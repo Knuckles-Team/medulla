@@ -136,6 +136,45 @@ pub fn shares_as_grants(shares: &[ProfileShare], resource: &str) -> Vec<crate::a
         .collect()
 }
 
+/// The IRIs a `Members` document set contributes to retrieval
+/// (MEDULLA-DECISION-ENGINE-R656.3): the members the caller can see. A member
+/// list longer than `max_members` refuses `INVALID_ARGUMENT`. A `SavedQuery`
+/// set is resolved by the served caller, which runs the read-only query and
+/// passes its result IRIs as `visible_iris` bound; here it contributes no
+/// member list of its own, so only the query result (already visible) enters.
+pub fn resolve_document_set(
+    set: &DocumentSet,
+    visible_iris: &std::collections::BTreeSet<String>,
+    max_members: usize,
+) -> Result<std::collections::BTreeSet<String>, String> {
+    match &set.kind {
+        DocumentSetKind::Members(members) => {
+            if members.len() > max_members {
+                return Err(format!(
+                    "INVALID_ARGUMENT: document set {} names {} members, over the limit of {max_members}",
+                    set.set_id,
+                    members.len()
+                ));
+            }
+            Ok(members
+                .iter()
+                .filter(|iri| visible_iris.contains(*iri))
+                .cloned()
+                .collect())
+        }
+        DocumentSetKind::SavedQuery(_) => {
+            if visible_iris.len() > max_members {
+                return Err(format!(
+                    "INVALID_ARGUMENT: document set {} resolves to {} IRIs, over the limit of {max_members}",
+                    set.set_id,
+                    visible_iris.len()
+                ));
+            }
+            Ok(visible_iris.clone())
+        }
+    }
+}
+
 impl AssistantProfile {
     /// Structural admission: the schema version, a non-empty id, tenant and
     /// name, and instructions within `max_instructions_chars` characters.
@@ -239,5 +278,33 @@ mod tests {
         let mut stale = original;
         stale.schema_version = 99;
         assert!(stale.check(DEFAULT_INSTRUCTIONS_MAX_CHARS).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R656.3
+    #[test]
+    fn resolve_document_set_intersects_members_and_bounds_the_list() {
+        use std::collections::BTreeSet;
+        let visible: BTreeSet<String> = ["urn:doc:1", "urn:doc:2"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let set = DocumentSet {
+            set_id: "set-1".into(),
+            tenant: "t".into(),
+            name: "Policies".into(),
+            kind: DocumentSetKind::Members(vec!["urn:doc:1".into(), "urn:doc:9".into()]),
+            owner_principal: "alice".into(),
+            shares: vec![],
+            schema_version: ASSISTANT_PROFILE_SCHEMA_VERSION,
+        };
+        let resolved = resolve_document_set(&set, &visible, 10).unwrap();
+        assert_eq!(resolved.into_iter().collect::<Vec<_>>(), vec!["urn:doc:1"]);
+        let error = resolve_document_set(&set, &visible, 1).unwrap_err();
+        assert!(error.starts_with("INVALID_ARGUMENT"));
+        let empty = DocumentSet {
+            kind: DocumentSetKind::Members(vec![]),
+            ..set
+        };
+        assert!(resolve_document_set(&empty, &visible, 10).unwrap().is_empty());
     }
 }

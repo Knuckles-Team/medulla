@@ -77,6 +77,7 @@ fn concurrent_readers_see_one_generation() {
         adapter_digest: None,
         quality_policy_ref: None,
         implicit_feedback: &[],
+        allowed: None,
     };
 
     let stop = AtomicBool::new(false);

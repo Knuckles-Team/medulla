@@ -257,6 +257,7 @@ async fn execute_vector(
                 as_of: None,
                 perspectives: None,
                 capability: None,
+                document_set_ids: Vec::new(),
             },
         )
         .await;

@@ -7234,6 +7234,7 @@ class GraphOperationsClient:
         hops: int = 0,
         perspectives: int | None = None,
         capability: str | None = None,
+        document_set_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         """One-round-trip hybrid discovery
         (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
@@ -7270,6 +7271,11 @@ class GraphOperationsClient:
                         else {}
                     ),
                     **({"capability": capability} if capability is not None else {}),
+                    **(
+                        {"document_set_ids": document_set_ids}
+                        if document_set_ids
+                        else {}
+                    ),
                 },
             )
         ).payload

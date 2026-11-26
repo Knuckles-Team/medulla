@@ -138,16 +138,24 @@ fn gather_candidates(
     kws: &[String],
     query_embedding: &[f32],
     k: usize,
+    allowed: Option<&std::collections::BTreeSet<String>>,
 ) -> Candidates {
     let has_kw = !kws.is_empty();
     let mut list = Vec::new();
     let mut scan_capped = false;
     if !query_embedding.is_empty() {
         let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
-        let raw = core
-            .semantic_store
-            .read()
-            .semantic_search(query_embedding, fanout);
+        let raw = match allowed {
+            Some(allowed) => core.semantic_store.read().semantic_search_filtered(
+                query_embedding,
+                fanout,
+                |id| allowed.contains(id),
+            ),
+            None => core
+                .semantic_store
+                .read()
+                .semantic_search(query_embedding, fanout),
+        };
         for (id, sim) in raw {
             let kw = if has_kw {
                 let (name, desc, ntype) = node_text(core, &id);
@@ -158,7 +166,10 @@ fn gather_candidates(
             list.push(Candidate { id, sim, kw });
         }
     } else if has_kw {
-        let ids = core.node_ids();
+        let mut ids = core.node_ids();
+        if let Some(allowed) = allowed {
+            ids.retain(|id| allowed.contains(id));
+        }
         scan_capped = ids.len() > DISCOVER_LEX_SCAN_CAP;
         for id in ids.into_iter().take(DISCOVER_LEX_SCAN_CAP) {
             let (name, desc, ntype) = node_text(core, &id);
@@ -197,6 +208,9 @@ pub(super) struct DiscoverCall<'a> {
     /// Implicit feedback events derived from the tenant's stored retrieval outcomes
     /// (MEDULLA-FEDERATED-QUERY-R705.3); empty without a tenant or a control store.
     pub(super) implicit_feedback: &'a [medulla_result_types::feedback_event::RetrievalFeedback],
+    /// The IRIs the request's document sets allow (MEDULLA-DECISION-ENGINE-R656.3);
+    /// `None` applies no filter, `Some` only narrows, and an empty set returns nothing.
+    pub(super) allowed: Option<&'a std::collections::BTreeSet<String>>,
 }
 
 #[cfg(feature = "query")]
@@ -253,7 +267,7 @@ fn discover_pass(
     let kws = normalized_keywords(call.keywords);
     let has_emb = !call.query_embedding.is_empty();
     let has_kw = !kws.is_empty();
-    let gathered = gather_candidates(core, &kws, call.query_embedding, k);
+    let gathered = gather_candidates(core, &kws, call.query_embedding, k, call.allowed);
     let is_deep = !deep.vectors.is_empty();
 
     // Score: the weighted blend (standard) or reciprocal-rank fusion over the arms (deep).
@@ -401,6 +415,9 @@ fn discover_pass(
 
     // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
     let mut planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
+    if let Some(allowed) = call.allowed {
+        planned.retain(|hit| allowed.contains(&hit.id));
+    }
     planned.retain(|hit| {
         let excluded = is_checked_at_read(core, &hit.id);
         unchecked_excluded += u64::from(excluded);
@@ -561,6 +578,7 @@ async fn handle_discover(
     served: (Option<String>, Option<ServedAdapterRef>),
     quality_policy_ref: Option<String>,
     implicit_feedback: Vec<medulla_result_types::feedback_event::RetrievalFeedback>,
+    allowed: Option<std::collections::BTreeSet<String>>,
 ) -> Response {
     let (tenant, adapter) = served;
     let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
@@ -607,6 +625,7 @@ async fn handle_discover(
             adapter_digest: adapter_digest_of(adapter.as_ref()),
             quality_policy_ref: quality_policy_ref.as_deref(),
             implicit_feedback: &implicit_feedback,
+            allowed: allowed.as_ref(),
         },
         deep,
         req_id,
@@ -693,6 +712,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             as_of,
             perspectives,
             capability,
+            document_set_ids,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(
@@ -711,6 +731,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             as_of,
             perspectives,
             capability,
+            document_set_ids,
         },
         other => other,
     }
@@ -764,7 +785,15 @@ pub(super) async fn try_handle_semantic_compute(
             as_of,
             perspectives,
             capability,
+            document_set_ids,
         } => {
+            let allowed =
+                match super::assistant_profile::resolve_document_sets(&ctx, &document_set_ids)
+                    .await
+                {
+                    Ok(allowed) => allowed,
+                    Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
+                };
             let served = discover_served(&ctx, capability.as_deref()).await;
             let implicit_feedback = match served.0.as_deref() {
                 Some(tenant) => {
@@ -792,6 +821,7 @@ pub(super) async fn try_handle_semantic_compute(
                 served,
                 quality_policy_ref,
                 implicit_feedback,
+                allowed,
             )
             .await
         }

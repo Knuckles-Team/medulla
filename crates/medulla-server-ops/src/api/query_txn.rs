@@ -84,6 +84,26 @@ pub trait QueryApi: Send + Sync {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 
+    /// Run one saved read-only UQL text as the verified caller and return the node ids of its
+    /// rows (MEDULLA-DECISION-ENGINE-R656.3). The statement runs through the ordinary query
+    /// dispatch, so the caller's row and tenant scope apply; a result longer than `max_rows`
+    /// refuses `INVALID_ARGUMENT`.
+    #[cfg(feature = "query")]
+    #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)] // seam signature mirrors the query dispatch context
+    async fn saved_query_iris(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+        graph_name: &str,
+        read_authority: &medulla_server_api::carrier::GraphReadAuthority,
+        caller: &str,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
+        text: &str,
+        max_rows: usize,
+    ) -> Result<Vec<String>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// Route one gateway-routed data-mining method (`Mine*`) through the mining handler's
     /// commit gateway; `None` hands a method it does not own back to the caller.
     #[cfg(feature = "mining")]

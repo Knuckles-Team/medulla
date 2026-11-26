@@ -17983,6 +17983,7 @@ class MethodDiscoverParams(BaseModel):
 
     as_of: int | None = None
     capability: str | None = None
+    document_set_ids: list[str] = Field(default_factory=list)
     hops: Annotated[int, Field(ge=0)] = Field(default=0)
     k: Annotated[int, Field(ge=0)]
     keywords: list[str]
@@ -39113,6 +39114,7 @@ class MemoryRecallRequest(BaseModel):
 
     as_of_ms: int | None = None
     budget: Annotated[int, Field(ge=0)]
+    document_set_ids: list[str] = Field(default_factory=list)
     include_media: bool = False
     include_plan: bool = False
     keywords: list[str] = Field(default_factory=list)

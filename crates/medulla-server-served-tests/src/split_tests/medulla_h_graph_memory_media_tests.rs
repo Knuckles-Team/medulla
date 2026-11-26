@@ -126,6 +126,7 @@ mod served {
                     include_plan: false,
                     include_media,
                     previous_manifest_digest: None,
+                    document_set_ids: Vec::new(),
                 }),
             };
             let response = if tenant == TENANT {
@@ -294,6 +295,7 @@ mod served {
                         include_plan: false,
                         include_media: true,
                         previous_manifest_digest: None,
+                    document_set_ids: Vec::new(),
                     }),
                 },
             )

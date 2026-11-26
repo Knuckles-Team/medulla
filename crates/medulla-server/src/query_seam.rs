@@ -76,6 +76,64 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         )
     }
 
+    #[cfg(feature = "query")]
+    async fn saved_query_iris(
+        &self,
+        state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+        graph_name: &str,
+        read_authority: &medulla_server_api::carrier::GraphReadAuthority,
+        caller: &str,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
+        text: &str,
+        max_rows: usize,
+    ) -> Result<Vec<String>, String> {
+        #[cfg(feature = "security")]
+        let rls = Arc::new(state.read().await.isolation.clone());
+        let method = medulla_protocol_types::protocol::Method::Uql {
+            text: text.to_string(),
+            params: Default::default(),
+            prepare: false,
+            foreign_executions: Default::default(),
+        };
+        let response = medulla_h_query::query::try_handle(
+            state,
+            medulla_server_api::api::reentry::TryHandleContext {
+                req_id: 0,
+                graph_name,
+                read_authority: Some(read_authority),
+                caller,
+            },
+            core.clone(),
+            method,
+            #[cfg(feature = "security")]
+            &rls,
+        )
+        .await
+        .map_err(|_| "ENGINE_UNAVAILABLE: query surface not available in this build".to_string())?;
+        if let Some(error) = response.error {
+            return Err(match response.error_detail {
+                Some(detail) => format!("{error}: {detail}"),
+                None => error,
+            });
+        }
+        let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = response.result
+        else {
+            return Err("INTERNAL: a saved query answered no rows payload".to_string());
+        };
+        let result: medulla_query_types::wire::UqlResult = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("INTERNAL: a saved query answer did not decode: {error}"))?;
+        let medulla_query_types::wire::UqlResult::Rows { rows, .. } = result else {
+            return Err("INVALID_ARGUMENT: a saved query must return rows".to_string());
+        };
+        if rows.len() > max_rows {
+            return Err(format!(
+                "INVALID_ARGUMENT: a saved query returned {} rows, over the limit of {max_rows}",
+                rows.len()
+            ));
+        }
+        Ok(rows.into_iter().map(|row| row.id).collect())
+    }
+
     #[cfg(feature = "mining")]
     async fn mining_gateway_try_handle(
         &self,

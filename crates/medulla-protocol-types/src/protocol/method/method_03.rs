@@ -421,6 +421,10 @@ $($variants)*
         /// served read resolves the capability-scope adapter first, then the graph's.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         capability: Option<String>,
+        /// Document sets that narrow the candidates (MEDULLA-DECISION-ENGINE-R656.3):
+        /// the union of the named sets' resolved IRIs. Empty applies no filter.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        document_set_ids: Vec<String>,
     },
 
     /// MEDULLA-DECISION-ENGINE-R100.100.4: find the matches of a query's n-grams

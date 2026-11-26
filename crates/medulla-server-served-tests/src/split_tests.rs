@@ -72,6 +72,8 @@ mod medulla_h_ingest_meeting_transcript_tests;
 #[cfg(test)]
 mod medulla_h_graph_memory_media_tests;
 #[cfg(test)]
+mod medulla_h_graph_document_set_tests;
+#[cfg(test)]
 mod medulla_h_ingest_media_tag_tests;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

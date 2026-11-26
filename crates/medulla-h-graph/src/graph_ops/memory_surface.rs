@@ -725,6 +725,7 @@ pub(super) fn recall(
     tenant: &str,
     now_ms: i64,
     request: &MemoryRecallRequest,
+    allowed: Option<&std::collections::BTreeSet<String>>,
 ) -> Result<MemoryRecallResult, String> {
     check_embedding(&request.query_embedding, "the query embedding")?;
     if request.budget == 0 {
@@ -759,8 +760,20 @@ pub(super) fn recall(
             && record.timestamp_ms <= as_of
             && record.expires_at_ms.is_none_or(|expires| expires > as_of)
     };
+    // MEDULLA-DECISION-ENGINE-R656.3: a resolved document set only narrows;
+    // a record counts when the document it was derived from is a member.
+    let in_document_set = |stored: &Stored| {
+        allowed.is_none_or(|set| {
+            stored
+                .record
+                .provenance_key
+                .as_ref()
+                .is_some_and(|key| set.contains(key.as_str()))
+        })
+    };
     let searched_by_request = |stored: &Stored| {
         visible(stored)
+            && in_document_set(stored)
             && tiers.contains(&stored.record.tier)
             && request
                 .scope
@@ -950,6 +963,7 @@ fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Res
         "prime_session": request.prime_session,
         "include_plan": request.include_plan,
         "include_media": request.include_media,
+        "document_set_ids": request.document_set_ids,
         "knobs": {
             "memory.merge_cosine": knob_decimal(&kernel::MERGE_COSINE),
             "memory.memento_token_cap": knob_integer(&kernel::MEMENTO_TOKEN_CAP),
@@ -1035,7 +1049,14 @@ pub(super) async fn try_handle_memory_surface(
     let answer = match &method {
         Method::MemoryRecall { request } => {
             let now_ms = i64::try_from(authoritative_now_ms()).unwrap_or(i64::MAX);
-            recall(ctx.core, &tenant, now_ms, request)
+            let allowed =
+                match super::assistant_profile::resolve_document_sets(&ctx, &request.document_set_ids)
+                    .await
+                {
+                    Ok(allowed) => allowed,
+                    Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
+                };
+            recall(ctx.core, &tenant, now_ms, request, allowed.as_ref())
                 .and_then(ResultPayload::of::<MemoryRecallResultKind>)
         }
         Method::MemoryExport { request } => {

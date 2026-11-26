@@ -690,7 +690,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("BusRoster", &["BUS_SCOPE_REQUIRED"]),
     // MEDULLA-DECISION-ENGINE-R651.3.
     ("MemoryRemember", &["ACCESS_DENIED", "PARAMETER_INVALID"]),
-    ("MemoryRecall", &["ACCESS_DENIED", "PARAMETER_INVALID"]),
+    // MEDULLA-DECISION-ENGINE-R656.3: a named document set narrows recall.
+    (
+        "MemoryRecall",
+        &[
+            "ACCESS_DENIED",
+            "PARAMETER_INVALID",
+            "DOCUMENT_SET_NOT_FOUND",
+            "INVALID_ARGUMENT",
+        ],
+    ),
+    // MEDULLA-DECISION-ENGINE-R656.3: a named document set narrows discovery.
+    ("Discover", &["DOCUMENT_SET_NOT_FOUND", "INVALID_ARGUMENT"]),
     ("MemoryExport", &["ACCESS_DENIED"]),
     // MEDULLA-DURABLE-KERNEL-R085.5.
     (

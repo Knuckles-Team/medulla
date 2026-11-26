@@ -89,6 +89,7 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         include_plan: false,
         include_media: false,
         previous_manifest_digest: None,
+        document_set_ids: Vec::new(),
     }
 }
 
@@ -128,13 +129,13 @@ fn memory_methods_are_served_and_classified() {
     // Another tenant's record reads as absent to recall and to export.
     store(&core, "tenant-a", &foreign);
     let request = recall_request(vec![], &["x"], 100);
-    assert_eq!(recall(&core, "tenant-a", NOW, &request).unwrap().hits.len(), 1);
-    assert!(recall(&core, "tenant-b", NOW, &request).unwrap().hits.is_empty());
+    assert_eq!(recall(&core, "tenant-a", NOW, &request, None).unwrap().hits.len(), 1);
+    assert!(recall(&core, "tenant-b", NOW, &request, None).unwrap().hits.is_empty());
     let exported = export(&core, "tenant-b", &MemoryExportRequest::default()).unwrap();
     assert!(exported.records.is_empty());
     // A recall with nothing to search by is refused.
     let empty = recall_request(vec![], &[], 100);
-    assert!(recall(&core, "tenant-a", NOW, &empty).is_err());
+    assert!(recall(&core, "tenant-a", NOW, &empty, None).is_err());
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R651.1, MEDULLA-DECISION-ENGINE-R651.2,
@@ -178,23 +179,23 @@ fn remember_recall_consolidate_and_export_round_trip() {
     assert!(admit(&core, "tenant-a", &remember(changed, vec![1.0, 0.0]), &Default::default()).is_err());
 
     // Recall ranks by cosine, drops the expired record and respects the budget.
-    let found = recall(&core, "tenant-a", NOW, &recall_request(vec![1.0, 0.0], &[], 25)).unwrap();
+    let found = recall(&core, "tenant-a", NOW, &recall_request(vec![1.0, 0.0], &[], 25), None).unwrap();
     assert_eq!(ids(&found.hits), ["m:sky", "m:sky2"]);
     assert!(found.tokens_used <= 25);
     assert!(found.hits[0].score_q16 >= found.hits[1].score_q16);
-    let by_keyword = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["grass"], 100)).unwrap();
+    let by_keyword = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["grass"], 100), None).unwrap();
     assert_eq!(ids(&by_keyword.hits), ["m:grass"]);
     // As of an earlier instant the expired record is still visible.
     let mut earlier = recall_request(vec![1.0, 0.0], &[], 100);
     earlier.as_of_ms = Some(100);
-    let past = recall(&core, "tenant-a", NOW, &earlier).unwrap();
+    let past = recall(&core, "tenant-a", NOW, &earlier, None).unwrap();
     assert!(ids(&past.hits).contains(&"m:old"));
 
     // Priming a session returns its mementos; a plan proposes the merge and the promotion.
     let mut full = recall_request(vec![1.0, 0.0], &[], 100);
     full.prime_session = Some(ResourceId::new("sess:1").unwrap());
     full.include_plan = true;
-    let answer = recall(&core, "tenant-a", NOW, &full).unwrap();
+    let answer = recall(&core, "tenant-a", NOW, &full, None).unwrap();
     assert_eq!(answer.mementos.len(), 1);
     assert_eq!(answer.mementos[0].source_ids.len(), 2);
     let plan = answer.plan.expect("a plan was asked for");
@@ -239,8 +240,8 @@ fn recall_stays_stable_as_the_corpus_doubles() {
     let mut expected: Option<(Vec<String>, Vec<String>)> = None;
     for size in [1_000, 2_000, 4_000] {
         let core = corpus(size);
-        let vector = recall(&core, "tenant-a", NOW, &by_vector).unwrap();
-        let keyword = recall(&core, "tenant-a", NOW, &by_keyword).unwrap();
+        let vector = recall(&core, "tenant-a", NOW, &by_vector, None).unwrap();
+        let keyword = recall(&core, "tenant-a", NOW, &by_keyword, None).unwrap();
         let found = (
             ids(&vector.hits).into_iter().map(String::from).collect::<Vec<_>>(),
             ids(&keyword.hits).into_iter().map(String::from).collect::<Vec<_>>(),
@@ -289,17 +290,17 @@ fn media_attachment_remember_and_recall() {
 
     // Without `include_media` the caption vector does not find the record.
     let query = recall_request(vec![1.0, 0.0], &[], 100);
-    assert!(recall(&core, "tenant-a", NOW, &query).unwrap().hits.is_empty());
+    assert!(recall(&core, "tenant-a", NOW, &query, None).unwrap().hits.is_empty());
     let mut media = query.clone();
     media.include_media = true;
-    let hits = recall(&core, "tenant-a", NOW, &media).unwrap().hits;
+    let hits = recall(&core, "tenant-a", NOW, &media, None).unwrap().hits;
     assert_eq!(ids(&hits), ["m:image"]);
     assert_eq!(hits[0].record.attachments.len(), 1);
     // Another tenant sees nothing, and `include_media` needs a query embedding.
-    assert!(recall(&core, "tenant-b", NOW, &media).unwrap().hits.is_empty());
+    assert!(recall(&core, "tenant-b", NOW, &media, None).unwrap().hits.is_empty());
     let mut keywords_only = recall_request(vec![], &["photo"], 100);
     keywords_only.include_media = true;
-    assert!(recall(&core, "tenant-a", NOW, &keywords_only)
+    assert!(recall(&core, "tenant-a", NOW, &keywords_only, None)
         .unwrap_err()
         .starts_with("PARAMETER_INVALID"));
 }
@@ -364,11 +365,11 @@ fn media_evidence_reads_back() {
     assert_eq!(attachment["byte_len"], 4096);
     assert_eq!(attachment["derivation_ids"][0], derivation.as_str());
     // The same record is readable under its own tenant only.
-    assert!(recall(&core, "tenant-b", NOW, &recall_request(vec![], &["chart"], 100))
+    assert!(recall(&core, "tenant-b", NOW, &recall_request(vec![], &["chart"], 100), None)
         .unwrap()
         .hits
         .is_empty());
-    let own = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["chart"], 100)).unwrap();
+    let own = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["chart"], 100), None).unwrap();
     assert_eq!(own.hits[0].record.attachments[0].byte_len, 4096);
 }
 
@@ -458,22 +459,22 @@ fn consolidation_and_export_evidence_reads_back() {
 
     // Recall answers the plan digest of its own plan, and a drift report only when asked.
     let mut asked = recall_request(vec![1.0, 0.0], &[], 100);
-    let plain = recall(&core, "tenant-a", NOW, &asked).unwrap();
+    let plain = recall(&core, "tenant-a", NOW, &asked, None).unwrap();
     assert_eq!(plain.plan_digest.len(), 64);
     assert!(plain.drift.is_none());
-    assert_eq!(recall(&core, "tenant-a", NOW, &asked).unwrap().plan_digest, plain.plan_digest);
+    assert_eq!(recall(&core, "tenant-a", NOW, &asked, None).unwrap().plan_digest, plain.plan_digest);
     let mut narrower = asked.clone();
     narrower.scope = Some(ResourceId::new("sess:1").unwrap());
-    assert_ne!(recall(&core, "tenant-a", NOW, &narrower).unwrap().plan_digest, plain.plan_digest);
+    assert_ne!(recall(&core, "tenant-a", NOW, &narrower, None).unwrap().plan_digest, plain.plan_digest);
 
     asked.previous_manifest_digest = Some(digest.clone());
-    let same = recall(&core, "tenant-a", NOW, &asked).unwrap();
+    let same = recall(&core, "tenant-a", NOW, &asked, None).unwrap();
     assert_eq!(same.plan_digest, plain.plan_digest, "the comparison input is not part of the plan");
     let report = same.drift.expect("a previous digest was supplied");
     assert!(!report.drifted);
     assert_eq!(report.manifest_digest, digest);
     asked.previous_manifest_digest = Some(changed.manifest.manifest_digest.clone());
-    let drifted = recall(&core, "tenant-a", NOW, &asked).unwrap().drift.expect("a report");
+    let drifted = recall(&core, "tenant-a", NOW, &asked, None).unwrap().drift.expect("a report");
     assert!(drifted.drifted);
     assert_eq!(drifted.previous_manifest_digest, changed.manifest.manifest_digest);
 }

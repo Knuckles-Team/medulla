@@ -21,7 +21,7 @@ use super::*;
 use medulla_identity_types::acl::RbacAction;
 use medulla_identity_types::assistant_profile::{
     document_set_node_id, document_set_resource, profile_node_id, profile_resource,
-    AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
+    resolve_document_set, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
 };
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_isolation::profile_access::{may, profile_unavailable, read_stored, Caller};
@@ -470,4 +470,90 @@ pub(super) async fn try_handle_assistant_profile(
         &agent_id,
         op,
     ))
+}
+
+/// The IRIs the named document sets allow, as the caller may read them
+/// (MEDULLA-DECISION-ENGINE-R656.3). An empty `set_ids` applies no filter
+/// (`Ok(None)`). Each set loads under the caller's read authority, so an
+/// unknown set, another tenant's and one the caller may not read all refuse
+/// `DOCUMENT_SET_NOT_FOUND`. A `Members` set intersects with the IRIs of the
+/// caller's own projection; a `SavedQuery` set first runs as a read-only query
+/// under the caller's authority (the one leg that runs UQL) and its result IRIs
+/// enter the same intersection. The per-set results are unioned.
+pub(super) async fn resolve_document_sets(
+    ctx: &GraphOpsContext<'_>,
+    set_ids: &[String],
+) -> Result<Option<std::collections::BTreeSet<String>>, String> {
+    if set_ids.is_empty() {
+        return Ok(None);
+    }
+    let Some(tenant_scope) = ctx
+        .read_authority
+        .carrier()
+        .map(|carrier| carrier.tenant_scope().to_string())
+    else {
+        return Err(refuse(
+            "ACCESS_DENIED",
+            "a document-set read needs a verified tenant",
+        ));
+    };
+    let agent_id = ctx.read_authority.verified_actor()?.to_string();
+    let max_members =
+        usize::try_from(knobs().profile_document_set_max_members).unwrap_or(usize::MAX);
+    let mut sets = Vec::with_capacity(set_ids.len());
+    {
+        let state = ctx.state.read().await;
+        for set_id in set_ids {
+            let op = ProfileOp::GetDocumentSet {
+                set_id: set_id.clone(),
+            };
+            match read_op(ctx.raw_core, &state.isolation, &tenant_scope, &agent_id, &op) {
+                Ok(ReadOut::Set(set)) => sets.push(set),
+                _ => return Err(set_unavailable(set_id)),
+            }
+        }
+    }
+    let visible: std::collections::BTreeSet<String> = ctx.core.node_ids().into_iter().collect();
+    let mut allowed = std::collections::BTreeSet::new();
+    for set in &sets {
+        let in_view = match &set.kind {
+            DocumentSetKind::Members(_) => visible.clone(),
+            DocumentSetKind::SavedQuery(text) => {
+                #[cfg(feature = "query")]
+                {
+                    let Some(seam) = medulla_server_ops::api::query_txn::query_seam(ctx.state).await
+                    else {
+                        return Err(refuse(
+                            "ENGINE_UNAVAILABLE",
+                            "the query surface is not installed",
+                        ));
+                    };
+                    let iris = seam
+                        .saved_query_iris(
+                            ctx.state,
+                            ctx.graph_name,
+                            ctx.read_authority,
+                            &agent_id,
+                            ctx.core,
+                            text,
+                            max_members,
+                        )
+                        .await?;
+                    iris.into_iter()
+                        .filter(|iri| visible.contains(iri))
+                        .collect()
+                }
+                #[cfg(not(feature = "query"))]
+                {
+                    let _ = text;
+                    return Err(refuse(
+                        "ENGINE_UNAVAILABLE",
+                        "a saved-query document set needs the `query` feature",
+                    ));
+                }
+            }
+        };
+        allowed.extend(resolve_document_set(set, &in_view, max_members)?);
+    }
+    Ok(Some(allowed))
 }

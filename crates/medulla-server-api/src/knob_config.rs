@@ -615,6 +615,9 @@ knobs! {
     /// Longest `instructions` text of an assistant profile
     /// (MEDULLA-DECISION-ENGINE-R656.1).
     profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
+    /// Most IRIs one document set may name or resolve to
+    /// (MEDULLA-DECISION-ENGINE-R656.3).
+    profile_document_set_max_members: u64 = "profile.document_set_max_members", U64(5000), [10, 100_000], "IRIs", Tunable;
     /// Most steps plus flows of one imported canonical workflow (MEDULLA-CQ-ORCH-R701.2).
     process_import_max_elements: u64 = "process.import_max_elements", U64(100_000), [100, 1_000_000], "elements", Tunable;
     /// Team score: weight of the prior, as a count of outcomes. (MEDULLA-ORCH-VOCAB-R751.751).

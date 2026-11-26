@@ -708,6 +708,10 @@ pub struct MemoryRecallRequest {
     /// means no report (MEDULLA-DECISION-ENGINE-R651.5).
     #[serde(default)]
     pub previous_manifest_digest: Option<String>,
+    /// Document sets that narrow the searched records
+    /// (MEDULLA-DECISION-ENGINE-R656.3); empty applies no filter.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub document_set_ids: Vec<String>,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
