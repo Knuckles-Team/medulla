@@ -1,4 +1,8 @@
 use super::*;
+use medulla_types::contract::{
+    AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, PurposeKind,
+    ReplayOutcome, ScopeKind, VerificationStatus,
+};
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
     contract::Ed25519Signature, contract::IdempotencyKey, contract::MethodId, contract::Nonce,

@@ -470,7 +470,7 @@ impl OutboxProjectionCursor {
 mod tests {
     use super::*;
     use crate::mutation::{MutationReceipt, MutationResult};
-    use medulla_identity_types::authority::ScopeKind;
+    use medulla_types::contract::ScopeKind;
     use medulla_types::{
         contract::MutationDisposition, contract::TenantId, contract::MAX_SCOPE_COMPONENTS,
     };

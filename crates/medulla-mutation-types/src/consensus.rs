@@ -405,7 +405,7 @@ impl ParticipantTransactionRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::authority::ScopeKind;
+    use medulla_types::contract::ScopeKind;
     use medulla_types::{contract::TenantId, contract::MAX_SCOPE_COMPONENTS};
 
     fn digest(byte: u8) -> Digest256 {

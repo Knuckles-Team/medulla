@@ -7,14 +7,14 @@ use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::outbox::{OutboxHeader, OutboxIntent};
-use medulla_identity_types::{
-    authority::AdmissionOutcome, authority::AuthorityContext, authority::AuthorityScope,
-    authority::DecisionOutcome, authority::EffectState, authority::IngressSurface,
-    authority::NonceReplayKey, authority::Operation, authority::OperationReplayIdentity,
-    authority::ReplayReceipt, authority::ReplayOutcome, authority::ScopeKind,
-    authority::SignedAuthorityEnvelopeEvidence, authority::VerificationStatus,
-    authority::VerifiedAuthority, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
-    authority::AUTHORITY_PROTOCOL_V1,
+use medulla_types::contract::{
+    AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, ReplayOutcome,
+    ScopeKind, VerificationStatus,
+};
+use medulla_identity_types::authority::{
+    AuthorityContext, AuthorityScope, NonceReplayKey, OperationReplayIdentity, ReplayReceipt,
+    SignedAuthorityEnvelopeEvidence, VerifiedAuthority, AUTHORITY_CONTEXT_SCHEMA_V1,
+    AUTHORITY_PROTOCOL_V1,
 };
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
@@ -88,7 +88,7 @@ fn authority_for(
         audience: AudienceId::new("eg").unwrap(),
         tenant: TenantId::new("tenant:a").unwrap(),
         authority_scope: scope(),
-        purpose_kind: medulla_identity_types::authority::PurposeKind::new("graph_write").unwrap(),
+        purpose_kind: medulla_types::contract::PurposeKind::new("graph_write").unwrap(),
         purpose_resource: Some(scope().scope_id),
         operation: Operation::new("mutation").unwrap(),
         policy_revision: PolicyRevision::new("policy:1").unwrap(),
