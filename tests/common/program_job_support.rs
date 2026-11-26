@@ -9,6 +9,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use medulla_decision_types::decision::held_out::GraderKind;
 use medulla_modality::{
     ArtifactId, Classification, DerivationId, EvidenceAddress, EvidenceLocus, EvidenceLocusId,
     OpaqueRef, PolicyEnvelope, PrivacyAttestation, ResourceId,
@@ -16,9 +17,9 @@ use medulla_modality::{
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_program::{
     AdapterKind, EvaluationSummary, EvidenceBinding, ExampleOutcome, ExampleSplit, FieldRole,
-    FieldSpec, GraderKind, ModuleKind, OptimizationBudget, OptimizationRequest, OptimizerKind,
-    ProgramModality, ProgramRevision, ProgramRevisionIdentity, PromotionPolicy, SignatureSpec,
-    TrainingCorpus, TrainingExample, PROGRAM_SCHEMA_VERSION,
+    FieldSpec, ModuleKind, OptimizationBudget, OptimizationRequest, OptimizerKind, ProgramModality,
+    ProgramRevision, ProgramRevisionIdentity, PromotionPolicy, SignatureSpec, TrainingCorpus,
+    TrainingExample, PROGRAM_SCHEMA_VERSION,
 };
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;

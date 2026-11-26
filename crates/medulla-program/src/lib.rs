@@ -17,7 +17,6 @@ mod plan;
 mod transport;
 
 pub use commit::*;
-pub use contracts::*;
 pub use evidence::{
     check_front_inputs, check_held_out_split, independent_case_count, program_held_out_evidence,
     FrontRefusal, HeldOutRefusal, HELD_OUT_SET_DIGEST_DOMAIN,

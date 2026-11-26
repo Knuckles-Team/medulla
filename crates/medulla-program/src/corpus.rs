@@ -7,9 +7,8 @@ use medulla_decision_types::decision::program::{
 use medulla_modality::{OpaqueRef, PolicyEnvelope, PrivacyAttestation};
 use medulla_types::refusal_code::RefusalCode;
 
-use crate::{
-    EvidenceBinding, ExampleOutcome, ExampleSplit, GraderKind, TrainingCorpus, TrainingExample,
-};
+use crate::{EvidenceBinding, ExampleOutcome, ExampleSplit, TrainingCorpus, TrainingExample};
+use medulla_decision_types::decision::held_out::GraderKind;
 
 /// Why a stored score cannot become a training example
 /// (MEDULLA-DECISION-ENGINE-R813.4). Each variant has one registered code; a

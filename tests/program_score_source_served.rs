@@ -16,12 +16,13 @@ mod test_support;
 
 use std::sync::Arc;
 
+use medulla_decision_types::decision::held_out::GraderKind;
 use medulla_modality::{Classification, OpaqueRef, PolicyEnvelope, PrivacyAttestation};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_program::{
-    AdapterKind, EvaluationSummary, ExampleOutcome, ExampleSplit, FieldRole, FieldSpec, GraderKind,
-    ModuleKind, OptimizationBudget, OptimizationRequest, OptimizerKind, ProgramModality,
-    ProgramRevision, PromotionPolicy, ScoreSource, SignatureSpec, TrainingCorpus, TrainingExample,
+    AdapterKind, EvaluationSummary, ExampleOutcome, ExampleSplit, FieldRole, FieldSpec, ModuleKind,
+    OptimizationBudget, OptimizationRequest, OptimizerKind, ProgramModality, ProgramRevision,
+    PromotionPolicy, ScoreSource, SignatureSpec, TrainingCorpus, TrainingExample,
     PROGRAM_SCHEMA_VERSION,
 };
 use medulla_protocol_types::protocol::{Method, Response};

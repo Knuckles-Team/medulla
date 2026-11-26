@@ -1,16 +1,16 @@
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+use medulla_decision_types::decision::held_out::GraderKind;
 use medulla_modality::{
     ArtifactId, Classification, DerivationId, EvidenceAddress, EvidenceLocus, EvidenceLocusId,
     OpaqueRef, PolicyEnvelope, PrivacyAttestation, ResourceId,
 };
 use medulla_program::{
     AdapterKind, EvaluationSummary, EvidenceBinding, ExampleOutcome, ExampleSplit, FieldRole,
-    FieldSpec, GovernedContentRef, GraderKind, ModelCallRequest, ModelCallResponse,
-    ModelFinishReason, ModelTier, ModelUsage, ModuleKind, NativeCompiler, OptimizationBudget,
-    OptimizationRequest, OptimizerArtifact, OptimizerArtifactKind, OptimizerExecution,
-    OptimizerKind, PlanExecutor, PlanStepKind, ProgramModality, ProgramRevision,
-    ProgramRevisionIdentity, PromotionPolicy, SignatureSpec, TrainingCorpus, TrainingExample,
-    PROGRAM_SCHEMA_VERSION,
+    FieldSpec, GovernedContentRef, ModelCallRequest, ModelCallResponse, ModelFinishReason,
+    ModelTier, ModelUsage, ModuleKind, NativeCompiler, OptimizationBudget, OptimizationRequest,
+    OptimizerArtifact, OptimizerArtifactKind, OptimizerExecution, OptimizerKind, PlanExecutor,
+    PlanStepKind, ProgramModality, ProgramRevision, ProgramRevisionIdentity, PromotionPolicy,
+    SignatureSpec, TrainingCorpus, TrainingExample, PROGRAM_SCHEMA_VERSION,
 };
 use sha2::{Digest, Sha256};
 

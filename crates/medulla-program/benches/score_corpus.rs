@@ -7,12 +7,13 @@
 use std::hint::black_box;
 use std::time::Instant;
 
+use medulla_decision_types::decision::held_out::GraderKind;
 use medulla_modality::{
     ArtifactId, Classification, DerivationId, EvidenceAddress, EvidenceLocus, EvidenceLocusId,
     OpaqueRef, PolicyEnvelope, PrivacyAttestation, ResourceId,
 };
 use medulla_program::corpus::{corpus_from_scores, CorpusPolicy, ScoreRow};
-use medulla_program::{EvidenceBinding, ExampleSplit, GraderKind, ProgramModality};
+use medulla_program::{EvidenceBinding, ExampleSplit, ProgramModality};
 use sha2::{Digest, Sha256};
 
 const ROWS: usize = 10_000;
