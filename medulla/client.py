@@ -1042,6 +1042,19 @@ _CLAIM_WORK_ITEM_RESULT_FIELDS = frozenset(
         "changed_work_item_ids",
     }
 )
+# The run identity a claimed item carries; absent on a refusal and on an item
+# submitted without one.
+_CLAIM_WORK_ITEM_IDENTITY_FIELDS = frozenset(
+    {
+        "capability_digest",
+        "catalog_digest",
+        "model_digest",
+        "policy_digest",
+        "delegator_id",
+        "selected_agent_id",
+        "delegation_id",
+    }
+)
 _CLAIM_WORK_ITEM_LEASE_COUNTERS = (
     "lease_epoch",
     "fencing_token",
@@ -4211,8 +4224,11 @@ class WorkItemClient:
     @classmethod
     def _claim_result(cls, result: Any) -> dict[str, Any]:
         """The ClaimWorkItem answer, with its claimed/reason agreement enforced."""
-        answer = _exact_mapping(
-            "ClaimWorkItem result", result, _CLAIM_WORK_ITEM_RESULT_FIELDS
+        answer = _closed_mapping(
+            "ClaimWorkItem result",
+            result,
+            _CLAIM_WORK_ITEM_RESULT_FIELDS,
+            _CLAIM_WORK_ITEM_IDENTITY_FIELDS,
         )
         if answer["schema_version"] != "1":
             raise ValueError("ClaimWorkItem result schema_version must be 1")
@@ -4223,8 +4239,12 @@ class WorkItemClient:
             raise ValueError("ClaimWorkItem result claim state is inconsistent")
         if claimed:
             cls._claim_granted(answer)
+            for field in _CLAIM_WORK_ITEM_IDENTITY_FIELDS & set(answer):
+                _string(f"ClaimWorkItem result.{field}", answer[field])
         else:
             cls._claim_refused(answer)
+            if _CLAIM_WORK_ITEM_IDENTITY_FIELDS & set(answer):
+                raise ValueError("negative ClaimWorkItem result carries run identity")
         return answer
 
     async def claim(

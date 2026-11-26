@@ -300,3 +300,57 @@ fn illegal_work_item_transitions_answer_typed_outcomes_through_the_row_dispatch(
     assert_eq!(fenced.outcome, WorkItemCommitOutcome::Fenced);
     assert_eq!(status(shard, &leased), before);
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R028.7
+#[test]
+fn a_claim_answers_the_identity_the_item_was_submitted_with() {
+    let temp = open("r028-7-claim-identity");
+    let shard = &temp.shard;
+    let mut request = run_request();
+    request.idempotency_key = "identity-key".to_string();
+    request.run_id = None;
+    request.metadata = serde_json::from_value(serde_json::json!({
+        "capability_digest": "sha256:cc",
+        "delegation_id": "delegation-1",
+        "agent_id": "selected-agent",
+    }))
+    .unwrap();
+    let id = with_write(shard, "submit/identity", 1_000, |admitted| {
+        submit_run_rows(admitted, &request, "owner")
+    })
+    .expect("the work item submits")
+    .work_item_id;
+
+    let claimed = claim(shard, &id);
+    assert!(claimed.claimed);
+    assert_eq!(claimed.capability_digest.as_deref(), Some("sha256:cc"));
+    assert_eq!(claimed.delegation_id.as_deref(), Some("delegation-1"));
+    assert_eq!(claimed.selected_agent_id.as_deref(), Some("selected-agent"));
+    assert_eq!(claimed.delegator_id.as_deref(), Some("worker"));
+    assert_eq!(claimed.catalog_digest.as_deref(), Some("catalog"));
+    assert_eq!(claimed.model_digest.as_deref(), Some("model"));
+    assert_eq!(claimed.policy_digest.as_deref(), Some("policy"));
+
+    // A refused claim carries no identity.
+    let empty = claim_nothing(shard);
+    assert!(!empty.claimed);
+    assert!(empty.capability_digest.is_none() && empty.delegator_id.is_none());
+}
+
+fn claim_nothing(shard: &Shard) -> ClaimWorkItemResult {
+    let method = Method::ClaimWorkItem {
+        request: ClaimWorkItemRequest {
+            schema_version: ClaimWorkItemRequestSchemaVersion::V1,
+            tenant_ref: "tenant".into(),
+            work_item_id: Some("no-such-item".into()),
+            queue_ref: None,
+            resource_class: None,
+            fairness_group: None,
+            worker_ref: "worker-2".into(),
+            now_ms: 2_000,
+            lease_ms: 60_000,
+            max_tenant_in_flight: 64,
+        },
+    };
+    payload(apply(shard, "claim/none", method, 2_000).expect("the claim applies"))
+}

@@ -3154,17 +3154,24 @@ class ClaimWorkItemResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     attempt: Annotated[int, Field(ge=0)] | None = None
+    capability_digest: str | None = None
+    catalog_digest: str | None = None
     changed_work_item_ids: list[str]
     claimed: bool
+    delegation_id: str | None = None
+    delegator_id: str | None = None
     fencing_token: Annotated[int, Field(ge=0)] | None = None
     kind: str | None = None
     lease_epoch: Annotated[int, Field(ge=0)] | None = None
     lease_expires_at_ms: Annotated[int, Field(ge=0)] | None = None
     lease_holder_ref: str | None = None
     max_attempts: Annotated[int, Field(ge=0)] | None = None
+    model_digest: str | None = None
     payload_ref: str | None = None
+    policy_digest: str | None = None
     reason: ClaimWorkItemResultReason
     schema_version: ClaimWorkItemResultSchemaVersion
+    selected_agent_id: str | None = None
     tenant_in_flight: Annotated[int, Field(ge=0)] | None = None
     work_item_id: str | None = None
 

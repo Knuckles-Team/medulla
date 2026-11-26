@@ -261,7 +261,26 @@ pub fn claim_not_claimed_payload(
         max_attempts: None,
         tenant_in_flight: Some(u64::from(inflight)),
         changed_work_item_ids,
+        capability_digest: None,
+        catalog_digest: None,
+        model_digest: None,
+        policy_digest: None,
+        delegator_id: None,
+        selected_agent_id: None,
+        delegation_id: None,
     })
+}
+
+/// A non-empty string at `key` of a JSON object, or `None`.
+fn identity_text(
+    object: Option<&serde_json::Map<String, serde_json::Value>>,
+    key: &str,
+) -> Option<String> {
+    object
+        .and_then(|map| map.get(key))
+        .and_then(serde_json::Value::as_str)
+        .filter(|text| !text.is_empty())
+        .map(str::to_string)
 }
 
 /// Stamp the granted lease onto the selected candidate and report its
@@ -379,6 +398,17 @@ fn apply_claimed_work_item(
     let kind = property_string(&props, "kind").to_string();
     let payload_ref = property_string(&props, "payload_ref").to_string();
     let max_attempts = property_u64(&props, "max_attempts").max(1);
+    // The identity the item was submitted with, exactly the bindings
+    // `CommitWorkItemResult` later requires of a terminal outcome bundle.
+    let metadata = props.get("metadata").and_then(serde_json::Value::as_object);
+    let context = props.get("context").and_then(serde_json::Value::as_object);
+    let capability_digest = identity_text(metadata, "capability_digest");
+    let delegation_id = identity_text(metadata, "delegation_id");
+    let selected_agent_id = identity_text(metadata, "agent_id");
+    let delegator_id = identity_text(context, "agent_id");
+    let catalog_digest = identity_text(Some(&props), "catalog_digest");
+    let model_digest = identity_text(Some(&props), "model_digest");
+    let policy_digest = identity_text(Some(&props), "policy_digest");
     write_work_item_props(nodes, transitions, graph, &node_id, &mut props, crypto)?;
     work_item_capability::record_native_claim_in_wtx(
         native_work_items,
@@ -406,6 +436,13 @@ fn apply_claimed_work_item(
         max_attempts: Some(max_attempts),
         tenant_in_flight: Some(u64::from(inflight.saturating_add(1))),
         changed_work_item_ids,
+        capability_digest,
+        catalog_digest,
+        model_digest,
+        policy_digest,
+        delegator_id,
+        selected_agent_id,
+        delegation_id,
     })
 }
 

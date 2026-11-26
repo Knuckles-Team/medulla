@@ -152,6 +152,25 @@ pub struct ClaimWorkItemResult {
     #[serde(deserialize_with = "deserialize_required_option")]
     pub tenant_in_flight: Option<u64>,
     pub changed_work_item_ids: Vec<String>,
+    /// The identity digests the item was submitted with, read from the stored
+    /// item at claim time. Present only on a claimed item that carries them (a
+    /// native run); a worker commits its trace bundle against exactly these.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capability_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub catalog_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
+    /// The delegating agent (the item's `context.agent_id`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delegator_id: Option<String>,
+    /// The agent selected to run it (the item's `metadata.agent_id`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delegation_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
