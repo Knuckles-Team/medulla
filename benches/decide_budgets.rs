@@ -2324,6 +2324,47 @@ fn bench_skill_evolution(
     });
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R654.6
+/// The `decide/skill_evolution_paired_bootstrap` group (MEDULLA-DECISION-ENGINE-R654.6, R178.1):
+/// `paired_rollout_evidence` over 200 pairs per arm, the bootstrap lower bound of a skill
+/// revision's rollout set. The default budgets of `benches/baselines/decide.json` apply.
+fn bench_paired_rollouts(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
+    use medulla_decision_stats::decision::promotion::paired_rollout_evidence;
+    use medulla_decision_types::decision::skill_evolution::{
+        Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
+    };
+    let set = RolloutSet {
+        schema_version: ROLLOUT_SET_SCHEMA_VERSION,
+        program_ref: "skill-program".to_string(),
+        challenger_ref: "revision:skill-v1".to_string(),
+        champion_ref: Some("revision:skill-v0".to_string()),
+        rollouts: BoundedVec::new(
+            (0..200u64)
+                .map(|index| Rollout {
+                    seed: index % 5,
+                    task_id: format!("task-{index}"),
+                    challenger_score_ppm: Some(600_000 + (index as u32 % 7) * 20_000),
+                    champion_score_ppm: Some(600_000 + (index as u32 % 3) * 10_000),
+                    trace_ref: format!("trace-{index}"),
+                })
+                .collect(),
+        )
+        .unwrap(),
+    };
+    let policy = DecisionPolicy::engine_default();
+    let evidence = || {
+        black_box(paired_rollout_evidence(black_box(&set), black_box(&policy)));
+    };
+    assert_eq!(paired_rollout_evidence(&set, &policy).case_count, 200);
+    let mut group = c.benchmark_group("decide/skill_evolution_paired_bootstrap");
+    group.bench_function("evidence", |b| b.iter(evidence));
+    group.finish();
+    report.insert(
+        "decide/skill_evolution_paired_bootstrap".to_string(),
+        report_entry(REPORT_SAMPLES, evidence),
+    );
+}
+
 /// Facts the `decide/memory_scaling` group loads at its smallest size (N).
 const MEMORY_SCALING_BASE: usize = 100_000;
 /// Recalls timed at each corpus size.
@@ -3163,6 +3204,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_served_kernels(c, &rt, &mut report);
     bench_belief_revision(c, &rt, &mut report);
     bench_skill_evolution(c, &rt, &mut report);
+    bench_paired_rollouts(c, &mut report);
     bench_memory_scaling(c, &rt, &mut report);
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);

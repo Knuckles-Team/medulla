@@ -659,3 +659,88 @@ async fn rollout_evidence_reads_back_field_for_field() {
         assert!(facts.contains(&expected.as_str()), "{expected} in {facts:?}");
     }
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R654.6: the skill-evolution journey records
+/// 200 paired rollouts for each of two revisions, decides each as a promotion,
+/// moves the champion to each in turn, and rolls the second back to the first.
+// spec: MEDULLA-DECISION-ENGINE-R654.6
+#[tokio::test]
+async fn served_skill_evolution_journey() {
+    use super::learning_tests::{activate, pointer_state};
+    use super::path_preference_tests::pins;
+    use super::promotion_tests::{commit, promotion_request};
+    use super::retrieval_tests::learn;
+    use medulla_decision_outcome_types::decision::promotion::RevisionSubject;
+    use medulla_decision_stats::decision::promotion::rollout_set_digest;
+    use medulla_decision_types::decision::skill_evolution::{
+        Rollout, ROLLOUT_SET_SCHEMA_VERSION,
+    };
+    use medulla_decision_types::decision::statistical::retrieval::{
+        LearningRecorded, LearningWrite, PointerMovement, PointerRef,
+    };
+
+    const PAIRS: u64 = 200;
+    let h = Harness::new().await;
+    let pinned = pins(&h, TENANT);
+    let subject = RevisionSubject::Program {
+        program_ref: "skill-program".to_owned(),
+    };
+    let champion = PointerRef::Champion {
+        subject: subject.clone(),
+    };
+    let paired = |challenger: &str, gain_ppm: u32| RolloutSet {
+        schema_version: ROLLOUT_SET_SCHEMA_VERSION,
+        program_ref: "skill-program".to_owned(),
+        challenger_ref: challenger.to_owned(),
+        champion_ref: Some("revision:skill-v0".to_owned()),
+        rollouts: BoundedVec::new(
+            (0..PAIRS)
+                .map(|index| Rollout {
+                    seed: index % 5,
+                    task_id: format!("task-{index}"),
+                    challenger_score_ppm: Some(600_000 + gain_ppm),
+                    champion_score_ppm: Some(600_000),
+                    trace_ref: format!("trace-{index}"),
+                })
+                .collect(),
+        )
+        .unwrap(),
+    };
+
+    let mut promoted = Vec::new();
+    for (target, gain) in [("revision:skill-v1", 120_000), ("revision:skill-v2", 150_000)] {
+        let set = paired(target, gain);
+        let digest = rollout_set_digest(&set);
+        let LearningRecorded::Rollouts(evidence) = learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap() else {
+            panic!("rollouts answer their evidence");
+        };
+        assert_eq!(evidence.case_count, PAIRS);
+
+        let record = decide(&h, promotion_request(&pinned.0, &subject, &digest, target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+        assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
+        assert!(facts.contains(&"rollout.pairs=200"), "{facts:?}");
+        commit(&h, &record).await;
+        let state = pointer_state(&h, champion.clone(), activate(target, &record.record_id))
+            .await
+            .unwrap();
+        assert_eq!(state.target(), Some(target));
+        promoted.push(target);
+    }
+
+    let restored = pointer_state(&h, champion, PointerMovement::Rollback)
+        .await
+        .unwrap();
+    assert_eq!(restored.target(), Some(promoted[0]));
+}
