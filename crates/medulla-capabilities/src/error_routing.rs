@@ -1553,6 +1553,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CATALOG_QUERY_EMPTY",
         ],
     ),
+    // MEDULLA-DECISION-ENGINE-R617.9: the participant surface's refusals.
+    (
+        "Participant",
+        &[
+            "PARTICIPANT_KIND_INVALID",
+            "MEMBERSHIP_SESSION_UNKNOWN",
+            "PARTICIPANT_NOT_VISIBLE",
+            "OBSERVER_NOT_PERMITTED",
+            "SCOPE_NOT_VISIBLE",
+            "SCOPE_SESSION_LIMIT",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
     (
         "AssistantProfile",

@@ -450,6 +450,7 @@ mod tests {
             support_count: 0,
             token_estimate: 0,
             attachments: Vec::new(),
+            speaker: None,
             schema_version: 1,
         }
     }

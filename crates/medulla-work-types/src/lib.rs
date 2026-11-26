@@ -28,6 +28,7 @@ pub mod worker_registry;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod memory;
 // MEDULLA-DECISION-ENGINE-R617.7 — the participant record of a session.
+pub mod memory_scope;
 pub mod participant;
 // CONCEPT:INT-P2-1 — the durable analytics-job plane's wire op (`JobOp`), gated
 // `jobs`. Lives here (not in `medulla-jobs`, which sits ABOVE medulla-core in the DAG) for the

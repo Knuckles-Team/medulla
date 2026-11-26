@@ -51,6 +51,10 @@ pub struct TranscriptMessage {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub narrative_time_ms: Option<i64>,
     pub text: String,
+    /// The participant who spoke the turn; absent when the source names no speaker
+    /// (MEDULLA-DECISION-ENGINE-R617.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<medulla_work_types::participant::ParticipantId>,
     #[serde(default)]
     pub concept_refs: Vec<String>,
     pub provenance: TranscriptProvenance,
@@ -372,6 +376,7 @@ mod tests {
             storage_time_ms: 1_700_000_005_000,
             narrative_time_ms: None,
             text: "hello".into(),
+            speaker: None,
             concept_refs: vec!["concept:greeting".into()],
             provenance: TranscriptProvenance {
                 source_record_id: "s1/m1".into(),

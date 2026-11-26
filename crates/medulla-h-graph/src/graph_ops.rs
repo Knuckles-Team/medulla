@@ -48,6 +48,8 @@ mod discover_generation_tests;
 mod observation_state_tests;
 #[cfg(test)]
 mod participant_memory_tests;
+// MEDULLA-DECISION-ENGINE-R617.9 — served participant writes.
+mod participant_surface;
 // MEDULLA-BRANCH-MERGE-R001 — served branch registry.
 #[cfg(feature = "redb")]
 pub mod branch;

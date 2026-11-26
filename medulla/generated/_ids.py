@@ -609,6 +609,7 @@ METHOD_IDS = frozenset(
         "WalletKeyTrustGet",
         "WorkflowRegistry",
         "AssistantProfile",
+        "Participant",
         "WorldTransform",
         "ApproveEntityLink",
         "ArchitectureModelExport",

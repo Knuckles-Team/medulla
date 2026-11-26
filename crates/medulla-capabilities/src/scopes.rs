@@ -222,6 +222,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("ops:admin", Admin, "graph-os"),
     entry("ops:read", Admin, "graph-os"),
     entry("owl:read", User, "engine"),
+    entry("participant:write", User, "engine"),
     entry("policy:capture-write", Domain, "engine"),
     entry("policy:read", User, "graph-os"),
     entry("profile:write", User, "engine"),

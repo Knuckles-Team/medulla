@@ -117,6 +117,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "RetrievalFeedbackRecord": query.send_retrieval_feedback_record,
     "Asr": ingestion.send_asr,
     "AssistantProfile": coordination.send_assistant_profile,
+    "Participant": coordination.send_participant,
     "AuditAppend": security.send_audit_append,
     "AuditProveInclusion": security.send_audit_prove_inclusion,
     "AuditReadEvent": security.send_audit_read_event,

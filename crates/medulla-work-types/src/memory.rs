@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use sha2::{Digest, Sha256};
 
+use crate::participant::ParticipantId;
 use medulla_types::refusal_code::RefusalCode;
 use medulla_types::{contract::Digest256, contract::ResourceId, contract::TenantId};
 
@@ -197,6 +198,22 @@ pub struct ConversationMessage {
     pub timestamp_ms: i64,
     /// The message text.
     pub text: String,
+    /// The participant who spoke the turn; absent when the source names no speaker
+    /// (MEDULLA-DECISION-ENGINE-R617.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<ParticipantId>,
+}
+
+/// Where a conversation's thread is stored: the thread node and the workspace its participants
+/// live in (MEDULLA-DECISION-ENGINE-R617.8).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ThreadAnchor {
+    /// The graph node id of the committed transcript thread.
+    pub thread_node_id: String,
+    /// The workspace of the thread's participants: the thread's connector.
+    pub workspace: ResourceId,
 }
 
 /// A chat log parsed into ordered, provenance-keyed messages; the ingest
@@ -209,6 +226,10 @@ pub struct ConversationRecord {
     pub conversation_id: ResourceId,
     /// The messages in source order.
     pub messages: Vec<ConversationMessage>,
+    /// Where the committed thread is stored; present when the conversation came from an ingested
+    /// transcript, and the memberships of its speakers are written against it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread_anchor: Option<ThreadAnchor>,
 }
 
 impl ConversationRecord {
@@ -232,6 +253,7 @@ impl ConversationRecord {
             tenant,
             conversation_id,
             messages,
+            thread_anchor: None,
         })
     }
 
@@ -271,6 +293,7 @@ impl ConversationRecord {
                     support_count: 0,
                     token_estimate: u32::try_from(message.text.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
                     attachments: Vec::new(),
+                    speaker: message.speaker.clone(),
                     schema_version: MEMORY_RECORD_SCHEMA_VERSION,
                 })
             })
@@ -351,6 +374,7 @@ impl ProjectRules {
                     support_count: 0,
                     token_estimate: u32::try_from(fact.rule.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
                     attachments: Vec::new(),
+                    speaker: None,
                     schema_version: MEMORY_RECORD_SCHEMA_VERSION,
                 })
             })
@@ -623,6 +647,10 @@ pub struct MemoryRecord {
     pub token_estimate: u32,
     #[serde(default)]
     pub attachments: Vec<MediaAttachment>,
+    /// The participant who spoke the turn this record holds
+    /// (MEDULLA-DECISION-ENGINE-R617.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<ParticipantId>,
     #[serde(default = "default_memory_schema_version")]
     pub schema_version: u16,
 }
@@ -1055,6 +1083,7 @@ impl SessionNoteBody {
             support_count: 0,
             token_estimate: u32::try_from(self.content.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
             attachments: Vec::new(),
+            speaker: None,
             schema_version: MEMORY_RECORD_SCHEMA_VERSION,
         })
     }
@@ -1363,6 +1392,7 @@ mod tests {
             provenance_key: ResourceId::new(format!("prov:{id}")).unwrap(),
             timestamp_ms: 1_700_000_000_000,
             text: "hello".into(),
+            speaker: None,
         }
     }
 
@@ -1401,6 +1431,7 @@ mod tests {
                     byte_len: 4,
                     derivation_ids: vec![ResourceId::new("d1").unwrap()],
                 }],
+                speaker: None,
                 schema_version: MEMORY_RECORD_SCHEMA_VERSION,
             };
             let props = record.to_props();
@@ -1458,6 +1489,7 @@ mod tests {
             support_count: 0,
             token_estimate: 3,
             attachments: vec![attachment.clone()],
+            speaker: None,
             schema_version: MEMORY_RECORD_SCHEMA_VERSION,
         };
         let props = record.to_props();

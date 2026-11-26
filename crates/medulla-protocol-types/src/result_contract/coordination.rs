@@ -305,6 +305,10 @@ method_results! {
     HarnessEditGet(HarnessEdit / "get") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     ObservationStatePut(ObservationState / "put") => Raw<medulla_work_types::observation_state::ObservationRecord>;
     ObservationStateGet(ObservationState / "get") => Raw<medulla_work_types::observation_state::ObservationRecord>;
+    ParticipantPut(Participant / "put") => Raw<medulla_work_types::participant::Participant>;
+    ParticipantAddMember(Participant / "add_member") => Raw<medulla_work_types::participant::Membership>;
+    ParticipantPutScope(Participant / "put_scope") => Raw<medulla_work_types::memory_scope::MemoryScope>;
+    ParticipantSetObservation(Participant / "set_observation") => Raw<medulla_work_types::memory_scope::ObservationConfig>;
     AssistantProfilePutProfile(AssistantProfile / "put_profile") => Raw<medulla_identity_types::assistant_profile::AssistantProfile>;
     AssistantProfilePutDocumentSet(AssistantProfile / "put_document_set") => Raw<medulla_identity_types::assistant_profile::DocumentSet>;
     AssistantProfileGetProfile(AssistantProfile / "get_profile") => Raw<medulla_identity_types::assistant_profile::AssistantProfile>;

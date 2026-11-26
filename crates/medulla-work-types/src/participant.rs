@@ -149,12 +149,74 @@ impl Participant {
 
     /// The stable IRI: `urn:medulla:participant:<workspace>:<slug>`.
     pub fn iri(&self) -> String {
-        format!(
-            "{PARTICIPANT_IRI_PREFIX}{}:{}",
-            self.workspace.as_str(),
-            self.participant_id.as_str()
-        )
+        participant_iri(&self.workspace, &self.participant_id)
     }
+}
+
+/// The stable IRI of a participant: `urn:medulla:participant:<workspace>:<slug>`.
+pub fn participant_iri(workspace: &ResourceId, participant_id: &ParticipantId) -> String {
+    format!("{PARTICIPANT_IRI_PREFIX}{}:{}", workspace.as_str(), participant_id.as_str())
+}
+
+/// The edge type from a transcript thread to a participant it holds
+/// (MEDULLA-DECISION-ENGINE-R617.8).
+pub const HAS_PARTICIPANT_EDGE: &str = "hasParticipant";
+/// The edge property: when the participant joined the session, in milliseconds.
+pub const ADDED_AT_PROPERTY: &str = "added_at_ms";
+
+/// One speaker's place in one session (MEDULLA-DECISION-ENGINE-R617.8): the `hasParticipant` edge
+/// from the session's transcript thread to the participant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct Membership {
+    /// The conversation (session) the participant joined.
+    pub session_id: String,
+    /// The participant that joined.
+    pub participant_id: ParticipantId,
+    /// The time of the participant's first turn in the session.
+    pub added_at_ms: i64,
+}
+
+/// The memberships a conversation implies: one per distinct speaker, in order of first appearance,
+/// stamped with that speaker's first turn. A turn without a speaker adds none. Pure; O(messages).
+pub fn membership_edges(conversation: &crate::memory::ConversationRecord) -> Vec<Membership> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut edges = Vec::new();
+    for message in &conversation.messages {
+        let Some(speaker) = &message.speaker else {
+            continue;
+        };
+        if seen.insert(speaker.clone()) {
+            edges.push(Membership {
+                session_id: conversation.conversation_id.as_str().to_owned(),
+                participant_id: speaker.clone(),
+                added_at_ms: message.timestamp_ms,
+            });
+        }
+    }
+    edges
+}
+
+/// One served write of the participant surface (MEDULLA-DECISION-ENGINE-R617.9). Every operation
+/// is a write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ParticipantOp {
+    /// Create a participant, or update its name and `acts_as`.
+    Put { participant: Participant },
+    /// Add a participant to a session. Idempotent on the pair.
+    AddMember {
+        /// The session (conversation) the participant joins.
+        session_id: String,
+        /// The participant that joins.
+        participant_id: ParticipantId,
+    },
+    /// Create or replace a memory scope (MEDULLA-DECISION-ENGINE-R651.9).
+    PutScope { scope: crate::memory_scope::MemoryScope },
+    /// Set a participant's observation flags in one session (MEDULLA-DECISION-ENGINE-R651.10).
+    SetObservation { config: crate::memory_scope::ObservationConfig },
 }
 
 #[derive(Deserialize)]
@@ -231,6 +293,41 @@ mod tests {
         let object = Participant::new("whiteboard", "tenant-a", "ws-1", ParticipantKind::Object, "Whiteboard", None, vec![]);
         assert!(object.is_ok());
         assert!(Participant::new("a", "tenant-a", "ws-1", ParticipantKind::Agent, "Agent", None, vec![]).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.8
+    #[test]
+    fn membership_edges_dedupe_speakers() {
+        use crate::memory::{ConversationMessage, ConversationRecord, MessageRole};
+        let turn = |id: &str, speaker: Option<&str>, at: i64| ConversationMessage {
+            message_id: ResourceId::new(id).unwrap(),
+            role: MessageRole::User,
+            provenance_key: ResourceId::new(id).unwrap(),
+            timestamp_ms: at,
+            text: "hello".to_string(),
+            speaker: speaker.map(|s| ParticipantId::new(s).unwrap()),
+        };
+        let conversation = ConversationRecord::new(
+            "tenant-a",
+            "session-1",
+            vec![
+                turn("m1", Some("ada-1"), 10),
+                turn("m2", None, 20),
+                turn("m3", Some("bo-2"), 30),
+                turn("m4", Some("ada-1"), 40),
+            ],
+        )
+        .unwrap();
+        let edges = membership_edges(&conversation);
+        assert_eq!(edges.len(), 2);
+        assert_eq!(edges[0].participant_id.as_str(), "ada-1");
+        assert_eq!(edges[0].added_at_ms, 10);
+        assert_eq!(edges[1].participant_id.as_str(), "bo-2");
+        assert!(edges.iter().all(|edge| edge.session_id == "session-1"));
+        // The speaker travels onto each memory record.
+        let records = conversation.to_memory_records().unwrap();
+        assert_eq!(records[0].speaker.as_ref().map(ParticipantId::as_str), Some("ada-1"));
+        assert!(records[1].speaker.is_none());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R617.7

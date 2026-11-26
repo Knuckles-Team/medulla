@@ -2611,6 +2611,7 @@ fn bench_memory_scaling(
             support_count: 0,
             token_estimate: 10,
             attachments: Vec::new(),
+            speaker: None,
             schema_version: MEMORY_RECORD_SCHEMA_VERSION,
         };
         let response = rt.block_on(dispatch(

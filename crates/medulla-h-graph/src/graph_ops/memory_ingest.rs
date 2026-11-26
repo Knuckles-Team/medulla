@@ -7,7 +7,8 @@
 //! memory write. Turns are sealed into episodes by `knob episodes.gap`
 //! (MEDULLA-DECISION-ENGINE-R155.3): a quiet period longer than the knob closes an episode, and
 //! the last run stays open, because a later turn may still extend it. The harness reads the
-//! memory back only through `MemoryRecall`.
+//! memory back only through `MemoryRecall`. A turn's speaker joins the thread as a member
+//! (`hasParticipant`, MEDULLA-DECISION-ENGINE-R617.8) in the same call.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -27,6 +28,9 @@ pub struct RememberedThread {
     pub records: usize,
     /// Episodes sealed or found sealed.
     pub episodes: usize,
+    /// Distinct speakers of the thread (MEDULLA-DECISION-ENGINE-R617.8); each is a member of the
+    /// thread once the write returns.
+    pub members: usize,
 }
 
 /// `knob episodes.gap` in milliseconds.
@@ -113,13 +117,23 @@ pub async fn remember_thread(
         return Err(super::memory_surface::absent_record(conversation.conversation_id.as_str()));
     }
     if conversation.messages.is_empty() {
-        return Ok(RememberedThread { records: 0, episodes: 0 });
+        return Ok(RememberedThread { records: 0, episodes: 0, members: 0 });
     }
+    // Every distinct speaker joins the thread before any turn is remembered, so a speaker that is
+    // not a stored participant refuses the whole write (MEDULLA-DECISION-ENGINE-R617.8).
+    let members = match &conversation.thread_anchor {
+        Some(anchor) => {
+            super::participant_surface::commit_memberships(ctx, anchor, conversation).await?;
+            medulla_work_types::participant::membership_edges(conversation).len()
+        }
+        None => 0,
+    };
     let embeddings = embed(conversation.messages.iter().map(|message| message.text.clone()).collect()).await?;
     let requests = thread_requests(conversation, embeddings, gap_ms())?;
     let summary = RememberedThread {
         records: requests.len(),
         episodes: requests.iter().filter(|request| request.episode.is_some()).count(),
+        members,
     };
     for request in requests {
         let method = Method::MemoryRemember { request: Box::new(request) };

@@ -46,7 +46,7 @@ fn set_unavailable(set_id: &str) -> String {
     )
 }
 
-fn node_blob<T: serde::Serialize>(
+pub(super) fn node_blob<T: serde::Serialize>(
     label: &str,
     tenant_scope: &str,
     object: &T,

@@ -918,6 +918,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MemoryRemember { .. }
         | Method::MemoryRecall { .. }
         | Method::MemoryExport { .. }
+        // MEDULLA-DECISION-ENGINE-R617.9: every operation commits one node or edge write.
+        | Method::Participant { .. }
         // MEDULLA-FEDERATED-QUERY-R724: a put commits as the one request-graph
         // `AddNode` upsert; a list commits nothing.
         | Method::SchemaProjections { .. }

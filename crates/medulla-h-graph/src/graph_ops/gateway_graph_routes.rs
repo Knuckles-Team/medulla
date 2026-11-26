@@ -32,6 +32,7 @@ enum Route {
     ProcessModelDeploy,
     ObservationState,
     MemorySurface,
+    Participant,
     ArchitectureExchange,
     Other,
 }
@@ -216,6 +217,9 @@ fn is_domain_pack(method: &Method) -> bool {
 fn is_retrieval_feedback(method: &Method) -> bool {
     matches!(method, Method::RetrievalFeedbackRecord { .. })
 }
+fn is_participant(method: &Method) -> bool {
+    matches!(method, Method::Participant { .. })
+}
 fn is_argument_map(method: &Method) -> bool {
     matches!(method, Method::ArgumentMapPut { .. })
 }
@@ -254,6 +258,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_process_model_deploy, Route::ProcessModelDeploy),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
+    (is_participant, Route::Participant),
     (is_architecture_exchange, Route::ArchitectureExchange),
 ];
 
@@ -287,6 +292,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::ProcessModelDeploy
         | Route::ObservationState
         | Route::MemorySurface
+        | Route::Participant
         | Route::ArchitectureExchange
         | Route::FinanceRecords
         | Route::WorkflowRegistry
@@ -406,6 +412,9 @@ async fn try_handle_admin(
         }
         Route::NlCorrection => {
             super::super::nl_correction::handle_correct(ctx, tenant_id, method).await
+        }
+        Route::Participant => {
+            super::super::participant_surface::handle(ctx, tenant_id, method).await
         }
         Route::ArchitectureExchange => {
             super::super::architecture_exchange::handle_import(ctx, tenant_id, method).await

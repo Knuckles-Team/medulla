@@ -3141,6 +3141,17 @@ decode_workflow_registry_read = contract_decoder(
 decode_workflow_registry_register = contract_decoder(
     "WorkflowRegistry", "WorkflowRegistrationEntry", "register"
 )
+send_participant = contract_sender("Participant", "MethodParticipantParams")
+decode_participant_put = contract_decoder("Participant", "Participant", "put")
+decode_participant_add_member = contract_decoder(
+    "Participant", "Membership", "add_member"
+)
+decode_participant_put_scope = contract_decoder(
+    "Participant", "MemoryScope", "put_scope"
+)
+decode_participant_set_observation = contract_decoder(
+    "Participant", "ObservationConfig", "set_observation"
+)
 send_assistant_profile = contract_sender(
     "AssistantProfile", "MethodAssistantProfileParams"
 )

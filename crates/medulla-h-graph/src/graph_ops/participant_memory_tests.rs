@@ -324,3 +324,292 @@ async fn racing_saves_of_one_revision_admit_exactly_one() {
     assert_eq!(stored.revision, 2);
     assert_eq!(stored.name, won[0].name);
 }
+
+/// Participant surface proofs (MEDULLA-DECISION-ENGINE-R617.8, R617.9). Each write is admitted by
+/// the served handler's admission, then applied as the one write the gateway commits; a refused
+/// write changes nothing.
+mod participant_surface_proofs {
+    use super::super::participant_surface::{admit, plan_memberships, scope_max_sessions, Out};
+    use super::{SCOPE_A, SCOPE_B};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_server_auth::access::requires_write;
+    use medulla_server_mutation::mutation::{apply_coalescable_write, GATEWAY_ROUTED};
+    use medulla_types::contract::{ResourceId, TenantId};
+    use medulla_work_types::memory::{ConversationMessage, ConversationRecord, MessageRole, ThreadAnchor};
+    use medulla_work_types::memory_scope::{MemoryScope, ObservationConfig};
+    use medulla_work_types::participant::{
+        participant_iri, Participant, ParticipantId, ParticipantKind, ParticipantOp,
+        PARTICIPANT_SCHEMA_VERSION,
+    };
+
+    fn participant(slug: &str, represents: &str, acts_as: &[&str], name: &str) -> Participant {
+        Participant {
+            participant_id: ParticipantId::new(slug).unwrap(),
+            tenant: TenantId::new("caller-supplied").unwrap(),
+            workspace: ResourceId::new("ws-main").unwrap(),
+            kind: ParticipantKind::Person,
+            display_name: name.into(),
+            represents: Some(represents.into()),
+            acts_as: acts_as.iter().map(|a| a.to_string()).collect(),
+            schema_version: PARTICIPANT_SCHEMA_VERSION,
+        }
+    }
+
+    /// Admit and apply one operation; the refusal text when it is refused, and whether it
+    /// committed a write.
+    fn serve(
+        core: &GraphCore,
+        scope: &str,
+        agent: &str,
+        op: ParticipantOp,
+    ) -> Result<(Out, bool), String> {
+        let admitted = admit(core, scope, agent, &op)?;
+        let committed = admitted.write.is_some();
+        if let Some(write) = &admitted.write {
+            apply_coalescable_write(core, write).unwrap();
+        }
+        Ok((admitted.out, committed))
+    }
+
+    /// A committed transcript thread node, as ingest writes it.
+    fn thread(core: &GraphCore, session: &str, connector: &str) -> String {
+        let id = format!("transcript-thread:{session}");
+        core.add_node(
+            id.clone(),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "Transcript",
+                "connector": connector,
+                "session_id": session,
+            }))
+            .unwrap(),
+        );
+        id
+    }
+
+    fn scope_of(id: &str, owner: &str, sessions: &[&str]) -> MemoryScope {
+        MemoryScope {
+            scope_id: id.into(),
+            tenant: "caller-supplied".into(),
+            name: "work".into(),
+            owner_principal: owner.into(),
+            session_ids: sessions.iter().map(|s| s.to_string()).collect(),
+            shared_with: Default::default(),
+            schema_version: 1,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.9
+    #[test]
+    fn participant_methods_are_served_and_classified() {
+        let method = Method::Participant {
+            op: Box::new(ParticipantOp::Put {
+                participant: participant("ada-1", "urn:person:ada", &["alice"], "Ada"),
+            }),
+        };
+        assert!(requires_write(&method));
+        assert!(GATEWAY_ROUTED.contains(&"Participant"));
+
+        let core = GraphCore::new();
+        let put = |name: &str, acts: &[&str], agent: &str, scope: &str| {
+            serve(
+                &core,
+                scope,
+                agent,
+                ParticipantOp::Put {
+                    participant: participant("ada-1", "urn:person:ada", acts, name),
+                },
+            )
+        };
+        // Created under the verified tenant, whatever tenant the caller wrote.
+        let (out, committed) = put("Ada", &["alice"], "alice", SCOPE_A).unwrap();
+        let Out::Participant(created) = out else {
+            panic!("a put answers a participant")
+        };
+        assert!(committed);
+        assert_eq!(created.tenant.as_str(), SCOPE_A);
+
+        // Replay of an equal body commits nothing.
+        let (_, committed) = put("Ada", &["alice"], "alice", SCOPE_A).unwrap();
+        assert!(!committed);
+
+        // A different body updates the name and acts_as only.
+        let (out, committed) = put("Ada L.", &["alice", "bob"], "alice", SCOPE_A).unwrap();
+        let Out::Participant(updated) = out else {
+            panic!("a put answers a participant")
+        };
+        assert!(committed);
+        assert_eq!(updated.display_name, "Ada L.");
+        assert_eq!(updated.acts_as, vec!["alice".to_string(), "bob".to_string()]);
+
+        // The kind and represents are immutable.
+        let mut other_kind = participant("ada-1", "urn:person:ada", &["alice"], "Ada");
+        other_kind.kind = ParticipantKind::Agent;
+        let refused = serve(&core, SCOPE_A, "alice", ParticipantOp::Put { participant: other_kind })
+            .err()
+            .unwrap();
+        assert!(refused.starts_with("PARTICIPANT_KIND_INVALID: "), "{refused}");
+
+        // Cross-tenant negative: another tenant neither updates it nor overwrites its node, and
+        // the refusal is the non-disclosing envelope; so is a principal that does not act as it.
+        let foreign = put("Hijack", &["mallory"], "mallory", SCOPE_B).unwrap_err();
+        assert!(foreign.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{foreign}");
+        let not_acting = put("Hijack", &["mallory"], "mallory", SCOPE_A).unwrap_err();
+        assert!(not_acting.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{not_acting}");
+
+        // AddMember: needs a session with a thread; idempotent on the pair.
+        let join = |session: &str, scope: &str, agent: &str| {
+            serve(
+                &core,
+                scope,
+                agent,
+                ParticipantOp::AddMember {
+                    session_id: session.into(),
+                    participant_id: ParticipantId::new("ada-1").unwrap(),
+                },
+            )
+        };
+        let unknown = join("chat-9", SCOPE_A, "alice").unwrap_err();
+        assert!(unknown.starts_with("MEMBERSHIP_SESSION_UNKNOWN: "), "{unknown}");
+        let thread_id = thread(&core, "chat-9", "ws-main");
+        let iri = participant_iri(
+            &ResourceId::new("ws-main").unwrap(),
+            &ParticipantId::new("ada-1").unwrap(),
+        );
+        let (_, committed) = join("chat-9", SCOPE_A, "alice").unwrap();
+        assert!(committed);
+        assert!(core.has_edge(&thread_id, &iri));
+        let (_, committed) = join("chat-9", SCOPE_A, "alice").unwrap();
+        assert!(!committed);
+        // The other tenant cannot add the participant.
+        let other_tenant = join("chat-9", SCOPE_B, "alice").unwrap_err();
+        assert!(other_tenant.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{other_tenant}");
+
+        // PutScope: the owner saves; another principal cannot change it; the session limit comes
+        // from the knob.
+        let (out, _) = serve(
+            &core,
+            SCOPE_A,
+            "alice",
+            ParticipantOp::PutScope { scope: scope_of("sc-1", "alice", &["chat-9"]) },
+        )
+        .unwrap();
+        let Out::Scope(saved) = out else {
+            panic!("a scope put answers a scope")
+        };
+        assert_eq!(saved.tenant, SCOPE_A);
+        let not_owner = serve(
+            &core,
+            SCOPE_A,
+            "bob",
+            ParticipantOp::PutScope { scope: scope_of("sc-1", "bob", &["chat-9"]) },
+        )
+        .err()
+        .unwrap();
+        assert!(not_owner.starts_with("SCOPE_NOT_VISIBLE: "), "{not_owner}");
+        let too_many: Vec<String> = (0..=scope_max_sessions()).map(|n| format!("s{n}")).collect();
+        let refs: Vec<&str> = too_many.iter().map(String::as_str).collect();
+        let limit = serve(
+            &core,
+            SCOPE_A,
+            "alice",
+            ParticipantOp::PutScope { scope: scope_of("sc-2", "alice", &refs) },
+        )
+        .err()
+        .unwrap();
+        assert!(limit.starts_with("SCOPE_SESSION_LIMIT: "), "{limit}");
+
+        // SetObservation: a principal acting as the participant, or the scope owner of the
+        // session, may set it; anyone else is refused.
+        let config = ObservationConfig {
+            session_id: "chat-9".into(),
+            participant_id: ParticipantId::new("ada-1").unwrap(),
+            observe_self: true,
+            observe_others: true,
+        };
+        let set = |agent: &str| {
+            serve(
+                &core,
+                SCOPE_A,
+                agent,
+                ParticipantOp::SetObservation { config: config.clone() },
+            )
+        };
+        assert!(set("bob").is_ok());
+        let stranger = set("carol").unwrap_err();
+        assert!(stranger.starts_with("OBSERVER_NOT_PERMITTED: "), "{stranger}");
+        let (_, committed) = set("alice").unwrap();
+        assert!(!committed);
+    }
+
+    fn two_speaker_thread(tenant: &str) -> ConversationRecord {
+        let turn = |id: &str, speaker: &str, at: i64| ConversationMessage {
+            message_id: ResourceId::new(id).unwrap(),
+            role: MessageRole::User,
+            provenance_key: ResourceId::new(format!("src:{id}")).unwrap(),
+            timestamp_ms: at,
+            text: format!("turn {id}"),
+            speaker: Some(ParticipantId::new(speaker).unwrap()),
+        };
+        let mut conversation = ConversationRecord::new(
+            tenant,
+            "chat-9",
+            vec![turn("m1", "ada-1", 10), turn("m2", "bo-2", 20), turn("m3", "ada-1", 30)],
+        )
+        .unwrap();
+        conversation.thread_anchor = Some(ThreadAnchor {
+            thread_node_id: "transcript-thread:chat-9".into(),
+            workspace: ResourceId::new("ws-main").unwrap(),
+        });
+        conversation
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.8
+    #[test]
+    fn ingest_adds_speakers_as_members() {
+        let core = GraphCore::new();
+        let thread_id = thread(&core, "chat-9", "ws-main");
+        for (slug, name) in [("ada-1", "Ada"), ("bo-2", "Bo")] {
+            serve(
+                &core,
+                SCOPE_A,
+                "alice",
+                ParticipantOp::Put {
+                    participant: participant(slug, &format!("urn:person:{slug}"), &["alice"], name),
+                },
+            )
+            .unwrap();
+        }
+        let conversation = two_speaker_thread(SCOPE_A);
+        let anchor = conversation.thread_anchor.clone().unwrap();
+        // Two distinct speakers write two edges in one batch.
+        let (write, _) = plan_memberships(&core, SCOPE_A, &anchor, &conversation).unwrap().unwrap();
+        let Method::BatchUpdate { operations_msgpack } = &write else {
+            panic!("memberships are one batch")
+        };
+        medulla_graph_algos::algorithms::batch_update(&core, operations_msgpack).unwrap();
+        for slug in ["ada-1", "bo-2"] {
+            let iri = participant_iri(&anchor.workspace, &ParticipantId::new(slug).unwrap());
+            assert!(core.has_edge(&thread_id, &iri), "{slug}");
+        }
+        // A replay writes nothing: every speaker is already a member.
+        assert!(plan_memberships(&core, SCOPE_A, &anchor, &conversation).unwrap().is_none());
+
+        // Each record carries its speaker.
+        let embeddings = vec![vec![0.0f32]; conversation.messages.len()];
+        let requests = super::super::memory_ingest::thread_requests(&conversation, embeddings, 30 * 60_000).unwrap();
+        let speakers: Vec<Option<&str>> = requests
+            .iter()
+            .map(|request| request.record.speaker.as_ref().map(ParticipantId::as_str))
+            .collect();
+        assert_eq!(speakers, vec![Some("ada-1"), Some("bo-2"), Some("ada-1")]);
+
+        // Cross-tenant negative: another tenant finds neither participant, so no edge is planned
+        // and the refusal is the one an absent speaker gets.
+        let other = two_speaker_thread(SCOPE_B);
+        let refused = plan_memberships(&GraphCore::new(), SCOPE_B, &anchor, &other).unwrap_err();
+        assert!(refused.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{refused}");
+        let foreign = plan_memberships(&core, SCOPE_B, &anchor, &other).unwrap_err();
+        assert_eq!(foreign, refused);
+    }
+}

@@ -178,12 +178,24 @@ pub fn conversation_of(
                 )?,
                 timestamp_ms: message.event_time_ms,
                 text: message.text.clone(),
+                speaker: message.speaker.clone(),
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    ConversationRecord::new(tenant, conversation.as_str(), messages)
-        .map(Some)
-        .map_err(invalid)
+    let mut record = ConversationRecord::new(tenant, conversation.as_str(), messages).map_err(invalid)?;
+    // The memberships of the speakers hang off the thread node this batch commits, in the
+    // workspace its connector names (MEDULLA-DECISION-ENGINE-R617.8).
+    let thread_id = thread_identity(
+        tenant,
+        decoded.thread.connector.as_str(),
+        decoded.thread.stream.as_str(),
+        &decoded.thread.session_id,
+    )?;
+    record.thread_anchor = Some(medulla_work_types::memory::ThreadAnchor {
+        thread_node_id: format!("transcript-thread:{thread_id}"),
+        workspace: decoded.thread.connector.clone(),
+    });
+    Ok(Some(record))
 }
 
 /// The methods of one validated transcripts batch, in write order.
@@ -249,6 +261,9 @@ pub(super) fn transcript_methods(
             serde_json::to_value(message.role).map_err(invalid)?,
         );
         properties.insert("text".into(), message.text.clone().into());
+        if let Some(speaker) = &message.speaker {
+            properties.insert("speaker".into(), speaker.as_str().into());
+        }
         for (key, value) in super::permissions::restricted_read_access(TRANSCRIPT_READ_ACTION) {
             properties.insert(key.into(), value);
         }
@@ -579,6 +594,7 @@ mod tests {
             storage_time_ms: storage,
             narrative_time_ms: None,
             text: format!("text of {id}"),
+            speaker: None,
             concept_refs: vec!["concept-a".into()],
             provenance: TranscriptProvenance {
                 source_record_id: format!("record-{id}"),

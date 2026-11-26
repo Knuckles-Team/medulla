@@ -20,6 +20,11 @@ $($variants)*
     HarnessEdit {
         op: Box<medulla_work_types::harness_edit::HarnessEditOp>,
     },
+    /// Participants, session membership, memory scopes and observation
+    /// settings: every operation is a write (MEDULLA-DECISION-ENGINE-R617.9).
+    Participant {
+        op: Box<medulla_work_types::participant::ParticipantOp>,
+    },
     PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 

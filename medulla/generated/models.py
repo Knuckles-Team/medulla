@@ -16482,6 +16482,19 @@ class MethodAssistantProfile(BaseModel):
     params: MethodAssistantProfileParams
 
 
+class MethodParticipantParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: ParticipantOp
+
+
+class MethodParticipant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Participant"]
+    params: MethodParticipantParams
+
+
 class MethodBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17754,6 +17767,7 @@ Method = Annotated[
         MethodSyncMemorySnapshotStore,
         MethodWalletKeyTrustGet,
         MethodAssistantProfile,
+        MethodParticipant,
         MethodWorkflowRegistry,
         MethodBatch,
         MethodFinanceAccountProject,
@@ -36857,6 +36871,92 @@ AssistantProfileList = list[AssistantProfile]
 DocumentSetList = list[DocumentSet]
 
 
+class ParticipantKind(str, Enum):
+    PERSON = "person"
+    AGENT = "agent"
+    OBJECT = "object"
+
+
+class Participant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    participant_id: str
+    tenant: str
+    workspace: str
+    kind: ParticipantKind
+    display_name: str
+    represents: str | None
+    acts_as: list[str]
+    schema_version: int
+
+
+class Membership(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    session_id: str
+    participant_id: str
+    added_at_ms: int
+
+
+class MemoryScope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope_id: str
+    tenant: str
+    name: str
+    owner_principal: str
+    session_ids: list[str]
+    shared_with: list[str] = Field(default_factory=list)
+    schema_version: int
+
+
+class ObservationConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    session_id: str
+    participant_id: str
+    observe_self: bool
+    observe_others: bool
+
+
+class ParticipantOpPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put"]
+    participant: Participant
+
+
+class ParticipantOpAddMember(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["add_member"]
+    session_id: str
+    participant_id: str
+
+
+class ParticipantOpPutScope(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put_scope"]
+    scope: MemoryScope
+
+
+class ParticipantOpSetObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["set_observation"]
+    config: ObservationConfig
+
+
+ParticipantOp = Annotated[
+    ParticipantOpPut
+    | ParticipantOpAddMember
+    | ParticipantOpPutScope
+    | ParticipantOpSetObservation,
+    Field(discriminator="op"),
+]
+
+
 ActionRefusal = Annotated[
     ActionRefusalCriterionFailed
     | ActionRefusalUnknownParameter
@@ -40221,6 +40321,7 @@ class MemoryRecord(BaseModel):
     provenance_key: str | None = None
     schema_version: Annotated[int, Field(ge=0)] = 1
     session_id: str | None = None
+    speaker: str | None = None
     support_count: Annotated[int, Field(ge=0)] = 0
     tenant: str
     text: str
@@ -45668,6 +45769,8 @@ __all__ = [
     "MethodAsrParams",
     "MethodAssistantProfile",
     "MethodAssistantProfileParams",
+    "MethodParticipant",
+    "MethodParticipantParams",
     "MethodAuditAppend",
     "MethodAuditAppendParams",
     "MethodAuditProveInclusion",
@@ -46813,6 +46916,12 @@ __all__ = [
     "ModalityFacts",
     "ModeTransition",
     "ModelHints",
+    "MemoryScope",
+    "Membership",
+    "ObservationConfig",
+    "Participant",
+    "ParticipantKind",
+    "ParticipantOp",
     "ModelInputCapabilities",
     "ModelInputMediaType",
     "ModelPolicyVersion",

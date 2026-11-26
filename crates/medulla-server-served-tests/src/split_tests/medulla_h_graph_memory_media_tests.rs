@@ -182,6 +182,7 @@ mod served {
             support_count: 0,
             token_estimate: 10,
             attachments: attachment.into_iter().collect(),
+            speaker: None,
             schema_version: MEMORY_RECORD_SCHEMA_VERSION,
         }
     }

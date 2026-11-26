@@ -131,6 +131,8 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         // MEDULLA-DECISION-ENGINE-R651.3: a remember writes one node; recall and export read.
         Method::MemoryRemember { .. } => Some(true),
         Method::MemoryRecall { .. } | Method::MemoryExport { .. } => Some(false),
+        // MEDULLA-DECISION-ENGINE-R617.9: every participant operation writes.
+        Method::Participant { .. } => Some(true),
         Method::SchemaProjections { op } => Some(op.is_mutation()),
         Method::DomainPack { op } => Some(op.is_mutation()),
         Method::FleetCatalog { op } => Some(op.is_mutation()),

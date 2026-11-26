@@ -287,6 +287,7 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "ObservationState",
     "HarnessEdit",
     "MemoryRemember",
+    "Participant",
     // MEDULLA-FEDERATED-QUERY-R724: `put` writes; `list` is a graph read.
     "SchemaProjections",
     "DomainPack",
@@ -490,6 +491,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "HarnessEdit",
     "MemoryRemember",
     "NlQueryCorrect",
+    "Participant",
     // MEDULLA-FEDERATED-QUERY-R724: a boundary put self-translates into the one
     // `Method::AddNode` upsert, which carries the durable effect.
     "SchemaProjections",
@@ -802,6 +804,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "HarnessEdit",
     "MemoryRemember",
     "NlQueryCorrect",
+    "Participant",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -895,6 +898,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "HarnessEdit",
     "MemoryRemember",
     "NlQueryCorrect",
+    "Participant",
     "SchemaProjections",
     "DomainPack",
     "FinanceRecordPut",
@@ -998,6 +1002,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "HarnessEdit",
     "MemoryRemember",
     "NlQueryCorrect",
+    "Participant",
     "FinanceRecordPut",
     "FinanceAlertRaise",
     "FinanceFactorRecord",
@@ -1040,6 +1045,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "HarnessEdit",
     "MemoryRemember",
     "NlQueryCorrect",
+    "Participant",
     "SchemaProjections",
     "DomainPack",
     "FinanceRecordPut",

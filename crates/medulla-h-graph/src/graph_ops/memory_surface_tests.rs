@@ -36,6 +36,7 @@ fn record(tenant: &str, id: &str, tier: MemoryTier, text: &str) -> MemoryRecord 
         support_count: 0,
         token_estimate: 10,
         attachments: Vec::new(),
+        speaker: None,
         schema_version: MEMORY_RECORD_SCHEMA_VERSION,
     }
 }
@@ -876,6 +877,7 @@ fn chat(tenant: &str, turns: &[(&str, MessageRole, i64)]) -> ConversationRecord 
                 provenance_key: ResourceId::new(format!("src:{id}")).unwrap(),
                 timestamp_ms: *at,
                 text: format!("note {id}"),
+                speaker: None,
             })
             .collect(),
     )

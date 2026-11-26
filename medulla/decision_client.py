@@ -1223,6 +1223,84 @@ def document_set_wire(
     }
 
 
+def participant_wire(
+    *,
+    participant_id: str,
+    workspace: str,
+    kind: str,
+    display_name: str,
+    represents: str | None = None,
+    acts_as: Sequence[str] = (),
+    tenant: str = "tenant",
+) -> dict[str, Any]:
+    """A ``Participant`` in Rust field order. ``kind`` is ``person``, ``agent``
+    or ``object``; a person or agent carries ``represents``. The engine stamps
+    the caller's tenant."""
+    return {
+        "participant_id": participant_id,
+        "tenant": tenant,
+        "workspace": workspace,
+        "kind": kind,
+        "display_name": display_name,
+        "represents": represents,
+        "acts_as": list(acts_as),
+        "schema_version": 1,
+    }
+
+
+def put_participant_op(participant: Mapping[str, Any]) -> dict[str, Any]:
+    return {"op": "put", "participant": dict(participant)}
+
+
+def add_member_op(session_id: str, participant_id: str) -> dict[str, Any]:
+    return {
+        "op": "add_member",
+        "session_id": session_id,
+        "participant_id": participant_id,
+    }
+
+
+def put_scope_op(
+    *,
+    scope_id: str,
+    name: str,
+    owner_principal: str,
+    session_ids: Sequence[str] = (),
+    shared_with: Sequence[str] = (),
+    tenant: str = "tenant",
+) -> dict[str, Any]:
+    return {
+        "op": "put_scope",
+        "scope": {
+            "scope_id": scope_id,
+            "tenant": tenant,
+            "name": name,
+            "owner_principal": owner_principal,
+            "session_ids": sorted(set(session_ids)),
+            "shared_with": sorted(set(shared_with)),
+            "schema_version": 1,
+        },
+    }
+
+
+def set_observation_op(
+    session_id: str,
+    participant_id: str,
+    *,
+    observe_self: bool = True,
+    observe_others: bool = False,
+) -> dict[str, Any]:
+    return {
+        "op": "set_observation",
+        "config": {
+            "session_id": session_id,
+            "participant_id": participant_id,
+            "observe_self": observe_self,
+            "observe_others": observe_others,
+        },
+    }
+
+
 def put_profile_op(profile: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "put_profile", "profile": dict(profile)}
 
@@ -1518,6 +1596,18 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def participant(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``Participant``: put a participant, add a session member, put a
+        memory scope or set a participant's observation flags."""
+        from medulla.generated.coordination import send_participant
+
+        result = await send_participant(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
     async def semantic_enrich(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
@@ -1731,6 +1821,7 @@ __all__ = [
     "TASK_PLAN_FEATURE_SCHEMA",
     "DecisionClient",
     "DeclaredOption",
+    "add_member_op",
     "aggregate_op",
     "assistant_profile_wire",
     "belief_revise_request",
@@ -1759,9 +1850,12 @@ __all__ = [
     "library",
     "named_evaluator",
     "param",
+    "participant_wire",
     "profile_share",
     "put_document_set_op",
+    "put_participant_op",
     "put_profile_op",
+    "put_scope_op",
     "q32_of",
     "record_measured_fact",
     "record_outcome_op",
@@ -1771,6 +1865,7 @@ __all__ = [
     "propose_rule_op",
     "approve_rule_op",
     "revoke_rule_op",
+    "set_observation_op",
     "task_plan_request",
     "verify_task_plan_receipt",
     "usage_append_op",

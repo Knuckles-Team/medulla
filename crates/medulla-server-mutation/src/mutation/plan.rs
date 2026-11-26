@@ -156,6 +156,9 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     // MEDULLA-DECISION-ENGINE-R651.3: a remember commits one memory node through
     // this gateway; recall and export are graph reads.
     "MemoryRemember",
+    // MEDULLA-DECISION-ENGINE-R617.9: every participant operation commits one
+    // node or edge through this gateway.
+    "Participant",
     // MEDULLA-FEDERATED-QUERY-R724: `Put` commits one boundary node through this
     // gateway; `List` is a query-surface read (see [`is_gateway_routed`]).
     "SchemaProjections",
@@ -813,6 +816,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "HarnessEdit",
     // Nor does the memory record upsert (MEDULLA-DECISION-ENGINE-R651.3).
     "MemoryRemember",
+    // Nor do the participant writes (MEDULLA-DECISION-ENGINE-R617.9).
+    "Participant",
     // Nor does the schema boundary upsert (MEDULLA-FEDERATED-QUERY-R724).
     "SchemaProjections",
     // Nor does the domain pack batch (MEDULLA-TYPED-PACKS-R097.700).
@@ -908,6 +913,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::ObservationState { .. } => Some("ObservationState"),
         Method::HarnessEdit { .. } => Some("HarnessEdit"),
         Method::MemoryRemember { .. } => Some("MemoryRemember"),
+        Method::Participant { .. } => Some("Participant"),
         Method::SchemaProjections { .. } => Some("SchemaProjections"),
         Method::DomainPack { .. } => Some("DomainPack"),
         _ => None,
