@@ -16,6 +16,7 @@ fn topic(name: &str, centroid: &[f32]) -> TopicCentroid {
     }
 }
 
+// proves R614.2.3: Classify a document into a taxonomy
 // spec: MEDULLA-DECISION-ENGINE-R614.2.3
 #[test]
 fn classify_picks_nearest_topic_and_respects_floor() {

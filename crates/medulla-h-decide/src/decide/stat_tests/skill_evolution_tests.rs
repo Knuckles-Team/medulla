@@ -332,6 +332,8 @@ async fn candidate_cites_traces_and_library_rows() {
     assert!(bad.contains("PARAMETER_INVALID"), "{bad}");
 }
 
+// proves R703: Skill gaps, neologisms and merge candidates are detected as proposals
+// spec: MEDULLA-DECISION-ENGINE-R703
 // spec: MEDULLA-DECISION-ENGINE-R703.6
 #[tokio::test]
 async fn candidates_are_proposals_only() {

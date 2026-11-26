@@ -100,7 +100,9 @@ async def _ask(
 
 
 # spec: MEDULLA-DECISION-ENGINE-R172.12.6
+# proves R172.12: Designation reads imported connector-pack relationships
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R172.12.6")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R172.12")
 def test_designation_reads_imported_pack() -> None:
     async def exercise() -> None:
         client = await connect()

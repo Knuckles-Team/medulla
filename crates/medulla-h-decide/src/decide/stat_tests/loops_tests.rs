@@ -81,6 +81,8 @@ fn is_refusal(result: Result<LoopView, String>, code: &str) {
     assert!(error.starts_with(&format!("{code}:")), "{code} vs {error}");
 }
 
+// proves R653: Loop engine state, gap market and improvement ledger
+// spec: MEDULLA-DECISION-ENGINE-R653
 // spec: MEDULLA-DECISION-ENGINE-R653.2
 // spec: MEDULLA-DECISION-ENGINE-R653.3
 // spec: MEDULLA-DECISION-ENGINE-R653.6
@@ -308,6 +310,7 @@ fn decode_payload<T: serde::de::DeserializeOwned>(
     }
 }
 
+// proves R653.4: Refusal
 // spec: MEDULLA-DECISION-ENGINE-R653.4
 #[tokio::test]
 async fn loop_refusals_change_no_state() {
@@ -395,6 +398,7 @@ async fn loop_refusals_change_no_state() {
     );
 }
 
+// proves R653.5: Evidence
 // spec: MEDULLA-DECISION-ENGINE-R653.5
 #[tokio::test]
 async fn loop_evidence_reads_back_through_a_second_principal() {

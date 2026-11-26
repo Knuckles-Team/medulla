@@ -256,6 +256,9 @@ fn agent(iri: &str, tools: &[&str]) -> AgentCandidate {
     }
 }
 
+// proves R176: Job-scoped load set from the overlay of all connector packs
+// spec: MEDULLA-DECISION-ENGINE-R176
+// proves R176.3: Wiring
 // spec: MEDULLA-DECISION-ENGINE-R176.2, MEDULLA-DECISION-ENGINE-R176.3
 #[tokio::test]
 async fn served_decide_reaches_load_set() {
@@ -351,6 +354,7 @@ async fn other_tenant_packs_never_enter_the_set() {
     );
 }
 
+// proves R176.4: Refusal
 // spec: MEDULLA-DECISION-ENGINE-R176.4
 #[tokio::test]
 async fn load_set_refusals() {
@@ -418,6 +422,7 @@ async fn load_set_refusals() {
     assert!(error.contains("issues-connector"), "{error}");
 }
 
+// proves R176.5: Evidence
 // spec: MEDULLA-DECISION-ENGINE-R176.5
 #[tokio::test]
 async fn premises_per_component() {

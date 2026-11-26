@@ -134,6 +134,7 @@ fn rbac_before_data_products_matches_the_previous_pin() {
     );
 }
 
+// proves R172.5.1: Reward persistence
 // spec: MEDULLA-DECISION-ENGINE-R172.5.1
 #[test]
 fn agent_library_before_capability_reward_matches_the_previous_pin() {

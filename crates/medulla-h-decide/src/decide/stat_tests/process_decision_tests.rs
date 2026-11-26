@@ -180,6 +180,8 @@ fn branch_request(
     )
 }
 
+// proves R180: Process decisions: DMN tables and gateway branches evaluate as Decide families
+// spec: MEDULLA-DECISION-ENGINE-R180
 // spec: MEDULLA-DECISION-ENGINE-R180.4
 #[tokio::test]
 async fn decide_routes_table_and_branch() {

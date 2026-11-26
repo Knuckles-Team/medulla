@@ -440,6 +440,7 @@ async fn readback(h: &Harness) {
 /// One served journey: the operator matrix with named gaps, every typed
 /// refusal including a foreign receipt, and the readback that recomputes the
 /// aggregate digest.
+// proves R134.100: Fan-out aggregation decision
 // spec: MEDULLA-DECISION-ENGINE-R134.100
 #[tokio::test]
 async fn fanout_aggregate_applies_the_plan_operator_and_names_gaps() {

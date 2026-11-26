@@ -331,6 +331,7 @@ mod tests {
             .collect()
     }
 
+    // proves R653.2: Behavior: fenced lease and priority order
     // spec: MEDULLA-DECISION-ENGINE-R653.2
     #[test]
     fn lease_epochs_fence_and_queue_order_is_total() {
@@ -414,6 +415,7 @@ mod tests {
         }
     }
 
+    // proves R653.7: Behavior: gap settlement and offer rate
     // spec: MEDULLA-DECISION-ENGINE-R653.7
     #[test]
     fn settle_once_and_offer_rate_formula() {
@@ -460,6 +462,7 @@ mod tests {
         }
     }
 
+    // proves R653.8: Behavior: failure-sequence miner and capability ratchet
     // spec: MEDULLA-DECISION-ENGINE-R653.8
     #[test]
     fn miner_bounds_and_ratchet_verdict() {

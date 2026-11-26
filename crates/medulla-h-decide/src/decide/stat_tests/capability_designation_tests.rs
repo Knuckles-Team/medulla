@@ -338,6 +338,7 @@ fn epoch_of(index: &medulla_decision_memory::memory::capability_index::Capabilit
         .sum()
 }
 
+// proves R172.8: Designation refusals
 // spec: MEDULLA-DECISION-ENGINE-R172.8
 #[tokio::test]
 async fn capability_designation_refusals() {
@@ -493,6 +494,7 @@ fn ema_q32(old: i64, observed: i64) -> i64 {
     ((((one - alpha) * i128::from(old)) >> 32) + ((alpha * i128::from(observed)) >> 32)) as i64
 }
 
+// proves R172.7.1: `capability_outcome` decision-log op
 // spec: MEDULLA-DECISION-ENGINE-R172.7.1
 #[tokio::test]
 async fn capability_outcome_updates_reward_and_refuses() {
@@ -657,6 +659,7 @@ async fn capability_outcome_updates_reward_and_refuses() {
     assert!(h.store.capability_rewards(OTHER_TENANT).unwrap().is_empty());
 }
 
+// proves R172.9: Designation evidence
 // spec: MEDULLA-DECISION-ENGINE-R172.9
 #[tokio::test]
 async fn premises_name_scores_and_knobs() {
@@ -834,6 +837,7 @@ fn target_request(h: &Harness, targets: &[&str]) -> DecideRequest {
     designation_request(&schema_pin(h), ask, DecisionPolicyRef::Default)
 }
 
+// proves R172.12.4: Pack target refusals
 // spec: MEDULLA-DECISION-ENGINE-R172.12.4
 #[tokio::test]
 async fn pack_target_refusals() {
@@ -1041,6 +1045,7 @@ async fn capability_adapter_applies_before_rank() {
     assert_eq!(narrow, vec![1.0, 0.0]);
 }
 
+// proves R172.12.5: Pack designation evidence
 // spec: MEDULLA-DECISION-ENGINE-R172.12.5
 #[tokio::test]
 async fn premises_name_subclass_path_and_pack() {
@@ -1200,6 +1205,7 @@ async fn designated(h: &Harness, version: &str) -> Vec<String> {
     }
 }
 
+// proves R172.7.2: Index follows committed changes
 // spec: MEDULLA-DECISION-ENGINE-R172.7.2
 #[tokio::test]
 async fn committed_library_write_is_visible_to_next_question() {
@@ -1279,6 +1285,8 @@ async fn feed_without_an_active_generation_indexes_nothing() {
     assert_eq!(live, 0, "no embedding generation: nothing is indexed");
 }
 
+// proves R172: Capability designation index
+// spec: MEDULLA-DECISION-ENGINE-R172
 // spec: MEDULLA-DECISION-ENGINE-R172.13
 #[tokio::test]
 async fn designation_journey() {

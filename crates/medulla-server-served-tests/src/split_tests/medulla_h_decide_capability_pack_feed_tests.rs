@@ -425,6 +425,7 @@ fn tool_id(name: &str) -> OpaqueId {
     OpaqueId::new(format!("mcp:{CONNECTOR}/tool/{name}")).unwrap()
 }
 
+// proves R172.12.3: Pack projection upserts index records
 // spec: MEDULLA-DECISION-ENGINE-R172.12.3
 #[tokio::test]
 async fn projection_commit_upserts_pack_records() {

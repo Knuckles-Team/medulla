@@ -168,7 +168,11 @@ def _counts(client: Any) -> tuple[int, int]:
 
 
 # spec: MEDULLA-DECISION-ENGINE-R614.3
+# proves R614: Capability cards, ranked proposals, topic classes and relation
+# proves R614.2: Enrichment behaviour
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.3")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.2")
 def test_card_rank_classify_project_journey(clean_graph):
     _seed(clean_graph)
     schema = publish(clean_graph, "enrich-schema", "feature_schema", _schema_body())

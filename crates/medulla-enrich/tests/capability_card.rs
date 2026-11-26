@@ -18,6 +18,7 @@ fn card(facts: &[&str], summary: &str) -> CapabilityCard {
     }
 }
 
+// proves R614.2.1: Store a grounded capability card
 // spec: MEDULLA-DECISION-ENGINE-R614.2.1
 #[test]
 fn card_store_accepts_grounded_and_refuses_ungrounded() {

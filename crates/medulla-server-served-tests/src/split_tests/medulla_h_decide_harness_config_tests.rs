@@ -328,6 +328,9 @@ fn pinned_policy(h: &Harness, name: &str, knobs: &[(&str, i64)]) -> DecisionPoli
     }
 }
 
+// proves R128: HarnessConfig decision answers how to configure an agent run
+// spec: MEDULLA-DECISION-ENGINE-R128
+// proves R128.10: The dispatch registry routes the new kind
 // spec: MEDULLA-DECISION-ENGINE-R128.10
 #[tokio::test]
 async fn decide_routes_harness_config() {
@@ -363,6 +366,7 @@ async fn decide_routes_harness_config() {
     assert_eq!(foreign.error.as_deref(), Some("ACCESS_DENIED"));
 }
 
+// proves R128.8: The family reads model-profile and task-class facts
 // spec: MEDULLA-DECISION-ENGINE-R128.8
 #[tokio::test]
 async fn unknown_profile_is_refused() {
@@ -574,6 +578,7 @@ async fn inverted_thresholds_refuse() {
     assert_refused_with(&refused(&h, asked).await, "HARNESS_THRESHOLDS_INVALID");
 }
 
+// proves R128.11: Premises and why-not entries explain every part
 // spec: MEDULLA-DECISION-ENGINE-R128.11
 #[tokio::test]
 async fn premises_and_why_not_cover_each_part() {
@@ -715,6 +720,7 @@ async fn harness_config_cites_profile_fact_and_abstains_without() {
     }
 }
 
+// proves R128.12: The outcome encodes decided and abstained parts
 // spec: MEDULLA-DECISION-ENGINE-R128.12
 #[tokio::test]
 async fn all_parts_abstained_seals_abstention() {
@@ -976,6 +982,7 @@ fn effective_request(
         .request
 }
 
+// proves R128.16: Assistant profile constrains the HarnessConfig request
 // spec: MEDULLA-DECISION-ENGINE-R128.16
 #[tokio::test]
 async fn allowlist_narrows_tool_subset() {

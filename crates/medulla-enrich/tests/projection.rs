@@ -28,6 +28,7 @@ fn node(properties: &[(&str, &str)]) -> ProjectionNode {
     }
 }
 
+// proves R614.2.4: Project node properties into edges
 // spec: MEDULLA-DECISION-ENGINE-R614.2.4
 #[test]
 fn projection_emits_stable_edges_and_skips_unresolved() {

@@ -78,6 +78,7 @@ fn scores(record: &StatisticalDecisionRecord) -> Vec<(String, i64)> {
         .collect()
 }
 
+// proves R134.106: Wiring: answer ranking through `Decide`
 // spec: MEDULLA-DECISION-ENGINE-R134.106
 // spec: MEDULLA-DECISION-ENGINE-R134.109
 #[tokio::test]

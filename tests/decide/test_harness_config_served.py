@@ -126,7 +126,10 @@ def _premise_facts(record: dict[str, Any]) -> list[str]:
     return [premise["fact"] for premise in record["premises"]]
 
 
+# proves R128.15: Served proof of the harness_config journey
+# proves R128: HarnessConfig decision answers how to configure an agent run
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R128.15")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R128")
 def test_harness_config_end_to_end(clean_graph):
     client = clean_graph
     graph = _graph_name(client)

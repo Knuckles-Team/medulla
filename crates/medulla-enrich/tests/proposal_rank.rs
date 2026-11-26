@@ -12,6 +12,7 @@ fn input(concept: &str, impact: u32, confidence: u32, cost: u32) -> ConceptInput
     }
 }
 
+// proves R614.2.2: Rank research concepts into proposals
 // spec: MEDULLA-DECISION-ENGINE-R614.2.2
 #[test]
 fn value_orders_and_breaks_ties_by_id() {

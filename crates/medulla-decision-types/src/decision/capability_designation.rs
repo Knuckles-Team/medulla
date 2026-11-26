@@ -1234,6 +1234,7 @@ mod tests {
         assert!(many.validate().is_err());
     }
 
+    // proves R172.12.2: Target-class subsumption
     // spec: MEDULLA-DECISION-ENGINE-R172.12.2
     #[test]
     fn target_class_subsumption_selects_tools() {

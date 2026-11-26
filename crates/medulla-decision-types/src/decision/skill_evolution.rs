@@ -203,6 +203,7 @@ mod tests {
     }
 
     /// The wire form is fixed: field names, order and number encoding.
+    // proves R703.1: Model
     // spec: MEDULLA-DECISION-ENGINE-R703.1
     #[test]
     fn skill_candidates_round_trip_with_golden_vector() {

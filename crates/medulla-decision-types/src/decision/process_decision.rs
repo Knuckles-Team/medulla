@@ -124,6 +124,7 @@ mod tests {
         ])
     }
 
+    // proves R180.1: Process decision model
     // spec: MEDULLA-DECISION-ENGINE-R180.1
     #[test]
     fn requests_round_trip() {
