@@ -70,7 +70,7 @@ fn as_of(as_of_ms: i64) -> Result<(), WritebackError> {
     Ok(())
 }
 
-pub use medulla_decision_types::decision::statistical::writeback::RiskTier;
+use medulla_decision_types::decision::statistical::writeback::RiskTier;
 
 /// One high-stakes write-back proposal, stamped with the as-of instant it
 /// derives from.
