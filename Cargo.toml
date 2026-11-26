@@ -2185,6 +2185,13 @@ path = "benches/ingest_drain.rs"
 harness = false
 required-features = ["jobs"]
 
+# Claim with admission across 64 workers and 8 lanes (MEDULLA-INGEST-WORKER-R604.6): nightly budget.
+[[bench]]
+name = "ingest_claim_admit"
+path = "benches/ingest_claim_admit.rs"
+harness = false
+required-features = ["jobs"]
+
 # Materialization at batch size (MEDULLA-INGEST-WORKER-R606.6): nightly budget.
 [[bench]]
 name = "ingest_materialize"
