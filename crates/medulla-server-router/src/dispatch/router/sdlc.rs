@@ -27,11 +27,13 @@ use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_get, handle_project_mode_set, project_mode_record, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
+    check_pull_request_target, pull_request_arguments, pull_request_outcome,
+    ProposalDecision, OPEN_PULL_REQUEST_TOOL,
     handle_file_defect, handle_get_defect, handle_transition_defect, defect_node_id, defect_from_node,
     DefectFileOutcome, GetDefectReceipt, GetDefectRequest, TransitionDefectRequest, Defect, DefectWrite, FileDefectRequest,
     DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
     ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
-    ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
+    ProposalWrite, PullRequestError, PullRequestTarget, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeGetRequest, ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
@@ -1275,6 +1277,7 @@ fn proposal_operations(
 /// A stored `Proposal` node of the verified tenant, decoded for review.
 struct StoredProposal {
     project: String,
+    statement: String,
     entry: ProposalListEntry,
 }
 
@@ -1294,6 +1297,7 @@ fn stored_proposal(node_id: &str, properties: &[u8], tenant: &str) -> Option<Sto
     let state = ProposalState::from_stored(text("status")?)?;
     Some(StoredProposal {
         project: text("project")?.to_owned(),
+        statement: text("statement").unwrap_or_default().to_owned(),
         entry: ProposalListEntry {
             id: node_id.to_owned(),
             kind,
@@ -1408,6 +1412,12 @@ async fn proposal_list(
 /// `ProposalDecide` (MEDULLA-SDLC-R017.6): read the stored proposal, decide the new state,
 /// then write the state and the reviewer in one `BatchUpdate`. The node merges these keys; its
 /// owner and its content stay as `ProposalPut` wrote them. A refusal returns before any write.
+///
+/// An approval then opens the pull request (MEDULLA-SDLC-R017.8): the accept is already
+/// committed, the `open_pull_request` tool of the named SCM connector runs through the connector
+/// gateway under the caller's identity, and the outcome is recorded on the proposal and answered
+/// on the receipt. A failure never undoes the accept; it is the receipt's typed
+/// `pull_request_error`.
 async fn proposal_decide(
     state: &Arc<RwLock<ServerState>>,
     target: SdlcTarget<'_>,
@@ -1420,6 +1430,9 @@ async fn proposal_decide(
             .find(|stored| stored.entry.id == request.id)
             .ok_or_else(|| LifecycleRefusal::ProposalNotFound(request.id.clone()).to_string())?;
         let next = handle_proposal_decide(stored.entry.state, &request).map_err(|e| e.to_string())?;
+        if let Some(pull_request) = &request.pull_request {
+            check_pull_request_target(pull_request).map_err(|e| e.to_string())?;
+        }
         let mut properties = Map::new();
         properties.insert("type".into(), PROPOSAL_TYPE.into());
         properties.insert("tenant_id".into(), target.verified.tenant().into());
@@ -1430,14 +1443,129 @@ async fn proposal_decide(
             json!({"op": "upsert_node", "id": request.id, "properties": properties}),
         ])?;
         commit(state, &target, operations).await?;
-        Ok(ProposalDecideReceipt {
-            id: request.id,
+        let mut receipt = ProposalDecideReceipt {
+            id: request.id.clone(),
             state: next,
             pull_request: None,
-        })
+            pull_request_error: None,
+        };
+        if let (ProposalDecision::Approve, Some(pull_request)) =
+            (request.decision, &request.pull_request)
+        {
+            match open_pull_request(&target, stored, &request.id, pull_request).await {
+                Ok(address) => receipt.pull_request = Some(address),
+                Err(error) => receipt.pull_request_error = Some(error),
+            }
+            if let Err(why) = record_pull_request(state, &target, &receipt).await {
+                receipt.pull_request_error = Some(PullRequestError {
+                    code: PULL_REQUEST_RECORD_FAILED.to_owned(),
+                    message: why,
+                });
+            }
+        }
+        Ok(receipt)
     }
     .await;
     typed_response::<ProposalDecideResult>(target.req_id, result)
+}
+
+/// The code of an outcome that could not be written back to the proposal.
+const PULL_REQUEST_RECORD_FAILED: &str = "PULL_REQUEST_RECORD_FAILED";
+
+/// Open the pull request of one approved proposal through the connector gateway. The call
+/// carries the proposal id as its idempotency key, so a repeated approval never opens two.
+async fn open_pull_request(
+    target: &SdlcTarget<'_>,
+    stored: &StoredProposal,
+    proposal_id: &str,
+    pull_request: &PullRequestTarget,
+) -> Result<String, PullRequestError> {
+    let kind = serde_json::to_value(stored.entry.kind)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    let arguments = pull_request_arguments(
+        pull_request,
+        proposal_id,
+        &kind,
+        &stored.entry.target,
+        &stored.statement,
+    );
+    let reply = run_connector_tool(
+        pull_request.server.clone(),
+        OPEN_PULL_REQUEST_TOOL.to_owned(),
+        arguments,
+        target.verified.agent_id().to_owned(),
+        proposal_id.to_owned(),
+    )
+    .await;
+    pull_request_outcome(reply)
+}
+
+/// Run one connector tool call on a blocking thread; a failure is `(code, message)`.
+#[cfg(feature = "query")]
+async fn run_connector_tool(
+    server: String,
+    tool: String,
+    arguments: std::collections::BTreeMap<String, Value>,
+    principal: String,
+    idempotency_key: String,
+) -> Result<Value, (String, String)> {
+    use medulla_h_query::query::connector_tool::{call_connector_tool, ConnectorToolRequest};
+    let call = ConnectorToolRequest {
+        server,
+        tool,
+        arguments,
+        principal,
+        idempotency_key,
+    };
+    match tokio::task::spawn_blocking(move || call_connector_tool(&call)).await {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(failure)) => Err((failure.code, failure.message)),
+        Err(_) => Err((
+            "CONNECTOR_UNREACHABLE".to_owned(),
+            "the connector call did not finish".to_owned(),
+        )),
+    }
+}
+
+/// Run one connector tool call: this build has no connector gateway.
+#[cfg(not(feature = "query"))]
+async fn run_connector_tool(
+    _server: String,
+    _tool: String,
+    _arguments: std::collections::BTreeMap<String, Value>,
+    _principal: String,
+    _idempotency_key: String,
+) -> Result<Value, (String, String)> {
+    Err((
+        "CONNECTOR_PORT_UNAVAILABLE".to_owned(),
+        "this build has no connector gateway".to_owned(),
+    ))
+}
+
+/// Write the pull request outcome of an approval onto its proposal: the address, or the typed
+/// error, and null for the other, so a later outcome replaces an earlier one.
+async fn record_pull_request(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    receipt: &ProposalDecideReceipt,
+) -> Result<(), String> {
+    let mut properties = Map::new();
+    properties.insert("type".into(), PROPOSAL_TYPE.into());
+    properties.insert("tenant_id".into(), target.verified.tenant().into());
+    let text = |value: Option<&String>| value.map_or(Value::Null, |text| text.clone().into());
+    properties.insert("pull_request".into(), text(receipt.pull_request.as_ref()));
+    let error = receipt.pull_request_error.as_ref();
+    properties.insert("pull_request_error_code".into(), text(error.map(|e| &e.code)));
+    properties.insert(
+        "pull_request_error_message".into(),
+        text(error.map(|e| &e.message)),
+    );
+    let operations = bounded(vec![
+        json!({"op": "upsert_node", "id": receipt.id, "properties": properties}),
+    ])?;
+    commit(state, target, operations).await
 }
 
 /// `ProjectModeSet` (MEDULLA-SDLC-R012.8): read the project's stored mode (none

@@ -17,10 +17,12 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 | Method | Request | Answer |
 |---|---|---|
 | `ProposalList` | `{repo, state?, kind?}` | `[{id, kind, target, evidence[], state}]` |
-| `ProposalDecide` | `{id, decision, reviewer, reason}` | `{id, state, pull_request?}` |
+| `ProposalDecide` | `{id, decision, reviewer, reason, pull_request?: {server, repo, head, base}}` | `{id, state, pull_request?, pull_request_error?: {code, message}}` |
 | `GoalPut` | `{repo, statement, targets[]}` | `{goal_id}` |
 
 `kind` is one of twelve values. Row kinds: add, update, split, prune and retire. Plan kind: edit plan section. Task kinds: add, reorder and split. Other kinds: add contract, resolve clarification and tune knob. `decision` is `approve` or `reject`. `state` is `open`, `approved`, `rejected` or `landed`; an open proposal is stored with status `proposed`. A proposal reaches `landed` only after its pull request merges.
+
+An approval that carries `pull_request` opens the pull request after the accept commits, through the connector gateway tool `open_pull_request`. The answer holds the pull request address, or `pull_request_error`, whose `code` is the connector's own code or one of `CONNECTOR_UNREACHABLE`, `CONNECTOR_REPLY_INVALID`, `CONNECTOR_FAILED`, `CONNECTOR_PORT_UNAVAILABLE`, `PULL_REQUEST_REPLY_INVALID` and `PULL_REQUEST_RECORD_FAILED`. A failure never undoes the accept.
 
 ## Refusal codes
 
@@ -32,6 +34,7 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 - `MODE_APPROVAL_REQUIRED`: a move to `evolving` has no operator approval.
 - `PROPOSAL_NOT_FOUND`: a decision names an id that no proposal of the tenant has.
 - `PROPOSAL_NOT_OPEN`: a decision names a proposal that is no longer `open`.
+- `INVALID_ARGUMENT`: a pull request target has a blank field.
 - `GOAL_TARGET_REQUIRED`: a goal names no target.
 
 ## Authoritative code types

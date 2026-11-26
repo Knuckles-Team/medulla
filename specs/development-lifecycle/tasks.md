@@ -101,6 +101,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T090 [US4] MEDULLA-SDLC-R017.5 Proposals follow the project mode.
 - [ ] T091 [US4] MEDULLA-SDLC-R017.6 Proposals are reviewed in the interface and the spec-delivery page.
 - [ ] T092 [US4] MEDULLA-SDLC-R017.7 Hot-path proof: goal to pull request.
+- [ ] T092a [US4] MEDULLA-SDLC-R017.8 An approval opens the pull request through the connector gateway.
 - [ ] T093 [US2] MEDULLA-SDLC-R018 Release graph is ingested .
 - [ ] T094 [US2] MEDULLA-SDLC-R018.1 Bundle plans ingest as records.
 - [ ] T095 [US2] MEDULLA-SDLC-R018.2 Hot-path proof: release graph competency.

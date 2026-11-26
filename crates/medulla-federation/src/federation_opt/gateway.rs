@@ -22,7 +22,7 @@ use serde_json::{json, Value};
 
 use super::mcp::{
     ConnectorAccessAnswer, ConnectorAccessCheck, ConnectorRowRequest, ConnectorRowSource,
-    ConnectorRows, RawToolAnswer, RawToolCall,
+    ConnectorRows, ConnectorToolCall, ConnectorToolError, RawToolAnswer, RawToolCall,
 };
 
 /// The environment variable naming the gateway endpoint.
@@ -157,6 +157,24 @@ impl ConnectorRowSource for HttpConnectorGateway {
         })
     }
 
+    fn tool_call(&self, request: &ConnectorToolCall) -> Result<Value, ConnectorToolError> {
+        let reply = self
+            .post(&json!({
+                "op": "tool_call",
+                "server": request.server,
+                "tool": request.tool,
+                "arguments": request.arguments,
+                "principal": request.principal,
+                "idempotency_key": request.idempotency_key,
+                "timeout_ms": request.timeout_ms,
+            }))
+            .map_err(|message| ConnectorToolError {
+                code: TOOL_UNREACHABLE.to_string(),
+                message,
+            })?;
+        parse_tool_reply(&reply)
+    }
+
     fn rows(&self, request: &ConnectorRowRequest) -> Result<ConnectorRows, String> {
         let reply = self.post(&json!({
             "op": "rows",
@@ -234,6 +252,53 @@ fn parse_rows(reply: &Value) -> Result<ConnectorRows, String> {
     })
 }
 
+/// The code of a gateway that could not be reached or refused the call outright.
+pub const TOOL_UNREACHABLE: &str = "CONNECTOR_UNREACHABLE";
+/// The code of a gateway reply that is neither a result nor an error.
+pub const TOOL_REPLY_INVALID: &str = "CONNECTOR_REPLY_INVALID";
+/// The code of an error reply that names no code.
+pub const TOOL_FAILED: &str = "CONNECTOR_FAILED";
+/// The longest error message kept, in characters.
+const TOOL_MESSAGE_MAX_CHARS: usize = 256;
+
+/// A `tool_call` reply: `{"result": <value>}` answers the call; `{"error": {"code", "message"}}`
+/// (or an error string taken as the code) is the connector's typed failure. Anything else is
+/// `CONNECTOR_REPLY_INVALID`.
+fn parse_tool_reply(reply: &Value) -> Result<Value, ConnectorToolError> {
+    match reply.get("error") {
+        Some(Value::String(code)) => Err(ConnectorToolError {
+            code: code.clone(),
+            message: String::new(),
+        }),
+        Some(Value::Object(error)) => {
+            let text = |key: &str| {
+                error
+                    .get(key)
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .unwrap_or_default()
+            };
+            let code = text("code");
+            Err(ConnectorToolError {
+                code: if code.trim().is_empty() {
+                    TOOL_FAILED.to_string()
+                } else {
+                    code
+                },
+                message: text("message").chars().take(TOOL_MESSAGE_MAX_CHARS).collect(),
+            })
+        }
+        Some(_) => Err(ConnectorToolError {
+            code: TOOL_REPLY_INVALID.to_string(),
+            message: "the tool call error is neither a string nor an object".to_string(),
+        }),
+        None => reply.get("result").cloned().ok_or_else(|| ConnectorToolError {
+            code: TOOL_REPLY_INVALID.to_string(),
+            message: "the tool call reply has no `result`".to_string(),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,5 +326,30 @@ mod tests {
         assert!(!rows.truncated && rows.missing_source.is_none());
         assert!(parse_rows(&json!({"rows": "nope"})).is_err());
         assert!(parse_rows(&json!({"rows": [{"title": "no id"}]})).is_err());
+    }
+
+    // spec: MEDULLA-SDLC-R017.8
+    #[test]
+    fn tool_reply_is_a_result_or_a_typed_error() {
+        let result = parse_tool_reply(&json!({"result": {"url": "https://x/pr/1"}})).unwrap();
+        assert_eq!(result["url"], "https://x/pr/1");
+        let failed = parse_tool_reply(
+            &json!({"error": {"code": "SCM_BRANCH_MISSING", "message": "no such head"}}),
+        )
+        .unwrap_err();
+        assert_eq!(failed.code, "SCM_BRANCH_MISSING");
+        assert_eq!(failed.message, "no such head");
+        let bare = parse_tool_reply(&json!({"error": {"message": "x"}})).unwrap_err();
+        assert_eq!(bare.code, TOOL_FAILED);
+        let named = parse_tool_reply(&json!({"error": "OVER_LIMIT"})).unwrap_err();
+        assert_eq!(named.code, "OVER_LIMIT");
+        let long = "m".repeat(1000);
+        let cut = parse_tool_reply(&json!({"error": {"code": "C", "message": long}})).unwrap_err();
+        assert_eq!(cut.message.chars().count(), 256);
+        assert_eq!(parse_tool_reply(&json!({})).unwrap_err().code, TOOL_REPLY_INVALID);
+        assert_eq!(
+            parse_tool_reply(&json!({"error": 7})).unwrap_err().code,
+            TOOL_REPLY_INVALID
+        );
     }
 }

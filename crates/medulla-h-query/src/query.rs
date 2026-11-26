@@ -163,6 +163,8 @@ pub mod state_machine_next;
 #[cfg(feature = "query")]
 mod access_port;
 #[cfg(feature = "query")]
+pub mod connector_tool;
+#[cfg(feature = "query")]
 mod asset_usage;
 #[cfg(feature = "query")]
 mod catalog_read;

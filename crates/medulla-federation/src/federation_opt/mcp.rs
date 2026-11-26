@@ -99,6 +99,29 @@ pub struct ConnectorAccessAnswer {
     pub checked_at: u64,
 }
 
+/// One governed tool call that changes a connector's system, handed to the provider
+/// (MEDULLA-SDLC-R017.8). The provider runs it under `principal`; a repeat with the same
+/// `idempotency_key` must not repeat the effect.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectorToolCall {
+    pub server: String,
+    pub tool: String,
+    pub arguments: BTreeMap<String, Value>,
+    pub principal: String,
+    pub idempotency_key: String,
+    pub timeout_ms: u64,
+}
+
+/// Why a tool call did not answer: the stable code and a short message.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ConnectorToolError {
+    pub code: String,
+    pub message: String,
+}
+
+/// The code of a provider that serves no tool calls.
+pub const TOOL_PORT_UNAVAILABLE: &str = "CONNECTOR_PORT_UNAVAILABLE";
+
 /// The host-registered port that serves operation-bound MCP sources.
 pub trait ConnectorRowSource: Send + Sync {
     /// Ask the connector which records `principal` may read. A provider that cannot
@@ -118,6 +141,15 @@ pub trait ConnectorRowSource: Send + Sync {
     /// with no raw tools reports `Err`, and the caller fails closed.
     fn raw_call(&self, _request: &RawToolCall) -> Result<RawToolAnswer, String> {
         Err("this connector port serves no raw-access tools".to_string())
+    }
+    /// One governed tool call that changes the connector's system (MEDULLA-SDLC-R017.8), run
+    /// on the provider side under the caller's identity. A provider that serves no tool calls
+    /// reports `CONNECTOR_PORT_UNAVAILABLE`, and the caller records the failure.
+    fn tool_call(&self, _request: &ConnectorToolCall) -> Result<Value, ConnectorToolError> {
+        Err(ConnectorToolError {
+            code: TOOL_PORT_UNAVAILABLE.to_string(),
+            message: "this connector port serves no tool calls".to_string(),
+        })
     }
     /// The web metasearch capability the tool's declared schema carries, or `None` when the tool
     /// is not a web metasearch tool (MEDULLA-UNIFIED-DATA-PLANE-R038.7.1). A web tool answers

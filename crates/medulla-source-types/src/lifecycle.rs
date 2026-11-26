@@ -1079,6 +1079,33 @@ impl ProposalDecision {
     }
 }
 
+/// Where an approved proposal's pull request is opened (MEDULLA-SDLC-R017.8): the SCM
+/// connector server, the repository it hosts, the branch that holds the change and the branch
+/// it merges into.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct PullRequestTarget {
+    /// The registered SCM connector server.
+    pub server: String,
+    /// The repository on that server.
+    pub repo: String,
+    /// The branch that holds the change.
+    pub head: String,
+    /// The branch the pull request merges into.
+    pub base: String,
+}
+
+/// Why an approved proposal has no pull request (MEDULLA-SDLC-R017.8): a stable code and a
+/// short message. The accept itself is not undone.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct PullRequestError {
+    pub code: String,
+    pub message: String,
+}
+
 /// `ProposalDecide` request (MEDULLA-SDLC-R017.6).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -1089,10 +1116,15 @@ pub struct ProposalDecideRequest {
     pub decision: ProposalDecision,
     pub reviewer: String,
     pub reason: String,
+    /// Where to open the pull request of an approval (MEDULLA-SDLC-R017.8). A rejection never
+    /// opens one, and an approval with no target opens none and records no error.
+    #[serde(default)]
+    pub pull_request: Option<PullRequestTarget>,
 }
 
-/// What `ProposalDecide` answers. `pull_request` stays absent until the
-/// approved proposal has a pull request (MEDULLA-SDLC-R017.4).
+/// What `ProposalDecide` answers. `pull_request` is the pull request an approval opened
+/// (MEDULLA-SDLC-R017.8); `pull_request_error` says why an approval has none. Both are absent
+/// for a rejection.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProposalDecideReceipt {
@@ -1100,6 +1132,76 @@ pub struct ProposalDecideReceipt {
     pub state: ProposalState,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pull_request: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pull_request_error: Option<PullRequestError>,
+}
+
+/// The connector tool that opens a pull request.
+pub const OPEN_PULL_REQUEST_TOOL: &str = "open_pull_request";
+/// The code of a connector reply that holds no pull request address.
+pub const PULL_REQUEST_REPLY_INVALID: &str = "PULL_REQUEST_REPLY_INVALID";
+/// The longest message a pull request error keeps, in characters.
+pub const PULL_REQUEST_MESSAGE_MAX_CHARS: usize = 256;
+
+/// Check a pull request target: all four fields named. A blank one refuses `INVALID_ARGUMENT`.
+pub fn check_pull_request_target(target: &PullRequestTarget) -> Result<(), LifecycleRefusal> {
+    let blank = [&target.server, &target.repo, &target.head, &target.base]
+        .iter()
+        .any(|field| field.trim().is_empty());
+    if blank {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a pull request target names its server, repo, head and base".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+/// The arguments of the `open_pull_request` tool: the repository, the two branches and a title
+/// and body taken from the proposal (`kind` is its wire name).
+pub fn pull_request_arguments(
+    target: &PullRequestTarget,
+    proposal_id: &str,
+    kind: &str,
+    proposal_target: &str,
+    statement: &str,
+) -> std::collections::BTreeMap<String, serde_json::Value> {
+    let title = format!("{kind}: {proposal_target}");
+    let body = format!("{statement}\n\nProposal: {proposal_id}");
+    [
+        ("repo", target.repo.as_str()),
+        ("head", target.head.as_str()),
+        ("base", target.base.as_str()),
+        ("title", title.as_str()),
+        ("body", body.as_str()),
+    ]
+    .into_iter()
+    .map(|(key, value)| (key.to_owned(), serde_json::Value::String(value.to_owned())))
+    .collect()
+}
+
+/// The outcome of the `open_pull_request` call: the pull request address from a connector
+/// reply `{ "url": <non-blank string> }`, or the typed error. A reply with no address is
+/// `PULL_REQUEST_REPLY_INVALID`; a connector failure keeps its code and a message cut to
+/// [`PULL_REQUEST_MESSAGE_MAX_CHARS`].
+pub fn pull_request_outcome(
+    reply: Result<serde_json::Value, (String, String)>,
+) -> Result<String, PullRequestError> {
+    match reply {
+        Ok(value) => value
+            .get("url")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .map(str::to_owned)
+            .ok_or_else(|| PullRequestError {
+                code: PULL_REQUEST_REPLY_INVALID.to_owned(),
+                message: "the connector reply holds no pull request url".to_owned(),
+            }),
+        Err((code, message)) => Err(PullRequestError {
+            code,
+            message: message.chars().take(PULL_REQUEST_MESSAGE_MAX_CHARS).collect(),
+        }),
+    }
 }
 
 /// `ProposalDecide` (MEDULLA-SDLC-R017.6): the state one decision moves a

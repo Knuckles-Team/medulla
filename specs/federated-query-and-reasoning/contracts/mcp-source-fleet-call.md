@@ -19,11 +19,13 @@ Repository: medulla. Row `MEDULLA-FEDERATED-QUERY-R073.3` keeps `ForeignSourceSp
 |---|---|
 | Request | `ConnectorRowRequest { source_label, server, tool, arguments, pushed_filter, budget }` (budget: `max_rows` 1 to 10000, `timeout_ms` 100 to 60000); `arguments` are checked against the declared tool schema before the request is sent |
 | Reply | `{source_label, rows, truncated, missing_source}`: rows in the connector row contract, each with its source label; a partial reply names the missing source |
+| Tool call (a change to the connector's system, `MEDULLA-SDLC-R017.8`) | request `{"op": "tool_call", server, tool, arguments, principal, idempotency_key, timeout_ms}`; reply `{"result": <value>}` or `{"error": {code, message}}`; the provider runs it under `principal`, and a repeat with the same `idempotency_key` does not repeat the effect |
 
 ## Refusal codes
 
 - `SOURCE_UNREACHABLE`: the call failed, timed out or returned a result that is not a row list; the source abstains and the label is named.
 - `UNSUPPORTED_SEARCH_ARGUMENT`: arguments outside the declared tool schema.
+- `CONNECTOR_PORT_UNAVAILABLE`, `CONNECTOR_UNREACHABLE`, `CONNECTOR_REPLY_INVALID` and `CONNECTOR_FAILED`: a tool call that has no port, no answer, no result or error, or an error with no code; any other code is the connector's own.
 - `OUTBOUND_TARGET_DENIED` and `FOREIGN_SOURCE_UNGRANTED`: as in the connector source transport contract.
 
 ## Authoritative types

@@ -464,6 +464,80 @@ fn project_mode_get_reads_the_record_and_defaults_to_reference() {
     assert_eq!(record.approver, None);
 }
 
+// spec: MEDULLA-SDLC-R017.8
+#[test]
+fn approval_pull_request_arguments_and_outcome_are_typed() {
+    use medulla_source_types::lifecycle::{
+        check_pull_request_target, pull_request_arguments, pull_request_outcome,
+        ProposalDecideReceipt, ProposalState, PullRequestError,
+        PullRequestTarget, PULL_REQUEST_REPLY_INVALID,
+    };
+
+    let target = PullRequestTarget {
+        server: "scm".into(),
+        repo: "org/demo".into(),
+        head: "proposal/1".into(),
+        base: "main".into(),
+    };
+    check_pull_request_target(&target).unwrap();
+    for blank in 0..4 {
+        let mut broken = target.clone();
+        match blank {
+            0 => broken.server = " ".into(),
+            1 => broken.repo = String::new(),
+            2 => broken.head = " ".into(),
+            _ => broken.base = String::new(),
+        }
+        let refusal = check_pull_request_target(&broken).unwrap_err();
+        assert_eq!(refusal.code(), "INVALID_ARGUMENT");
+    }
+
+    let arguments = pull_request_arguments(&target, "proposal:1", "add_row", "R1", "Add a row.");
+    assert_eq!(arguments["repo"], "org/demo");
+    assert_eq!(arguments["head"], "proposal/1");
+    assert_eq!(arguments["base"], "main");
+    assert_eq!(arguments["title"], "add_row: R1");
+    assert_eq!(arguments["body"], "Add a row.\n\nProposal: proposal:1");
+    assert_eq!(arguments.len(), 5);
+
+    let url = pull_request_outcome(Ok(serde_json::json!({"url": " https://scm/pr/7 "})));
+    assert_eq!(url.unwrap(), "https://scm/pr/7");
+    for reply in [
+        serde_json::json!({}),
+        serde_json::json!({"url": "  "}),
+        serde_json::json!({"url": 7}),
+    ] {
+        let error = pull_request_outcome(Ok(reply)).unwrap_err();
+        assert_eq!(error.code, PULL_REQUEST_REPLY_INVALID);
+    }
+    let failed = pull_request_outcome(Err(("SCM_HEAD_MISSING".into(), "m".repeat(999))));
+    let failed = failed.unwrap_err();
+    assert_eq!(failed.code, "SCM_HEAD_MISSING");
+    assert_eq!(failed.message.chars().count(), 256);
+
+    // The receipt carries the pull request or the typed error, never an empty field.
+    let landed = ProposalDecideReceipt {
+        id: "proposal:1".into(),
+        state: ProposalState::Approved,
+        pull_request: Some("https://scm/pr/7".into()),
+        pull_request_error: None,
+    };
+    let wire = serde_json::to_value(&landed).unwrap();
+    assert_eq!(wire["pull_request"], "https://scm/pr/7");
+    assert!(wire.get("pull_request_error").is_none());
+    let failed = ProposalDecideReceipt {
+        pull_request: None,
+        pull_request_error: Some(PullRequestError {
+            code: "SCM_HEAD_MISSING".into(),
+            message: "no head".into(),
+        }),
+        ..landed
+    };
+    let wire = serde_json::to_value(&failed).unwrap();
+    assert!(wire.get("pull_request").is_none());
+    assert_eq!(wire["pull_request_error"]["code"], "SCM_HEAD_MISSING");
+}
+
 // spec: MEDULLA-SDLC-R017.3
 #[test]
 fn proposal_evidence_is_required_resolved_and_matched() {
@@ -524,6 +598,7 @@ fn a_decision_moves_only_an_open_proposal() {
         decision,
         reviewer: reviewer.into(),
         reason: reason.into(),
+        pull_request: None,
     };
     for code in ["PROPOSAL_NOT_FOUND", "PROPOSAL_NOT_OPEN"] {
         assert!(REFUSALS.iter().any(|c| c.as_str() == code), "{code}");
