@@ -260,21 +260,36 @@ async def test_sql_and_sparql_stored_queries_call() -> None:
         await client.close()
 
 
-# spec: MEDULLA-FEDERATED-QUERY-R708.9
+# spec: MEDULLA-FEDERATED-QUERY-R708.7
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R708.7")
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R708.9")
 @pytest.mark.asyncio
 async def test_workspace_share_schedule_and_lint() -> None:
-    """A stored query that reads a deprecated asset warns on its put receipt and on each
-    call, and the save and the run still proceed."""
+    """The shared query workspace: a query is shared by scope and refreshes no faster
+    than the floor. It warns on its put receipt and on each call when it reads a
+    deprecated asset, and the save and the run still proceed."""
     client = await _connect()
+    sharee = await _connect(f"workspace-sharee-{uuid.uuid4().hex[:8]}")
     suffix = uuid.uuid4().hex
     label = f"StoredLint{suffix}"
     name = f"lint_{suffix}"
     text = f"MATCH (:{label}) WHERE status = $status"
     try:
-        clean = await _put(client, _stored(name, text=text))
+        # The share scope: a tenant-shared query is callable by another principal.
+        clean = await _put(client, _stored(name, text=text, share="tenant"))
         assert clean["query"]["version"] == 1
         assert clean["warnings"] == []
+        assert (await _call(sharee, name, {"status": "open"}))["version"] == 1
+        # The schedule: a period under the floor knob is refused.
+        with pytest.raises(RuntimeError, match="STORED_QUERY_INVALID"):
+            await _put(
+                client,
+                _stored(
+                    f"{name}_fast",
+                    refresh={"kind": "period", "seconds": 1},
+                    materialize=True,
+                ),
+            )
         assert (await _call(client, name, {"status": "open"}))["warnings"] == []
 
         # A steward deprecates the asset the query reads.
@@ -292,7 +307,7 @@ async def test_workspace_share_schedule_and_lint() -> None:
         expected = [{"code": "STORED_QUERY_DEPRECATED_ASSET", "asset": label}]
 
         # The save proceeds and carries the typed warning on its receipt.
-        second = await _put(client, _stored(name, text=text, version=2))
+        second = await _put(client, _stored(name, text=text, version=2, share="tenant"))
         assert second["query"]["version"] == 2
         assert second["warnings"] == expected
 
@@ -302,4 +317,5 @@ async def test_workspace_share_schedule_and_lint() -> None:
         assert called["warnings"] == expected
         assert called["row_count"] == 0
     finally:
+        await sharee.close()
         await client.close()
