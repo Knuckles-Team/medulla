@@ -1464,6 +1464,7 @@ mod tests {
         }
     }
 
+    // proves R650.1: Model
     // spec: MEDULLA-MEDIA-VOCAB-R650.1
     #[test]
     fn media_attachment_round_trips() {
