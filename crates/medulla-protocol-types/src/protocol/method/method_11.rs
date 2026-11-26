@@ -572,6 +572,15 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::ReadBlameRequest>,
     },
 
+    /// The next step of a bisect over the gate verdicts of a branch chain
+    /// (MEDULLA-SCM-R009): the changeset that needs a `gate_id` verdict, or the
+    /// culprit when the failing range is one changeset. `good` is optional.
+    /// Refusals: `BISECT_VERDICT_COVERAGE`, `REVISION_NOT_ON_CHAIN`,
+    /// `INVALID_ARGUMENT`, plus the branch refusals of `ReadTree`. Reads only.
+    BisectStep {
+        request: Box<medulla_source_types::source_bisect::BisectStepRequest>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as

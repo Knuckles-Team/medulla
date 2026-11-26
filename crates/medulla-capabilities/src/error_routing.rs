@@ -1203,6 +1203,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REVISION_NOT_ON_CHAIN",
         ],
     ),
+    // MEDULLA-SCM-R009: the bisect refusals.
+    (
+        "BisectStep",
+        &[
+            "BISECT_VERDICT_COVERAGE",
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "INVALID_ARGUMENT",
+            "PATH_READ_DENIED",
+            "REVISION_NOT_ON_CHAIN",
+        ],
+    ),
     // MEDULLA-SCM-R005.2: the blame refusals and those of the path-history read.
     (
         "ReadBlame",

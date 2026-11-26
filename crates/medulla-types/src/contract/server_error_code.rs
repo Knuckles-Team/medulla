@@ -519,6 +519,8 @@ closed_error_codes! {
         GateInputDigestMismatch => "GATE_INPUT_DIGEST_MISMATCH",
         /// MEDULLA-SCM-R008: a different verdict for the same gate and changeset is stored.
         GateVerdictSealed => "GATE_VERDICT_SEALED",
+        /// MEDULLA-SCM-R009: the chain below the failing changeset has no passing verdict of the gate.
+        BisectVerdictCoverage => "BISECT_VERDICT_COVERAGE",
         /// MEDULLA-SCM-R008: a required gate has no passing verdict, so the landing is blocked.
         LandingGateBlocked => "LANDING_GATE_BLOCKED",
         /// MEDULLA-SCM-R008: a write that lowers a landing policy carries no operator approval.

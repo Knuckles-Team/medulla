@@ -87,6 +87,8 @@ pub mod source_git_objects;
 pub mod source_history;
 /// Tree materialization of the source-changeset chain (MEDULLA-SCM-R004).
 pub mod source_tree;
+/// Bisect over the gate verdicts of the source-changeset chain (MEDULLA-SCM-R009).
+pub mod source_bisect;
 /// Shared parser fixtures for this crate's unit tests and downstream test
 /// consumers. The feature is dev-only in the facade and absent from releases.
 #[cfg(all(any(test, feature = "test-support"), feature = "ast"))]

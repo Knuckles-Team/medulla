@@ -16451,6 +16451,13 @@ class MethodSetPathGrant(BaseModel):
     params: MethodSetPathGrantParams
 
 
+class MethodBisectStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BisectStep"]
+    params: MethodBisectStepParams
+
+
 class MethodReadBlame(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17208,6 +17215,7 @@ Method = Annotated[
         MethodGitExportPack,
         MethodSetPathGrant,
         MethodReadPathHistory,
+        MethodBisectStep,
         MethodReadBlame,
         MethodReadSpan,
         MethodAtomContext,
@@ -37687,6 +37695,12 @@ class MethodSetPathGrantParams(BaseModel):
     request: SetPathGrantRequest
 
 
+class MethodBisectStepParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: BisectStepRequest
+
+
 class MethodReadBlameParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38492,6 +38506,36 @@ class StoredQueryLanguage(str, Enum):
     UQL = "uql"
     SQL = "sql"
     SPARQL = "sparql"
+
+
+class BisectOutcome(str, Enum):
+    NEEDS_VERDICT = "needs_verdict"
+    CULPRIT = "culprit"
+
+
+class BisectLink(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    changeset: str
+    commit: str
+
+
+class BisectStepReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    link: BisectLink
+    outcome: BisectOutcome
+    remaining: Annotated[int, Field(ge=0)]
+
+
+class BisectStepRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bad: str
+    branch: str
+    gate_id: str
+    good: str | None = None
+    repo: str
 
 
 class BlameRun(BaseModel):
@@ -47026,6 +47070,10 @@ __all__ = [
     "BenchmarkDataset",
     "BenchmarkQuery",
     "BenchmarkResult",
+    "BisectLink",
+    "BisectOutcome",
+    "BisectStepReceipt",
+    "BisectStepRequest",
     "BlameRun",
     "BookmarkQueryLimitPolicy",
     "BookmarkRelationsRequest",
@@ -47459,6 +47507,8 @@ __all__ = [
     "MethodProjectionReadParams",
     "MethodPublishSkillPackage",
     "MethodPublishSkillPackageParams",
+    "MethodBisectStep",
+    "MethodBisectStepParams",
     "MethodReadBlame",
     "MethodReadBlameParams",
     "MethodReadGraphChanges",

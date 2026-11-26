@@ -630,6 +630,7 @@ METHOD_IDS = frozenset(
         "NumericEvaluate",
         "ObservationState",
         "OpenGraphSnapshot",
+        "BisectStep",
         "ReadBlame",
         "ReadGraphChanges",
         "ReadPathHistory",

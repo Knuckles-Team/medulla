@@ -68,6 +68,7 @@ pub mod source_changeset;
 /// changeset (MEDULLA-SCM-R004).
 #[cfg(feature = "blob")]
 pub mod source_tree;
+pub mod source_bisect;
 // MEDULLA-SCM-R008 — gate verdicts are sealed records.
 pub mod gate_verdict;
 /// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).

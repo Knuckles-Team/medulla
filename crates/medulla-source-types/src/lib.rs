@@ -48,6 +48,8 @@ pub mod source_path_grant;
 pub mod lifecycle;
 // MEDULLA-SCM-R008 — gate verdict records and the landing policy.
 pub mod gate_verdict;
+// MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
+pub mod source_bisect;
 pub mod spec_question;
 pub mod stack_frame;
 // MEDULLA-SDLC-R019.2 — delivery records.

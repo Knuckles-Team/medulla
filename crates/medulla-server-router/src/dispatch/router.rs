@@ -70,6 +70,7 @@ mod source_ingest;
 mod git_export_pack;
 mod import_git_history;
 mod read_blame;
+mod source_bisect;
 mod read_path_history;
 mod read_tree;
 mod set_path_grant;

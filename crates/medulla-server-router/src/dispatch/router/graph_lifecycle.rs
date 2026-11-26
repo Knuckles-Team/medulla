@@ -186,6 +186,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R009: the next changeset a bisect needs a verdict for.
+        Method::BisectStep { request } => {
+            dispatch_boxed(super::source_bisect::handle_bisect_step(
+                state,
+                req,
+                verified_context,
+                super::source_bisect::BisectStepFields { request },
+            ))
+            .await
+        }
         // MEDULLA-SCM-R007: one principal's path grant on a repository.
         Method::SetPathGrant { request } => {
             dispatch_boxed(super::set_path_grant::handle_set_path_grant(
