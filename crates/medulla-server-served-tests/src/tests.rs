@@ -1061,6 +1061,7 @@ async fn test_uql_text_equals_structured_plan_and_oracle() {
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )
@@ -1128,6 +1129,7 @@ async fn test_uql_text_bad_syntax_is_clear_error() {
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )
@@ -1176,6 +1178,7 @@ async fn test_served_scan_reads_node_type_labels() {
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )

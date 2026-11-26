@@ -584,6 +584,7 @@ pub fn uql(text: &str) -> Method {
         params: Default::default(),
         prepare: false,
         foreign_executions: Default::default(),
+        budget: None,
     }
 }
 

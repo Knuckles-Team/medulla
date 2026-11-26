@@ -1506,6 +1506,11 @@ pub enum UqlResult {
         /// `PROPAGATE ... RISK HISTORY` stage; empty (and omitted) otherwise.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         historical_risk: Vec<crate::impact_risk::HistoricalRisk>,
+        /// MEDULLA-DECISION-ENGINE-R144.8: the budget the statement ran under and what it
+        /// spent, present exactly when the request carried a budget. `applied_budget` is the
+        /// caller budget clamped field-wise to the tenant ceiling.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cost: Option<Box<crate::indexless_cost::CostReport>>,
     },
     /// `EXPLAIN`: the canonical and the optimized plan, per-stage estimates, and
     /// whether the plan is incrementally maintainable (with the reason when not).
@@ -1723,6 +1728,7 @@ mod tests {
                     },
                 ],
                 historical_risk: vec![],
+                cost: None,
             },
             UqlResult::Profile {
                 columns: vec![],
@@ -1755,6 +1761,7 @@ mod tests {
                 knowledge_revision: 0,
                 source_coverage: vec![],
                 historical_risk: vec![],
+                cost: None,
             }
         );
     }

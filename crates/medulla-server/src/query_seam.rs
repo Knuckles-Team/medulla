@@ -94,6 +94,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
             params: Default::default(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         };
         let response = medulla_h_query::query::try_handle(
             state,

@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget, MAX_INDEXLESS_OPS};
 use medulla_types::contract::BoundedVec;
 
 use super::knob_families::indexless::{
@@ -19,9 +20,6 @@ use super::knobs::{KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::record::outcome::RefusalCode;
 use super::request::DecisionPolicyRef;
-
-/// Most operations one request may carry.
-pub const MAX_INDEXLESS_OPS: usize = 64;
 
 /// The stable refusals of the `indexless` family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,35 +70,6 @@ pub enum IndexlessOp {
         end_byte: u64,
         expected_digest: String,
     },
-}
-
-/// A budget in rows, visits and cost units.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct IndexlessBudget {
-    pub max_rows: u64,
-    pub max_visits: u64,
-    pub max_cost_units: u64,
-}
-
-/// What a request spent and has left.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct CostReport {
-    pub rows_visited: u64,
-    pub visits: u64,
-    pub cost_used: u64,
-    pub remaining: IndexlessBudget,
-    pub applied_budget: IndexlessBudget,
-    #[serde(default)]
-    pub operation_ids: BoundedVec<String, MAX_INDEXLESS_OPS>,
-    pub authorization_revision: u64,
-    /// The tenant ceiling the budget was clamped to, as
-    /// `knob:indexless.<name>=<value>` premises (MEDULLA-DECISION-ENGINE-R144.7).
-    #[serde(default)]
-    pub premises: Vec<String>,
 }
 
 /// One indexless retrieval request.

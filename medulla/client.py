@@ -13716,6 +13716,7 @@ class QueryClient:
         *,
         prepare: bool = False,
         foreign_executions: list[dict[str, Any]] | None = None,
+        budget: dict[str, int] | None = None,
     ) -> dict[str, Any]:
         """Run a UQL statement (CONCEPT:AU-KG.query.top-nodes-by-degree; UQL-07/08/09).
 
@@ -13743,6 +13744,14 @@ class QueryClient:
         and typed parameter map; the client does not compute or guess either
         digest. A source the caller cannot read is absent from the executions: it
         adds no rows and the answer's ``"coverage"`` lists it as not used.
+
+        ``budget`` is an optional ``{"max_rows", "max_visits", "max_cost_units"}``
+        result budget (MEDULLA-DECISION-ENGINE-R144.8). The engine clamps it
+        field-wise to the tenant ceiling, refuses ``INDEXLESS_BUDGET_EXHAUSTED``
+        when the statement returns more than the applied budget allows, and answers
+        a ``"cost"`` entry on the ``"rows"`` result with ``applied_budget``,
+        ``rows_visited``, ``visits``, ``cost_used`` and ``remaining``. The client
+        sends the budget unchanged and never clamps or defaults it.
 
         Set ``prepare=True`` to ask the authenticated server to plan this exact
         executable text without running it and return the server-owned pins in
@@ -13780,6 +13789,8 @@ class QueryClient:
         }
         if prepare:
             body["prepare"] = True
+        if budget is not None:
+            body["budget"] = budget
         if foreign_executions:
             # The generated sender validates the server-issued execution shapes.
             # Keep the opaque references byte-for-byte; digest calculation belongs

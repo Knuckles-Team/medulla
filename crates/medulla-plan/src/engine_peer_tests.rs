@@ -336,6 +336,7 @@ fn the_envelope_binds_the_secret_the_statement_the_graph_and_the_request_id() {
         params: Default::default(),
         prepare: false,
         foreign_executions: Default::default(),
+        budget: None,
     };
     assert!(
         verified_claims(&peer.secret, &widened).is_none(),

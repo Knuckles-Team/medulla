@@ -928,6 +928,7 @@ fn uql_decodes_foreign_executions_and_refuses_the_singular_field() {
         params: Default::default(),
         prepare: false,
         foreign_executions,
+        budget: None,
     })
     .expect("encodes");
     assert_eq!(encoded["params"]["foreign_executions"], two["params"]["foreign_executions"]);

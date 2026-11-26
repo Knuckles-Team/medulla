@@ -22111,6 +22111,7 @@ class MethodUpdateResourceHostParams(BaseModel):
 class MethodUqlParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    budget: IndexlessBudget | None = None
     foreign_executions: BoundedVec_ForeignReadExecutionRef_16 | None = None
     params: dict[str, UqlParam] | None = None
     prepare: bool | None = None
@@ -32161,6 +32162,7 @@ class UqlResultRowsBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     columns: list[str]
+    cost: CostReport | None = None
     rows: list[UqlRow]
     warnings: list[str]
 

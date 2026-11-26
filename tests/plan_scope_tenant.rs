@@ -63,6 +63,7 @@ async fn uql(state: &test_support::SharedState, id: u64, text: &str) -> Response
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )
@@ -157,6 +158,7 @@ async fn unverified_tenant_refused_zero_reads() {
             params: Default::default(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         },
         &rls,
     )

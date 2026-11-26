@@ -702,6 +702,7 @@ impl RemoteEngineSource<'_> {
             params: std::collections::BTreeMap::new(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         })?;
         let raw = self.round_trip(&request)?;
         let result: medulla_query_types::wire::UqlResult = medulla_types::msgpack::decode_bounded(

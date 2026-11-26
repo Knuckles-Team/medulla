@@ -1930,6 +1930,7 @@ mod txn_ryow_dispatch_tests {
             params: Default::default(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         }
     }
 

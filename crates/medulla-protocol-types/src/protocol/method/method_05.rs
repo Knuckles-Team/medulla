@@ -165,6 +165,12 @@ $($variants)*
         /// statement can join several sources (DECISIONS FQ-UQL-MULTI).
         #[serde(default, skip_serializing_if = "medulla_types::contract::BoundedVec::is_empty")]
         foreign_executions: medulla_types::contract::BoundedVec<medulla_catalog_types::foreign_read::ForeignReadExecutionRef, 16>,
+        /// MEDULLA-DECISION-ENGINE-R144.8: the caller's result budget. The engine clamps it
+        /// field-wise to the tenant ceiling (`indexless.*` knobs) and answers the applied budget
+        /// and the spent cost in `UqlResult::Rows.cost`. Absent means the statement is
+        /// unmetered, exactly as before; a present budget is never widened.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        budget: Option<medulla_query_types::indexless_cost::IndexlessBudget>,
     },
 
 

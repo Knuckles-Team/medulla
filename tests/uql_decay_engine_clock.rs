@@ -39,6 +39,7 @@ async fn uql_rows(state: &test_support::SharedState, id: u64, offset_ms: u64) ->
             params: Default::default(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         },
     );
     let response: Response =

@@ -19,8 +19,9 @@ use medulla_agent_types::agent_component::{
 };
 use medulla_decision_types::decision::digest::policy_digest;
 use medulla_decision_types::decision::indexless_retrieval::{
-    CostReport, IndexlessBudget, IndexlessOp, IndexlessRequest, IndexlessResult,
+    IndexlessOp, IndexlessRequest, IndexlessResult,
 };
+use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 use medulla_decision_types::decision::knob_families::indexless::MAX_ROWS;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;

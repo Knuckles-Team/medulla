@@ -227,6 +227,7 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
             knowledge_revision: 0,
             source_coverage: Vec::new(),
             historical_risk: traced.risks,
+            cost: None,
         });
     }
     if columns.is_empty() && !has_risk_history(&plan.ops) {
@@ -239,6 +240,7 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
             knowledge_revision: 0,
             source_coverage: Vec::new(),
             historical_risk: Vec::new(),
+            cost: None,
         });
     }
     let traced = traced(plan, ctx)?;
@@ -250,6 +252,7 @@ fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, S
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: traced.risks,
+        cost: None,
     })
 }
 

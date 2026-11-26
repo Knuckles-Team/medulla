@@ -82,6 +82,7 @@ pub(crate) fn handle_harness_metric(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -180,6 +181,7 @@ fn handle_run_trace_usage(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -237,6 +239,7 @@ fn handle_evolution_trace_metrics(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -326,6 +329,7 @@ fn handle_harness_config_evidence(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -433,6 +437,7 @@ fn handle_capability_gaps(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,
@@ -510,6 +515,7 @@ fn handle_harness_session_search(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     served_response::<query_results::Uql>(
         ctx.req_id,

@@ -284,6 +284,7 @@ async fn served_uql(state: &Arc<RwLock<ServerState>>, request: u64, text: &str) 
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )

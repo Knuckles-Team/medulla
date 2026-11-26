@@ -10,7 +10,13 @@
 //! namespace. A `PROFILE` answer carries wall times and is never cached, nor is a
 //! statement whose legs read the decision log (it moves without the graph version).
 
+use super::context_search::resolve_policy;
 use super::*;
+use medulla_decision_types::decision::indexless_retrieval::{
+    ceiling_premises, clamp_budget, tenant_ceiling, unit_costs, BudgetMeter,
+};
+use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef};
+use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 
 /// Parse and run one UQL statement.
 #[cfg(feature = "query")]
@@ -23,6 +29,7 @@ pub(crate) async fn handle_uql(
         medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
         16,
     >,
+    budget: Option<IndexlessBudget>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     // MEDULLA-FEDERATED-QUERY-R708.3: `CALL STORED name(args)` is the stored-query call.
@@ -124,13 +131,24 @@ pub(crate) async fn handle_uql(
     let policy_digest = medulla_exec::policy_mask::policy_digest(&policies);
     let principal = ctx.caller.to_string();
     let tenant = ctx.graph_name.to_string();
+    // MEDULLA-DECISION-ENGINE-R144.8: a caller budget is clamped to the tenant ceiling
+    // before the statement runs; the statement is metered against the applied budget.
+    let metering = match budget {
+        None => None,
+        Some(asked) => match resolve_policy(ctx, &tenant, &DecisionPolicyRef::Default).await {
+            Ok(policy) => Some(UqlMetering::new(asked, &policy)),
+            Err(message) => return Ok(Response::err(req_id, message)),
+        },
+    };
     #[cfg(not(feature = "result-cache"))]
     let _ = &policy_digest;
     #[cfg(feature = "result-cache")]
     let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs, &policy_digest) {
         // MEDULLA-FEDERATED-QUERY-R706.11: a request under shape policies is evaluated, so
         // its record is owed; a cached answer would owe none.
-        Ok(key) => key.filter(|_| !policies.has_shapes()),
+        // A metered statement is never served from or stored in the cache: its answer
+        // carries the cost of this request's own budget (MEDULLA-DECISION-ENGINE-R144.8).
+        Ok(key) => key.filter(|_| !policies.has_shapes() && metering.is_none()),
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     let (snap, version) = sql_read_snapshot(
@@ -226,6 +244,9 @@ pub(crate) async fn handle_uql(
                     risk.graph_revision = version;
                 }
             }
+            if let Some(metering) = &metering {
+                metering.charge(&mut result, version)?;
+            }
             #[cfg(feature = "federation")]
             if let medulla_query_types::wire::UqlResult::Explain {
                 plan_digest: reported_plan_digest,
@@ -270,6 +291,64 @@ pub(crate) async fn handle_uql(
         Ok(()) => response,
         Err(code) => Response::err(req_id, code.as_str()),
     })
+}
+
+/// MEDULLA-DECISION-ENGINE-R144.8: the budget one `Uql` statement runs under. The applied
+/// budget is the caller budget clamped field-wise to the tenant ceiling, the same
+/// `clamp_budget` `IndexlessRetrieve` uses; a statement that returns more rows than the applied
+/// `max_rows`, or whose cost exceeds `max_cost_units`, refuses `INDEXLESS_BUDGET_EXHAUSTED`.
+/// The statement is one visit and each returned row costs `indexless.scan_cost` units.
+struct UqlMetering {
+    applied: IndexlessBudget,
+    ceiling: IndexlessBudget,
+    scan_cost: u64,
+}
+
+impl UqlMetering {
+    fn new(asked: IndexlessBudget, policy: &DecisionPolicy) -> Self {
+        let ceiling = tenant_ceiling(policy);
+        Self {
+            applied: clamp_budget(Some(asked), ceiling),
+            ceiling,
+            scan_cost: unit_costs(policy).scan,
+        }
+    }
+
+    /// Admit the rows of `result` under the applied budget. An executed `Rows` answer carries
+    /// the cost report; a `PROFILE` answer is metered the same way but has no report slot, and
+    /// an `EXPLAIN` executes nothing.
+    fn charge(
+        &self,
+        result: &mut medulla_query_types::wire::UqlResult,
+        revision: u64,
+    ) -> Result<(), String> {
+        use medulla_query_types::wire::UqlResult;
+        let returned = match result {
+            UqlResult::Rows { rows, .. } | UqlResult::Profile { rows, .. } => rows.len() as u64,
+            _ => return Ok(()),
+        };
+        let mut meter = BudgetMeter::new(self.applied);
+        let report = |meter: &BudgetMeter| CostReport {
+            premises: ceiling_premises(self.ceiling),
+            ..meter.report(revision)
+        };
+        if let Err(code) = meter.charge(
+            "uql:rows",
+            returned,
+            1,
+            returned.saturating_mul(self.scan_cost),
+        ) {
+            return Err(format!(
+                "{}: operation uql:rows: the statement returned {returned} rows; cost {}",
+                code.as_str(),
+                serde_json::to_string(&report(&meter)).unwrap_or_default()
+            ));
+        }
+        if let UqlResult::Rows { cost, .. } = result {
+            *cost = Some(Box::new(report(&meter)));
+        }
+        Ok(())
+    }
 }
 
 /// MEDULLA-FEDERATED-QUERY-R078.3: the caller scope a served statement's plan
@@ -347,6 +426,9 @@ fn uql_cache_key(
 mod served_tests {
     use super::super::current_auth_test_support::prelude::*;
     use medulla_query_types::wire::{UqlParam, UqlResult};
+    use super::UqlMetering;
+    use medulla_decision_types::decision::indexless_retrieval::{tenant_ceiling, unit_costs};
+    use medulla_decision_types::decision::DecisionPolicy;
 
     const SECRET: &str = "uql-served-test-secret";
 
@@ -401,6 +483,7 @@ mod served_tests {
             params,
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         };
         dispatch_on_heap(state, req(id, method)).await
     }
@@ -443,6 +526,129 @@ mod served_tests {
             .as_deref()
             .is_some_and(|detail| detail.contains("UQL_UNBOUND_PARAMETER")));
     }
+
+    async fn uql_budgeted(
+        state: &Arc<RwLock<ServerState>>,
+        id: u64,
+        text: &str,
+        budget: Option<medulla_query_types::indexless_cost::IndexlessBudget>,
+    ) -> Response {
+        let method = Method::Uql {
+            text: text.into(),
+            params: Default::default(),
+            prepare: false,
+            foreign_executions: Default::default(),
+            budget,
+        };
+        dispatch_on_heap(state, req(id, method)).await
+    }
+
+    fn asked(
+        max_rows: u64,
+        max_visits: u64,
+        max_cost_units: u64,
+    ) -> medulla_query_types::indexless_cost::IndexlessBudget {
+        medulla_query_types::indexless_cost::IndexlessBudget {
+            max_rows,
+            max_visits,
+            max_cost_units,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R144.8
+    /// Verifies MEDULLA-DECISION-ENGINE-R144.8: a `Uql` budget is clamped field-wise to the
+    /// tenant ceiling, the answer reports the applied budget and the spend, an unbudgeted
+    /// statement is unmetered, and a statement past the applied rows refuses by code.
+    #[tokio::test]
+    async fn uql_budget_is_clamped_reported_and_enforced() {
+        let state = state();
+        for (index, node) in ["d1", "d2", "d3"].into_iter().enumerate() {
+            add_doc(&state, 1 + index as u64, node, 2020 + index as i64).await;
+        }
+        let ceiling = tenant_ceiling(&DecisionPolicy::engine_default());
+
+        // Unbudgeted: no report, same rows as before.
+        let plain = uql_budgeted(&state, 10, "MATCH (:Doc)", None).await;
+        let UqlResult::Rows { rows, cost, .. } = body(&plain) else {
+            panic!("rows expected")
+        };
+        assert_eq!(rows.len(), 3);
+        assert!(cost.is_none(), "an unbudgeted statement reports no cost");
+
+        // Over the ceiling in rows and cost, under it in visits: the ceiling wins field-wise.
+        let over = asked(u64::MAX, 5, u64::MAX);
+        let metered = uql_budgeted(&state, 11, "MATCH (:Doc)", Some(over)).await;
+        let UqlResult::Rows { rows, cost, .. } = body(&metered) else {
+            panic!("rows expected")
+        };
+        assert_eq!(rows.len(), 3);
+        let cost = cost.expect("a budgeted statement reports its cost");
+        assert_eq!(cost.applied_budget.max_rows, ceiling.max_rows);
+        assert_eq!(cost.applied_budget.max_visits, 5);
+        assert_eq!(cost.applied_budget.max_cost_units, ceiling.max_cost_units);
+        assert_eq!((cost.rows_visited, cost.visits), (3, 1));
+        assert_eq!(cost.remaining.max_rows, ceiling.max_rows - 3);
+        assert_eq!(
+            cost.premises,
+            ["max_rows", "max_visits", "max_cost_units"]
+                .iter()
+                .zip([ceiling.max_rows, ceiling.max_visits, ceiling.max_cost_units])
+                .map(|(name, value)| format!("knob:indexless.{name}={value}"))
+                .collect::<Vec<_>>()
+        );
+
+        // Past the applied rows: refused by the registered code, nothing is clamped.
+        let refused = uql_budgeted(&state, 12, "MATCH (:Doc)", Some(asked(2, 10, 10))).await;
+        assert_eq!(refused.error.as_deref(), Some("INDEXLESS_BUDGET_EXHAUSTED"));
+        assert!(refused.result.is_none());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R144.8
+    /// Verifies MEDULLA-DECISION-ENGINE-R144.8: the metering charge is the one statement visit
+    /// plus the scan cost of each returned row, and a refused charge attaches no report.
+    #[test]
+    fn uql_metering_charges_one_visit_and_scan_cost_per_row() {
+        use medulla_query_types::wire::UqlResult;
+        let policy = DecisionPolicy::engine_default();
+        let rows = |count: usize| UqlResult::Rows {
+            columns: vec![],
+            rows: (0..count)
+                .map(|index| medulla_query_types::wire::UqlRow {
+                    id: format!("n{index}"),
+                    score: None,
+                    channels: vec![],
+                    knowledge: None,
+                    proof: None,
+                    provenance: Default::default(),
+                })
+                .collect(),
+            warnings: vec![],
+            snapshot_revision: 0,
+            knowledge_revision: 0,
+            source_coverage: vec![],
+            historical_risk: vec![],
+            cost: None,
+        };
+
+        let metering = UqlMetering::new(asked(10, 1, 40), &policy);
+        let mut result = rows(4);
+        metering.charge(&mut result, 7).expect("four rows fit");
+        let UqlResult::Rows { cost: Some(cost), .. } = result else {
+            panic!("a cost report")
+        };
+        assert_eq!(cost.authorization_revision, 7);
+        assert_eq!(cost.cost_used, 4 * unit_costs(&policy).scan);
+        assert_eq!(cost.operation_ids.as_slice(), ["uql:rows".to_string()]);
+
+        let mut too_many = rows(11);
+        let error = metering.charge(&mut too_many, 7).expect_err("eleven rows do not fit");
+        assert!(error.starts_with("INDEXLESS_BUDGET_EXHAUSTED: operation uql:rows"), "{error}");
+        let UqlResult::Rows { cost, .. } = too_many else {
+            panic!("rows")
+        };
+        assert!(cost.is_none(), "a refused statement attaches no report");
+    }
+
     #[cfg(feature = "federation")]
     #[tokio::test]
     async fn explain_returns_server_owned_foreign_query_pins() {
@@ -493,6 +699,7 @@ mod served_tests {
                     params: Default::default(),
                     prepare: true,
                     foreign_executions: Default::default(),
+                    budget: None,
                 },
             ),
         )

@@ -2276,6 +2276,7 @@ async fn native_note_ids(
             params: Default::default(),
             prepare: false,
             foreign_executions: Default::default(),
+            budget: None,
         },
     );
     let response = test_support::dispatch(state, request).await;

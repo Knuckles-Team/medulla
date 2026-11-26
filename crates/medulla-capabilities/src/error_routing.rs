@@ -2360,6 +2360,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("Uql", &["PLAN_SCOPE_INVALID", "PLAN_SCOPE_UNVERIFIED"]),
     // MEDULLA-FEDERATED-QUERY-R078.7: the company-context view refusal.
     ("Uql", &["COMPANY_MAPPING_MISSING", "SNAPSHOT_TIME_UNKNOWN"]),
+    // MEDULLA-DECISION-ENGINE-R144.8: a statement past the applied result budget.
+    ("Uql", &["INDEXLESS_BUDGET_EXHAUSTED"]),
     // MEDULLA-FEDERATED-QUERY-R032.100: the `PROPAGATE ... RISK HISTORY` refusals.
     ("Uql", &["HISTORY_DATASET_UNAVAILABLE", "HISTORY_MALFORMED"]),
     (

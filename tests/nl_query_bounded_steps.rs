@@ -174,6 +174,7 @@ async fn second_step_corrects_parse_error() {
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )

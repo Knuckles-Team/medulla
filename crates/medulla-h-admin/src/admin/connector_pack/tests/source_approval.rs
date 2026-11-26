@@ -1623,6 +1623,7 @@ async fn uql_joins_two_approved_sources_in_one_query() {
         params: BTreeMap::new(),
         prepare: false,
         foreign_executions: BoundedVec::new(executions).unwrap(),
+        budget: None,
     };
 
     // Tenant B presenting tenant A's execution ids is refused.

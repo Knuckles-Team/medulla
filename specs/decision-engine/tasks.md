@@ -413,6 +413,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T404 [US7] MEDULLA-DECISION-ENGINE-R144.5 Indexless cost evidence
 - [ ] T405 [US7] MEDULLA-DECISION-ENGINE-R144.6 Indexless retrieval served proof
 - [ ] T406 [US7] MEDULLA-DECISION-ENGINE-R144.7 Tenant budget ceiling
+- [ ] T1040 [US7] MEDULLA-DECISION-ENGINE-R144.8 Uql result budget
 - [ ] T407 [US7] MEDULLA-DECISION-ENGINE-R146.1 Temporal context model
 - [ ] T408 [US7] MEDULLA-DECISION-ENGINE-R146.2 Temporal basis rules
 - [ ] T409 [US7] MEDULLA-DECISION-ENGINE-R146.3 Temporal basis family wiring

@@ -116,7 +116,7 @@ async fn relations(
                 .collect(),
         ),
     );
-    let response = handle_uql(ctx, statement(window), params, false, Default::default())
+    let response = handle_uql(ctx, statement(window), params, false, Default::default(), None)
         .await
         .map_err(|_| "ENGINE_UNAVAILABLE: UQL is not served in this build".to_string())?;
     let rows = match response_body::<UqlResult>(response)? {

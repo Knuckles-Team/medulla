@@ -106,6 +106,7 @@ fn uql(text: impl Into<String>) -> Method {
         params: Default::default(),
         prepare: false,
         foreign_executions: Default::default(),
+        budget: None,
     }
 }
 

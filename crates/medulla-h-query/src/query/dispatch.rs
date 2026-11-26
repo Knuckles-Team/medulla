@@ -359,7 +359,8 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             params,
             prepare,
             foreign_executions,
-        } => handle_uql(ctx, text, params, prepare, foreign_executions).await,
+            budget,
+        } => handle_uql(ctx, text, params, prepare, foreign_executions, budget).await,
         // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
         Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         // MEDULLA-UNIFIED-DATA-PLANE-R030.3: approving one entity link writes its owl:sameAs edge.

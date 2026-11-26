@@ -59,6 +59,7 @@ async fn uql(state: &test_support::SharedState, id: u64, text: &str) -> Response
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
         ),
     )

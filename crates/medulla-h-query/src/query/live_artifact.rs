@@ -319,6 +319,7 @@ async fn run_uql(ctx: &QueryHandlerCtx<'_>, text: &str) -> Result<Value, String>
         UqlParams::new(),
         false,
         Default::default(),
+        None,
     )
     .await
     .map_err(|_| "UQL is not served in this build".to_string())?;

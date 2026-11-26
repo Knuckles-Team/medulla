@@ -418,6 +418,7 @@ async fn run_uql(
         uql_params(bound),
         false,
         Default::default(),
+        None,
     )
     .await
     .map_err(|_| "UQL is not served in this build".to_string())?;
@@ -692,6 +693,7 @@ pub(crate) async fn handle_call_stored_statement(
         knowledge_revision: 0,
         source_coverage: Vec::new(),
         historical_risk: Vec::new(),
+        cost: None,
     };
     match ResultPayload::of::<results::Uql>(body) {
         Ok(payload) => Response::ok(ctx.req_id, payload),

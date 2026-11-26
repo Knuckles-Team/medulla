@@ -487,6 +487,7 @@ fn legacy_query_body(method: &Method) -> Option<Vec<u8>> {
             params,
             prepare,
             foreign_executions,
+            budget: None,
         } if foreign_executions.is_empty() => LegacyQuery::Uql {
             text,
             params,
@@ -2086,6 +2087,7 @@ mod tests {
                 params: Default::default(),
                 prepare: false,
                 foreign_executions: Default::default(),
+                budget: None,
             },
             Method::UnifiedQuery {
                 plan: medulla_exec::algebra::Plan::new(vec![]),
