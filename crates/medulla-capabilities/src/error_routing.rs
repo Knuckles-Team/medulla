@@ -442,6 +442,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FrictionReport",
         &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
     ),
+    // MEDULLA-DURABLE-KERNEL-R877.3: the bundle refusals, all before the target changes.
+    ("BundleExport", &["BUNDLE_TOO_LARGE"]),
+    (
+        "BundleImport",
+        &[
+            "BUNDLE_DIGEST_MISMATCH",
+            "BUNDLE_EMBEDDING_MODEL_UNKNOWN",
+            "BUNDLE_GRAPH_EXISTS",
+            "BUNDLE_TOO_LARGE",
+            "BUNDLE_VERSION_UNSUPPORTED",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R713.4: a malformed op and an unreadable graph.
     (
         "SkillTelemetry",

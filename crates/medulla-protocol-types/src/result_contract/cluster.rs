@@ -29,6 +29,9 @@ method_results! {
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     SubmitSymbolEdit(SubmitSymbolEdit) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     ImportGitHistory(ImportGitHistory) => Json<medulla_source_types::source_changeset::ImportGitHistoryReceipt>;
+    // MEDULLA-DURABLE-KERNEL-R877.2: the stored bundle, and what an import wrote.
+    BundleExport(BundleExport) => Json<medulla_types::knowledge_bundle::BundleExportReceipt>;
+    BundleImport(BundleImport) => Json<medulla_types::knowledge_bundle::BundleImportReceipt>;
     GitExportPack(GitExportPack) => Json<medulla_source_types::source_changeset::GitExportPackReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;

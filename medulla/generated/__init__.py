@@ -683,6 +683,8 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "SubmitChangeset": cluster.send_submit_changeset,
     "ImportGitHistory": cluster.send_import_git_history,
     "GitExportPack": cluster.send_git_export_pack,
+    "BundleExport": cluster.send_bundle_export,
+    "BundleImport": cluster.send_bundle_import,
     "SubmitWorkItem": coordination.send_submit_work_item,
     "SubmitWorkItems": coordination.send_submit_work_items,
     "SummariesAtLevel": graph.send_summaries_at_level,

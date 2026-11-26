@@ -17582,6 +17582,20 @@ class MethodImportGitHistory(BaseModel):
     params: MethodImportGitHistoryParams
 
 
+class MethodBundleExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BundleExport"]
+    params: MethodBundleExportParams
+
+
+class MethodBundleImport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["BundleImport"]
+    params: MethodBundleImportParams
+
+
 class MethodGitExportPack(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18420,6 +18434,8 @@ Method = Annotated[
         MethodBranchReadAt,
         MethodSubmitChangeset,
         MethodImportGitHistory,
+        MethodBundleExport,
+        MethodBundleImport,
         MethodGitExportPack,
         MethodSetPathGrant,
         MethodReadPathHistory,
@@ -40351,6 +40367,52 @@ class MethodImportGitHistoryParams(BaseModel):
     request: ImportGitHistoryRequest
 
 
+class BundleOnConflict(str, Enum):
+    REFUSE = "refuse"
+    SKIP = "skip"
+
+
+class MethodBundleExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graphs: list[str]
+    include_documents: bool = False
+    include_embeddings: bool = False
+
+
+class MethodBundleImportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bundle_ref: str
+    on_conflict: BundleOnConflict
+    target_graph_prefix: str = ""
+
+
+class BundleExportReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bundle_ref: str
+    manifest_digest: str
+    size_bytes: Annotated[int, Field(ge=0)]
+
+
+class ImportedGraph(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    skipped: bool
+
+
+class BundleImportReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    documents: Annotated[int, Field(ge=0)]
+    embeddings: Annotated[int, Field(ge=0)]
+    graphs: list[ImportedGraph]
+    provenance: Annotated[int, Field(ge=0)]
+    triples: Annotated[int, Field(ge=0)]
+
+
 class MethodGitExportPackParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -50455,6 +50517,14 @@ __all__ = [
     "MethodFeatureLedgerParams",
     "MethodFinanceAccountProject",
     "MethodFinanceAccountProjectParams",
+    "BundleExportReceipt",
+    "BundleImportReceipt",
+    "BundleOnConflict",
+    "ImportedGraph",
+    "MethodBundleExport",
+    "MethodBundleExportParams",
+    "MethodBundleImport",
+    "MethodBundleImportParams",
     "MethodGitExportPack",
     "MethodGitExportPackParams",
     "MethodHarnessEdit",

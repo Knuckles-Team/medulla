@@ -6,6 +6,7 @@
 //! ingestion records in `medulla-ingestion-types`, the access-control vocabulary
 //! (`AgentRole`/`AgentIdentity`) in `medulla-identity-types`.
 
+pub mod knowledge_bundle;
 pub mod row_change;
 // MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
 pub mod semantic_enrichment;

@@ -51,6 +51,7 @@ mod data_plane;
 mod data_plane_arms;
 mod decision_plane;
 mod graph_lifecycle;
+mod knowledge_bundle;
 mod identity_access;
 mod memory_change;
 mod memory_events;

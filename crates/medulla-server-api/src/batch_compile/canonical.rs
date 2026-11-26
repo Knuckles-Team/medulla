@@ -880,6 +880,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FrictionReport { .. }
         // MEDULLA-DECISION-ENGINE-R713.3: skill invocations commit through the graph gateway.
         | Method::SkillTelemetry { .. }
+        // MEDULLA-DURABLE-KERNEL-R877.4: imported graphs commit through the internal batch path.
+        | Method::BundleExport { .. }
+        | Method::BundleImport { .. }
         | Method::PublishSkillPackage { .. }
         | Method::Claims { .. }
         | Method::FeatureLedger { .. }

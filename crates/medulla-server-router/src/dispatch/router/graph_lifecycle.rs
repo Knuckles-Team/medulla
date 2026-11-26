@@ -72,6 +72,38 @@ pub async fn dispatch_graph_lifecycle_methods(
         },
 
         Method::ListGraphs => dispatch_boxed(list_graphs(state, verified_context, req.id)).await,
+        // MEDULLA-DURABLE-KERNEL-R877.4: a knowledge bundle moves one scoped dataset between tenants.
+        Method::BundleExport {
+            graphs,
+            include_embeddings,
+            include_documents,
+        } => {
+            dispatch_boxed(super::knowledge_bundle::serve_bundle_export(
+                state,
+                req.id,
+                verified_context,
+                graphs,
+                include_embeddings,
+                include_documents,
+            ))
+            .await
+        }
+        Method::BundleImport {
+            bundle_ref,
+            target_graph_prefix,
+            on_conflict,
+        } => {
+            dispatch_boxed(super::knowledge_bundle::serve_bundle_import(
+                state,
+                req,
+                verified_context,
+                state_machine_authorized,
+                bundle_ref,
+                target_graph_prefix,
+                on_conflict,
+            ))
+            .await
+        }
         // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
         Method::CreateBranch {
             tenant,

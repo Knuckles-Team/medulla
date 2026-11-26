@@ -433,6 +433,31 @@ $($variants)*
     EnrichDocument {
         request: Box<medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest>,
     },
+    /// Export chosen graphs of the caller's tenant as one knowledge bundle
+    /// (MEDULLA-DURABLE-KERNEL-R877.2): triples, embeddings, provenance rows and
+    /// source documents read from one snapshot of the caller's row-projected view,
+    /// stored as one blob. Answers `{bundle_ref, manifest_digest, size_bytes}`.
+    /// Refusals: `BUNDLE_TOO_LARGE`.
+    BundleExport {
+        graphs: Vec<String>,
+        #[serde(default)]
+        include_embeddings: bool,
+        #[serde(default)]
+        include_documents: bool,
+    },
+    /// Import a knowledge bundle blob under `target_graph_prefix`
+    /// (MEDULLA-DURABLE-KERNEL-R877.2): every digest is verified before anything is
+    /// written, then each graph commits its triples, embeddings and provenance rows
+    /// as one batch and its documents are stored by digest. Refusals:
+    /// `BUNDLE_DIGEST_MISMATCH`, `BUNDLE_VERSION_UNSUPPORTED`, `BUNDLE_TOO_LARGE`,
+    /// `BUNDLE_GRAPH_EXISTS`, `BUNDLE_EMBEDDING_MODEL_UNKNOWN`; each leaves the
+    /// target unchanged.
+    BundleImport {
+        bundle_ref: String,
+        #[serde(default)]
+        target_graph_prefix: String,
+        on_conflict: medulla_types::knowledge_bundle::BundleOnConflict,
+    },
     /// One scheduled semantic enrichment of the request graph (MEDULLA-DECISION-ENGINE-R614.3):
     /// store a grounded capability card, rank research concepts into proposals,
     /// classify a Document into a taxonomy topic, or project node properties

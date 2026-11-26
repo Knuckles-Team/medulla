@@ -791,6 +791,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "FrictionReport",
     // MEDULLA-DECISION-ENGINE-R713.3: skill invocations commit through the graph gateway.
     "SkillTelemetry",
+    // MEDULLA-DURABLE-KERNEL-R877.4: imported graphs commit through the internal batch path.
+    "BundleImport",
     "PublishSkillPackage",
     "MutationOutbox",
     "EdgeIndex",
@@ -898,6 +900,7 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
         Method::KnowledgeCuration { .. } => Some("KnowledgeCuration"),
         Method::FrictionReport { .. } => Some("FrictionReport"),
         Method::SkillTelemetry { .. } => Some("SkillTelemetry"),
+        Method::BundleImport { .. } => Some("BundleImport"),
         Method::PublishSkillPackage { .. } => Some("PublishSkillPackage"),
         Method::MutationOutbox { .. } => Some("MutationOutbox"),
         Method::EdgeIndex { .. } => Some("EdgeIndex"),

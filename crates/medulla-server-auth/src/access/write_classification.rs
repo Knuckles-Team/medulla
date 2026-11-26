@@ -466,6 +466,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ApplyChangeEnvelopeDrafts { .. }
                 | Method::SourceIngest { .. }
                 | Method::EnrichDocument { .. }
+                // MEDULLA-DURABLE-KERNEL-R877.4: an import writes graphs; an export reads.
+                | Method::BundleImport { .. }
                 | Method::SemanticEnrich { .. }
                 | Method::MeetingSummaryCommit { .. }
                 | Method::MeetingSummaryContext { .. }

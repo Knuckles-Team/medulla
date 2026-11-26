@@ -679,6 +679,8 @@ METHOD_IDS = frozenset(
         "SubmitChangeset",
         "ImportGitHistory",
         "GitExportPack",
+        "BundleExport",
+        "BundleImport",
         "TraceCritique",
         "TsDefineStateSpace",
         "ViewportQuery",

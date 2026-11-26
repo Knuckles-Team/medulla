@@ -1570,6 +1570,8 @@ send_import_git_history = contract_sender(
     "ImportGitHistory", "MethodImportGitHistoryParams"
 )
 send_git_export_pack = contract_sender("GitExportPack", "MethodGitExportPackParams")
+send_bundle_export = contract_sender("BundleExport", "MethodBundleExportParams")
+send_bundle_import = contract_sender("BundleImport", "MethodBundleImportParams")
 send_list_foreign_sources = contract_sender(
     "ListForeignSources", "MethodListForeignSourcesParams"
 )

@@ -24,6 +24,10 @@ pub mod connector_pack_projection;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graph_schema;
 
+/// The knowledge bundle handlers (MEDULLA-DURABLE-KERNEL-R877.2).
+#[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
+pub mod knowledge_bundle;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod namespace_migration;

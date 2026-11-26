@@ -112,3 +112,33 @@ fn clustered_mutation_inventory_is_complete() {
         );
     }
 }
+
+/// The mutation inventory lists the bundle import and no other bundle method
+/// (MEDULLA-DURABLE-KERNEL-R877.4).
+// spec: MEDULLA-DURABLE-KERNEL-R877.4
+#[test]
+fn bundle_import_is_classified_as_a_write() {
+    use medulla_protocol_types::protocol::Method;
+    use medulla_types::knowledge_bundle::BundleOnConflict;
+    let import = Method::BundleImport {
+        bundle_ref: "cas:sha256:00".to_string(),
+        target_graph_prefix: String::new(),
+        on_conflict: BundleOnConflict::Refuse,
+    };
+    let export = Method::BundleExport {
+        graphs: vec!["g".to_string()],
+        include_embeddings: true,
+        include_documents: true,
+    };
+    assert!(medulla_server_auth::access::requires_write(&import));
+    assert!(!medulla_server_auth::access::requires_write(&export));
+    let mutating: Vec<&str> = medulla_capabilities::method_policy_entries()
+        .filter(|(name, policy, _)| name.starts_with("Bundle") && policy.mutates)
+        .map(|(name, _, _)| name)
+        .collect();
+    assert_eq!(mutating, ["BundleImport"]);
+    let reading = medulla_capabilities::policy(&export);
+    assert!(!reading.mutates);
+    assert_eq!(reading.authz_action, "graph:read");
+    assert_eq!(medulla_capabilities::policy(&import).authz_action, "graph:write");
+}

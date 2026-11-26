@@ -101,6 +101,12 @@ closed_error_codes! {
         BlobDigestMismatch => "BLOB_DIGEST_MISMATCH",
         BlobNotFound => "BLOB_NOT_FOUND",
         BlobTooLarge => "BLOB_TOO_LARGE",
+        // MEDULLA-DURABLE-KERNEL-R877.3: the knowledge bundle refusals.
+        BundleDigestMismatch => "BUNDLE_DIGEST_MISMATCH",
+        BundleVersionUnsupported => "BUNDLE_VERSION_UNSUPPORTED",
+        BundleTooLarge => "BUNDLE_TOO_LARGE",
+        BundleGraphExists => "BUNDLE_GRAPH_EXISTS",
+        BundleEmbeddingModelUnknown => "BUNDLE_EMBEDDING_MODEL_UNKNOWN",
         ChangesetEmpty => "CHANGESET_EMPTY",
         ChangesetInvalid => "CHANGESET_INVALID",
         /// MEDULLA-SDLC-R012.3: a changeset names no requirement ID and is not a chore.
