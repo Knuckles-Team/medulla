@@ -26,6 +26,7 @@ def _stored_model(client) -> str:
     return models[0]
 
 
+# proves R002.651.4: Process conformance: footprint replay against a stored process ...
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R002.651.4")
 def test_conforming_trace_scores_one_deviating_below(clean_graph) -> None:
     model = _stored_model(clean_graph)

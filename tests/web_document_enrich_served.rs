@@ -434,6 +434,7 @@ async fn enrich_replay_supersede_and_search() {
     assert_eq!(answer.selected[0].canonical_url, "https://example.org/new");
 }
 
+// proves R652.3: Wiring: sections, the processed-document record and link edges commit with ...
 // spec: MEDULLA-REPO-INGEST-R652.3
 #[test]
 fn section_tree_and_links_are_written() {
@@ -610,6 +611,7 @@ async fn sections_and_links_run() {
     }
 }
 
+// proves R652.4: Refusal
 // spec: MEDULLA-REPO-INGEST-R652.4
 #[test]
 fn oversized_and_invalid_tree_refuse_without_writes() {
@@ -666,6 +668,7 @@ async fn oversized_and_invalid_tree_run() {
     }
 }
 
+// proves R652.5: Evidence
 // spec: MEDULLA-REPO-INGEST-R652.5
 #[test]
 fn processed_document_reads_back() {

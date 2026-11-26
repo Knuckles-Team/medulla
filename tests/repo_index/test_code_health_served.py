@@ -15,7 +15,8 @@ from test_repository_enrich_served import _index
 _FIXTURE = [
     (
         "app/main.py",
-        b"def a():\n    return 1\n\ndef main():\n    return a()\n\ndef b():\n    return 2\n",
+        b"def a():\n    return 1\n\ndef main():\n    return a()\n\n"
+        b"def b():\n    return 2\n",
     ),
 ]
 
@@ -36,6 +37,7 @@ def _sweep(client: Any, entry_points: list[str]) -> dict[str, Any]:
     )
 
 
+# proves R700.3: Wiring: CodeHealthSweep is a served read over the same code ...
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R700.3")
 def test_declared_entry_points_report_unreachable_symbols(clean_graph) -> None:
     _index(clean_graph, "repo-health", _FIXTURE)

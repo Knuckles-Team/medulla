@@ -89,6 +89,7 @@ def _mark(ordinal: int, new_fact: str, old_fact: str, envelope_id: str) -> dict:
     )
 
 
+# proves R002.651.2: Supersession is two existing methods in one envelope, verified ...
 # spec: MEDULLA-REPO-INGEST-R002.651.2
 def test_supersession_edge_and_unknown_fact_refusal(clean_graph):
     graph = _graph_name(clean_graph)
