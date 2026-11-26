@@ -34,7 +34,7 @@ fn sample_view() -> GraphView {
     }
 }
 
-fn run(sql: &str) -> medulla_sql::sql::QueryResult {
+fn run(sql: &str) -> medulla_protocol_types::protocol::QueryResult {
     // Direct call (exec_sql owns its current-thread runtime) — the spike already
     // proved the spawn_blocking nesting.
     exec_sql(
@@ -45,7 +45,7 @@ fn run(sql: &str) -> medulla_sql::sql::QueryResult {
     .expect("sql executed")
 }
 
-fn rows_as_values(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {
+fn rows_as_values(r: &medulla_protocol_types::protocol::QueryResult) -> Vec<Vec<serde_json::Value>> {
     r.rows
         .iter()
         .map(|blob| rmp_serde::from_slice::<Vec<serde_json::Value>>(blob).unwrap())

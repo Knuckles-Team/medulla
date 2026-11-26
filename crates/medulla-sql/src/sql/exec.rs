@@ -19,7 +19,7 @@ use datafusion::execution::context::SessionContext;
 use datafusion::prelude::SessionConfig;
 use medulla_graph_core::graph::GraphView;
 // The wire DTO lives at the bottom of the DAG (medulla-types); the algorithm stays here.
-pub use medulla_protocol_types::protocol::QueryResult;
+use medulla_protocol_types::protocol::QueryResult;
 
 use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,

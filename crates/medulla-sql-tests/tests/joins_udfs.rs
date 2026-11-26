@@ -4,7 +4,8 @@
 #![cfg(feature = "sql")]
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_sql::{sql::exec_sql, sql::exec_sql_cached, sql::QueryResult, sql::SqlCache};
+use medulla_protocol_types::protocol::QueryResult;
+use medulla_sql::sql::{exec_sql, exec_sql_cached, SqlCache};
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]

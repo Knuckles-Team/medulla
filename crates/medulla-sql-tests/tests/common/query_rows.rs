@@ -1,4 +1,4 @@
-use medulla_sql::sql::QueryResult;
+use medulla_protocol_types::protocol::QueryResult;
 
 pub fn rows(result: &QueryResult) -> Vec<Vec<serde_json::Value>> {
     result

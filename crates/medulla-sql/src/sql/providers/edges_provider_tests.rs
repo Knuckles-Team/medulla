@@ -23,7 +23,7 @@ fn graph() -> GraphCore {
     core
 }
 
-fn ids(r: &crate::sql::QueryResult, col_index: usize) -> Vec<String> {
+fn ids(r: &medulla_protocol_types::protocol::QueryResult, col_index: usize) -> Vec<String> {
     r.rows
         .iter()
         .map(|blob| {

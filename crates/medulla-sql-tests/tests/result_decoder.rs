@@ -35,7 +35,7 @@ fn sample_view() -> GraphView {
     }
 }
 
-fn run(sql: &str) -> medulla_sql::sql::QueryResult {
+fn run(sql: &str) -> medulla_protocol_types::protocol::QueryResult {
     exec_sql(
         &sample_view(),
         sql,
@@ -44,7 +44,7 @@ fn run(sql: &str) -> medulla_sql::sql::QueryResult {
     .expect("sql executed and decoded")
 }
 
-fn rows(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {
+fn rows(r: &medulla_protocol_types::protocol::QueryResult) -> Vec<Vec<serde_json::Value>> {
     r.rows
         .iter()
         .map(|blob| rmp_serde::from_slice::<Vec<serde_json::Value>>(blob).unwrap())
