@@ -15,8 +15,9 @@ use super::{
     parse_pagination, percent_decode, scope_authorized, table_ident_namespace, visibility_for,
     RestReply,
 };
+use medulla_catalog_types::lake_catalog::ProjectionAccess;
 use medulla_lake::catalog::{
-    refuse_projection_write, CatalogOperation, ProjectionAccess, TableEntry, PROJECTION_READ_ONLY,
+    refuse_projection_write, CatalogOperation, TableEntry, PROJECTION_READ_ONLY,
 };
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::http1::HttpMessage;
