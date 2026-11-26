@@ -60,6 +60,7 @@ pub mod pgrx_spike_review;
 pub mod pitr_schedule;
 // MEDULLA-TYPED-PACKS-R100.101 — the pure skill admission rule over consumer contracts.
 pub mod skill_admission;
+pub mod skill_edit;
 // RF-ADR-009 — connector MCP pack import: index, entries, framed digests, ops,
 // results and the durable import record. Pure serde; the importer and its
 // validation rules live in the server.

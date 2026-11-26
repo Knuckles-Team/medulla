@@ -55,6 +55,7 @@ pub mod input_capabilities;
 pub mod proposal;
 pub mod red_team;
 pub mod search;
+pub mod skill_edit;
 pub mod skill_admission;
 pub mod source_effect;
 
@@ -83,6 +84,10 @@ pub use search::{
 pub use source_effect::{
     SourceEffectReceipt, SourceEffectRecordResult, RECEIPT_DIGEST_INVALID, RECEIPT_DIGEST_REUSED,
     RECEIPT_REVISION_UNKNOWN,
+};
+pub use skill_edit::{
+    SkillSourceEditRequest, SkillSourcePatch, MAX_SKILL_PATCHES, SKILL_PATCH_ANCHOR_INVALID,
+    SKILL_PATCH_OVERLAP, SKILL_SOURCE_STALE, SKILL_SPAN_UNKNOWN,
 };
 pub use skill_admission::{
     SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire, MAX_SKILL_ADMISSION_COHORT,
