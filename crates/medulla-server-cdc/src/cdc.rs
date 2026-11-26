@@ -279,6 +279,28 @@ impl CdcHub {
         let _ = self.reasoning_cascade.set(cascade);
     }
 
+    /// The subclass closure the reasoning cascade holds for `graph`, class to every superclass
+    /// (MEDULLA-INGEST-WORKER-R701.9). `None` when the cascade is not installed or has not
+    /// refreshed `graph`; the caller then reads the closure of its own ontology. Reads the
+    /// stored classification; computes nothing.
+    pub fn reasoning_closure(
+        &self,
+        graph: &str,
+    ) -> Option<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>> {
+        #[cfg(feature = "owl")]
+        {
+            self.reasoning_cascade
+                .get()?
+                .last_refresh(graph)
+                .map(|refresh| refresh.classification.subsumers)
+        }
+        #[cfg(not(feature = "owl"))]
+        {
+            let _ = graph;
+            None
+        }
+    }
+
     /// Install the standing impact watches (EH-526). At most once, at startup,
     /// only when armed; a second call is a silent no-op.
     #[cfg(all(feature = "mining", feature = "query"))]

@@ -194,6 +194,7 @@ fn cache() -> GroundingCache {
             ("Ada".to_string(), "Person".to_string()),
             ("Note G".to_string(), "Work".to_string()),
         ]),
+        ..GroundingCache::default()
     }
 }
 

@@ -666,6 +666,28 @@ async fn route_source_ingestion_status(
     .await
 }
 
+/// The subclass closure the graph's reasoning cascade holds, handed to the grounding cache so it
+/// reads the closure the reasoner already computed instead of building a second one
+/// (MEDULLA-INGEST-WORKER-R701.9). `None` when the graph is not opted in to the cascade.
+fn reasoner_subclass_closure(
+    ctx: &GraphOpRouting<'_>,
+) -> Option<
+    Arc<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>>,
+> {
+    #[cfg(feature = "streaming")]
+    {
+        ctx.cdc
+            .as_ref()?
+            .reasoning_closure(ctx.graph_name)
+            .map(Arc::new)
+    }
+    #[cfg(not(feature = "streaming"))]
+    {
+        let _ = ctx;
+        None
+    }
+}
+
 async fn route_source_ingestion_request(
     ctx: GraphOpRouting<'_>,
     request: medulla_source_types::source_ingestion::SourceIngestionRequest,
@@ -706,6 +728,7 @@ async fn route_source_ingestion_request(
             fencing_token,
             schema_sources: ctx.core.schema_sources(),
             core: Arc::clone(ctx.core),
+            subclass_closure: reasoner_subclass_closure(&ctx),
         },
         request,
     )

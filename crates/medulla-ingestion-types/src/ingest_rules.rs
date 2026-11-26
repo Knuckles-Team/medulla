@@ -17,6 +17,9 @@ use crate::source_governance::{Classification, RecordGovernance, SourceContainer
 pub const MAX_CONTAINER_DEPTH: usize = 32;
 /// Most members one source group may hold.
 pub const MAX_GROUP_MEMBERS: usize = 100_000;
+/// Most `rdfs:subClassOf` steps the grounding cache follows from one class
+/// (MEDULLA-INGEST-WORKER-R701.8).
+pub const MAX_HIERARCHY_STEPS: usize = 64;
 /// Share of a source's held records one reconcile plan may delete (percent).
 pub const MASS_DELETE_PERCENT: usize = 20;
 
@@ -48,6 +51,8 @@ pub enum IngestRefusal {
     ProposalNotAdmitted(ProposalCheck),
     #[error("ATOM_PROVENANCE_MISSING: atom {0} has no provenance key")]
     AtomProvenanceMissing(String),
+    #[error("ONTOLOGY_HIERARCHY_CYCLE: class {0} reaches itself or nests deeper than {MAX_HIERARCHY_STEPS} steps")]
+    OntologyHierarchyCycle(String),
 }
 
 impl IngestRefusal {
@@ -203,16 +208,77 @@ pub fn check_container_tree(containers: &[SourceContainer]) -> Result<(), Ingest
 }
 
 /// The ontology cache the grounder consults: predicate to (domain, range)
-/// classes, and entity name to class.
+/// classes, entity name to class, and each class to the transitive set of its
+/// superclasses (MEDULLA-INGEST-WORKER-R701.8).
 #[derive(Clone, Debug, Default)]
 pub struct GroundingCache {
     pub predicates: BTreeMap<String, (String, String)>,
     pub classes: BTreeMap<String, String>,
+    /// `subclass_of[C]` holds every strict superclass of `C`. A class with none is absent.
+    pub subclass_of: BTreeMap<String, BTreeSet<String>>,
+}
+
+/// The transitive superclass sets of the direct `rdfs:subClassOf` edges `direct`
+/// (class to its direct superclasses). A class that reaches itself, or a chain
+/// longer than [`MAX_HIERARCHY_STEPS`], refuses `ONTOLOGY_HIERARCHY_CYCLE` before
+/// any cache is built (MEDULLA-INGEST-WORKER-R701.8). A class with no superclass
+/// is absent from the result.
+pub fn subclass_closure(
+    direct: &BTreeMap<String, BTreeSet<String>>,
+) -> Result<BTreeMap<String, BTreeSet<String>>, IngestRefusal> {
+    let mut closure = BTreeMap::new();
+    for class in direct.keys() {
+        let mut supers: BTreeSet<String> = BTreeSet::new();
+        let mut frontier: Vec<&str> = vec![class.as_str()];
+        for step in 1..=MAX_HIERARCHY_STEPS + 1 {
+            let mut next: Vec<&str> = Vec::new();
+            for node in &frontier {
+                for parent in direct.get(*node).into_iter().flatten() {
+                    if parent == class {
+                        return Err(IngestRefusal::OntologyHierarchyCycle(class.clone()));
+                    }
+                    if supers.insert(parent.clone()) {
+                        next.push(parent.as_str());
+                    }
+                }
+            }
+            if next.is_empty() {
+                frontier.clear();
+                break;
+            }
+            frontier = next;
+            if step > MAX_HIERARCHY_STEPS {
+                return Err(IngestRefusal::OntologyHierarchyCycle(class.clone()));
+            }
+        }
+        if !supers.is_empty() {
+            closure.insert(class.clone(), supers);
+        }
+    }
+    Ok(closure)
+}
+
+impl GroundingCache {
+    /// Whether the entity class `class` is the declared class `declared` or one of its
+    /// subclasses.
+    fn class_fits(&self, class: Option<&String>, declared: &str) -> bool {
+        match class {
+            Some(class) => {
+                class == declared
+                    || self
+                        .subclass_of
+                        .get(class)
+                        .is_some_and(|supers| supers.contains(declared))
+            }
+            None => false,
+        }
+    }
 }
 
 /// Ground one fact. Direction is repaired when only the swapped pair satisfies
 /// the predicate's domain and range; a fact that fits neither way stays an
-/// ungrounded claim.
+/// ungrounded claim. An entity fits a declared class when its class is that
+/// class or a subclass of it; a grounded result keeps the declared classes.
 pub fn ground_fact(fact: ExtractedFact, cache: &GroundingCache) -> CandidateClaim {
     let grounding = ground(&fact, cache);
     CandidateClaim { fact, grounding }
@@ -224,7 +290,9 @@ fn ground(fact: &ExtractedFact, cache: &GroundingCache) -> GroundingResult {
     };
     let subject = cache.classes.get(&fact.subject);
     let object = cache.classes.get(&fact.object);
-    let fits = |s: Option<&String>, o: Option<&String>| s == Some(domain) && o == Some(range);
+    let fits = |s: Option<&String>, o: Option<&String>| {
+        cache.class_fits(s, domain) && cache.class_fits(o, range)
+    };
     if fits(subject, object) {
         grounded(domain, &fact.predicate, range, false)
     } else if fits(object, subject) {

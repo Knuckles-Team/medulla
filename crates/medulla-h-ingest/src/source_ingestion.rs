@@ -96,6 +96,10 @@ pub struct PrepareContext<'a> {
     /// The request graph's core, read for the approved quality rules and open incidents an
     /// outside quality score is judged against (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
     pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    /// The `rdfs:subClassOf` closure the graph's reasoner already holds, class to every
+    /// superclass (MEDULLA-INGEST-WORKER-R701.9). `None` when the graph is not opted in to the
+    /// reasoning cascade; the grounding cache then reads the closure of its own ontology.
+    pub subclass_closure: Option<Arc<BTreeMap<String, BTreeSet<String>>>>,
 }
 
 // The fields are read only by the durable terminal-receipt builder (redb + blob).
@@ -1003,7 +1007,8 @@ async fn prepare_extension_batch(
             // candidate claims and fact atoms (MEDULLA-INGEST-WORKER-R701.3).
             let decoded = facts::decode_facts(items.as_slice())?;
             let facts_scope = facts::chunk_facts_scope(ctx.verified);
-            let cache = facts::grounding_cache(&ctx.schema_sources)?;
+            let cache =
+                facts::grounding_cache(&ctx.schema_sources, ctx.subclass_closure.as_deref())?;
             // The chunk the facts were read from grounds each claim and lets a
             // re-extraction supersede (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
             let chunk = match batch.source_chunk.as_deref() {
@@ -5119,6 +5124,7 @@ mod tests {
             fencing_token: None,
             schema_sources: Arc::new(medulla_graph_core::graph::GraphSchemaSources::default()),
             core: Arc::new(medulla_graph_core::graph::GraphCore::new()),
+            subclass_closure: None,
         };
         let blob_dir = tempfile::tempdir().unwrap();
         let blob =

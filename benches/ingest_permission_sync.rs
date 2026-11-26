@@ -146,6 +146,8 @@ fn main() {
                 placement_epoch: 0,
                 fencing_token: None,
                 schema_sources: Arc::new(medulla_graph_core::graph::GraphSchemaSources::default()),
+                core: Arc::new(medulla_graph_core::graph::GraphCore::new()),
+                subclass_closure: None,
             },
             request,
         ));

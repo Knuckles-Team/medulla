@@ -22,7 +22,8 @@ use medulla_ingestion_types::extracted_fact::{
     GroundingResult,
 };
 use medulla_ingestion_types::ingest_rules::{
-    check_atom_provenance, ground_fact, infer_links, FactDeduper, GroundingCache, RELATED_TO,
+    check_atom_provenance, ground_fact, infer_links, subclass_closure, FactDeduper, GroundingCache,
+    RELATED_TO,
 };
 use medulla_ingestion_types::knowledge_atom::{
     atom_node_id, AtomKind, KnowledgeAtom, ATOM_NODE_TYPE, ATOM_OF,
@@ -70,6 +71,7 @@ const FACT_UNIT_DOMAIN: &[u8] = b"eg/extracted-fact";
 
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
 const RDFS_RANGE: &str = "http://www.w3.org/2000/01/rdf-schema#range";
+const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 const RDFS_LABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
@@ -336,20 +338,44 @@ type Cached = Option<(Digest256, Arc<GroundingCache>)>;
 /// The grounding cache of the graph's compiled ontology, computed once per
 /// schema identity: each property with a declared domain and range maps its
 /// local name to those classes, and each named individual maps its label, or
-/// its local name, to its class.
-pub fn grounding_cache(sources: &GraphSchemaSources) -> Result<Arc<GroundingCache>, String> {
+/// its local name, to its class. `reasoner_closure` is the `rdfs:subClassOf`
+/// closure the graph's reasoner already holds (MEDULLA-INGEST-WORKER-R701.9);
+/// when it is given the cache takes it as `subclass_of` and the closure of the
+/// ontology's own edges is not used. Without it the cache keeps the closure it
+/// built from the ontology, once per schema identity.
+pub fn grounding_cache(
+    sources: &GraphSchemaSources,
+    reasoner_closure: Option<&BTreeMap<String, BTreeSet<String>>>,
+) -> Result<Arc<GroundingCache>, String> {
     static CACHE: Mutex<Cached> = Mutex::new(None);
     let digest = sources.composed_digest();
-    let mut cache = CACHE.lock().map_err(|_| "grounding cache poisoned")?;
-    if let Some((cached, built)) = cache.as_ref() {
-        if *cached == digest {
-            return Ok(Arc::clone(built));
+    let base = {
+        let mut cache = CACHE.lock().map_err(|_| "grounding cache poisoned")?;
+        match cache.as_ref() {
+            Some((cached, built)) if *cached == digest => Arc::clone(built),
+            _ => {
+                let documents: Vec<&str> = sources.ontologies().map(|(_, text)| text).collect();
+                let built = Arc::new(build_grounding_cache(&documents)?);
+                *cache = Some((digest, Arc::clone(&built)));
+                built
+            }
         }
-    }
-    let documents: Vec<&str> = sources.ontologies().map(|(_, text)| text).collect();
-    let built = Arc::new(build_grounding_cache(&documents)?);
-    *cache = Some((digest, Arc::clone(&built)));
-    Ok(built)
+    };
+    Ok(match reasoner_closure {
+        Some(closure) => with_reasoner_closure(&base, closure),
+        None => base,
+    })
+}
+
+/// `base` with its `subclass_of` replaced by the closure the reasoner holds.
+pub fn with_reasoner_closure(
+    base: &GroundingCache,
+    closure: &BTreeMap<String, BTreeSet<String>>,
+) -> Arc<GroundingCache> {
+    Arc::new(GroundingCache {
+        subclass_of: closure.clone(),
+        ..base.clone()
+    })
 }
 
 /// Build a grounding cache from Turtle ontology documents.
@@ -359,6 +385,7 @@ pub fn build_grounding_cache(ontologies: &[&str]) -> Result<GroundingCache, Stri
     let mut ranges: BTreeMap<String, String> = BTreeMap::new();
     let mut labels: BTreeMap<String, String> = BTreeMap::new();
     let mut types: BTreeMap<String, String> = BTreeMap::new();
+    let mut direct: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for text in ontologies {
         for triple in medulla_rdf::mapping::parse_turtle(text)? {
             let NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
@@ -378,11 +405,20 @@ pub fn build_grounding_cache(ontologies: &[&str]) -> Result<GroundingCache, Stri
                 (RDF_TYPE, Term::NamedNode(class)) => {
                     types.insert(subject, class.as_str().to_string());
                 }
+                (RDFS_SUBCLASS_OF, Term::NamedNode(parent)) => {
+                    direct
+                        .entry(subject)
+                        .or_default()
+                        .insert(parent.as_str().to_string());
+                }
                 _ => {}
             }
         }
     }
-    let mut cache = GroundingCache::default();
+    let mut cache = GroundingCache {
+        subclass_of: subclass_closure(&direct).map_err(|refusal| refusal.to_string())?,
+        ..GroundingCache::default()
+    };
     for (property, domain) in &domains {
         if let Some(range) = ranges.get(property) {
             cache.predicates.insert(
