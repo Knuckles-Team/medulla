@@ -2413,6 +2413,13 @@ path = "benches/discover_planning.rs"
 harness = false
 required-features = ["server", "security", "query"]
 
+# MEDULLA-SDLC-R014.13: served spec intelligence report at 20,000 rows, nightly only.
+[[bench]]
+name = "spec_intelligence"
+path = "benches/spec_intelligence.rs"
+harness = false
+required-features = ["server", "security", "query", "shacl"]
+
 # MEDULLA-UNIFIED-DATA-PLANE-R651.6: served DocumentDelete of a 500-chunk Document, nightly only.
 [[bench]]
 name = "document_cascade_delete"

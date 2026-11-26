@@ -55,6 +55,7 @@
     "rerank_top64": 25000000,
     "shortcut_detectors": 40000000,
     "sparql_update_insert_10k": 50000000,
+    "spec_intelligence/report_20k": 20000000000,
     "stored_query": 3000000
   }
 }
