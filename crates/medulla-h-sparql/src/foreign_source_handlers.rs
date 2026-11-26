@@ -49,6 +49,9 @@ pub struct ContractWriteTarget<'a> {
     /// verification reads, and its authority is recomputed against the stored grant
     /// (MEDULLA-FEDERATED-QUERY-R085.3).
     pub verified_context: &'a medulla_server_api::authority_context::VerifiedRequestContext,
+    /// The engine clock a lease's liveness is judged on (MEDULLA-FEDERATED-QUERY-R085.3); a
+    /// proof hands a manual clock, production hands the engine clock.
+    pub clock: &'a dyn medulla_types::clock::Clock,
 }
 
 /// The `vg:MetadataContract` class every registered source's discovery writes.
@@ -588,7 +591,7 @@ async fn verify_source_query_approval(
         return refuse(SourceQueryError::Unauthorized, identity);
     };
     // (5) The lease is live.
-    let now = medulla_server_api::txn::now_ms();
+    let now = target.clock.now_ms();
     if matches!(
         lease.status,
         ControlLeaseStatus::Revoked | ControlLeaseStatus::Consumed

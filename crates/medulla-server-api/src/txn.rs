@@ -169,26 +169,10 @@ pub fn now_ms() -> u64 {
     if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         return medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     }
-    let wall = SystemTime::now()
+    SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-    wall.saturating_add(test_clock_advance_ms())
-}
-
-/// Milliseconds a test has moved [`now_ms`] forward; always zero outside test builds.
-#[cfg(any(test, feature = "test-support"))]
-pub(crate) static TEST_CLOCK_ADVANCE_MS: std::sync::atomic::AtomicU64 =
-    std::sync::atomic::AtomicU64::new(0);
-
-#[cfg(any(test, feature = "test-support"))]
-fn test_clock_advance_ms() -> u64 {
-    TEST_CLOCK_ADVANCE_MS.load(std::sync::atomic::Ordering::Relaxed)
-}
-
-#[cfg(not(any(test, feature = "test-support")))]
-fn test_clock_advance_ms() -> u64 {
-    0
+        .unwrap_or(0)
 }
 
 /// Auto-rollback transactions idle past `ttl_secs` (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid safety rail).

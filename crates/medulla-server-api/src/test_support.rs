@@ -18,26 +18,6 @@ pub fn decode_raw_response<T: serde::de::DeserializeOwned>(
     rmp_serde::from_slice(&bytes).expect("decode raw typed server response")
 }
 
-/// Moves the engine clock ([`crate::txn::now_ms`]) forward for the guard's lifetime, so a test
-/// proves an expiry without sleeping on the wall clock. Dropping the guard restores the clock.
-pub struct ClockAdvanceGuard {
-    ms: u64,
-}
-
-impl ClockAdvanceGuard {
-    /// Advance the engine clock by `ms` milliseconds.
-    pub fn advance(ms: u64) -> Self {
-        crate::txn::TEST_CLOCK_ADVANCE_MS.fetch_add(ms, std::sync::atomic::Ordering::Relaxed);
-        Self { ms }
-    }
-}
-
-impl Drop for ClockAdvanceGuard {
-    fn drop(&mut self) {
-        crate::txn::TEST_CLOCK_ADVANCE_MS.fetch_sub(self.ms, std::sync::atomic::Ordering::Relaxed);
-    }
-}
-
 #[cfg(test)]
 #[test]
 fn concurrent_temporary_paths_are_unique() {

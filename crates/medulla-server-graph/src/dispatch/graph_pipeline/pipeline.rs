@@ -386,6 +386,7 @@ pub async fn route_process_global_domains(
             principal: caller,
             tenant_scope: &ctx.tenant_scope,
             verified_context: ctx.verified_context,
+            clock: &medulla_kernel::kernel::dispatch_support::EngineClock,
         },
     )
     .await

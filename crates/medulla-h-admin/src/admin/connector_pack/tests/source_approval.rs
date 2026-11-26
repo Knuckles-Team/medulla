@@ -1322,13 +1322,49 @@ async fn changed_or_revoked_approval_refuses() {
 
     // An expired lease refuses SOURCE_QUERY_APPROVAL_EXPIRED.
     let short = issue_source_query(&served, &source, "r085-verify:issue-short", 1_000).await;
-    // Move the engine clock past the lease's expiry; no wall-clock wait.
-    let _later = medulla_server_api::test_support::ClockAdvanceGuard::advance(1_200);
-    let error = refused(
-        "expired",
-        verify_source_query(&served, &source, "r085-verify:expired", source_query_check(&short))
-            .await,
+    // The verification judges the lease on the clock it is handed: a manual clock one tick
+    // before the lease's expiry still verifies, one tick at it refuses. No wall-clock wait.
+    let clock = medulla_types::clock::ManualClock::new(short.expires_at_ms - 1);
+    let persistence = served.state.read().await.persistence.clone();
+    let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
+    let verified =
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+            ADMIN,
+            TENANT,
+            &["*"],
+        );
+    let target = medulla_h_sparql::foreign_source_handlers::ContractWriteTarget {
+        core: &core,
+        persistence: persistence.as_ref(),
+        graph: "__commons__",
+        principal: Some(ADMIN),
+        tenant_scope: TENANT,
+        verified_context: &verified,
+        clock: &clock,
+    };
+    let verify_at_clock = || async {
+        let call = medulla_server_auth::access::OwnerScopedCall {
+            state: &served.state,
+            req_id: 1,
+            carrier: None,
+        };
+        let method = medulla_protocol_types::protocol::Method::VerifySourceQueryApproval {
+            request: Box::new(source_query_check(&short)),
+            source_approval: Box::new(source.receipt.clone()),
+        };
+        match medulla_h_sparql::foreign_source_handlers::try_handle(call, method, &target).await {
+            Ok(response) => response,
+            Err(other) => panic!("the verification was not handled: {other:?}"),
+        }
+    };
+    let live = verify_at_clock().await;
+    assert!(
+        live.error.is_none(),
+        "the lease is live one tick before its expiry: {:?}",
+        live.error
     );
+    clock.advance_ms(1);
+    let error = refused("expired", verify_at_clock().await);
     assert!(error.contains("SOURCE_QUERY_APPROVAL_EXPIRED"), "{error}");
 }
 
@@ -1386,6 +1422,7 @@ async fn real_dispatch_issues_and_verifies_approval() {
         principal: Some(ADMIN),
         tenant_scope: TENANT,
         verified_context: &verified,
+        clock: &medulla_types::clock::SystemClock,
     };
     let call = medulla_server_auth::access::OwnerScopedCall {
         state: &served.state,
