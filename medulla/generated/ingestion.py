@@ -996,6 +996,22 @@ decode_approval_gate_resolve = contract_decoder(
 send_goal_list = contract_sender("GoalList", "MethodGoalListParams")
 send_goal_iterations = contract_sender("GoalIterations", "MethodGoalIterationsParams")
 send_goal_control = contract_sender("GoalControl", "MethodGoalControlParams")
+send_file_defect = contract_sender("FileDefect", "MethodFileDefectParams")
+send_transition_defect = contract_sender(
+    "TransitionDefect", "MethodTransitionDefectParams"
+)
+send_get_defect = contract_sender("GetDefect", "MethodGetDefectParams")
+send_triage_defect = contract_sender("TriageDefect", "MethodTriageDefectParams")
+send_spec_status = contract_sender("SpecStatus", "MethodSpecStatusParams")
+send_lifecycle_trace = contract_sender("LifecycleTrace", "MethodLifecycleTraceParams")
+decode_file_defect = contract_decoder("FileDefect", "FileDefectReceipt")
+decode_transition_defect = contract_decoder(
+    "TransitionDefect", "TransitionDefectReceipt"
+)
+decode_get_defect = contract_decoder("GetDefect", "GetDefectReceipt")
+decode_triage_defect = contract_decoder("TriageDefect", "TriageDefectReceipt")
+decode_spec_status = contract_decoder("SpecStatus", "SpecStatusAnswer")
+decode_lifecycle_trace = contract_decoder("LifecycleTrace", "LifecycleTraceAnswer")
 send_connector_runs = contract_sender("ConnectorRuns", "MethodConnectorRunsParams")
 send_connector_run_record = contract_sender(
     "ConnectorRunRecord", "MethodConnectorRunRecordParams"

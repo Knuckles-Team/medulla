@@ -47,6 +47,7 @@ METHOD_IDS = frozenset(
         "SchemaRepairPropose",
         "SchemaRepairApprove",
         "TransitionDefect",
+        "TriageDefect",
         "GetDefect",
         "ProposalDecide",
         "ArgumentMapPut",

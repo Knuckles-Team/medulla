@@ -17827,6 +17827,48 @@ class MethodGoalControl(BaseModel):
     params: MethodGoalControlParams
 
 
+class MethodFileDefect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FileDefect"]
+    params: MethodFileDefectParams
+
+
+class MethodTransitionDefect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TransitionDefect"]
+    params: MethodTransitionDefectParams
+
+
+class MethodGetDefect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetDefect"]
+    params: MethodGetDefectParams
+
+
+class MethodTriageDefect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["TriageDefect"]
+    params: MethodTriageDefectParams
+
+
+class MethodSpecStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SpecStatus"]
+    params: MethodSpecStatusParams
+
+
+class MethodLifecycleTrace(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["LifecycleTrace"]
+    params: MethodLifecycleTraceParams
+
+
 class MethodConnectorRuns(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18842,6 +18884,12 @@ Method = Annotated[
         MethodGoalList,
         MethodGoalIterations,
         MethodGoalControl,
+        MethodFileDefect,
+        MethodTransitionDefect,
+        MethodGetDefect,
+        MethodTriageDefect,
+        MethodSpecStatus,
+        MethodLifecycleTrace,
         MethodConnectorRuns,
         MethodConnectorRunRecord,
         MethodConnectorRunGet,
@@ -41317,6 +41365,237 @@ class MethodGoalControlParams(BaseModel):
     op: GoalControlOp
 
 
+class DefectIntake(str, Enum):
+    GATE_FAILURE = "gate_failure"
+    RUN_FAILURE = "run_failure"
+    INCIDENT = "incident"
+    CONNECTOR_ISSUE = "connector_issue"
+    DIRECT = "direct"
+
+
+class DefectStatus(str, Enum):
+    NEW = "new"
+    TRIAGED = "triaged"
+    FIXING = "fixing"
+    FIXED = "fixed"
+    VERIFIED = "verified"
+    CLOSED = "closed"
+    REJECTED = "rejected"
+
+
+class DefectFileOutcome(str, Enum):
+    CREATED = "created"
+    ABSORBED = "absorbed"
+    REOPENED = "reopened"
+
+
+class Symptom(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    intake: DefectIntake
+    observed_at: Annotated[int, Field(ge=0)]
+    source_record_id: str
+    text: str
+
+
+class Defect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_at: Annotated[int, Field(ge=0)]
+    id: str
+    intake: DefectIntake
+    repo: str
+    severity: Severity
+    signature_digest: str
+    status: DefectStatus
+    symptoms: list[Symptom]
+    title: str
+
+
+class FileDefectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    intake: DefectIntake
+    observed_at: Annotated[int, Field(ge=0)]
+    repo: str
+    severity: Severity | None = None
+    source_record_id: str
+    text: str
+    title: str
+
+
+class FileDefectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    defect_id: str
+    node_id: str
+    outcome: DefectFileOutcome
+    status: DefectStatus
+    symptoms: Annotated[int, Field(ge=0)]
+
+
+class TransitionDefectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    defect_id: str
+    fix_changeset: str | None = None
+    gate_id: str | None = None
+    reason: str | None = None
+    repo: str
+    to: DefectStatus
+
+
+class TransitionDefectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_: DefectStatus = Field(..., alias="from")
+    node_id: str
+    to: DefectStatus
+
+
+class GetDefectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    defect_id: str
+    repo: str
+
+
+class GetDefectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    defect: Defect
+    fix_changeset: str | None = None
+    node_id: str
+
+
+class SpecState(str, Enum):
+    SPECIFIED = "SPECIFIED"
+    LANDED = "LANDED"
+    VERIFIED = "VERIFIED"
+
+
+class SpecRowState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    landed_by: list[str]
+    state: SpecState
+    verified_by: list[str]
+    withdrawn: bool
+
+
+class SpecStatusAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    repo: str
+    rev: str
+    rows: list[SpecRowState]
+
+
+class LifecycleKind(str, Enum):
+    REQUIREMENT = "requirement"
+    CODE_SYMBOL = "code_symbol"
+    TEST_CASE = "test_case"
+    CHANGESET = "changeset"
+    GATE_VERDICT = "gate_verdict"
+    RUN_TRACE = "run_trace"
+    RELEASE = "release"
+    DEPLOYMENT = "deployment"
+    DEFECT = "defect"
+    INCIDENT = "incident"
+
+
+class LifecycleEdgeKind(str, Enum):
+    CHANGES = "changes"
+    CITES_REQUIREMENT = "citesRequirement"
+    IMPLEMENTS = "implements"
+    VERIFIED_BY = "verifiedBy"
+    EXERCISES = "exercises"
+    JUDGES = "judges"
+    PRODUCED_BY = "producedBy"
+    AFFECTS = "affects"
+    INTRODUCED_BY = "introducedBy"
+    FIXED_BY = "fixedBy"
+    CONTAINS = "contains"
+    DEPLOYS = "deploys"
+    OBSERVED_IN = "observedIn"
+    RAISES = "raises"
+
+
+class LifecycleTraceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    anchor: str
+    depth: Annotated[int, Field(ge=0, le=255)]
+    kinds: list[LifecycleKind] = []
+    policy: DecisionPolicyRef | None = None
+
+
+class TraceRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    kind: LifecycleKind
+
+
+class TraceEdge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_: str = Field(..., alias="from")
+    kind: LifecycleEdgeKind
+    rule: str
+    rule_version: Annotated[int, Field(ge=0)]
+    to: str
+
+
+class LifecycleTraceAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges: list[TraceEdge]
+    policy_digest: str = ""
+    records: list[TraceRecord]
+    truncated: bool
+
+
+class MethodFileDefectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: FileDefectRequest
+
+
+class MethodTransitionDefectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: TransitionDefectRequest
+
+
+class MethodGetDefectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: GetDefectRequest
+
+
+class MethodTriageDefectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: TriageDefectRequest
+
+
+class MethodSpecStatusParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    repo: str
+    rev: str
+    spec_id: str | None = None
+
+
+class MethodLifecycleTraceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: LifecycleTraceRequest
+
+
 class MethodConnectorRunsParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -51863,6 +52142,38 @@ __all__ = [
     "MethodGoalIterationsParams",
     "MethodGoalControl",
     "MethodGoalControlParams",
+    "DefectFileOutcome",
+    "DefectIntake",
+    "DefectStatus",
+    "Defect",
+    "FileDefectReceipt",
+    "FileDefectRequest",
+    "GetDefectReceipt",
+    "GetDefectRequest",
+    "LifecycleEdgeKind",
+    "LifecycleKind",
+    "LifecycleTraceAnswer",
+    "LifecycleTraceRequest",
+    "SpecRowState",
+    "SpecState",
+    "SpecStatusAnswer",
+    "Symptom",
+    "TraceEdge",
+    "TraceRecord",
+    "TransitionDefectReceipt",
+    "TransitionDefectRequest",
+    "MethodFileDefect",
+    "MethodTransitionDefect",
+    "MethodGetDefect",
+    "MethodTriageDefect",
+    "MethodSpecStatus",
+    "MethodLifecycleTrace",
+    "MethodFileDefectParams",
+    "MethodTransitionDefectParams",
+    "MethodGetDefectParams",
+    "MethodTriageDefectParams",
+    "MethodSpecStatusParams",
+    "MethodLifecycleTraceParams",
     "MethodConnectorRuns",
     "MethodConnectorRunsParams",
     "MethodConnectorRunRecord",
