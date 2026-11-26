@@ -43,11 +43,13 @@ mod served {
     use medulla_agent_types::agent_guardrail::{
         check_rule_against_invariants, GuardrailRule, RulePromotionVerdict,
     };
-    use medulla_decision_stats::decision::correction::{commit_correction, nearest_corrections};
+    use medulla_decision_stats::decision::correction::{
+        candidate_outcomes, commit_correction, nearest_corrections, OutcomeRow,
+    };
     use medulla_decision_types::correction::{
-        Correction, CorrectionEffect, CorrectionNearest, CorrectionOp, CorrectionOutcome,
-        CorrectionRead, CorrectionRecorded, CorrectionSource, EvalCase, OutcomeTag, RuleCandidate,
-        CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
+        task_class_of, Correction, CorrectionEffect, CorrectionInput, CorrectionNearest,
+        CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead, CorrectionRecorded, CorrectionSource,
+        EvalCase, OutcomeTag, RuleCandidate, ACTION_RECORD_CLASS, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
         OUTCOME_SELF_REPORTED,
     };
     use medulla_decision_types::decision::knobs::KnobValue;
@@ -56,7 +58,8 @@ mod served {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
-        CorrectionRecordGet, CorrectionRecordNearest, CorrectionRecordRun,
+        CorrectionRecordGet, CorrectionRecordNearest, CorrectionRecordOutcomes,
+        CorrectionRecordRun,
     };
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use serde_json::{json, Map, Value};
@@ -91,6 +94,9 @@ mod served {
             CorrectionOp::Record { correction } => record(state, verified, graph, correction).await,
             CorrectionOp::Nearest { target } => nearest(state, verified, graph, &target).await,
             CorrectionOp::Get { receipt_id } => get(state, verified, graph, &receipt_id).await,
+            CorrectionOp::Outcomes { rule_id } => {
+                outcomes(state, verified, graph, rule_id.as_deref()).await
+            }
         }
     }
 
@@ -99,11 +105,37 @@ mod served {
         format!("{target}\n{after}")
     }
 
+    /// The refusal of a target that names no visible action record of the caller's tenant. An
+    /// absent record, a hidden one, another tenant's and a node of another class all answer these
+    /// exact bytes, so the refusal is no existence oracle.
+    fn target_not_found() -> String {
+        format!(
+            "{}: the target names no action record",
+            CORRECTION_NOT_FOUND.as_str()
+        )
+    }
+
+    /// The producer and the task class of the action record `target` names: the record's `actor`
+    /// and its `actionKind` as a task class. `None` when the node is absent, hidden from the
+    /// caller, another tenant's, or not an `ActionRecord`.
+    fn action_of(view: &GraphView, tenant: &str, target: &str) -> Option<(String, String)> {
+        let row = view.node_row_object(target)?;
+        if row.get(TYPE).and_then(Value::as_str) != Some(ACTION_RECORD_CLASS)
+            || row.get(TENANT).and_then(Value::as_str) != Some(tenant)
+        {
+            return None;
+        }
+        Some((
+            text(&row, "actor")?,
+            task_class_of(row.get("actionKind").and_then(Value::as_str)?),
+        ))
+    }
+
     async fn record(
         state: &SharedState,
         verified: &VerifiedRequestContext,
         graph: &str,
-        correction: Correction,
+        input: CorrectionInput,
     ) -> Result<PlannedWrite, String> {
         // Every refusal precedes the first node of the plan, so a refusal
         // commits no effect (MEDULLA-DECISION-ENGINE-R702.4).
@@ -113,24 +145,38 @@ mod served {
                 CORRECTION_ROLE_REQUIRED.as_str()
             ));
         }
-        if correction.actor == correction.produced_by {
+        // The producer and the task class come from the corrected action record in the graph;
+        // the corrector is the verified principal. The caller supplies neither.
+        let (produced_by, task_class) = {
+            let (view, _) = filtered_view_versioned(state, verified.agent_id(), graph).await?;
+            action_of(&view, verified.tenant(), &input.target)
+                .ok_or_else(target_not_found)?
+        };
+        let actor = verified.agent_id().to_string();
+        if actor == produced_by {
             return Err(format!(
                 "{}: the actor of a correction cannot be the producer of the corrected output",
                 OUTCOME_SELF_REPORTED.as_str()
             ));
         }
+        let correction = input.resolve(produced_by, actor, task_class);
         let commit = commit_correction(&correction).map_err(invalid_parameter)?;
         let (store, resolved) = {
             let store = state.write().await.ensure_agent_library()?;
             let resolved = resolve_policy(&store, verified.tenant(), &DecisionPolicyRef::Default)?;
             (store, resolved)
         };
-        // The candidate rule passes the same invariant gate a promoted rule
-        // passes (R129.3); only this tenant's invariants are read.
-        let invariants = store.published_rule_invariants(verified.tenant())?;
+        // The candidate rule passes the same invariant gate a promoted rule passes (R129.3): its
+        // id is the digest of its rule text and it is checked against every invariant of this
+        // tenant that governs the corrected action's task class.
+        let invariants: Vec<_> = store
+            .published_rule_invariants(verified.tenant())?
+            .into_iter()
+            .filter(|invariant| invariant.on_class == commit.effect.rule_candidate.task_class)
+            .collect();
         let candidate = GuardrailRule {
             rule_id: commit.effect.rule_candidate.rule_id.clone(),
-            applies_to_class: correction.target.clone(),
+            applies_to_class: commit.effect.rule_candidate.task_class.clone(),
             source_generation: commit.effect.receipt_id.clone(),
         };
         if let RulePromotionVerdict::RejectedInvariant { invariant_iri } =
@@ -292,6 +338,61 @@ mod served {
         })
     }
 
+    async fn outcomes(
+        state: &SharedState,
+        verified: &VerifiedRequestContext,
+        graph: &str,
+        rule_id: Option<&str>,
+    ) -> Result<PlannedWrite, String> {
+        let (view, _) = filtered_view_versioned(state, verified.agent_id(), graph).await?;
+        let candidates = candidate_outcomes(outcome_rows(&view, verified.tenant()), rule_id);
+        Ok(PlannedWrite {
+            graph: graph.to_string(),
+            operations: Vec::new(),
+            reply: ResultPayload::of::<CorrectionRecordOutcomes>(CorrectionOutcomes { candidates })?,
+        })
+    }
+
+    /// Every `CorrectionOutcome` node of `tenant` that the view shows, joined to the rule
+    /// candidate of its receipt. An outcome whose candidate is hidden or absent is skipped, so
+    /// the read shows only what the caller may see (MEDULLA-DECISION-ENGINE-R702.8).
+    fn outcome_rows(view: &GraphView, tenant: &str) -> Vec<OutcomeRow> {
+        let mut rows = Vec::new();
+        for id in view.node_properties.keys() {
+            let Some(outcome) = view.node_row_object(id) else {
+                continue;
+            };
+            if outcome.get(TYPE).and_then(Value::as_str) != Some("CorrectionOutcome")
+                || outcome.get(TENANT).and_then(Value::as_str) != Some(tenant)
+            {
+                continue;
+            }
+            let (Some(receipt), Some(tag), Some(value)) = (
+                text(&outcome, "receipt_id"),
+                text(&outcome, "tag"),
+                outcome.get("value").and_then(Value::as_f64),
+            ) else {
+                continue;
+            };
+            let Some(rule) = row(view, &format!("rule:{receipt}"), "RuleCandidate", tenant, &receipt)
+            else {
+                continue;
+            };
+            let (Some(rule_id), Some(task_class)) =
+                (text(&rule, "rule_id"), text(&rule, "task_class"))
+            else {
+                continue;
+            };
+            rows.push(OutcomeRow {
+                rule_id,
+                task_class,
+                tag,
+                value,
+            });
+        }
+        rows
+    }
+
     /// One stored node of `class`, owned by `tenant`, that carries `receipt_id`.
     /// A node of another tenant is the same `None` as an absent one.
     fn row(
@@ -357,6 +458,7 @@ mod served {
             after: text(&node, "after")?,
             produced_by: text(&node, "produced_by")?,
             actor: text(&node, "actor")?,
+            task_class: text(&node, "task_class")?,
             at_ms: node.get("at_ms")?.as_u64()?,
             source: match node.get("source").and_then(Value::as_str) {
                 None | Some("human") => CorrectionSource::Human,
@@ -370,6 +472,7 @@ mod served {
             rule_candidate: RuleCandidate {
                 rule_id: text(&rule, "rule_id")?,
                 text_digest: text(&rule, "text_digest")?,
+                task_class: text(&rule, "task_class")?,
             },
             outcome: CorrectionOutcome {
                 outcome_id: text(&outcome, "outcome_id")?,

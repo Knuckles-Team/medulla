@@ -1433,23 +1433,21 @@ def correction_record_op(
     target: str,
     before: str,
     after: str,
-    produced_by: str,
-    actor: str,
     at_ms: int,
     *,
     source: str | None = None,
 ) -> dict[str, Any]:
-    """A ``CorrectionRecord`` record of one correction of ``target`` (the verified
-    role ``corrector`` is required). ``source`` is ``human`` (the default),
-    ``review_comment`` (``before`` and ``after`` are ``sha256:`` digests, never the
-    comment text) or ``review_rejection`` (R702.7)."""
+    """A ``CorrectionRecord`` record of one correction of ``target``, the node id of the
+    action record being corrected (the verified role ``corrector`` is required). The
+    engine reads the producer and the task class from that record and takes the
+    corrector from the verified principal; the caller names neither. ``source`` is
+    ``human`` (the default), ``review_comment`` (``before`` and ``after`` are
+    ``sha256:`` digests, never the comment text) or ``review_rejection`` (R702.7)."""
     correction: dict[str, Any] = {
         "correction_id": correction_id,
         "target": target,
         "before": before,
         "after": after,
-        "produced_by": produced_by,
-        "actor": actor,
         "at_ms": at_ms,
     }
     if source is not None:
@@ -1465,6 +1463,15 @@ def correction_nearest_op(target: str) -> dict[str, Any]:
 def correction_get_op(receipt_id: str) -> dict[str, Any]:
     """A ``CorrectionRecord`` read of one correction by ``receipt_id``."""
     return {"op": "get", "receipt_id": receipt_id}
+
+
+def correction_outcomes_op(rule_id: str | None = None) -> dict[str, Any]:
+    """A ``CorrectionRecord`` read of the independent outcomes per rule candidate,
+    optionally narrowed to one ``rule_id`` (R702.8)."""
+    op: dict[str, Any] = {"op": "outcomes"}
+    if rule_id is not None:
+        op["rule_id"] = rule_id
+    return op
 
 
 def failure_ingest_op(graph: str, since_ms: int | None = None) -> dict[str, Any]:
@@ -2110,6 +2117,7 @@ __all__ = [
     "claim_propose_op",
     "commit_op",
     "correction_get_op",
+    "correction_outcomes_op",
     "correction_nearest_op",
     "correction_record_op",
     "decide_request",

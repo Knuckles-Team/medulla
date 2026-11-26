@@ -10,8 +10,8 @@ use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
 use medulla_decision_stats::decision::correction::commit_correction;
 use medulla_decision_types::correction::{
-    Correction, CorrectionOp, CorrectionRead, CorrectionRecorded, CorrectionSource,
-    CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, OUTCOME_SELF_REPORTED,
+    task_class_of, Correction, CorrectionInput, CorrectionOp, CorrectionOutcomes, CorrectionRead, CorrectionRecorded,
+    CorrectionSource, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, OUTCOME_SELF_REPORTED,
 };
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_persistence_records::agent_component::test_component_draft;
@@ -23,17 +23,38 @@ fn corrector(tenant: &str) -> VerifiedRequestContext {
     VerifiedRequestContext::verified_for_test_with_roles("decider", tenant, &["corrector"])
 }
 
-fn correction(id: &str, target: &str, after: &str) -> Correction {
-    Correction {
+/// The action record every fixture correction targets: produced by `agent:planner`, a tool call.
+const ACTION: &str = "action:7";
+const PRODUCER: &str = "agent:planner";
+
+fn correction(id: &str, target: &str, after: &str) -> CorrectionInput {
+    CorrectionInput {
         correction_id: id.into(),
         target: target.into(),
         before: "the wrong answer".into(),
         after: after.into(),
-        produced_by: "agent:planner".into(),
-        actor: "user:ada".into(),
         at_ms: 1_700_000_000_000,
         source: CorrectionSource::Human,
     }
+}
+
+/// The correction a fixture input becomes once the handler resolves it: the producer and the task
+/// class come from the action record, the corrector from the verified principal.
+fn stored(input: CorrectionInput) -> Correction {
+    input.resolve(PRODUCER.into(), "decider".into(), task_class_of("tool_call"))
+}
+
+/// Store one `ActionRecord` the way ingestion does, owned by the test principal.
+fn seed_action(core: &medulla_graph_core::graph::GraphCore, id: &str, tenant: &str, actor: &str) {
+    let properties = serde_json::json!({
+        "type": "ActionRecord",
+        "actionKind": "tool_call",
+        "actor": actor,
+        "idempotencyKey": id,
+        "tenant_id": tenant,
+        "_owner": "decider",
+    });
+    core.add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
 }
 
 async fn core(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
@@ -120,7 +141,7 @@ fn publish_invariant(h: &Harness, invariant: &RuleInvariant) {
         .expect("invariant publishes");
 }
 
-fn record(c: Correction) -> CorrectionOp {
+fn record(c: CorrectionInput) -> CorrectionOp {
     CorrectionOp::Record { correction: c }
 }
 
@@ -134,7 +155,8 @@ async fn harness() -> Harness {
 #[tokio::test]
 async fn correction_reaches_the_handler() {
     let h = harness().await;
-    let write = plan(&h, &corrector(TENANT), record(correction("c1", "answer:7", "right")))
+    seed_action(&core(&h).await, ACTION, TENANT, PRODUCER);
+    let write = plan(&h, &corrector(TENANT), record(correction("c1", ACTION, "right")))
         .await
         .ok()
         .expect("plans");
@@ -176,43 +198,78 @@ async fn correction_reaches_the_handler() {
 async fn correction_refusals_commit_nothing() {
     let h = harness().await;
     let core = core(&h).await;
+    seed_action(&core, ACTION, TENANT, PRODUCER);
+    // An action the corrector produced itself, and one of another tenant.
+    seed_action(&core, "action:own", TENANT, "decider");
+    seed_action(&core, "action:foreign", "tenant-other", PRODUCER);
     let nodes_before = core.node_ids().len();
 
     // No verified role `corrector`.
     let plain = VerifiedRequestContext::verified_for_test_with_roles("decider", TENANT, &["test"]);
-    let error = refused(plan(&h, &plain, record(correction("c1", "answer:7", "right"))).await);
+    let error = refused(plan(&h, &plain, record(correction("c1", ACTION, "right"))).await);
     assert!(error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()), "{error}");
 
-    // The actor produced the output it corrects.
-    let mut own = correction("c2", "answer:7", "right");
-    own.produced_by = own.actor.clone();
-    let error = refused(plan(&h, &corrector(TENANT), record(own)).await);
+    // The target names no action record: absent, another tenant's and a node of another class
+    // all refuse with the same bytes.
+    let absent = refused(plan(&h, &corrector(TENANT), record(correction("c1", "action:none", "x"))).await);
+    assert!(absent.starts_with(CORRECTION_NOT_FOUND.as_str()), "{absent}");
+    let foreign =
+        refused(plan(&h, &corrector(TENANT), record(correction("c1", "action:foreign", "x"))).await);
+    assert_eq!(foreign, absent);
+    let wrong_class = serde_json::json!({"type": "Note", "tenant_id": TENANT, "_owner": "decider"});
+    core.add_node("note:1".to_string(), rmp_serde::to_vec_named(&wrong_class).unwrap());
+    let nodes_before = nodes_before + 1;
+    let note = refused(plan(&h, &corrector(TENANT), record(correction("c1", "note:1", "x"))).await);
+    assert_eq!(note, absent);
+
+    // The corrector is the producer of the corrected action, read from the record: a caller
+    // cannot attribute the correction to another actor.
+    let error = refused(plan(&h, &corrector(TENANT), record(correction("c2", "action:own", "right"))).await);
     assert!(error.starts_with(OUTCOME_SELF_REPORTED.as_str()), "{error}");
 
-    // The candidate rule contradicts a stored invariant.
-    let contradicted = correction("c3", "eg:task", "right");
-    let rule_id = commit_correction(&contradicted)
+    // The candidate rule contradicts a stored invariant of its task class. Its id is the digest
+    // of its rule text, so an invariant names that digest.
+    let contradicted = correction("c3", ACTION, "right");
+    let rule_id = commit_correction(&stored(contradicted.clone()))
         .unwrap()
         .effect
         .rule_candidate
         .rule_id;
+    assert!(rule_id.starts_with("sha256:"), "{rule_id}");
     publish_invariant(
         &h,
         &RuleInvariant {
             invariant_iri: "inv:no-such-rule".into(),
-            forbidden_rule_id: rule_id,
-            on_class: "eg:task".into(),
+            forbidden_rule_id: rule_id.clone(),
+            on_class: task_class_of("tool_call"),
         },
     );
     let error = refused(plan(&h, &corrector(TENANT), record(contradicted)).await);
     assert!(error.starts_with("RULE_CONTRADICTS_INVARIANT"), "{error}");
+    // The same rule text under a task class the invariant does not govern is not refused.
+    publish_invariant(
+        &h,
+        &RuleInvariant {
+            invariant_iri: "inv:other-class".into(),
+            forbidden_rule_id: commit_correction(&stored(correction("c5", ACTION, "other text")))
+                .unwrap()
+                .effect
+                .rule_candidate
+                .rule_id,
+            on_class: task_class_of("filing"),
+        },
+    );
+    plan(&h, &corrector(TENANT), record(correction("c5", ACTION, "other text")))
+        .await
+        .ok()
+        .expect("an invariant of another class does not govern it");
 
     // An oversized value is the shape error of R702.1.
     let error = refused(
         plan(
             &h,
             &corrector(TENANT),
-            record(correction("c4", "answer:7", &"x".repeat(8 * 1024 + 1))),
+            record(correction("c4", ACTION, &"x".repeat(8 * 1024 + 1))),
         )
         .await,
     );
@@ -228,7 +285,8 @@ async fn correction_refusals_commit_nothing() {
 async fn correction_reads_back_by_receipt() {
     let h = harness().await;
     let core = core(&h).await;
-    let write = plan(&h, &corrector(TENANT), record(correction("c1", "answer:7", "right")))
+    seed_action(&core, ACTION, TENANT, PRODUCER);
+    let write = plan(&h, &corrector(TENANT), record(correction("c1", ACTION, "right")))
         .await
         .ok()
         .expect("plans");
@@ -243,7 +301,10 @@ async fn correction_reads_back_by_receipt() {
     let read = plan(&h, &corrector(TENANT), get).await.ok().expect("reads");
     let read: CorrectionRead = reply(&read);
     assert_eq!(read.receipt_id, receipt);
-    assert_eq!(read.correction, correction("c1", "answer:7", "right"));
+    assert_eq!(read.correction, stored(correction("c1", ACTION, "right")));
+    assert_eq!(read.correction.produced_by, PRODUCER);
+    assert_eq!(read.correction.actor, "decider");
+    assert_eq!(read.effect.rule_candidate.task_class, task_class_of("tool_call"));
     assert_eq!(read.effect, recorded.effect);
 
     // Another tenant reads the same as an absent receipt.
@@ -262,9 +323,10 @@ async fn correction_reads_back_by_receipt() {
 async fn review_sources_yield_eval_cases_with_digests_only() {
     let h = harness().await;
     let core = core(&h).await;
+    seed_action(&core, ACTION, TENANT, PRODUCER);
 
     // A rejection yields the three effects and an outcome of 0.0, and names its source.
-    let mut rejection = correction("r1", "answer:9", "better");
+    let mut rejection = correction("r1", ACTION, "better");
     rejection.source = CorrectionSource::ReviewRejection;
     let write = plan(&h, &corrector(TENANT), record(rejection)).await.ok().expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
@@ -276,7 +338,7 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     );
 
     // A review source needs the same verified role as a human.
-    let mut unprivileged = correction("r2", "answer:9", "better");
+    let mut unprivileged = correction("r2", ACTION, "better");
     unprivileged.source = CorrectionSource::ReviewRejection;
     let plain = VerifiedRequestContext::verified_for_test_with_roles("decider", TENANT, &["test"]);
     let error = refused(plan(&h, &plain, record(unprivileged)).await);
@@ -284,11 +346,11 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
 
     // A review comment with text is refused; with digests it is stored, and the stored nodes
     // hold neither the output nor the comment text.
-    let mut text = correction("r3", "answer:9", "please rename this variable");
+    let mut text = correction("r3", ACTION, "please rename this variable");
     text.source = CorrectionSource::ReviewComment;
     let error = refused(plan(&h, &corrector(TENANT), record(text)).await);
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
-    let mut digests = correction("r4", "answer:9", &format!("sha256:{}", "c".repeat(64)));
+    let mut digests = correction("r4", ACTION, &format!("sha256:{}", "c".repeat(64)));
     digests.before = format!("sha256:{}", "d".repeat(64));
     digests.source = CorrectionSource::ReviewComment;
     let write = plan(&h, &corrector(TENANT), record(digests.clone())).await.ok().expect("plans");
@@ -296,7 +358,7 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     let receipt = reply::<CorrectionRecorded>(&write).receipt_id;
     let get = CorrectionOp::Get { receipt_id: receipt };
     let read: CorrectionRead = reply(&plan(&h, &corrector(TENANT), get).await.ok().expect("reads"));
-    assert_eq!(read.correction, digests);
+    assert_eq!(read.correction, stored(digests));
     assert_eq!(read.correction.source, CorrectionSource::ReviewComment);
 }
 
@@ -337,4 +399,49 @@ async fn skill_corrections_feed_skill_eval_cases() {
     let other = correction("f3", "answer:9", "better");
     let write = plan(&h, &corrector(TENANT), record(other)).await.ok().expect("plans");
     assert!(write.operations.iter().all(|op| op["properties"]["type"] != "SkillEvalCase"));
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R702.8: the independent outcomes group per rule candidate,
+/// the same rule text under two corrections is one candidate, and another tenant reads none.
+// spec: MEDULLA-DECISION-ENGINE-R702.8
+#[tokio::test]
+async fn independent_outcomes_read_per_rule_candidate() {
+    let h = harness().await;
+    let core = core(&h).await;
+    seed_action(&core, ACTION, TENANT, PRODUCER);
+    seed_action(&core, "action:8", TENANT, PRODUCER);
+    for input in [
+        correction("c1", ACTION, "right"),
+        correction("c2", "action:8", "right"),
+        correction("c3", ACTION, "another rule"),
+    ] {
+        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        commit(&core, &write);
+    }
+    let read = |tenant: &str, rule_id: Option<String>| {
+        let verified = corrector(tenant);
+        let h = &h;
+        async move {
+            let write = plan(h, &verified, CorrectionOp::Outcomes { rule_id })
+                .await
+                .ok()
+                .expect("reads");
+            assert!(write.operations.is_empty(), "the read writes nothing");
+            reply::<CorrectionOutcomes>(&write)
+        }
+    };
+    let all = read(TENANT, None).await;
+    assert_eq!(all.candidates.len(), 2);
+    let right_id = commit_correction(&stored(correction("c1", ACTION, "right")))
+        .unwrap()
+        .effect
+        .rule_candidate
+        .rule_id;
+    let right = all.candidates.iter().find(|c| c.rule_id == right_id).unwrap();
+    assert_eq!(right.independent, 2);
+    assert_eq!(right.mean_value, 0.0);
+    assert_eq!(right.task_class, task_class_of("tool_call"));
+    let one = read(TENANT, Some(right_id)).await;
+    assert_eq!(one.candidates.len(), 1);
+    assert!(read("tenant-other", None).await.candidates.is_empty());
 }

@@ -4,7 +4,7 @@
 //! tenant never sees it (MEDULLA-DECISION-ENGINE-R702.6).
 
 use medulla_decision_types::correction::{
-    Correction, CorrectionNearest, CorrectionOp, CorrectionRead, CorrectionRecorded,
+    CorrectionInput, CorrectionNearest, CorrectionOp, CorrectionRead, CorrectionRecorded,
     CorrectionSource,
 };
 use medulla_h_decide::decide::stat_test_support::{decode, Harness, TENANT};
@@ -34,17 +34,34 @@ async fn dispatch(h: &Harness, tenant: &str, roles: &[&str], op: CorrectionOp) -
     .await
 }
 
-fn correction(id: &str, after: &str) -> Correction {
-    Correction {
+fn correction(id: &str, after: &str) -> CorrectionInput {
+    CorrectionInput {
         correction_id: id.into(),
-        target: "answer:7".into(),
+        target: "action:7".into(),
         before: "the wrong answer".into(),
         after: after.into(),
-        produced_by: "agent:planner".into(),
-        actor: "user:ada".into(),
         at_ms: 1_700_000_000_000,
         source: CorrectionSource::Human,
     }
+}
+
+/// Store one `ActionRecord` of `tenant` the way ingestion does; a correction targets it.
+async fn seed_action(h: &Harness, id: &str, tenant: &str, actor: &str) {
+    let properties = serde_json::json!({
+        "type": "ActionRecord",
+        "actionKind": "tool_call",
+        "actor": actor,
+        "idempotencyKey": id,
+        "tenant_id": tenant,
+        "_owner": "decider",
+    });
+    let guard = h.state.read().await;
+    guard
+        .registry
+        .get(GRAPH)
+        .unwrap()
+        .core
+        .add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R702.6: record, nearest and a self-reported
@@ -54,7 +71,11 @@ fn correction(id: &str, after: &str) -> Correction {
 #[tokio::test]
 async fn correction_commits_three_effects_atomically() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
-    let record = |c: Correction| CorrectionOp::Record { correction: c };
+    let record = |c: CorrectionInput| CorrectionOp::Record { correction: c };
+    // The corrected action is produced by another agent; the corrector is the verified
+    // principal `decider`, and a second action is its own output.
+    seed_action(&h, "action:7", TENANT, "agent:planner").await;
+    seed_action(&h, "action:own", TENANT, "decider").await;
 
     let recorded: CorrectionRecorded = decode(
         dispatch(&h, TENANT, &["corrector"], record(correction("c1", "right"))).await,
@@ -77,17 +98,29 @@ async fn correction_commits_three_effects_atomically() {
             .is_some());
     }
 
-    // Another tenant's correction of the same target does not answer `Nearest`.
+    // Another tenant's correction of its own action does not answer `Nearest`; its target is
+    // invisible here, and a target of another tenant reads as an absent one.
+    seed_action(&h, "action:other", "tenant-other", "agent:planner").await;
+    let mut foreign_input = correction("c2", "other");
+    foreign_input.target = "action:other".into();
     let _: CorrectionRecorded = decode(
-        dispatch(&h, "tenant-other", &["corrector"], record(correction("c2", "other"))).await,
+        dispatch(&h, "tenant-other", &["corrector"], record(foreign_input.clone())).await,
     )
     .unwrap();
+    let hidden = dispatch(&h, TENANT, &["corrector"], record(foreign_input)).await;
+    let absent = {
+        let mut missing = correction("c2", "other");
+        missing.target = "action:none".into();
+        dispatch(&h, TENANT, &["corrector"], record(missing)).await
+    };
+    assert!(hidden.refusal_text().unwrap().starts_with("CORRECTION_NOT_FOUND"));
+    assert_eq!(hidden.refusal_text(), absent.refusal_text());
     let nearest: CorrectionNearest = decode(
         dispatch(
             &h,
             TENANT,
             &["corrector"],
-            CorrectionOp::Nearest { target: "answer:7".into() },
+            CorrectionOp::Nearest { target: "action:7".into() },
         )
         .await,
     )
@@ -106,11 +139,16 @@ async fn correction_commits_three_effects_atomically() {
     )
     .unwrap();
     assert_eq!(read.effect, recorded.effect);
+    // The producer and the task class come from the action record, the corrector from the
+    // verified principal.
+    assert_eq!(read.correction.produced_by, "agent:planner");
+    assert_eq!(read.correction.actor, "decider");
+    assert_eq!(read.correction.task_class, "action_kind:tool_call");
 
     // Refusals commit nothing: a self-reported correction, and a caller without
     // the role.
     let mut own = correction("c3", "right");
-    own.produced_by = own.actor.clone();
+    own.target = "action:own".into();
     let refused = dispatch(&h, TENANT, &["corrector"], record(own)).await;
     assert!(refused.refusal_text().unwrap().starts_with("OUTCOME_SELF_REPORTED"));
     let unprivileged =

@@ -38607,12 +38607,24 @@ class Correction(BaseModel):
     produced_by: str
     source: CorrectionSource = CorrectionSource.HUMAN
     target: str
+    task_class: str
+
+
+class CorrectionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after: str
+    at_ms: Annotated[int, Field(ge=0)]
+    before: str
+    correction_id: str
+    source: CorrectionSource = CorrectionSource.HUMAN
+    target: str
 
 
 class CorrectionOpRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    correction: Correction
+    correction: CorrectionInput
     op: Literal["record"]
 
 
@@ -38630,8 +38642,15 @@ class CorrectionOpGet(BaseModel):
     receipt_id: str
 
 
+class CorrectionOpOutcomes(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["outcomes"]
+    rule_id: str | None = None
+
+
 CorrectionOp = Annotated[
-    CorrectionOpRecord | CorrectionOpNearest | CorrectionOpGet,
+    CorrectionOpRecord | CorrectionOpNearest | CorrectionOpGet | CorrectionOpOutcomes,
     Field(discriminator="op"),
 ]
 
@@ -38646,6 +38665,7 @@ class RuleCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     rule_id: str
+    task_class: str
     text_digest: str
 
 
@@ -38689,6 +38709,21 @@ class CorrectionNearest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     node_ids: list[str]
+
+
+class CandidateOutcomes(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    independent: Annotated[int, Field(ge=0)]
+    mean_value: float
+    rule_id: str
+    task_class: str
+
+
+class CorrectionOutcomes(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidates: list[CandidateOutcomes]
 
 
 class CorrectionRead(BaseModel):
@@ -49698,9 +49733,13 @@ __all__ = [
     "MethodCorrectionRecordParams",
     "Correction",
     "CorrectionEffect",
+    "CorrectionInput",
     "CorrectionNearest",
     "CorrectionOp",
     "CorrectionOpGet",
+    "CorrectionOpOutcomes",
+    "CorrectionOutcomes",
+    "CandidateOutcomes",
     "CorrectionOpNearest",
     "CorrectionOpRecord",
     "CorrectionOutcome",

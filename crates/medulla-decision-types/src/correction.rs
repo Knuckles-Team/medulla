@@ -46,6 +46,20 @@ pub const REFUSALS: &[RefusalCode] = &[
     CORRECTION_NOT_FOUND,
 ];
 
+/// The class of the stored action record a correction names as its target
+/// (MEDULLA-DECISION-ENGINE-R702.4).
+pub const ACTION_RECORD_CLASS: &str = "ActionRecord";
+
+/// The prefix of a task class derived from an action record: the record's
+/// `actionKind` text follows it, so the class is an IRI an invariant can govern
+/// (`on_class`).
+pub const TASK_CLASS_PREFIX: &str = "action_kind:";
+
+/// The task class of an action of `action_kind`.
+pub fn task_class_of(action_kind: &str) -> String {
+    format!("{TASK_CLASS_PREFIX}{action_kind}")
+}
+
 /// Upper bound on `Correction::before` and `Correction::after`, in bytes.
 pub const CORRECTION_VALUE_MAX_BYTES: usize = 8 * 1024;
 
@@ -81,6 +95,45 @@ impl CorrectionSource {
     }
 }
 
+/// The wire body of `CorrectionOp::Record` (MEDULLA-DECISION-ENGINE-R702.1). The caller
+/// supplies neither the corrector nor the producer of the corrected output: the corrector is
+/// the verified principal, and the producer and the task class are read from the action record
+/// the `target` names (R702.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CorrectionInput {
+    pub correction_id: String,
+    /// The node id of the action record being corrected.
+    pub target: String,
+    pub before: String,
+    pub after: String,
+    pub at_ms: u64,
+    /// Where the correction came from; `human` when absent.
+    #[serde(default, skip_serializing_if = "CorrectionSource::is_human")]
+    pub source: CorrectionSource,
+}
+
+impl CorrectionInput {
+    /// The stored correction: the input plus the three facts the handler resolves.
+    pub fn resolve(self, produced_by: String, actor: String, task_class: String) -> Correction {
+        Correction {
+            correction_id: self.correction_id,
+            target: self.target,
+            before: self.before,
+            after: self.after,
+            produced_by,
+            actor,
+            task_class,
+            at_ms: self.at_ms,
+            source: self.source,
+        }
+    }
+}
+
+/// One stored correction. `produced_by` is the actor of the corrected action record, `actor` is
+/// the verified principal that recorded the correction and `task_class` is derived from the
+/// action record's kind; none of the three is caller-supplied.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
@@ -91,6 +144,7 @@ pub struct Correction {
     pub after: String,
     pub produced_by: String,
     pub actor: String,
+    pub task_class: String,
     pub at_ms: u64,
     /// Where the correction came from; `human` when absent.
     #[serde(default, skip_serializing_if = "CorrectionSource::is_human")]
@@ -138,8 +192,11 @@ impl Correction {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RuleCandidate {
+    /// `sha256:` plus the hex digest of the canonical rule text (the corrected value).
     pub rule_id: String,
     pub text_digest: String,
+    /// The task class of the corrected action; an invariant that governs it can forbid the rule.
+    pub task_class: String,
 }
 
 /// The only outcome tag a correction may carry.
@@ -211,15 +268,21 @@ pub struct CorrectionCommit {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum CorrectionOp {
     /// Record one correction and commit its three effects atomically.
-    Record { correction: Correction },
+    Record { correction: CorrectionInput },
     /// Nearest prior corrections to `target`, tenant-filtered.
     Nearest { target: String },
     /// Every node sharing `receipt_id`.
     Get { receipt_id: String },
+    /// The independent outcomes of the caller's tenant, aggregated per rule candidate
+    /// (MEDULLA-DECISION-ENGINE-R702.8); `rule_id` narrows the answer to one candidate.
+    Outcomes {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        rule_id: Option<String>,
+    },
 }
 
 impl CorrectionOp {
-    /// Whether the op writes: `Record` does, `Nearest` and `Get` do not.
+    /// Whether the op writes: `Record` does, `Nearest`, `Get` and `Outcomes` do not.
     pub fn is_mutation(&self) -> bool {
         matches!(self, Self::Record { .. })
     }
@@ -258,41 +321,68 @@ pub struct CorrectionRead {
     pub effect: CorrectionEffect,
 }
 
+/// The independent outcomes recorded for one rule candidate (MEDULLA-DECISION-ENGINE-R702.8).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CandidateOutcomes {
+    /// The candidate's rule id: `sha256:` plus the digest of its rule text.
+    pub rule_id: String,
+    /// The task class of the corrected actions.
+    pub task_class: String,
+    /// How many corrections tagged `independent` yielded this candidate.
+    pub independent: u64,
+    /// The mean `value` of those outcomes, in `[0, 1]`.
+    pub mean_value: f64,
+}
+
+/// What `CorrectionOp::Outcomes` answers: one entry per rule candidate that has at least one
+/// independent outcome, ordered by rule id.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CorrectionOutcomes {
+    pub candidates: Vec<CandidateOutcomes>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn sample_correction() -> Correction {
-        Correction {
+    fn sample_input() -> CorrectionInput {
+        CorrectionInput {
             correction_id: "c1".into(),
-            target: "decision:7".into(),
+            target: "action:7".into(),
             before: "a".into(),
             after: "b".into(),
-            produced_by: "agent:x".into(),
-            actor: "user:y".into(),
             at_ms: 42,
             source: CorrectionSource::Human,
         }
+    }
+
+    fn sample_correction() -> Correction {
+        sample_input().resolve("agent:x".into(), "user:y".into(), task_class_of("tool_call"))
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R702.1
     #[test]
     fn correction_types_round_trip_with_golden_vector() {
         let op = CorrectionOp::Record {
-            correction: sample_correction(),
+            correction: sample_input(),
         };
         let json = serde_json::to_string(&op).unwrap();
         assert_eq!(
             json,
-            r#"{"op":"record","correction":{"correction_id":"c1","target":"decision:7","before":"a","after":"b","produced_by":"agent:x","actor":"user:y","at_ms":42}}"#
+            r#"{"op":"record","correction":{"correction_id":"c1","target":"action:7","before":"a","after":"b","at_ms":42}}"#
         );
         assert_eq!(serde_json::from_str::<CorrectionOp>(&json).unwrap(), op);
 
         let effect = CorrectionEffect {
             receipt_id: "r".repeat(64),
             rule_candidate: RuleCandidate {
-                rule_id: "rule:1".into(),
+                rule_id: "sha256:d".into(),
                 text_digest: "d".into(),
+                task_class: task_class_of("tool_call"),
             },
             outcome: CorrectionOutcome {
                 outcome_id: "o1".into(),
@@ -313,8 +403,17 @@ mod tests {
         );
 
         // Unknown fields and other outcome tags are refused.
-        assert!(serde_json::from_str::<Correction>(
-            r#"{"correction_id":"c","target":"t","before":"","after":"","produced_by":"p","actor":"a","at_ms":0,"extra":1}"#
+        assert!(serde_json::from_str::<CorrectionInput>(
+            r#"{"correction_id":"c","target":"t","before":"","after":"","at_ms":0,"extra":1}"#
+        )
+        .is_err());
+        // The corrector and the producer are not caller-supplied: a body that names one is refused.
+        assert!(serde_json::from_str::<CorrectionInput>(
+            r#"{"correction_id":"c","target":"t","before":"","after":"","actor":"a","at_ms":0}"#
+        )
+        .is_err());
+        assert!(serde_json::from_str::<CorrectionInput>(
+            r#"{"correction_id":"c","target":"t","before":"","after":"","produced_by":"p","at_ms":0}"#
         )
         .is_err());
         assert!(serde_json::from_str::<OutcomeTag>(r#""self_reported""#).is_err());

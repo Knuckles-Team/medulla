@@ -1016,6 +1016,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1010 [US9] MEDULLA-DECISION-ENGINE-R712.5 Evidence
 - [ ] T1011 [US9] MEDULLA-DECISION-ENGINE-R712.6 Hot-path proof
 - [ ] T1012 [US9] MEDULLA-DECISION-ENGINE-R702.7 Review comments and rejections are correction sources
+- [ ] T1039 [US9] MEDULLA-DECISION-ENGINE-R702.8 Independent outcomes per rule candidate
 - [ ] T1013 [US9] MEDULLA-DECISION-ENGINE-R713 Skill usage telemetry carries no prompt text and yields twelve measures per skill (rollup)
 - [ ] T1014 [US9] MEDULLA-DECISION-ENGINE-R713.1 Model
 - [ ] T1015 [US9] MEDULLA-DECISION-ENGINE-R713.2 Behavior: measures

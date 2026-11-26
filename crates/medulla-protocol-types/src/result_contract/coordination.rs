@@ -267,6 +267,8 @@ method_results! {
     CorrectionRecordRun(CorrectionRecord / "record") => Raw<medulla_decision_types::correction::CorrectionRecorded>;
     CorrectionRecordNearest(CorrectionRecord / "nearest") => Raw<medulla_decision_types::correction::CorrectionNearest>;
     CorrectionRecordGet(CorrectionRecord / "get") => Raw<medulla_decision_types::correction::CorrectionRead>;
+    // MEDULLA-DECISION-ENGINE-R702.8: the independent outcomes per rule candidate.
+    CorrectionRecordOutcomes(CorrectionRecord / "outcomes") => Raw<medulla_decision_types::correction::CorrectionOutcomes>;
     // MEDULLA-DECISION-ENGINE-R701.3: failure-pattern ingest, mark-addressed and get.
     FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_types::failure_patterns::FailureIngestResult>;
     FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_types::failure_patterns::GapTopic>;

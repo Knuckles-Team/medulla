@@ -2376,9 +2376,25 @@ fn bench_correction(
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
     use medulla_decision_types::correction::{
-        Correction, CorrectionNearest, CorrectionOp, CorrectionRecorded,
+        CorrectionInput, CorrectionNearest, CorrectionOp, CorrectionRecorded,
     };
     let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    // The corrected action: the correction target must name a stored action record.
+    rt.block_on(async {
+        let properties = serde_json::json!({
+            "type": "ActionRecord",
+            "actionKind": "tool_call",
+            "actor": "agent:planner",
+            "idempotencyKey": "action:bench",
+            "tenant_id": TENANT,
+            "_owner": "decider",
+        });
+        let guard = h.state.read().await;
+        guard.registry.get("__commons__").unwrap().core.add_node(
+            "action:bench".to_string(),
+            rmp_serde::to_vec_named(&properties).unwrap(),
+        );
+    });
     let call = |op: CorrectionOp| -> Response {
         rt.block_on(Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
@@ -2399,13 +2415,11 @@ fn bench_correction(
             ),
         ))
     };
-    let correction = Correction {
+    let correction = CorrectionInput {
         correction_id: "bench-correction".into(),
-        target: "answer:bench".into(),
+        target: "action:bench".into(),
         before: "the wrong answer".into(),
         after: "the right answer".into(),
-        produced_by: "agent:planner".into(),
-        actor: "user:ada".into(),
         at_ms: 1_700_000_000_000,
         source: medulla_decision_types::correction::CorrectionSource::Human,
     };
@@ -2416,7 +2430,7 @@ fn bench_correction(
     };
     let recorded: CorrectionRecorded = decode(record()).expect("the correction is recorded");
     let nearest: CorrectionNearest = decode(call(CorrectionOp::Nearest {
-        target: "answer:bench".into(),
+        target: "action:bench".into(),
     }))
     .expect("the nearest corrections are answered");
     assert_eq!(

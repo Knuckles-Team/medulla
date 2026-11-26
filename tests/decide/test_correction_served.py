@@ -14,8 +14,9 @@ import os
 import uuid
 from typing import Any
 
+import msgpack
 import pytest
-from conftest import request_context, tenant_request_context
+from conftest import TEST_TENANT, request_context, tenant_request_context
 
 from medulla import decision_client as dc
 from medulla.client import EngineResponseError, MedullaClient
@@ -31,6 +32,28 @@ async def _connect(context: dict[str, object]) -> MedullaClient:
     )
 
 
+async def _seed_action(client: MedullaClient, node_id: str, actor: str) -> None:
+    """Store one `ActionRecord` the way ingestion does; a correction targets it."""
+    operations = [
+        {
+            "op": "upsert_node",
+            "id": node_id,
+            "properties": {
+                "type": "ActionRecord",
+                "actionKind": "tool_call",
+                "actor": actor,
+                "idempotencyKey": node_id,
+                "tenant_id": TEST_TENANT,
+            },
+        }
+    ]
+    await client._send(
+        "BatchUpdate",
+        {"operations_msgpack": msgpack.packb(operations, use_bin_type=True)},
+        GRAPH,
+    )
+
+
 async def _journey(prefix: str) -> dict[str, Any]:
     corrector = await _connect(request_context(roles=["corrector"]))
     plain = await _connect(request_context(roles=["test"]))
@@ -39,20 +62,23 @@ async def _journey(prefix: str) -> dict[str, Any]:
     )
     try:
         decisions = dc.DecisionClient(client=corrector, graph=GRAPH)
-        target = f"answer:{prefix}"
+        target = f"action:{prefix}"
+        own = f"action:{prefix}-own"
+        await _seed_action(corrector, target, "agent:planner")
+        # An action the corrector itself produced: a self-reported outcome.
+        await _seed_action(corrector, own, request_context()["principal"])
         record = dc.correction_record_op(
             correction_id=f"{prefix}-c1",
             target=target,
             before="the wrong answer",
             after="the right answer",
-            produced_by="agent:planner",
-            actor="user:ada",
             at_ms=1_700_000_000_000,
         )
         recorded = await decisions.correction_record(record)
         receipt = recorded["receipt_id"]
         nearest = await decisions.correction_record(dc.correction_nearest_op(target))
         read = await decisions.correction_record(dc.correction_get_op(receipt))
+        outcomes = await decisions.correction_record(dc.correction_outcomes_op())
 
         refusals: dict[str, str] = {}
         try:
@@ -61,11 +87,9 @@ async def _journey(prefix: str) -> dict[str, Any]:
             refusals["role"] = str(error)
         self_reported = dc.correction_record_op(
             correction_id=f"{prefix}-c2",
-            target=target,
+            target=own,
             before="a",
             after="b",
-            produced_by="user:ada",
-            actor="user:ada",
             at_ms=1,
         )
         try:
@@ -78,10 +102,28 @@ async def _journey(prefix: str) -> dict[str, Any]:
             )
         except EngineResponseError as error:
             refusals["foreign"] = str(error)
+        # A target that names no visible action record refuses like an absent one.
+        for label, who, target_id in (
+            ("absent", decisions, f"action:{prefix}-none"),
+            ("foreign_target", dc.DecisionClient(client=foreign, graph=GRAPH), target),
+        ):
+            try:
+                await who.correction_record(
+                    dc.correction_record_op(
+                        correction_id=f"{prefix}-{label}",
+                        target=target_id,
+                        before="a",
+                        after="b",
+                        at_ms=1,
+                    )
+                )
+            except EngineResponseError as error:
+                refusals[label] = str(error)
         return {
             "recorded": recorded,
             "nearest": nearest,
             "read": read,
+            "outcomes": outcomes,
             "refusals": refusals,
         }
     finally:
@@ -94,11 +136,13 @@ async def _journey(prefix: str) -> dict[str, Any]:
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R702.4")
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R702.5")
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R702.6")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R702.8")
 def test_correction_served(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R702.3
     # spec: MEDULLA-DECISION-ENGINE-R702.4
     # spec: MEDULLA-DECISION-ENGINE-R702.5
     # spec: MEDULLA-DECISION-ENGINE-R702.6
+    # spec: MEDULLA-DECISION-ENGINE-R702.8
     prefix = "corr" + uuid.uuid4().hex[:8]
     result = asyncio.run(_journey(prefix))
 
@@ -118,8 +162,18 @@ def test_correction_served(clean_graph):
     assert read["correction"]["after"] == "the right answer"
     assert read["effect"] == effect
 
+    # The independent outcome is read back per rule candidate (R702.8).
+    candidates = result["outcomes"]["candidates"]
+    assert effect["rule_candidate"]["rule_id"] in [c["rule_id"] for c in candidates]
+    assert all(c["independent"] >= 1 for c in candidates)
+
     refusals = result["refusals"]
     assert "CORRECTION_ROLE_REQUIRED" in refusals["role"]
     assert "OUTCOME_SELF_REPORTED" in refusals["self"]
+    # The producer is read from the action record, and an invisible target is no oracle.
+    assert read["correction"]["produced_by"] == "agent:planner"
+    assert read["correction"]["task_class"] == "action_kind:tool_call"
+    assert "CORRECTION_NOT_FOUND" in refusals["absent"]
+    assert refusals["foreign_target"] == refusals["absent"]
     # A foreign tenant's read is not told the correction exists.
     assert "foreign" in refusals

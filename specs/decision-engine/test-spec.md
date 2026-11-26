@@ -2254,6 +2254,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R712.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::premises_name_band_and_split` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R712.6`: `tests/decide/test_skill_ablation_served.py::test_effect_noise_canary_and_stale_compile` (planned, L4): proves: Hot-path proof
 - `MEDULLA-DECISION-ENGINE-R702.7`: `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::review_sources_yield_eval_cases_with_digests_only` (planned, L3): proves: Review comments and rejections are correction sources
+- `MEDULLA-DECISION-ENGINE-R702.8`: `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::independent_outcomes_read_per_rule_candidate` (planned, L3): proves: Independent outcomes per rule candidate
 - `MEDULLA-DECISION-ENGINE-R713`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::telemetry_journey` (planned, L3): proves: Skill usage telemetry carries no prompt text and yields twelve measures per skill (rollup)
 - `MEDULLA-DECISION-ENGINE-R713.1`: `crates/medulla-decision-types/src/skill_telemetry.rs::tests::invocation_has_no_free_text_and_measures_has_twelve_fields` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R713.2`: `crates/medulla-decision-stats/src/decision/skill_telemetry.rs::tests::twelve_measures_match_golden_vectors` (planned, L1): proves: Behavior: measures
