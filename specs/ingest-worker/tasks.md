@@ -8,13 +8,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T002 [US1] MEDULLA-INGEST-WORKER-R001.2 Typed job kinds and lane derivation
 - [ ] T003 [US1] MEDULLA-INGEST-WORKER-R001.3 Partition key function
 - [ ] T004 [US1] MEDULLA-INGEST-WORKER-R001.4 Enqueue maps onto the served task queue with deterministic ids
-- [ ] T126 [US1] MEDULLA-INGEST-WORKER-R001.4.1 Wiring: the served ingest enqueue and the shared ingest queue stack (before T007, T009, T010 and T046)
+- [x] T126 [US1] MEDULLA-INGEST-WORKER-R001.4.1 Wiring: the served ingest enqueue and the shared ingest queue stack (before T007, T009, T010 and T046)
 - [ ] T005 [US1] MEDULLA-INGEST-WORKER-R001.7 Typed retry policy with validation
 - [ ] T006 [US1] MEDULLA-INGEST-WORKER-R001.8 Retry delay function with jitter
 - [ ] T007 [US1] MEDULLA-INGEST-WORKER-R001.9 Failure routing: retry with backoff, then dead letter
 - [ ] T007a [US1] MEDULLA-INGEST-WORKER-R001.9 Register `analytics_job_task_dead_letters` in the Jobs owner layout (registry, table_api, contract, owner tests, predecessor and digest)
-- [ ] T008 [US1] MEDULLA-INGEST-WORKER-R001.10 Hydration kinds run on the hydration queue
-- [ ] T009 [US1] MEDULLA-INGEST-WORKER-R001.11 Backpressure read and producer refusal
+- [x] T008 [US1] MEDULLA-INGEST-WORKER-R001.10 Hydration kinds run on the hydration queue
+- [x] T009 [US1] MEDULLA-INGEST-WORKER-R001.11 Backpressure read and producer refusal
 - [ ] T010 [US1] MEDULLA-INGEST-WORKER-R001.12 A missed lease renewal redelivers the job and counts as an attempt
 - [ ] T011 [US1] MEDULLA-INGEST-WORKER-R001.13 Ingest job metrics are exported from one registry
 - [ ] T012 [US1] MEDULLA-INGEST-WORKER-R001.14 Runner contract: the engine methods the SDK runner relies on
@@ -29,8 +29,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T021 [US4] MEDULLA-INGEST-WORKER-R002.3 Wiring: proposals are judged inside SourceIngest admission
 - [ ] T022 [US4] MEDULLA-INGEST-WORKER-R002.4 Refusal
 - [ ] T023 [US4] MEDULLA-INGEST-WORKER-R002.5 Evidence: coverage and redundancy on ProposalItemReceipt
-- [ ] T024 [US4] MEDULLA-INGEST-WORKER-R002.6 Hot-path proof: ontology induction through SourceIngest
-- [ ] T025 [US4] MEDULLA-INGEST-WORKER-R002.7 Behavior: gate_proposal_classes refuses pack mappings that name an unadmitted proposal class
+- [x] T024 [US4] MEDULLA-INGEST-WORKER-R002.6 Hot-path proof: ontology induction through SourceIngest
+- [x] T025 [US4] MEDULLA-INGEST-WORKER-R002.7 Behavior: gate_proposal_classes refuses pack mappings that name an unadmitted proposal class
 - [ ] T026 [US3] MEDULLA-INGEST-WORKER-R003.1 Model
 - [ ] T027 [US3] MEDULLA-INGEST-WORKER-R003.2 Behavior: atom decomposition and context selection
 - [ ] T028 [US3] MEDULLA-INGEST-WORKER-R003.3 Wiring: decompose at ingest and select at query
@@ -42,13 +42,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T034 [US3] MEDULLA-INGEST-WORKER-R003.9 Wiring: the document validator runs inside prepare
 - [x] T035 [US3] MEDULLA-INGEST-WORKER-R003.10.1 Behavior: the quarantine envelope commits without advancing state
 - [x] T036 [US3] MEDULLA-INGEST-WORKER-R003.11 Evidence: quarantine receipt, finish and replay
-- [ ] T037 [US3] MEDULLA-INGEST-WORKER-R003.12 Hot-path proof: document normalization through the wire method
+- [x] T037 [US3] MEDULLA-INGEST-WORKER-R003.12 Hot-path proof: document normalization through the wire method
 - [ ] T038 [US3] MEDULLA-INGEST-WORKER-R003.13 Model
 - [ ] T039 [US3] MEDULLA-INGEST-WORKER-R003.14 Behavior: transcript validation
 - [ ] T040 [US3] MEDULLA-INGEST-WORKER-R003.15 Wiring: transcripts batches are admitted through the extension path
 - [ ] T041 [US3] MEDULLA-INGEST-WORKER-R003.16 Refusal: typed transcript errors
-- [ ] T042 [US3] MEDULLA-INGEST-WORKER-R003.17.1 Evidence: transcript and quarantine reads enforce stored policy
-- [ ] T043 [US3] MEDULLA-INGEST-WORKER-R003.18 Hot-path proof: transcripts through the wire method
+- [x] T042 [US3] MEDULLA-INGEST-WORKER-R003.17.1 Evidence: transcript and quarantine reads enforce stored policy
+- [x] T043 [US3] MEDULLA-INGEST-WORKER-R003.18 Hot-path proof: transcripts through the wire method
 - [x] T124 [US3] MEDULLA-INGEST-WORKER-R003.19 Behavior: every ingested record carries the core provenance predicates
 - [ ] T125 [US3] MEDULLA-INGEST-WORKER-R003.20 Model: the concept-link predicate of a transcript segment
 - [ ] T044 [US1] MEDULLA-INGEST-WORKER-R604.1 Model: lanes, queue classes and lane metrics
@@ -71,8 +71,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T061 [US5] MEDULLA-INGEST-WORKER-R606.6 Hot-path proof: materialization at batch size
 - [ ] T062 [US3] MEDULLA-INGEST-WORKER-R700.1 Model: fragments and the reader registry
 - [x] T063 [US3] MEDULLA-INGEST-WORKER-R700.2 Behavior: bounded streaming readers
-- [ ] T064 [US3] MEDULLA-INGEST-WORKER-R700.3 Wiring: readers run inside document normalization
-- [ ] T065 [US3] MEDULLA-INGEST-WORKER-R700.4 Refusal: oversize, encrypted, unsupported or corrupt input
+- [x] T064 [US3] MEDULLA-INGEST-WORKER-R700.3 Wiring: readers run inside document normalization
+- [x] T065 [US3] MEDULLA-INGEST-WORKER-R700.4 Refusal: oversize, encrypted, unsupported or corrupt input
 - [x] T066 [US3] MEDULLA-INGEST-WORKER-R700.5 Evidence: every fragment re-extracts from its span
 - [ ] T067 [US3] MEDULLA-INGEST-WORKER-R700.6 Hot-path proof: readers through the wire method
 - [ ] T068 [US4] MEDULLA-INGEST-WORKER-R701.1 Model
