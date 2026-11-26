@@ -8,6 +8,7 @@ use medulla_work_store::{
     redb_store::work_item::test_shard::GRAPH,
 };
 use medulla_work_types::native_control::SubmitWorkItemRequest;
+use medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 

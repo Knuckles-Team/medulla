@@ -156,7 +156,7 @@ fn refuse_stored_lease(stored: Option<&NodeMap>) -> Result<(), String> {
         row.contains_key(medulla_work_types::run_completion::RUN_COMPLETION_BATCH)
             || row.contains_key(medulla_work_types::run_completion::RUN_COMPLETION_DIGEST)
             || row.contains_key("run_owner_binding")
-            || row.contains_key(super::run_owner::ADMISSION_REQUEST)
+            || row.contains_key(medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST)
     }) {
         return Err(NATIVE_KEY_AUTHORITY.to_string());
     }
@@ -437,7 +437,7 @@ fn has_reserved_run_binding(row: &NodeMap) -> bool {
         medulla_work_types::run_completion::RUN_COMPLETION_DIGEST,
         "current_plan",
         "run_owner_binding",
-        super::run_owner::ADMISSION_REQUEST,
+        medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST,
         "pending_call_lease_ref",
     ]
     .iter()

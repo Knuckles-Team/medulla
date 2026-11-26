@@ -88,7 +88,7 @@ fn preceding_run(
         return Err("CONVERSATION_UNAVAILABLE: predecessor ownership is invalid".into());
     }
     let original: SubmitWorkItemRequest = serde_json::from_value(
-        row.get(super::run_owner::ADMISSION_REQUEST)
+        row.get(medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST)
             .cloned()
             .ok_or("CONVERSATION_UNAVAILABLE: predecessor admission is missing")?,
     )

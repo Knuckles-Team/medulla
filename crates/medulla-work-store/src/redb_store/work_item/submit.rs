@@ -695,7 +695,7 @@ pub fn write_submit_work_item_node_and_edges(
     if let Some(owner) = owner {
         props.insert("run_owner_binding".into(), owner);
         props.insert(
-            super::run_owner::ADMISSION_REQUEST.into(),
+            medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST.into(),
             serde_json::to_value(request).map_err(|error| error.to_string())?,
         );
     }

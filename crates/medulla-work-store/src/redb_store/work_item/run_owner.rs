@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub use medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
+use medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
 
 pub fn work_item_id(graph: &str, tenant: &str, run_id: &str) -> Result<String, String> {
     use sha2::{Digest, Sha256};
