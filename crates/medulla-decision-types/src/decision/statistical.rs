@@ -231,6 +231,10 @@ pub enum QuestionKind {
     GraphIntake,
     /// Measured tool necessity against a trace (MEDULLA-DECISION-ENGINE-R165). See `decision::tool_necessity`.
     ToolNecessity,
+    /// The outputs of one stored DMN decision table over typed inputs (MEDULLA-DECISION-ENGINE-R180). See `decision::process_decision`.
+    DecisionTableEval,
+    /// The arms one plan branch takes over typed inputs (MEDULLA-DECISION-ENGINE-R180). See `decision::process_decision`.
+    BranchSelect,
     /// Whether a checker feedback loop continues (MEDULLA-DECISION-ENGINE-R169). See `decision::checker_feedback`.
     FeedbackLoop,
     /// Whether a plan's features are wired in the architecture (MEDULLA-DECISION-ENGINE-R171). See `decision::planning_admission`.

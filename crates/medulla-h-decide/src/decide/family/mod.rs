@@ -93,6 +93,7 @@ mod template_choice;
 mod temporal_basis;
 mod thought_search;
 mod tool_action_admission;
+pub(super) mod process_decision;
 pub(super) mod tool_necessity;
 mod tool_relevance;
 mod tool_subset;
@@ -342,6 +343,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         field_shielding::FieldShieldingFamily;
     static GRAPHINTAKEFAMILY: graph_intake::GraphIntakeFamily = graph_intake::GraphIntakeFamily;
     static PROMOTIONFAMILY: promotion::PromotionFamily = promotion::PromotionFamily;
+    static PROCESSDECISIONFAMILY: process_decision::ProcessDecisionFamily =
+        process_decision::ProcessDecisionFamily;
     static TOOLNECESSITYFAMILY: tool_necessity::ToolNecessityFamily =
         tool_necessity::ToolNecessityFamily;
     static FEEDBACKLOOPFAMILY: feedback_loop::FeedbackLoopFamily =
@@ -465,6 +468,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::FieldShielding => &FIELDSHIELDINGFAMILY,
         QuestionKind::GraphIntake => &GRAPHINTAKEFAMILY,
         QuestionKind::ToolNecessity => &TOOLNECESSITYFAMILY,
+        QuestionKind::DecisionTableEval | QuestionKind::BranchSelect => &PROCESSDECISIONFAMILY,
         QuestionKind::FeedbackLoop => &FEEDBACKLOOPFAMILY,
         QuestionKind::PlanningAdmission => &PLANNINGADMISSIONFAMILY,
         QuestionKind::ToolActionAdmission => &TOOLACTIONADMISSIONFAMILY,
@@ -567,6 +571,8 @@ mod tests {
             QuestionKind::FieldShielding,
             QuestionKind::GraphIntake,
             QuestionKind::ToolNecessity,
+            QuestionKind::DecisionTableEval,
+            QuestionKind::BranchSelect,
             QuestionKind::FeedbackLoop,
             QuestionKind::PlanningAdmission,
             QuestionKind::ToolActionAdmission,
@@ -660,6 +666,8 @@ mod tests {
             | QuestionKind::FieldShielding
             | QuestionKind::GraphIntake
             | QuestionKind::ToolNecessity
+            | QuestionKind::DecisionTableEval
+            | QuestionKind::BranchSelect
             | QuestionKind::FeedbackLoop
             | QuestionKind::PlanningAdmission
             | QuestionKind::ToolActionAdmission

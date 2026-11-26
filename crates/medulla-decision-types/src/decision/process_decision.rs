@@ -10,6 +10,8 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::decision::record::outcome::RefusalCode;
+
 /// One typed value of a decision input or output.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
@@ -75,6 +77,32 @@ pub struct BranchVerdict {
     pub matched_conditions: Vec<String>,
     pub used_default: bool,
 }
+
+/// Abstention: UNIQUE, ANY or FIRST matched no rule (MEDULLA-DECISION-ENGINE-R180.5).
+pub const DMN_NO_RULE_MATCHED: RefusalCode = RefusalCode::new("DMN_NO_RULE_MATCHED");
+/// Abstention: UNIQUE matched more than one rule; the detail names the rule ids.
+pub const DMN_UNIQUE_VIOLATED: RefusalCode = RefusalCode::new("DMN_UNIQUE_VIOLATED");
+/// Abstention: ANY matched rules with different outputs; the detail names the rule ids.
+pub const DMN_ANY_CONFLICT: RefusalCode = RefusalCode::new("DMN_ANY_CONFLICT");
+/// Abstention: an entry or a hit policy outside the supported subset; the detail names it.
+pub const DMN_EXPRESSION_UNSUPPORTED: RefusalCode = RefusalCode::new("DMN_EXPRESSION_UNSUPPORTED");
+/// Abstention: a table input the request did not supply; the detail names it.
+pub const DMN_INPUT_MISSING: RefusalCode = RefusalCode::new("DMN_INPUT_MISSING");
+/// Abstention: no arm held and the branch has no default arm.
+pub const BRANCH_NO_ARM: RefusalCode = RefusalCode::new("BRANCH_NO_ARM");
+/// Abstention: no sealed plan carries the requested plan digest.
+pub const PLAN_UNKNOWN: RefusalCode = RefusalCode::new("PLAN_UNKNOWN");
+
+/// The refusal table of the `decision_table_eval` and `branch_select` families.
+pub const REFUSALS: &[RefusalCode] = &[
+    DMN_NO_RULE_MATCHED,
+    DMN_UNIQUE_VIOLATED,
+    DMN_ANY_CONFLICT,
+    DMN_EXPRESSION_UNSUPPORTED,
+    DMN_INPUT_MISSING,
+    BRANCH_NO_ARM,
+    PLAN_UNKNOWN,
+];
 
 #[cfg(test)]
 mod tests {

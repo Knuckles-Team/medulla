@@ -416,6 +416,15 @@ async fn serve(
                 super::family::tool_necessity::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
+            } else if matches!(
+                request.question.kind,
+                QuestionKind::DecisionTableEval | QuestionKind::BranchSelect
+            ) {
+                // A process decision reads its stored DMN tables in the graph named by its
+                // `graph` param, under the same ACL and RLS filter (MEDULLA-DECISION-ENGINE-R180.4).
+                super::family::process_decision::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ProcessPlan {
                 // A `process_plan` question reads its stored workflow in the graph named by
                 // its `graph` param, under the same ACL and RLS filter (MEDULLA-CQ-ORCH-R704.5).

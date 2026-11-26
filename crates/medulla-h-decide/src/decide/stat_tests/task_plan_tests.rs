@@ -374,7 +374,7 @@ async fn premises_name_calls_and_bindings() {
 
 /// A task-plan request over a proposal given as JSON, with the declared
 /// candidates the handler requires (the sorted task ids).
-fn request_with(pin: &ComponentDependency, proposal: serde_json::Value) -> DecideRequest {
+pub(super) fn request_with(pin: &ComponentDependency, proposal: serde_json::Value) -> DecideRequest {
     let proposal: TaskPlanProposal = serde_json::from_value(proposal).unwrap();
     let mut request = task_request(pin);
     let mut ids: Vec<String> = proposal.tasks.iter().map(|t| t.task_id.clone()).collect();
@@ -400,7 +400,7 @@ fn request_with(pin: &ComponentDependency, proposal: serde_json::Value) -> Decid
     request
 }
 
-fn step(id: &str, deps: &[&str], extra: serde_json::Value) -> serde_json::Value {
+pub(super) fn step(id: &str, deps: &[&str], extra: serde_json::Value) -> serde_json::Value {
     let mut value = serde_json::json!({
         "task_id": id, "prompt": format!("Do {id}"), "depends_on": deps,
     });

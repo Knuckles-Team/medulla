@@ -2303,6 +2303,8 @@ QuestionKind = (
     | Literal["field_shielding"]
     | Literal["graph_intake"]
     | Literal["tool_necessity"]
+    | Literal["decision_table_eval"]
+    | Literal["branch_select"]
     | Literal["feedback_loop"]
     | Literal["planning_admission"]
     | Literal["tool_action_admission"]

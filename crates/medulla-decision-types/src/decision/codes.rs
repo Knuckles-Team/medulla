@@ -499,6 +499,14 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::GraphIntake, super::graph_intake::REFUSALS),
     (QuestionKind::ToolNecessity, super::tool_necessity::REFUSALS),
     (
+        QuestionKind::DecisionTableEval,
+        super::process_decision::REFUSALS,
+    ),
+    (
+        QuestionKind::BranchSelect,
+        super::process_decision::REFUSALS,
+    ),
+    (
         QuestionKind::ItemRecommendation,
         super::item_recommendation::REFUSALS,
     ),

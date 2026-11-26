@@ -263,6 +263,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::FieldShielding => "field_shielding",
         QuestionKind::GraphIntake => "graph_intake",
         QuestionKind::ToolNecessity => "tool_necessity",
+        QuestionKind::DecisionTableEval => "decision_table_eval",
+        QuestionKind::BranchSelect => "branch_select",
         QuestionKind::FeedbackLoop => "feedback_loop",
         QuestionKind::PlanningAdmission => "planning_admission",
         QuestionKind::ToolActionAdmission => "tool_action_admission",

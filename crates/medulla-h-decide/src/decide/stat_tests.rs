@@ -1232,6 +1232,7 @@ mod held_item_admission_tests;
 #[cfg(feature = "redb")]
 mod capacity_tests;
 mod item_recommendation_tests;
+mod process_decision_tests;
 mod prompt_candidate_tests;
 mod ingest_shortfall_tests;
 mod process_plan_tests;
