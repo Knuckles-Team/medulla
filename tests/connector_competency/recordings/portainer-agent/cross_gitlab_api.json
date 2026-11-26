@@ -1,0 +1,20 @@
+{
+  "source": "portainer-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "stack": "stack-1",
+      "pipeline": "pipeline-1",
+      "joinKey": "portainer.q2-key-1",
+      "id": "portainer-agent-portainer.q2-1",
+      "label": "portainer-agent 1"
+    },
+    {
+      "stack": "stack-2",
+      "pipeline": "pipeline-2",
+      "joinKey": "portainer.q2-key-2",
+      "id": "portainer-agent-portainer.q2-2",
+      "label": "portainer-agent 2"
+    }
+  ]
+}

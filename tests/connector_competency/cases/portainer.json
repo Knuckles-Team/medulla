@@ -4,10 +4,12 @@
   "vocabulary_module": "infrastructure-v1.ttl",
   "terms": [
     "ContainerStack",
+    "ManagementEnvironment",
     "desiredReplicas",
     "runningReplicas",
     "stackInEnvironment",
-    "ManagementEnvironment"
+    "stackSourceRepository",
+    "startedAt"
   ],
   "questions": [
     {
@@ -31,6 +33,31 @@
       "min_rows": 1,
       "recordings": [
         "portainer-agent/single.json"
+      ]
+    },
+    {
+      "id": "portainer.q2",
+      "kind": "cross",
+      "question": "Which Portainer stacks deploy from a Git repository whose latest GitLab pipeline failed?",
+      "uql": "LET s0 = FOREIGN SCAN 'portainer-agent'; LET s1 = FOREIGN SCAN 'gitlab_api'; JOIN s0, s1",
+      "sources": [
+        "portainer-agent",
+        "gitlab_api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "portainer-agent": "mcp_tool",
+        "gitlab_api": "http_endpoint"
+      },
+      "columns": [
+        "stack",
+        "repository",
+        "pipeline"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "portainer-agent/cross_gitlab_api.json",
+        "gitlab_api/cross_portainer-agent.json"
       ]
     }
   ]
