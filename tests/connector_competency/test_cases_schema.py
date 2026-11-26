@@ -25,9 +25,11 @@ GOOD: dict[str, Any] = {
         {
             "id": "alpha.q1",
             "kind": "single",
+            "question": "Which alpha items exist?",
             "uql": "MATCH (c:Collection) RETURN c",
             "sources": ["alpha"],
             "optional_sources": ["beta"],
+            "source_kinds": {"alpha": "mcp_tool", "beta": "http_endpoint"},
             "columns": ["c"],
             "min_rows": 1,
             "recordings": ["alpha/single.json"],
@@ -57,6 +59,17 @@ INVALID = [
         _mutate(("questions", 0, "uql"), "MATCH gamma RETURN 1"),
     ),
     ("bad kind", _mutate(("questions", 0, "kind"), "both")),
+    (
+        "source kind missing",
+        _mutate(("questions", 0, "source_kinds"), {"alpha": "mcp_tool"}),
+    ),
+    (
+        "source kind unknown",
+        _mutate(
+            ("questions", 0, "source_kinds"),
+            {"alpha": "mcp_tool", "beta": "carrier_pigeon"},
+        ),
+    ),
     ("missing key", {k: v for k, v in GOOD.items() if k != "terms"}),
 ]
 

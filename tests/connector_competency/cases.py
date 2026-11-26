@@ -11,6 +11,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from fixture_source import KINDS as CONTRACT_KINDS
+
 HERE = Path(__file__).resolve().parent
 CASES_DIR = HERE / "cases"
 RECORDINGS_DIR = HERE / "recordings"
@@ -22,9 +24,11 @@ FILE_KEYS = ("connector", "rollup", "vocabulary_module", "terms", "questions")
 QUESTION_KEYS = (
     "id",
     "kind",
+    "question",
     "uql",
     "sources",
     "optional_sources",
+    "source_kinds",
     "columns",
     "min_rows",
     "recordings",
@@ -49,9 +53,11 @@ class Case:
     connector: str
     rollup: str
     kind: str
+    question: str
     uql: str
     sources: tuple[str, ...]
     optional_sources: tuple[str, ...]
+    source_kinds: dict[str, str]
     columns: tuple[str, ...]
     min_rows: int
     recordings: tuple[str, ...]
@@ -91,6 +97,7 @@ def _check_file(doc: dict, path: Path) -> None:
 def _check_question(q: dict, known: set[str], recordings: Path, path: Path) -> None:
     _require(q["kind"] in KINDS, path, f"{q['id']}: kind is not single or cross")
     _require(_text(q["uql"]), path, f"{q['id']}: uql is empty")
+    _require(_text(q["question"]), path, f"{q['id']}: question is empty")
     for key in ("sources", "optional_sources", "columns", "recordings"):
         _require(_strings(q[key]), path, f"{q['id']}: {key} is not a string list")
     _require(
@@ -98,8 +105,25 @@ def _check_question(q: dict, known: set[str], recordings: Path, path: Path) -> N
         path,
         f"{q['id']}: min_rows",
     )
+    _check_source_kinds(q, path)
     _check_recordings(q, recordings, path)
     _check_text(q, known, path)
+
+
+def _check_source_kinds(q: dict, path: Path) -> None:
+    kinds = q["source_kinds"]
+    _require(isinstance(kinds, dict), path, f"{q['id']}: source_kinds is not an object")
+    named = set(q["sources"]) | set(q["optional_sources"])
+    _require(
+        set(kinds) == named,
+        path,
+        f"{q['id']}: source_kinds does not name exactly the sources",
+    )
+    _require(
+        all(kind in CONTRACT_KINDS for kind in kinds.values()),
+        path,
+        f"{q['id']}: source_kinds names an unknown contract kind",
+    )
 
 
 def _check_recordings(q: dict, recordings: Path, path: Path) -> None:
@@ -134,9 +158,11 @@ def _build(doc: dict, q: dict) -> Case:
         connector=doc["connector"],
         rollup=doc["rollup"],
         kind=q["kind"],
+        question=q["question"],
         uql=q["uql"],
         sources=tuple(q["sources"]),
         optional_sources=tuple(q["optional_sources"]),
+        source_kinds=dict(q["source_kinds"]),
         columns=tuple(q["columns"]),
         min_rows=q["min_rows"],
         recordings=tuple(q["recordings"]),

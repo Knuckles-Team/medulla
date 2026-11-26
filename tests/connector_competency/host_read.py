@@ -129,7 +129,9 @@ async def completed_read(
         output_schema=b'{"type":"object"}',
         annotations=PackAnnotations(contract_version="1.0.0"),
     )
-    archive = ConnectorPackArchiveBuilder.build(server_entry, [tool_entry, contract_entry])
+    archive = ConnectorPackArchiveBuilder.build(
+        server_entry, [tool_entry, contract_entry]
+    )
     blob = await ConnectorPackClient(client).upload_archive(
         archive, operation_key=f"host-read:{connector}:archive"
     )
@@ -236,7 +238,7 @@ async def completed_read(
     rows = [
         {
             "id": item["id"],
-            "columns": {"label": item["label"]},
+            "columns": {k: v for k, v in item.items() if k != "id"},
             "provenance": [_contract_iri(connector), f"fetch:{fetch_time}"],
         }
         for item in items
