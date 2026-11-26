@@ -66,6 +66,9 @@ pub enum ChangesetRefusal {
     /// A blob of an overlapping path could not be read for the merge
     /// (MEDULLA-BRANCH-MERGE-R010).
     MergeBlobUnreadable,
+    /// A requirement row the submission edits was also edited by a changeset after the
+    /// writer's base (MEDULLA-SDLC-R012.6); the detail lists the row ids.
+    RequirementEditConflict,
     /// A tree read named a revision that is not a changeset of the branch
     /// chain (MEDULLA-SCM-R004).
     RevisionNotOnChain,
@@ -111,6 +114,7 @@ impl ChangesetRefusal {
             Self::ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
             Self::SourceConflict => "SOURCE_CONFLICT",
             Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
+            Self::RequirementEditConflict => "REQUIREMENT_EDIT_CONFLICT",
             Self::RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
             Self::HistoryIndexStale => "HISTORY_INDEX_STALE",
             Self::BlameBinary => "BLAME_BINARY",

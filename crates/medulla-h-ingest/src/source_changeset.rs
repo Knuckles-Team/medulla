@@ -387,6 +387,85 @@ fn merge_overlaps(
     Ok(out)
 }
 
+/// The row ids a markdown table edit touched (MEDULLA-SDLC-R012.6): a row line is
+/// `| \`ID\` | ... |`; a row is edited when its line differs between `before` and `after`,
+/// or exists in only one of them.
+pub fn edited_row_ids(before: &str, after: &str) -> std::collections::BTreeSet<String> {
+    let rows = |text: &str| -> std::collections::BTreeMap<String, String> {
+        text.lines()
+            .filter_map(|line| {
+                let line = line.trim();
+                let rest = line.strip_prefix("| `")?;
+                let (id, _) = rest.split_once('`')?;
+                Some((id.to_owned(), line.to_owned()))
+            })
+            .collect()
+    };
+    let (old, new) = (rows(before), rows(after));
+    old.keys()
+        .chain(new.keys())
+        .filter(|id| old.get(*id) != new.get(*id))
+        .cloned()
+        .collect()
+}
+
+fn is_spec_markdown(path: &str) -> bool {
+    path.ends_with(".md") && (path.starts_with("specs/") || path.contains("/specs/"))
+}
+
+/// Refuse `REQUIREMENT_EDIT_CONFLICT` when a spec file the submission modifies has a row that
+/// the submission and a changeset after the writer's base both edited (MEDULLA-SDLC-R012.6).
+/// `newer` is the changesets after the base (newest first) and `older` the chain from the
+/// base down. Both sides writing the same bytes is no conflict.
+fn check_row_edit_conflicts(
+    paths: &[SubmittedPath],
+    newer: &[(String, Changeset)],
+    older: &[(String, Changeset)],
+    blobs: &dyn BlobIo,
+) -> Result<(), AcceptError> {
+    let blob_in = |chain: &[(String, Changeset)], path: &str| -> Option<Option<String>> {
+        chain
+            .iter()
+            .find_map(|(_, c)| c.changed_paths.iter().find(|p| p.path == path))
+            .map(|p| p.new_blob.clone())
+    };
+    let mut conflicts: Vec<String> = Vec::new();
+    for entry in paths.iter().filter(|e| is_spec_markdown(&e.path) && e.op == PathOp::Modify) {
+        let (Some(Some(base)), Some(Some(theirs)), Some(ours)) = (
+            blob_in(older, &entry.path),
+            blob_in(newer, &entry.path),
+            entry.blob.as_ref().map(|b| b.digest.clone()),
+        ) else {
+            continue;
+        };
+        if ours == theirs {
+            continue;
+        }
+        let unreadable = |detail: String| {
+            AcceptError::Refused(SubmitRefusal::new(
+                ChangesetRefusal::MergeBlobUnreadable,
+                format!("{}: {detail}", entry.path),
+            ))
+        };
+        let read = |digest: &str| -> Result<String, AcceptError> {
+            let bytes = blobs.read(digest).map_err(&unreadable)?;
+            Ok(String::from_utf8_lossy(&bytes).into_owned())
+        };
+        let (base, ours, theirs) = (read(&base)?, read(&ours)?, read(&theirs)?);
+        let theirs_rows = edited_row_ids(&base, &theirs);
+        conflicts.extend(edited_row_ids(&base, &ours).intersection(&theirs_rows).cloned());
+    }
+    if conflicts.is_empty() {
+        return Ok(());
+    }
+    conflicts.sort();
+    conflicts.dedup();
+    Err(AcceptError::Refused(SubmitRefusal::new(
+        ChangesetRefusal::RequirementEditConflict,
+        format!("rows=[{}]", conflicts.join(", ")),
+    )))
+}
+
 /// Stage two of `SubmitChangeset` (MEDULLA-SCM-R002): extend the changeset
 /// chain. Walks the chain from the head, checks the writer's base, fills
 /// `old_blob` of every path from the first parent, and seals the record.
@@ -440,6 +519,7 @@ pub fn accept(
             .map(|(_, c)| c.changed_paths.iter().map(|p| p.path.clone()).collect())
             .collect();
         if !path_set_disjoint(&touched, &since) {
+            check_row_edit_conflicts(&request.paths, &walked[..behind], &walked[behind..], ctx.blobs)?;
             submitted_paths =
                 merge_overlaps(&request.paths, &walked[..behind], &walked[behind..], ctx)?;
         }
@@ -911,6 +991,108 @@ mod tests {
             refused(Some(hex_id('1')), "z.rs"),
             ChangesetRefusal::SourceConflict
         );
+    }
+
+    struct MapBlobs(std::collections::BTreeMap<String, Vec<u8>>);
+
+    impl BlobIo for MapBlobs {
+        fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
+            self.0.get(digest).cloned().ok_or_else(|| format!("no blob {digest}"))
+        }
+        fn store(&self, _bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
+            Ok(SubmittedBlobRef {
+                digest: "m".repeat(64),
+                size: 1,
+            })
+        }
+    }
+
+    fn keep_ours(
+        _base: &[u8],
+        ours: &[u8],
+        _theirs: &[u8],
+    ) -> Result<Vec<u8>, medulla_source_types::source_changeset::FileMergeRefusal> {
+        Ok(ours.to_vec())
+    }
+
+    // spec: MEDULLA-SDLC-R012.6
+    #[test]
+    fn edited_row_ids_names_changed_added_and_removed_rows() {
+        let before = "| ID |\n| `A-R1` | one |\n| `A-R2` | two |\n| `A-R3` | three |\n";
+        let after = "| ID |\n| `A-R1` | one |\n| `A-R2` | TWO |\n| `A-R4` | four |\n";
+        let edited: Vec<String> = edited_row_ids(before, after).into_iter().collect();
+        assert_eq!(edited, ["A-R2", "A-R3", "A-R4"]);
+    }
+
+    // spec: MEDULLA-SDLC-R012.6
+    #[test]
+    fn two_changesets_editing_one_row_refuse_and_distinct_rows_merge() {
+        let doc = "specs/x/requirements.md";
+        let blobs = MapBlobs(
+            [
+                ("base", "| `A-R1` | one |\n| `A-R2` | two |\n"),
+                ("theirs", "| `A-R1` | ONE |\n| `A-R2` | two |\n"),
+                ("same-row", "| `A-R1` | uno |\n| `A-R2` | two |\n"),
+                ("other-row", "| `A-R1` | one |\n| `A-R2` | dos |\n"),
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.as_bytes().to_vec()))
+            .collect(),
+        );
+        let changed = |blob: &str, parent: String| {
+            let mut c = Changeset {
+                id: String::new(),
+                repo: "r".into(),
+                parents: vec![parent],
+                author_principal: "p".into(),
+                message: "m".into(),
+                changed_paths: vec![ChangedPath {
+                    path: doc.into(),
+                    op: PathOp::Modify,
+                    old_blob: None,
+                    new_blob: Some(blob.into()),
+                    mode: 0o100644,
+                }],
+                created_at: 1,
+                trailers: Default::default(),
+                agent_identity: None,
+                run_trace_id: None,
+                git: None,
+            };
+            c.id = c.canonical_id();
+            c
+        };
+        let first = changed("base", "base".into());
+        let second = changed("theirs", hex_id('1'));
+        let chain = MemChain {
+            head: hex_id('2'),
+            commits: vec![(hex_id('1'), first), (hex_id('2'), second)],
+        };
+        let ctx = AcceptContext {
+            author_principal: "p",
+            created_at_ms: 9,
+            blobs: &blobs,
+            merge: keep_ours,
+            agent_identity: None,
+            git_origin: None,
+        };
+        let submit = |blob: &str| {
+            accept(
+                &chain,
+                &request(
+                    Some(hex_id('1')),
+                    vec![submitted(doc, PathOp::Modify, Some(blob))],
+                ),
+                &ctx,
+            )
+        };
+        match submit("same-row") {
+            Err(AcceptError::Refused(r)) => {
+                assert_eq!(r.refusal.code(), "REQUIREMENT_EDIT_CONFLICT");
+            }
+            other => panic!("expected the row conflict, got {other:?}"),
+        }
+        assert!(submit("other-row").is_ok());
     }
 
     // spec: MEDULLA-SCM-R002

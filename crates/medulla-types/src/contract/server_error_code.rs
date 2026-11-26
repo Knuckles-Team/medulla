@@ -107,6 +107,8 @@ closed_error_codes! {
         ChangesetRequirementMissing => "CHANGESET_REQUIREMENT_MISSING",
         ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
         MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
+        /// MEDULLA-SDLC-R012.6: a requirement row is edited by two open changesets.
+        RequirementEditConflict => "REQUIREMENT_EDIT_CONFLICT",
         SourceConflict => "SOURCE_CONFLICT",
         RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
         /// MEDULLA-SCM-R010: a git object graph that cannot be imported or exported.

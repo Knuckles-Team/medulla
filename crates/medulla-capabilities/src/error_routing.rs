@@ -1176,6 +1176,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "LIFECYCLE_ENDPOINT_UNKNOWN",
             "MERGE_BLOB_UNREADABLE",
             "PATH_WRITE_DENIED",
+            "REQUIREMENT_EDIT_CONFLICT",
             "RUN_TRACE_UNKNOWN",
             "SOURCE_CONFLICT",
         ],

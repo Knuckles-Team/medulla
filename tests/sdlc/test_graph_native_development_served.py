@@ -294,3 +294,85 @@ async def _bound_changeset(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-SDLC-R012.3")
 def test_changeset_binds_requirements_and_refuses_unbound() -> None:
     asyncio.run(_bound_changeset(f"sdlc-bound-{uuid.uuid4().hex[:8]}"))
+
+
+async def _concurrent_row_edits(graph: str) -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    path = "specs/demo/requirements.md"
+    base_text = b"| `D-R1` | one |\n| `D-R2` | two |\n"
+    try:
+        await client.tenants.create(graph, "Global")
+        await client._send(
+            "SetPathGrant",
+            {
+                "request": {
+                    "repo": graph,
+                    "principal": TEST_AGENT_ID,
+                    "prefix": "",
+                    "read": True,
+                    "write": True,
+                }
+            },
+        )
+
+        async def submit(text: bytes, op: str, base_head: str | None, key: str):
+            digest = await client.blob.store(text)
+            return await client._send(
+                "SubmitChangeset",
+                {
+                    "request": {
+                        "repo": graph,
+                        "branch": "main",
+                        "base_head": base_head,
+                        "message": f"feat: {key}\n\nSpec: MEDULLA-SDLC-R012.6",
+                        "paths": [
+                            {
+                                "path": path,
+                                "op": op,
+                                "blob": {"digest": digest, "size": len(text)},
+                                "mode": 0o100644,
+                                "renamed_from": None,
+                            }
+                        ],
+                        "trailers": None,
+                        "run_trace_id": None,
+                    }
+                },
+                idempotency_key=f"{graph}-{key}",
+            )
+
+        first = await submit(base_text, "add", None, "base")
+        theirs = await submit(
+            b"| `D-R1` | ONE |\n| `D-R2` | two |\n",
+            "modify",
+            first["branch_head"],
+            "theirs",
+        )
+        assert theirs["branch_head"]
+        with pytest.raises(Exception, match="REQUIREMENT_EDIT_CONFLICT"):
+            await submit(
+                b"| `D-R1` | uno |\n| `D-R2` | two |\n",
+                "modify",
+                first["branch_head"],
+                "same-row",
+            )
+        other = await submit(
+            b"| `D-R1` | one |\n| `D-R2` | dos |\n",
+            "modify",
+            first["branch_head"],
+            "other-row",
+        )
+        assert other["branch_head"]
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R012.6
+@pytest.mark.spec("MEDULLA-SDLC-R012.6")
+def test_concurrent_row_edits_refuse() -> None:
+    asyncio.run(_concurrent_row_edits(f"sdlc-rows-{uuid.uuid4().hex[:8]}"))
