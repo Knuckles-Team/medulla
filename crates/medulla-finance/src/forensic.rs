@@ -8,7 +8,7 @@
 /// One fiscal year of standardized financial-statement inputs. Defined in
 /// `medulla-types::wire` (the `protocol` enum embeds it); re-exported here so the
 /// scoring code below is unchanged.
-pub use medulla_finance_types::wire_finance::YearData;
+use medulla_finance_types::wire_finance::YearData;
 
 #[inline]
 fn d(a: f64, b: f64) -> f64 {
@@ -19,7 +19,7 @@ fn d(a: f64, b: f64) -> f64 {
     }
 }
 
-pub use medulla_result_types::compute_result::finance::ForensicReport;
+use medulla_result_types::compute_result::finance::ForensicReport;
 
 /// Beneish M-Score (8 components). Above ≈ −1.78 (classic cutoff −2.22) flags
 /// possible earnings manipulation. `t` = this year, `p` = prior year.
