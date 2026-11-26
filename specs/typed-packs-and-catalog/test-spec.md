@@ -841,3 +841,10 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R811.1`: `tests/test_wire_mirror_state_words.py::test_conformance_evidence_types_state_as_the_rust_enum` (L1): proves: Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine.
 - `MEDULLA-TYPED-PACKS-R811.2`: `crates/medulla-catalog-types/src/fleet_catalog/vocabulary.rs::tests::discovery_outcome_tag_is_probe_not_status` (L1): proves: the discovery outcome tag is a probe-result tag, not a lifecycle.
 - `MEDULLA-TYPED-PACKS-R108.17`: `tests/typed_packs/test_catalog_capabilities_served.py::test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_assets` (L3): proves: browse, search and detail run as registered queries and hide assets the caller may not read
+
+## Class term roll-up (R812)
+
+- `MEDULLA-TYPED-PACKS-R812`: `tests/typed_packs/test_object_model_served.py::test_class_terms_list_direct_superclasses_for_core_rollup` (L4): proves: a class term of `GraphSchemaClasses` carries its direct superclasses (rollup).
+- `MEDULLA-TYPED-PACKS-R812.1`: `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_class_term_lists_its_direct_named_superclasses_sorted` (L1), `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_core_class_rolls_up_through_its_declared_superclass` (L1): proves: model and behavior: `GraphSchemaTermView.superclasses`.
+- `MEDULLA-TYPED-PACKS-R812.2`: `crates/medulla-h-admin/src/graph_schema/terms_served_tests.rs::a_served_class_term_carries_its_direct_superclasses` (L3): proves: wiring: the served page carries the superclasses.
+- `MEDULLA-TYPED-PACKS-R812.3`: `tests/test_graph_schema_term_superclasses.py::test_term_view_carries_superclasses_and_defaults_to_none` (L1): proves: python mirror: `GraphSchemaTermView.superclasses`.

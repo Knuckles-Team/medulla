@@ -119,6 +119,12 @@ pub struct GraphSchemaTermView {
     /// the metadata catalog (MEDULLA-TYPED-PACKS-R106.5). Absent for any other term kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_count: Option<u64>,
+    /// For a class: the IRIs of its direct `rdfs:subClassOf` superclasses across every
+    /// source of the composition, sorted and deduplicated, so a client can roll a class up
+    /// to the core vocabulary (MEDULLA-TYPED-PACKS-R812.1). Absent for any other term kind
+    /// and for a class that declares none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub superclasses: Vec<String>,
 }
 
 /// One class that declares `:implementsInterface`, with the required members

@@ -6,7 +6,7 @@
 //! source that owns it: a dynamic source may only restate a core declaration
 //! verbatim (`compose::validate_dynamic_declarations`), never take it over.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use medulla_catalog_types::{
@@ -25,6 +25,13 @@ use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
+
+/// The declared terms of a composition and the direct superclasses of its classes.
+struct DeclaredVocabulary {
+    terms: BTreeMap<GraphSchemaTermPosition, String>,
+    superclasses: BTreeMap<String, BTreeSet<String>>,
+}
 
 /// One page request, as the method carries it.
 pub struct TermPageRequest<'a> {
@@ -114,7 +121,7 @@ fn classes_page(
         .cursor
         .map(GraphSchemaTermPosition::parse)
         .transpose()?;
-    let terms = declared_terms(sources)?;
+    let DeclaredVocabulary { terms, superclasses } = scan_vocabulary(sources)?;
     let matching: Vec<(&GraphSchemaTermPosition, &String)> = terms
         .iter()
         .filter(|(position, _)| request.kind.is_none_or(|kind| kind == position.kind))
@@ -124,7 +131,7 @@ fn classes_page(
         .into_iter()
         .filter(|(position, _)| after.as_ref().is_none_or(|after| *position > after))
         .take(limit + 1)
-        .map(|(position, source_id)| term_view(position, source_id, sources))
+        .map(|(position, source_id)| term_view(position, source_id, sources, &superclasses))
         .collect();
     let next_cursor = (page.len() > limit).then(|| {
         page.truncate(limit);
@@ -199,7 +206,15 @@ fn term_view(
     position: &GraphSchemaTermPosition,
     source_id: &str,
     sources: &GraphSchemaSources,
+    superclasses: &BTreeMap<String, BTreeSet<String>>,
 ) -> GraphSchemaTermView {
+    let superclasses = match position.kind {
+        GraphSchemaTermKind::Class => superclasses
+            .get(&position.iri)
+            .map(|direct| direct.iter().cloned().collect())
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
     GraphSchemaTermView {
         iri: position.iri.clone(),
         local_name: term_local_name(&position.iri).to_string(),
@@ -207,6 +222,7 @@ fn term_view(
         source_id: source_id.to_string(),
         ontology_revision: active_ontology_revision(sources, source_id),
         node_count: None,
+        superclasses,
     }
 }
 
@@ -227,17 +243,41 @@ fn active_ontology_revision(sources: &GraphSchemaSources, source_id: &str) -> Op
 fn declared_terms(
     sources: &GraphSchemaSources,
 ) -> Result<BTreeMap<GraphSchemaTermPosition, String>, String> {
+    scan_vocabulary(sources).map(|vocabulary| vocabulary.terms)
+}
+
+/// One parse of every source: the declared terms and, per subject, the named
+/// `rdfs:subClassOf` objects any source states (MEDULLA-TYPED-PACKS-R812.1). A
+/// restriction (a blank-node object) is not a named superclass and is skipped.
+fn scan_vocabulary(sources: &GraphSchemaSources) -> Result<DeclaredVocabulary, String> {
     let mut terms = BTreeMap::new();
+    let mut superclasses: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for (source_id, document) in sources.ontologies() {
         let triples = medulla_rdf::mapping::parse_turtle(document)
             .map_err(|error| format!("ONTOLOGY_INVALID: source '{source_id}': {error}"))?;
-        for position in triples.iter().filter_map(declared_position) {
-            terms
-                .entry(position)
-                .or_insert_with(|| source_id.to_string());
+        for triple in &triples {
+            if let Some(position) = declared_position(triple) {
+                terms
+                    .entry(position)
+                    .or_insert_with(|| source_id.to_string());
+            } else if let Some((subject, object)) = subclass_pair(triple) {
+                superclasses.entry(subject).or_default().insert(object);
+            }
         }
     }
-    Ok(terms)
+    Ok(DeclaredVocabulary { terms, superclasses })
+}
+
+fn subclass_pair(triple: &Triple) -> Option<(String, String)> {
+    if triple.predicate.as_str() != RDFS_SUBCLASS_OF {
+        return None;
+    }
+    let (NamedOrBlankNode::NamedNode(subject), Term::NamedNode(object)) =
+        (&triple.subject, &triple.object)
+    else {
+        return None;
+    };
+    Some((subject.as_str().to_string(), object.as_str().to_string()))
 }
 
 fn declared_position(triple: &Triple) -> Option<GraphSchemaTermPosition> {
@@ -326,6 +366,84 @@ mod tests {
         assert!(classes
             .iter()
             .any(|(position, _)| term_local_name(&position.iri) == "Document"));
+    }
+
+    const SUBCLASS_ONTOLOGY: &str = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
+        <https://example.org/pack#Base> a owl:Class .\n\
+        <https://example.org/pack#Other> a owl:Class .\n\
+        <https://example.org/pack#Leaf> a owl:Class ;\n\
+            rdfs:subClassOf <https://example.org/pack#Other> , <https://example.org/pack#Base> ,\n\
+                [ a owl:Restriction ; owl:onProperty <https://example.org/pack#partOf> ;\n\
+                  owl:someValuesFrom <https://example.org/pack#Base> ] .\n\
+        <https://example.org/pack#partOf> a owl:ObjectProperty .\n";
+
+    // spec: MEDULLA-TYPED-PACKS-R812.1
+    #[test]
+    fn a_class_term_lists_its_direct_named_superclasses_sorted() {
+        let source = GraphSchemaSource::new(
+            SchemaSourceOrigin::Admin {
+                name: "tree".to_string(),
+            },
+            None,
+            Some(Arc::from(SUBCLASS_ONTOLOGY)),
+            0,
+        )
+        .expect("a bounded admin source");
+        let sources = GraphSchemaSources::with_dynamic(BTreeMap::from([(
+            "admin:tree".to_string(),
+            source,
+        )]))
+        .expect("the source composes with the core catalog");
+        let page = classes_page("g", &sources, &request(None, None, 1000))
+            .expect("a first page")
+            .terms
+            .as_slice()
+            .to_vec();
+        let term = |iri: &str| {
+            page.iter()
+                .find(|term| term.iri == iri)
+                .unwrap_or_else(|| panic!("{iri} is listed"))
+        };
+        assert_eq!(
+            term("https://example.org/pack#Leaf").superclasses,
+            [
+                "https://example.org/pack#Base".to_string(),
+                "https://example.org/pack#Other".to_string()
+            ],
+            "the restriction is not a named superclass"
+        );
+        assert!(term("https://example.org/pack#Base").superclasses.is_empty());
+        assert!(
+            term("https://example.org/pack#partOf").superclasses.is_empty(),
+            "a property term carries no superclasses"
+        );
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R812.1
+    #[test]
+    fn a_core_class_rolls_up_through_its_declared_superclass() {
+        let sources = GraphSchemaSources::default();
+        let page = classes_page(
+            "g",
+            &sources,
+            &request(Some(GraphSchemaTermKind::Class), None, 1000),
+        )
+        .expect("a first page");
+        let terms = page.terms.as_slice();
+        assert!(
+            terms.iter().any(|term| !term.superclasses.is_empty()),
+            "the core catalog states at least one rdfs:subClassOf"
+        );
+        let iris: std::collections::BTreeSet<&str> =
+            terms.iter().map(|term| term.iri.as_str()).collect();
+        assert!(
+            terms
+                .iter()
+                .flat_map(|term| term.superclasses.iter())
+                .any(|superclass| iris.contains(superclass.as_str())),
+            "a superclass IRI names a class the vocabulary declares"
+        );
     }
 
     // spec: MEDULLA-TYPED-PACKS-R077

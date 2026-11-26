@@ -312,3 +312,37 @@ def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R812")
+def test_class_terms_list_direct_superclasses_for_core_rollup() -> None:
+    """A pack class that extends a core class reports that core IRI as a superclass."""
+
+    async def exercise() -> None:
+        tag = uuid.uuid4().hex[:8]
+        connector = f"rollup-{tag}"
+        base = f"https://example.org/{connector}"
+        graph = f"rollup-{tag}"
+        client = await _import_and_attach(connector, base, graph)
+        try:
+            terms: dict[str, list[str]] = {}
+            cursor = None
+            while True:
+                page = await reasoning.send_graph_schema_classes(
+                    client, {"kind": "class", "cursor": cursor, "limit": 1000}
+                )
+                terms.update({term.iri: term.superclasses for term in page.terms})
+                cursor = page.next_cursor
+                if cursor is None:
+                    break
+            assert terms[f"{base}#Asset"] == [WORK_ITEM]
+            assert terms[f"{base}#Person"] == [WORK_ITEM]
+            assert all(
+                list(superclasses) == sorted(set(superclasses))
+                for superclasses in terms.values()
+            )
+        finally:
+            await client.tenants.delete(graph)
+            await client.close()
+
+    asyncio.run(exercise())

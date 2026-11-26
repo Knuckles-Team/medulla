@@ -153,3 +153,72 @@ async fn a_request_from_another_tenant_is_refused() {
     );
     assert!(response.result.is_none());
 }
+
+/// MEDULLA-TYPED-PACKS-R812.2: a served page carries each class's direct `rdfs:subClassOf`
+/// IRIs, so a client rolls a pack class up to the core vocabulary it extends.
+// spec: MEDULLA-TYPED-PACKS-R812.2
+#[tokio::test]
+async fn a_served_class_term_carries_its_direct_superclasses() {
+    const CORE_DOCUMENT: &str = "https://knuckles-team.github.io/ontology/core#Document";
+    let ontology = format!(
+        "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
+         <https://example.org/c#Report> a owl:Class ; rdfs:subClassOf <{CORE_DOCUMENT}> .\n\
+         <https://example.org/c#Memo> a owl:Class ; rdfs:subClassOf <https://example.org/c#Report> .\n\
+         <https://example.org/c#Free> a owl:Class .\n"
+    );
+    let source = GraphSchemaSource::new(
+        SchemaSourceOrigin::Admin {
+            name: "tree".to_string(),
+        },
+        None,
+        Some(Arc::from(ontology.as_str())),
+        0,
+    )
+    .expect("a bounded admin source");
+    let state = medulla_server::seams_install::new_state_for_test(
+        SECRET,
+        ServerState::test_isolation(AGENT),
+    );
+    let state = Arc::new(RwLock::new(state));
+    {
+        let mut guard = state.write().await;
+        guard
+            .registry
+            .create_graph("vocab-tree", GraphType::Global, None)
+            .expect("create graph");
+        let core = guard.registry.get("vocab-tree").expect("resident").core.clone();
+        core.install_schema_sources(Arc::new(
+            GraphSchemaSources::with_dynamic(BTreeMap::from([(
+                "admin:tree".to_string(),
+                source,
+            )]))
+            .expect("composes with the core"),
+        ));
+    }
+    let method = Method::GraphSchemaClasses {
+        kind: Some(medulla_catalog_types::graph_schema::GraphSchemaTermKind::Class),
+        cursor: None,
+        limit: 1000,
+    };
+    let page: GraphSchemaClassesView = raw(&call(&state, TENANT, "vocab-tree", method).await);
+    let superclasses = |iri: &str| {
+        page.terms
+            .as_slice()
+            .iter()
+            .find(|term| term.iri == iri)
+            .unwrap_or_else(|| panic!("{iri} is listed"))
+            .superclasses
+            .clone()
+    };
+    assert_eq!(
+        superclasses("https://example.org/c#Report"),
+        [CORE_DOCUMENT.to_string()]
+    );
+    assert_eq!(
+        superclasses("https://example.org/c#Memo"),
+        ["https://example.org/c#Report".to_string()],
+        "direct superclasses only, not the transitive closure"
+    );
+    assert!(superclasses("https://example.org/c#Free").is_empty());
+}

@@ -214,6 +214,7 @@ class GraphSchemaTermView(BaseModel):
     ontology_revision: Annotated[int, Field(ge=0)] | None = None
     node_count: Annotated[int, Field(ge=0)] | None = None
     source_id: str
+    superclasses: list[str] = Field(default_factory=list)
 
 
 class JsonType(str, Enum):
