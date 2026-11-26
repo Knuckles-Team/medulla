@@ -321,6 +321,10 @@ pub struct AnalyticsJob {
     /// a lost terminal RPC response can be retried idempotently by the same slot.
     #[serde(default)]
     pub last_worker_ref: String,
+    /// The routing premises of each claim, newest last, at most 8 kept
+    /// (MEDULLA-PLACEMENT-R004.5). Rewritten with the job record in the claim transaction.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routing: Vec<medulla_decision_types::decision::statistical::placement::RoutingDecision>,
     /// Durable typed result dataset. Populated before entering ``Publishing`` and
     /// retained after success so analytics output is never discarded.
     #[serde(default)]

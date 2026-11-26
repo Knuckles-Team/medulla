@@ -452,6 +452,22 @@ pub struct HostCapability {
     pub headroom: u64,
 }
 
+/// The routing premises of one claim (MEDULLA-PLACEMENT-R004.5): the hosts that declared the
+/// capability, the host that claimed, and the generation of the declaration read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RoutingDecision {
+    pub job_id: String,
+    pub required_capability: String,
+    /// The host IRIs declaring `required_capability`, sorted, at most 64.
+    pub candidates: Vec<String>,
+    /// The claiming worker's host IRI.
+    pub chosen: String,
+    /// The commons graph version read with the declaration.
+    pub topology_generation: u64,
+}
+
 /// The capability a heavy job class requires.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

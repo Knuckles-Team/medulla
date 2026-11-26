@@ -171,6 +171,29 @@ impl Default for ClaimPacing {
 /// One tenant's pacers, one bucket per priority class.
 type TenantPacers = [ClaimPacer; 4];
 
+/// The hosts that declared one heavy capability and the commons graph version they were read at
+/// (MEDULLA-PLACEMENT-R004.5).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RoutingCandidates {
+    /// The heavy capability name (`backtest`, `gpu`, ...).
+    pub capability: String,
+    /// The host IRIs declaring it, sorted, at most 64.
+    pub candidates: Vec<String>,
+    pub topology_generation: u64,
+}
+
+/// The routing premises a claim caller supplies. The map key is the opaque worker capability
+/// string a job's `required_capabilities` holds, so the store stays blind to heavy names.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RoutingEvidence {
+    pub by_capability: std::collections::BTreeMap<String, RoutingCandidates>,
+    /// The claiming worker's host IRI.
+    pub chosen: String,
+}
+
+/// The most routing decisions one job record keeps.
+const MAX_ROUTING_HISTORY: usize = 8;
+
 /// A fenced assignment returned by the distributed scheduler.
 #[derive(Clone, Debug)]
 pub struct WorkerClaim {
@@ -692,6 +715,7 @@ impl JobStore {
             state: JobState::Submitted { checkpoint: None },
             lease_epoch: 0,
             last_worker_ref: String::new(),
+            routing: Vec::new(),
             output: None,
             created_at_ms: now,
             updated_at_ms: now,
@@ -736,6 +760,7 @@ impl JobStore {
                     state: JobState::Submitted { checkpoint: None },
                     lease_epoch: 0,
                     last_worker_ref: String::new(),
+                    routing: Vec::new(),
                     output: None,
                     created_at_ms: now,
                     updated_at_ms: now,
@@ -842,6 +867,32 @@ impl JobStore {
             quota,
             ClaimFamily::Analytics,
             None,
+            None,
+        )
+    }
+
+    /// [`Self::claim_next`] that records the routing premises on the claimed job
+    /// (MEDULLA-PLACEMENT-R004.5): for the first required capability of the job that `routing`
+    /// names, one [`RoutingDecision`](medulla_decision_types::decision::statistical::placement::RoutingDecision)
+    /// is appended to the job record in the claim's own transaction.
+    pub fn claim_next_routed(
+        &self,
+        worker_ref: &str,
+        worker_capabilities: &[String],
+        now_ms: i64,
+        lease_ms: u64,
+        quota: TenantJobQuota,
+        routing: &RoutingEvidence,
+    ) -> Result<Option<WorkerClaim>> {
+        self.claim_next_family(
+            worker_ref,
+            worker_capabilities,
+            now_ms,
+            lease_ms,
+            quota,
+            ClaimFamily::Analytics,
+            None,
+            Some(routing),
         )
     }
 
@@ -866,6 +917,7 @@ impl JobStore {
             quota,
             ClaimFamily::Analytics,
             Some(job_id),
+            None,
         )
     }
 
@@ -881,6 +933,7 @@ impl JobStore {
         quota: TenantJobQuota,
         family: ClaimFamily,
         only_job: Option<&str>,
+        routing: Option<&RoutingEvidence>,
     ) -> Result<Option<WorkerClaim>> {
         if claim_next_args_invalid(worker_ref, worker_capabilities, lease_ms, &quota) {
             return Err(codec_err(
@@ -955,6 +1008,9 @@ impl JobStore {
             expires_at_ms: now_ms.saturating_add(lease_ms as i64),
         };
         job.last_worker_ref = worker_ref.to_string();
+        if let Some(evidence) = routing {
+            record_routing(&mut job, evidence);
+        }
         // J01 (from Submitted) or J02 (from Backoff, once `not_before_ms` has passed).
         let facts = JobFacts {
             worker_takes_lease: true,
@@ -4078,6 +4134,66 @@ mod tests {
         assert!(none.is_none(), "a host without the capability claims nothing");
     }
 
+    // spec: MEDULLA-PLACEMENT-R004.5
+    #[test]
+    fn claim_records_routing_decision() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let mut heavy = spec("g1", 1);
+        heavy.policy.placement.required_capabilities = vec!["opaque-backtest".to_string()];
+        let heavy = store.submit(heavy).unwrap();
+        let mut by_capability = std::collections::BTreeMap::new();
+        by_capability.insert(
+            "opaque-backtest".to_string(),
+            RoutingCandidates {
+                capability: "backtest".to_string(),
+                candidates: vec!["host:alpha".to_string()],
+                topology_generation: 7,
+            },
+        );
+        let evidence = RoutingEvidence {
+            by_capability,
+            chosen: "host:alpha".to_string(),
+        };
+        let capabilities = vec!["opaque-backtest".to_string()];
+        let claim = store
+            .claim_next_routed(
+                "worker:alpha",
+                &capabilities,
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+                &evidence,
+            )
+            .unwrap()
+            .expect("the capable worker claims the job");
+        assert_eq!(claim.job.job_id, heavy.job_id);
+        assert_eq!(claim.job.routing.len(), 1);
+        let decision = &claim.job.routing[0];
+        assert_eq!(decision.required_capability, "backtest");
+        assert_eq!(decision.candidates, vec!["host:alpha".to_string()]);
+        assert_eq!(decision.chosen, "host:alpha");
+        assert_eq!(decision.topology_generation, 7);
+        // The decision is stored with the job record, in the claim's own transaction.
+        let stored = store.get(&heavy.job_id).unwrap();
+        assert_eq!(stored.routing, claim.job.routing);
+        // A job with no heavy capability records no routing decision.
+        let plain = store.submit(spec("g1", 2)).unwrap();
+        let other = store
+            .claim_next_routed(
+                "worker:plain",
+                &[],
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+                &evidence,
+            )
+            .unwrap()
+            .expect("the plain job is claimed");
+        assert_eq!(other.job.job_id, plain.job_id);
+        assert!(other.job.routing.is_empty());
+    }
+
     #[test]
     fn capability_anchor_skips_unsatisfied_ready_jobs_without_raw_labels() {
         let dir = tempfile::tempdir().unwrap();
@@ -4408,5 +4524,33 @@ mod tests {
         // forced, would collapse to the same tick window as a no-op.
         assert!(store.due_intents(1_000).unwrap().is_empty());
         assert!(!store.record_intent_tick("cold_offload", 1_000).unwrap());
+    }
+}
+
+
+/// Appends the routing decision of a claim to the job: the first required capability of the job
+/// that the evidence names. A job with no such capability records none; the oldest decision is
+/// dropped past [`MAX_ROUTING_HISTORY`].
+fn record_routing(job: &mut AnalyticsJob, evidence: &RoutingEvidence) {
+    let Some(found) = job
+        .policy
+        .placement
+        .required_capabilities
+        .iter()
+        .find_map(|capability| evidence.by_capability.get(capability))
+    else {
+        return;
+    };
+    job.routing
+        .push(medulla_decision_types::decision::statistical::placement::RoutingDecision {
+            job_id: job.job_id.clone(),
+            required_capability: found.capability.clone(),
+            candidates: found.candidates.clone(),
+            chosen: evidence.chosen.clone(),
+            topology_generation: found.topology_generation,
+        });
+    if job.routing.len() > MAX_ROUTING_HISTORY {
+        let excess = job.routing.len() - MAX_ROUTING_HISTORY;
+        job.routing.drain(..excess);
     }
 }

@@ -411,7 +411,7 @@ pub async fn handle(
         } => {
             // The heavy capabilities of a remote claim come from the host its worker
             // registered on, never from the worker (MEDULLA-PLACEMENT-R004.3).
-            let declared = match host_capabilities::registered_host_declaration(
+            let (declared, routing) = match host_capabilities::registered_host_declaration(
                 state,
                 verified_context.principal(),
                 &worker_instance,
@@ -429,6 +429,7 @@ pub async fn handle(
                 &worker_instance,
                 capabilities,
                 declared,
+                &routing,
                 lease_ms,
             )
         }

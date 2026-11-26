@@ -148,6 +148,18 @@ pub struct JobWorkerLease {
     pub expires_at_ms: i64,
 }
 
+/// The routing premises of one claim: which hosts declared the capability, which host claimed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct JobRoutingDecision {
+    pub job_id: String,
+    pub required_capability: String,
+    pub candidates: Vec<String>,
+    pub chosen: String,
+    pub topology_generation: u64,
+}
+
 /// The durable analytics-job record, as a caller sees it. The lease, the cancel request and the
 /// backoff time are part of `state`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,6 +174,9 @@ pub struct AnalyticsJobRecord {
     pub state: JobState,
     pub lease_epoch: u64,
     pub last_worker_ref: String,
+    /// The routing premises of each claim, newest last (MEDULLA-PLACEMENT-R004.5).
+    #[serde(default)]
+    pub routing: Vec<JobRoutingDecision>,
     pub output: Option<JobResult>,
     pub created_at_ms: i64,
     pub updated_at_ms: i64,

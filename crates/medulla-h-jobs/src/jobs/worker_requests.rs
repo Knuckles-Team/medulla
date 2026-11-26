@@ -92,6 +92,7 @@ pub(super) fn worker_lease(
 /// The most capabilities one worker claim names (MEDULLA-DURABLE-KERNEL-R082.10).
 const MAX_WORKER_CAPABILITIES: usize = 64;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn handle_worker_claim(
     store: &JobStore,
     req_id: u64,
@@ -100,6 +101,7 @@ pub(super) fn handle_worker_claim(
     worker_instance: &str,
     capabilities: Vec<String>,
     declared: Vec<String>,
+    routing: &medulla_jobs::RoutingEvidence,
     lease_ms: u64,
 ) -> Response {
     let worker_ref = match worker_ref(caller, verified_worker_context, worker_instance) {
@@ -127,12 +129,13 @@ pub(super) fn handle_worker_claim(
         .map(|value| opaque_worker_capability(value))
         .chain(declared)
         .collect();
-    match store.claim_next(
+    match store.claim_next_routed(
         &worker_ref,
         &capabilities,
         unix_ms(),
         bounded_lease_ms(lease_ms),
         tenant_worker_quota(),
+        routing,
     ) {
         Ok(Some(claim)) => worker_claim_response(req_id, &claim),
         Ok(None) => Response::ok(

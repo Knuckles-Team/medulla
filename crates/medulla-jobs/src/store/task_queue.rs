@@ -243,6 +243,7 @@ impl JobStore {
             },
             lease_epoch: 0,
             last_worker_ref: String::new(),
+            routing: Vec::new(),
             output: None,
             created_at_ms: now_ms,
             updated_at_ms: now_ms,
@@ -325,6 +326,7 @@ impl JobStore {
             lease_ms,
             quota,
             ClaimFamily::Task,
+            None,
             None,
         )
     }

@@ -508,6 +508,7 @@ mod tests {
             },
             lease_epoch: 0,
             last_worker_ref: String::new(),
+            routing: Vec::new(),
             output: Some(
                 TypedJobResult::new(
                     [

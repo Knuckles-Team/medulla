@@ -23,6 +23,7 @@ name = "medulla_jobs"
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-resource = { path = "../medulla-resource" }
 # RF-RULING-004: `medulla-storage` is the sole physical owner of `jobs.redb` (declared
 # `OwnerLayout::Jobs`) and `medulla-transaction` the sole writer. Unconditional for the

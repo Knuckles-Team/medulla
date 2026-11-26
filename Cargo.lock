@@ -6535,6 +6535,7 @@ dependencies = [
  "criterion",
  "hex",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-graph-core",
  "medulla-ingestion-types",
  "medulla-jobs",

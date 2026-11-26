@@ -114,13 +114,26 @@ pub(super) async fn worker_loop(
                 continue;
             }
         };
+        let routing = match super::host_capabilities::routing_evidence(
+            &state,
+            medulla_server_auth::auth::node_identity(),
+        )
+        .await
+        {
+            Ok(routing) => routing,
+            Err(_) => {
+                tokio::time::sleep(Duration::from_millis(timing.poll_ms)).await;
+                continue;
+            }
+        };
         let claimable: Vec<String> = capabilities.iter().cloned().chain(declared).collect();
-        match store.claim_next(
+        match store.claim_next_routed(
             &worker_ref,
             &claimable,
             unix_ms(),
             timing.lease_ms,
             quota,
+            &routing,
         ) {
             Ok(Some(claim)) => {
                 let job_id = claim.job.job_id.clone();

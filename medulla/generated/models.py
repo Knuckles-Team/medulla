@@ -1404,6 +1404,7 @@ class AnalyticsJobRecord(BaseModel):
     output: JobResult | None = None
     policy: JobPolicy
     retry: JobRetryPolicy
+    routing: list[JobRoutingDecision] = Field(default_factory=list)
     state: JobState
     updated_at_ms: int
 
@@ -2965,6 +2966,7 @@ class ClaimedAnalyticsJob(BaseModel):
     output: JobResult | None = None
     policy: JobPolicy
     retry: JobRetryPolicy
+    routing: list[JobRoutingDecision] = Field(default_factory=list)
     state: JobState
     updated_at_ms: int
 
@@ -10464,6 +10466,16 @@ class JobStateSucceededBody(BaseModel):
 
     checkpoint: JobCheckpoint
     result_ref: str
+
+
+class JobRoutingDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidates: list[str]
+    chosen: str
+    job_id: str
+    required_capability: str
+    topology_generation: Annotated[int, Field(ge=0)]
 
 
 class JobWorkerLease(BaseModel):

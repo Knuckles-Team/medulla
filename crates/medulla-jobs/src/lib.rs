@@ -85,7 +85,8 @@ pub use model::{
 };
 pub use result::{ReproducibilityManifest, ResultColumn, ResultUsage, TypedJobResult};
 pub use store::{
-    analytics_job_scope_identity, ClaimFamily, ClaimPacing, JobError, JobStore, SubmitSpec,
+    analytics_job_scope_identity, ClaimFamily, ClaimPacing, JobError, JobStore, RoutingCandidates,
+    RoutingEvidence, SubmitSpec,
     TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome, TenantJobQuota, WorkerClaim,
     TASK_FAMILY_PREFIX,
 };

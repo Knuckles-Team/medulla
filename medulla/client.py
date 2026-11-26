@@ -28,7 +28,7 @@ import socket
 import ssl
 import threading
 import time
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, NoReturn, TypedDict, cast
 
@@ -16467,6 +16467,34 @@ class JobsClient:
                 self._client, {"op": {"Resume": {"job_id": job_id}}}
             )
         ).payload
+
+    async def worker_register(
+        self,
+        worker_id: str,
+        host_iri: str,
+        *,
+        cores: int = 1,
+        memory_bytes: int = 1 << 30,
+        lanes_supported: Sequence[str] = (),
+    ) -> dict[str, Any]:
+        """Register one worker under the verified principal on the host ``host_iri``.
+
+        The host's heavy capabilities come from its ``placement:Host`` declaration in
+        the commons graph, never from the worker (MEDULLA-PLACEMENT-R004.6).
+        """
+        return await self._client._send(
+            "WorkerRegister",
+            {
+                "registration": {
+                    "worker_id": worker_id,
+                    "host_iri": host_iri,
+                    "cores": cores,
+                    "memory_bytes": memory_bytes,
+                    "lanes_supported": sorted(lanes_supported),
+                }
+            },
+            None,
+        )
 
     async def worker_claim(
         self,

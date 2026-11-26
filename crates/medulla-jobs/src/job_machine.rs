@@ -679,6 +679,7 @@ mod tests {
             state,
             lease_epoch: 0,
             last_worker_ref: String::new(),
+            routing: Vec::new(),
             output: None,
             created_at_ms: 0,
             updated_at_ms: 0,

@@ -13,6 +13,7 @@ use medulla_decision_types::decision::statistical::placement::{
     HeavyCapability, NO_CAPABLE_HOST, PLACEMENT_FACTS_INVALID,
 };
 use medulla_identity_types::tenancy::COMMONS_GRAPH;
+use medulla_jobs::{RoutingCandidates, RoutingEvidence};
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
@@ -46,7 +47,6 @@ pub(crate) async fn declared_for(
             None => return Ok(BTreeSet::new()),
         }
     };
-    let invalid = |what: &str| format!("{PLACEMENT_FACTS_INVALID}: {host_iri}: {what}");
     let Some((_, properties)) = core
         .get_nodes_by_label(host_class(), MAX_DECLARED_HOSTS)
         .into_iter()
@@ -54,7 +54,17 @@ pub(crate) async fn declared_for(
     else {
         return Ok(BTreeSet::new());
     };
-    let value = medulla_types::msgpack::decode_property_value(&properties)
+    decode_capabilities(host_iri, &properties)
+}
+
+/// The heavy capabilities one `placement:Host` node declares: a `PLACEMENT_FACTS_INVALID`
+/// refusal for a malformed declaration.
+fn decode_capabilities(
+    host_iri: &str,
+    properties: &[u8],
+) -> Result<BTreeSet<HeavyCapability>, String> {
+    let invalid = |what: &str| format!("{PLACEMENT_FACTS_INVALID}: {host_iri}: {what}");
+    let value = medulla_types::msgpack::decode_property_value(properties)
         .map_err(|_| invalid("the properties are not a valid property value"))?;
     let names = value
         .as_object()
@@ -68,6 +78,63 @@ pub(crate) async fn declared_for(
         declared.insert(capability);
     }
     Ok(declared)
+}
+
+/// The most candidate hosts one routing decision lists.
+const MAX_ROUTING_CANDIDATES: usize = 64;
+
+/// The routing premises of a claim by the host `host_iri` (MEDULLA-PLACEMENT-R004.5): one scan
+/// of the commons `placement:Host` nodes yields every declaring host per heavy capability and the
+/// graph version the declaration was read at. An absent commons graph gives no premises.
+pub(crate) async fn routing_evidence(
+    state: &Arc<RwLock<ServerState>>,
+    host_iri: &str,
+) -> Result<RoutingEvidence, String> {
+    let core = {
+        let current = state.read().await;
+        current
+            .registry
+            .get(COMMONS_GRAPH)
+            .map(|entry| entry.core.clone())
+    };
+    let mut evidence = RoutingEvidence {
+        by_capability: std::collections::BTreeMap::new(),
+        chosen: host_iri.to_string(),
+    };
+    let Some(core) = core else {
+        return Ok(evidence);
+    };
+    let topology_generation = core.version();
+    let mut hosts: Vec<(String, BTreeSet<HeavyCapability>)> = Vec::new();
+    for (iri, properties) in core.get_nodes_by_label(host_class(), MAX_DECLARED_HOSTS) {
+        let declared = decode_capabilities(&iri, &properties)?;
+        hosts.push((iri, declared));
+    }
+    for name in HEAVY_CAPABILITY_NAMES {
+        let mut candidates: Vec<String> = hosts
+            .iter()
+            .filter(|(_, declared)| {
+                declared
+                    .iter()
+                    .any(|capability| heavy_capability_name(*capability) == name)
+            })
+            .map(|(iri, _)| iri.clone())
+            .collect();
+        if candidates.is_empty() {
+            continue;
+        }
+        candidates.sort();
+        candidates.truncate(MAX_ROUTING_CANDIDATES);
+        evidence.by_capability.insert(
+            opaque_worker_capability(name),
+            RoutingCandidates {
+                capability: name.to_string(),
+                candidates,
+                topology_generation,
+            },
+        );
+    }
+    Ok(evidence)
 }
 
 /// Refuse a submit whose `required_capabilities` names a heavy capability that no
@@ -117,7 +184,7 @@ pub(crate) async fn registered_host_declaration(
     state: &Arc<RwLock<ServerState>>,
     principal: &str,
     worker_instance: &str,
-) -> Result<Vec<String>, String> {
+) -> Result<(Vec<String>, RoutingEvidence), String> {
     let registry = state.read().await.worker_registry.clone();
     let host_iri = {
         let registry = registry.lock();
@@ -131,10 +198,14 @@ pub(crate) async fn registered_host_declaration(
         }
     };
     match host_iri {
-        Some(host_iri) => declared_for(state, &host_iri)
-            .await
-            .map(|declared| heavy_capability_strings(&declared)),
-        None => Ok(Vec::new()),
+        Some(host_iri) => {
+            let declared = declared_for(state, &host_iri).await?;
+            Ok((
+                heavy_capability_strings(&declared),
+                routing_evidence(state, &host_iri).await?,
+            ))
+        }
+        None => Ok((Vec::new(), RoutingEvidence::default())),
     }
 }
 
