@@ -64,6 +64,7 @@ pub fn commit_correction(correction: &Correction) -> Result<CorrectionCommit, Co
                 ("produced_by", json!(correction.produced_by)),
                 ("actor", json!(correction.actor)),
                 ("at_ms", json!(correction.at_ms)),
+                ("source", json!(correction.source.as_str())),
                 ("receipt_id", json!(receipt_id)),
             ],
         ),
@@ -137,6 +138,7 @@ pub fn nearest_corrections(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::correction::CorrectionSource;
 
     fn correction(after: &str) -> Correction {
         Correction {
@@ -147,6 +149,7 @@ mod tests {
             produced_by: "agent:planner".into(),
             actor: "user:ada".into(),
             at_ms: 1_700_000_000_000,
+            source: CorrectionSource::Human,
         }
     }
 

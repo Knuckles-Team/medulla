@@ -10,7 +10,7 @@ use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
 use medulla_decision_stats::decision::correction::commit_correction;
 use medulla_decision_types::correction::{
-    Correction, CorrectionOp, CorrectionRead, CorrectionRecorded,
+    Correction, CorrectionOp, CorrectionRead, CorrectionRecorded, CorrectionSource,
     CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, OUTCOME_SELF_REPORTED,
 };
 use medulla_protocol_types::protocol::ResultPayload;
@@ -32,6 +32,7 @@ fn correction(id: &str, target: &str, after: &str) -> Correction {
         produced_by: "agent:planner".into(),
         actor: "user:ada".into(),
         at_ms: 1_700_000_000_000,
+        source: CorrectionSource::Human,
     }
 }
 
@@ -252,4 +253,49 @@ async fn correction_reads_back_by_receipt() {
     let absent = CorrectionOp::Get { receipt_id: "0".repeat(64) };
     let same = refused(plan(&h, &corrector("tenant-other"), absent).await);
     assert!(same.starts_with(CORRECTION_NOT_FOUND.as_str()), "{same}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R702.7: a review source yields the same three effects under
+/// the same role, a rejection scores 0.0, and a review comment is stored as digests only.
+// spec: MEDULLA-DECISION-ENGINE-R702.7
+#[tokio::test]
+async fn review_sources_yield_eval_cases_with_digests_only() {
+    let h = harness().await;
+    let core = core(&h).await;
+
+    // A rejection yields the three effects and an outcome of 0.0, and names its source.
+    let mut rejection = correction("r1", "answer:9", "better");
+    rejection.source = CorrectionSource::ReviewRejection;
+    let write = plan(&h, &corrector(TENANT), record(rejection)).await.ok().expect("plans");
+    let recorded: CorrectionRecorded = reply(&write);
+    assert_eq!(recorded.effect.outcome.value, 0.0);
+    assert_eq!(write.operations[0]["properties"]["source"], "review_rejection");
+    assert_eq!(
+        write.operations.iter().filter(|op| op["op"] == "upsert_node").count(),
+        4
+    );
+
+    // A review source needs the same verified role as a human.
+    let mut unprivileged = correction("r2", "answer:9", "better");
+    unprivileged.source = CorrectionSource::ReviewRejection;
+    let plain = VerifiedRequestContext::verified_for_test_with_roles("decider", TENANT, &["test"]);
+    let error = refused(plan(&h, &plain, record(unprivileged)).await);
+    assert!(error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()), "{error}");
+
+    // A review comment with text is refused; with digests it is stored, and the stored nodes
+    // hold neither the output nor the comment text.
+    let mut text = correction("r3", "answer:9", "please rename this variable");
+    text.source = CorrectionSource::ReviewComment;
+    let error = refused(plan(&h, &corrector(TENANT), record(text)).await);
+    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
+    let mut digests = correction("r4", "answer:9", &format!("sha256:{}", "c".repeat(64)));
+    digests.before = format!("sha256:{}", "d".repeat(64));
+    digests.source = CorrectionSource::ReviewComment;
+    let write = plan(&h, &corrector(TENANT), record(digests.clone())).await.ok().expect("plans");
+    commit(&core, &write);
+    let receipt = reply::<CorrectionRecorded>(&write).receipt_id;
+    let get = CorrectionOp::Get { receipt_id: receipt };
+    let read: CorrectionRead = reply(&plan(&h, &corrector(TENANT), get).await.ok().expect("reads"));
+    assert_eq!(read.correction, digests);
+    assert_eq!(read.correction.source, CorrectionSource::ReviewComment);
 }

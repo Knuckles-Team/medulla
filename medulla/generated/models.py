@@ -38371,6 +38371,12 @@ FailureOp = Annotated[
 ]
 
 
+class CorrectionSource(str, Enum):
+    HUMAN = "human"
+    REVIEW_COMMENT = "review_comment"
+    REVIEW_REJECTION = "review_rejection"
+
+
 class Correction(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38380,6 +38386,7 @@ class Correction(BaseModel):
     before: str
     correction_id: str
     produced_by: str
+    source: CorrectionSource = CorrectionSource.HUMAN
     target: str
 
 
@@ -49320,6 +49327,7 @@ __all__ = [
     "CorrectionOutcome",
     "CorrectionRead",
     "CorrectionRecorded",
+    "CorrectionSource",
     "EvalCase",
     "OutcomeTag",
     "RuleCandidate",

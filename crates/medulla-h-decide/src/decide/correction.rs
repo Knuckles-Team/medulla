@@ -46,7 +46,7 @@ mod served {
     use medulla_decision_stats::decision::correction::{commit_correction, nearest_corrections};
     use medulla_decision_types::correction::{
         Correction, CorrectionEffect, CorrectionNearest, CorrectionOp, CorrectionOutcome,
-        CorrectionRead, CorrectionRecorded, EvalCase, OutcomeTag, RuleCandidate,
+        CorrectionRead, CorrectionRecorded, CorrectionSource, EvalCase, OutcomeTag, RuleCandidate,
         CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
         OUTCOME_SELF_REPORTED,
     };
@@ -331,6 +331,12 @@ mod served {
             produced_by: text(&node, "produced_by")?,
             actor: text(&node, "actor")?,
             at_ms: node.get("at_ms")?.as_u64()?,
+            source: match node.get("source").and_then(Value::as_str) {
+                None | Some("human") => CorrectionSource::Human,
+                Some("review_comment") => CorrectionSource::ReviewComment,
+                Some("review_rejection") => CorrectionSource::ReviewRejection,
+                Some(_) => return None,
+            },
         };
         let effect = CorrectionEffect {
             receipt_id: receipt_id.to_string(),

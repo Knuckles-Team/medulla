@@ -2407,6 +2407,7 @@ fn bench_correction(
         produced_by: "agent:planner".into(),
         actor: "user:ada".into(),
         at_ms: 1_700_000_000_000,
+        source: medulla_decision_types::correction::CorrectionSource::Human,
     };
     let record = || {
         call(CorrectionOp::Record {

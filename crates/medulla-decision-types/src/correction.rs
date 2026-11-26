@@ -49,6 +49,38 @@ pub const REFUSALS: &[RefusalCode] = &[
 /// Upper bound on `Correction::before` and `Correction::after`, in bytes.
 pub const CORRECTION_VALUE_MAX_BYTES: usize = 8 * 1024;
 
+/// Where a correction came from (MEDULLA-DECISION-ENGINE-R702.7). Every source needs the same
+/// verified role and yields the same three effects.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum CorrectionSource {
+    /// A person corrected an output directly.
+    #[default]
+    Human,
+    /// A review comment: `before` and `after` carry digests only, never the comment text.
+    ReviewComment,
+    /// A review rejection of the output.
+    ReviewRejection,
+}
+
+impl CorrectionSource {
+    /// Whether this is the default source; a human correction serializes without the field, so
+    /// its receipt id is the one it had before sources existed.
+    pub fn is_human(&self) -> bool {
+        matches!(self, Self::Human)
+    }
+
+    /// The stable name stored on the correction node.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Human => "human",
+            Self::ReviewComment => "review_comment",
+            Self::ReviewRejection => "review_rejection",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
@@ -60,12 +92,26 @@ pub struct Correction {
     pub produced_by: String,
     pub actor: String,
     pub at_ms: u64,
+    /// Where the correction came from; `human` when absent.
+    #[serde(default, skip_serializing_if = "CorrectionSource::is_human")]
+    pub source: CorrectionSource,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CorrectionShapeError {
     #[error("correction field `{0}` exceeds {CORRECTION_VALUE_MAX_BYTES} bytes")]
     ValueTooLarge(&'static str),
+    /// A review comment carries digests only: the field holds text, not `sha256:` plus 64
+    /// lowercase hex (MEDULLA-DECISION-ENGINE-R702.7).
+    #[error("review comment field `{0}` must be a sha256 digest, never the comment text")]
+    CommentNotDigest(&'static str),
+}
+
+/// Whether `text` is `sha256:` plus 64 lowercase hex characters.
+fn is_digest_text(text: &str) -> bool {
+    text.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    })
 }
 
 impl Correction {
@@ -76,6 +122,13 @@ impl Correction {
         }
         if self.after.len() > CORRECTION_VALUE_MAX_BYTES {
             return Err(CorrectionShapeError::ValueTooLarge("after"));
+        }
+        if self.source == CorrectionSource::ReviewComment {
+            for (name, value) in [("before", &self.before), ("after", &self.after)] {
+                if !is_digest_text(value) {
+                    return Err(CorrectionShapeError::CommentNotDigest(name));
+                }
+            }
         }
         Ok(())
     }
@@ -218,6 +271,7 @@ mod tests {
             produced_by: "agent:x".into(),
             actor: "user:y".into(),
             at_ms: 42,
+            source: CorrectionSource::Human,
         }
     }
 
@@ -273,5 +327,34 @@ mod tests {
             big.validate(),
             Err(CorrectionShapeError::ValueTooLarge("after"))
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R702.7
+    #[test]
+    fn a_review_comment_carries_digests_and_a_human_correction_keeps_its_bytes() {
+        // A human correction serializes without a source, so its receipt id does not move.
+        let human = sample_correction();
+        assert!(!serde_json::to_string(&human).unwrap().contains("source"));
+        // A review source names itself.
+        let mut rejection = sample_correction();
+        rejection.source = CorrectionSource::ReviewRejection;
+        let json = serde_json::to_string(&rejection).unwrap();
+        assert!(json.contains(r#""source":"review_rejection""#));
+        assert_eq!(serde_json::from_str::<Correction>(&json).unwrap(), rejection);
+        assert!(rejection.validate().is_ok());
+        // A review comment holds digests, never text.
+        let mut comment = sample_correction();
+        comment.source = CorrectionSource::ReviewComment;
+        assert_eq!(
+            comment.validate(),
+            Err(CorrectionShapeError::CommentNotDigest("before"))
+        );
+        comment.before = format!("sha256:{}", "a".repeat(64));
+        assert_eq!(
+            comment.validate(),
+            Err(CorrectionShapeError::CommentNotDigest("after"))
+        );
+        comment.after = format!("sha256:{}", "b".repeat(64));
+        assert!(comment.validate().is_ok());
     }
 }

@@ -1430,21 +1430,25 @@ def correction_record_op(
     produced_by: str,
     actor: str,
     at_ms: int,
+    *,
+    source: str | None = None,
 ) -> dict[str, Any]:
-    """A ``CorrectionRecord`` record of one human correction of ``target`` (the verified
-    role ``corrector`` is required)."""
-    return {
-        "op": "record",
-        "correction": {
-            "correction_id": correction_id,
-            "target": target,
-            "before": before,
-            "after": after,
-            "produced_by": produced_by,
-            "actor": actor,
-            "at_ms": at_ms,
-        },
+    """A ``CorrectionRecord`` record of one correction of ``target`` (the verified
+    role ``corrector`` is required). ``source`` is ``human`` (the default),
+    ``review_comment`` (``before`` and ``after`` are ``sha256:`` digests, never the
+    comment text) or ``review_rejection`` (R702.7)."""
+    correction: dict[str, Any] = {
+        "correction_id": correction_id,
+        "target": target,
+        "before": before,
+        "after": after,
+        "produced_by": produced_by,
+        "actor": actor,
+        "at_ms": at_ms,
     }
+    if source is not None:
+        correction["source"] = source
+    return {"op": "record", "correction": correction}
 
 
 def correction_nearest_op(target: str) -> dict[str, Any]:
