@@ -6,11 +6,15 @@ then ranks the columns by the traffic the tenant's reads recorded.
 
 from __future__ import annotations
 
+import os
 import uuid
 
 import pytest
+from conftest import tenant_request_context
 
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, SyncMedullaClient
+
+OTHER_TENANT = "tenant:advice-other"
 
 
 def _table(clean_graph) -> str:
@@ -70,11 +74,16 @@ def test_unembeddable_types_refuse_without_side_effects(clean_graph):
     }
 
 
+# proves R077.6.6: Column advice: hot-path proof
+# proves R077.6: Workload-aware column vectorization advice
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.6")
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6")
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.2")
 def test_workload_changes_advice(clean_graph):
     """MEDULLA-FEDERATED-QUERY-R077.6.2: the ranking follows the traffic, not the
     statistics."""
     table = _table(clean_graph)
+    indexes_before = _index_names(clean_graph)
     idle = _advice(clean_graph, table)
     assert float(idle["body"]["score"]) == 0.0
     assert float(idle["title"]["score"]) == 0.0
@@ -93,6 +102,60 @@ def test_workload_changes_advice(clean_graph):
     title_first = _advice(clean_graph, table)
     assert float(title_first["title"]["score"]) > float(title_first["body"]["score"])
     assert float(title_first["body"]["score"]) > 0.0
+
+    # unembeddable refusal: a pinned read of the integer column refuses, and the
+    # listing of the other columns is unaffected
+    with pytest.raises(EngineResponseError) as unsupported:
+        clean_graph.query.sql(
+            "SELECT * FROM information_schema.vector_advice "
+            f"WHERE table_name = '{table}' AND column_name = 'qty'"
+        )
+    assert "COLUMN_TYPE_UNSUPPORTED" in str(unsupported.value)
+    assert _advice(clean_graph, table)["body"]["eligibility"] == "eligible"
+
+    # tenant isolation: another tenant's table of the same name starts from no
+    # observations, its traffic never moves this tenant's counters, and this
+    # tenant's traffic never reaches it
+    ours = int(_advice(clean_graph, table)["body"]["sample_count"])
+    other = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(OTHER_TENANT),
+    )
+    try:
+        other.query.sql(
+            f"CREATE TABLE {table} (id BIGINT PRIMARY KEY, title TEXT, body TEXT, qty "
+            f"BIGINT)"
+        )
+        other.query.sql(
+            f"INSERT INTO {table} VALUES (1, 'alpha', 'first long body', 1)"
+        )
+        assert int(_advice(other, table)["body"]["sample_count"]) == 0
+        for _ in range(5):
+            other.query.sql(f"SELECT id FROM {table} WHERE body LIKE '%long%'")
+        assert int(_advice(other, table)["body"]["sample_count"]) == 5
+        assert int(_advice(clean_graph, table)["body"]["sample_count"]) == ours
+    finally:
+        other.close()
+
+    # zero automatic bindings: no amount of traffic created or queued a binding
+    assert _index_names(clean_graph) == indexes_before
+
+    # stale schema: a DDL change moves the catalog revision, so the counters seen
+    # under the old revision rank as stale. A pinned read refuses; a listing does
+    # not refuse on account of that column and still shows every column
+    clean_graph.query.sql(f"CREATE TABLE {table}_moved (id BIGINT PRIMARY KEY)")
+    stale = _advice(clean_graph, table)
+    assert stale["body"]["eligibility"] == "insufficient_observations"
+    assert stale["body"]["reason"] == "SCHEMA_REVISION_STALE"
+    assert float(stale["body"]["score"]) == 0.0
+    assert set(stale) == {"id", "title", "body", "qty"}
+    with pytest.raises(EngineResponseError) as refused:
+        clean_graph.query.sql(
+            "SELECT * FROM information_schema.vector_advice "
+            f"WHERE table_name = '{table}' AND column_name = 'body'"
+        )
+    assert "SCHEMA_REVISION_STALE" in str(refused.value)
+    assert _index_names(clean_graph) == indexes_before
 
 
 def _receipt_rows(clean_graph, table: str) -> dict[str, dict]:

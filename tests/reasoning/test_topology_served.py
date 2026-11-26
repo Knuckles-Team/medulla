@@ -45,6 +45,7 @@ def _seed(gc) -> None:
     gc.edges.add(*_BRIDGE, {"relationship": "LINKS"})
 
 
+# proves R607.3: Wiring
 # spec: MEDULLA-FEDERATED-QUERY-R607.3
 def test_method_is_registered_and_reaches_kernels(clean_graph):
     gc = clean_graph
@@ -290,6 +291,8 @@ def test_evidence_fields_after_success_and_refusal(capped_engine):
 
 # proves R607.6: Hot-path proof
 # spec: MEDULLA-FEDERATED-QUERY-R607.6
+# proves R607: Topology analytics find partitions, analogies, synergy and hyperedge
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R607")
 def test_each_analytic_is_served(clean_graph):
     """All five analytics answer over the wire on ONE fixture, each naming itself."""
     gc = clean_graph

@@ -429,6 +429,7 @@ mod tests {
         assert!(thresholds.breached(ShortcutDetector::SingleClue, 0.5001));
     }
 
+    // proves R702.5: Evidence
     // spec: MEDULLA-FEDERATED-QUERY-R702.5
     #[test]
     fn rejection_carries_the_complete_report() {

@@ -221,7 +221,9 @@ def _cites_kind(kind: str, quantifier: str) -> dict[str, Any]:
 
 
 # proves R040.1.6: Constraints: hot-path proof
+# proves R040.1: Hard entity and relationship constraints
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.6")
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1")
 def test_constraints_before_ranking(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R040.1.6: required and forbidden edge
     predicates,

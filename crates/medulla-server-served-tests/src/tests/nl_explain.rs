@@ -224,6 +224,80 @@ async fn nl_mutating_candidates_refuse_without_changing_graph_data() {
     }
 }
 
+// proves R058: NL runs only as disclosed, read-only typed UQL
+// spec: MEDULLA-FEDERATED-QUERY-R058
+#[tokio::test]
+async fn executed_uql_returned_and_read_only() {
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = echo_planned_fixture().await;
+    let core = state
+        .read()
+        .await
+        .registry
+        .get("__commons__")
+        .expect("fixture graph")
+        .core
+        .clone();
+    let before = core.analysis_snapshot();
+    let text = "MATCH (:Doc) |> LIMIT 3";
+
+    // The executed UQL is returned with the rows, and those rows are the rows the
+    // same UQL answers when a caller sends it directly.
+    let explained = send(&state, 1100, nl_explain(text)).await;
+    assert_ok(&explained);
+    let body = explain_body(&explained);
+    assert_eq!(body.uql, text, "each result carries the executed UQL");
+    let direct = send(
+        &state,
+        1101,
+        Method::Uql {
+            text: text.into(),
+            params: Default::default(),
+            prepare: false,
+            foreign_executions: Default::default(),
+            budget: None,
+        },
+    )
+    .await;
+    assert_ok(&direct);
+    let mut direct_ids = medulla_server::decode_uql_ids(&direct);
+    let mut nl_ids: Vec<String> = body.rows.iter().map(|(id, _)| id.clone()).collect();
+    direct_ids.sort();
+    nl_ids.sort();
+    assert_eq!(nl_ids, direct_ids, "direct-UQL row parity");
+    assert_eq!(nl_ids.len(), 3);
+
+    // Plan-only mode answers the typed UQL candidate and its digests.
+    let planned = send(&state, 1102, nl_plan(text)).await;
+    assert_ok(&planned);
+    assert_eq!(plan_body(&planned).uql, text);
+
+    // Each refusal keeps its typed code and returns no rows.
+    let over_budget = "x".repeat(medulla_nlq::nl::NlQueryBudget::default().max_uql_len + 1);
+    for (id, candidate, code) in [
+        (1110, "MATCH ((( not uql", "NL_QUERY_STEPS_EXHAUSTED"),
+        (1111, over_budget.as_str(), "QUERY_TEXT_TOO_LONG"),
+        (1112, "MATCH (:Doc) |> DELETE", "NL_MUTATION_REFUSED"),
+        (1113, "CREATE (n:Doc {id: 'injected'})", "NL_MUTATION_REFUSED"),
+    ] {
+        let refused = send(&state, id, nl(candidate)).await;
+        assert!(refused.result.is_none(), "{code}: no rows");
+        assert_eq!(
+            refused.error.as_deref(),
+            Some(code),
+            "{:?}",
+            refused.error_detail
+        );
+    }
+
+    // No mutation is reachable: the graph is unchanged after every call above.
+    let after = core.analysis_snapshot();
+    assert_eq!(after.graph.node_count(), before.graph.node_count());
+    assert_eq!(after.graph.edge_count(), before.graph.edge_count());
+    assert_eq!(after.node_properties, before.node_properties);
+    assert_eq!(after.edge_properties, before.edge_properties);
+}
+
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.7.1
 #[tokio::test]
 async fn nl_query_grounds_names_on_the_graph_schema_before_running() {

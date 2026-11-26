@@ -134,6 +134,8 @@ fn refusal(resp: &Response) -> String {
     format!("{:?} {:?}", resp.error, resp.error_detail)
 }
 
+// proves R058.4: Natural-language planning context, dialect choice and bounded steps
+// spec: MEDULLA-FEDERATED-QUERY-R058.4
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.2
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.1
 #[tokio::test]
@@ -293,6 +295,7 @@ async fn explain(state: &test_support::SharedState, id: u64, text: &str) -> NlQu
     }
 }
 
+// proves R058.4.5: NL planning context: evidence
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.5
 #[tokio::test]
 async fn served_response_carries_steps_and_digest() {

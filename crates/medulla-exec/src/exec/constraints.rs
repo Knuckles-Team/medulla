@@ -554,4 +554,42 @@ mod tests {
             .unwrap()
             .is_empty());
     }
+
+    // proves R040.1.4: a pin with no revision to compare against is unevaluable
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.4
+    #[test]
+    fn pin_without_a_revision_is_unevaluable_and_ranks_nothing() {
+        let fixture = fixture();
+        let core = graph(&fixture);
+        let view = core.analysis_snapshot();
+        let pinned = constraints(vec![cites_banned(RelationshipQuantifier::NotExists)]);
+        assert_eq!(pinned.graph_revision, 4);
+
+        // The query binds no revision: the pin cannot be compared, so the whole
+        // constraint set is refused and no candidate set is produced to rank.
+        let refusal = compile_constraints(&view, &pinned, None).unwrap_err();
+        assert!(matches!(refusal, ConstraintError::Unevaluable(_)), "{refusal:?}");
+        assert_eq!(refusal.code(), ServerErrorCode::ConstraintUnevaluable);
+        assert_eq!(refusal.code().as_str(), "CONSTRAINT_UNEVALUABLE");
+        // The wire text starts with the registered code and names the pinned revision.
+        let wire: String = refusal.clone().into();
+        assert!(wire.starts_with("CONSTRAINT_UNEVALUABLE: "), "{wire}");
+        assert!(wire.contains("revision 4"), "{wire}");
+        // It is neither of the other two refusals.
+        assert_ne!(refusal.code(), ServerErrorCode::GraphRevisionStale);
+        assert_ne!(refusal.code(), ServerErrorCode::ConstraintInvalid);
+
+        // A hard exclusion never becomes a score penalty: the refusal is the same
+        // whatever the predicates are, and no predicate is evaluated.
+        let entity_only = RetrievalConstraints {
+            relationship_predicates: BoundedVec::default(),
+            ..pinned.clone()
+        };
+        assert!(matches!(
+            compile_constraints(&view, &entity_only, None),
+            Err(ConstraintError::Unevaluable(_))
+        ));
+        // With a revision to compare against the same pin compiles.
+        assert!(compile_constraints(&view, &pinned, Some(4)).is_ok());
+    }
 }

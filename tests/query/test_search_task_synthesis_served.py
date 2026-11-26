@@ -132,6 +132,7 @@ def _ranking_request(accepted: dict[str, dict]) -> dict:
     }
 
 
+# proves R702.3: Wiring
 # spec: MEDULLA-FEDERATED-QUERY-R702.3
 def test_task_feeds_ranking_evaluation(clean_graph):
     gc = clean_graph
@@ -280,6 +281,8 @@ def test_risky_task_refused_with_detector_name(clean_graph):
 
 
 # spec: MEDULLA-FEDERATED-QUERY-R702.6
+# proves R702: Search-task synthesis with shortcut-risk diagnostics
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R702")
 def test_single_clue_task_is_rejected(clean_graph):
     gc = clean_graph
     # A 200-node store: one single-clue star (4 nodes) among 49 four-node rings.

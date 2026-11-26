@@ -265,6 +265,7 @@ async fn rdf_identifiers() {
     assert_unknown(&nl(&state, 3, &by_prefix).await, "rdf", "InventedClassName");
 }
 
+// proves R058.4.9: Inline foreign adapter grounding
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.9
 #[cfg(feature = "federation")]
 #[tokio::test]

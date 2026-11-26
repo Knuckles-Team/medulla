@@ -1,23 +1,29 @@
 """PROPAGATE ... RISK HISTORY over the served wire (MEDULLA-FEDERATED-QUERY-R032.100).
 
-Failure history is ``:Observation`` facts on the pinned snapshot. Three layers, differing
-failure counts, a dependency cycle and a node with no observations cover both directions,
-the path formulas, a null aggregate with ``partial``, and the single refusal for an absent
-dataset.
+Failure history is ``:Observation`` facts on the pinned snapshot. Three layers,
+differing failure counts, a dependency cycle and a node with no observations cover both
+directions, the path formulas, a null aggregate with ``partial``, and the single refusal
+for an absent dataset and for one the caller cannot see.
 """
 
 from __future__ import annotations
 
+import os
 import uuid
 
 import pytest
+from conftest import tenant_request_context
 
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, SyncMedullaClient
+
+OTHER_TENANT = "tenant:history-other"
 
 LAYERS = "LAYERS ('service' 1.0, 'os' 0.5, 'hardware' 0.25)"
 
 
-def _observe(graph, tag: str, dataset: str, target: str, outcome: str, index: int) -> None:
+def _observe(
+    graph, tag: str, dataset: str, target: str, outcome: str, index: int
+) -> None:
     observation = f"obs-{tag}-{target}-{index}"
     graph.nodes.add(
         observation,
@@ -42,7 +48,11 @@ def test_historical_risk_both_directions(clean_graph) -> None:
     for source, target in ((a, b), (b, c), (c, a), (d, a)):
         clean_graph.edges.add(source, target, {"relationship": "dependsOn"})
     index = 0
-    for target, outcomes in ((a, ["failure", "success"]), (b, ["failure"]), (c, ["success"])):
+    for target, outcomes in (
+        (a, ["failure", "success"]),
+        (b, ["failure"]),
+        (c, ["success"]),
+    ):
         for outcome in outcomes:
             _observe(clean_graph, tag, dataset, target, outcome, index)
             index += 1
@@ -82,3 +92,46 @@ def test_historical_risk_both_directions(clean_graph) -> None:
         with pytest.raises(EngineResponseError) as refused:
             clean_graph.query.uql(text)
         assert "HISTORY_DATASET_UNAVAILABLE" in str(refused.value)
+
+
+# proves R032.100: a hidden dataset refuses like an absent one
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R032.100")
+def test_hidden_dataset_refuses_like_an_absent_one(clean_graph) -> None:
+    tag = uuid.uuid4().hex[:8]
+    hidden = f"hidden-{tag}"
+    absent = f"absent-{tag}"
+    node = f"svc-{tag}"
+    clean_graph.nodes.add(node, {"type": f"Svc{tag}", "layer": "service"})
+    other = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(OTHER_TENANT, scopes=["*"]),
+    )
+    try:
+        # Another tenant holds the dataset: the observations are in its snapshot only.
+        other.nodes.add(node, {"type": f"Svc{tag}", "layer": "service"})
+        _observe(other, tag, hidden, node, "failure", 0)
+        query = f"MATCH (:Svc{tag}) |> PROPAGATE NOISY_OR -[:dependsOn]-> HOPS 2"
+
+        def refusal(dataset: str) -> str:
+            tail = f"RISK HISTORY '{dataset}' WINDOW 0 TO 1000 {LAYERS}"
+            with pytest.raises(EngineResponseError) as refused:
+                clean_graph.query.uql(f"{query} {tail}")
+            return str(refused.value)
+
+        hidden_reply = refusal(hidden)
+        absent_reply = refusal(absent)
+        assert "HISTORY_DATASET_UNAVAILABLE" in hidden_reply
+        # No existence oracle: the reply for the dataset another tenant holds is
+        # the reply for one that nobody holds, up to the dataset name.
+        assert hidden_reply.replace(hidden, "<dataset>") == absent_reply.replace(
+            absent, "<dataset>"
+        )
+        # The owning tenant sees its own history through the same query.
+        own = other.query.uql(
+            f"{query} RISK HISTORY '{hidden}' WINDOW 0 TO 1000 {LAYERS} "
+            "|> RETURN impact"
+        )
+        assert own["kind"] == "rows"
+        assert own["historical_risk"][0]["dataset"] == hidden
+    finally:
+        other.close()
