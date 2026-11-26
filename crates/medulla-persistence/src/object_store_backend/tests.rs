@@ -617,3 +617,246 @@ async fn restore_refuses_a_root_sealed_under_a_key_the_store_lacks() {
     assert!(error.contains("key-a"), "{error}");
     assert!(error.contains("does not hold"), "{error}");
 }
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.4
+// The startup open reads the setting once and refuses before any effect. The cases share one
+// process-wide variable, so they run in one test; the secret variables are unique to it.
+#[test]
+fn open_from_env_refuses_before_the_listener() {
+    use crate::object_store_backend::{open_from_env, STORAGE_BACKEND_ENV};
+
+    let spec = r#"{"variant":"object_store","endpoint":"R2_4_ENDPOINT","bucket":"R2_4_BUCKET","root":"R2_4_ROOT","durability":"object_store_conditional_put"}"#;
+
+    // Unset, empty and `local` are the redb default: nothing is opened.
+    std::env::remove_var(STORAGE_BACKEND_ENV);
+    assert!(open_from_env().unwrap().is_none());
+    for setting in ["", "local"] {
+        std::env::set_var(STORAGE_BACKEND_ENV, setting);
+        assert!(open_from_env().unwrap().is_none(), "{setting:?}");
+    }
+
+    // A spec whose secret variables are unset refuses naming the field, never a value.
+    std::env::set_var(STORAGE_BACKEND_ENV, spec);
+    for name in ["R2_4_ENDPOINT", "R2_4_BUCKET", "R2_4_ROOT"] {
+        std::env::remove_var(name);
+    }
+    let refusal = open_from_env().err().expect("an unset secret refuses");
+    assert!(
+        refusal.starts_with("OBJECT_STORE_SECRET_UNRESOLVED"),
+        "{refusal}"
+    );
+
+    // An unknown variant and an unreadable body are `STORAGE_BACKEND_UNKNOWN`.
+    for setting in [r#"{"variant":"tape_library"}"#, "{"] {
+        std::env::set_var(STORAGE_BACKEND_ENV, setting);
+        let refusal = open_from_env().err().expect("an unknown spec refuses");
+        assert!(refusal.starts_with("STORAGE_BACKEND_UNKNOWN"), "{refusal}");
+    }
+
+    // A resolvable spec opens: the same function the listener waits on.
+    std::env::set_var(STORAGE_BACKEND_ENV, spec);
+    std::env::set_var("R2_4_ENDPOINT", "http://127.0.0.1:9");
+    std::env::set_var("R2_4_BUCKET", "bucket-a");
+    std::env::set_var("R2_4_ROOT", "root-a");
+    assert!(open_from_env().unwrap().is_some());
+    std::env::remove_var(STORAGE_BACKEND_ENV);
+}
+
+/// One single-node batch of graph `GRAPH_FNAME`, committing at graph version `index + 1`.
+#[cfg(feature = "redb")]
+fn node_batch(index: u64) -> medulla_protocol_types::mutation_batch::MutationBatch {
+    use medulla_mutation_types::mutation_scope::{
+        DurabilityDomain, IncarnationId, LogicalName, MutationOutboxIntent, MutationScopeIdentity,
+        MutationSurface, ScopeTenantId, MUTATION_BATCH_VERSION,
+    };
+    use medulla_protocol_types::mutation_batch::{
+        MutationBatch, MutationOperation, VersionExpectation, MUTATION_ACTOR_HEADER,
+    };
+    use medulla_protocol_types::protocol::Method;
+
+    let identity = MutationScopeIdentity::graph(
+        ScopeTenantId::new("restore-tenant").unwrap(),
+        LogicalName::new(GRAPH_FNAME).unwrap(),
+        IncarnationId::new("incarnation:test:object-restore").unwrap(),
+    );
+    let batch_id = format!("b{index}");
+    let actor = format!("principal:sha256:{}", "b".repeat(64));
+    let mut batch = MutationBatch {
+        schema_version: MUTATION_BATCH_VERSION,
+        batch_id: batch_id.clone(),
+        envelope: medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
+            &identity, &actor, 17, &batch_id,
+        ),
+        identity,
+        placement_epoch: 1,
+        version_expectation: VersionExpectation::Graph(index),
+        fencing_token: Some(1),
+        authoritative_state: None,
+        operations: vec![MutationOperation {
+            ordinal: 0,
+            surface: MutationSurface::Transaction,
+            domain: DurabilityDomain::GraphRows,
+            method: Method::AddNode {
+                node_id: format!("node-{index}"),
+                properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"n": index}))
+                    .unwrap(),
+            },
+        }],
+        outbox: vec![MutationOutboxIntent {
+            topic: "projection.restore".to_string(),
+            key: batch_id,
+            payload: rmp_serde::to_vec_named(&serde_json::json!({"event": index})).unwrap(),
+            headers: std::collections::BTreeMap::from([(MUTATION_ACTOR_HEADER.to_string(), actor)]),
+        }],
+        created_at_ms: 10,
+    };
+    let schema_digest = batch
+        .envelope
+        .operation()
+        .expect("fixture carries an operation envelope")
+        .method_schema_digest;
+    batch.reseal_envelope(schema_digest).unwrap();
+    batch
+}
+
+#[cfg(feature = "redb")]
+const GRAPH_FNAME: &str = "restore-graph";
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.5
+// Three commits of one engine publish to the root; a fresh local store restores the head into
+// itself, every batch present and the graph version installed, and a corrupted segment refuses
+// the restore by digest.
+#[cfg(feature = "redb")]
+#[tokio::test]
+async fn restore_materializes_head_into_an_empty_local_store() {
+    use futures_util::TryStreamExt;
+    use medulla_server_api::api::persistence::PersistenceBackend;
+
+    let store = Arc::new(InMemory::new());
+    let source_dir = tempfile::tempdir().unwrap();
+    let mut source =
+        crate::redb_backend::RedbBackend::open(source_dir.path().to_string_lossy().to_string(), 64)
+            .unwrap();
+    source
+        .register_graph(GRAPH_FNAME, "restore-graph", GraphType::Commons)
+        .await
+        .unwrap();
+    source
+        .attach_object_store(Arc::new(backend(store.clone())))
+        .unwrap();
+    for index in 0..3 {
+        PersistenceBackend::commit_mutation_batch(
+            &source,
+            GRAPH_FNAME,
+            &node_batch(index),
+            None,
+            1_000 + index,
+        )
+        .await
+        .expect("the batch commits and publishes");
+    }
+
+    // A fresh store restores the head: every published entry replays, and the graph version
+    // is the head's.
+    let target_dir = tempfile::tempdir().unwrap();
+    let target =
+        crate::redb_backend::RedbBackend::open(target_dir.path().to_string_lossy().to_string(), 64)
+            .unwrap();
+    let applied = backend(store.clone()).restore_into(&target).await.unwrap();
+    assert_eq!(applied, 3);
+    for index in 0..3 {
+        let record =
+            PersistenceBackend::read_mutation_batch(&target, GRAPH_FNAME, &format!("b{index}"))
+                .await
+                .unwrap();
+        assert!(record.is_some(), "batch b{index} is in the restored ledger");
+    }
+    let (name, graph_type, version) = target.graph_identity(GRAPH_FNAME).unwrap().unwrap();
+    assert_eq!((name.as_str(), graph_type, version), ("restore-graph", GraphType::Commons, 3));
+
+    // A restore that finds the graph already at the head applies nothing.
+    assert_eq!(backend(store.clone()).restore_into(&target).await.unwrap(), 0);
+
+    // A corrupted segment refuses the restore by digest, and the root is never written.
+    let segments: Vec<_> = store
+        .list(Some(&ObjPath::from(ROOT)))
+        .try_collect()
+        .await
+        .unwrap();
+    let segment = segments
+        .iter()
+        .find(|meta| meta.location.as_ref().contains("/segments/"))
+        .expect("the root holds a segment");
+    store
+        .put(&segment.location, b"corrupted".to_vec().into())
+        .await
+        .unwrap();
+    let damaged_dir = tempfile::tempdir().unwrap();
+    let damaged =
+        crate::redb_backend::RedbBackend::open(damaged_dir.path().to_string_lossy().to_string(), 64)
+            .unwrap();
+    let refusal = backend(store).restore_into(&damaged).await.unwrap_err();
+    assert!(
+        refusal.starts_with("OBJECT_SEGMENT_DIGEST_MISMATCH"),
+        "{refusal}"
+    );
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.3
+// The first commit on an empty root writes the snapshot, one batch segment, a create-only manifest
+// and a create-only HEAD at version 1; the second publishes at version 2; a root whose next
+// manifest was already taken refuses the third with OBJECT_PUBLISH_STALE.
+#[tokio::test]
+async fn first_commit_bootstraps_head_and_later_commits_publish() {
+    let store = Arc::new(InMemory::new());
+    let publisher = backend(store.clone());
+    let snapshot = b"owner-table-dump".to_vec();
+    let with_data = || {
+        Ok(GraphBootstrap {
+            graph_name: "named-graph".to_string(),
+            graph_type: GraphType::Commons,
+            graph_version: 0,
+            seal_key_id: None,
+            snapshot: snapshot.clone(),
+        })
+    };
+    let first = to_vec_named(&["first-rows"]).unwrap();
+    let ack = publisher
+        .commit_mutation_batch(TENANT, GRAPH, &first, Some(1), &with_data)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 1);
+    assert_eq!(head(&store).await.version, 1);
+    let fetcher = medulla_storage::object::fetch::ObjectFetcher::new(store.clone(), ROOT);
+    let one = fetcher.materialize(TENANT, GRAPH, 1).await.unwrap();
+    assert_eq!(one.snapshot.bytes, snapshot);
+    assert_eq!(one.batches.len(), 1);
+    assert_eq!(one.batches[0].bytes, first);
+
+    let second = to_vec_named(&["second-rows"]).unwrap();
+    let ack = publisher
+        .commit_mutation_batch(TENANT, GRAPH, &second, Some(2), &with_data)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 2);
+    assert_eq!(head(&store).await.version, 2);
+    let two = fetcher.materialize(TENANT, GRAPH, 2).await.unwrap();
+    assert_eq!(two.batches.len(), 2);
+    assert_eq!(two.batches[1].bytes, second);
+
+    // Another node took version 3's manifest: this publisher's fence is stale.
+    store
+        .put(
+            &ObjPath::from(format!("{}/manifests/{:020}.json", base(), 3)),
+            manifest_bytes(3, Some(2), Vec::new()).into(),
+        )
+        .await
+        .unwrap();
+    let third = to_vec_named(&["third-rows"]).unwrap();
+    let refusal = publisher
+        .commit_mutation_batch(TENANT, GRAPH, &third, Some(3), &with_data)
+        .await
+        .unwrap_err();
+    assert_eq!(refusal, CommitRefusal::PublishStale { version: 2 });
+    assert_eq!(head(&store).await.version, 2);
+}
