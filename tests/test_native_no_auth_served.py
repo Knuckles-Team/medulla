@@ -111,7 +111,7 @@ def clean_env():
 
 
 @contextlib.contextmanager
-def server(tmp_path, *, mode="none", extra_env=None):
+def server(tmp_path, *, mode="none", extra_env=None, features=(), extra_args=()):
     with socket.socket(socket.AF_INET) as probe:
         probe.bind(("127.0.0.1", 0))
         sock = probe.getsockname()
@@ -120,7 +120,7 @@ def server(tmp_path, *, mode="none", extra_env=None):
     with (tmp_path / "server.log").open("ab") as log:
         proc = subprocess.Popen(
             [
-                binary(),
+                binary(features),
                 "--auth-mode",
                 mode,
                 "--persist-dir",
@@ -128,6 +128,7 @@ def server(tmp_path, *, mode="none", extra_env=None):
                 "--tcp-only",
                 "--tcp-addr",
                 address,
+                *extra_args,
             ],
             env=clean_env() | (extra_env or {}),
             stdout=log,

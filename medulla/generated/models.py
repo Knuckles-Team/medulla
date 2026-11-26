@@ -19606,6 +19606,7 @@ class DowntimeJobObservation(BaseModel):
     attempts_made: Annotated[int, Field(ge=0, le=4294967295)]
     checkpoint_stage: str | None = None
     cpu_ms: Annotated[int, Field(ge=0)] | None = None
+    has_checkpoint: bool
     has_lease: bool
     state: DowntimeJobState
 
