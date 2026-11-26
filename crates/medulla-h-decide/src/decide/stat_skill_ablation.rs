@@ -244,7 +244,7 @@ pub(super) fn record_canary(
     verdict: CanaryVerdict,
 ) -> Result<CanaryRecorded, String> {
     let key = canary_key(&canary.skill_ref);
-    let subject = medulla_decision_outcome_types::decision::promotion::RevisionSubject::Skill {
+    let subject = medulla_decision_types::decision::held_out::RevisionSubject::Skill {
         skill_ref: canary.skill_ref.clone(),
         tier: None,
     };

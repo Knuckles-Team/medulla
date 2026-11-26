@@ -23,10 +23,11 @@ use medulla_decision_types::{decision::StatisticalPolicy, decision::UnitRational
 use medulla_types::contract::BoundedVec;
 
 use medulla_decision_outcome_types::decision::promotion::{
-    ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
-    RollbackDecision, KNOBS as PROMOTION_KNOBS, MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN,
-    BOOTSTRAP_LEVEL, BOOTSTRAP_RESAMPLES, REGRESSION_MARGIN, REGRESSION_WINDOW,
+    ChampionPointer, PromotionVerdict, RollbackDecision, KNOBS as PROMOTION_KNOBS,
+    MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN, BOOTSTRAP_LEVEL, BOOTSTRAP_RESAMPLES,
+    REGRESSION_MARGIN, REGRESSION_WINDOW,
 };
+use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
 use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::codes::{
     ADOPTION_NOT_PROVEN, EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
@@ -425,7 +426,7 @@ pub fn paired_rollout_evidence(set: &RolloutSet, policy: &DecisionPolicy) -> Hel
             .to_owned()
     };
     HeldOutEvidence {
-        schema_version: medulla_decision_outcome_types::decision::promotion::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+        schema_version: medulla_decision_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
         subject: RevisionSubject::Program {
             program_ref: set.program_ref.clone(),
         },
@@ -439,7 +440,7 @@ pub fn paired_rollout_evidence(set: &RolloutSet, policy: &DecisionPolicy) -> Hel
         delta_ppm,
         case_count: cases as u64,
         independent: true,
-        grader_kind: medulla_decision_outcome_types::decision::promotion::GraderKind::TraceMetric,
+        grader_kind: medulla_decision_types::decision::held_out::GraderKind::TraceMetric,
         measurement: None,
         review: None,
     }
@@ -541,11 +542,11 @@ pub fn subject_gate(
 
 #[cfg(test)]
 mod gate_tests {
-    use medulla_decision_outcome_types::decision::promotion::{
-        DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind,
-        ReviewApproval, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION, KNOBS,
-        MEASURED_FACT_MIN_CASES,
+    use medulla_decision_types::decision::held_out::{
+        DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind, ReviewApproval,
+        RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
     };
+    use medulla_decision_outcome_types::decision::promotion::{KNOBS, MEASURED_FACT_MIN_CASES};
     use medulla_decision_types::decision::codes::{
         EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
         PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED,
@@ -863,9 +864,10 @@ mod class_metric_tests {
 #[cfg(test)]
 mod tests {
     use medulla_decision_outcome_types::decision::promotion::{
-        ChampionPointer, GraderKind, HeldOutEvidence, PromotionVerdict, ReceiptKind,
-        RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION, KNOBS, REGRESSION_MARGIN,
-        REGRESSION_WINDOW,
+        ChampionPointer, PromotionVerdict, KNOBS, REGRESSION_MARGIN, REGRESSION_WINDOW,
+    };
+    use medulla_decision_types::decision::held_out::{
+        GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
     };
     use medulla_decision_types::decision::knobs::KnobValue;
     use medulla_decision_types::decision::DecisionPolicy;

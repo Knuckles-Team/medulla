@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 
 use medulla_decision_outcome_types::decision::concentration::{
     concentration_verdict, counted_edits, ConcentrationAbstention, ConcentrationAction,
-    ConcentrationPolicy, EditFact, EditStatus,
+    ConcentrationPolicy, EditFact,
 };
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::codes::{MIXED_POLICY_REVISION, NO_CONCENTRATION_POLICY};
@@ -24,6 +24,7 @@ use medulla_decision_types::decision::{
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::edit_machine::EditStatus;
 
 use super::stat_executor::{Executed, FamilyExecuted};
 use super::stat_support::{filtered_view, invalid_parameter};

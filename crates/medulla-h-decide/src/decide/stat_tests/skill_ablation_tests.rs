@@ -6,12 +6,12 @@ use super::path_preference_tests::pins;
 use super::promotion_tests::{commit, promotion_request, rollout_set};
 use super::retrieval_tests::learn;
 use super::*;
-use medulla_decision_outcome_types::decision::promotion::RevisionSubject;
 use medulla_decision_stats::decision::promotion::rollout_set_digest;
 use medulla_decision_types::decision::codes::{
     ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
     CANARY_TRAFFIC_OUT_OF_BOUNDS, COMPILE_MODEL_UNKNOWN,
 };
+use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningRecorded, LearningWrite, PointerRef,

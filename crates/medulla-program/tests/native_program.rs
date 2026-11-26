@@ -257,7 +257,7 @@ fn all_modalities_compile_and_require_evidence_before_promotion() {
 // spec: MEDULLA-DECISION-ENGINE-R810.7
 #[test]
 fn selected_candidate_carries_held_out_evidence() {
-    use medulla_decision_outcome_types::decision::promotion::ReceiptKind;
+    use medulla_decision_types::decision::held_out::ReceiptKind;
     let mut request = request(OptimizerKind::LabeledFewShot);
     let proposal = NativeCompiler::compile(&request).expect("compile proposal");
     assert_eq!(proposal.held_out, None, "no evaluated candidate, no evidence");

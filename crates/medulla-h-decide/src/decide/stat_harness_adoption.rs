@@ -11,10 +11,9 @@
 //! only by a champion pointer move (MEDULLA-ORCH-VOCAB-R801.7); every adoption
 //! stays readable.
 
-use medulla_decision_outcome_types::decision::promotion::{
-    DefinitionKind, RevisionStage, RevisionSubject,
-};
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+use medulla_decision_types::decision::held_out::{DefinitionKind, RevisionSubject};
 use medulla_decision_types::decision::statistical::log::{
     HarnessAdoptionStored, HarnessAdoptionWrite, HarnessLessonQuery, HarnessLessonsFound,
 };

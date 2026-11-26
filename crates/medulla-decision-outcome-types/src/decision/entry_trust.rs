@@ -9,8 +9,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-pub use medulla_decision_types::decision::entry_types::{
-    EntryCheck, EntryTrust, EntryTrustPolicy, RefusedEntry, RetrievedEntry, TrustTier,
+use medulla_decision_types::decision::entry_types::{
+    EntryCheck, EntryTrustPolicy, RefusedEntry, RetrievedEntry, TrustTier,
 };
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

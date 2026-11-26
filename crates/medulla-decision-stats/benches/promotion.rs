@@ -9,11 +9,11 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_decision_outcome_types::decision::promotion::{
-    ChampionPointer, GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject,
-    HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
+use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
 use medulla_decision_stats::decision::promotion::{challenger_wins, regression_rollback};
+use medulla_decision_types::decision::held_out::{
+    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::OpaqueId;
 

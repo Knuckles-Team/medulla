@@ -8,15 +8,17 @@
 //! `promote` for exactly that target and subject. [`record_rollouts`] stores a
 //! rollout set under [`rollouts_key`] and answers its evidence.
 
-use medulla_decision_outcome_types::decision::promotion::{
-    DefinitionKind, GraderKind, HeldOutEvidence, ReceiptKind, RevisionStage, RevisionSubject,
-    HELD_OUT_EVIDENCE_SCHEMA_VERSION, PROMOTION_UNEVALUATED,
-};
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::{RevisionRow, REVISION_KEY_PREFIX};
 use medulla_decision_outcome_types::policy_evolution::{
     is_policy_evolution_row, PolicyEvolutionRecord, StoredPolicyRecord,
 };
 use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
+use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
+use medulla_decision_types::decision::held_out::{
+    DefinitionKind, GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject,
+    HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
 use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;

@@ -9,9 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_outcome_types::decision::load_set::{
-    merge_load_set, LoadComponent, LoadSetKnobs,
-};
+use medulla_decision_outcome_types::decision::load_set::{merge_load_set, LoadComponent};
 use medulla_decision_types::decision::capability_designation::{
     CapabilityDesignationQuestion, DesignatedCapability, DesignationAsk, DesignationKnobs,
     DesignationWeights, EntityKind, PackOrigin, QueryVector,
@@ -24,6 +22,7 @@ use medulla_decision_types::decision::promotion_tier::{
 use medulla_decision_types::decision::load_set::{
     LoadSetAnswer, LoadSetQuestion, LOAD_SET_NO_DESIGNATED_COMPONENT, LOAD_SET_STALE_PACK_REVISION,
 };
+use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
 use medulla_decision_types::decision::load_set_knobs::KNOBS as LOAD_SET_KNOBS;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;

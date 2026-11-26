@@ -23,7 +23,8 @@ mod program_job_support;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, RevisionSubject};
+use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
+use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningRecorded, LearningWrite, PointerMovement, PointerRef,

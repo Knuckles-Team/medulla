@@ -13,9 +13,8 @@
 //! only `DecisionLog` moves a pointer, and only on a committed `promote`
 //! record (`stat_promotion::qualified_champion`).
 
-use medulla_decision_outcome_types::decision::promotion::{
-    ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
-};
+use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, PromotionVerdict};
+use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
 use medulla_decision_stats::decision::promotion::{regression_rollback, subject_gate, PromotionGate};
 use medulla_decision_stats::decision::promotion_tier::tier_gate;
 use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};

@@ -637,7 +637,7 @@ async fn rollout_evidence_reads_back_field_for_field() {
         &h,
         promotion_request(
             &pinned.0,
-            &medulla_decision_outcome_types::decision::promotion::RevisionSubject::Program {
+            &medulla_decision_types::decision::held_out::RevisionSubject::Program {
                 program_ref: set.program_ref.clone(),
             },
             &digest,
@@ -670,7 +670,7 @@ async fn served_skill_evolution_journey() {
     use super::path_preference_tests::pins;
     use super::promotion_tests::{commit, promotion_request};
     use super::retrieval_tests::learn;
-    use medulla_decision_outcome_types::decision::promotion::RevisionSubject;
+    use medulla_decision_types::decision::held_out::RevisionSubject;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
     use medulla_decision_types::decision::skill_evolution::{
         Rollout, ROLLOUT_SET_SCHEMA_VERSION,

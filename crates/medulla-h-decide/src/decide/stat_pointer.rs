@@ -180,7 +180,8 @@ pub(super) fn champion_pointer(
     tenant: &str,
     pointer_key: &str,
 ) -> Result<medulla_decision_outcome_types::decision::promotion::ChampionPointer, String> {
-    use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, RevisionSubject};
+    use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
+    use medulla_decision_types::decision::held_out::RevisionSubject;
     use medulla_types::contract::OpaqueId;
     let not_found = || {
         format!(

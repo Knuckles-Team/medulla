@@ -1,5 +1,5 @@
 use super::*;
-use crate::decision::promotion::RevisionSubject;
+use medulla_decision_types::decision::held_out::RevisionSubject;
 
 fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])
@@ -274,7 +274,7 @@ fn every_policy_operation_and_receipt_round_trips() {
         champion_revision_ref: Some(id("polver:base")),
         evaluation_set_digest: digest(16),
         evaluator_digest: digest(17),
-        evaluator_kind: crate::decision::promotion::GraderKind::Annotation,
+        evaluator_kind: medulla_decision_types::decision::held_out::GraderKind::Annotation,
         held_out_trajectory_ids: medulla_types::contract::BoundedVec::new(vec![id(
             "poltraj:held-1",
         )])

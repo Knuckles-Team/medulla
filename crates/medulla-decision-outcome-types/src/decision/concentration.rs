@@ -32,7 +32,7 @@ pub struct ConcentrationPolicy {
 
 /// The recorded status of a harness edit: the closed state of `EditMachine`
 /// (MEDULLA-DECISION-ENGINE-R173.7).
-pub use medulla_types::edit_machine::EditStatus;
+use medulla_types::edit_machine::EditStatus;
 
 /// One recorded harness edit. `policy_revision` names the policy revision the
 /// edit was judged under.

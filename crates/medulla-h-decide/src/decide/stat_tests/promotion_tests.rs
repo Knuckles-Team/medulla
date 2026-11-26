@@ -8,14 +8,15 @@ use super::learning_tests::{activate, pointer_state};
 use super::path_preference_tests::{pins, OTHER};
 use super::retrieval_tests::learn;
 use super::*;
-use medulla_decision_outcome_types::decision::promotion::{
-    DefinitionKind, GraderKind, ReceiptKind, RevisionSubject, PROMOTION_UNEVALUATED,
-};
 use medulla_decision_outcome_types::policy_evolution::{
     EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionRecord, SafetyOutcome,
     StoredPolicyRecord,
 };
 use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
+use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
+use medulla_decision_types::decision::held_out::{
+    DefinitionKind, GraderKind, ReceiptKind, RevisionSubject,
+};
 use medulla_decision_types::decision::jobs::{FullLabelMetrics, LabelExclusions};
 use medulla_decision_types::decision::skill_evolution::{
     Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,

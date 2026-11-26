@@ -531,10 +531,11 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
 // spec: MEDULLA-DECISION-ENGINE-R060
 #[tokio::test]
 async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
-    use medulla_decision_outcome_types::decision::promotion::{
-        DefinitionKind, ReceiptKind, RevisionSubject, PROMOTION_UNEVALUATED,
-    };
     use medulla_decision_stats::decision::promotion::challenger_wins;
+    use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
+    use medulla_decision_types::decision::held_out::{
+        DefinitionKind, ReceiptKind, RevisionSubject,
+    };
     use medulla_decision_types::decision::DecisionPolicy;
 
     use super::super::stat_promotion::{

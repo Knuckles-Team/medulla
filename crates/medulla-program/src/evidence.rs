@@ -8,7 +8,7 @@
 //! (`Decide` kind `Promotion`) reads the evidence off the stored
 //! `ProgramRevision` node.
 
-use medulla_decision_outcome_types::decision::promotion::{
+use medulla_decision_types::decision::held_out::{
     GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
 use medulla_query_types::solve_scalar::digest_text;

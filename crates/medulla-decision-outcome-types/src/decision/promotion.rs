@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub use medulla_decision_types::decision::held_out::{
+use medulla_decision_types::decision::held_out::{
     DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind, ReviewApproval,
     RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
@@ -323,7 +323,7 @@ pub const KNOBS: &[KnobSpec] = &[
     },
 ];
 
-pub use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
+use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
 
 /// The promotion and calibration refusal codes.
 pub const REFUSALS: &[RefusalCode] = medulla_decision_types::decision::codes::PROMOTION;

@@ -18,11 +18,11 @@
 use medulla_agent_types::agent_guardrail::{
     check_rule_against_invariants, GuardrailRule, RuleInvariant, RulePromotionVerdict,
 };
-use medulla_decision_outcome_types::decision::promotion::{
+use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
+use medulla_decision_types::decision::held_out::{
     GraderKind, HeldOutEvidence, ReceiptKind, ReviewApproval, RevisionSubject,
     HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
-use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
 use medulla_decision_types::decision::{
     DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
 };

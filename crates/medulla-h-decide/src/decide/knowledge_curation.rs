@@ -42,11 +42,12 @@ pub async fn handle_knowledge_curation(
 mod served {
     use std::collections::BTreeSet;
 
-    use medulla_decision_outcome_types::decision::promotion::{RevisionStage, RevisionSubject};
+    use medulla_decision_outcome_types::decision::promotion::RevisionStage;
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
     use medulla_decision_stats::decision::knowledge_curation::{
         check_contradictions, is_due, loop_metrics, FlagMeasure, Invariant, KnowledgeIndex,
     };
+    use medulla_decision_types::decision::held_out::RevisionSubject;
     use medulla_decision_types::knowledge_curation::{
         ContradictionFinding, CorrectionRef, CurationAdmitted, CurationEditOp, CurationInputs,
         CurationProposal, CurationStatus, FlagStateRow, PatternRef, SourceChangeRef, TraceRef,

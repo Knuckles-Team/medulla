@@ -4,13 +4,11 @@
 //! Pure over [`RecordLookup`], so every refusal is unit-testable without a
 //! server. Structural checks on one body already ran in `medulla-types`.
 
-use medulla_decision_outcome_types::{
-    decision::promotion::RevisionSubject, policy_evolution::CaptureEligibility, policy_evolution::ModelPolicyVersion,
-    policy_evolution::OpenWeightPolicyCapability, policy_evolution::PolicyCapture,
-    policy_evolution::PolicyEvaluation, policy_evolution::PolicyEvolutionRecord,
-    policy_evolution::PolicyEvolutionRecordBody, policy_evolution::PolicyRefusal,
-    policy_evolution::TrainingRun, policy_evolution::TrainingRunOutcome,
-    policy_evolution::VersionOrigin,
+use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_outcome_types::policy_evolution::{
+    CaptureEligibility, ModelPolicyVersion, OpenWeightPolicyCapability, PolicyCapture,
+    PolicyEvaluation, PolicyEvolutionRecord, PolicyEvolutionRecordBody, PolicyRefusal, TrainingRun,
+    TrainingRunOutcome, VersionOrigin,
 };
 
 /// What admission may read from the request graph.

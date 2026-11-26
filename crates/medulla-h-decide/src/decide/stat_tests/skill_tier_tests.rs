@@ -6,9 +6,9 @@ use super::path_preference_tests::pins;
 use super::promotion_tests::{commit, promotion_request};
 use super::retrieval_tests::learn;
 use super::*;
-use medulla_decision_outcome_types::decision::promotion::RevisionSubject;
 use medulla_decision_stats::decision::promotion::rollout_set_digest;
 use medulla_decision_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
+use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::promotion_tier::{
     SkillTier, TierReview, ALWAYS_ON_CAPACITY_REACHED, MEMBER_OF, TIER_DOWNGRADE_NEEDS_REVIEW,
     TIER_REVIEW_MISSING,

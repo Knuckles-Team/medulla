@@ -19,11 +19,11 @@ use medulla_agent_types::agent_component::{
     ComponentDependency, DraftPublication, DraftSubject,
 };
 use medulla_agent_types::agent_library::AgentLibraryMutationContext;
-use medulla_decision_outcome_types::decision::promotion::{GraderKind, RevisionSubject};
 use medulla_decision_outcome_types::policy_evolution::{
     EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionOp, PolicyRecordReceipt,
     SafetyOutcome, MAX_HELD_OUT_TRAJECTORIES,
 };
+use medulla_decision_types::decision::held_out::{GraderKind, RevisionSubject};
 use medulla_decision_types::decision::planner_cost_head::{
     COMPONENT_DIGEST_PREFIX, PLANNER_COST_HEAD_ATTRIBUTE, PLANNER_POLICY_ID,
 };

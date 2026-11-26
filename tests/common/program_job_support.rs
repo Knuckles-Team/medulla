@@ -444,7 +444,7 @@ pub async fn champion_target(state: &crate::test_support::SharedState) -> Option
     let store = medulla_persistence_records::agent_library::shared_agent_library(state)
         .await
         .expect("the agent library opens");
-    let subject = medulla_decision_outcome_types::decision::promotion::RevisionSubject::Program {
+    let subject = medulla_decision_types::decision::held_out::RevisionSubject::Program {
         program_ref: program_ref().as_str().to_string(),
     };
     let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(

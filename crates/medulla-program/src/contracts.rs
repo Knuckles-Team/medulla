@@ -9,7 +9,7 @@ mod address;
 
 use std::collections::BTreeSet;
 
-pub use medulla_decision_outcome_types::decision::promotion::GraderKind;
+pub use medulla_decision_types::decision::held_out::GraderKind;
 use medulla_modality::{
     EvidenceAddress, EvidenceLocus, OpaqueRef, PolicyEnvelope, PrivacyAttestation,
 };

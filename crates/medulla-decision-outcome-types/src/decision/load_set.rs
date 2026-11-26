@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_decision_types::decision::capability_designation::EntityKind;
 use medulla_decision_types::decision::load_set::{AgentStart, LoadSetQuestion};
 
-pub use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
+use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
 
 /// One designated component as the merge sees it: its score, the capabilities
 /// it holds and the connector pack it came from.

@@ -41,7 +41,7 @@ use medulla_agent_types::agent_topology::{
 };
 use medulla_compute::assemble::admit_topology;
 use medulla_decision_outcome_types::decision::concentration::{
-    concentration_verdict, ConcentrationPolicy, EditFact, EditStatus,
+    concentration_verdict, ConcentrationPolicy, EditFact,
 };
 use medulla_decision_stats::decision::population::wasserstein1;
 use medulla_decision_stats::decision::reward::decompose;
@@ -103,6 +103,7 @@ use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use medulla_types::edit_machine::EditStatus;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
 

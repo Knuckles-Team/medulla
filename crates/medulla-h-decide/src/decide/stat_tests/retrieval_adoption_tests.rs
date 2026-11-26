@@ -7,11 +7,11 @@ use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, learn, outcome, sql,
 };
 use super::*;
-use medulla_decision_outcome_types::decision::promotion::{
-    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
 use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
 use medulla_decision_types::decision::codes::ADOPTION_NOT_PROVEN;
+use medulla_decision_types::decision::held_out::{
+    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 use medulla_decision_types::decision::statistical::retrieval::ReturnedEvidence;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
