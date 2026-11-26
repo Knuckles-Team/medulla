@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::change_envelope::ChangeEnvelopeCommit;
 use medulla_mutation_types::{
-    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxDeadLetterPage,
+    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxAcked, mutation_outbox::OutboxDeadLetterPage,
+    mutation_outbox::OutboxPulled,
     mutation_outbox::OutboxRewindReceipt,
 };
 
@@ -185,6 +186,8 @@ method_results! {
     MutationOutboxStatus(MutationOutbox / "status") => Raw<MutationOutboxStatusView>;
     MutationOutboxDeadLetters(MutationOutbox / "dead_letters") => Raw<OutboxDeadLetterPage>;
     MutationOutboxRewind(MutationOutbox / "rewind") => Raw<OutboxRewindReceipt>;
+    MutationOutboxPull(MutationOutbox / "pull") => Raw<OutboxPulled>;
+    MutationOutboxAck(MutationOutbox / "ack") => Raw<OutboxAcked>;
 }
 
 #[cfg(test)]

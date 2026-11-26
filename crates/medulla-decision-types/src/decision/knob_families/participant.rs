@@ -54,6 +54,20 @@ pub const KNOBS: &[KnobSpec] = &[
     },
 ];
 
+/// The default of the integer or duration knob `name`; zero for a name that is not a knob of this
+/// family. Handlers that have no server knob table read their bounds here.
+pub fn default_u64(name: &str) -> u64 {
+    KNOBS
+        .iter()
+        .find(|spec| spec.name == name)
+        .and_then(|spec| match spec.default {
+            KnobValue::Integer(value) => u64::try_from(value).ok(),
+            KnobValue::DurationMs(value) => u64::try_from(value).ok(),
+            _ => None,
+        })
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::decision::knobs::KnobSafety;

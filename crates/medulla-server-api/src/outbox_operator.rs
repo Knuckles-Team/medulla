@@ -6,5 +6,5 @@
 
 pub use medulla_transaction::{
     consumer_standing, operate_outbox as operate, outbox_position as position,
-    read_outbox_view as read_view, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
+    read_outbox_view as read_view, OutboxClaimBudget, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
 };

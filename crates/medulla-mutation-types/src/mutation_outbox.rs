@@ -143,18 +143,60 @@ pub enum MutationOutboxOp {
         consumer: String,
         to: RewindTarget,
     },
+    /// Lease up to `limit` pending rows of each named topic for `consumer`
+    /// (MEDULLA-DECISION-ENGINE-R073.7). A service consumer reads memory events with this; the
+    /// target must be a graph, and a row of another tenant is never returned.
+    Pull {
+        target: OutboxTarget,
+        consumer: String,
+        topics: Vec<String>,
+        limit: u32,
+    },
+    /// Acknowledge one leased row; the acknowledgement is the cursor advance
+    /// (MEDULLA-DECISION-ENGINE-R073.7).
+    Ack {
+        target: OutboxTarget,
+        consumer: String,
+        lease: crate::mutation_scope::MutationOutboxLease,
+    },
+}
+
+/// The rows one `Pull` leased, topic by topic, oldest first inside a topic.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OutboxPulled {
+    pub schema_version: u16,
+    pub leases: Vec<crate::mutation_scope::MutationOutboxLease>,
+}
+
+/// Where an acknowledgement left the consumer's cursor.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OutboxAcked {
+    pub schema_version: u16,
+    pub consumer: String,
+    /// The batch of the last row the cursor now covers.
+    pub batch_id: String,
+    /// The ordinal of that row inside its batch.
+    pub ordinal: u32,
 }
 
 impl MutationOutboxOp {
-    /// Only a rewind writes; the two views read a snapshot.
+    /// A rewind, a pull (it leases rows) and an ack write; the two views read a snapshot.
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Rewind { .. })
+        matches!(self, Self::Rewind { .. } | Self::Pull { .. } | Self::Ack { .. })
     }
 
-    /// One action for all three: reading another consumer's backlog is as
-    /// operationally privileged as replaying it.
+    /// One action for the three operator operations: reading another consumer's backlog is as
+    /// operationally privileged as replaying it. A pull and an ack are the memory-event consumer's
+    /// own, granted to a service principal for webhooks (MEDULLA-DECISION-ENGINE-R073.7).
     pub fn authz_action(&self) -> &'static str {
-        "admin:outbox"
+        match self {
+            Self::Pull { .. } | Self::Ack { .. } => "memory:events",
+            Self::Status { .. } | Self::DeadLetters { .. } | Self::Rewind { .. } => "admin:outbox",
+        }
     }
 
     /// The consumer this operation names.
@@ -162,7 +204,9 @@ impl MutationOutboxOp {
         match self {
             Self::Status { consumer, .. }
             | Self::DeadLetters { consumer, .. }
-            | Self::Rewind { consumer, .. } => consumer,
+            | Self::Rewind { consumer, .. }
+            | Self::Pull { consumer, .. }
+            | Self::Ack { consumer, .. } => consumer,
         }
     }
 
@@ -171,7 +215,9 @@ impl MutationOutboxOp {
         match self {
             Self::Status { target, .. }
             | Self::DeadLetters { target, .. }
-            | Self::Rewind { target, .. } => target,
+            | Self::Rewind { target, .. }
+            | Self::Pull { target, .. }
+            | Self::Ack { target, .. } => target,
         }
     }
 
@@ -188,7 +234,17 @@ impl MutationOutboxOp {
             Self::DeadLetters { limit, .. } if *limit > MAX_OUTBOX_DEAD_LETTER_PAGE => Err(
                 format!("mutation outbox dead-letter limit exceeds {MAX_OUTBOX_DEAD_LETTER_PAGE}"),
             ),
-            Self::Status { .. } | Self::DeadLetters { .. } | Self::Rewind { .. } => Ok(()),
+            Self::Pull { limit, .. } if *limit == 0 => {
+                Err("mutation outbox pull limit must be at least one".to_string())
+            }
+            Self::Pull { topics, .. } if topics.is_empty() => {
+                Err("mutation outbox pull must name at least one topic".to_string())
+            }
+            Self::Status { .. }
+            | Self::DeadLetters { .. }
+            | Self::Rewind { .. }
+            | Self::Pull { .. }
+            | Self::Ack { .. } => Ok(()),
         }
     }
 }
@@ -424,5 +480,49 @@ mod standing_tests {
         let moved = old.as_object_mut().unwrap().remove("standing").unwrap();
         old["status"] = moved;
         assert!(serde_json::from_value::<MutationOutboxStatusView>(old).is_err());
+    }
+}
+
+#[cfg(test)]
+mod memory_event_op_tests {
+    use super::*;
+
+    fn graph() -> OutboxTarget {
+        OutboxTarget::Graph { graph: "g".to_string() }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R073.7
+    #[test]
+    fn pull_and_ack_are_writes_under_the_memory_events_action() {
+        let pull = MutationOutboxOp::Pull {
+            target: graph(),
+            consumer: "memory-webhooks".to_string(),
+            topics: vec!["memory.claim.changed".to_string()],
+            limit: 10,
+        };
+        assert!(pull.is_mutation());
+        assert_eq!(pull.authz_action(), "memory:events");
+        assert!(pull.validate().is_ok());
+        // The operator operations keep their action.
+        let status = MutationOutboxOp::Status { target: graph(), consumer: "c".to_string() };
+        assert_eq!(status.authz_action(), "admin:outbox");
+        assert!(!status.is_mutation());
+        // A pull needs a limit and a topic.
+        let no_limit = MutationOutboxOp::Pull {
+            target: graph(),
+            consumer: "c".to_string(),
+            topics: vec!["t".to_string()],
+            limit: 0,
+        };
+        assert!(no_limit.validate().is_err());
+        let no_topic = MutationOutboxOp::Pull {
+            target: graph(),
+            consumer: "c".to_string(),
+            topics: Vec::new(),
+            limit: 1,
+        };
+        assert!(no_topic.validate().is_err());
+        let wire = serde_json::to_string(&pull).unwrap();
+        assert_eq!(serde_json::from_str::<MutationOutboxOp>(&wire).unwrap(), pull);
     }
 }

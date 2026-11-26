@@ -211,6 +211,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("mcp:admin", Admin, "graph-os"),
     entry("mcp:delegate", User, "graph-os"),
     entry("mcp:discover", User, "graph-os"),
+    entry("memory:events", ServiceOnly, "engine"),
     entry("memory:read", User, "engine"),
     entry("memory:write", User, "engine"),
     entry("mining:read", User, "engine"),

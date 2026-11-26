@@ -51,6 +51,8 @@ pub async fn handle_mutation_outbox(
 }
 
 #[cfg(feature = "redb")]
+mod memory_events;
+#[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::position;
 #[cfg(feature = "redb")]
 use medulla_server_api::outbox_operator::OutboxView;
@@ -70,6 +72,8 @@ const BLOCKING_TASK: &str = "mutation outbox";
 enum Answer {
     View(OutboxViewAnswer),
     Write(OutboxWriteReply),
+    Pulled(medulla_mutation_types::mutation_outbox::OutboxPulled),
+    Acked(medulla_mutation_types::mutation_outbox::OutboxAcked),
 }
 
 #[cfg(feature = "redb")]
@@ -91,6 +95,14 @@ impl Answer {
                 req_id,
                 ResultPayload::of_ref::<results::MutationOutboxRewind>(&receipt),
             ),
+            Answer::Pulled(pulled) => Response::ok(
+                req_id,
+                ResultPayload::of_ref::<results::MutationOutboxPull>(&pulled),
+            ),
+            Answer::Acked(acked) => Response::ok(
+                req_id,
+                ResultPayload::of_ref::<results::MutationOutboxAck>(&acked),
+            ),
             Answer::Write(OutboxWriteReply::Rejected) => Response::err(
                 req_id,
                 "CORRUPT_OUTBOX: an operator request produced a consumer reject",
@@ -107,6 +119,26 @@ async fn serve(
 ) -> Result<Answer, String> {
     op.validate()?;
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    // The memory-event consumer's own operations (MEDULLA-DECISION-ENGINE-R073.7): they read the
+    // graph's durable ledger through the persistence seam and filter by the verified tenant.
+    if let MutationOutboxOp::Pull { .. } | MutationOutboxOp::Ack { .. } = &op {
+        let persistence = state.read().await.persistence.clone().ok_or_else(|| {
+            "OUTBOX_OWNER_UNAVAILABLE: no durable persistence backend".to_string()
+        })?;
+        return match op {
+            MutationOutboxOp::Pull { target, consumer, topics, limit } => {
+                memory_events::pull(&persistence, verified, &target, &consumer, &topics, limit, now_ms)
+                    .await
+                    .map(Answer::Pulled)
+            }
+            MutationOutboxOp::Ack { target, consumer, lease } => {
+                memory_events::ack(&persistence, verified, &target, &consumer, &lease, now_ms)
+                    .await
+                    .map(Answer::Acked)
+            }
+            _ => Err("INTERNAL: not a memory event operation".to_string()),
+        };
+    }
     let owner = resolve(state, verified, op.target()).await?;
     match op {
         MutationOutboxOp::Status { consumer, .. } => owner
@@ -134,6 +166,9 @@ async fn serve(
             })
             .await
             .map(Answer::Write),
+        MutationOutboxOp::Pull { .. } | MutationOutboxOp::Ack { .. } => {
+            Err("INTERNAL: memory event operations are served before owner resolution".to_string())
+        }
     }
 }
 

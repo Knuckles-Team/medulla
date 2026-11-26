@@ -22102,10 +22102,49 @@ class MutationOutboxOpRewind(BaseModel):
     to: RewindTarget
 
 
+class MutationOutboxOpPull(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    consumer: str
+    limit: Annotated[int, Field(ge=0)]
+    op: Literal["pull"]
+    target: OutboxTarget
+    topics: list[str]
+
+
+class MutationOutboxOpAck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    consumer: str
+    lease: MutationOutboxLease
+    op: Literal["ack"]
+    target: OutboxTarget
+
+
 MutationOutboxOp = Annotated[
-    MutationOutboxOpStatus | MutationOutboxOpDeadLetters | MutationOutboxOpRewind,
+    MutationOutboxOpStatus
+    | MutationOutboxOpDeadLetters
+    | MutationOutboxOpRewind
+    | MutationOutboxOpPull
+    | MutationOutboxOpAck,
     Field(discriminator="op"),
 ]
+
+
+class OutboxPulled(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    leases: list[MutationOutboxLease]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class OutboxAcked(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    batch_id: str
+    consumer: str
+    ordinal: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
 class MutationOutboxRecord(BaseModel):
