@@ -12,6 +12,15 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use super::planned_write::PlannedWrite;
 use super::SharedState;
 
+/// The graph node id of one invocation (MEDULLA-DECISION-ENGINE-R713.3). The id is namespaced by
+/// the tenant, with the tenant length in front so no tenant and id pair spells another's, so the
+/// repeat check of an ingest looks only at the caller's own tenant: a foreign tenant's invocation
+/// id never collides with the caller's and never answers differently (no existence oracle).
+#[cfg(all(feature = "decide", feature = "redb"))]
+pub(crate) fn invocation_node_id(tenant: &str, invocation_id: &str) -> String {
+    format!("skill-invocation:{}:{tenant}:{invocation_id}", tenant.len())
+}
+
 /// Plan one `SkillTelemetry` operation for the verified caller.
 pub async fn handle_skill_telemetry(
     state: &SharedState,
@@ -470,7 +479,7 @@ mod served {
                 ));
             }
             row.tenant_id = tenant.to_string();
-            let node = node_id(&row.invocation_id);
+            let node = super::invocation_node_id(tenant, &row.invocation_id);
             if index.exists(&node) || !seen.insert(row.invocation_id.clone()) {
                 repeated += 1;
                 continue;
@@ -483,7 +492,7 @@ mod served {
             .to_hex();
         let mut operations = Vec::new();
         for row in &accepted {
-            let node = node_id(&row.invocation_id);
+            let node = super::invocation_node_id(tenant, &row.invocation_id);
             operations.push(json!({"op": "upsert_node", "id": node, "properties": to_row(row)}));
             if let Some(trace) = index.run_trace_of(tenant, &row.run_id) {
                 operations.push(edge_operation(&node, &trace, OBSERVED_IN, &receipt));
@@ -497,10 +506,6 @@ mod served {
                 repeated,
             })?,
         })
-    }
-
-    fn node_id(invocation_id: &str) -> String {
-        format!("skill-invocation:{invocation_id}")
     }
 
     /// Whether a `:Score` node passed: its `passed` flag, else a normalised value at or above

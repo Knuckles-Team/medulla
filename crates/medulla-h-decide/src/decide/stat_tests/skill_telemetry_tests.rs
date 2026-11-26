@@ -4,7 +4,7 @@
 //! traces list by eval outcome.
 
 use super::super::planned_write::PlannedWrite;
-use super::super::skill_telemetry::handle_skill_telemetry;
+use super::super::skill_telemetry::{handle_skill_telemetry, invocation_node_id};
 use super::*;
 use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
 use medulla_decision_types::skill_telemetry::{
@@ -202,10 +202,11 @@ async fn ingest_files_each_invocation_under_the_read_index_keys() {
         ids.sort();
         ids
     };
-    assert_eq!(by("skill_ref", SKILL), ["skill-invocation:i1", "skill-invocation:i2"]);
+    let node = |id: &str| invocation_node_id(TENANT, id);
+    assert_eq!(by("skill_ref", SKILL), [node("i1"), node("i2")]);
     assert_eq!(by("principal_pseudonym", &principal_pseudonym(TENANT, "u1", 1)).len(), 2);
-    assert_eq!(by("started_day", "1"), ["skill-invocation:i1", "skill-invocation:i2"]);
-    assert_eq!(by("started_day", "5"), ["skill-invocation:i3"]);
+    assert_eq!(by("started_day", "1"), [node("i1"), node("i2")]);
+    assert_eq!(by("started_day", "5"), [node("i3")]);
 
     // A read narrowed by skill and window answers from those keys: a window of days 0 to 1 holds
     // the two rows of the skill, a window of day 5 alone holds none of them.
@@ -402,4 +403,65 @@ async fn traces_by_eval_uses_the_edge_index() {
     let second: TracesAnswer = reply(&run(&h, &caller, page(first.next_cursor)).await.unwrap());
     assert_eq!(second.trace_ids, ["trace-run-a"]);
     assert_eq!(second.next_cursor, None);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R713.3
+#[tokio::test]
+async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently() {
+    const FOREIGN: &str = "tenant-foreign";
+    const FOREIGN_SKILL: &str = "skill:foreign@1";
+    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let core = seed(&h).await;
+    put(&core, FOREIGN_SKILL, json!({"type": "Skill", "tenant_id": FOREIGN}));
+    let owner = who();
+    let foreign = VerifiedRequestContext::verified_for_test_with_scopes(
+        "agent-7",
+        FOREIGN,
+        &["telemetry:write", "telemetry:read"],
+    );
+
+    // The owner stores invocation `i1`.
+    let mine = run(&h, &owner, ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]))
+        .await
+        .expect("ingests");
+    assert_eq!(reply::<IngestReceipt>(&mine), IngestReceipt { stored: 1, repeated: 0 });
+    commit(&core, &mine);
+
+    // Another tenant ingests the same invocation id. It answers exactly as it would on an empty
+    // graph (stored, not repeated), so the id tells it nothing about the owner's rows.
+    let theirs = run(&h, &foreign, ingest_op(vec![event("i1", FOREIGN_SKILL, "u9", 1, "run-z", false)]))
+        .await
+        .expect("ingests");
+    assert_eq!(reply::<IngestReceipt>(&theirs), IngestReceipt { stored: 1, repeated: 0 });
+    commit(&core, &theirs);
+
+    // The two rows are two nodes, each stamped with its own tenant.
+    let (own_node, foreign_node) = (invocation_node_id(TENANT, "i1"), invocation_node_id(FOREIGN, "i1"));
+    assert_ne!(own_node, foreign_node);
+    let tenant_of = |id: &str| {
+        let blob = core.get_node_properties(id).expect("the node exists");
+        medulla_types::msgpack::decode_property_value(&blob).unwrap()["tenant_id"].clone()
+    };
+    assert_eq!(tenant_of(&own_node), json!(TENANT));
+    assert_eq!(tenant_of(&foreign_node), json!(FOREIGN));
+
+    // A repeat is still found, but only inside the tenant that stored it.
+    let again = run(&h, &owner, ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]))
+        .await
+        .expect("repeats");
+    assert_eq!(reply::<IngestReceipt>(&again), IngestReceipt { stored: 0, repeated: 1 });
+
+    // Neither tenant's measures count the other's invocation.
+    let measured = |caller: &VerifiedRequestContext, skill: &str| {
+        let op = SkillTelemetryOp::Measures {
+            graph: GRAPH.into(),
+            skill_ref: skill.into(),
+            window: window(),
+        };
+        let (h, caller) = (&h, caller.clone());
+        async move { reply::<SkillMeasures>(&run(h, &caller, op).await.expect("reads")).invocations }
+    };
+    assert_eq!(measured(&owner, SKILL).await, 1);
+    assert_eq!(measured(&foreign, FOREIGN_SKILL).await, 1);
+    assert_eq!(measured(&foreign, SKILL).await, 0);
 }
