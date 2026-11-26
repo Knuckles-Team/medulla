@@ -204,6 +204,7 @@ pub fn answer(
     let subject = require_subject(question, subject)?;
     let mut out = Collector::new(view);
     answer_lifecycle(question, subject, view, &mut out)?;
+    answer_context(question, subject, view, &mut out)?;
     match question {
         SpecQuestion::UnreachableRequirements => {
             for requirement in view.of_type("Requirement") {
@@ -341,7 +342,13 @@ pub fn answer(
         | SpecQuestion::DeploymentOfRequirement
         | SpecQuestion::OpenDefectsInRelease
         | SpecQuestion::ChangesetsBetweenDeployments
-        | SpecQuestion::OpenTasksOfBundle => {}
+        | SpecQuestion::OpenTasksOfBundle
+        // The context questions are answered by `answer_context` above.
+        | SpecQuestion::TaskContext
+        | SpecQuestion::PlanSection
+        | SpecQuestion::Contract
+        | SpecQuestion::SeamRouting
+        | SpecQuestion::PlanToGoalPhase => {}
     }
     Ok(out.finish())
 }
@@ -455,6 +462,230 @@ fn answer_lifecycle(
         }
         SpecQuestion::OpenTasksOfBundle => open_tasks_of_bundle(subject, view, out)?,
         _ => {}
+    }
+    Ok(())
+}
+
+/// The ids joined with commas, in the order given with repeats dropped.
+fn joined<'a>(ids: impl IntoIterator<Item = &'a str>) -> String {
+    let mut seen = BTreeSet::new();
+    ids.into_iter()
+        .filter(|id| seen.insert(*id))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// The context questions of MEDULLA-SDLC-R014.15, over the same pre-read view. Each takes a
+/// node id and refuses `COMPETENCY_SUBJECT_UNKNOWN` when no record of the right type has it.
+fn answer_context(
+    question: SpecQuestion,
+    subject: Option<&str>,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    let subject = subject.unwrap_or_default();
+    match question {
+        SpecQuestion::TaskContext => task_context(subject, view, out),
+        SpecQuestion::PlanSection => plan_section(subject, view, out),
+        SpecQuestion::Contract => contract(subject, view, out),
+        SpecQuestion::SeamRouting => seam_routing(subject, view, out),
+        SpecQuestion::PlanToGoalPhase => plan_to_goal_phase(subject, view, out),
+        _ => Ok(()),
+    }
+}
+
+/// One row for one task: the row it serves, the plan sections that cover that row, the
+/// contracts it crosses, its code items, the rows it depends on and what blocks it.
+fn task_context(
+    task: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, task, "TaskLine")?;
+    let row = view.out(task, "forRow").next().unwrap_or_default();
+    let sections: Vec<&str> = view.inbound(row, "covers").collect();
+    let contracts: Vec<&str> = view.out(row, "crossesSeam").collect();
+    let code: Vec<&str> = view.out(row, "implementedBy").collect();
+    let depends: Vec<&str> = view.out(row, "dependsOnRow").collect();
+    let open_dependencies: Vec<&str> = depends
+        .iter()
+        .copied()
+        .filter(|dependency| view.unverified(dependency))
+        .collect();
+    let providers: Vec<String> = blocked_tasks(view)
+        .into_iter()
+        .filter(|(blocked, ..)| blocked == task)
+        .map(|(_, _, _, provider)| provider)
+        .collect();
+    let blocked_by = joined(providers.iter().map(String::as_str));
+    let blocked = !blocked_by.is_empty() || !open_dependencies.is_empty();
+    let mut read = vec![task, row];
+    read.extend(&sections);
+    read.extend(&contracts);
+    read.extend(&depends);
+    out.row(
+        &read,
+        &[
+            ("task", task),
+            ("task_id", view.prop(task, "taskId")),
+            ("phase", view.prop(task, "phase")),
+            ("ticked", view.prop(task, "ticked")),
+            ("row", row),
+            ("row_id", view.prop(row, "rowId")),
+            ("row_status", view.prop(row, "rowStatus")),
+            ("plan_sections", joined(sections.iter().copied()).as_str()),
+            ("contracts", joined(contracts.iter().copied()).as_str()),
+            ("code_items", joined(code.iter().copied()).as_str()),
+            ("depends_on", joined(depends.iter().copied()).as_str()),
+            (
+                "open_dependencies",
+                joined(open_dependencies.iter().copied()).as_str(),
+            ),
+            ("blocked_by_providers", blocked_by.as_str()),
+            ("blocked", if blocked { "true" } else { "false" }),
+        ],
+    );
+    Ok(())
+}
+
+/// One row for one plan section: its span, phase, digest, text and covered rows.
+fn plan_section(
+    section: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, section, "PlanSection")?;
+    let covered: Vec<&str> = view.out(section, "covers").collect();
+    let mut read = vec![section];
+    read.extend(&covered);
+    out.row(
+        &read,
+        &[
+            ("section", section),
+            ("repo", view.prop(section, "repo")),
+            ("file", view.prop(section, "file")),
+            ("title", view.prop(section, "title")),
+            ("phase", view.prop(section, "phase")),
+            ("start_line", view.prop(section, "start_line")),
+            ("end_line", view.prop(section, "end_line")),
+            ("section_digest", view.prop(section, "digest")),
+            ("text", view.prop(section, "text")),
+            ("requirements", joined(covered.iter().copied()).as_str()),
+        ],
+    );
+    Ok(())
+}
+
+/// One row for one contract: its declared parts, the rows that cross it and the providers
+/// that are not yet verified.
+fn contract(
+    contract: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, contract, "Contract")?;
+    let crossing: Vec<&str> = view.inbound(contract, "crossesSeam").collect();
+    let providers = provider_nodes(view, contract);
+    let unverified: Vec<&str> = providers
+        .iter()
+        .map(String::as_str)
+        .filter(|provider| view.unverified(provider))
+        .collect();
+    let mut read = vec![contract];
+    read.extend(&crossing);
+    read.extend(providers.iter().map(String::as_str));
+    out.row(
+        &read,
+        &[
+            ("contract", contract),
+            ("repo", view.prop(contract, "repo")),
+            ("seam", view.prop(contract, "seam")),
+            ("declared_in", view.prop(contract, "declaredIn")),
+            ("provider_repos", view.prop(contract, "provider_repos")),
+            ("provider_rows", view.prop(contract, "provider_rows")),
+            ("consumer_repos", view.prop(contract, "consumer_repos")),
+            ("wire_shape", view.prop(contract, "wire_shape")),
+            ("refusal_codes", view.prop(contract, "refusal_codes")),
+            ("types", view.prop(contract, "types")),
+            ("vectors", view.prop(contract, "vectors")),
+            ("crossing_rows", joined(crossing.iter().copied()).as_str()),
+            (
+                "unverified_providers",
+                joined(unverified.iter().copied()).as_str(),
+            ),
+        ],
+    );
+    Ok(())
+}
+
+/// One row per provider of each contract the requirement crosses: which repository and row
+/// provides the seam, whether this row is itself a provider, and the provider's status.
+fn seam_routing(
+    requirement: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, requirement, "Requirement")?;
+    out.read(requirement);
+    for contract in view.out(requirement, "crossesSeam") {
+        let providers = provider_nodes(view, contract);
+        let direction = if providers.iter().any(|provider| provider == requirement) {
+            "provider"
+        } else {
+            "consumer"
+        };
+        for provider in &providers {
+            let (repo, row) = provider
+                .strip_prefix("requirement:")
+                .and_then(|pair| pair.split_once(':'))
+                .unwrap_or_default();
+            let status = if view.nodes.contains_key(provider) {
+                view.prop(provider, "rowStatus")
+            } else {
+                "unknown"
+            };
+            out.row(
+                &[contract, provider.as_str()],
+                &[
+                    ("contract", contract),
+                    ("seam", view.prop(contract, "seam")),
+                    ("direction", direction),
+                    ("provider", provider.as_str()),
+                    ("provider_repo", repo),
+                    ("provider_row", row),
+                    ("provider_status", status),
+                    ("consumer_repos", view.prop(contract, "consumer_repos")),
+                ],
+            );
+        }
+    }
+    Ok(())
+}
+
+/// One row per requirement a plan section covers: the section's phase and the goals that
+/// requirement targets (empty when it targets none).
+fn plan_to_goal_phase(
+    section: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, section, "PlanSection")?;
+    out.read(section);
+    let phase = view.prop(section, "phase");
+    for requirement in view.out(section, "covers") {
+        let goals: Vec<&str> = view.out(requirement, "targetsGoal").collect();
+        let mut read = vec![requirement];
+        read.extend(&goals);
+        out.row(
+            &read,
+            &[
+                ("section", section),
+                ("phase", phase),
+                ("requirement", requirement),
+                ("row", view.prop(requirement, "rowId")),
+                ("goals", joined(goals.iter().copied()).as_str()),
+            ],
+        );
     }
     Ok(())
 }
@@ -706,5 +937,121 @@ mod tests {
             answer(SpecQuestion::UncoveredCodeItems, Some("x"), &view),
             Err(LifecycleRefusal::ParameterInvalid(_))
         ));
+    }
+
+    // spec: MEDULLA-SDLC-R014.15
+    #[test]
+    fn context_questions_answer_task_section_contract_seam_and_goal_phase() {
+        let mut view = SpecGraphView::default();
+        for (id, status, repo, row) in [
+            ("requirement:r:A-R1", "SPECIFIED", "r", "A-R1"),
+            ("requirement:r:A-R2", "VERIFIED", "r", "A-R2"),
+            ("requirement:p:P-R7", "SPECIFIED", "p", "P-R7"),
+        ] {
+            view.nodes.insert(
+                id.into(),
+                node(
+                    "Requirement",
+                    &[("rowStatus", status), ("repo", repo), ("rowId", row)],
+                ),
+            );
+        }
+        view.nodes.insert(
+            "contract:r:seam".into(),
+            node(
+                "Contract",
+                &[
+                    ("seam", "seam"),
+                    ("provider_rows", "p:P-R7"),
+                    ("consumer_repos", "r"),
+                    ("wire_shape", "{a}"),
+                ],
+            ),
+        );
+        view.nodes.insert(
+            "task:r:t#T1".into(),
+            node("TaskLine", &[("taskId", "T1"), ("phase", "2"), ("ticked", "false")]),
+        );
+        view.nodes.insert(
+            "plansection:r:p.md#L3".into(),
+            node(
+                "PlanSection",
+                &[("title", "Phase 2"), ("phase", "2"), ("start_line", "3"), ("digest", "sha256:x")],
+            ),
+        );
+        view.nodes
+            .insert("goal:g".into(), node("Goal", &[("statement", "ship")]));
+        for (from, rel, to) in [
+            ("task:r:t#T1", "forRow", "requirement:r:A-R1"),
+            ("requirement:r:A-R1", "crossesSeam", "contract:r:seam"),
+            ("requirement:p:P-R7", "crossesSeam", "contract:r:seam"),
+            ("requirement:r:A-R1", "dependsOnRow", "requirement:r:A-R2"),
+            ("plansection:r:p.md#L3", "covers", "requirement:r:A-R1"),
+            ("plansection:r:p.md#L3", "covers", "requirement:r:A-R2"),
+            ("requirement:r:A-R1", "targetsGoal", "goal:g"),
+        ] {
+            edge(&mut view, from, rel, to);
+        }
+
+        let task = answer(SpecQuestion::TaskContext, Some("task:r:t#T1"), &view).unwrap();
+        assert_eq!(task.rows.len(), 1);
+        let row = &task.rows[0];
+        assert_eq!(row["row"], "requirement:r:A-R1");
+        assert_eq!(row["plan_sections"], "plansection:r:p.md#L3");
+        assert_eq!(row["contracts"], "contract:r:seam");
+        assert_eq!(row["depends_on"], "requirement:r:A-R2");
+        assert_eq!(row["open_dependencies"], "", "A-R2 is verified");
+        assert_eq!(row["blocked_by_providers"], "requirement:p:P-R7");
+        assert_eq!(row["blocked"], "true");
+        assert!(!task.digests.is_empty());
+
+        let section = answer(SpecQuestion::PlanSection, Some("plansection:r:p.md#L3"), &view).unwrap();
+        assert_eq!(section.rows[0]["phase"], "2");
+        assert_eq!(section.rows[0]["section_digest"], "sha256:x");
+        assert_eq!(
+            section.rows[0]["requirements"],
+            "requirement:r:A-R1,requirement:r:A-R2"
+        );
+
+        let seam = answer(SpecQuestion::Contract, Some("contract:r:seam"), &view).unwrap();
+        assert_eq!(seam.rows[0]["wire_shape"], "{a}");
+        assert_eq!(
+            seam.rows[0]["crossing_rows"],
+            "requirement:p:P-R7,requirement:r:A-R1"
+        );
+        assert_eq!(seam.rows[0]["unverified_providers"], "requirement:p:P-R7");
+
+        let routed = answer(SpecQuestion::SeamRouting, Some("requirement:r:A-R1"), &view).unwrap();
+        assert_eq!(routed.rows.len(), 1);
+        assert_eq!(routed.rows[0]["direction"], "consumer");
+        assert_eq!(routed.rows[0]["provider_repo"], "p");
+        assert_eq!(routed.rows[0]["provider_row"], "P-R7");
+        assert_eq!(routed.rows[0]["provider_status"], "SPECIFIED");
+        let provider = answer(SpecQuestion::SeamRouting, Some("requirement:p:P-R7"), &view).unwrap();
+        assert_eq!(provider.rows[0]["direction"], "provider");
+
+        let goals = answer(
+            SpecQuestion::PlanToGoalPhase,
+            Some("plansection:r:p.md#L3"),
+            &view,
+        )
+        .unwrap();
+        assert_eq!(goals.rows.len(), 2);
+        assert_eq!(goals.rows[0]["goals"], "goal:g");
+        assert_eq!(goals.rows[0]["phase"], "2");
+        assert_eq!(goals.rows[1]["goals"], "");
+
+        for (question, subject) in [
+            (SpecQuestion::TaskContext, "task:none"),
+            (SpecQuestion::PlanSection, "requirement:r:A-R1"),
+            (SpecQuestion::Contract, "plansection:r:p.md#L3"),
+            (SpecQuestion::SeamRouting, "contract:r:seam"),
+            (SpecQuestion::PlanToGoalPhase, "goal:g"),
+        ] {
+            let refused = answer(question, Some(subject), &view).unwrap_err();
+            assert_eq!(refused.code(), "COMPETENCY_SUBJECT_UNKNOWN", "{question:?}");
+            let missing = answer(question, None, &view).unwrap_err();
+            assert_eq!(missing.code(), "PARAMETER_INVALID", "{question:?}");
+        }
     }
 }

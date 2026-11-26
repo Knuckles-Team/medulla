@@ -80,6 +80,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plan sections are records.
 - [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
 - [ ] T071 [US2] MEDULLA-SDLC-R014.9 Hot-path proof: served artifact graph.
+- [ ] T071a [US2] MEDULLA-SDLC-R014.15 Context questions for a task, a plan section, a contract, a seam and a plan's goals.
 - [ ] T072 [US3] MEDULLA-SDLC-R015 Task-dispatch decision .
 - [ ] T074 [US3] MEDULLA-SDLC-R015.2 Run-context assembly.
 - [ ] T075 [US3] MEDULLA-SDLC-R015.3 Wiring: hand each task to an agent run.

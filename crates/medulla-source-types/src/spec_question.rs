@@ -37,6 +37,22 @@ pub enum SpecQuestion {
     /// The open task rows of one release bundle in the bundle's train order
     /// (MEDULLA-SDLC-R018.2).
     OpenTasksOfBundle,
+    /// What an implementer needs for one task: its row, phase, covering plan sections,
+    /// contracts, code items and what blocks it (MEDULLA-SDLC-R014.15). The subject is the
+    /// task node id.
+    TaskContext,
+    /// One plan section with its span, phase and the requirement rows it covers
+    /// (MEDULLA-SDLC-R014.15). The subject is the plan section node id.
+    PlanSection,
+    /// One contract with its wire shape, providers and the rows that cross it
+    /// (MEDULLA-SDLC-R014.15). The subject is the contract node id.
+    Contract,
+    /// For each contract one requirement row crosses, which repository and row provides it
+    /// (MEDULLA-SDLC-R014.15). The subject is the requirement node id.
+    SeamRouting,
+    /// The phase of one plan section and the goals each requirement it covers targets
+    /// (MEDULLA-SDLC-R014.15). The subject is the plan section node id.
+    PlanToGoalPhase,
 }
 
 impl SpecQuestion {
@@ -53,6 +69,11 @@ impl SpecQuestion {
                 | Self::OpenDefectsInRelease
                 | Self::ChangesetsBetweenDeployments
                 | Self::OpenTasksOfBundle
+                | Self::TaskContext
+                | Self::PlanSection
+                | Self::Contract
+                | Self::SeamRouting
+                | Self::PlanToGoalPhase
         )
     }
 }

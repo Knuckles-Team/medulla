@@ -19419,7 +19419,11 @@ class MedullaClient:
         ``question`` is ``unreachable_requirements``, ``uncovered_code_items``,
         ``tasks_blocked_by_contract``, ``principles_at_risk`` (``subject`` is the
         changeset id), ``changes_advancing_goal`` (``subject`` is the goal node id) or
-        ``next_unblocked_task`` (``subject`` is the phase). The answer holds ``rows``
+        ``next_unblocked_task`` (``subject`` is the phase). The context questions
+        (MEDULLA-SDLC-R014.15) each take a node id as ``subject``: ``task_context``
+        (the task), ``plan_section`` (the plan section), ``contract`` (the contract),
+        ``seam_routing`` (the requirement) and ``plan_to_goal_phase`` (the plan
+        section). The answer holds ``rows``
         and the ``digests`` of the records it read. A subject given where none is taken,
         or missing where required, refuses ``PARAMETER_INVALID``; an unknown goal or
         phase refuses ``COMPETENCY_SUBJECT_UNKNOWN``.
