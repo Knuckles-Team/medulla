@@ -30,9 +30,6 @@ pub const WORKFLOW_OPTION: &str = "workflow";
 /// The request parameter that carries the draft.
 pub const PARAM_SKILL_WORKFLOW: &str = "skill_workflow";
 
-/// Every refusal code of this family.
-pub use medulla_decision_types::decision::skill_workflow::REFUSALS;
-
 /// The family of the `skill_workflow_compile` question kind.
 pub struct SkillWorkflowFamily;
 

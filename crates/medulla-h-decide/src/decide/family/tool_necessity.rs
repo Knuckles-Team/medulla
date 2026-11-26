@@ -21,7 +21,6 @@ use medulla_decision_types::decision::tool_necessity::{
     compare_tool_decision, measure_tool_necessity, MismatchReason, NecessityRefusal,
     ToolNecessityKnobs, MODEL_UNKNOWN, STALE_MEASUREMENT, TOOL_UNKNOWN,
 };
-pub use medulla_decision_types::decision::tool_necessity::REFUSALS;
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::refusal_code::RefusalCode;

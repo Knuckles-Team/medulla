@@ -16,8 +16,6 @@ use medulla_decision_types::decision::graph_intake::{
     GraphReference, GraphResolutionError, IntakeSource, ResolvedSource, PARAM_GRAPH,
     PARAM_SOURCES,
 };
-#[allow(unused_imports)]
-pub use medulla_decision_types::decision::graph_intake::REFUSALS;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,

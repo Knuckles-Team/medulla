@@ -12,10 +12,6 @@ use medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAn
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-/// The three refusal codes of an abstained part (MEDULLA-CQ-ORCH-R008.3), registered with the
-/// decision codes in `medulla-decision-types` so an abstention round-trips.
-pub use medulla_decision_types::decision::execution_part::REFUSALS;
-
 /// The steps of the task, each with its successor and the source that states it.
 #[cfg(feature = "decide")]
 const STEPS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
