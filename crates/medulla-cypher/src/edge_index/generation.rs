@@ -10,9 +10,9 @@ use std::collections::BTreeMap;
 
 use medulla_ann::HnswIndex;
 use medulla_graph_core::graph::GraphView;
-use medulla_graph_core::index::IndexBlock;
-use medulla_graph_core::index::IndexBlockReason;
 use medulla_graph_core::index::IndexManifest;
+use medulla_index_types::managed_index::IndexBlock;
+use medulla_index_types::managed_index::IndexBlockReason;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};

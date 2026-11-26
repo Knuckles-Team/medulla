@@ -96,9 +96,7 @@ pub enum SchemaSourceOrigin {
     },
 }
 
-pub use medulla_catalog_types::graph_schema::{
-    OntologyRevisionEntry, MAX_ONTOLOGY_REVISION_HISTORY,
-};
+use medulla_catalog_types::graph_schema::{OntologyRevisionEntry, MAX_ONTOLOGY_REVISION_HISTORY};
 
 /// What a schema source's vocabulary may describe in a connector seed graph
 /// (MEDULLA-TYPED-PACKS-R104.4). Only `Domain` vocabulary is bulk data and is

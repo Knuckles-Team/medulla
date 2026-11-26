@@ -52,13 +52,13 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_graph_core::index::IndexBlock;
-use medulla_graph_core::index::IndexBlockReason;
 use medulla_graph_core::index::IndexManifest;
-use medulla_graph_core::index::ManagedIndexFamily;
-use medulla_graph_core::index::ManagedIndexState;
-use medulla_graph_core::index::ManagedIndexStatus;
-use medulla_graph_core::index::ManagedIndexTarget;
+use medulla_index_types::managed_index::IndexBlock;
+use medulla_index_types::managed_index::IndexBlockReason;
+use medulla_index_types::managed_index::ManagedIndexFamily;
+use medulla_index_types::managed_index::ManagedIndexState;
+use medulla_index_types::managed_index::ManagedIndexStatus;
+use medulla_index_types::managed_index::ManagedIndexTarget;
 use serde::{Deserialize, Serialize};
 
 use generation::EdgeGeneration;

@@ -14,10 +14,10 @@ use std::collections::BTreeMap;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
-use medulla_graph_core::index::IndexBlock;
-use medulla_graph_core::index::IndexBlockReason;
 use medulla_graph_core::index::IndexManifest;
-use medulla_graph_core::index::ManagedIndexStatus;
+use medulla_index_types::managed_index::IndexBlock;
+use medulla_index_types::managed_index::IndexBlockReason;
+use medulla_index_types::managed_index::ManagedIndexStatus;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

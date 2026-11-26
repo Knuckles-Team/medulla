@@ -21,10 +21,8 @@
 
 use super::IndexManager;
 
-pub use medulla_index_types::{
-    managed_index::IndexBlock, managed_index::IndexBlockReason, managed_index::ManagedIndexFamily,
-    managed_index::ManagedIndexState, managed_index::ManagedIndexStatus,
-    managed_index::ManagedIndexTarget, managed_index::MAX_BLOCK_DETAIL_BYTES,
+use medulla_index_types::managed_index::{
+    IndexBlock, IndexBlockReason, ManagedIndexState, ManagedIndexStatus, MAX_BLOCK_DETAIL_BYTES,
 };
 
 impl IndexManager {

@@ -45,6 +45,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
 # MEDULLA-FEDERATED-QUERY-R721.1: `ModalityContract` for `TableSnapshotRow` (the SQL modality).

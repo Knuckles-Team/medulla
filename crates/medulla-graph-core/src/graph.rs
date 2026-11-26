@@ -65,11 +65,11 @@ pub use node_history::{
     install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
 };
 pub use version_commits::VersionCommitLog;
-pub use schema_sources::{
+use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
-    OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
-    MAX_CORE_SCHEMA_SOURCES, MAX_ONTOLOGY_REVISION_HISTORY, MAX_SCHEMA_DOCUMENT_TRIPLES,
-    MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID, SOURCE_ROLE_VALUES, VIRTUAL_GRAPH_SHAPES,
+    SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX, MAX_CORE_SCHEMA_SOURCES,
+    MAX_SCHEMA_DOCUMENT_TRIPLES, MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
+    SOURCE_ROLE_VALUES, VIRTUAL_GRAPH_SHAPES,
 };
 pub use snapshot::{GraphSnapshot, LegacyIntegrityPolicy, GRAPH_SNAPSHOT_SCHEMA_VERSION};
 pub use view::GraphView;
@@ -104,7 +104,7 @@ pub struct Topology {
 /// an outer lock. Single-op convenience methods open a one-shot txn. Properties are
 /// `Arc<Vec<u8>>` (Phase C-A) so they move into/out of the DashMap and snapshots
 /// without copying the bytes.
-pub use medulla_result_types::compute_result::algorithms::OntologyMatch;
+use medulla_result_types::compute_result::algorithms::OntologyMatch;
 
 /// A built aho-corasick automaton over capability terms plus the per-pattern
 /// metadata (parallel to the automaton's pattern ids). Cached on [`GraphCore`]

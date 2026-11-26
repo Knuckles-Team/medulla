@@ -59,6 +59,7 @@ medulla-tables = { path = "../medulla-tables" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
+medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
 finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]

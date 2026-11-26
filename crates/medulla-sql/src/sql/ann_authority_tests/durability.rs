@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use super::*;
-use medulla_graph_core::index::ManagedIndexState;
+use medulla_index_types::managed_index::ManagedIndexState;
 use medulla_table_store::{
     tables::ann_authority::durable::encode, tables::ann_authority::durable::verified_manifest,
     tables::ann_authority::durable::Encoding,

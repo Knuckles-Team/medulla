@@ -14,7 +14,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
-use medulla_graph_core::index::ManagedIndexState;
+use medulla_index_types::managed_index::ManagedIndexState;
 use medulla_table_store::tables::ann_authority::generation::AnnGeneration;
 use medulla_table_store::tables::ann_authority::*;
 use medulla_table_store::tables::ann_plan::metric_to_ann;
@@ -644,7 +644,7 @@ fn a_failed_build_is_visible_and_a_dropped_registration_is_forgotten() {
     assert_eq!(failed.state, ManagedIndexState::Blocked);
     assert_eq!(
         failed.block.map(|block| block.reason),
-        Some(medulla_graph_core::index::IndexBlockReason::NotIndexable),
+        Some(medulla_index_types::managed_index::IndexBlockReason::NotIndexable),
         "a typed diagnostic"
     );
 

@@ -10,8 +10,8 @@ use medulla_graph_core::index::IndexDescriptor;
 use medulla_graph_core::index::IndexError;
 use medulla_graph_core::index::IndexKind;
 use medulla_graph_core::index::IndexManifest;
-use medulla_graph_core::index::ManagedIndexStatus;
 use medulla_graph_core::index::SecondaryIndex;
+use medulla_index_types::managed_index::ManagedIndexStatus;
 
 use super::{EdgeIndex, EdgeRefreshOutcome, POISONED};
 

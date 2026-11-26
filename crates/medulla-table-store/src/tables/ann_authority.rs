@@ -49,11 +49,11 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use medulla_graph_core::index::IndexBlock;
-use medulla_graph_core::index::ManagedIndexFamily;
-use medulla_graph_core::index::ManagedIndexState;
-use medulla_graph_core::index::ManagedIndexStatus;
-use medulla_graph_core::index::ManagedIndexTarget;
+use medulla_index_types::managed_index::IndexBlock;
+use medulla_index_types::managed_index::ManagedIndexFamily;
+use medulla_index_types::managed_index::ManagedIndexState;
+use medulla_index_types::managed_index::ManagedIndexStatus;
+use medulla_index_types::managed_index::ManagedIndexTarget;
 
 use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::ann_plan::AnnMethod;

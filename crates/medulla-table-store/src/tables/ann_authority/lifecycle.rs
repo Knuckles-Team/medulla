@@ -9,7 +9,7 @@
 //! the tenant's indexes the reader may see ([`UserAnnAuthority::adopt_statuses`]);
 //! the projection then lists exactly those.
 
-use medulla_graph_core::index::ManagedIndexStatus;
+use medulla_index_types::managed_index::ManagedIndexStatus;
 
 use super::{read, write, AnnIndexStatus, UserAnnAuthority};
 use crate::tables::ann_plan::AnnIndexPlan;

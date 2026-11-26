@@ -9,9 +9,9 @@
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_graph_core::index::ChangeSet;
-use medulla_graph_core::index::IndexBlockReason;
-use medulla_graph_core::index::ManagedIndexState;
-use medulla_graph_core::index::ManagedIndexTarget;
+use medulla_index_types::managed_index::IndexBlockReason;
+use medulla_index_types::managed_index::ManagedIndexState;
+use medulla_index_types::managed_index::ManagedIndexTarget;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 

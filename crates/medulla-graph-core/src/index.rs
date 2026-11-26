@@ -50,11 +50,8 @@ use crate::graph::GraphCore;
 mod lifecycle;
 mod manifest;
 mod server_maintenance;
-pub use lifecycle::{
-    IndexBlock, IndexBlockReason, ManagedIndexFamily, ManagedIndexState, ManagedIndexStatus,
-    ManagedIndexTarget, MAX_BLOCK_DETAIL_BYTES,
-};
 pub use manifest::{IndexCompletenessCursor, IndexManifest, IndexValidity};
+use medulla_index_types::managed_index::ManagedIndexStatus;
 use server_maintenance::{maintain_server_index, record_server_index_step};
 
 mod change_set;
