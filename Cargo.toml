@@ -2447,6 +2447,13 @@ name = "catalog_search"
 path = "benches/catalog_search.rs"
 harness = false
 
+# Glossary label search over 100,000 terms (MEDULLA-TYPED-PACKS-R801.6): nightly budget.
+# Never gates a PR.
+[[bench]]
+name = "glossary_search"
+path = "benches/glossary_search.rs"
+harness = false
+
 # Source sync core at 10,000 records (MEDULLA-SRC-AUTH-R012.10): nightly budget.
 # Never gates a PR.
 [[bench]]

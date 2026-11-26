@@ -4,6 +4,8 @@ Drives `Glossary` through the real served surface: a scheme is imported with its
 terms, a term moves through review, and an approved term binds to an asset.
 """
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import os
@@ -67,7 +69,12 @@ def _approve(client: Any, graph: str, iri: str) -> str:
     approved = _op(
         client,
         graph,
-        {"op": "transition", "iri": iri, "event": "approve", "change_request": request_id},
+        {
+            "op": "transition",
+            "iri": iri,
+            "event": "approve",
+            "change_request": request_id,
+        },
     )
     assert approved["status"] == "approved"
     return request_id
@@ -86,7 +93,9 @@ def served():
             "AddNode",
             {
                 "node_id": ASSET,
-                "properties_msgpack": msgpack.packb({"type": "Column"}, use_bin_type=True),
+                "properties_msgpack": msgpack.packb(
+                    {"type": "Column"}, use_bin_type=True
+                ),
             },
             graph,
         )
@@ -175,7 +184,12 @@ def test_glossary_refusals(served) -> None:
         _op(
             client,
             graph,
-            {"op": "transition", "iri": other, "event": "approve", "change_request": request_id},
+            {
+                "op": "transition",
+                "iri": other,
+                "event": "approve",
+                "change_request": request_id,
+            },
         )
     assert _props(client, graph, other)["status"] == "in_review"
 
@@ -189,7 +203,12 @@ def _approve_in_review(client: Any, graph: str, iri: str) -> None:
     _op(
         client,
         graph,
-        {"op": "transition", "iri": iri, "event": "approve", "change_request": request_id},
+        {
+            "op": "transition",
+            "iri": iri,
+            "event": "approve",
+            "change_request": request_id,
+        },
     )
 
 
@@ -200,20 +219,33 @@ def test_status_history_reads_back(served) -> None:
     _op(
         client,
         graph,
-        {"op": "put_scheme", "scheme": SCHEME, "terms": [{"iri": REVENUE, "term": _term()}]},
+        {
+            "op": "put_scheme",
+            "scheme": SCHEME,
+            "terms": [{"iri": REVENUE, "term": _term()}],
+        },
     )
     request_id = _approve(client, graph, REVENUE)
     actor = request_context()["agent_id"]
-    approved = _props(client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:approved")
+    approved = _props(
+        client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:approved"
+    )
     assert approved["subject"] == REVENUE
     assert approved["subject_kind"] == "term"
     assert (approved["from"], approved["to"]) == ("in_review", "approved")
     assert approved["actor"] == actor
     assert approved["change_request"] == request_id
-    submitted = _props(client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review")
+    submitted = _props(
+        client,
+        graph,
+        f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review",
+    )
     assert (submitted["from"], submitted["to"]) == ("draft", "in_review")
     assert "supersedes" not in submitted
-    assert approved["supersedes"] == f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review"
+    assert (
+        approved["supersedes"]
+        == f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review"
+    )
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.7")
@@ -237,12 +269,16 @@ def test_proposed_description_needs_review(served) -> None:
     # Nobody governs the asset yet, so there is nobody to review.
     with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
         _op(client, graph, {"op": "propose_description", "proposal": proposal})
-    support.assign_stewards(client, graph, ASSET, support.principal(), support.principal(REVIEWER))
+    support.assign_stewards(
+        client, graph, ASSET, support.principal(), support.principal(REVIEWER)
+    )
 
     proposed = _op(client, graph, {"op": "propose_description", "proposal": proposal})
     proposal_id = proposed["iri"]
     stored = _props(client, graph, proposal_id)
-    assert stored["state"] == "proposed" and stored["lineage_refs"] == ["col:orders.subtotal"]
+    assert stored["state"] == "proposed" and stored["lineage_refs"] == [
+        "col:orders.subtotal"
+    ]
     assert "description" not in _props(client, graph, ASSET)
 
     reviewer = support.connect(agent_id=REVIEWER)
@@ -252,7 +288,13 @@ def test_proposed_description_needs_review(served) -> None:
             _decode(
                 reviewer._send(
                     "Glossary",
-                    {"op": {"op": "review_description", "proposal": proposal_id, "approve": True}},
+                    {
+                        "op": {
+                            "op": "review_description",
+                            "proposal": proposal_id,
+                            "approve": True,
+                        }
+                    },
                     graph,
                 )
             )
@@ -265,7 +307,13 @@ def test_proposed_description_needs_review(served) -> None:
         approved = _decode(
             reviewer._send(
                 "Glossary",
-                {"op": {"op": "review_description", "proposal": proposal_id, "approve": True}},
+                {
+                    "op": {
+                        "op": "review_description",
+                        "proposal": proposal_id,
+                        "approve": True,
+                    }
+                },
                 graph,
             )
         )
@@ -274,3 +322,42 @@ def test_proposed_description_needs_review(served) -> None:
         reviewer.close()
     assert _props(client, graph, proposal_id)["state"] == "approved"
     assert _props(client, graph, ASSET)["description"] == proposal["text"]
+
+
+CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.6")
+def test_import_scheme_bind_term_and_review_lifecycle(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R801.6: scheme, review lifecycle, bind and search."""
+    graph, client = served
+    _op(
+        client,
+        graph,
+        {
+            "op": "put_scheme",
+            "scheme": SCHEME,
+            "terms": [{"iri": REVENUE, "term": _term()}],
+        },
+    )
+
+    # The term moves through a change request and binds to the column.
+    _approve(client, graph, REVENUE)
+    bound = _op(client, graph, {"op": "bind", "term": REVENUE, "asset": ASSET})
+    assert bound["iri"] == REVENUE
+
+    # One served query lists the glossary terms of the graph, and the term is found by its
+    # alternative label.
+    rows = client.query.uql(f"MATCH () WHERE type = '{CATALOG}CatalogGlossaryTerm'")
+    assert rows["kind"] == "rows", rows
+    by_alt = [
+        row["id"]
+        for row in rows["rows"]
+        if "turnover"
+        in [
+            str(label).lower()
+            for label in _props(client, graph, row["id"])["alt_labels"]
+        ]
+    ]
+    assert by_alt == [REVENUE]
+    assert _props(client, graph, REVENUE)["status"] == "approved"
