@@ -909,6 +909,75 @@ async fn harness_component_current_is_the_champion() {
     );
 }
 
+const BUNDLE_AGENT: &str = "agent:deployer";
+const BUNDLE_CLASS: &str = "eg:taskclass/deploy";
+
+/// Fifty stored contrasts of one agent and task class, each behind its own
+/// `Evaluated` adoption revision of `Definition { HarnessBundle, <agent>:<class> }`,
+/// all measured against one scored baseline run: `(subject, adoption ids, the
+/// graph that scores the baseline)`.
+fn seed_harness_bundle(h: &Harness) -> (RevisionSubject, Vec<String>, GraphView) {
+    use super::harness_contrast_tests::{graph_view, BASELINE};
+    use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+    use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+    use medulla_work_types::orchestration::improvement::{AdoptedHarness, HarnessContrast};
+
+    let bundle = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::HarnessBundle,
+        definition_ref: format!("{BUNDLE_AGENT}:{BUNDLE_CLASS}"),
+    };
+    assert_eq!(
+        bundle.pointer_key(),
+        format!("champion:definition:harness_bundle:{BUNDLE_AGENT}:{BUNDLE_CLASS}")
+    );
+    let (subject_kind, subject_ref) = RevisionRow::subject_of(&bundle.pointer_key()).unwrap();
+    let delta_q32 = (100_000i64 << 32) / 1_000_000;
+    let mut rows: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut adoptions: Vec<String> = Vec::new();
+    for index in 0..50u64 {
+        let contrast = HarnessContrast {
+            task_ref: format!("task:{index}"),
+            conditions_digest: format!("sha256:conditions-{index:02}"),
+            run_a_trace_id: BASELINE.to_owned(),
+            run_b_trace_id: format!("trace:b-{index}"),
+            retry_delta: 0,
+            tool_selection_delta: 0,
+            eval_score_delta: delta_q32,
+            cost_delta: 0,
+        };
+        let adopted = AdoptedHarness {
+            agent_ref: BUNDLE_AGENT.to_owned(),
+            task_class: BUNDLE_CLASS.to_owned(),
+            component_version_refs: BoundedVec::new(vec![format!("harness-component:p:{index}")])
+                .unwrap(),
+            decision_ref: format!("decision:{index}"),
+            contrast_ref: Some(contrast.node_id()),
+        };
+        let id = adopted.node_id();
+        rows.push((
+            format!("harness-adopted:{index:020}:{id}"),
+            encode_artifact(&adopted).unwrap(),
+        ));
+        rows.push((
+            format!("harness-contrast:{}", contrast.node_id()),
+            encode_artifact(&contrast).unwrap(),
+        ));
+        let revision = RevisionRow {
+            id: id.clone(),
+            subject_kind: subject_kind.clone(),
+            subject_ref: subject_ref.clone(),
+            stage: RevisionStage::Evaluated,
+            digest: format!("sha256:decision-{index}"),
+            evaluation_receipt_id: Some(adopted.decision_ref.clone()),
+            created_ms: index,
+        };
+        rows.push((revision.key(), encode_artifact(&revision).unwrap()));
+        adoptions.push(id);
+    }
+    h.store.put_decision_artifacts(TENANT, &rows).unwrap();
+    (bundle, adoptions, graph_view(&[], &[], &[(BASELINE, 0.5, "human")]))
+}
+
 /// Verifies MEDULLA-DECISION-ENGINE-R805.12: a harness component version and a
 /// per-task adoption are revisions of `Definition` subjects. The component
 /// promotes from its paired rollout set, the adoption from the stored
@@ -919,13 +988,8 @@ async fn harness_component_current_is_the_champion() {
 #[tokio::test]
 async fn harness_definitions_promote_and_roll_back() {
     use super::harness_contrast_tests::{decide_contrast, graph_view, BASELINE};
-    use medulla_decision_outcome_types::decision::promotion::RevisionStage;
-    use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
     use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
-    use medulla_work_types::orchestration::improvement::{AdoptedHarness, HarnessContrast};
 
-    const AGENT: &str = "agent:deployer";
-    const CLASS: &str = "eg:taskclass/deploy";
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);
 
@@ -986,62 +1050,8 @@ async fn harness_definitions_promote_and_roll_back() {
         .unwrap();
     assert_eq!(back.target(), Some(versions[0].as_str()));
 
-    // The adoption: fifty stored contrasts of one agent and task class, each
-    // behind its own adoption revision, all measured against one scored baseline.
-    let bundle = RevisionSubject::Definition {
-        definition_kind: DefinitionKind::HarnessBundle,
-        definition_ref: format!("{AGENT}:{CLASS}"),
-    };
-    assert_eq!(
-        bundle.pointer_key(),
-        format!("champion:definition:harness_bundle:{AGENT}:{CLASS}")
-    );
-    let (subject_kind, subject_ref) = RevisionRow::subject_of(&bundle.pointer_key()).unwrap();
-    let delta_q32 = (100_000i64 << 32) / 1_000_000;
-    let mut rows: Vec<(String, Vec<u8>)> = Vec::new();
-    let mut adoptions: Vec<String> = Vec::new();
-    for index in 0..50u64 {
-        let contrast = HarnessContrast {
-            task_ref: format!("task:{index}"),
-            conditions_digest: format!("sha256:conditions-{index:02}"),
-            run_a_trace_id: BASELINE.to_owned(),
-            run_b_trace_id: format!("trace:b-{index}"),
-            retry_delta: 0,
-            tool_selection_delta: 0,
-            eval_score_delta: delta_q32,
-            cost_delta: 0,
-        };
-        let adopted = AdoptedHarness {
-            agent_ref: AGENT.to_owned(),
-            task_class: CLASS.to_owned(),
-            component_version_refs: BoundedVec::new(vec![format!("harness-component:p:{index}")])
-                .unwrap(),
-            decision_ref: format!("decision:{index}"),
-            contrast_ref: Some(contrast.node_id()),
-        };
-        let id = adopted.node_id();
-        rows.push((
-            format!("harness-adopted:{index:020}:{id}"),
-            encode_artifact(&adopted).unwrap(),
-        ));
-        rows.push((
-            format!("harness-contrast:{}", contrast.node_id()),
-            encode_artifact(&contrast).unwrap(),
-        ));
-        let revision = RevisionRow {
-            id: id.clone(),
-            subject_kind: subject_kind.clone(),
-            subject_ref: subject_ref.clone(),
-            stage: RevisionStage::Evaluated,
-            digest: format!("sha256:decision-{index}"),
-            evaluation_receipt_id: Some(adopted.decision_ref.clone()),
-            created_ms: index,
-        };
-        rows.push((revision.key(), encode_artifact(&revision).unwrap()));
-        adoptions.push(id);
-    }
-    h.store.put_decision_artifacts(TENANT, &rows).unwrap();
-    let view = graph_view(&[], &[], &[(BASELINE, 0.5, "human")]);
+    // The adoption: fifty stored contrasts of one agent and task class.
+    let (bundle, adoptions, view) = seed_harness_bundle(&h);
 
     let policy = DecisionPolicy::engine_default();
     let evidence = held_out_evidence(
@@ -1210,4 +1220,187 @@ async fn pointer_read_returns_champion_and_refuses_unknown_key() {
     }
     let foreign = read(OTHER, subject.pointer_key()).await.unwrap_err();
     assert!(foreign.starts_with("POINTER_NOT_FOUND"), "{foreign}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.6: one challenger per subject kind is
+/// promoted through `Decide` kind `Promotion`, a committed record and a
+/// `MovePointer`; a later regression of the Program champion is judged by a
+/// `review` decision whose rollback restores the parent; and the champions read
+/// back through the served `pointer` read and the `decision_pointers` relation.
+// spec: MEDULLA-DECISION-ENGINE-R805.6
+#[tokio::test]
+async fn served_promotion_journey() {
+    use super::harness_contrast_tests::decide_contrast;
+    use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
+    use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
+
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let pins = pins(&h, TENANT);
+    let (bundle, adoptions, view) = seed_harness_bundle(&h);
+
+    // The subjects whose receipt is a paired rollout set, and their two challengers each.
+    let rolled = [
+        subject(),
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::Agent,
+            definition_ref: "agent-a".to_owned(),
+        },
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::HarnessComponent,
+            definition_ref: "comp:prompt".to_owned(),
+        },
+        RevisionSubject::RetrievalStrategy {
+            strategy_ref: "strategy-a".to_owned(),
+        },
+    ];
+    let target_of = |subject: &RevisionSubject, generation: &str| match subject {
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::HarnessComponent,
+            definition_ref,
+        } => format!("harness-component:{definition_ref}:sha256:{generation}"),
+        other => format!("revision:{generation}:{}", other.pointer_key()),
+    };
+    let mut champions: Vec<(RevisionSubject, String, String)> = Vec::new();
+    for subject in &rolled {
+        let pointer = PointerRef::Champion {
+            subject: subject.clone(),
+        };
+        let mut targets = Vec::new();
+        for generation in ["one", "two"] {
+            let target = target_of(subject, generation);
+            let set = RolloutSet {
+                challenger_ref: target.clone(),
+                program_ref: PROGRAM.to_owned(),
+                ..rollout_set(150_000)
+            };
+            // Every rollout set names the Program of the fixture; a subject of another
+            // kind takes the same pairs under its own evidence subject.
+            let digest = rollout_set_digest(&set);
+            learn(
+                &h,
+                "decider",
+                LearningWrite::RecordRollouts { set: Box::new(set) },
+            )
+            .await
+            .unwrap();
+            let record = decide(&h, promotion_request(&pins.0, subject, &digest, &target))
+                .await
+                .unwrap()
+                .records
+                .as_slice()[0]
+                .clone();
+            let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+            assert!(
+                facts.contains(&"promotion.verdict=promote"),
+                "{subject:?}: {facts:?}"
+            );
+            commit(&h, &record).await;
+            let state = pointer_state(&h, pointer.clone(), activate(&target, &record.record_id))
+                .await
+                .unwrap();
+            assert_eq!(state.target(), Some(target.as_str()), "{subject:?}");
+            targets.push(target);
+        }
+        champions.push((subject.clone(), targets[0].clone(), targets[1].clone()));
+    }
+
+    // The harness bundle promotes from its stored contrasts.
+    let bundle_pointer = PointerRef::Champion {
+        subject: bundle.clone(),
+    };
+    for target in &adoptions[..2] {
+        let record = decide_contrast(
+            &h,
+            &promotion_request(&pins.0, &bundle, target, target),
+            &view,
+        );
+        commit(&h, &record).await;
+        pointer_state(
+            &h,
+            bundle_pointer.clone(),
+            activate(target, &record.record_id),
+        )
+        .await
+        .unwrap();
+    }
+    champions.push((bundle.clone(), adoptions[0].clone(), adoptions[1].clone()));
+
+    // A later evaluation of the Program champion over the same cases regressed:
+    // the review decision names a rollback and the pointer returns to its parent.
+    let program = subject();
+    let regressed = RolloutSet {
+        challenger_ref: champions[0].2.clone(),
+        ..rollout_set(50_000)
+    };
+    let regressed_digest = rollout_set_digest(&regressed);
+    learn(
+        &h,
+        "decider",
+        LearningWrite::RecordRollouts {
+            set: Box::new(regressed),
+        },
+    )
+    .await
+    .unwrap();
+    let mut review = promotion_request(&pins.0, &program, &regressed_digest, &champions[0].2);
+    let params: Vec<TypedParam> = review
+        .params
+        .iter()
+        .cloned()
+        .map(|mut param| {
+            if param.name == "mode" {
+                param.value = TypedValue::Text("review".to_owned());
+            }
+            param
+        })
+        .collect();
+    review.params = BoundedVec::new(params).unwrap();
+    let verdict = decide(&h, review).await.unwrap().records.as_slice()[0].clone();
+    let facts: Vec<&str> = verdict.premises.iter().map(|p| p.fact.as_str()).collect();
+    assert!(facts.contains(&"promotion.verdict=rollback"), "{facts:?}");
+    let restored = pointer_state(
+        &h,
+        PointerRef::Champion {
+            subject: program.clone(),
+        },
+        PointerMovement::Rollback,
+    )
+    .await
+    .unwrap();
+    assert_eq!(restored.target(), Some(champions[0].1.as_str()));
+    champions[0].2 = champions[0].1.clone();
+
+    // Every champion reads back through the served pointer read.
+    for (subject, _, current) in &champions {
+        let op = DecisionLogOp::Pointer {
+            tenant_id: TENANT.to_owned(),
+            pointer_key: subject.pointer_key(),
+        };
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+        let served: ChampionPointer = decode(
+            super::super::log::handle_decision_log(&h.state, 9, &verified, op).await,
+        )
+        .unwrap();
+        assert_eq!(served.subject, *subject);
+        assert_eq!(served.revision_ref.as_str(), current, "{subject:?}");
+    }
+
+    // The audit relation holds every move: ten activations for the five
+    // subjects, two each, and the one review rollback.
+    #[cfg(feature = "query")]
+    {
+        let rows = super::retrieval_tests::sql(
+            &h,
+            "decider",
+            "SELECT pointer_key, transition FROM decision_pointers ORDER BY seq",
+        )
+        .await;
+        let count = |transition: &str| {
+            rows.iter()
+                .filter(|row| row[1] == serde_json::json!(transition))
+                .count()
+        };
+        assert_eq!(count("activated"), 10, "{rows:?}");
+        assert_eq!(count("rolled_back"), 1, "{rows:?}");
+    }
 }
