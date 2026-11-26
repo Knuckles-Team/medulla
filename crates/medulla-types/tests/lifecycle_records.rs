@@ -283,6 +283,8 @@ fn a_goal_with_no_target_refuses_and_a_target_writes() {
 }
 
 // spec: MEDULLA-SDLC-R017.2
+/// The proposal kind set is closed: each wire name parses to its kind and an unknown name
+/// refuses PROPOSAL_KIND_UNKNOWN.
 #[test]
 fn proposal_kind_set_is_closed() {
     use medulla_source_types::lifecycle::{Proposal, ProposalKind, REFUSALS};
