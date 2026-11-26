@@ -45,7 +45,7 @@ from test_contract_kinds_served import (
     _named_refusal,
 )
 
-from medulla.client import MedullaClient
+from medulla.client import EngineResponseError, MedullaClient
 
 CASES = load_cases()
 OTHER_TENANT = "tenant:competency-other"
@@ -372,7 +372,7 @@ def test_cross_tenant_case_returns_no_row(
                 outcomes.append(
                     await other.query.uql(case.uql, foreign_executions=executions)
                 )
-            except Exception as refusal:  # the engine names the refusal
+            except EngineResponseError as refusal:  # only an engine refusal counts
                 outcomes.append(refusal)
         finally:
             await owner.close()
@@ -385,7 +385,11 @@ def test_cross_tenant_case_returns_no_row(
             fixture.close()
 
     outcome = outcomes[0]
-    if not isinstance(outcome, Exception):
+    if isinstance(outcome, EngineResponseError):
+        # A refusal must name the engine's code, not merely fail: the second tenant is
+        # refused its read, never answered with the owner's rows.
+        assert str(outcome).strip(), "the refusal carries its engine code"
+    else:
         assert outcome.get("rows", []) == [], outcome
 
 
@@ -396,8 +400,9 @@ def _victim(case: Case) -> str:
 def _assert_gap(outcome: Any, victim: str, codes: tuple[str, ...]) -> None:
     """The answer abstains on ``victim`` by name; it never returns a wrong answer."""
     if isinstance(outcome, Exception):
+        # The row demands the refusal code, so the victim's name alone is not enough.
         text = str(outcome)
-        assert any(code in text for code in codes + (victim,)), text
+        assert any(code in text for code in codes), text
         return
     for row in outcome.get("rows", []):
         provenance = row.get("provenance") or {}
@@ -448,7 +453,7 @@ def test_case_abstains(case: Case, variant: str, clean_graph, tmp_path: Path) ->
                 outcomes.append(
                     await client.query.uql(case.uql, foreign_executions=executions)
                 )
-            except Exception as refusal:  # the engine names the abstention
+            except EngineResponseError as refusal:  # the engine names the abstention
                 outcomes.append(refusal)
         finally:
             await client.close()
