@@ -464,7 +464,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 
 | Row | Proving test |
 |---|---|
-| `MEDULLA-TYPED-PACKS-R801.7` | `tests/typed_packs/test_glossary_served.py::test_proposed_description_needs_review` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.7` | `tests/typed_packs/test_glossary_served.py::test_proposed_description_needs_review` |
 | `MEDULLA-TYPED-PACKS-R802.7` | `tests/typed_packs/test_stewardship_served.py::test_deprecation_lowers_rank_and_emits_event` |
 | `MEDULLA-TYPED-PACKS-R802.8` | `tests/typed_packs/test_stewardship_served.py::test_critical_element_gaps_reported` |
 | `MEDULLA-TYPED-PACKS-R805.7` | `tests/data_plane/test_catalog_search_served.py::test_usage_cluster_yields_product_proposal`; `crates/medulla-core/tests/data_product.rs::proposals_cluster_by_principal_overlap` |

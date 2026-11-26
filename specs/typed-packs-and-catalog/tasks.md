@@ -263,7 +263,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T247 [US5] MEDULLA-TYPED-PACKS-R652.3 Wiring
 - [x] T248 [US5] MEDULLA-TYPED-PACKS-R652.4 Refusal
 - [x] T249 [US5] MEDULLA-TYPED-PACKS-R652.5 Evidence
-- [ ] T250 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
+- [x] T250 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
 - [ ] T251 [US6] MEDULLA-TYPED-PACKS-R700.1 Model
 - [ ] T252 [US6] MEDULLA-TYPED-PACKS-R700.2 Behavior
 - [x] T253 [US6] MEDULLA-TYPED-PACKS-R700.3 Wiring
@@ -275,9 +275,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T259 [US6] MEDULLA-TYPED-PACKS-R700.9 RETIRED: distill a source set into a skill-graph bundle
 - [x] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
 - [x] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
-- [ ] T262 [US6] MEDULLA-TYPED-PACKS-R701.3 Wiring
-- [ ] T263 [US6] MEDULLA-TYPED-PACKS-R701.4 Refusal
-- [ ] T264 [US6] MEDULLA-TYPED-PACKS-R701.5 Hot-path proof
+- [x] T262 [US6] MEDULLA-TYPED-PACKS-R701.3 Wiring
+- [x] T263 [US6] MEDULLA-TYPED-PACKS-R701.4 Refusal
+- [x] T264 [US6] MEDULLA-TYPED-PACKS-R701.5 Hot-path proof
 - [ ] T265 [US6] MEDULLA-TYPED-PACKS-R710 Schema drift classification, containment, repair proposal and activation: model and behavior
 - [ ] T266 [US6] MEDULLA-TYPED-PACKS-R712 Schema drift classification, containment, repair proposal and activation: refusal, evidence and hot-path proof
 - [ ] T267 [US6] MEDULLA-TYPED-PACKS-R714 Delivery-path wiring of drift classification
@@ -288,7 +288,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T272 [US7] MEDULLA-TYPED-PACKS-R801.4 Refusal
 - [ ] T273 [US7] MEDULLA-TYPED-PACKS-R801.5 Evidence
 - [ ] T274 [US7] MEDULLA-TYPED-PACKS-R801.6 Hot-path proof
-- [ ] T275 [US7] MEDULLA-TYPED-PACKS-R801.7 Proposed descriptions for terms and assets
+- [x] T275 [US7] MEDULLA-TYPED-PACKS-R801.7 Proposed descriptions for terms and assets
 - [ ] T276 [US7] MEDULLA-TYPED-PACKS-R802.1 Model
 - [ ] T277 [US7] MEDULLA-TYPED-PACKS-R802.2 Behavior
 - [ ] T278 [US7] MEDULLA-TYPED-PACKS-R802.3 Wiring
@@ -300,9 +300,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 BUILD: add `ChecksumAlgorithm`, `DetectorRule`, `SensitiveDetector.rule`, `Detection.sample_size`/`scanned_at_ms`, `InvalidDetector`, `SensitiveDetector::validate`, `DEFAULT_THRESHOLD` and `builtin_detectors()` to `crates/medulla-query-types/src/sensitive_detect.rs`; test `detector_rules_round_trip_and_validate`
 - [x] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Add `crates/medulla-core/src/sensitive_scan.rs` (`ScanLimits`, `DetectorResources`, `NoResources`, `ScanError`, `scan_values`, `passing`), the `regex` dependency and the `DETECTOR_RESOURCE_MISSING` / `SCAN_LIMITS_INVALID` codes; test `scan_values_counts_hits_without_values`
 - [ ] T286 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
-- [ ] T287 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
-- [ ] T288 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
-- [ ] T289 [US7] MEDULLA-TYPED-PACKS-R803.6 Hot-path proof
+- [x] T287 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
+- [x] T288 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
+- [x] T289 [US7] MEDULLA-TYPED-PACKS-R803.6 Hot-path proof
 - [ ] T290 [US7] MEDULLA-TYPED-PACKS-R803.7 Document chunk wiring
 - [ ] T291 [US7] MEDULLA-TYPED-PACKS-R804.1 Model
 - [x] T292 [US7] MEDULLA-TYPED-PACKS-R804.2 Diff and impact behavior
@@ -314,7 +314,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T298 [US7] MEDULLA-TYPED-PACKS-R805.2 Contract check behavior
 - [ ] T299 [US7] MEDULLA-TYPED-PACKS-R805.3 Wiring
 - [ ] T300 [US7] MEDULLA-TYPED-PACKS-R805.4 Refusals
-- [ ] T301 [US7] MEDULLA-TYPED-PACKS-R805.5 Evidence
+- [x] T301 [US7] MEDULLA-TYPED-PACKS-R805.5 Evidence
 - [ ] T302 [US7] MEDULLA-TYPED-PACKS-R805.6 Hot-path proof
 - [x] T303 [US7] MEDULLA-TYPED-PACKS-R805.7 Data product proposals
 - [ ] T304 [US7] MEDULLA-TYPED-PACKS-R806 Serve schema drift records and repair approval as methods
@@ -349,8 +349,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T348 [US8] MEDULLA-TYPED-PACKS-R812.2 Wiring: the served page carries the superclasses
 - [ ] T349 [US8] MEDULLA-TYPED-PACKS-R812.3 Python mirror: `GraphSchemaTermView.superclasses`
 - [ ] T351 [US8] MEDULLA-TYPED-PACKS-R813 Schema source reads are ordinary ontology reads (rollup)
-- [ ] T352 [US8] MEDULLA-TYPED-PACKS-R813.1 `GraphSchemaList` is `owl:read`
-- [ ] T353 [US8] MEDULLA-TYPED-PACKS-R813.2 `GraphSchemaGet`: one source with its documents
-- [ ] T354 [US8] MEDULLA-TYPED-PACKS-R813.3 Python mirror: `GraphSchemaGet`
+- [x] T352 [US8] MEDULLA-TYPED-PACKS-R813.1 `GraphSchemaList` is `owl:read`
+- [x] T353 [US8] MEDULLA-TYPED-PACKS-R813.2 `GraphSchemaGet`: one source with its documents
+- [x] T354 [US8] MEDULLA-TYPED-PACKS-R813.3 Python mirror: `GraphSchemaGet`
 - [ ] T355 [US8] MEDULLA-TYPED-PACKS-R813.4 Schema reads redact provenance below `security:admin`
-- [ ] T356 [US8] MEDULLA-TYPED-PACKS-R813.5 Python mirror: `GraphSchemaSourceView.provenance_redacted`
+- [x] T356 [US8] MEDULLA-TYPED-PACKS-R813.5 Python mirror: `GraphSchemaSourceView.provenance_redacted`
