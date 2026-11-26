@@ -136,6 +136,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T128 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
 - [ ] T129 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
 - [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items (16 lines, consumer edits listed in the row; compile lane). Size: M, 1 PR.
+- [ ] T140 MEDULLA-SDLC-R021.8 No module of any crate re-exports another crate's items (about 120 lines in 47 crates, one commit per source crate; compile lane). Size: L, 47 commits.
 - [x] T131 [US1] MEDULLA-SDLC-R014.10 Row-level spec vocabulary in the SDD ontology.
 - [ ] T132 [US1] MEDULLA-SDLC-R014.11 SHACL shapes mirror the spec-standard row checks.
 - [ ] T133 [US1] MEDULLA-SDLC-R014.12 Ingest every repository's specs and `Spec:` history.

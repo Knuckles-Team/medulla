@@ -240,7 +240,7 @@ Pre-untangled design for the rows R021.1 to R021.7, one line per answer.
 - State. None. These are data types.
 - Environment. None.
 
-The order is: guard test (R021.2), policy move (R021.1), query types (R021.3), access control (R021.4), domain slices (R021.5), new slices (R021.6), re-export removal (R021.7). The lane compiles each group with `cargo check --workspace --all-targets --all-features` on a warm slot and runs the full test suite once after R021.6 (the split is all-or-nothing). The map below is the source of truth for every move; a module absent from it is a bug in the map. The map is total: every module of `medulla-types` is in exactly one row of it, and `tests/test_types_slices.py` holds the same map.
+The order is: guard test (R021.2), policy move (R021.1), query types (R021.3), access control (R021.4), domain slices (R021.5), new slices (R021.6), re-export removal from `lib.rs` and `mod.rs` (R021.7), then from every module (R021.8). The lane compiles each group with `cargo check --workspace --all-targets --all-features` on a warm slot and runs the full test suite once after R021.6 (the split is all-or-nothing). The map below is the source of truth for every move; a module absent from it is a bug in the map. The map is total: every module of `medulla-types` is in exactly one row of it, and `tests/test_types_slices.py` holds the same map.
 
 | Destination crate | Modules | Count | Lines |
 |---|---|---|---|
