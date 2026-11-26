@@ -181,7 +181,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T171 MEDULLA-DURABLE-KERNEL-R101.1 Model
 - [ ] T172 MEDULLA-DURABLE-KERNEL-R101.2 Behavior
 - [ ] T173 MEDULLA-DURABLE-KERNEL-R101.3 Wiring
-- [ ] T174 MEDULLA-DURABLE-KERNEL-R101.4 Optional budget pattern in `TYPES_QUERY`, typed `DowntimeTypeRefusal`, `BudgetRequired` skip; claim-isolation test for the `downtime` capability
+- [x] T174 MEDULLA-DURABLE-KERNEL-R101.4 Optional budget pattern in `TYPES_QUERY`, typed `DowntimeTypeRefusal`, `BudgetRequired` skip; claim-isolation test for the `downtime` capability
 - [ ] T175 MEDULLA-DURABLE-KERNEL-R101.5 `DowntimeSelectionRecord` and `DowntimeSkipReason` wire types; `dw:Selection` facts with prune to 1,000 in one internal graph commit; paged `DowntimeSelections { after, limit }` read from the commons graph; `ResultUsage.cpu_ms`/`peak_memory_bytes`; delete the in-memory selection slot
 - [ ] T176 MEDULLA-DURABLE-KERNEL-R101.6 Served L4 test of idle-window run order and foreground preemption
 - [x] T298 MEDULLA-DURABLE-KERNEL-R101.7 `DowntimeBody` seam and registry; `preempt_requested`; `downtime_worker_loop` with step budget, `downtime_budget_exhausted` stop and `JobStore::yield_running_fenced`

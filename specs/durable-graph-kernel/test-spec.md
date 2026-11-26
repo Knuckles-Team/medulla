@@ -655,8 +655,8 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::existing_staging_directory_refuses` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::admission_binds_owner_and_refuses_duplicate_forged_and_generic_writes` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_returns_the_original_result_and_conflicts_on_change` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::budgetless_type_is_skipped_with_budget_required` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-jobs/src/store.rs::downtime_job_is_never_claimed_by_an_analytics_worker` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::tests::budgetless_type_is_skipped_with_budget_required` |
+| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-jobs/src/store.rs::tests::downtime_job_is_never_claimed_by_an_analytics_worker` |
 | `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-h-jobs/src/jobs/downtime_worker.rs::budget_stop_and_preempt_yield` |
 | `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-jobs/src/downtime.rs::preempt_requested_above_the_idle_ceiling` |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |

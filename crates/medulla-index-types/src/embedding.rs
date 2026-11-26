@@ -281,6 +281,19 @@ impl EmbeddingSpaceRef {
     /// constructed with; this only guards against a hostile/corrupt/default
     /// value before it is used to gate a comparison.
     pub fn validate(&self) -> Result<(), String> {
+        self.validate_identity().map_err(|reason| {
+            if self.modalities.is_empty() {
+                reason
+            } else {
+                // A multimodal space without its identity tuple is `EMBEDDING_SPACE_INVALID`
+                // (MEDULLA-FEDERATED-QUERY-R039.1.1).
+                format!("{}: {reason}", ServerErrorCode::EmbeddingSpaceInvalid)
+            }
+        })?;
+        self.validate_modalities()
+    }
+
+    fn validate_identity(&self) -> Result<(), String> {
         if self.id.is_empty() {
             return Err("embedding space model id must not be empty".to_string());
         }
@@ -305,7 +318,7 @@ impl EmbeddingSpaceRef {
         if self.digest.is_empty() {
             return Err("embedding space digest must not be empty".to_string());
         }
-        self.validate_modalities()
+        Ok(())
     }
 
     /// The identity tuple `(id, dimensions, revision)` is checked above; a
@@ -596,9 +609,17 @@ mod tests {
         assert!(plain.modalities.is_empty());
         assert_eq!(plain, space(8));
         // Absent identity tuple, a missing or doubled modality: invalid.
-        let mut no_identity = multimodal.clone();
-        no_identity.revision.clear();
-        assert!(no_identity.validate().is_err());
+        let code = ServerErrorCode::EmbeddingSpaceInvalid.as_str();
+        for clear in [
+            (|s: &mut EmbeddingSpaceRef| s.id.clear()) as fn(&mut EmbeddingSpaceRef),
+            |s| s.revision.clear(),
+            |s| s.dimensions = 0,
+        ] {
+            let mut no_identity = multimodal.clone();
+            clear(&mut no_identity);
+            let err = no_identity.validate().unwrap_err();
+            assert!(err.starts_with(code), "{err}");
+        }
         let mut three = bindings();
         three.pop();
         let err = space(8).with_modalities(three).unwrap_err();
