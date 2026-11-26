@@ -164,7 +164,7 @@ async def test_share_scope_limits_calls() -> None:
         await _put(author, _stored(shared, share="tenant"))
 
         assert (await _call(author, private, {"status": "x"}))["version"] == 1
-        with pytest.raises(RuntimeError, match="ACCESS_DENIED"):
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
             await _call(sharee, private, {"status": "x"})
         assert (await _call(sharee, shared, {"status": "x"}))["version"] == 1
         # Only the author publishes further versions of a name.

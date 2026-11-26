@@ -39,6 +39,41 @@ async fn put(served: &Served, query: StoredQuery) {
     assert!(response.error.is_none(), "StoredQueryPut: {response:?}");
 }
 
+/// Register `agent` as a regular identity holding read, and when `writable` write, on the served
+/// graph, so a refusal of its requests can only come from the stored-query handler and not from
+/// the graph's access check.
+async fn admit(served: &Served, agent: &str, writable: bool) {
+    use medulla_identity_types::acl::{
+        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+    };
+    let role = format!("stored-query-{agent}");
+    let mut state = served.state().write().await;
+    state.isolation.add_role(Role::new(&role));
+    let mut actions = vec![RbacAction::Read];
+    if writable {
+        actions.push(RbacAction::Write);
+    }
+    for action in actions {
+        state.isolation.add_grant(Grant {
+            role: role.clone(),
+            resource: ResourceSelector::Graph(served.graph().to_string()),
+            action,
+            effect: GrantEffect::Allow,
+        });
+    }
+    state.isolation.register_agent(AgentIdentity {
+        agent_id: agent.to_string(),
+        role: AgentRole::Agent,
+        teams: Vec::new(),
+        roles: vec![role],
+    });
+}
+
+/// The refusal text with the requested name masked, so refusals of different names compare.
+fn masked(response: &Response, name: &str) -> String {
+    refusal_text(response).replace(name, "<name>")
+}
+
 /// As the reader `OTHER`, who is outside every private share scope.
 async fn as_other(served: &Served, method: Method) -> Response {
     served.verified_as(OTHER, TENANT, &["kg:read"], method).await
@@ -76,7 +111,7 @@ fn names(page: &StoredQueryPage) -> Vec<&str> {
 #[tokio::test]
 async fn get_and_list_hide_a_private_query_from_another_principal_exactly_like_a_missing_one() {
     let served = Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "ResearchPaper")]).await;
-    served.register_reader(OTHER).await;
+    admit(&served, OTHER, false).await;
     put(&served, stored("alpha_private", 1, ShareScope::Private)).await;
     put(&served, stored("beta_shared", 1, ShareScope::Tenant)).await;
     put(&served, stored("beta_shared", 2, ShareScope::Tenant)).await;
@@ -153,40 +188,69 @@ async fn list_pages_by_cursor_in_name_order_and_refuses_a_foreign_cursor() {
     assert_eq!(seen, vec!["q_a", "q_b", "q_c"]);
     assert_eq!(pages, 2);
 
-    // A cursor minted for this tenant does not resume another tenant's listing (the cursor
-    // binding itself is proved at L1), and a limit outside its bound is refused.
+    // A cursor minted for this tenant does not resume another tenant's listing, and a limit
+    // outside its bound is refused. The foreign reader holds the read scope and the graph's
+    // read grant, so the handler is what refuses.
     let minted = ok::<StoredQueryPage>(
         "StoredQueryList first page",
         served.verified(TENANT, &["kg:read"], list(Some(1), None, false)).await,
     )
     .next_cursor
     .expect("two names remain");
+    let foreign_reader = "usr:tenant-other-reader";
+    admit(&served, foreign_reader, false).await;
     let transplanted = served
-        .verified("tenant-other", &["kg:read"], list(None, Some(minted), false))
+        .verified_as(
+            foreign_reader,
+            "tenant-other",
+            &["kg:read"],
+            list(None, Some(minted), false),
+        )
         .await;
-    assert!(transplanted.error.is_some(), "{transplanted:?}");
+    let text = refusal_text(&transplanted);
+    assert!(text.contains("STORED_QUERY_INVALID"), "{text}");
+    assert!(
+        text.contains("stored query list cursor was not minted for this tenant"),
+        "{text}"
+    );
     let zero = served.verified(TENANT, &["kg:read"], list(Some(0), None, false)).await;
-    assert!(refusal_text(&zero).contains("STORED_QUERY_INVALID"), "{zero:?}");
+    let zero_text = refusal_text(&zero);
+    assert!(zero_text.contains("STORED_QUERY_INVALID"), "{zero_text}");
+    assert!(zero_text.contains("limit must be 1..=256"), "{zero_text}");
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R708.12
 #[tokio::test]
 async fn retire_is_a_tombstone_only_the_author_can_write() {
     let served = Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "ResearchPaper")]).await;
-    served.register_reader(OTHER).await;
+    admit(&served, OTHER, true).await;
     put(&served, stored("old_report", 1, ShareScope::Tenant)).await;
     put(&served, stored("keeper", 1, ShareScope::Tenant)).await;
 
-    // Another principal cannot retire it, and the refusal changes nothing.
-    let foreign = as_other(
-        &served,
-        Method::StoredQueryRetire {
-            name: "old_report".to_string(),
-            reason: StoredQueryRetireReason::Superseded,
-        },
-    )
-    .await;
-    assert!(foreign.error.is_some(), "{foreign:?}");
+    // Another principal holding the write scope and the graph's write grant cannot retire it:
+    // the handler refuses with the very text a missing name gets, and the refusal changes
+    // nothing.
+    let retire_as_other = |name: &str| {
+        served.verified_as(
+            OTHER,
+            TENANT,
+            &["query:write"],
+            Method::StoredQueryRetire {
+                name: name.to_string(),
+                reason: StoredQueryRetireReason::Superseded,
+            },
+        )
+    };
+    let foreign = retire_as_other("old_report").await;
+    let absent = retire_as_other("absent_report").await;
+    let foreign_text = refusal_text(&foreign);
+    assert!(foreign_text.contains("STORED_QUERY_NOT_FOUND"), "{foreign_text}");
+    assert!(foreign_text.contains("no stored query"), "{foreign_text}");
+    assert_eq!(
+        masked(&foreign, "old_report"),
+        masked(&absent, "absent_report"),
+        "a foreign name and a missing name must refuse alike"
+    );
     let still: StoredQueryView = ok(
         "StoredQueryGet after a foreign retire",
         served.verified(TENANT, &["kg:read"], get("old_report", None)).await,
@@ -254,4 +318,47 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
         .as_ref()
         .expect("the retired name carries its tombstone");
     assert_eq!(tombstone.reason, StoredQueryRetireReason::Superseded);
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R708.8, MEDULLA-FEDERATED-QUERY-R708.12
+#[tokio::test]
+async fn call_refuses_missing_retired_out_of_scope_and_unpublished_names_identically() {
+    let served = Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "ResearchPaper")]).await;
+    admit(&served, OTHER, false).await;
+    put(&served, stored("alpha_private", 1, ShareScope::Private)).await;
+    put(&served, stored("beta_shared", 1, ShareScope::Tenant)).await;
+    put(&served, stored("gamma_retired", 1, ShareScope::Tenant)).await;
+    let retired = served
+        .call_on(
+            served.graph(),
+            "retire-gamma",
+            Method::StoredQueryRetire {
+                name: "gamma_retired".to_string(),
+                reason: StoredQueryRetireReason::Incorrect,
+            },
+        )
+        .await;
+    assert!(retired.error.is_none(), "StoredQueryRetire: {retired:?}");
+
+    let call = |name: &str, version: Option<u32>| {
+        as_other(
+            &served,
+            Method::StoredQueryCall {
+                name: name.to_string(),
+                version,
+                args: [("status".to_string(), serde_json::json!("open"))].into(),
+            },
+        )
+    };
+    let missing = call("absent_query", None).await;
+    let out_of_scope = call("alpha_private", None).await;
+    let retired_name = call("gamma_retired", None).await;
+    let unpublished = call("beta_shared", Some(9)).await;
+
+    let reference = masked(&missing, "absent_query");
+    assert!(reference.contains("STORED_QUERY_NOT_FOUND"), "{reference}");
+    assert!(!reference.contains("ACCESS_DENIED"), "{reference}");
+    assert_eq!(masked(&out_of_scope, "alpha_private"), reference);
+    assert_eq!(masked(&retired_name, "gamma_retired"), reference);
+    assert_eq!(masked(&unpublished, "beta_shared"), reference);
 }

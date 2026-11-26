@@ -786,10 +786,9 @@ pub(crate) async fn handle_stored_call(
         tenant: stored.author_tenant,
     };
     if !query.may_call(&reader_of(ctx), &author) {
-        return Err(refuse(
-            ACCESS_DENIED,
-            "the caller is outside the share scope of the stored query",
-        ));
+        // The same refusal as a missing or retired name: the caller learns nothing about
+        // whether the name exists.
+        return Err(not_found());
     }
     let bound = query.bind(args)?;
     let now = now_ms();
