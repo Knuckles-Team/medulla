@@ -10,7 +10,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
-pub use medulla_index_types::semantic_index::GraphTextPropertyRef;
+use medulla_index_types::semantic_index::GraphTextPropertyRef;
 use medulla_index_types::semantic_index::{SemanticSourceKind, SEMANTIC_GRAPH_SOURCE_ACL_REVISION};
 use sha2::{Digest, Sha256};
 

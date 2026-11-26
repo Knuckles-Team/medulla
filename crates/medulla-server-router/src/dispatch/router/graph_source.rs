@@ -7,9 +7,9 @@
 use std::sync::Arc;
 
 use medulla_h_retrieve::semantic_index_runtime::graph_source::{
-    GraphSourceFuture, GraphSourceProvider, GraphSourceSnapshot, GraphTextPropertyRef,
-    MAX_GRAPH_SOURCE_NODES,
+    GraphSourceFuture, GraphSourceProvider, GraphSourceSnapshot, MAX_GRAPH_SOURCE_NODES,
 };
+use medulla_index_types::semantic_index::GraphTextPropertyRef;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::shared::{

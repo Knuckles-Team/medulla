@@ -48,7 +48,7 @@ pub struct BookmarkReadView<'a> {
 /// binding, or one bound to anything but a graph property, is `BOOKMARK_INDEX_STALE`.
 pub fn bookmark_graph_selector(
     service: &SemanticIndexService,
-) -> Result<crate::semantic_index_runtime::graph_source::GraphTextPropertyRef, String> {
+) -> Result<medulla_index_types::semantic_index::GraphTextPropertyRef, String> {
     use medulla_index_types::semantic_index::SemanticSourceSelector;
     let stale = |reason: &str| refusal(BOOKMARK_INDEX_STALE, reason);
     let binding = service
@@ -63,7 +63,7 @@ pub fn bookmark_graph_selector(
 
 /// The entity-id to node-id map of the given node ids, the `node_of_entity` of a view.
 pub fn entity_node_map(
-    selector: &crate::semantic_index_runtime::graph_source::GraphTextPropertyRef,
+    selector: &medulla_index_types::semantic_index::GraphTextPropertyRef,
     tenant_scope: &str,
     node_ids: impl IntoIterator<Item = String>,
 ) -> BTreeMap<String, String> {

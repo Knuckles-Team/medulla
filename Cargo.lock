@@ -8279,6 +8279,7 @@ dependencies = [
  "medulla-h-sparql",
  "medulla-h-txn",
  "medulla-identity-types",
+ "medulla-index-types",
  "medulla-ingestion-types",
  "medulla-isolation",
  "medulla-kernel",
