@@ -1,0 +1,16 @@
+# cargo-hakari configuration (MEDULLA-CONTRACT-R069.1). The crate it names is generated:
+# `cargo hakari generate && cargo hakari manage-deps`, never edited by hand. `cargo xtask
+# workspace-hack` regenerates and diffs it. The tool is pinned in scripts/bootstrap.sh.
+hakari-package = "medulla-workspace-hack"
+dep-format-version = "4"
+resolver = "2"
+exact-versions = true
+
+platforms = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+]

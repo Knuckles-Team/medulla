@@ -29,6 +29,7 @@ mod tempdir;
 mod verify_release_tag;
 mod wheel_completeness;
 mod wheel_privacy;
+mod workspace_hack;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -205,6 +206,15 @@ const CHECKS: &[Check] = &[
         name: wheel_privacy::NAME,
         summary: wheel_privacy::SUMMARY,
         run: wheel_privacy::run,
+        standalone: true,
+        needs_git: false,
+    },
+    // Standalone until the workspace-hack crate is generated and wired into every member
+    // (MEDULLA-CONTRACT-R069.1); then it moves into `checks`.
+    Check {
+        name: workspace_hack::NAME,
+        summary: workspace_hack::SUMMARY,
+        run: workspace_hack::run,
         standalone: true,
         needs_git: false,
     },

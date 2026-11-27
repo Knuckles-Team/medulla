@@ -57,6 +57,8 @@ if [[ "$scanners" == 1 ]]; then
   bash scripts/install_scanners.sh "$scanner_root" >/dev/null
   deny_version="$(PYTHONPATH=scripts python3 -c 'from scanner_contract import load_contract; print(load_contract().cargo_deny_version)')"
   command -v cargo-deny >/dev/null 2>&1 || cargo install --locked --version "$deny_version" cargo-deny
+  hakari_version=0.9.39  # keep equal to PINNED_VERSION in tools/xtask/src/workspace_hack.rs
+  command -v cargo-hakari >/dev/null 2>&1 || cargo install --locked --version "=$hakari_version" cargo-hakari
   uv tool install --quiet import-linter==2.13
   echo "bootstrap: add the scanners to PATH:"
   bash scripts/install_scanners.sh "$scanner_root" | sed 's/^/  export PATH="/; s/$/:$PATH"/'
