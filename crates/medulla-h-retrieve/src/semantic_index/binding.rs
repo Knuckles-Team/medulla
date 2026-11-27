@@ -123,19 +123,19 @@ pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) 
     }
 }
 
+/// A checked binding with the service handle, clock, actor and attempt nonce its mutation needs.
+type AdmissionInputs = (
+    SemanticBinding,
+    Arc<SemanticIndexService>,
+    u64,
+    String,
+    Nonce,
+);
+
 fn checked_admission_inputs(
     ctx: &SemanticIndexContext<'_>,
     mut draft: Box<medulla_index_types::semantic_index::SemanticBindingDraft>,
-) -> Result<
-    (
-        SemanticBinding,
-        Arc<SemanticIndexService>,
-        u64,
-        String,
-        Nonce,
-    ),
-    Box<Response>,
-> {
+) -> Result<AdmissionInputs, Box<Response>> {
     stamp_draft_identity(&mut draft, ctx.authority);
     let binding = SemanticBinding::create(*draft)
         .map_err(|_| Box::new(invalid_semantic_input(ctx.req_id, "semantic binding")))?;
