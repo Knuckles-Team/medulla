@@ -6,7 +6,6 @@
 //! ANN image, so nothing here builds, writes or activates an index.
 
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
-use medulla_exec::exec::TextEmbedder;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_types::contract::ServerErrorCode;
 

@@ -79,7 +79,7 @@ pub async fn handle_semantic_index(
     let op = *op;
     let authority = match authorize(req_id, verified, &op) {
         Ok(authority) => authority,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let (persist_dir, service) = match open_service(state, req_id, &authority, &op).await {
         Ok(opened) => opened,
@@ -241,22 +241,22 @@ fn authorize(
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: &SemanticIndexOp,
-) -> Result<CarrierAuthority, Response> {
+) -> Result<CarrierAuthority, Box<Response>> {
     // Echo only the refused shape field and its static reason, never the
     // submitted value.
     match op.validate() {
         Ok(()) => {}
         Err(SemanticIndexError::InvalidField { field, reason }) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("INVALID_ARGUMENT: semantic operation rejected: `{field}` {reason}"),
-            ));
+            )));
         }
         Err(_) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 "INVALID_ARGUMENT: semantic operation rejected",
-            ));
+            )));
         }
     }
     // Tenant isolation, checked ONCE rather than per arm, keeps a binding id
@@ -267,25 +267,25 @@ fn authorize(
     if !matches!(op, SemanticIndexOp::GetBindingRequest { .. })
         && op.tenant_id() != verified.tenant()
     {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "ACCESS_DENIED: semantic index tenant must match verified request tenant",
-        ));
+        )));
     }
-    let authority =
-        CarrierAuthority::from_verified(verified).map_err(|error| Response::err(req_id, error))?;
+    let authority = CarrierAuthority::from_verified(verified)
+        .map_err(|error| Box::new(Response::err(req_id, error)))?;
     // The carrier's own capability is checked in addition to the ledger gate.
     if op.is_mutation() && !authority.can_write() {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "ACCESS_DENIED: semantic index mutation requires kg:write",
-        ));
+        )));
     }
     if !op.is_mutation() && !authority.can_read() {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "ACCESS_DENIED: semantic index read requires kg:read",
-        ));
+        )));
     }
     if let SemanticIndexOp::GetBindingRequest { request } = op {
         SemanticIndexServerAdapter::authorize_request(
@@ -293,7 +293,7 @@ fn authorize(
             &authority,
             medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         )
-        .map_err(|error| Response::err(req_id, error))?;
+        .map_err(|error| Box::new(Response::err(req_id, error)))?;
     }
     Ok(authority)
 }

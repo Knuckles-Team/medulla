@@ -20,12 +20,12 @@ pub(super) fn invalid_semantic_input(req_id: u64, subject: &'static str) -> Resp
 
 /// Every operation-bound binding mutation consumes the same verified
 /// attempt nonce before crossing the service's durable mutation boundary.
-fn verified_attempt_nonce(ctx: &SemanticIndexContext<'_>) -> Result<Nonce, Response> {
+fn verified_attempt_nonce(ctx: &SemanticIndexContext<'_>) -> Result<Nonce, Box<Response>> {
     ctx.authority.attempt_nonce().ok_or_else(|| {
-        Response::err(
+        Box::new(Response::err(
             ctx.req_id,
             "ACCESS_DENIED: semantic mutation requires a verified attempt nonce",
-        )
+        ))
     })
 }
 
@@ -33,7 +33,7 @@ fn verified_attempt_nonce(ctx: &SemanticIndexContext<'_>) -> Result<Nonce, Respo
 /// operation crosses into the blocking native mutation path.
 fn binding_operation_inputs(
     ctx: &SemanticIndexContext<'_>,
-) -> Result<(Arc<SemanticIndexService>, u64, String, Nonce), Response> {
+) -> Result<(Arc<SemanticIndexService>, u64, String, Nonce), Box<Response>> {
     let nonce = verified_attempt_nonce(ctx)?;
     Ok((
         Arc::clone(&ctx.service),
@@ -49,16 +49,20 @@ pub(super) fn checked_replacement(
     ctx: &SemanticIndexContext<'_>,
     mut draft: Box<medulla_index_types::semantic_index::SemanticBindingDraft>,
     source_manifest: medulla_index_types::semantic_index::SemanticSqlSourceManifestDraft,
-) -> Result<(SemanticBinding, SemanticSqlSourceManifest), Response> {
+) -> Result<(SemanticBinding, SemanticSqlSourceManifest), Box<Response>> {
     stamp_draft_identity(&mut draft, ctx.authority);
     let replacement = SemanticBinding::create(*draft)
-        .map_err(|_| invalid_semantic_input(ctx.req_id, "semantic binding"))?;
-    let manifest = SemanticSqlSourceManifest::create(source_manifest)
-        .map_err(|_| invalid_semantic_input(ctx.req_id, "semantic source manifest"))?;
+        .map_err(|_| Box::new(invalid_semantic_input(ctx.req_id, "semantic binding")))?;
+    let manifest = SemanticSqlSourceManifest::create(source_manifest).map_err(|_| {
+        Box::new(invalid_semantic_input(
+            ctx.req_id,
+            "semantic source manifest",
+        ))
+    })?;
     let adapter = SemanticIndexServerAdapter::new(Arc::clone(&ctx.service));
     adapter
         .authorize_binding_worker(&replacement, ctx.authority)
-        .map_err(|error| Response::err(ctx.req_id, error))?;
+        .map_err(|error| Box::new(Response::err(ctx.req_id, error)))?;
     Ok((replacement, manifest))
 }
 
@@ -130,11 +134,11 @@ fn checked_admission_inputs(
         String,
         Nonce,
     ),
-    Response,
+    Box<Response>,
 > {
     stamp_draft_identity(&mut draft, ctx.authority);
     let binding = SemanticBinding::create(*draft)
-        .map_err(|_| invalid_semantic_input(ctx.req_id, "semantic binding"))?;
+        .map_err(|_| Box::new(invalid_semantic_input(ctx.req_id, "semantic binding")))?;
     check_sql_column_source(ctx, &binding)?;
     let (service, now_ms, actor, nonce) = binding_operation_inputs(ctx)?;
     Ok((binding, service, now_ms, actor, nonce))
@@ -149,7 +153,7 @@ fn checked_admission_inputs(
 fn check_sql_column_source(
     ctx: &SemanticIndexContext<'_>,
     binding: &SemanticBinding,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     use medulla_index_types::semantic_index::SemanticSourceSelector;
     use medulla_server_auth::sql_catalog_acl::{
         open_authorized_table, SqlPrivilege, ACCESS_DENIED,
@@ -160,12 +164,12 @@ fn check_sql_column_source(
     };
     // MEDULLA-FEDERATED-QUERY-R077.5: a column has at most one binding, under one canonical id.
     if binding.binding_id != selector.binding_id() {
-        return Err(invalid_semantic_input(
+        return Err(Box::new(invalid_semantic_input(
             ctx.req_id,
             "semantic SQL column binding id",
-        ));
+        )));
     }
-    let denied = || Response::err(ctx.req_id, ACCESS_DENIED);
+    let denied = || Box::new(Response::err(ctx.req_id, ACCESS_DENIED));
     let table = open_authorized_table(
         ctx.authority,
         ctx.persist_dir,
@@ -175,16 +179,16 @@ fn check_sql_column_source(
     .map_err(|_| denied())?;
     let schema = table.schema().map_err(|_| denied())?;
     let Some(column) = schema.column(&selector.column_id) else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             ctx.req_id,
             "COLUMN_UNKNOWN: the source column is not in the table schema",
-        ));
+        )));
     };
     if !medulla_table_store::tables::is_embeddable(column.ty) {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             ctx.req_id,
             "COLUMN_TYPE_UNSUPPORTED: only text and json columns can be embedded",
-        ));
+        )));
     }
     Ok(())
 }
@@ -193,13 +197,13 @@ fn check_sql_column_source(
 fn check_sql_column_source(
     ctx: &SemanticIndexContext<'_>,
     binding: &SemanticBinding,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     use medulla_index_types::semantic_index::SemanticSourceSelector;
     match &binding.source_selector {
-        SemanticSourceSelector::SqlColumnRef(_) => Err(invalid_semantic_input(
+        SemanticSourceSelector::SqlColumnRef(_) => Err(Box::new(invalid_semantic_input(
             ctx.req_id,
             "semantic SQL column source",
-        )),
+        ))),
         _ => Ok(()),
     }
 }
@@ -211,7 +215,7 @@ async fn admit_binding(
 ) -> Response {
     let (binding, service, now_ms, actor, nonce) = match checked_admission_inputs(ctx, draft) {
         Ok(inputs) => inputs,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     reply::<ingestion_results::SemanticIndexAdmitBinding, _>(
         ctx.req_id,
@@ -251,11 +255,11 @@ async fn refresh_binding(
 ) -> Response {
     let (replacement, manifest) = match checked_replacement(ctx, draft, source_manifest) {
         Ok(validated) => validated,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let (service, now_ms, actor, nonce) = match binding_operation_inputs(ctx) {
         Ok(inputs) => inputs,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     reply::<ingestion_results::SemanticIndexRefreshBinding, _>(
         ctx.req_id,
@@ -290,7 +294,7 @@ async fn binding_lifecycle(
 ) -> Response {
     let (service, now_ms, actor, nonce) = match binding_operation_inputs(ctx) {
         Ok(inputs) => inputs,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match command {
         BindingLifecycle::Transition(next_state) => {
