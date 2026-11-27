@@ -519,7 +519,7 @@ fn write_old_schema_avro() -> Vec<u8> {
         let mut record = apache_avro::types::Record::new(&schema).unwrap();
         record.put("id", id);
         record.put("name", name);
-        writer.append(record).unwrap();
+        writer.append_value(record).unwrap();
     }
     writer.into_inner().unwrap()
 }

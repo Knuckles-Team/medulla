@@ -531,14 +531,22 @@ mod tests {
             .collect();
         let neighbours = near(&borrowed);
         let expected = plan_consolidation(&records, &neighbours, 0.92, 0.05);
-        let handles: Vec<_> = (0..8)
-            .map(|_| {
-                let (records, neighbours) = (records.clone(), neighbours.clone());
-                std::thread::spawn(move || plan_consolidation(&records, &neighbours, 0.92, 0.05))
-            })
-            .collect();
-        for handle in handles {
-            assert_eq!(handle.join().unwrap(), expected);
+        let (sender, receiver) = std::sync::mpsc::sync_channel(8);
+        for _ in 0..8 {
+            let (records, neighbours) = (records.clone(), neighbours.clone());
+            let sender = sender.clone();
+            std::thread::spawn(move || {
+                sender
+                    .send(plan_consolidation(&records, &neighbours, 0.92, 0.05))
+                    .ok();
+            });
+        }
+        drop(sender);
+        for _ in 0..8 {
+            let plan = receiver
+                .recv_timeout(std::time::Duration::from_secs(60))
+                .expect("a planning thread answers");
+            assert_eq!(plan, expected);
         }
         assert!(!expected.held.is_empty());
         assert!(expected

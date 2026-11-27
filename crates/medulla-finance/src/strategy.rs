@@ -7,7 +7,7 @@
 // slices (R007.2+).
 
 use medulla_result_types::compute_result::market::strategy::{
-    OrderSide, ProposedAction, StrategyKind, StrategySpec, STRATEGY_SPEC_VERSION,
+    OrderSide, ProposedAction, StrategyKind, StrategySpec,
 };
 
 /// Evaluate a [`StrategySpec`] for one scheduled contribution date, deterministically.
@@ -32,6 +32,7 @@ pub fn evaluate(spec: &StrategySpec) -> Option<ProposedAction> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_result_types::compute_result::market::strategy::STRATEGY_SPEC_VERSION;
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R007.1
     #[test]

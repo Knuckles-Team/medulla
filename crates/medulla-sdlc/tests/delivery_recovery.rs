@@ -124,7 +124,7 @@ fn a_lapsed_lane_lease_names_its_running_assignment_by_delivery_id() {
             active: false,
         },
     ];
-    let expired = expired_by_lane_leases(&[delivery.clone()], &leases, 100);
+    let expired = expired_by_lane_leases(std::slice::from_ref(&delivery), &leases, 100);
     assert_eq!(
         expired,
         BTreeSet::from(["a1".to_string()]),

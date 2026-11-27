@@ -62,7 +62,7 @@ pub fn default_u64(name: &str) -> u64 {
         .find(|spec| spec.name == name)
         .and_then(|spec| match spec.default {
             KnobValue::Integer(value) => u64::try_from(value).ok(),
-            KnobValue::DurationMs(value) => u64::try_from(value).ok(),
+            KnobValue::DurationMs(value) => Some(value),
             _ => None,
         })
         .unwrap_or(0)

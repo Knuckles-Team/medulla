@@ -165,11 +165,10 @@ pub fn loop_metrics(flags: &[FlagMeasure], from_ms: u64, to_ms: u64) -> LoopMetr
             .filter(|flag| flag.state == FlagState::Dismissed)
             .count() as u64,
         median_flag_to_fix_ms: median,
-        recurrence_ppm: if ever_curated == 0 {
-            0
-        } else {
-            came_back.saturating_mul(1_000_000) / ever_curated
-        },
+        recurrence_ppm: came_back
+            .saturating_mul(1_000_000)
+            .checked_div(ever_curated)
+            .unwrap_or(0),
     }
 }
 
@@ -248,7 +247,7 @@ mod tests {
             forbidden_ops: vec![CurationEditOp::Retire],
         };
         let retire = proposal(CurationEditOp::Retire, Some("v1"), "v1");
-        let found = check_contradictions(&retire, &index(), &[invariant.clone()]);
+        let found = check_contradictions(&retire, &index(), std::slice::from_ref(&invariant));
         assert_eq!(codes(&found), [CONTRADICTS_INVARIANT.as_str()]);
         assert_eq!(found[0].other_ref.as_deref(), Some("no-retire-orders"));
         assert!(check_contradictions(&clean, &index(), &[invariant]).is_empty());

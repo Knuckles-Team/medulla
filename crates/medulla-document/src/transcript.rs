@@ -6,7 +6,6 @@
 //! per producer.  Checkpoint identity is deliberately reused from `medulla-types`;
 //! this module does not create a second cursor contract.
 
-use medulla_source_types::source_ingestion::SourceCheckpoint;
 use medulla_types::contract::{Digest256, UtcUnixNanos};
 use serde::{Deserialize, Serialize};
 
@@ -147,6 +146,7 @@ pub struct TranscriptTurn {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_source_types::source_ingestion::SourceCheckpoint;
     use medulla_types::contract::ResourceId;
 
     // spec: MEDULLA-REPO-INGEST-R800.1

@@ -257,7 +257,7 @@ pub(super) fn view_of_turtle(ttl: &str) -> GraphView {
 // ── MEDULLA-TYPED-PACKS-R108.16: the ranked catalog function ────────────────────────────
 
 /// The `GraphView` key of the node a bound asset term names.
-fn catalog_node_key<'a>(ctx: &'a Ctx, asset: &Binding) -> Option<String> {
+fn catalog_node_key(ctx: &Ctx, asset: &Binding) -> Option<String> {
     let bare = match asset {
         Binding::Iri(iri) => iri.clone(),
         _ => return None,

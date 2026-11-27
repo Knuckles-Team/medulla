@@ -180,10 +180,10 @@ fn blocked_tasks(view: &SpecGraphView) -> Vec<(String, String, String, String)> 
     blocked
 }
 
-fn require_subject<'a>(
+fn require_subject(
     question: SpecQuestion,
-    subject: Option<&'a str>,
-) -> Result<Option<&'a str>, LifecycleRefusal> {
+    subject: Option<&str>,
+) -> Result<Option<&str>, LifecycleRefusal> {
     match (question.takes_subject(), subject) {
         (true, Some(value)) if !value.trim().is_empty() => Ok(Some(value)),
         (false, None) => Ok(None),
@@ -283,7 +283,7 @@ pub fn answer(
         }
         SpecQuestion::ChangesAdvancingGoal => {
             let goal = subject.unwrap_or_default();
-            if !view.nodes.get(goal).is_some_and(|n| n.node_type == "Goal") {
+            if view.nodes.get(goal).is_none_or(|n| n.node_type != "Goal") {
                 return Err(LifecycleRefusal::CompetencySubjectUnknown(goal.to_owned()));
             }
             out.read(goal);
@@ -738,7 +738,8 @@ fn open_tasks_of_bundle(
         .split(',')
         .filter(|row| !row.is_empty())
         .collect();
-    let mut rows: Vec<(usize, Vec<(u8, u64, String)>, &str, &str)> = view
+    type RankedRow<'a> = (usize, Vec<(u8, u64, String)>, &'a str, &'a str);
+    let mut rows: Vec<RankedRow<'_>> = view
         .inbound(bundle, "inBundle")
         .filter(|requirement| open.contains(view.prop(requirement, "rowId")))
         .map(|requirement| {

@@ -333,7 +333,7 @@ mod tests {
         // A value outside its range or a degenerate range is refused.
         let hi = row("hi", GraderKind::Api, true, 6.0);
         assert_eq!(
-            corpus_from_scores(&[hi.clone()], &policy()),
+            corpus_from_scores(std::slice::from_ref(&hi), &policy()),
             Err(ScoreRefusal::OutOfRange {
                 node: hi.score_ref.as_str().to_string()
             })

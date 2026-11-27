@@ -269,7 +269,7 @@ fn contract_wave_rows_declare_their_static_policy() {
         emits_cdc: false,
         txn_participation: txn,
     };
-    let expected: [(&str, MethodPolicy, &str); 10] = [
+    let expected: [(&str, MethodPolicy, &str); 11] = [
         (
             "AgentAssemble",
             flags(

@@ -186,7 +186,7 @@ pub fn compile_constraints(
                 .any(|(other, _)| {
                     view.node_row_object(&view.graph[other])
                         .is_some_and(|neighbour| {
-                            crate::pred_eval::all_hold(&neighbour, &[target.clone()])
+                            crate::pred_eval::all_hold(&neighbour, std::slice::from_ref(target))
                         })
                 });
             let passes = match predicate.quantifier {

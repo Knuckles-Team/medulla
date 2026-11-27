@@ -164,7 +164,7 @@ mod tests {
             format!("graph-source:{base}:epoch:+1"),
             format!("graph-source:{base}:epoch:x"),
             format!("graph-source:{}:epoch:1", base.to_uppercase()),
-            format!("graph-source:sha256:abc:epoch:1"),
+            "graph-source:sha256:abc:epoch:1".to_string(),
             format!("other-source:{base}:epoch:1"),
             format!("{base}:epoch:1"),
         ] {

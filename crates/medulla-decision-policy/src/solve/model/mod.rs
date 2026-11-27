@@ -17,7 +17,6 @@ use serde::{Deserialize, Serialize};
 pub use error::{Location, ModelError};
 use medulla_decision_types::solve::objective::ObjectiveValue;
 use medulla_decision_types::solve::spec::{ConstraintBody, ModelSpec, Relation, Term, VarId};
-use objective::MAX_SCALAR_MAGNITUDE;
 pub use validate::{
     MAX_ABS_COEFFICIENT, MAX_ABS_RHS, MAX_CONSTRAINTS, MAX_LABEL_BYTES, MAX_OBJECTIVE_LEVELS,
     MAX_VARIABLES,

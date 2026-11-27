@@ -1963,7 +1963,7 @@ mod tests {
         ];
         /// The committed publish descriptors: every component kind and the
         /// authorization action publishing it needs.
-        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 26] = [
+        const PUBLISH_DESCRIPTORS: [(AgentComponentKind, &str); 27] = [
             (AgentComponentKind::ModelProfile, "agent:component-write"),
             (AgentComponentKind::SystemPrompt, "agent:component-write"),
             (AgentComponentKind::Tool, "agent:component-write"),

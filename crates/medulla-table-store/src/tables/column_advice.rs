@@ -255,9 +255,17 @@ pub struct ColumnUsageCounters {
 
 impl ColumnUsageCounters {
     fn locked(&self) -> std::sync::MutexGuard<'_, UsageState> {
-        self.state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        // The counters are advisory: a panic mid-update leaves counts that are at worst
+        // slightly off, so a poisoned lock is cleared and the counters stay in service.
+        loop {
+            match self.state.lock() {
+                Ok(guard) => return guard,
+                Err(poisoned) => {
+                    drop(poisoned);
+                    self.state.clear_poison();
+                }
+            }
+        }
     }
 
     /// Install the resolved knob values.
@@ -438,9 +446,11 @@ mod tests {
     #[test]
     fn counters_are_bounded_restart_on_ddl_and_drop_old_uses() {
         let counters = ColumnUsageCounters::default();
-        let mut settings = AdviceSettings::default();
-        settings.max_columns = 2;
-        settings.window_ms = 1000;
+        let settings = AdviceSettings {
+            max_columns: 2,
+            window_ms: 1000,
+            ..AdviceSettings::default()
+        };
         counters.configure(settings);
         let pair = |c: &str| vec![("docs".to_string(), c.to_string())];
         counters.observe(&pair("a"), 1, 10);

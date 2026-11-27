@@ -122,7 +122,7 @@ impl RunMetricsRequest {
 
     fn admits(&self, sample: &RunSample) -> bool {
         let matches = |wanted: &Option<String>, actual: &str| {
-            wanted.as_deref().map_or(true, |wanted| wanted == actual)
+            wanted.as_deref().is_none_or(|wanted| wanted == actual)
         };
         matches(&self.technique, &sample.technique)
             && matches(&self.arm, &sample.arm)

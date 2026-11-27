@@ -685,6 +685,7 @@ mod tests {
             owner: Some(&owner),
             terms: &terms,
             upstream: &upstream,
+            ..Default::default()
         };
         let entry = agent_entry();
         let agent = emit_asset(AssetRecord::AgentVersion(&entry), &links).unwrap();

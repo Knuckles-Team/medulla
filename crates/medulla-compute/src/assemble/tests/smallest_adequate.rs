@@ -169,7 +169,8 @@ mod objective_levels {
     /// ranked by total bytes, then total ledger cost, then the largest ids
     /// avoided first.
     fn brute_force() -> Vec<String> {
-        let mut best: Option<((u64, u64, Vec<usize>), Vec<String>)> = None;
+        type Ranked = ((u64, u64, Vec<usize>), Vec<String>);
+        let mut best: Option<Ranked> = None;
         for mask in 0u32..(1 << TOOLS.len()) {
             let picked: Vec<usize> = (0..TOOLS.len()).filter(|i| mask & (1 << i) != 0).collect();
             let covered =

@@ -229,7 +229,7 @@ impl IdentityStore {
         let key_len = request.public_key_hex.len();
         if !ISSUER_KEY_ALGORITHMS.contains(&request.algorithm.as_str())
             || !is_lower_hex(&request.public_key_hex)
-            || key_len % 2 != 0
+            || !key_len.is_multiple_of(2)
             || !(64..=130).contains(&key_len)
         {
             return Err(IdentityRefusal::InvalidRequest);

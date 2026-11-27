@@ -251,7 +251,7 @@ mod tests {
             for (number, line) in source[..test_start].lines().enumerate() {
                 let code = line.trim_start();
                 assert!(
-                    !(code.contains(".phase =") && !code.contains("==")),
+                    !code.contains(".phase =") || code.contains("=="),
                     "{file}:{} assigns the phase directly: {code}",
                     number + 1
                 );

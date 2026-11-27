@@ -325,7 +325,7 @@ impl Response {
             },
         };
         let transition_refused = (error == medulla_types::transition_refused::TRANSITION_REFUSED)
-            .then(|| error_detail.as_deref())
+            .then_some(error_detail.as_deref())
             .flatten()
             .and_then(medulla_types::transition_refused::TransitionRefused::from_detail)
             .map(Into::into);

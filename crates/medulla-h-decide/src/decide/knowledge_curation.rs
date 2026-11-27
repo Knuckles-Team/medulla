@@ -155,7 +155,7 @@ mod served {
                 ..
             } => {
                 require_lease(state, verified, &loop_id, epoch).await?;
-                propose(graph, &view, verified, &store, proposal, body)
+                propose(graph, &view, verified, &store, *proposal, body)
             }
             CurationOp::Status { proposal_id, .. } => {
                 status(graph, &view, verified, &store, &proposal_id)

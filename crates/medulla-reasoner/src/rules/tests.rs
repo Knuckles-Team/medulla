@@ -1,3 +1,4 @@
+use super::proof::ASSERTED_RULE;
 use super::*;
 use medulla_rdf::mapping::parse_turtle;
 

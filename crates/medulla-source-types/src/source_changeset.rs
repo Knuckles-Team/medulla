@@ -719,10 +719,7 @@ fn valid_path(path: &str) -> bool {
 /// before an optional `(scope)`, an optional `!` and the colon is `chore`.
 pub fn is_chore(message: &str) -> bool {
     let subject = message.lines().next().unwrap_or_default();
-    let kind = subject
-        .split(|c| matches!(c, '(' | ':' | '!'))
-        .next()
-        .unwrap_or_default();
+    let kind = subject.split(['(', ':', '!']).next().unwrap_or_default();
     kind.trim() == "chore"
 }
 

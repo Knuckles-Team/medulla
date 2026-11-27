@@ -482,13 +482,13 @@ pub fn regression_rollback(
     let Some(previous) = pointer.parent_ref.clone() else {
         return hold("no_previous_target");
     };
-    PromotionVerdict::Rollback(RollbackDecision {
+    PromotionVerdict::Rollback(Box::new(RollbackDecision {
         pointer: pointer.clone(),
         from_ref: pointer.revision_ref.clone(),
         to_ref: previous,
         reason: format!("regression:drop_ppm={drop}"),
         evidence_refs: Vec::new(),
-    })
+    }))
 }
 
 /// MEDULLA-DECISION-ENGINE-R805.11: the gate rule of the evidence's subject.
@@ -1018,14 +1018,22 @@ mod tests {
         };
         let policy = DecisionPolicy::engine_default();
         let first = super::paired_rollout_evidence(&set, &policy);
-        let handles: Vec<_> = (0..4)
-            .map(|_| {
-                let (set, policy) = (set.clone(), policy.clone());
-                std::thread::spawn(move || super::paired_rollout_evidence(&set, &policy))
-            })
-            .collect();
-        for handle in handles {
-            assert_eq!(handle.join().expect("thread"), first);
+        let (sender, receiver) = std::sync::mpsc::sync_channel(4);
+        for _ in 0..4 {
+            let (set, policy) = (set.clone(), policy.clone());
+            let sender = sender.clone();
+            std::thread::spawn(move || {
+                sender
+                    .send(super::paired_rollout_evidence(&set, &policy))
+                    .ok();
+            });
+        }
+        drop(sender);
+        for _ in 0..4 {
+            let evidence = receiver
+                .recv_timeout(std::time::Duration::from_secs(60))
+                .expect("an evidence thread answers");
+            assert_eq!(evidence, first);
         }
         assert_eq!(first.case_count, 60);
         assert_eq!(first.receipt_kind, ReceiptKind::RolloutSet);

@@ -579,10 +579,9 @@ pub fn fit_topics(
         mine.sort_by_key(|(confidence, _)| *confidence);
         let total = mine.len() as u64;
         let correct_all = mine.iter().filter(|(_, ok)| *ok).count() as u64;
-        let holdout_precision_bp = if total == 0 {
-            0
-        } else {
-            u32::try_from(correct_all * 10_000 / total).unwrap_or(10_000)
+        let holdout_precision_bp = match (correct_all * 10_000).checked_div(total) {
+            None => 0,
+            Some(basis_points) => u32::try_from(basis_points).unwrap_or(10_000),
         };
         // The lowest confidence whose suffix (every prediction at or above it) reaches the target.
         let mut floor_bp = MAX_CONFIDENCE_BASIS_POINTS;

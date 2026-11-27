@@ -442,7 +442,7 @@ fn write_entry(out: &mut Vec<u8>, name: &str, data: &[u8]) {
     out.extend_from_slice(&header);
     out.extend_from_slice(data);
     let padding = (BLOCK - data.len() % BLOCK) % BLOCK;
-    out.extend(std::iter::repeat(0u8).take(padding));
+    out.extend(std::iter::repeat_n(0u8, padding));
 }
 
 fn parse_octal(field: &[u8]) -> Result<u64, BundleError> {

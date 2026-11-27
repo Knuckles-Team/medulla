@@ -9,7 +9,7 @@
 //! before it writes the decision.
 
 use medulla_catalog_types::data_product::{AccessRequest, DataContract, DataProduct};
-use redb::{ReadableTable, TableDefinition};
+use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
 use super::durable_write::commit_authority_mutation;

@@ -830,7 +830,7 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             medulla_types::process_import::COMPILE_REFUSALS
                 .iter()
                 .chain(medulla_types::process_import::REFUSALS)
-                .map(|code| RefusalCode::new(*code))
+                .map(|code| RefusalCode::new(code))
                 .collect(),
         ),
         ("belief_revision", codes(belief_revision::REFUSALS)),

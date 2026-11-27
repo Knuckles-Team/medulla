@@ -44,17 +44,17 @@ fn row(index: usize, envelope: &PolicyEnvelope) -> ScoreRow {
     let label = format!("score-{index}");
     ScoreRow {
         score_ref: opaque("score", &label),
-        run_ref: (index % 50 != 0).then(|| opaque("run", &label)),
+        run_ref: (!index.is_multiple_of(50)).then(|| opaque("run", &label)),
         value: 1.0 + (index % 5) as f64,
         range_min: 1.0,
         range_max: 5.0,
-        grader_kind: if index % 7 == 0 {
+        grader_kind: if index.is_multiple_of(7) {
             GraderKind::ModelJudge
         } else {
             GraderKind::Human
         },
         author: Some(opaque("author", &format!("author-{}", index % 20))),
-        split: Some(if index % 5 == 0 {
+        split: Some(if index.is_multiple_of(5) {
             ExampleSplit::Test
         } else {
             ExampleSplit::Train

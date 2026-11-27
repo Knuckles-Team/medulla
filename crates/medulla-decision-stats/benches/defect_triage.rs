@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use medulla_decision_outcome_types::decision::defect_triage::{
     cap_frames, decide_triage, find_duplicate, pick_owner, rank_suspects, OpenDefect, SuspectInput,
-    TriageKnobs,
+    TriageEvidence, TriageKnobs,
 };
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_source_types::lifecycle::Severity;
@@ -87,12 +87,15 @@ fn main() {
             "defect-bench",
             Severity::Medium,
             lines.len() as u32,
-            suspects,
-            owner,
-            duplicate,
-            kept.iter()
-                .map(|line| format!("symptom:{}", line.len()))
-                .collect(),
+            TriageEvidence {
+                suspects,
+                owner,
+                duplicate_of: duplicate,
+                evidence_refs: kept
+                    .iter()
+                    .map(|line| format!("symptom:{}", line.len()))
+                    .collect(),
+            },
             &knobs,
         );
         black_box(decision);

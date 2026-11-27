@@ -21,7 +21,6 @@ mod backend;
 pub use backend::SemanticStore;
 #[cfg(feature = "ann")]
 pub use backend::{build_off_lock, BuildHooks, BuildOutcome};
-use medulla_index_types::embedding::EmbeddingSpaceRef;
 
 /// The content stamp of one [`SemanticStore`] (CONCEPT:MEDULLA-KG.coordination.dependency-scoped-cache-invalidation,
 /// EH-393 — the `EmbeddingGeneration` dependency dimension). Every constructor, content mutation
@@ -567,6 +566,7 @@ mod check_embedding_dimension_tests {
 #[cfg(test)]
 mod space_declaration_tests {
     use super::*;
+    use medulla_index_types::embedding::EmbeddingSpaceRef;
 
     fn space(model: &str, dimensions: usize) -> EmbeddingSpaceRef {
         EmbeddingSpaceRef::pinned(model, "1", "a".repeat(64), "b".repeat(64), dimensions, true)

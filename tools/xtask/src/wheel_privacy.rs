@@ -620,7 +620,7 @@ mod tests {
             writer.write_all(payload).expect("write");
         }
         if let Some(c) = comment {
-            writer.set_comment(c);
+            writer.set_comment(c).expect("comment");
         }
         writer.finish().expect("finish");
         (tree, path)

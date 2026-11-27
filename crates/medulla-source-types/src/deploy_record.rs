@@ -528,7 +528,8 @@ mod tests {
     // spec: MEDULLA-SDLC-R002.7
     #[test]
     fn every_bound_refuses_before_a_write() {
-        let cases: Vec<Box<dyn Fn(&mut DeployRecordInput)>> = vec![
+        type RefusalCase = Box<dyn Fn(&mut DeployRecordInput)>;
+        let cases: Vec<RefusalCase> = vec![
             Box::new(|b| b.plan_digest = "abc".to_owned()),
             Box::new(|b| b.plan_digest = format!("sha256:{}", "A".repeat(64))),
             Box::new(|b| b.target = " ".to_owned()),

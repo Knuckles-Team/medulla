@@ -1,4 +1,5 @@
 use super::*;
+use medulla_protocol_types::protocol::Method;
 
 /// Actions an op decides at run time (op-level `authz_action`s and the
 /// request boundary's controller scopes) on top of the ledger rows.

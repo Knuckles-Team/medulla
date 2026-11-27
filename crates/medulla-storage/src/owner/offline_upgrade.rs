@@ -293,7 +293,7 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
             identity,
             integrity,
             options,
-            JobsSource::BeforeJobMachine
+            JobsSource::LegacyJobs
         ),
         upgrade_jobs
     ),
@@ -304,7 +304,7 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
             identity,
             integrity,
             options,
-            JobsSource::BeforeTaskQueue
+            JobsSource::WithoutTaskTotals
         ),
         upgrade_jobs
     ),
@@ -315,7 +315,7 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
             identity,
             integrity,
             options,
-            JobsSource::BeforeTaskDeadLetter
+            JobsSource::NoDeadLetterTable
         ),
         upgrade_jobs
     ),

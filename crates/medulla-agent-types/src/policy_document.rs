@@ -434,7 +434,7 @@ mod tests {
                 *candidate
             );
         }
-        let wire = serde_json::to_value(&candidates[1].status).unwrap();
+        let wire = serde_json::to_value(candidates[1].status).unwrap();
         assert_eq!(wire["inactive"]["reason"], "CLAUSE_UNPARSED");
         assert_eq!(
             parse_policy_document(&[0xff, 0xfe], PolicyProfile::Constitution, &source()),

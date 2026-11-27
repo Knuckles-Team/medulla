@@ -167,7 +167,7 @@ fn luhn(value: &str) -> bool {
             }
         })
         .sum();
-    sum % 10 == 0
+    sum.is_multiple_of(10)
 }
 
 fn iban_mod97(value: &str) -> bool {

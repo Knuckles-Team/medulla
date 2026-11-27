@@ -262,7 +262,10 @@ fn answer(question: &Question, stable: usize) -> Vec<String> {
     let mut rows: Vec<String> = Vec::new();
     for row in table.to_rows().1 {
         for (index, cell) in row.iter().enumerate().skip(stable) {
-            let value = cell.as_deref().unwrap_or_default();
+            let value = cell
+                .as_ref()
+                .map(|term| term.value_text())
+                .unwrap_or_default();
             assert!(
                 !value.is_empty(),
                 "column {index} (source, record id or as-of) is unbound"
@@ -271,7 +274,14 @@ fn answer(question: &Question, stable: usize) -> Vec<String> {
         rows.push(
             row.iter()
                 .take(stable)
-                .map(|cell| comparable(cell.as_deref().unwrap_or("-")))
+                .map(|cell| {
+                    comparable(
+                        cell.as_ref()
+                            .map(|term| term.value_text())
+                            .as_deref()
+                            .unwrap_or("-"),
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join("\t"),
         );

@@ -21,9 +21,7 @@
 
 use super::IndexManager;
 
-use medulla_index_types::managed_index::{
-    IndexBlock, IndexBlockReason, ManagedIndexState, ManagedIndexStatus, MAX_BLOCK_DETAIL_BYTES,
-};
+use medulla_index_types::managed_index::ManagedIndexStatus;
 
 impl IndexManager {
     /// The status of every managed index registered on this graph, by name.
@@ -76,7 +74,9 @@ impl IndexManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use medulla_index_types::managed_index::{
+        IndexBlock, IndexBlockReason, ManagedIndexState, MAX_BLOCK_DETAIL_BYTES,
+    };
 
     #[test]
     fn the_lifecycle_rule_is_requested_backfilling_active_or_blocked() {

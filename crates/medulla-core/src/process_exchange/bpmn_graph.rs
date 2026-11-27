@@ -199,8 +199,6 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
             push_edge(&flow.id, &flow.target_ref, "flowTarget");
         }
     }
-    drop(push_node);
-    drop(push_edge);
 
     // A fragment whose owner is not an element of the document stays on the document node.
     let mut kept: BTreeMap<String, String> = BTreeMap::new();

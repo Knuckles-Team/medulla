@@ -198,6 +198,9 @@ struct Search<'a> {
     work: u64,
 }
 
+/// A candidate group paired with its optional alternative member set.
+type GroupChoice = (Group, Option<Vec<usize>>);
+
 struct Group {
     members: Vec<usize>,
     residual: i128,
@@ -252,7 +255,7 @@ impl Search<'_> {
         anchor: &Item,
         anchor_is_left: bool,
         pool: &[&Item],
-    ) -> Result<Option<(Group, Option<Vec<usize>>)>, RuleRefusal> {
+    ) -> Result<Option<GroupChoice>, RuleRefusal> {
         let tolerance = i128::from(self.params.tolerance_minor);
         for size in 1..=MAX_GROUP.min(pool.len()) {
             let mut best: Option<Group> = None;

@@ -81,7 +81,7 @@ fn retire_predecessor_tables(
     }
     // The jobs successor stores every record in its machine shape under the new table name, so
     // the retired table is converted and then deleted (MEDULLA-CQ-ORCH-R811.4).
-    if target == UpgradeTarget::Jobs(JobsSource::BeforeJobMachine) {
+    if target == UpgradeTarget::Jobs(JobsSource::LegacyJobs) {
         crate::owner::jobs_upgrade::convert_job_rows(write)?;
     }
     // Every graph shard generation stores its reservation rows with the retired `tombstone`

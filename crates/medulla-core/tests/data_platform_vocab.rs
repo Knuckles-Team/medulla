@@ -368,7 +368,7 @@ fn ml_terms_present() {
     let triples = load_data_platform();
     assert!(has_iri(
         &triples,
-        &format!("https://knuckles-team.github.io/ontology/core#Dataset"),
+        "https://knuckles-team.github.io/ontology/core#Dataset",
         &format!("{RDFS}subClassOf"),
         "https://knuckles-team.github.io/ontology/core#Dataset"
     ));
@@ -1577,7 +1577,7 @@ fn alignment_relational_resolves() {
         &triples,
         "https://knuckles-team.github.io/ontology/core#DatabaseTable",
         &format!("{RDFS}subClassOf"),
-        &format!("https://knuckles-team.github.io/ontology/core#Table")
+        "https://knuckles-team.github.io/ontology/core#Table"
     ));
     assert!(has_iri(
         &triples,
@@ -1589,7 +1589,7 @@ fn alignment_relational_resolves() {
         &triples,
         "https://knuckles-team.github.io/ontology/core#Collection",
         &format!("{RDFS}subClassOf"),
-        &format!("https://knuckles-team.github.io/ontology/core#DocumentCollection")
+        "https://knuckles-team.github.io/ontology/core#DocumentCollection"
     ));
     assert!(has_iri(
         &triples,

@@ -5,7 +5,7 @@ use medulla_agent_types::{
 };
 
 use super::*;
-use crate::rules::ASSERTED_RULE;
+use crate::rules::proof::ASSERTED_RULE;
 
 fn model(window: u32, vision: bool, output: &[&str]) -> AgentComponentFacts {
     AgentComponentFacts::ModelProfile {

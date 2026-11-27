@@ -149,7 +149,7 @@ pub(super) fn collect(
         if a < b && axioms.asymmetric.contains(*property) {
             if let Some(reverse) = directed.get(&(*property, *b, *a)) {
                 push(
-                    *a,
+                    a,
                     format!("asymmetric:{property}"),
                     ViolationDetail::Asymmetry {
                         property: (*property).to_string(),
@@ -172,7 +172,7 @@ pub(super) fn collect(
         let targets: BTreeSet<&str> = undated.iter().map(|e| e.target.as_str()).collect();
         if targets.len() > 1 {
             push(
-                *source,
+                source,
                 format!("functional:{property}"),
                 ViolationDetail::Cardinality {
                     class: OWL_THING.to_string(),
@@ -198,7 +198,7 @@ pub(super) fn collect(
                         (second, first)
                     };
                     push(
-                        *source,
+                        source,
                         format!("functional:{property}"),
                         ViolationDetail::TemporalConflict {
                             property: (*property).to_string(),

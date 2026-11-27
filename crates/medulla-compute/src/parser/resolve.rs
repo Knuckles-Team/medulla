@@ -233,7 +233,7 @@ pub fn import_segments(module: &str) -> BTreeSet<String> {
         .trim()
         .trim_matches(|c| c == '"' || c == '\'' || c == '<' || c == '>');
     let mut names: BTreeSet<String> = trimmed
-        .split(|c| c == '/' || c == '.' || c == ':')
+        .split(['/', '.', ':'])
         .filter(|segment| !segment.is_empty() && !matches!(*segment, "crate" | "self" | "super"))
         .map(str::to_string)
         .collect();

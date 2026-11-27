@@ -5,8 +5,6 @@
 //! link, or abstains with a typed reason. Nothing here reads a clock or a float;
 //! equal inputs produce equal records.
 
-use serde::{Deserialize, Serialize};
-
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
@@ -230,18 +228,33 @@ pub fn pick_owner(path_owners: &[String], recent_authors: &[String]) -> Option<S
         .cloned()
 }
 
+/// The ranked evidence one triage decision rests on.
+pub struct TriageEvidence {
+    /// The suspected symbols, ranked.
+    pub suspects: Vec<String>,
+    /// The picked owner, when one is known.
+    pub owner: Option<String>,
+    /// The defect this one duplicates, when one is found.
+    pub duplicate_of: Option<String>,
+    /// The evidence the decision cites.
+    pub evidence_refs: Vec<String>,
+}
+
 /// Decide a triage from ranked evidence. It abstains, with the typed reason,
 /// when the evidence cannot support a decision.
 pub fn decide_triage(
     defect_id: &str,
     severity: Severity,
     symptom_count: u32,
-    suspects: Vec<String>,
-    owner: Option<String>,
-    duplicate_of: Option<String>,
-    evidence_refs: Vec<String>,
+    evidence: TriageEvidence,
     knobs: &TriageKnobs,
 ) -> TriageDecision {
+    let TriageEvidence {
+        suspects,
+        owner,
+        duplicate_of,
+        evidence_refs,
+    } = evidence;
     let abstain = if evidence_refs.is_empty() {
         Some(TriageAbstainReason::InsufficientEvidence)
     } else if suspects.is_empty() {
@@ -287,10 +300,12 @@ mod tests {
             "d1",
             Severity::High,
             1,
-            vec!["sym::a".into()],
-            Some("alice".into()),
-            Some("d0".into()),
-            vec!["gv-1".into()],
+            TriageEvidence {
+                suspects: vec!["sym::a".into()],
+                owner: Some("alice".into()),
+                duplicate_of: Some("d0".into()),
+                evidence_refs: vec!["gv-1".into()],
+            },
             &knobs(),
         );
         let json = serde_json::to_string(&decision).unwrap();
@@ -303,10 +318,12 @@ mod tests {
             "d2",
             Severity::Low,
             1,
-            vec![],
-            None,
-            None,
-            vec!["x".into()],
+            TriageEvidence {
+                suspects: vec![],
+                owner: None,
+                duplicate_of: None,
+                evidence_refs: vec!["x".into()],
+            },
             &knobs(),
         );
         assert_eq!(
@@ -325,10 +342,12 @@ mod tests {
             "d3",
             Severity::Low,
             1,
-            vec!["s".into()],
-            None,
-            None,
-            vec!["x".into()],
+            TriageEvidence {
+                suspects: vec!["s".into()],
+                owner: None,
+                duplicate_of: None,
+                evidence_refs: vec!["x".into()],
+            },
             &knobs(),
         );
         assert_eq!(ownerless.abstain_reason, Some(TriageAbstainReason::NoOwner));
@@ -336,10 +355,12 @@ mod tests {
             "d4",
             Severity::Low,
             1,
-            vec!["s".into()],
-            Some("o".into()),
-            None,
-            vec![],
+            TriageEvidence {
+                suspects: vec!["s".into()],
+                owner: Some("o".into()),
+                duplicate_of: None,
+                evidence_refs: vec![],
+            },
             &knobs(),
         );
         assert_eq!(
@@ -380,10 +401,12 @@ mod tests {
             "d1",
             Severity::Medium,
             1,
-            rank_suspects(&inputs, Some("c2"), 1_000, &knobs()),
-            pick_owner(&owners, &authors),
-            None,
-            vec!["culprit:c2".into()],
+            TriageEvidence {
+                suspects: rank_suspects(&inputs, Some("c2"), 1_000, &knobs()),
+                owner: pick_owner(&owners, &authors),
+                duplicate_of: None,
+                evidence_refs: vec!["culprit:c2".into()],
+            },
             &knobs(),
         );
         assert_eq!(

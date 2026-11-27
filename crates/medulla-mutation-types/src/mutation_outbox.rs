@@ -157,7 +157,7 @@ pub enum MutationOutboxOp {
     Ack {
         target: OutboxTarget,
         consumer: String,
-        lease: crate::mutation_scope::MutationOutboxLease,
+        lease: Box<crate::mutation_scope::MutationOutboxLease>,
     },
 }
 

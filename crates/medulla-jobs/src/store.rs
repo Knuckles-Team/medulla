@@ -2414,6 +2414,13 @@ fn select_ready_for_worker(
             .map(|value| capability_index_key(value)),
     );
 
+    let terms = ClaimTerms {
+        worker_capabilities,
+        capabilities,
+        now_ms,
+        quota,
+        family,
+    };
     let ready = wtx
         .open_read_table(JOB_READY_BY_CAPABILITY)
         .map_err(redb_err)?;
@@ -2437,16 +2444,7 @@ fn select_ready_for_worker(
                 continue;
             };
             let job = decode_job(value.value())?;
-            if !job_ready_for_claim(
-                wtx,
-                &job,
-                &anchor,
-                worker_capabilities,
-                capabilities,
-                now_ms,
-                quota,
-                family,
-            )? {
+            if !job_ready_for_claim(wtx, &job, &anchor, &terms)? {
                 continue;
             }
             let order = (rank, created_at_ms, job_id.to_string());
@@ -2465,16 +2463,29 @@ fn select_ready_for_worker(
 /// with `worker_capabilities`/`capabilities`, under `quota`. Split out of
 /// `select_ready_for_worker` (extract-method, cx/wD8) — same terms, same
 /// order, same short-circuiting as before.
+/// What a worker claims under: its capabilities, the clock, the tenant quota and the job family.
+#[derive(Clone, Copy)]
+struct ClaimTerms<'a> {
+    worker_capabilities: &'a [String],
+    capabilities: &'a BTreeSet<&'a str>,
+    now_ms: i64,
+    quota: TenantJobQuota,
+    family: ClaimFamily,
+}
+
 fn job_ready_for_claim(
     wtx: &AdmittedMutation<'_, JobsOwner>,
     job: &AnalyticsJob,
     anchor: &str,
-    worker_capabilities: &[String],
-    capabilities: &BTreeSet<&str>,
-    now_ms: i64,
-    quota: TenantJobQuota,
-    family: ClaimFamily,
+    terms: &ClaimTerms<'_>,
 ) -> Result<bool> {
+    let ClaimTerms {
+        worker_capabilities,
+        capabilities,
+        now_ms,
+        quota,
+        family,
+    } = *terms;
     if !family.admits(job)
         || !ready_indexed(job)
         || placement_anchor(job) != anchor

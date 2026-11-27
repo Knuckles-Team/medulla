@@ -511,6 +511,8 @@ mod tests {
             hex(2)
         )
         .is_err());
-        assert!(StepVerdict::new("s".into(), true, hex(5), vec!["zz".into()]).is_err());
+        assert!(
+            StepVerdict::new("s".into(), StepOutcome::Verified, hex(5), vec!["zz".into()]).is_err()
+        );
     }
 }

@@ -481,7 +481,8 @@ fn maintain_one(
         ViewOutput::Groups { .. } | ViewOutput::Distinct(_) => {
             let (keys, aggs) = program.group_shape();
             let (keys, aggs) = (&keys[..], &aggs[..]);
-            let mut touched: BTreeMap<String, Vec<(i64, &Row, Vec<Value>)>> = BTreeMap::new();
+            type Touched<'a> = BTreeMap<String, Vec<(i64, &'a Row, Vec<Value>)>>;
+            let mut touched: Touched<'_> = BTreeMap::new();
             for delta in &deltas {
                 if !program.admits(&delta.row)? {
                     continue;

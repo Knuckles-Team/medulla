@@ -18,11 +18,10 @@
 //! vector. A `Reason` (datalog fixpoint) op, blob/object source ops, cross-modal
 //! write ACID and cross-shard are explicit later increments (intentionally absent).
 
-use medulla_query_types::wire::{Op, Plan, Pred};
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_query_types::wire::{Op, Plan, Pred};
 
     /// The plan AST round-trips through MessagePack (the wire format) unchanged —
     /// the proof `Method::UnifiedQuery { plan }` can carry it.

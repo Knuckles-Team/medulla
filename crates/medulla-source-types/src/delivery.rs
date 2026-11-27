@@ -84,6 +84,7 @@ pub const REFUSALS: &[RefusalCode] = &[
 
 /// How strongly the delivery was mandated.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum MandateStrength {
     Explicit,
@@ -92,6 +93,7 @@ pub enum MandateStrength {
 
 /// Lifecycle state of one assignment: pending -> running -> ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum AssignmentState {
     Pending,
@@ -113,6 +115,7 @@ impl AssignmentState {
 
 /// The last report state an assignment declared.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DeliveryReportState {
     Progress,
@@ -125,6 +128,7 @@ pub enum DeliveryReportState {
 
 /// The latest report of one assignment (R019.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct AssignmentReport {
     pub state: DeliveryReportState,
@@ -136,6 +140,7 @@ pub struct AssignmentReport {
 
 /// Who produced a delivery input.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum InputSource {
     Person,
@@ -144,6 +149,7 @@ pub enum InputSource {
 
 /// One feedback input a delivery received (R019.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryInput {
     pub event_id: String,
@@ -157,6 +163,7 @@ pub struct DeliveryInput {
 
 /// The one open question of a delivery (R019.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryQuestion {
     pub text: String,
@@ -167,6 +174,7 @@ pub struct DeliveryQuestion {
 
 /// The state of one proposal a delivery opened.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ProposalState {
     Open,
@@ -253,6 +261,7 @@ impl ProposalState {
 
 /// One proposal a delivery opened and its state.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryProposal {
     pub id: String,
@@ -261,6 +270,7 @@ pub struct DeliveryProposal {
 
 /// The stage of a delivery, derived on each read and never stored (R019.7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum DeliveryStage {
     #[serde(rename = "ended")]
     Ended,
@@ -298,6 +308,7 @@ impl DeliveryStage {
 
 /// One report an agent writes to a delivery through `DeliveryReport` (R019.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryReportWrite {
     pub delivery_id: String,
@@ -348,6 +359,7 @@ impl Delivery {
 
 /// How a delivery ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum DeliveryOutcome {
     Completed,
@@ -359,6 +371,7 @@ pub enum DeliveryOutcome {
 
 /// Feedback event kinds; mirrors `ScmFeedbackEvent.kind` of SCION-SCM-R003.1.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum FeedbackKind {
     CheckChanged,
@@ -378,6 +391,7 @@ pub enum FeedbackKind {
 /// provider event id the engine dedups by, the connector that provided it, what happened, who
 /// caused it, the proposal it concerns and whether a check it reports failed.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ScmFeedbackEvent {
     pub event_id: String,
@@ -424,6 +438,7 @@ impl FeedbackRefusal {
 
 /// The merge-arming verdict for a proposal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ArmingVerdict {
     Arm,
@@ -433,6 +448,7 @@ pub enum ArmingVerdict {
 
 /// Who mandated the delivery, on what basis, and over which rows.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryMandate {
     pub schema_version: u32,
@@ -447,6 +463,7 @@ pub struct DeliveryMandate {
 
 /// One run assigned to a delivery.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryAssignment {
     pub schema_version: u32,
@@ -464,6 +481,7 @@ pub struct DeliveryAssignment {
 
 /// Whether an outside effect a lost assignment recorded has a receipt (R019.13).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ReceiptState {
     Confirmed,
@@ -473,6 +491,7 @@ pub enum ReceiptState {
 
 /// One outside effect named in a recovery note.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RecoveredEffect {
     pub description: String,
@@ -481,6 +500,7 @@ pub struct RecoveredEffect {
 
 /// What a new assignment inherits from the one a restart ended (R019.13).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RecoveryNote {
     /// The id of the assignment this one replaces.
@@ -493,6 +513,7 @@ pub struct RecoveryNote {
 
 /// The delivery record.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Delivery {
     pub schema_version: u32,
@@ -568,6 +589,7 @@ impl MandateRevoked {
 
 /// Who produced a review (R019.9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ReviewerKind {
     Automated,
@@ -576,6 +598,7 @@ pub enum ReviewerKind {
 
 /// One stored `:Review` record as the round budget reads it (R019.9).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ReviewRecord {
     pub proposal_id: String,
@@ -587,6 +610,7 @@ pub struct ReviewRecord {
 
 /// Whether an automated review is still addressed (R019.9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum RoundVerdict {
     Address,
@@ -595,6 +619,7 @@ pub enum RoundVerdict {
 
 /// The facts a merge-arming verdict reads (R019.10).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ArmingFacts {
     /// The delivery opened the proposal.
@@ -660,6 +685,7 @@ pub struct WouldDispatch {
 /// `DeliveryOpen`: the slice a dispatch opens one delivery for (R019.3, R019.4). The actor,
 /// the project mode, the tenant and the clock come from the engine, never the request.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryOpenRequest {
     pub repo: String,
@@ -676,6 +702,7 @@ pub struct DeliveryOpenRequest {
 
 /// The answer of `DeliveryOpen`: the delivery, or the recorded `would_dispatch`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryOpenAnswer {
     pub delivery: Option<Delivery>,
@@ -686,6 +713,7 @@ pub struct DeliveryOpenAnswer {
 
 /// The receipt of `DeliveryFeedback` (R019.5).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryFeedbackReceipt {
     pub duplicate: bool,
@@ -696,6 +724,7 @@ pub struct DeliveryFeedbackReceipt {
 
 /// A delivery with its derived stage (R019.7); the stage is computed on each read.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryAnswer {
     pub delivery: Delivery,
@@ -704,6 +733,7 @@ pub struct DeliveryAnswer {
 
 /// `DeliveryStatus` and `DeliveryStop` name one delivery.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryRef {
     pub delivery_id: String,
@@ -712,6 +742,7 @@ pub struct DeliveryRef {
 /// `DeliveryRespond` (R019.17): a person's answer to the one open question of a delivery. The
 /// answering principal is the verified caller, never a request field.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryRespondRequest {
     pub delivery_id: String,
@@ -720,6 +751,7 @@ pub struct DeliveryRespondRequest {
 
 /// `DeliveryRetry`: a new pending assignment on a live delivery whose assignments all ended.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryRetryRequest {
     pub delivery_id: String,
@@ -728,6 +760,7 @@ pub struct DeliveryRetryRequest {
 
 /// `DeliveryList`: the deliveries of the tenant, optionally of one repository.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryListRequest {
     #[serde(default)]
@@ -736,6 +769,7 @@ pub struct DeliveryListRequest {
 
 /// One row of the delivery list.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryListEntry {
     pub id: String,
@@ -747,6 +781,7 @@ pub struct DeliveryListEntry {
 
 /// The answer of `DeliveryList`, ordered by delivery id.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeliveryListAnswer {
     pub deliveries: Vec<DeliveryListEntry>,

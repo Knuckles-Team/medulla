@@ -753,6 +753,9 @@ pub fn merged_row(left_table: &str, left: &Row, right_table: &str, right: &Row) 
     merged
 }
 
+/// The key columns and the aggregates of a grouped view.
+pub type GroupShape = (Vec<(String, RowExpr)>, Vec<(String, ExactAgg)>);
+
 impl IncrementalViewProgram {
     /// The stored rows of a join view over the full source tables (R013.2): one per matching
     /// pair that the filter admits, keyed `<left key>|<right key>`.
@@ -807,7 +810,7 @@ impl IncrementalViewProgram {
 
     /// The key columns and aggregates of a grouped view; a `Distinct` view is a grouped view
     /// of its output tuple with no aggregate.
-    pub fn group_shape(&self) -> (Vec<(String, RowExpr)>, Vec<(String, ExactAgg)>) {
+    pub fn group_shape(&self) -> GroupShape {
         match &self.output {
             ViewOutput::Groups { keys, aggs } => (keys.clone(), aggs.clone()),
             ViewOutput::Distinct(columns) => (columns.clone(), Vec::new()),

@@ -326,7 +326,7 @@ pub fn replenish_until_k(
         .iter()
         .filter(|id| semantic.get_embedding(id).is_none())
         .count() as u64;
-    let shortfall = (scored.len() < k).then(|| Shortfall {
+    let shortfall = (scored.len() < k).then_some(Shortfall {
         requested: k as u64,
         found: scored.len() as u64,
         missing,

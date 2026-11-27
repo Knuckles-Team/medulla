@@ -89,7 +89,7 @@ mod proof;
 mod syntax;
 
 pub use owl_rules::builtin_rules;
-use proof::{RuleDerivations, ASSERTED_RULE, MAX_PROOF_DEPTH, MAX_PROOF_NODES};
+use proof::RuleDerivations;
 use syntax::{iri, is_meta_class, is_schema_pred, RDF_TYPE};
 pub use syntax::{Atom, RTerm, Rule, RuleSet};
 

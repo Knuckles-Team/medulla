@@ -3,7 +3,7 @@
 use medulla_observe::machine::request::{RequestEvent, RequestState};
 use medulla_observe::registry::requests::{self, EnterRequest, RequestRegistry};
 
-fn enter<'a>(registry: &RequestRegistry, id: u64, principal: &'a str) -> requests::RequestGuard {
+fn enter(registry: &RequestRegistry, id: u64, principal: &str) -> requests::RequestGuard {
     registry.enter(EnterRequest {
         request_id: id,
         trace_id: Some("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),

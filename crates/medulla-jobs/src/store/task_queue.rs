@@ -78,7 +78,7 @@ pub struct TaskQueueLoad {
 #[derive(Clone, Debug)]
 pub enum TaskSubmitOutcome {
     /// The task was stored.
-    Enqueued(AnalyticsJob),
+    Enqueued(Box<AnalyticsJob>),
     /// The idempotency key of this tenant and queue was already used.
     Duplicate,
 }
@@ -272,7 +272,7 @@ impl JobStore {
             updated_at_ms: now_ms,
         };
         self.put_raw(&job)?;
-        Ok(TaskSubmitOutcome::Enqueued(job))
+        Ok(TaskSubmitOutcome::Enqueued(Box::new(job)))
     }
 
     /// The queued and running counts and the oldest enqueue time of one tenant
@@ -833,7 +833,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(item.payload_digest, expected);
-        assert_eq!(table.len().unwrap(), 1);
+        assert_eq!(redb::ReadableTableMetadata::len(&table).unwrap(), 1);
         // The failed task left the queue load.
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (0, 0));
@@ -897,12 +897,12 @@ mod tests {
         );
         // A tenant that does not own the item reads it as unknown.
         assert!(matches!(
-            store.redrive_dead_letters("other", &[first.clone()], 20_000),
+            store.redrive_dead_letters("other", std::slice::from_ref(&first), 20_000),
             Err(RedriveError::Unknown { .. })
         ));
 
         let done = store
-            .redrive_dead_letters("acme", &[first.clone()], 20_000)
+            .redrive_dead_letters("acme", std::slice::from_ref(&first), 20_000)
             .unwrap();
         assert_eq!(done.redriven, 1);
         assert_eq!(

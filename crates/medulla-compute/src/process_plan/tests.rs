@@ -574,8 +574,14 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
             contract_iri: "urn:contract:post".to_string(),
         },
     );
-    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4, 86_400)
-        .unwrap_err();
+    let refused = super::plan::plan_from_workflow(
+        &caller,
+        std::slice::from_ref(&post),
+        &no_callee,
+        4,
+        86_400,
+    )
+    .unwrap_err();
     assert_eq!(refused.code, WORKFLOW_UNKNOWN);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
     let mut inner = workflow(vec![
@@ -595,7 +601,7 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
             )],
         })
     };
-    let plan = sealed(&caller, &[post.clone()], &callee, 4).unwrap();
+    let plan = sealed(&caller, std::slice::from_ref(&post), &callee, 4).unwrap();
     let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
     assert_eq!(ids, vec!["s2:s2", "s3"]);
     assert_eq!(

@@ -179,11 +179,13 @@ mod tests {
     fn stale_overlapping_unanchored_and_foreign_ending_edits_refuse() {
         let digest = skill_digest(SOURCE.as_bytes());
         let one = patch(SOURCE, "first", "1st");
-        assert!(
-            apply_skill_patches(SOURCE.as_bytes(), &skill_digest(b"other"), &[one.clone()])
-                .unwrap_err()
-                .starts_with(SKILL_SOURCE_STALE)
-        );
+        assert!(apply_skill_patches(
+            SOURCE.as_bytes(),
+            &skill_digest(b"other"),
+            std::slice::from_ref(&one)
+        )
+        .unwrap_err()
+        .starts_with(SKILL_SOURCE_STALE));
         let overlapping = [
             SkillSourcePatch {
                 range_start: 10,

@@ -263,7 +263,6 @@ fn jobs_key_type(name: &str) -> Option<&'static str> {
         "analytics_job_task_queue_totals" => Some("(&str,&str)"),
         "analytics_job_task_queue_oldest" => Some("(&str,&str,i64,&str)"),
         "analytics_job_records"
-        | "analytics_job_records"
         | "analytics_jobs"
         | "analytics_job_committed_results"
         | "job_intents"

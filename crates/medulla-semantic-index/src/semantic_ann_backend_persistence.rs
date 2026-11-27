@@ -28,7 +28,7 @@ impl AnnIndexImage {
     /// vectors in `codes` and the row-id sidecar in `ids`, for a generation below
     /// `ANN_BUILD_THRESHOLD` that has no ANN index.
     pub fn flat(ids: &[String], vectors: &[f32]) -> std::io::Result<Self> {
-        let mut codes = Vec::with_capacity(vectors.len() * std::mem::size_of::<f32>());
+        let mut codes = Vec::with_capacity(std::mem::size_of_val(vectors));
         for value in vectors {
             codes.extend_from_slice(&value.to_le_bytes());
         }

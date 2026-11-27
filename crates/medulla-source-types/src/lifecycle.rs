@@ -18,6 +18,7 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 /// The closed edge vocabulary (MEDULLA-SDLC-R001).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
 pub enum LifecycleEdgeKind {
     Changes,
@@ -95,6 +96,7 @@ impl LifecycleEdgeKind {
 
 /// The record kinds a lifecycle trace can reach.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum LifecycleKind {
     Requirement,
@@ -321,6 +323,7 @@ pub enum DeploymentOutcome {
 
 /// One rollout of an image to an environment.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Deployment {
     pub environment: String,
@@ -1648,6 +1651,7 @@ pub fn handle_file_defect(
 
 /// The derived state of a requirement row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "UPPERCASE")]
 pub enum SpecState {
     Specified,
@@ -1657,6 +1661,7 @@ pub enum SpecState {
 
 /// One requirement row with the evidence behind its state.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SpecRowState {
     pub id: String,
@@ -1668,6 +1673,7 @@ pub struct SpecRowState {
 
 /// The served answer of `SpecStatus`: every row of one repository at one revision.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SpecStatusAnswer {
     pub repo: String,
@@ -1682,6 +1688,7 @@ pub const MAX_SPEC_STATUS_FIELD_BYTES: usize = 512;
 /// is derived at, and an optional spec id that keeps only the rows of that spec
 /// (`<spec_id>-R...`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SpecStatusRequest {
     pub repo: String,
@@ -1718,6 +1725,7 @@ pub fn handle_spec_status(
 
 /// The derived state of one task line.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "UPPERCASE")]
 pub enum TaskState {
     Open,
@@ -1727,6 +1735,7 @@ pub enum TaskState {
 
 /// One task with the evidence behind its state.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct TaskRowState {
     pub id: String,
@@ -1741,6 +1750,7 @@ pub struct TaskRowState {
 
 /// The served answer of the task states: every task of one repository at one revision.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct TaskStatusAnswer {
     pub repo: String,
@@ -1751,6 +1761,7 @@ pub struct TaskStatusAnswer {
 /// The result-size limits of one trace, resolved from the lifecycle knobs
 /// (MEDULLA-SDLC-R006.7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct TraceLimits {
     pub max_depth: u8,
     pub node_budget: usize,
@@ -1762,6 +1773,7 @@ pub struct TraceLimits {
 /// `policy` names the policy whose knobs bound the answer
 /// (MEDULLA-SDLC-R006.7).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(try_from = "LifecycleTraceRequestWire")]
 pub struct LifecycleTraceRequest {
     pub anchor: String,
@@ -1771,6 +1783,7 @@ pub struct LifecycleTraceRequest {
 }
 
 #[derive(Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 struct LifecycleTraceRequestWire {
     anchor: String,
@@ -1818,6 +1831,7 @@ impl LifecycleTraceRequest {
 
 /// A record a trace reached.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct TraceRecord {
     pub id: String,
     pub kind: LifecycleKind,
@@ -1825,6 +1839,7 @@ pub struct TraceRecord {
 
 /// An edge a trace reached, with the rule that derived it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct TraceEdge {
     pub kind: LifecycleEdgeKind,
     pub from: String,
@@ -1835,6 +1850,7 @@ pub struct TraceEdge {
 
 /// The records and edges reachable from the anchor.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct LifecycleTraceAnswer {
     pub records: Vec<TraceRecord>,
     pub edges: Vec<TraceEdge>,

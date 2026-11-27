@@ -79,7 +79,7 @@ fn decode_checkpoint(bytes: &[u8], prefix: &str) -> Result<Tree, String> {
 /// Whether the changeset that makes the chain `count` changesets long carries
 /// a checkpoint.
 pub fn checkpoint_due(count: u64, interval: u64) -> bool {
-    interval > 0 && count > 0 && count % interval == 0
+    interval > 0 && count > 0 && count.is_multiple_of(interval)
 }
 
 /// The full tree after `history` (oldest first) has been replayed.

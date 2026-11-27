@@ -1913,7 +1913,7 @@ mod tests {
         let mut names: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         names.sort();
         assert_eq!(names, vec!["Alice", "Bob", "Carol"]);
@@ -1936,7 +1936,7 @@ mod tests {
         let subjects: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("p").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("p").map(|b| b.value_text()))
             .collect();
         assert_eq!(subjects, vec!["<http://example.org/person/1>"]);
     }
@@ -1962,12 +1962,7 @@ mod tests {
         let mut pairs: Vec<(String, String)> = res
             .solutions
             .iter()
-            .filter_map(|s| {
-                Some((
-                    s.get("aname")?.as_str().to_string(),
-                    s.get("bname")?.as_str().to_string(),
-                ))
-            })
+            .filter_map(|s| Some((s.get("aname")?.value_text(), s.get("bname")?.value_text())))
             .collect();
         pairs.sort();
         // Alice(1)→knows→Bob(2); Carol(3)→knows→Alice(1). Bob has no friend_id.
@@ -2000,7 +1995,7 @@ mod tests {
         let mut names: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         names.sort();
         assert_eq!(names, vec!["Alice", "Carol"]);
@@ -2167,7 +2162,7 @@ mod tests {
         let admin_names: std::collections::BTreeSet<String> = admin_res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         assert!(
             admin_names.contains("Carol"),
@@ -2198,7 +2193,7 @@ mod tests {
         let rls_names: std::collections::BTreeSet<String> = rls_res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         assert!(
             !rls_names.contains("Carol"),
@@ -2357,7 +2352,7 @@ mod tests {
         let mut names: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         names.sort();
         assert_eq!(names, vec!["Alice", "Carol"]);
@@ -2392,7 +2387,7 @@ mod tests {
         let subjects: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("p").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("p").map(|b| b.value_text()))
             .collect();
         assert_eq!(subjects, vec!["<http://example.org/person/1>"]);
     }
@@ -2506,7 +2501,7 @@ mod tests {
         let mut names: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         names.sort();
         assert_eq!(names, vec!["Alice", "Bob", "Carol"]);
@@ -2528,7 +2523,7 @@ mod tests {
         let subjects: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("p").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("p").map(|b| b.value_text()))
             .collect();
         assert_eq!(subjects, vec!["<http://example.org/person/1>"]);
     }
@@ -2567,7 +2562,7 @@ mod tests {
         let mut names: Vec<String> = res
             .solutions
             .iter()
-            .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("name").map(|b| b.value_text()))
             .collect();
         names.sort();
         assert_eq!(names, vec!["Alice", "Carol"]);
@@ -2593,12 +2588,7 @@ mod tests {
         let mut pairs: Vec<(String, String)> = res
             .solutions
             .iter()
-            .filter_map(|s| {
-                Some((
-                    s.get("aname")?.as_str().to_string(),
-                    s.get("bname")?.as_str().to_string(),
-                ))
-            })
+            .filter_map(|s| Some((s.get("aname")?.value_text(), s.get("bname")?.value_text())))
             .collect();
         pairs.sort();
         assert_eq!(

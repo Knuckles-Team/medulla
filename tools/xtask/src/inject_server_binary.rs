@@ -193,7 +193,8 @@ pub fn inject(wheel: &Path, binary: &Path, library: Option<&Path>) -> Result<Str
     let temporary = PathBuf::from(format!("{}.tmp", wheel.display()));
     {
         let mut out = ZipWriter::new(File::create(&temporary).map_err(|e| e.to_string())?);
-        out.set_raw_comment(comment.into_boxed_slice());
+        out.set_raw_comment(comment.into_boxed_slice())
+            .map_err(|e| e.to_string())?;
         for entry in &entries {
             out.start_file(&entry.name, entry.options())
                 .map_err(|e| e.to_string())?;

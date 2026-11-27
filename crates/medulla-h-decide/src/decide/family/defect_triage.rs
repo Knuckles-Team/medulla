@@ -9,7 +9,7 @@
 
 use medulla_decision_outcome_types::decision::defect_triage::{
     cap_frames, decide_triage, find_duplicate, pick_owner, rank_suspects, SuspectInput,
-    TriageKnobs, DEFECT_CLOSED, DEFECT_UNKNOWN, KNOBS,
+    TriageEvidence, TriageKnobs, DEFECT_CLOSED, DEFECT_UNKNOWN, KNOBS,
 };
 use medulla_decision_types::decision::defect_triage::TriageAbstainReason;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -199,10 +199,12 @@ fn triage(
         &defect.id,
         defect.severity,
         u32::try_from(defect.symptoms.len()).unwrap_or(u32::MAX),
-        suspects.clone(),
-        owner,
-        duplicate,
-        evidence_refs,
+        TriageEvidence {
+            suspects: suspects.clone(),
+            owner,
+            duplicate_of: duplicate,
+            evidence_refs,
+        },
         &knobs,
     );
 

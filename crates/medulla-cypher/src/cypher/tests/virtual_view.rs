@@ -202,7 +202,11 @@ fn answer(fixture: &mut Fixture, text: &str) -> Vec<Vec<String>> {
     let (_, rows) = result.to_rows();
     let mut rows: Vec<Vec<String>> = rows
         .into_iter()
-        .map(|row| row.into_iter().map(Option::unwrap_or_default).collect())
+        .map(|row| {
+            row.into_iter()
+                .map(|cell| cell.map(|term| term.value_text()).unwrap_or_default())
+                .collect()
+        })
         .collect();
     rows.sort();
     rows

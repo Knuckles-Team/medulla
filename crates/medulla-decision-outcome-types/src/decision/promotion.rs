@@ -9,8 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::decision::held_out::{
-    DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind, ReviewApproval,
-    RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+    HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::OpaqueId;
@@ -242,7 +241,7 @@ pub struct RollbackDecision {
 pub enum PromotionVerdict {
     Promote { challenger_ref: String },
     Hold { reason: String },
-    Rollback(RollbackDecision),
+    Rollback(Box<RollbackDecision>),
 }
 
 /// `promotion.min_cases`: fewest held-out cases a promotion needs.
@@ -333,6 +332,9 @@ pub const REFUSALS: &[RefusalCode] = medulla_decision_types::decision::codes::PR
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::decision::held_out::{
+        DefinitionKind, GraderKind, MeasurementWindow, ReviewApproval,
+    };
 
     fn reference(namespace: &str, value: &str) -> OpaqueId {
         OpaqueId::new(format!("{namespace}:{value}")).expect("valid opaque id")
@@ -532,7 +534,7 @@ mod tests {
             reason: "held_out_regression".to_owned(),
             evidence_refs: vec![],
         };
-        round_trip(&PromotionVerdict::Rollback(rollback));
+        round_trip(&PromotionVerdict::Rollback(Box::new(rollback)));
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R811.8

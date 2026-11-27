@@ -185,7 +185,7 @@ fn propose_op(epoch: u64, proposal: CurationProposal, body: &str) -> CurationOp 
         graph: GRAPH.into(),
         loop_id: LOOP.into(),
         epoch,
-        proposal,
+        proposal: Box::new(proposal),
         body: body.into(),
     }
 }

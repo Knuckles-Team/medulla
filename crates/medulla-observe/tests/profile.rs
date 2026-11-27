@@ -10,32 +10,39 @@ use medulla_observe::profile::{self, ProfileError};
 /// Two threads that run until told to stop, so the sampler has other threads to sample.
 struct Spinners {
     stop: Arc<AtomicBool>,
-    threads: Vec<std::thread::JoinHandle<()>>,
+    done: std::sync::mpsc::Receiver<()>,
+    count: usize,
 }
 
 impl Spinners {
     fn start() -> Self {
         let stop = Arc::new(AtomicBool::new(false));
-        let threads = (0..2)
-            .map(|_| {
-                let stop = Arc::clone(&stop);
-                std::thread::Builder::new()
-                    .name("prof-spin".to_string())
-                    .spawn(move || {
-                        while !stop.load(Ordering::Relaxed) {
-                            std::hint::spin_loop();
-                        }
-                    })
-                    .expect("a spinner thread")
-            })
-            .collect();
-        Self { stop, threads }
+        let count = 2;
+        let (finished, done) = std::sync::mpsc::sync_channel(count);
+
+        for _ in 0..count {
+            let stop = Arc::clone(&stop);
+            let finished = finished.clone();
+            std::thread::Builder::new()
+                .name("prof-spin".to_string())
+                .spawn(move || {
+                    while !stop.load(Ordering::Relaxed) {
+                        std::hint::spin_loop();
+                    }
+                    finished.send(()).ok();
+                })
+                .expect("a spinner thread");
+        }
+        Self { stop, done, count }
     }
 
+    /// Stop the spinners and wait, within a deadline, for each to report that it ended.
     fn stop(self) {
         self.stop.store(true, Ordering::Relaxed);
-        for thread in self.threads {
-            thread.join().expect("a spinner thread ends");
+        for _ in 0..self.count {
+            self.done
+                .recv_timeout(std::time::Duration::from_secs(30))
+                .expect("a spinner thread ends");
         }
     }
 }

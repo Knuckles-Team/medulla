@@ -387,11 +387,9 @@ impl ShiftDetector {
             }
             ShiftPhase::Cooldown => {
                 self.cooldown_left = self.cooldown_left.saturating_sub(1);
-                if self.cooldown_left == 0 {
-                    if self.transition(ShiftEvent::CooldownElapsed).is_ok() {
-                        self.baseline = self.recent.clone();
-                        self.consecutive = 0;
-                    }
+                if self.cooldown_left == 0 && self.transition(ShiftEvent::CooldownElapsed).is_ok() {
+                    self.baseline = self.recent.clone();
+                    self.consecutive = 0;
                 }
             }
             ShiftPhase::Armed => {}

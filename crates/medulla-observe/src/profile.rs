@@ -342,7 +342,7 @@ mod sampler {
             // call reads are set below, and `previous` receives the old disposition.
             let (mut action, mut previous): (libc::sigaction, libc::sigaction) =
                 unsafe { (std::mem::zeroed(), std::mem::zeroed()) };
-            action.sa_sigaction = on_sigprof as usize;
+            action.sa_sigaction = on_sigprof as extern "C" fn(libc::c_int) as usize;
             action.sa_flags = libc::SA_RESTART;
             // SAFETY: `sa_mask` is a valid, owned signal set.
             unsafe { libc::sigemptyset(&mut action.sa_mask) };

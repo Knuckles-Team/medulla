@@ -262,13 +262,13 @@ fn blame_entry(
     }
     let mut origins: Vec<u64> = Vec::with_capacity(old_lines.len());
     for (count, origin) in &prior.runs {
-        origins.extend(std::iter::repeat(*origin).take(*count as usize));
+        origins.extend(std::iter::repeat_n(*origin, *count as usize));
     }
     let mut mapped: Vec<u64> = Vec::with_capacity(new_lines.len());
     let mut cursor = 0usize;
     for (start, length, replacement) in diff_chunks(&old_lines, &new_lines) {
         mapped.extend_from_slice(&origins[cursor..start]);
-        mapped.extend(std::iter::repeat(seq).take(replacement.len()));
+        mapped.extend(std::iter::repeat_n(seq, replacement.len()));
         cursor = start + length;
     }
     mapped.extend_from_slice(&origins[cursor..]);

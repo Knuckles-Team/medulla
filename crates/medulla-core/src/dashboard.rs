@@ -112,7 +112,7 @@ pub fn access_of(asset: &DashboardAsset, caller: &Caller<'_>) -> Option<Access> 
         .iter()
         .filter(|grant| {
             grant.principal_or_group == caller.principal
-                || caller.groups.iter().any(|g| *g == grant.principal_or_group)
+                || caller.groups.contains(&grant.principal_or_group)
         })
         .map(|grant| match grant.role {
             DashboardRole::View => Access::View,

@@ -7,14 +7,13 @@
 //! cgroup minimum and reserve 10% CPU plus 20% RAM headroom. Explicit values
 //! are upper bounds only and must be clamped to these automatic values.
 
-use medulla_resource::{
-    default_node_cap, resolve_cpu_budget, resolve_memory_bytes, tier_for, Capacity, CpuLimit,
-    MemoryLimit, Tier,
-};
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_resource::{
+        default_node_cap, resolve_cpu_budget, resolve_memory_bytes, tier_for, Capacity, CpuLimit,
+        MemoryLimit, Tier,
+    };
 
     #[test]
     fn pi_ram_gets_a_bounded_node_cap() {

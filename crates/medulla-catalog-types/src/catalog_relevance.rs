@@ -248,12 +248,7 @@ impl AssetDoc {
                 .into_iter()
                 .next()
                 .and_then(|raw| serde_json::from_str::<Vec<Map<String, Value>>>(&raw).ok())
-                .map(|entries| {
-                    entries
-                        .iter()
-                        .map(|entry| Self::from_props(entry))
-                        .collect()
-                })
+                .map(|entries| entries.iter().map(Self::from_props).collect())
                 .unwrap_or_default(),
         }
     }

@@ -236,6 +236,7 @@ mod tests {
             destructive_hint: Some(true),
             idempotent_hint: Some(false),
             open_world_hint: Some(true),
+            prompt_role: Some(PackPromptRole::Task),
             contract_version: Some("1.2.3".to_string()),
             cost: Some(DeclaredCost {
                 currency: "USD".to_string(),

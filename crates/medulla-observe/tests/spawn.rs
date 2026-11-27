@@ -43,7 +43,7 @@ async fn spawn_registers_and_panic_is_recorded_with_location() {
 
     // A panic finishes with TASK_PANICKED and the panic location; the process continues.
     let panicked = medulla_observe::spawn::spawn(spec("spawn-panics"), async {
-        let value: Option<u32> = None;
+        let value: Option<u32> = std::hint::black_box(None);
         value.expect("the job panics here");
     });
     panicked.await.unwrap();

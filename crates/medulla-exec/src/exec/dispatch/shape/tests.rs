@@ -51,14 +51,16 @@ impl ShapeSource for GraphShapes {
 fn run(input: RowSet, shape: &str, shapes: &str, keep: ShapeKeep) -> Result<RowSet, String> {
     let view = people();
     let semantic = SemanticStore::new();
-    validate_shape(
+    let result = validate_shape(
         &PlanCtx::new(&view, &semantic),
         input,
         shape,
         shapes,
         "",
         keep,
-    )
+        false,
+    );
+    result
 }
 
 #[test]
@@ -95,6 +97,7 @@ fn an_empty_using_falls_back_to_the_bound_graph_shapes() {
         "",
         "",
         ShapeKeep::Violating,
+        false,
     )
     .unwrap();
     assert_eq!(ids(&out), vec!["<http://ex/bob>"]);
@@ -139,6 +142,7 @@ fn opt_in_projection_validates_property_graph_nodes_and_preserves_row_ids() {
         source,
         "http://ex/",
         ShapeKeep::Conforming,
+        false,
     )
     .unwrap();
     let invalid = validate_shape(
@@ -148,6 +152,7 @@ fn opt_in_projection_validates_property_graph_nodes_and_preserves_row_ids() {
         source,
         "http://ex/",
         ShapeKeep::Violating,
+        false,
     )
     .unwrap();
     assert_eq!(ids(&valid), vec!["source:one"]);
@@ -170,6 +175,7 @@ fn projection_refuses_colliding_native_and_rdf_identities() {
         SHAPES,
         "http://ex/",
         ShapeKeep::Conforming,
+        false,
     )
     .unwrap_err();
     assert!(error.contains("colliding node identities"), "{error}");
@@ -205,6 +211,7 @@ fn projection_preserves_explicit_source_datatype_without_guessing_strings() {
         shapes,
         "http://ex/",
         ShapeKeep::Conforming,
+        false,
     )
     .unwrap();
     let invalid = validate_shape(
@@ -214,6 +221,7 @@ fn projection_preserves_explicit_source_datatype_without_guessing_strings() {
         shapes,
         "http://ex/",
         ShapeKeep::Violating,
+        false,
     )
     .unwrap();
     assert_eq!(ids(&valid), vec!["source:typed"]);

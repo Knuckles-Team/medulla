@@ -233,7 +233,7 @@ pub enum CurationOp {
         /// The lease epoch the caller holds.
         epoch: u64,
         /// The proposal.
-        proposal: CurationProposal,
+        proposal: Box<CurationProposal>,
         /// The proposed body, at most 64 KiB; its digest is `edit.body_digest`.
         body: String,
     },

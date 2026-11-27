@@ -280,10 +280,8 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R833
     #[test]
     fn each_fault_refuses_with_its_own_code_in_check_order() {
-        let cases: Vec<(
-            ScaleRefusalCode,
-            Box<dyn Fn(&mut ScaleIntentRecord, &mut ScaleObservation)>,
-        )> = vec![
+        type Mutation = Box<dyn Fn(&mut ScaleIntentRecord, &mut ScaleObservation)>;
+        let cases: Vec<(ScaleRefusalCode, Mutation)> = vec![
             (
                 ScaleRefusalCode::AuthorityMissing,
                 Box::new(|_, o| o.authority_revisions = 2),

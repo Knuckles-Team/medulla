@@ -236,6 +236,9 @@ pub struct ConfigEvidence {
     pub abstained: Option<&'static str>,
 }
 
+/// The traces of one harness configuration: each trace id with its properties.
+type TraceGroup<'a> = Vec<(&'a String, &'a Map<String, Value>)>;
+
 /// Group the in-scope traces by configuration and report each group's cost per
 /// solved task with its trace ids. A trace is in scope when its `runModel` and
 /// `runTaskClass` equal the query's and it has an `appliedHarnessConfig` text.
@@ -244,7 +247,7 @@ pub fn harness_config_evidence(
     query: &ConfigEvidenceQuery,
     traces: &[(String, &Map<String, Value>)],
 ) -> Vec<ConfigEvidence> {
-    let mut groups: BTreeMap<&str, Vec<(&String, &Map<String, Value>)>> = BTreeMap::new();
+    let mut groups: BTreeMap<&str, TraceGroup<'_>> = BTreeMap::new();
     for (id, props) in traces {
         let in_scope = text(props, "runModel") == Some(query.model_ref.as_str())
             && text(props, "runTaskClass") == Some(query.task_class.as_str());
@@ -1223,7 +1226,7 @@ mod tests {
             }
             (id.to_string(), value.as_object().cloned().unwrap())
         };
-        let rows = vec![
+        let rows = [
             build("t3", "c1", "m", "completed", Some("0.30")),
             build("t1", "c1", "m", "completed", Some("0.10")),
             build("t2", "c1", "m", "failed", Some("0.20")),

@@ -345,10 +345,10 @@ mod commit_tests {
             .validate()
             .unwrap();
 
-        for status in [MutationBatchStatus::Prepared] {
-            let error = graph_commit(status).validate().unwrap_err();
-            assert!(error.contains("must contain a committed receipt"));
-        }
+        let error = graph_commit(MutationBatchStatus::Prepared)
+            .validate()
+            .unwrap_err();
+        assert!(error.contains("must contain a committed receipt"));
 
         let mut wrong_version = graph_commit(MutationBatchStatus::Committed);
         wrong_version.record.committed_version = CommittedVersion::Native {

@@ -335,10 +335,9 @@ pub fn conclude(input: &CouncilInput<'_>) -> Result<CouncilResult, String> {
         }
         _ => (None, Some(CouncilAbstention::NoQuorum)),
     };
-    let selected = match &outcome {
-        Some(CouncilOutcome::Selected { option_id }) => Some(option_id.as_str()),
-        None => None,
-    };
+    let selected = outcome
+        .as_ref()
+        .map(|CouncilOutcome::Selected { option_id }| option_id.as_str());
     let (mut accepted, mut rejected) = (Vec::new(), Vec::new());
     for position in &sorted {
         if Some(position.option_id.as_str()) == selected {

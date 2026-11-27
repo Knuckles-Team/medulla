@@ -89,7 +89,7 @@ fn answers(reg: &ObdaSourceRegistry, query: &str, var: &str) -> Vec<String> {
     let mut out: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get(var).map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get(var).map(|b| b.value_text()))
         .collect();
     out.sort();
     out

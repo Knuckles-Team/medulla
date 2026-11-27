@@ -835,8 +835,14 @@ fn resource_grant_survives_reopen_and_revoke_is_audited() {
             )
             .count()
     };
-    let audit_len =
-        |layer: &IsolationLayer| layer.rbac().identity_store().audit_trail().entries().len();
+    let audit_len = |layer: &IsolationLayer| {
+        layer
+            .rbac()
+            .identity_store()
+            .audit_trail()
+            .entries()
+            .count()
+    };
     let dir = durable_fixture_dir("resource-grant");
     {
         let source = seeded()

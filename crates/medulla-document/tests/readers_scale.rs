@@ -157,7 +157,8 @@ fn time_and_memory_scale_linearly() {
 #[test]
 fn spans_reextract_to_fragment_text() {
     let registry = text_registry(ReaderLimits::new(MAX_BYTES, 2).unwrap()).unwrap();
-    let formats: [(&str, fn(usize) -> String); 2] = [("text/csv", csv), ("text/vtt", vtt)];
+    type SourceMaker = fn(usize) -> String;
+    let formats: [(&str, SourceMaker); 2] = [("text/csv", csv), ("text/vtt", vtt)];
     for (media_type, make) in formats {
         for units in [10, 1_000] {
             let source = make(units);

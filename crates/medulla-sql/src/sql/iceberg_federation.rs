@@ -638,8 +638,8 @@ pub struct IcebergRows {
 
 fn json_scalar(array: &dyn arrow::array::Array, row: usize) -> serde_json::Value {
     use arrow::array::{
-        Array, AsArray, BooleanArray, Float32Array, Float64Array, Int16Array, Int32Array,
-        Int64Array, Int8Array, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
+        AsArray, BooleanArray, Float32Array, Float64Array, Int16Array, Int32Array, Int64Array,
+        Int8Array, UInt16Array, UInt32Array, UInt64Array, UInt8Array,
     };
     use arrow::datatypes::DataType;
     if array.is_null(row) {

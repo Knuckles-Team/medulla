@@ -31,7 +31,6 @@ mod triples;
 mod where_ops;
 
 pub use engine::{execute, execute_str, UpdateError};
-use medulla_query_types::rdf_report::UpdateReport;
 pub use parse::{insert_data_triples, load_sources, parse_update, referenced_named_graphs};
 pub use store::{GraphStore, MapStore};
 pub use triples::{insert_triples, remove_triples};
@@ -41,6 +40,7 @@ mod tests {
     use super::*;
     use crate::guard::{GuardRejection, WriteGuard};
     use crate::sparql::{execute, Dataset, Projection, QueryOutcome};
+    use medulla_query_types::rdf_report::UpdateReport;
     use oxrdf::{Graph, Triple};
 
     struct TestWriteGuard;

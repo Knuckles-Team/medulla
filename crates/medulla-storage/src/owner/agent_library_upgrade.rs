@@ -82,28 +82,28 @@ impl RbacSource {
 
 /// The jobs generation an offline upgrade starts from. Every one ends at the current layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum JobsSource {
+pub(crate) enum JobsSource {
     /// Before the analytics job machine (MEDULLA-CQ-ORCH-R811.4): every record is converted to
     /// the machine shape.
-    BeforeJobMachine,
+    LegacyJobs,
     /// Before the per-queue task totals and oldest-enqueue index (MEDULLA-INGEST-WORKER-R001.4.1).
-    BeforeTaskQueue,
+    WithoutTaskTotals,
     /// Before the ingest dead-letter table (MEDULLA-INGEST-WORKER-R001.9).
-    BeforeTaskDeadLetter,
+    NoDeadLetterTable,
 }
 
 impl JobsSource {
     fn descriptor(self) -> (&'static LayoutPredecessor, [u8; 32]) {
         match self {
-            Self::BeforeJobMachine => (
+            Self::LegacyJobs => (
                 &JOBS_BEFORE_JOB_MACHINE,
                 super::lineage::JOBS_PRE_JOB_MACHINE_DIGEST,
             ),
-            Self::BeforeTaskQueue => (
+            Self::WithoutTaskTotals => (
                 &super::lineage::JOBS_BEFORE_TASK_QUEUE,
                 super::lineage::JOBS_PRE_TASK_QUEUE_DIGEST,
             ),
-            Self::BeforeTaskDeadLetter => (
+            Self::NoDeadLetterTable => (
                 &super::lineage::JOBS_BEFORE_TASK_DEAD_LETTER,
                 super::lineage::JOBS_PRE_TASK_DEAD_LETTER_DIGEST,
             ),

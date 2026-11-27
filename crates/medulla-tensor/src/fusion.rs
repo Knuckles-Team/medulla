@@ -16,10 +16,6 @@ use medulla_tsdb::point::Ts;
 
 use crate::tensor::{Buffer, Tensor};
 
-// Re-export the medulla-tsdb alignment surface so callers can drive the whole fusion pipeline
-// (build streams → align/window → tensor) from `medulla_tensor::fusion` alone.
-use medulla_tsdb::fusion::InterpMode;
-
 /// A fused multimodal tensor frame (CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream): a `[timesteps × channels]` `F64`
 /// `frame` tensor (`NaN` at gaps) + a same-shape `U8` `mask` tensor (`1` = valid /
 /// `0` = missing), plus the `grid` timestamps and channel `names` for provenance. The
@@ -147,6 +143,7 @@ pub fn windowed_fusion(
 #[cfg(test)]
 mod eg098_fusion_tests {
     use super::*;
+    use medulla_tsdb::fusion::InterpMode;
     use medulla_tsdb::point::Point;
 
     const NS: i64 = 1_000_000_000;
