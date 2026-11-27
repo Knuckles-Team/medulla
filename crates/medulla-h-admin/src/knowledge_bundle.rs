@@ -143,7 +143,7 @@ fn provenance_rows(view: &GraphView) -> Result<Vec<Value>, String> {
         }
         for blob in blobs {
             let properties = medulla_types::msgpack::decode_property_value(blob.as_slice())
-                .map_err(|error| format!("PARAMETER_INVALID: an edge row is unreadable: {error}"))?;
+                .map_err(|_| "PARAMETER_INVALID: an edge row is unreadable".to_string())?;
             edges.push((source, target, properties));
         }
     }
