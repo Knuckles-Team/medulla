@@ -1,11 +1,84 @@
-# Engine observability: symbolizing a stack
+# Engine observability
 
-A released server ships stripped. Each release uploads one symbol artifact per platform,
-named by the build identity of the shipped executable:
-`symbols-<platform>-<build-id>.tar.zst` with a `.sha256` file beside it. `<platform>` is the
-release matrix name (`linux-aarch64`, `windows-x86_64`, `macos-aarch64`).
+The engine reports what it is doing and why it is not ready. This page lists the served call, its
+sections, the log targets, the refusal codes, the knobs and the command that symbolizes a stack.
+
+## Introspect
+
+`Introspect` reads one page of one section of the runtime registries. It needs the `observe:read`
+scope. A page holds rows ascending by the section's key, a `next_cursor` for the next page and the
+registry sequence number the page was read at. A row carries no payload, no token and no property
+value; a principal appears only as an opaque keyed reference. The call writes nothing.
+
+`limit` is 1 to 500 (default 100). `cursor` is the `next_cursor` of the previous page.
+
+| Section | Key | What a row says |
+|---|---|---|
+| `requests` | registry key | One in-flight request: id, trace id, method, graph, phase, age, the lock it waits for |
+| `tasks` | task id | One background task: name, owner, kind, state, cursor, units, last progress, origin request |
+| `runtime` | `global`, then `worker:<index>` | The tokio runtime: queue depth, and per worker busy time, busy ratio, parks and the `spinning` flag |
+| `locks` | lock name | One named lock site: holder, hold time, waiters, longest wait |
+| `readiness` | graph name | One graph's readiness state, reason code and the task that blocks it |
+| `startup` | start time, step, graph | One boot step with its duration and outcome |
+| `build` | `build` | The running binary: version, git SHA, build id, profile, features |
+| `events` | sequence number | One accepted state-machine transition |
+| `indexes` | index name | One semantic index the engine maintains and whether it is bound |
+
+## Refusal codes
+
+| Code | Meaning |
+|---|---|
+| `INTROSPECT_LIMIT_INVALID` | `limit` is 0 or over 500 |
+| `INTROSPECT_CURSOR_INVALID` | `cursor` is not a key of the section |
+| `PARTIAL_MATERIALIZATION` | A read met a graph that is only partly paged into memory; the detail carries the phase and the cursor |
+| `NO_PROGRESS` | A guarded loop made no progress; the message names the loop and its `file:line` |
+| `TRANSITION_REFUSED` | A state machine refused an event; the detail names the machine, the state, the event and the reason |
+
+An engine refusal that names no declared code answers `INTERNAL` with a detail ending in a cause
+reference, `cause-<8 hex>`. The same reference is on the one WARN log line that holds the full
+text. The Python exception carries it as `cause_ref`.
+
+## Readiness
+
+`Health` carries a `readiness` report: whether the engine is ready, every graph's state and at
+most 100 blockers, each with the graph, its state, a reason code and the task that blocks it. The
+report is built without the server state lock, so `Health` answers within
+`observe.health_deadline_ms`; when the lock does not answer it names the holder under the blocker
+`STATE_LOCK_BUSY`. The observability listener serves the same report on `GET /readyz`: 200 when
+ready, 503 with the blockers otherwise. `GET /healthz` stays liveness.
+
+## Log targets
+
+| Target | What it logs |
+|---|---|
+| `medulla::request` | The request span: every line of a request shows `request_id`, `trace_id`, `op` and `graph` |
+| `medulla::transition` | Each state-machine transition at DEBUG; a transition into a failed, stalled or degraded state at ERROR or WARN; each refused transition at WARN |
+| `medulla::refusal` | The full text of an uncoded refusal, with its cause reference |
+| `medulla::startup` | One line per boot step with its outcome |
+| `medulla::build` | One line at start with the version, git SHA, build id, profile and features |
+
+A caller's W3C `traceparent` goes in the request's `trace_id` field; a malformed one is dropped and
+the request runs. A task a request spawns shows the same ids and records the request as its origin.
+
+## Knobs
+
+| Knob | Default | Unit | What it bounds |
+|---|---|---|---|
+| `observe.task_stall_after_ms` | 60000 | ms | Idle time after which the watchdog marks a task stalled |
+| `observe.stall_check_interval_ms` | 5000 | ms | Time between two watchdog scans |
+| `observe.health_deadline_ms` | 2000 | ms | Longest `Health` and `/readyz` wait for the state |
+| `observe.event_ring_capacity` | 4096 | events | Transition events the ring keeps |
+| `observe.task_registry_capacity` | 4096 | tasks | Live tasks the registry lists |
+| `observe.progress_idle_limit` | 2 | iterations | Equal cursors in a row before a guarded loop fails |
+| `observe.worker_spin_busy_ratio` | 0.9 | ratio | Busy ratio at which a worker is flagged spinning |
+| `observe.lock_hold_warn_ms` | 5000 | ms | A lock held this long logs at WARN with its holder |
+| `observe.startup_reports_kept` | 8 | reports | Boot reports kept in the control store |
+| `observe.profile_hz` | 99 | Hz | Stack sampling rate |
+| `observe.profile_max_seconds` | 60 | s | Longest profile call; fixed |
+
 
 ## Symbolize a stack
+
 
 Start from the offsets of the stack and the build-id the running server prints with
 `--build-id`:

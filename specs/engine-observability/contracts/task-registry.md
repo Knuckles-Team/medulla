@@ -17,11 +17,16 @@ A consumer owns a long-running job and wants it visible, supervised and explaine
 
 | Item | Shape | Rule |
 |---|---|---|
-| Register and run | `medulla_observe::spawn(TaskSpec { name, owner, kind }, future)` | Registers, enters the trace span, runs, finishes the handle with the future's outcome |
-| Register only | `TaskRegistry::register(TaskSpec) -> TaskHandle` | For a job the consumer spawns itself |
-| Report progress | `TaskHandle::progress(cursor, units_done)` | Call at least once per pass or per unit of work; records the caller location |
+| Register and run | `medulla_observe::spawn::spawn(TaskSpec { name, owner, kind }, future)` | Registers, runs the future inside the span current at the call, finishes the handle with the future's outcome (`IntoOutcome`, with `FailureCode` for an error), and records the spawning request as `origin_request` (`SpawnContext::capture`, `TaskHandle::set_origin_request`) |
+| Register only | `TaskRegistry::register(TaskSpec) -> TaskHandle` | `TaskSpec` names the job and its `TaskKind` (`Materialization`, `Index`, `Migration`, `Maintenance`, `Projection`, `Replication`, `Listener` or `External`). For a job the consumer spawns itself; the process-wide registry is `medulla_observe::global()` |
+| Report progress | `TaskHandle::progress(cursor, units_done)` | Call at least once per pass or per unit of work; records the caller location. `TaskHandle::reporter` returns a cloneable `TaskProgress` for the same call from another thread |
+| Report from inside a job | `spawn::progress(cursor, units_done)` | Reaches the current job without its handle; `spawn::current_reporter()` returns a `TaskProgress` a blocking thread can use, and `spawn::current_task_name()` names the job |
 | Finish | `TaskHandle::finish(Outcome)` | `Outcome` is `Completed`, `Failed(code)` or `Cancelled` |
-| Cursor | `ProgressCursor::{Keyset, Counter(u64), Opaque(String)}` | `Opaque` holds at most 256 bytes and never a payload or a secret |
+| Cursor | `ProgressCursor::{Keyset, Counter(u64), Opaque(String)}` | `Opaque` holds at most 256 bytes and never a payload or a secret; `ProgressCursor::opaque` cuts at a character boundary |
+| Read | `TaskRegistry::get`, `all`, `live`, `sequence` and `TaskHandle::row` return `TaskRow`; `file_line` renders a recorded location | A row holds name, owner, kind, state, cursor, units, last-progress time and location, and the origin request |
+| Guard a loop | `ProgressGuard::new(name)` or `with_limit`, then `check(&cursor)` | After `observe.progress_idle_limit` equal cursors in a row `check` returns `NoProgress` naming the loop and its `file:line`; `set_progress_idle_limit` and `progress_idle_limit` read and set the limit |
+| Capacity | `TaskRegistry::set_capacity`, `dropped_total` | A job that does not fit still runs unlisted and is counted |
+| Supervise | `TaskRegistry::detect_stalls(now, stall_after_ms)` | The stall watchdog's scan; the clock is an argument |
 
 A training run reports `Counter(step)` as the cursor and its step count as units. The task name is `train:<run id>`. The owner is `clustering`.
 
