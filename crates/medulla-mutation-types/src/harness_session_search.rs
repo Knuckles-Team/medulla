@@ -166,14 +166,18 @@ impl SessionSearchQuery {
 /// kind is absent).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionSearchRow {
+    /// The id of the row.
     pub id: String,
+    /// The columns of the row by name, each as text.
     pub columns: BTreeMap<&'static str, String>,
 }
 
 /// One page of the search.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionSearchPage {
+    /// The rows of this page.
     pub rows: Vec<SessionSearchRow>,
+    /// Notes on the page, such as a filter that could not apply.
     pub warnings: Vec<String>,
     /// The cursor of the next page; `None` on the last.
     pub next_cursor: Option<String>,
