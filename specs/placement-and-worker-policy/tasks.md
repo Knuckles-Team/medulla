@@ -18,7 +18,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [x] T012 [US1] MEDULLA-PLACEMENT-R001.12 Assembled step graph from the chosen target.
 - [ ] T013 [US1] MEDULLA-PLACEMENT-R001.13 Assemble abstains rather than invents.
 - [ ] T014 [US1] MEDULLA-PLACEMENT-R001.15 Capacity adjustment is a decision-engine question (pointer).
-- [ ] T015 [US1] MEDULLA-PLACEMENT-R001.16 Wiring: arbora placement flow.
 - [ ] T016 [US2] MEDULLA-PLACEMENT-R002 Ingest-worker policy has one authority: the engine decides, the worker asks (rollup).
 - [ ] T017 [US2] MEDULLA-PLACEMENT-R002.1 Register carries capacity.
 - [x] T018 [US2] MEDULLA-PLACEMENT-R002.2 Autosize and depth limit live in `SchedulerConfig`.
