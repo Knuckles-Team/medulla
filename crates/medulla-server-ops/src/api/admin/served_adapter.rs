@@ -161,6 +161,7 @@ fn rewrite_ops(
 /// Whether a plan ranks by vector anywhere (only then is an adapter looked up).
 #[cfg(feature = "query")]
 pub fn plan_ranks_by_vector(ops: &[medulla_query_types::wire::Op]) -> bool {
+    use medulla_query_types::wire::Op;
     ops.iter().any(|op| match op {
         Op::Rank { .. } | Op::RankEmbed { .. } => true,
         Op::FuseRrf { branches, .. } => branches.iter().any(|b| plan_ranks_by_vector(b)),
