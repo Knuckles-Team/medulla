@@ -27,6 +27,9 @@ from pydantic import BaseModel
 from medulla.generated._catalog_rank_feature_schemas import (
     CATALOG_RANK_FEATURE_SCHEMAS,
 )
+from medulla.generated._process_control_feature_schemas import (
+    PROCESS_CONTROL_FEATURE_SCHEMAS,
+)
 from medulla.generated._task_plan_feature_schema import (
     TASK_PLAN_FEATURE_SCHEMA,
 )
@@ -2764,6 +2767,7 @@ __all__ = [
     "Q32_ONE",
     "TASK_PLAN_FEATURE_SCHEMA",
     "CATALOG_RANK_FEATURE_SCHEMAS",
+    "PROCESS_CONTROL_FEATURE_SCHEMAS",
     "RETRIEVAL_PLAN_OPTIONS",
     "merge_arming_request",
     "retrieval_plan_request",

@@ -30,6 +30,7 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind, BranchSpec};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
 
@@ -45,6 +46,41 @@ const PARAM_REQUEST: &str = "process_decision";
 
 /// The family of the `decision_table_eval` and `branch_select` question kinds.
 pub struct ProcessDecisionFamily;
+
+/// The question ids a host pins a feature schema for, one per control step
+/// (MEDULLA-DECISION-ENGINE-R180.8). The schema component of each is
+/// `decide.schema.<question id>`.
+pub const PROCESS_CONTROL_QUESTION_IDS: [&str; 2] =
+    ["process.branch_select", "process.decision_table_eval"];
+
+/// The one feature schema both control steps pin (MEDULLA-DECISION-ENGINE-R180.8).
+///
+/// A process decision scores nothing: it evaluates a stored table or a sealed plan
+/// branch and answers the single declared option `decision`. A request still names a
+/// pinned schema, and a schema declares at least one feature, so the body is the one
+/// inert `declared_cost_micros` feature imputing 0, which no process decision reads.
+/// `medulla/generated/_process_control_feature_schemas.py` mirrors it.
+pub fn process_control_feature_schema(
+) -> medulla_decision_types::decision::statistical::features::FeatureSchemaBody {
+    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
+    use medulla_decision_types::decision::statistical::features::{
+        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+    };
+    FeatureSchemaBody {
+        schema_version: FEATURE_SCHEMA_VERSION,
+        features: BoundedVec::new(vec![FeatureSpec {
+            name: "declared_cost_micros".to_string(),
+            kind: FeatureKind::DeclaredCostMicros,
+            missing: MissingValue::Impute {
+                value: QuantisedValue {
+                    scale: QuantScaleTag::Q32,
+                    value: 0,
+                },
+            },
+        }])
+        .expect("one feature is within the schema bound"),
+    }
+}
 
 struct Abstention(RefusalCode, String);
 
@@ -408,5 +444,23 @@ impl DecisionFamily for ProcessDecisionFamily {
     fn evidence_class(&self, outcome: &StatisticalOutcome) -> Option<EvidenceClass> {
         // The table is stored graph content, so the record is an observation.
         matches!(outcome, StatisticalOutcome::Advisory { .. }).then_some(EvidenceClass::Observation)
+    }
+}
+
+#[cfg(test)]
+mod control_schema_tests {
+    use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R180.8
+    #[test]
+    fn the_control_schema_is_valid_and_encodes_one_inert_feature() {
+        let body = process_control_feature_schema().checked().unwrap();
+        assert_eq!(body.names(), ["declared_cost_micros"]);
+        let encoded =
+            medulla_decision_types::decision::statistical::body::encode_body(&body).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
+        assert_eq!(json["features"][0]["kind"]["feature"], "declared_cost_micros");
+        assert_eq!(json["features"][0]["missing"]["missing"], "impute");
+        assert_eq!(PROCESS_CONTROL_QUESTION_IDS.len(), 2);
     }
 }

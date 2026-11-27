@@ -185,3 +185,21 @@ def test_catalog_rank_schemas_are_published_per_point_over_one_body() -> None:
     names = [f["name"] for f in operation["body"]["features"]]
     assert names[-1] == "semantic_similarity"
     assert operation["body"]["features"][-1]["missing"]["missing"] == "impute"
+
+
+# spec: MEDULLA-DECISION-ENGINE-R180.8
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R180.8")
+def test_process_control_schemas_are_published_per_step_over_one_body() -> None:
+    schemas = dc.PROCESS_CONTROL_FEATURE_SCHEMAS
+    assert sorted(schemas) == ["process.branch_select", "process.decision_table_eval"]
+    assert len({entry["content_digest"] for entry in schemas.values()}) == 1
+    branch = schemas["process.branch_select"]
+    assert branch["component_id"] == "decide.schema.process.branch_select"
+    assert branch["kind"] == "feature_schema"
+    assert branch["content_digest"].startswith("sha256:")
+    assert branch["idempotency_key"].startswith(
+        "eg:decide.schema.process.branch_select:"
+    )
+    feature = branch["body"]["features"][0]
+    assert feature["kind"] == {"feature": "declared_cost_micros"}
+    assert feature["missing"]["missing"] == "impute"

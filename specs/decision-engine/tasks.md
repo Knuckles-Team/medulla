@@ -931,6 +931,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T912 [US7] MEDULLA-DECISION-ENGINE-R180.5 Process decision refusal
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
 - [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof
+- [ ] T914a [US7] MEDULLA-DECISION-ENGINE-R180.8 Feature schema of the control-step points
 - [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
 - [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours; the answer keeps the best 64 scores and adds `Advisory.ranked_total` (ladder truncation, `calibrated_scores` by id, matrix rows of the retained ids).
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
