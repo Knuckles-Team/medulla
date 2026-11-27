@@ -74,6 +74,7 @@ Owned: `QuestionKind::Placement`, placement vocabulary, `stat_placement.rs`, pro
 | FR-007 | plan.md Project Structure | T-008 | PENDING |
 | FR-008 | plan.md Project Structure | T-009 | PENDING |
 | FR-009 | plan.md Machine wiring | MEDULLA-PLACEMENT-R780 to MEDULLA-PLACEMENT-R783 | PENDING |
+| FR-010 | plan.md Build-slot leases | MEDULLA-PLACEMENT-R786 | PENDING |
 
 ## Open questions
 

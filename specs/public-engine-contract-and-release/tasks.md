@@ -136,3 +136,38 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T123 [US1] MEDULLA-CONTRACT-R063 Clear the state-machine census and switch the hook to blocking
 - [ ] T127 [US1] MEDULLA-CONTRACT-R063.1 Rename the eleven set-once holder fields and enum types out of the census, with serde and Python aliases keeping the wire bytes
 - [ ] T124 [US1] MEDULLA-CONTRACT-R064 No workspace manifest names a date-time crate: `medulla-h-ingest` moves to `jiff`, the root drops `chrono`, the four ignores name their transitive dependents
+- [ ] T132 [US5] MEDULLA-CONTRACT-R065 One version of each dependency family, one TLS and crypto backend (rollup).
+- [ ] T133 [US5] MEDULLA-CONTRACT-R065.1 One columnar-array family.
+- [ ] T134 [US5] MEDULLA-CONTRACT-R065.2 One TLS and crypto backend: ring.
+- [ ] T135 [US5] MEDULLA-CONTRACT-R065.3 Every remaining multi-version package is unavoidable and carries a reason.
+- [ ] T136 [US5] MEDULLA-CONTRACT-R065.4 A gate fails on any duplicate outside the allow-list, and the allow-list only shrinks.
+- [ ] T137 [US5] MEDULLA-CONTRACT-R065.5 The vendored security patches survive unification.
+- [ ] T138 [US5] MEDULLA-CONTRACT-R066 The embedded analytical database stays out of the developer build and links a prebuilt library in release (rollup).
+- [ ] T139 [US5] MEDULLA-CONTRACT-R066.1 The feature `source-duckdb` is outside `default` and `full`.
+- [ ] T140 [US5] MEDULLA-CONTRACT-R066.2 Release and serving builds link a prebuilt library pinned by version and checksum.
+- [ ] T141 [US5] MEDULLA-CONTRACT-R066.3 The library ships beside the server in the wheel and the serving image.
+- [ ] T142 [US5] MEDULLA-CONTRACT-R067 Every workspace crate stays within 25,000 lines of Rust and a change rebuilds only its own domain (rollup).
+- [ ] T143 [US5] MEDULLA-CONTRACT-R067.1 The xtask check `crate-size-budget`.
+- [ ] T144 [US5] MEDULLA-CONTRACT-R067.2 Split `medulla-decision-types` into four crates by dependency layer.
+- [ ] T145 [US5] MEDULLA-CONTRACT-R067.3 Split `medulla-catalog-types` into two crates.
+- [ ] T146 [US5] MEDULLA-CONTRACT-R067.4 Split `medulla-identity-types` into two crates.
+- [ ] T147 [US5] MEDULLA-CONTRACT-R067.5 Split `medulla-decision-stats` into two crates.
+- [ ] T148 [US5] MEDULLA-CONTRACT-R067.6 Split `medulla-compute` into two crates.
+- [ ] T149 [US5] MEDULLA-CONTRACT-R067.7 Split `medulla-h-decide` into seven crates.
+- [ ] T150 [US5] MEDULLA-CONTRACT-R067.8 Split `medulla-h-admin` into two crates.
+- [ ] T151 [US5] MEDULLA-CONTRACT-R067.9 Split `medulla-h-ingest` into two crates.
+- [ ] T152 [US5] MEDULLA-CONTRACT-R067.10 Split `medulla-h-graph` into two crates.
+- [ ] T153 [US5] MEDULLA-CONTRACT-R067.11 Split `medulla-h-query` into two crates.
+- [ ] T154 [US5] MEDULLA-CONTRACT-R067.12 Split `medulla-server-router` into two crates.
+- [ ] T155 [US5] MEDULLA-CONTRACT-R067.13 Split `medulla-server-served-tests` into three crates.
+- [ ] T156 [US5] MEDULLA-CONTRACT-R067.14 The size gate is enforced.
+- [ ] T157 [US5] MEDULLA-CONTRACT-R068 Internal deploys build with a faster profile; published wheels keep their profiles (rollup).
+- [ ] T158 [US5] MEDULLA-CONTRACT-R068.1 The profile `release-internal`.
+- [ ] T159 [US5] MEDULLA-CONTRACT-R068.2 Deploy build scripts use the profile.
+- [ ] T160 [US5] MEDULLA-CONTRACT-R069 A generated workspace-hack crate unifies dependency features (rollup).
+- [ ] T161 [US5] MEDULLA-CONTRACT-R069.1 The crate and its pinned tool.
+- [ ] T162 [US5] MEDULLA-CONTRACT-R069.2 A gate regenerates and diffs.
+- [ ] T163 [US5] MEDULLA-CONTRACT-R069.3 Hot-path proof: a single-crate build uses the workspace feature set.
+- [ ] T164 [US4] MEDULLA-CONTRACT-R065.6 Upgrade `zip` and `url` past their current advisories
+- [ ] T165 [US4] MEDULLA-CONTRACT-R065.7 The lock is current: a clean locked resolve succeeds
+- [ ] T166 [US4] MEDULLA-CONTRACT-R066.4 The columnar-dataframe library family is behind its own feature

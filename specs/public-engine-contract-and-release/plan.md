@@ -207,6 +207,221 @@ For runtime rows, name the actual production call site and its served integratio
 
 No follow-on above asserts a passed test or changes a subsystem's acceptance in this batch.
 
+### Build speed design (R065 to R069)
+
+- **Owner.** The root `Cargo.toml`, `Cargo.lock` and `scripts/` own the build graph; `tools/xtask` owns the architecture checks. No other repository is touched.
+- **Cohesion.** Dependency unification, the embedded-database gate, the size budget, the deploy profile and the workspace-hack crate all change the cost of a build and live in the build files. Crate splits change source layout and stay with the crates they split.
+- **Dependency direction.** Each split crate depends only on crates of its own or a lower layer (`pyproject.toml` `cargo_layers`); a new crate takes the layer of the crate it comes from. The workspace-hack crate has no dependents' code in it and points at nothing but third-party crates.
+- **Interface depth.** Each split moves modules with their descendants and rewrites callers; no `pub use` bridge stays. The size check has one helper pair (`count_lines`, `over_budget`) with one caller each.
+- **Special cases.** One dependency exception (the Kafka client's TLS) is on the allow-list with its reason; no crate has a size exception.
+- **State.** `scripts/cargo_lock_duplicates.toml` is the one tracked list and only shrinks; the machines of the split crates keep their edge tables (no lifecycle is added).
+- **Environment.** The embedded database library, its version and its checksums are pinned in `scripts/duckdb-pin.toml`; the deploy profile is a Cargo profile; nothing varies by host.
+
+### Duplicate census (R065.3)
+
+Packages the lock holds in more than one version, other than the array crates that R065.1 unifies. Each row names the dependents that pin each version; `scripts/cargo_lock_duplicates.toml` carries the reason for each that stays.
+
+| Package | Versions and pinning dependents |
+|---|---|
+| `aes` | 0.8.4 (pulled by aes-gcm); 0.9.4 (pulled by lopdf) |
+| `apache-avro` | 0.21.0 (pulled by iceberg); 0.22.0 (pulled by medulla-lake) |
+| `atoi` | 2.0.0 (pulled by arrow-cast, sqlx-postgres); 3.1.1 (pulled by arrow-cast) |
+| `atoi_simd` | 0.17.0 (pulled by polars-compute, polars-time); 0.18.1 (pulled by calamine) |
+| `base64` | 0.22.1 (pulled by arrow-cast, datafusion-functions, iceberg, and 13 more); 0.23.1 (pulled by arrow-cast, hyper-util, medulla-cypher, and 13 more) |
+| `bindgen` | 0.69.5 (pulled by espeak-rs-sys); 0.72.1 (pulled by whisper-rs-sys) |
+| `bitflags` | 1.3.2 (pulled by defmt); 2.13.2 (pulled by arrow-schema, bindgen, flatbuffers, and 17 more) |
+| `block-buffer` | 0.10.4 (pulled by digest); 0.12.1 (pulled by digest) |
+| `chacha20` | 0.10.2 (pulled by proptest, rand); 0.9.1 (pulled by chacha20poly1305) |
+| `chrono-tz` | 0.10.4 (pulled by arrow-array, datafusion-functions, orc-rust, and 1 more); 0.8.6 (pulled by display-more) |
+| `cipher` | 0.4.4 (pulled by aes, aes-gcm, chacha20, and 2 more); 0.5.2 (pulled by aes, cbc, ecb) |
+| `comfy-table` | 7.2.2 (pulled by arrow-cast); 8.0.1 (pulled by arrow-cast) |
+| `const-oid` | 0.10.2 (pulled by digest); 0.9.6 (pulled by der, tokio-postgres-rustls, x509-cert) |
+| `cpufeatures` | 0.2.17 (pulled by aes, argon2, chacha20, and 4 more); 0.3.1 (pulled by aes, chacha20, sha1, and 1 more) |
+| `crypto-common` | 0.1.7 (pulled by aead, cipher, digest, and 1 more); 0.2.2 (pulled by cipher, digest) |
+| `darling` | 0.20.11 (pulled by derive_builder_core); 0.24.1 (pulled by bon-macros, serde_with_macros) |
+| `darling_core` | 0.20.11 (pulled by darling, darling_macro); 0.24.1 (pulled by darling, darling_macro) |
+| `darling_macro` | 0.20.11 (pulled by darling); 0.24.1 (pulled by darling) |
+| `der` | 0.7.10 (pulled by spki, x509-cert, x509-certificate); 0.8.2 (pulled by ureq) |
+| `digest` | 0.10.7 (pulled by apache-avro, blake2, crc-fast, and 4 more); 0.11.3 (pulled by apache-avro, hmac, md-5, and 3 more) |
+| `embedded-io` | 0.4.0 (pulled by postcard); 0.6.1 (pulled by postcard) |
+| `fallible-iterator` | 0.2.0 (pulled by postgres-protocol, postgres-types, tokio-postgres); 0.3.0 (pulled by duckdb) |
+| `foldhash` | 0.1.5 (pulled by hashbrown); 0.2.0 (pulled by datafusion-common, datafusion-functions-aggregate, hashbrown, and 2 more) |
+| `fs4` | 0.13.1 (pulled by tantivy); 1.1.0 (pulled by medulla-engine, medulla-h-query, medulla-h-retrieve) |
+| `getrandom` | 0.2.17 (pulled by const-random-macro, jsonwebtoken, polars-arrow, and 2 more); 0.3.4 (pulled by ahash, polars-arrow, polars-core, and 1 more); 0.4.3 (pulled by jobserver, lopdf, quinn-proto, and 4 more) |
+| `glam` | 0.30.10 (pulled by nalgebra); 0.31.1 (pulled by nalgebra); 0.32.1 (pulled by nalgebra); 0.33.12 (pulled by nalgebra) |
+| `hashbrown` | 0.12.3 (pulled by indexmap); 0.14.5 (pulled by dashmap, ordered-multimap); 0.15.5 (pulled by hashlink, petgraph, planus); 0.16.1 (pulled by gimli, hashlink, lru, and 9 more); 0.17.1 (pulled by arrow-array, cranelift-codegen, cranelift-frontend, and 13 more) |
+| `hashlink` | 0.10.0 (pulled by duckdb); 0.11.1 (pulled by sqlx-core) |
+| `heck` | 0.4.1 (pulled by ouroboros_macro); 0.5.0 (pulled by clap_derive, cranelift-codegen-meta, pyo3-macros-backend, and 3 more) |
+| `hmac` | 0.12.1 (pulled by medulla-core, medulla-engine, medulla-federation, and 14 more); 0.13.0 (pulled by aws-sigv4, hkdf, postgres-protocol, and 2 more) |
+| `indexmap` | 1.9.3 (pulled by serde_with); 2.14.2 (pulled by arrow-json, datafusion, datafusion-common, and 26 more) |
+| `inout` | 0.1.4 (pulled by cipher); 0.2.6 (pulled by cipher) |
+| `itertools` | 0.12.1 (pulled by bindgen); 0.13.0 (pulled by bindgen, criterion, criterion-plot, and 2 more); 0.14.0 (pulled by datafusion, datafusion-catalog, datafusion-catalog-listing, and 19 more); 0.15.0 (pulled by object_store, openraft) |
+| `libloading` | 0.8.9 (pulled by clang-sys, cudarc); 0.9.0 (pulled by ort) |
+| `linux-raw-sys` | 0.12.1 (pulled by rustix); 0.4.15 (pulled by rustix) |
+| `lz4_flex` | 0.11.6 (pulled by orc-rust); 0.13.1 (pulled by arrow-ipc, parquet, tantivy); 0.14.0 (pulled by medulla-kvcache) |
+| `md-5` | 0.10.6 (pulled by medulla-cypher, medulla-rdf, medulla-sql, and 3 more); 0.11.0 (pulled by lopdf, object_store, opendal-core, and 3 more) |
+| `md5` | 0.7.0 (pulled by dust_dds); 0.8.1 (pulled by pgwire) |
+| `miniz_oxide` | 0.8.9 (pulled by apache-avro); 0.9.1 (pulled by apache-avro, flate2) |
+| `ndarray` | 0.16.1 (pulled by piper-rs); 0.17.2 (pulled by medulla-ann, medulla-finance, medulla-finance-quant, and 5 more) |
+| `nom` | 7.1.3 (pulled by cexpr, tantivy-query-grammar); 8.0.0 (pulled by lopdf) |
+| `num-bigint` | 0.4.8 (pulled by apache-avro, arrow-buffer, bigdecimal, and 3 more); 0.5.1 (pulled by arrow-buffer) |
+| `object` | 0.39.1 (pulled by ar_archive_writer); 0.40.0 (pulled by wasmtime, wasmtime-environ, wasmtime-internal-cranelift, and 1 more) |
+| `object_store` | 0.13.2 (pulled by datafusion, datafusion-catalog, datafusion-catalog-listing, and 6 more); 0.14.2 (pulled by medulla-engine, medulla-persistence, medulla-persistence-ops, and 3 more) |
+| `ordered-float` | 3.9.2 (pulled by thrift); 4.6.0 (pulled by iceberg); 5.5.0 (pulled by tantivy-query-grammar) |
+| `phf` | 0.11.3 (pulled by chrono-tz, chrono-tz-build); 0.12.1 (pulled by chrono-tz); 0.13.1 (pulled by tokio-postgres) |
+| `phf_shared` | 0.11.3 (pulled by phf, phf_codegen, phf_generator); 0.12.1 (pulled by phf); 0.13.1 (pulled by phf) |
+| `prettyplease` | 0.2.37 (pulled by bindgen); 0.3.0 (pulled by bon-macros) |
+| `prost` | 0.13.5 (pulled by orc-rust); 0.14.4 (pulled by medulla-engine, medulla-server, medulla-server-obs, and 5 more) |
+| `prost-derive` | 0.13.5 (pulled by prost); 0.14.4 (pulled by prost) |
+| `quick-xml` | 0.41.0 (pulled by medulla-core, medulla-document, medulla-rdf, and 3 more); 0.42.0 (pulled by calamine, reqsign-aws-core, reqsign-aws-v4) |
+| `r-efi` | 5.3.0 (pulled by getrandom); 6.0.0 (pulled by getrandom) |
+| `rand` | 0.10.3 (pulled by apache-avro, lopdf, object_store, and 10 more); 0.8.8 (pulled by medulla-ann, medulla-compute, medulla-decision-policy, and 21 more); 0.9.5 (pulled by apache-avro, datafusion-datasource, datafusion-execution, and 9 more) |
+| `rand_chacha` | 0.3.1 (pulled by medulla-ann, medulla-compute, medulla-decision-policy, and 6 more); 0.9.0 (pulled by rand) |
+| `rand_core` | 0.10.1 (pulled by chacha20, getrandom, rand, and 2 more); 0.6.4 (pulled by crypto-common, password-hash, rand, and 2 more); 0.9.5 (pulled by rand, rand_chacha) |
+| `reqwest` | 0.12.28 (pulled by iceberg, iceberg-catalog-rest); 0.13.5 (pulled by medulla-engine, medulla-quantum-hardware, object_store, and 3 more) |
+| `rustc-hash` | 1.1.0 (pulled by bindgen); 2.1.3 (pulled by bindgen, cranelift-codegen, quinn, and 3 more) |
+| `rustix` | 0.38.44 (pulled by which); 1.1.6 (pulled by fs4, medulla-direct-state, medulla-engine, and 9 more) |
+| `schemars` | 0.9.0 (pulled by serde_with); 1.2.3 (pulled by byte-unit, medulla-agent-types, medulla-capabilities, and 15 more) |
+| `sha1` | 0.10.7 (pulled by medulla-compute, medulla-cypher, medulla-engine, and 18 more); 0.11.0 (pulled by reqsign-aws-core, reqsign-core, sqlx-mysql, and 1 more) |
+| `sha2` | 0.10.9 (pulled by cranelift-codegen, medulla-agent-types, medulla-ann-codes, and 91 more); 0.11.1 (pulled by aws-sigv4, libduckdb-sys, lopdf, and 5 more) |
+| `shlex` | 1.3.0 (pulled by bindgen); 2.0.1 (pulled by cc) |
+| `socket2` | 0.5.10 (pulled by dust_dds); 0.6.5 (pulled by hyper-util, quinn, quinn-udp, and 2 more) |
+| `strum` | 0.27.2 (pulled by apache-avro, duckdb, iceberg); 0.28.0 (pulled by apache-avro, medulla-protocol-types, medulla-result-types, and 1 more) |
+| `strum_macros` | 0.27.2 (pulled by apache-avro, polars-arrow, polars-compute, and 4 more); 0.28.0 (pulled by strum) |
+| `syn` | 2.0.119 (pulled by aws-smithy-runtime-api-macros, bindgen, cyclonedds-derive, and 41 more); 3.0.9 (pulled by async-trait, bon-macros, borsh-derive, and 25 more) |
+| `thiserror` | 1.0.69 (pulled by cyclonedds, lzokay-native); 2.0.21 (pulled by apache-avro, cobs, defmt-parser, and 47 more) |
+| `thiserror-impl` | 1.0.69 (pulled by thiserror); 2.0.21 (pulled by thiserror) |
+| `untrusted` | 0.7.1 (pulled by aws-lc-rs); 0.9.0 (pulled by ring, rustls-webpki) |
+| `wasi` | 0.11.1+wasi-snapshot-preview1 (pulled by getrandom, mio); 0.14.7+wasi-0.2.4 (pulled by wasite) |
+| `wasm-encoder` | 0.258.3 (pulled by wasmtime-environ); 0.262.0 (pulled by wast) |
+| `wasmparser` | 0.258.3 (pulled by wasm-encoder, wasmprinter, wasmtime, and 2 more); 0.262.0 (pulled by wasm-encoder) |
+| `windows-core` | 0.61.2 (pulled by windows, windows-collections, windows-future, and 1 more); 0.62.2 (pulled by iana-time-zone) |
+| `windows-link` | 0.1.3 (pulled by windows, windows-core, windows-future, and 4 more); 0.2.1 (pulled by chrono, jiff, jni, and 6 more) |
+| `windows-result` | 0.3.4 (pulled by windows-core); 0.4.1 (pulled by windows-core) |
+| `windows-strings` | 0.4.2 (pulled by windows-core); 0.5.1 (pulled by windows-core) |
+| `windows-sys` | 0.52.0 (pulled by ring, socket2); 0.59.0 (pulled by fs4, rustix); 0.61.2 (pulled by anstyle-query, anstyle-wincon, console, and 25 more) |
+| `zip` | 2.6.1 (pulled by medulla-document, medulla-xtask); 9.8.1 (pulled by calamine) |
+| `zstd` | 0.13.5 (pulled by orc-rust); 0.14.3 (pulled by apache-avro, arrow-ipc, iceberg, and 4 more) |
+| `zstd-safe` | 7.4.1 (pulled by zstd); 8.2.0 (pulled by zstd) |
+
+### Crate split maps (R067.2 to R067.13)
+
+Sizes are physical lines under `src/` on the current main. Paths use the directory form `parent/{a,b}`; `./` is `src/`, `(root)` is `src/lib.rs`. Each crate keeps its own `lib.rs`; the original `lib.rs` goes to the crate that keeps the original name. The map is a dependency-ordered partition of the static module graph (references through `crate::` and `super::` paths). Each target stays below 22,000 lines. The listed upward references are the only static edges that point to a higher crate; the lane resolves each by moving the referenced item down, confirms with `cargo check`, and updates the map in the same change if a module changes crate.
+
+#### `medulla-decision-types`: 63,097 lines into 4 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-decision-statistical-types` | 16,657 | ./{(root),claims,context_facts,decision,failure_patterns,friction,knowledge_curation,knowledge_flag,loops,memory_events,skill_telemetry,source_toc,usage}; decision/{answer_ranking_request,branch_fusion,changeset_review,coding_agent,entity_resolution,entry_types,errors,execution_part,feature_match,held_out,ingest_shortfall,item_recommendation,load_set,numeric,planner_cost_head,planning_admission,primitive,process_decision,promotion_answer,promotion_tier,recursive_trace,reputation,research_voi,size,skill_evolution,task_plan,verifier_receipt}; decision/statistical/{belief,body,capacity,context_search,dataset,declared,enrichment_schedule,errors,execution_routing,features,graph_rows,grounded_eval,ingestion_lane,keyed,lifecycle_record,nl,ranking_eval,retrieval_drift,retrieval_pointer,retrieval_refresh,scale,scorer,shard_monitor,topology,writeback}; decision/task_plan/{aggregation,call,context,control,skill_binding,trajectory_projection,trajectory_refusal} |
+| `medulla-decision-policy-types` | 16,649 | decision/{approval,checker_feedback,context_package,delegation,delegation_quality,digest,evidence_stream,harness_contrast,held_item,importance_penalty,jobs,knobs,limit_types,local_certification,memory_benchmark,memory_rewrite,package_validation,policy,program,rapid_r015,record,replay,request,run_governance,safety,skill_upgrade_request,skill_workflow,team_coordination,thought_search,trajectory_ladder,transfer,usage}; decision/statistical/{distilled,feedback,head,retrieval,retrieval_adapter,retrieval_calibration,retrieval_generation,run_credit,tool_subset}; ./{decision_fixtures,skill_eval,solve} |
+| `medulla-decision-program-types` | 16,670 | decision/{autonomy,capability_designation,comparative_analysis,context_replacement,curriculum,field_shielding,graph_intake,instruction_disclosure,paper_admission,population,program_store,reward,statistical,temporal_query,tool_action,tool_relevance,trace_fix_binding,trajectory_verdict,usage_guidance}; decision/statistical/{harness_config,log,placement,placement_plan}; decision/task_plan/{branch_breadth,fanout,horizon,pairwise,skill_plan,skill_tree,trajectory,trajectory_budget} |
+| `medulla-decision-types` | 13,121 | ./{belief_revision,correction,ontology,participant_memory}; decision/{a2a_route,analyst_synthesis,capability_rank,codes,command_config,context_bundle,context_source,council,defect_triage,indexless_retrieval,ingestion_admission,knob_families,lifecycle,load_set_knobs,merge_arming,model_capacity,path_success,playbook,process_plan,process_remediation,recruit,resolve_conflict,revert_or_fix_forward,run_adjustment,serving_technique,sub_call,tool_necessity,verifier_case_machine}; decision/statistical/{outcome,reasoning_paradigm,retrieval_plan}; decision/task_plan/{critical_path,decompose,tests} |
+
+Upward references to resolve (35 module pairs, 47 references): `decision::record` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x4; `decision::record` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x3; `decision::package_validation` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x3; `decision::harness_contrast` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x3; `decision_fixtures` (crate medulla-decision-policy-types) uses `decision::statistical::log` (crate medulla-decision-program-types) x2; `decision::jobs` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x2; `decision::statistical::tool_subset` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x2; `decision::skill_upgrade_request` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::trace_fix_binding` (crate medulla-decision-program-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::delegation_quality` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::program` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::package_validation` (crate medulla-decision-policy-types) uses `decision::knob_families` (crate medulla-decision-types) x1; `decision::digest` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::limit_types` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::usage` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::skill_workflow` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::skill_workflow` (crate medulla-decision-policy-types) uses `decision::program_store` (crate medulla-decision-program-types) x1; `decision::rapid_r015` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::knobs` (crate medulla-decision-policy-types) uses `decision::knob_families` (crate medulla-decision-types) x1; `decision::thought_search` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::context_package` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::team_coordination` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::trajectory_ladder` (crate medulla-decision-policy-types) uses `decision::statistical` (crate medulla-decision-program-types) x1; `decision::statistical::retrieval` (crate medulla-decision-policy-types) uses `decision::statistical::log` (crate medulla-decision-program-types) x1; `decision::statistical::head` (crate medulla-decision-policy-types) uses `decision::statistical::outcome` (crate medulla-decision-types) x1; `decision::statistical::run_credit` (crate medulla-decision-policy-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::task_plan::fanout` (crate medulla-decision-program-types) uses `decision::knob_families` (crate medulla-decision-types) x1; `decision::task_plan::trajectory_budget` (crate medulla-decision-program-types) uses `decision::codes` (crate medulla-decision-types) x1; `decision::task_plan::trajectory_budget` (crate medulla-decision-program-types) uses `decision::knob_families` (crate medulla-decision-types) x1; `decision::task_plan::skill_tree` (crate medulla-decision-program-types) uses `decision::knob_families` (crate medulla-decision-types) x1; and 5 more pairs in the same form.
+
+#### `medulla-catalog-types`: 28,750 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-catalog-source-types` | 14,738 | ./{(root),architecture_view,asset_usage,attached_catalog,attached_source_dialect,attached_source_governance,await_watermark,catalog_relevance,clickhouse_attached_catalog,consolidation_isolation,consumer_contract,data_product,dialect_conformance,distribution,document_source_catalog,embedding_promotion,engine_capabilities,entity_link_proposal,external_schema,foreign_source_catalog,glossary,gramps_pilot_phase,immich_pilot_phase,lake_catalog,lineage,metadata_acceleration,mssql_attached_catalog,mssql_driver_connection,mysql_mariadb_connection,ontology_diff,ontology_edit,ontology_inspection,open_metadata,pg_compat_feature,pg_diff_baseline,pgrx_spike,pgrx_spike_review,postgres_adapter,probe_machine,profile,quality,relational_attached_catalog,schema_boundary,schema_inference,shared_db_platform,skill_admission,skill_edit,sqlite_attached_catalog,sqlite_live_attach,stewardship,virtual_graph_view,web_source} |
+| `medulla-catalog-types` | 14,012 | ./{catalog_fixtures,catalog_read,connector_pack,document_conformance,domain_pack,fleet_catalog,foreign_read,gramps_baseline_digest,gramps_cutover_gate,gramps_gap_fix,graph_schema,incident,incident_record_machine,pitr_schedule,replay_conformance,restore_drill,schema_context,warehouse_conformance} |
+
+Upward references: none.
+
+#### `medulla-identity-types`: 25,454 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-identity-core-types` | 13,420 | ./{(root),acl,authority,authority_audit,credential_receipt,identity,identity_fixtures,source_coverage,tenancy}; identity/{access,approval_key,audit,config,credentials,delegation,denials,model,ownership,password_policy,requests,requests_admin,requests_provision,scope,segment,stamp,store,tests,text,wire_login}; identity/store/{ownership,session_reference}; identity/tests/{access,auth,credentials,delegation_agent_run,factors,mfa_totp,provision,recovery,revocation,session_evidence,sql_dump,tokens,user_status_machine,verdicts,wire_logins} |
+| `medulla-identity-types` | 12,034 | ./{application_admission_machine,assistant_profile,classification,platform_admission,rbac_elevation,resource_grant}; identity/{metadata,ops,policy_bundle,projection,relations,sql_dump,views}; identity/store/{access_ops,approval_keys,auth,authority,credentials,delegation,external,import,invariants,mfa,modes,provision,recovery,sessions,tenant,throttle,tokens,users,verdict,webauthn,wire_logins}; identity/tests/{approval_keys,modes,policy_bundle} |
+
+Upward references to resolve (4 module pairs, 8 references): `identity::store` (crate medulla-identity-core-types) uses `identity::ops` (crate medulla-identity-types) x5; `identity::store` (crate medulla-identity-core-types) uses `identity::views` (crate medulla-identity-types) x1; `identity::store` (crate medulla-identity-core-types) uses `identity::policy_bundle` (crate medulla-identity-types) x1; `identity::requests_provision` (crate medulla-identity-core-types) uses `identity::views` (crate medulla-identity-types) x1.
+
+#### `medulla-decision-stats`: 29,136 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-decision-stats-records` | 15,267 | ./{(root),conformal,decision}; decision/{adapter,admission,analyst_synthesis,autonomy,bm25,branch_outcomes,candidate,changeset_review,cluster_knobs,comparative_analysis,context_cursor,context_partition,context_search,correction,curriculum,delegation,distilled,dmn_eval,entity_resolution,evolution_round,feature_match,grounded_eval,importance_penalty,insight,instruction_disclosure,knowledge_curation,knowledge_flag,legal_option_filter,memory,memory_benchmark,memory_rewrite,nl,participant_ask,participant_card,participant_derive,playbook,population,promotion_tier,ranking_eval,recommend,refusal,research_voi,retrieval,reward,route,run_credit,safety,schema_mapping,session_note,skill_eval} |
+| `medulla-decision-stats` | 13,869 | decision/{aggregate,branch_select,drift,evaluate,evaluate_bandit,exploration,feature_power,features,fit,fit_calibrate,head_eval,ladder,promotion,quant,rapid_r083,replay,scorer,skill_evolution,skill_plan,skill_telemetry,source_trust,step_verify,targets,temporal_basis,thought_search,tool_relevance,track_record,trajectory,trajectory_join,trajectory_ladder,transfer,usage_guidance,verifier_receipt,web_fetch_selection,writeback}; ./{ope,sparse_select,viewport} |
+
+Upward references: none.
+
+#### `medulla-compute`: 26,004 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-compute-assemble` | 13,235 | ./{(root),assemble,contract,datascience,line_merge,node_labels,parser,probabilistic,process_plan,screen,sketch,source_bisect,source_git_objects,source_history,source_symbol_edit,source_tree,test_support}; assemble/{agent,coding_agent,eliminate,facts,model,objective,primitive,profile,prompt,search}; parser/{branch_scope,enrichment_snapshot,enrichment_work_machine,resolve_imports,spec_artifacts,tree_sitter_grammars_extended,tree_sitter_sql,tree_sitter_walk} |
+| `medulla-compute` | 12,769 | assemble/{conclude,seal,template,tests,topology,uniqueness,validate,why_not}; ./ast; parser/{branch_index,branch_index_tests,branch_projection,enrichment_admission,enrichment_machine,enrichment_reactivation,resolve,tree_sitter,tree_sitter_ast} |
+
+Upward references to resolve (3 module pairs, 4 references): `contract` (crate medulla-compute-assemble) uses `ast` (crate medulla-compute) x2; `assemble::model` (crate medulla-compute-assemble) uses `assemble::topology` (crate medulla-compute) x1; `assemble::profile` (crate medulla-compute-assemble) uses `assemble::conclude` (crate medulla-compute) x1.
+
+#### `medulla-h-decide`: 131,816 lines into 7 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-h-decide-base` | 19,845 | ./{(root),decide,solve}; decide/{assemble_shield,belief_revise,capacity_premise,claims,connector_points,correction,coverage,coverage_tests,definitions_read,drift_registry,features,guardrail,knowledge_flag,loops,participant_ask,participant_card,participant_derivation,planned_write,program_embedding,prompt_candidates,served_adapter,shape,stat_classes,stat_delegation,stat_generation_space,stat_gold_guarantee,stat_grounded_eval,stat_held_item_critique,stat_memory_change,stat_penalty,stat_placement,stat_proposals,stat_ranking_eval,stat_skill_eval,stat_skill_tier,stat_slate,stat_support,stat_tool_subset,stat_vectors,statistical,telemetry,tool_index,topology_read,topology_schema,triage_read,windows_read}; decide/family/{assemble,classify,connector_event_triage,connector_tool_choice,connector_write_back,pre_tool_risk,template,template_choice}; decide/stat_tests/{a2a_route_tests,belief_revision_tests,capacity_tests,claims_tests,classes_tests,connector_triage_tests,connector_writeback_tests,context_replacement_tests,council_tests,credential_reuse_tests,delegation_tests,graph_intake_tests,ingest_shortfall_tests,kernel_family_support,loops_tests,model_capacity_tests,nl_tests,population_tests,pretool_risk_tests,process_remediation_tests,reasoning_paradigm_tests,revision_proposal_tests,reward_decomposition_tests,run_adjustment_tests,run_observation_tests,schema_mapping_tests,serving_technique_tests,step_verification_tests,synthesis_tests,telemetry_tests,topology_tests,trajectory_join_tests} |
+| `medulla-h-decide-runlog` | 19,405 | decide/{assemble,candidates,commit,family,jobs,log,policy_activation,run_record,stat_adapter,stat_capability_outcome,stat_certification,stat_decision_reads,stat_designation,stat_evaluator,stat_executor,stat_generation,stat_harness_adoption,stat_jobs,stat_lifecycle_record,stat_load_set,stat_log,stat_model_capacity,stat_pointer,stat_recommend,stat_reputation,stat_resolve,stat_retention,stat_retrieval,stat_retrieval_views,stat_rule_promotion,stat_skill_ablation,stat_slate_attribution,stat_usage_guidance,stat_verdict_dataset,stat_view,stat_walk_forward,stat_writeback,steps_read}; decide/family/{feedback_loop,support}; decide/stat_tests/{commit_admission_tests,log_tests,retrieval_tests} |
+| `medulla-h-decide-learning` | 19,442 | decide/{entry_stage,limit_stage,safety_stage,stat_belief,stat_calibration,stat_capacity,stat_concentration,stat_decide,stat_distilled,stat_feedback,stat_freshness,stat_generation_cycle,stat_harness_contrast,stat_learning,stat_nl,stat_package_run,stat_placement_plan,stat_promotion,stat_replay,stat_run_credit,stat_session_note,stat_task_plan,stat_team,stat_test_support,stat_topology,stat_trajectory}; decide/family/{comparative_analysis,context_package,harness_config,planning_admission,process_decision,process_plan,promotion,route,scale_intent,skill_upgrade,task_context,tool_necessity,tool_relevance}; decide/stat_tests/{assemble_tests,consumer_tests,placement_tests}; ./usage |
+| `medulla-h-decide-stat-tests` | 19,788 | decide/{capability_feed,execution_answer,failure_ingest,feature_ledger,friction,knowledge_curation,skill_telemetry,stat_tests,stat_thought_search,triage}; decide/family/{capability_designation,kernel}; decide/stat_tests/{generation_cycle_tests,harness_contrast_tests,learning_tests,path_preference_tests,promotion_tests,rank_tests,scorer_tests,skill_tier_tests,skill_upgrade_tests,skill_workflow_tests,sub_call_admission_tests,task_plan_tests,team_coordination_tests,temporal_basis_tests,thought_search_tests,tool_action_admission_tests,tool_necessity_tests,tool_relevance_tests,tool_subset_tests,trajectory_ladder_tests,trajectory_tests,transfer_tests,usage_guidance_tests,writeback_queue_tests} |
+| `medulla-h-decide-family-tests` | 19,744 | decide/stat_tests/{importance_penalty_tests,insight_tests,instruction_disclosure_tests,item_recommendation_tests,knob_tests,knowledge_curation_tests,knowledge_flag_tests,lifecycle_record_tests,limit_guard_tests,load_set_tests,memory_change_tests,merge_arming_tests,org_runtime_tests,over_window_plan_tests,package_run_tests,paper_admission_tests,placement_plan_tests,planning_admission_tests,playbook_triage_tests,policy_activation_tests,probe_selection_tests,probe_verdict_tests,process_decision_tests,process_plan_tests,program_match_tests,program_store_tests,prompt_candidate_tests,recursion_mode_tests,registry_tests,replay_tests,reputation_tests,research_voi_tests,resolve_conflict_tests,resolve_entity_tests,retention_tests,retrieval_adoption_tests,retrieval_eval_tests,retrieval_plan_tests,revert_family_tests,route_tests,rule_promotion_tests,run_credit_tests,runtime_quota_tests,safety_bound_tests,scale_intent_tests,scope_bound_tests,scoped_adapter_tests,session_note_tests,skill_ablation_tests,skill_eval_tests,skill_evolution_tests,skill_telemetry_tests} |
+| `medulla-h-decide-families` | 19,944 | decide/family/{schema_mapping,serving_technique,skill_evolution,skill_workflow,step_verification,sub_call_admission,task_plan,team_coordination,temporal_basis,thought_search,tool_action_admission,tool_subset,topology,trajectory_join,trajectory_ladder,usage_guidance}; decide/stat_tests/{answer_ranking_tests,assemble_size_tests,assemble_vocabulary_tests,attribution_tests,autonomy_tests,belief_tests,branch_outcomes_tests,calibration_tests,capability_designation_tests,certification_tests,changeset_review_tests,command_config_tests,commit_tests,comparative_analysis_tests,concentration_tests,connector_toolchoice_tests,context_budget_tests,context_package_tests,correction_admission_tests,correction_tests,curriculum_promotion_tests,defect_triage_tests,delegation_quality_tests,distilled_rank_tests,drift_refresh_tests,entry_trust_tests,er_proposals_tests,evaluator_tests,evolution_round_tests,exploration_pool_tests,failure_patterns_tests,fanout_tests,feature_match_tests,feedback_loop_tests,feedback_tests,field_shielding_tests,freshness_refresh_tests,friction_report_tests,generated_code_admission_tests,grounded_eval_tests,harness_adoption_tests,held_item_admission_tests} |
+| `medulla-h-decide` | 13,648 | decide/execution_answer_tests; decide/family/{a2a_route,adversarial_admission,analyst_synthesis,answer_ranking,autonomy,branch_outcome,capacity_proposal,changeset_review,command_config,context_budget,context_replacement,correction_admission,council,credential_reuse,curriculum_promotion,defect_triage,delegation_admission,edit_concentration,enrichment_schedule,evolution_round,fanout_aggregate,fanout_width,feature_match,field_shielding,generated_code_admission,graph_intake,harness_contrast,held_item_admission,ingest_shortfall,ingestion_lane,insight_selection,instruction_disclosure,item_recommendation,load_set,merge_arming,over_window_plan,paper_admission,path_preference,placement,placement_plan,playbook_triage,population_drift,probe_selection,probe_verdict,process_remediation,program_store,rank,reasoning_paradigm,recruit,recursion_mode,research_voi,resolve_conflict,resolve_entity,retrieval_plan,revert_or_fix_forward,reward_decomposition,run_adjustment,runtime_quota} |
+
+Upward references to resolve (15 module pairs, 21 references): `decide::stat_log` (crate medulla-h-decide-runlog) uses `decide::stat_learning` (crate medulla-h-decide-learning) x3; `decide::policy_activation` (crate medulla-h-decide-runlog) uses `decide::stat_promotion` (crate medulla-h-decide-learning) x2; `decide::stat_log` (crate medulla-h-decide-runlog) uses `decide::stat_replay` (crate medulla-h-decide-learning) x2; `decide::stat_support` (crate medulla-h-decide-base) uses `decide::stat_replay` (crate medulla-h-decide-learning) x2; `decide::statistical` (crate medulla-h-decide-base) uses `decide::stat_decide` (crate medulla-h-decide-learning) x2; `decide::stat_retention` (crate medulla-h-decide-runlog) uses `decide::stat_replay` (crate medulla-h-decide-learning) x1; `decide::stat_skill_ablation` (crate medulla-h-decide-runlog) uses `decide::stat_promotion` (crate medulla-h-decide-learning) x1; `decide::stat_memory_change` (crate medulla-h-decide-base) uses `decide::stat_jobs` (crate medulla-h-decide-runlog) x1; `decide::served_adapter` (crate medulla-h-decide-base) uses `decide::stat_adapter` (crate medulla-h-decide-runlog) x1; `decide::stat_ranking_eval` (crate medulla-h-decide-base) uses `decide::stat_jobs` (crate medulla-h-decide-runlog) x1; `decide::candidates` (crate medulla-h-decide-runlog) uses `decide::stat_decide` (crate medulla-h-decide-learning) x1; `decide::stat_generation_space` (crate medulla-h-decide-base) uses `decide::stat_generation` (crate medulla-h-decide-runlog) x1; `decide::stat_generation_space` (crate medulla-h-decide-base) uses `decide::stat_generation_cycle` (crate medulla-h-decide-learning) x1; `decide::stat_grounded_eval` (crate medulla-h-decide-base) uses `decide::stat_jobs` (crate medulla-h-decide-runlog) x1; `decide::stat_tests::retrieval_tests` (crate medulla-h-decide-runlog) uses `decide::stat_tests::consumer_tests` (crate medulla-h-decide-learning) x1.
+
+#### `medulla-h-admin`: 40,707 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-h-admin-schema` | 20,524 | ./{(root),admin,agent_library_projection,graph_schema,knowledge_bundle,namespace_migration,raft_admin}; admin/{agent,backup,concept_lineage,describe_contract,introspect,ownership,package_validation,profile,prompt_receipt,saga,skill_admission,workflow_registry}; admin/connector_pack/{catalog_authority,contract_diff,import,seed,surface_vocab}; admin/connector_pack/import/{annotations,capability_tests,catalog_attributes,contract_rdf,contract_tests,facts,front_matter,json,modality_tests,nutrition,skill_files,validation}; admin/connector_pack/tests/{concept_lineage,content_model,external_schema,model_input_capabilities,ontology,orphan_policy,pack_source,scale,self_served_catalog,source_approval,undecodable}; graph_schema/{attach_pack,edits,ontology_diff,ontology_diff_serve,ontology_import,ontology_import_tests,terms_served_tests,test_support,virtual_graph_tests,world_model_tests} |
+| `medulla-h-admin` | 20,183 | admin/{cluster,component_content,connector_pack,package_validation_tests,skill_source_edit,workflow_registry_tests}; admin/connector_pack/{admin,approval,conformance,reconcile,release_approval,reproject,seed_tests,self_served_catalog,tests}; admin/connector_pack/import/{concept_path,crosswalk,desired,external_schema,planning,release,seed_entries,skill_graph,vocabulary}; admin/connector_pack/tests/{admin,embedding_set,open_metadata_sync,outbox,process_sync,skill_package_render,source_sync,sql_columns,storage_acceptance,sync_harness,withdrawal}; ./{boot_maintenance,connector_pack_projection}; graph_schema/{approved,authority_attach_tests,finance_tests,ontology_diff_tests,swarm_topology_tests,tests} |
+
+Upward references to resolve (5 module pairs, 9 references): `admin::agent` (crate medulla-h-admin-schema) uses `admin::component_content` (crate medulla-h-admin) x4; `graph_schema` (crate medulla-h-admin-schema) uses `admin::connector_pack::import::crosswalk` (crate medulla-h-admin) x2; `graph_schema` (crate medulla-h-admin-schema) uses `admin::connector_pack::reproject` (crate medulla-h-admin) x1; `admin::agent` (crate medulla-h-admin-schema) uses `admin::skill_source_edit` (crate medulla-h-admin) x1; `admin::connector_pack::import::validation` (crate medulla-h-admin-schema) uses `connector_pack_projection` (crate medulla-h-admin) x1.
+
+#### `medulla-h-ingest`: 38,145 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-h-ingest-repository` | 18,148 | ./{(root),asr,atom_context,blob,defect_intake,gate_verdict,harness_session,ingest_drain,ingest_queue,ingestion_admission,ingestion_rung,modality,ontology_slice,repository_enrichment_worker,repository_index,semantic_enrichment,source_batch,source_bisect}; source_ingestion/{action_record,bookmark,containers,drift_gate,drift_methods,facts,governance,media_derivation,media_tag,permissions,policy_candidates,proposals,quality,row_version,skill_document} |
+| `medulla-h-ingest` | 19,997 | ./{data_prep_declaration,document_delete,ingest_readback,lifecycle_status,lifecycle_tests,lineage,meeting_transcript,paper_ingest,source_changeset,source_history,source_ingestion,source_revert,source_symbol_edit,source_tree,web_ingest}; source_ingestion/{documents,spec_projection,sweep,transcript} |
+
+Upward references: none.
+
+#### `medulla-h-graph`: 36,273 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-h-graph-gateway` | 18,695 | ./{(root),graph_ops,harness_admission,pipeline,placement,supersession_admission,topology,write_back}; graph_ops/{argument_map,branch,bus,discover_plan,domain_pack,finance_alerts,finance_factors,finance_forecast_gate,finance_performance,finance_receipts,gateway,gateway_broker,gateway_graph,gateway_mining_ml,graph_change_feed,memory_cursor,participant_card,participant_read,policy_source,process_compile,read_span,retention_cleanup,retrieval_feedback,run_failure_defect,source_sync,subgraph,terminal,union,wallet_trust} |
+| `medulla-h-graph` | 17,578 | graph_ops/{algorithms,architecture_exchange,assistant_profile,atom_context,broker,context_facts,context_facts_tests,discover_generation_tests,discover_quality,discover_seed_tests,edges,finance_accounting,finance_order_limit_check,finance_order_proposal,finance_records,finance_regime,finance_regime_gate,gateway_graph_routes,harness_edit,harness_edit_tests,harness_session,hierarchy,memory,memory_ingest,memory_snapshot,memory_snapshot_tests,memory_surface,memory_surface_tests,nl_correction,nodes,observation_state,observation_state_tests,participant_derive,participant_memory_tests,participant_surface,process_document,read_span_tests,schema_boundary,semantic,workflow_registry,workflow_registry_tests} |
+
+Upward references to resolve (25 module pairs, 45 references): `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::memory` (crate medulla-h-graph) x8; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::nodes` (crate medulla-h-graph) x4; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::broker` (crate medulla-h-graph) x4; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::algorithms` (crate medulla-h-graph) x4; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::edges` (crate medulla-h-graph) x3; `graph_ops::gateway` (crate medulla-h-graph-gateway) uses `graph_ops::memory_surface` (crate medulla-h-graph) x2; `graph_ops::participant_read` (crate medulla-h-graph-gateway) uses `graph_ops::participant_derive` (crate medulla-h-graph) x2; `graph_ops::participant_read` (crate medulla-h-graph-gateway) uses `graph_ops::participant_surface` (crate medulla-h-graph) x1; `graph_ops::gateway_graph` (crate medulla-h-graph-gateway) uses `graph_ops::semantic` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::context_facts` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::atom_context` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::architecture_exchange` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::process_document` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::memory_surface` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::assistant_profile` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::harness_edit` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::observation_state` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::semantic` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::hierarchy` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::finance_records` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::finance_accounting` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::finance_regime` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::finance_order_limit_check` (crate medulla-h-graph) x1; `graph_ops::terminal` (crate medulla-h-graph-gateway) uses `graph_ops::finance_order_proposal` (crate medulla-h-graph) x1; `graph_ops::finance_performance` (crate medulla-h-graph-gateway) uses `graph_ops::finance_accounting` (crate medulla-h-graph) x1.
+
+#### `medulla-h-query`: 29,112 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-h-query-read` | 15,389 | ./{(root),federation,nl,query}; query/{access_port,argument_map,base,catalog_search,code_context,code_map,column_lineage,connector_tool,corpus_retrieve,cypher,document_encoding,entity_link,expansion,explain_handlers,explain_wire_a,explain_wire_b,foreign_leg,foreign_watermarks,freshness_feed,graphql,harness_metrics,node_body,overlay,projection,run_metrics,run_trace_export,schema_context,schema_projections,segment_filter,source_coverage,spec_intelligence,sql_catalog,sql_dispatch,sql_matview,sql_nearest,sql_write,standards} |
+| `medulla-h-query` | 13,723 | ./{knowledge_stream,request_cancel,streaming}; query/{asset_usage,bookmark_relations,catalog_glossary,catalog_governance,catalog_read,context_compile,context_search,dispatch,indexless,live_artifact,nl,planning,retrieval_round,search_task,sql_read,state_machine_next,stored_query,uql_statement,viewport} |
+
+Upward references: none.
+
+#### `medulla-server-router`: 27,064 lines into 2 crates
+
+| Target crate | Lines | Modules (paths under `src/`, `::` form) |
+|---|---|---|
+| `medulla-server-router-arms` | 13,251 | ./{(root),dispatch}; dispatch/{incident,quality,request_boundary,router,seam,telemetry,test_support}; dispatch/router/{bookmark,bookmark_binding,branch_merge,branch_write,catalog_emit,changeset_index,channels,data_plane_arms,git_export_pack,git_refs_list,graph_source,import_git_history,incident,knowledge_bundle,lifecycle,list_path_grants,memory_change,memory_events,quality,read_blame,read_tree,resource_cost,revert_changeset,schema_drift,service_control,set_path_grant,share,source_bisect,source_ingest,submit_changeset,submit_symbol_edit,telemetry} |
+| `medulla-server-router` | 13,813 | dispatch/dispatch_e2e_tests; dispatch/router/{control_plane,data_plane,data_product,decision_plane,graph_lifecycle,identity_access,read_path_history,sdlc} |
+
+Upward references: none.
+
+#### `medulla-server-served-tests`: 30,400 lines into 3 crates
+
+| Target crate | Lines | Files under `src/` |
+|---|---|---|
+| `medulla-served-test-harness` | about 2,600 | `lib.rs` modules `refusal_tap` and `log_capture`; `split_tests/connector_pack_harness.rs`; `split_tests/semantic_live_generation.rs` |
+| `medulla-server-served-handler-tests` | 10,640 | every `split_tests/medulla_h_*` file |
+| `medulla-server-served-tests` | about 17,000 | `tests.rs`, `tests/` (4 files), the other `split_tests` files, `split_tests.rs` |
+
 ## Phase 2: Task approach
 
 ### Work sequence
@@ -217,6 +432,7 @@ No follow-on above asserts a passed test or changes a subsystem's acceptance in 
 4. **Package:** one `medulla` distribution per platform, with the server folded in (R053.x).
 5. **CI:** the full root Python suite, static gates and the feature matrix run in hosted CI (R009, R018, R037).
 6. **Split gates:** crate graph, build profiles and spec path checks (R056.x).
+8. **Build speed:** unify dependencies (R065) and gate the embedded database (R066) first, independent of each other; then the size gate (R067.1); then the twelve splits (R067.2 to R067.13), types crates first; then enforce the gate (R067.14); the workspace-hack crate (R069) last because it depends on the final crate set; the deploy profile (R068) any time.
 7. **Dependency hygiene:** the workspace's own manifests move to one maintained date-time crate (`jiff`). The four advisory ignores stay in `.config/deny.toml` as a reviewed ledger for the copies that third-party dependents pull in (R064).
 
 ## Complexity Tracking

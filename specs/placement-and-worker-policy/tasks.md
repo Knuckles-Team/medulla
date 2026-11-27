@@ -109,3 +109,13 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. `[P]` marks
 - [ ] T104 [US4] MEDULLA-PLACEMENT-R785 Census debt of jobs and control leases is closed (rollup)
 - [ ] T105 [US4] MEDULLA-PLACEMENT-R785.1 ScheduleRecord/ScheduleState and ScheduleView state machine: holder-level transition delegating to ScheduleState::apply
 - [ ] T106 [US4] MEDULLA-PLACEMENT-R785.2 Control lease wire views follow `ControlLeaseMachine`: Python mirror follows the Rust machine
+- [ ] T107 [US4] MEDULLA-PLACEMENT-R786 Host build slots are capacity leases with an explicit state machine (rollup).
+- [ ] T108 [US4] MEDULLA-PLACEMENT-R786.1 The build-slot pool kind and its priority classes.
+- [ ] T109 [US4] MEDULLA-PLACEMENT-R786.2 The lease state machine: Requested, Queued, Granted, Running, Released, Expired, Revoked.
+- [ ] T110 [US4] MEDULLA-PLACEMENT-R786.3 Every illegal transition is refused with a typed error, and no writer bypasses `apply`.
+- [ ] T111 [US4] MEDULLA-PLACEMENT-R786.4 A heartbeat-renewed TTL expires a dead holder instead of leaking its slot.
+- [ ] T112 [US4] MEDULLA-PLACEMENT-R786.5 Priority classes order the queue and the queue is fair within a class.
+- [ ] T113 [US4] MEDULLA-PLACEMENT-R786.6 Every transition is recorded as a fact.
+- [ ] T114 [US4] MEDULLA-PLACEMENT-R786.7 Two methods complete the served surface: `StartCapacity` and `RevokeCapacity`.
+- [ ] T115 [US4] MEDULLA-PLACEMENT-R786.8 Describe the build-slot machine in the ontology.
+- [ ] T116 [US4] MEDULLA-PLACEMENT-R786.9 Hot-path proof: two lanes and a land gate share one slot.

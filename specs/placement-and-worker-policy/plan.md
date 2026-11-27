@@ -171,6 +171,20 @@ Decision: hosts declare capabilities and the graph stores them; a worker never s
 
 Cross-repository: `ARBORA-` rows that submit jobs only pass the job class.
 
+### Build-slot leases (R786)
+
+Pre-untangled design, one line per answer.
+
+- **Owner.** The engine owns the record and the decision: `crates/medulla-mutation-types/src/capacity_lease.rs` (types, machine, ledger) and `crates/medulla-resource-store/src/redb_store/capacity_lease.rs` (store). Serving belongs to arbora; no part of the queue or the priorities is in arbora.
+- **Cohesion.** The pool, the priority classes, the queue order, the heartbeat deadline and the transition record change together and live in the capacity-lease module. The knobs live with the other knobs in `knob_config.rs`.
+- **Dependency direction.** Arbora depends on the engine's served methods; the engine depends on nothing in arbora. The ledger depends on the existing `transition` helper and `TransitionRefused`.
+- **Interface depth.** Callers use `AcquireCapacity`, `RenewCapacity`, `ReleaseCapacity`, `CapacityStatus`, `ReclaimExpiredCapacity` (existing) and the two new methods `StartCapacity` and `RevokeCapacity`. No second lease store, queue or lock exists.
+- **Special cases.** None per host or per holder. The reserved class is the existing `reserved_floor` rule applied to the new priorities; every host is a cell with its own N and R.
+- **State.** `CapacityLeaseMachine` is an explicit machine: seven states, seven events, fifteen edges (R786.2); the typed refusal is `TransitionRefused`. No flag or nullable timestamp encodes a state; `effective_status(now)` is a read-side derivation only.
+- **Environment.** Per host slot counts and the reserved count are cell data set through `UpdateCapacityCell`; the TTL, queue TTL and sweep interval are knobs.
+
+Production caller chain: `arbora lease run` → `capacity.lease.request` → `AcquireCapacity` → `try_acquire` → `grant_next` → stored lease and audit entry; the sweeper `spawn_periodic_sweep(capacity.sweep_secs, "capacity_sweep")` → `reclaim_expired` → `grant_next`.
+
 ## Phase 2: Task approach
 
 The ingest-worker policy (MEDULLA-PLACEMENT-R002) and the association bound (MEDULLA-PLACEMENT-R003) land with their durable-kernel owner rows. The owner-batch rollups (MEDULLA-PLACEMENT-R611, MEDULLA-PLACEMENT-R750, MEDULLA-PLACEMENT-R751, MEDULLA-PLACEMENT-R700) follow their cross-repo owners and keep only their engine-side slices.

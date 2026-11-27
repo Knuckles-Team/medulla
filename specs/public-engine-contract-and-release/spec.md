@@ -100,6 +100,11 @@ Independent test: `tests/test_server_split_rollup.py::test_backbone_crates_exist
 - FR-005 A tag publishes only a commit that main CI passed (`MEDULLA-CONTRACT-R053.7`).
 - FR-006 Hosted gates run on exact trees without baseline or suppression (`MEDULLA-CONTRACT-R022`, `MEDULLA-CONTRACT-R039`).
 - FR-007 The installed client has a served Agent Library and Decide journey (`MEDULLA-CONTRACT-R002.2`, `MEDULLA-CONTRACT-R002.3`).
+- FR-009 Dependencies are unified: one array family, one TLS and crypto backend, a shrinking allow-list of duplicates (`MEDULLA-CONTRACT-R065`).
+- FR-010 The embedded analytical database is outside the developer build and links a prebuilt pinned library in release (`MEDULLA-CONTRACT-R066`, `MEDULLA-CONTRACT-R066.4`).
+- FR-011 Every crate stays within the size budget and a change rebuilds only its own domain (`MEDULLA-CONTRACT-R067`).
+- FR-012 Internal deploys build with `release-internal`; published profiles are unchanged (`MEDULLA-CONTRACT-R068`).
+- FR-013 A generated workspace-hack crate unifies dependency features (`MEDULLA-CONTRACT-R069`).
 - FR-008 Crate layers are downward-only and the architecture map matches the source (`MEDULLA-CONTRACT-R056.2`, `MEDULLA-CONTRACT-R052.1`).
 
 ### Success criteria
@@ -109,6 +114,9 @@ Independent test: `tests/test_server_split_rollup.py::test_backbone_crates_exist
 - SC-003 Every platform wheel holds exactly one executable server member (`MEDULLA-CONTRACT-R053.9`).
 - SC-004 The privacy and secret-history scans report zero findings on the tracked tree (`MEDULLA-CONTRACT-R040`, `MEDULLA-CONTRACT-R043`).
 - SC-005 The workspace builds with no dependency cycle and no crate-level lint allow (`MEDULLA-CONTRACT-R056.17`).
+- SC-006 `Cargo.lock` holds one columnar-array family, one TLS and crypto backend and only reasoned duplicates (`MEDULLA-CONTRACT-R065.4`).
+- SC-007 A default developer build compiles no C++ for the embedded analytical database (`MEDULLA-CONTRACT-R066.1`).
+- SC-008 Every workspace crate is at most 25,000 lines of Rust under `src/` (`MEDULLA-CONTRACT-R067.14`).
 
 ## Architecture and ownership
 
