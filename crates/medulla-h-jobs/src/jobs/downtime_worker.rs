@@ -126,7 +126,7 @@ pub(super) async fn run_downtime_claim(
         let (step_body, step_job, step_blob) = (body.clone(), job.clone(), state_blob.clone());
         let step = tokio::task::spawn_blocking(move || {
             step_body.step(DowntimeStepInput {
-                job: &*step_job,
+                job: &step_job,
                 state_blob: step_blob.as_deref(),
                 step_deadline_ms,
             })

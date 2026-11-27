@@ -302,7 +302,7 @@ fn validate_association_thresholds(
     req_id: u64,
     min_support: f64,
     min_confidence: f64,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     // Reject invalid parameters before traversing or pseudonymizing the input.
     // A governed-payload refusal is caller input, not an internal engine fault.
     if !min_support.is_finite()
@@ -310,10 +310,10 @@ fn validate_association_thresholds(
         || !min_confidence.is_finite()
         || !(0.0..=1.0).contains(&min_confidence)
     {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: association job thresholds are invalid",
-        ));
+        )));
     }
     Ok(())
 }
@@ -322,17 +322,17 @@ fn validate_association_thresholds(
 fn validate_association_cardinality(
     req_id: u64,
     transactions: &[Vec<String>],
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let distinct_items = transactions
         .iter()
         .flatten()
         .collect::<std::collections::BTreeSet<_>>()
         .len();
     if distinct_items > MAX_ASSOCIATION_DISTINCT_ITEMS {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: association job exceeds the distinct-item limit",
-        ));
+        )));
     }
     Ok(())
 }
@@ -347,13 +347,13 @@ pub(super) fn submit_job_mine_associate(
     min_support: f64,
     min_confidence: f64,
     algorithm: String,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     validate_association_thresholds(req_id, min_support, min_confidence)?;
     if parse_algorithm(&algorithm).is_err() {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: unsupported association job algorithm",
-        ));
+        )));
     }
     // Durable worker input contains opaque item references only. Source
     // labels and personal identifiers never enter jobs.redb.
@@ -397,12 +397,12 @@ pub(super) fn submit_job_source_query_log(
     authority: &CarrierAuthority,
     req_id: u64,
     source: String,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     if source.trim().is_empty() || source.len() > 256 {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: the source name must be 1 to 256 characters",
-        ));
+        )));
     }
     let params = serde_json::json!({ "source": source });
     Ok((
@@ -437,19 +437,19 @@ pub(super) fn submit_job_profile(
     req_id: u64,
     dataset: String,
     columns: Vec<String>,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     if !plain_identifier(&dataset) {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: the dataset must be a plain name of 1 to 256 characters",
-        ));
+        )));
     }
     let max_columns = medulla_server_api::knob_config::knobs().profile_max_columns as usize;
     if columns.len() > max_columns || !columns.iter().all(|column| plain_identifier(column)) {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: the columns must be plain names, at most profile.max_columns of them",
-        ));
+        )));
     }
     let params = serde_json::json!({ "dataset": dataset, "columns": columns });
     Ok((
@@ -475,12 +475,12 @@ pub(super) fn submit_job_quality(
     authority: &CarrierAuthority,
     req_id: u64,
     target: String,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     if !plain_identifier(&target) {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: the target must be a plain name of 1 to 256 characters",
-        ));
+        )));
     }
     let params = serde_json::json!({ "target": target });
     Ok((
@@ -508,17 +508,17 @@ pub(super) fn submit_job_analytical(
     authority: &CarrierAuthority,
     req_id: u64,
     query: medulla_work_types::jobs::AnalyticalQuery,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     use medulla_work_types::jobs::AnalyticalQuery;
     let (size, shape) = match &query {
         AnalyticalQuery::Unified { plan_msgpack } => (plan_msgpack.len(), "unified"),
         AnalyticalQuery::Sparql { query, .. } => (query.len(), "sparql"),
     };
     if size == 0 || size > MAX_ANALYTICAL_QUERY_BYTES {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: an analytical query is 1 byte to 1 MiB",
-        ));
+        )));
     }
     Ok((
         JobKind::AnalyticalQuery {
@@ -597,16 +597,16 @@ pub(super) fn submit_job_usage_cluster(
     authority: &CarrierAuthority,
     req_id: u64,
     term_bindings: Vec<medulla_work_types::jobs::UsageTermBinding>,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     if term_bindings.len() > MAX_USAGE_TERM_BINDINGS
         || term_bindings.iter().any(|b| {
             b.asset.is_empty() || b.asset.len() > 256 || b.term.is_empty() || b.term.len() > 256
         })
     {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "INVALID_ARGUMENT: term bindings must name an asset and a term of 1 to 256 characters, at most 10000 of them",
-        ));
+        )));
     }
     let params = serde_json::json!({ "term_bindings": term_bindings.len() });
     Ok((
@@ -632,33 +632,33 @@ pub(super) fn submit_job_program_optimize(
     request_msgpack: Vec<u8>,
     score_rows: Option<&medulla_program::corpus::StoredScoreSet>,
     required_capabilities: &mut Vec<String>,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     if let Err(error) = check_program_optimizer_name(&request_msgpack) {
-        return Err(Response::err(req_id, error));
+        return Err(Box::new(Response::err(req_id, error)));
     }
     let Some(mut request) = decode_optimization_request(&request_msgpack) else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "program optimization request failed bounded decoding",
-        ));
+        )));
     };
     let verified_policy = match verified_program_policy(authority, policy_fingerprint, purpose) {
         Ok(policy) => policy,
-        Err(error) => return Err(Response::err(req_id, error)),
+        Err(error) => return Err(Box::new(Response::err(req_id, error))),
     };
     if let Err(error) = fill_corpus_from_scores(&mut request, score_rows, &verified_policy) {
-        return Err(Response::err(req_id, error));
+        return Err(Box::new(Response::err(req_id, error)));
     }
     if let Err(error) = check_program_request(&request) {
-        return Err(Response::err(req_id, error));
+        return Err(Box::new(Response::err(req_id, error)));
     }
     let request = match request.rebind_program_policy(verified_policy) {
         Ok(request) => request,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("program optimization request is invalid: {error}"),
-            ));
+            )));
         }
     };
     let optimizer = request.optimizer.as_str().to_string();
@@ -666,10 +666,10 @@ pub(super) fn submit_job_program_optimize(
     let request_msgpack = match rmp_serde::to_vec_named(&request) {
         Ok(payload) => payload,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("program optimization encoding failed: {error}"),
-            ));
+            )));
         }
     };
     ensure_program_optimization_capability(req_id, required_capabilities)?;
@@ -695,7 +695,7 @@ pub(super) fn submit_job_program_optimize(
 pub(super) fn ensure_program_optimization_capability(
     req_id: u64,
     required_capabilities: &mut Vec<String>,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if required_capabilities
         .iter()
         .any(|capability| capability == "program.optimization")
@@ -703,10 +703,10 @@ pub(super) fn ensure_program_optimization_capability(
         return Ok(());
     }
     if required_capabilities.len() == 64 {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "analytics job has no room for its required native capability",
-        ));
+        )));
     }
     required_capabilities.push("program.optimization".to_string());
     Ok(())

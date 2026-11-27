@@ -8,7 +8,6 @@
 //! committed batch instead of writing twice.
 
 use super::prelude_server::*;
-use super::prelude_std::*;
 use super::*;
 use serde_json::Value;
 

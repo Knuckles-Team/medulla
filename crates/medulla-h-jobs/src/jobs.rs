@@ -954,7 +954,7 @@ pub fn govern_job_kind(
     req_id: u64,
     kind: JobKind,
     governance: JobGovernance<'_>,
-) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
     match kind {
         JobKind::MineAssociate {
             transactions,
@@ -996,10 +996,10 @@ pub fn govern_job_kind(
         JobKind::ProgramOptimize { .. } => {
             // Nothing to bind: the refusal leaves the capabilities untouched.
             let JobGovernance { .. } = governance;
-            Err(Response::err(
+            Err(Box::new(Response::err(
                 req_id,
                 "INVALID_ARGUMENT: program optimization jobs are not built into this server",
-            ))
+            )))
         }
     }
 }
@@ -1039,11 +1039,11 @@ async fn finalize_submit(
         },
     ) {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let input_payload = match encode_job_input(&governed_kind, req_id) {
         Ok(payload) => payload,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     use sha2::{Digest, Sha256};
     let input_digest = hex::encode(Sha256::digest(&input_payload));
@@ -1070,9 +1070,13 @@ async fn finalize_submit(
 }
 
 /// Encode a submit's governed `JobKind` as the durable input payload.
-fn encode_job_input(governed_kind: &JobKind, req_id: u64) -> Result<Vec<u8>, Response> {
-    rmp_serde::to_vec_named(governed_kind)
-        .map_err(|error| Response::err(req_id, format!("job input encoding failed: {error}")))
+fn encode_job_input(governed_kind: &JobKind, req_id: u64) -> Result<Vec<u8>, Box<Response>> {
+    rmp_serde::to_vec_named(governed_kind).map_err(|error| {
+        Box::new(Response::err(
+            req_id,
+            format!("job input encoding failed: {error}"),
+        ))
+    })
 }
 
 /// Apply the durably-compiled submit batch and respond with the resulting job.

@@ -9,7 +9,6 @@
 
 use super::executor_quality::ActorRows;
 use super::prelude_jobs::*;
-use super::prelude_std::*;
 use super::*;
 use medulla_server_api::state::ServerState;
 use medulla_work_types::jobs::AnalyticalQuery;
@@ -17,7 +16,6 @@ use medulla_work_types::jobs::AnalyticalQuery;
 /// The verified target of one analytical query claim.
 pub(super) struct AnalyticalTarget {
     pub query: AnalyticalQuery,
-    pub tenant_scope: String,
     pub agent: String,
 }
 

@@ -88,7 +88,7 @@ pub(super) async fn handle_worker_publish(
     }
     let job = match require_publishing_lease(store, req_id, job_id, &worker_ref, lease_epoch) {
         Ok(job) => job,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     #[cfg(feature = "raft")]
     if let Some(response) =
@@ -143,17 +143,17 @@ pub(super) fn require_publishing_lease(
     job_id: &str,
     worker_ref: &str,
     lease_epoch: u64,
-) -> Result<medulla_jobs::AnalyticsJob, Response> {
+) -> Result<medulla_jobs::AnalyticsJob, Box<Response>> {
     match store.verify_lease(job_id, worker_ref, lease_epoch, unix_ms()) {
         Ok(job) if matches!(&job.state, JobState::Publishing { .. }) => Ok(job),
-        Ok(job) => Err(Response::err(
+        Ok(job) => Err(Box::new(Response::err(
             req_id,
             format!(
                 "worker publication requires Publishing, got {}",
                 medulla_types::transition_refused::MachineState::stored(job.state.stage())
             ),
-        )),
-        Err(error) => Err(Response::err(req_id, job_refusal(&error))),
+        ))),
+        Err(error) => Err(Box::new(Response::err(req_id, job_refusal(&error)))),
     }
 }
 

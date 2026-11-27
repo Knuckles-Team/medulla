@@ -161,22 +161,14 @@ pub(super) async fn execute_claim(
                 )
                 .await;
             }
-            JobKind::AnalyticalQuery {
-                query,
-                tenant_scope,
-                agent,
-            } => {
+            JobKind::AnalyticalQuery { query, agent, .. } => {
                 return execute_analytical_claim(
                     state,
                     store,
                     &claim.job,
                     &worker_ref,
                     epoch,
-                    AnalyticalTarget {
-                        query,
-                        tenant_scope,
-                        agent,
-                    },
+                    AnalyticalTarget { query, agent },
                 )
                 .await;
             }
