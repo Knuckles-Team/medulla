@@ -25,7 +25,9 @@ mod mine_associate_wire_tests {
         .unwrap()
     }
 
-    fn govern(kind: JobKind) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    fn govern(
+        kind: JobKind,
+    ) -> Result<(JobKind, String, String, serde_json::Value), Box<Response>> {
         govern_job_kind(
             &authority(),
             82,
