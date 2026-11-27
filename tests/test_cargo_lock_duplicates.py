@@ -197,3 +197,28 @@ def test_vendored_security_patches_stay_patched() -> None:
         assert versions[name] == {arrow}, (
             f"{name} {versions[name]} must stay equal to arrow {arrow}"
         )
+
+
+# spec: MEDULLA-CONTRACT-R065.3
+def test_every_allow_list_entry_has_pinned_by_and_reason() -> None:
+    packages = _lock_packages()
+    names = set(_versions(packages))
+    allow = _allow_list()
+    assert allow, "the allow-list must not be empty while the lock holds duplicates"
+    for name, entry in allow.items():
+        assert set(entry) == {"versions", "pinned_by", "reason"}, (
+            f"{name}: {sorted(entry)}"
+        )
+        assert entry["versions"] and all(
+            isinstance(v, str) for v in entry["versions"]
+        ), name
+        assert entry["pinned_by"], f"{name}: pinned_by is empty"
+        assert entry["reason"].strip(), f"{name}: reason is empty"
+        missing = [p for p in entry["pinned_by"] if p not in names]
+        assert not missing, f"{name}: pinned_by names absent from the lock: {missing}"
+    # The recorded versions equal the lock's, so a version bump refreshes its entry.
+    versions = _versions(packages)
+    for name, entry in allow.items():
+        assert set(entry["versions"]) == versions.get(name, set()), (
+            f"{name}: versions differ from the lock"
+        )

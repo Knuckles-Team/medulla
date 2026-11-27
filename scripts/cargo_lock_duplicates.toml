@@ -1,0 +1,395 @@
+# Packages Cargo.lock holds in more than one version (MEDULLA-CONTRACT-R065.3).
+# Every entry names the dependents that pin each version and why the duplicate stays.
+# The list only shrinks: tests/test_cargo_lock_duplicates.py fails on a duplicate
+# outside it, on an entry that is no longer a duplicate, and on an entry the merge
+# base did not hold. Do not add entries; move the pinning dependent instead.
+
+[aes]
+versions = ["0.8.4", "0.9.4"]
+pinned_by = ["aes-gcm", "lopdf"]
+reason = "Older release is requested only by third-party releases (aes-gcm) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[apache-avro]
+versions = ["0.21.0", "0.22.0"]
+pinned_by = ["iceberg", "medulla-lake"]
+reason = "Older release is requested only by third-party releases (iceberg) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[atoi_simd]
+versions = ["0.17.0", "0.18.1"]
+pinned_by = ["calamine", "polars-compute", "polars-time"]
+reason = "Older release is requested only by third-party releases (polars-compute, polars-time) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[base64]
+versions = ["0.22.1", "0.23.1"]
+pinned_by = ["arrow-cast", "datafusion-functions", "hyper-util", "iceberg", "jsonwebtoken", "medulla-cypher", "medulla-decision-types", "medulla-nlq"]
+reason = "Older release is requested by workspace crates (medulla-xtask) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[bindgen]
+versions = ["0.69.5", "0.72.1"]
+pinned_by = ["espeak-rs-sys", "whisper-rs-sys"]
+reason = "Older release is requested only by third-party releases (espeak-rs-sys) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[bitflags]
+versions = ["1.3.2", "2.13.2"]
+pinned_by = ["arrow-schema", "bindgen", "crossterm", "defmt", "flatbuffers"]
+reason = "Older release is requested only by third-party releases (defmt) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[block-buffer]
+versions = ["0.10.4", "0.12.1"]
+pinned_by = ["digest"]
+reason = "Older release is requested only by third-party releases (digest) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[chacha20]
+versions = ["0.9.1", "0.10.2"]
+pinned_by = ["chacha20poly1305", "proptest", "rand"]
+reason = "Older release is requested only by third-party releases (chacha20poly1305) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[chrono-tz]
+versions = ["0.8.6", "0.10.4"]
+pinned_by = ["arrow-array", "datafusion-functions", "display-more", "orc-rust", "polars-arrow"]
+reason = "Older release is requested only by third-party releases (display-more) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[cipher]
+versions = ["0.4.4", "0.5.2"]
+pinned_by = ["aes", "aes-gcm", "cbc", "chacha20", "chacha20poly1305", "ecb"]
+reason = "Older release is requested only by third-party releases (aes, aes-gcm, chacha20, chacha20poly1305, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[const-oid]
+versions = ["0.9.6", "0.10.2"]
+pinned_by = ["der", "digest", "rsa", "tokio-postgres-rustls"]
+reason = "Older release is requested only by third-party releases (der, digest, rsa, tokio-postgres-rustls, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[cpufeatures]
+versions = ["0.2.17", "0.3.1"]
+pinned_by = ["aes", "argon2", "chacha20", "curve25519-dalek", "sha1", "sha2"]
+reason = "Older release is requested only by third-party releases (aes, argon2, chacha20, curve25519-dalek, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[crypto-common]
+versions = ["0.1.7", "0.2.2"]
+pinned_by = ["aead", "cipher", "digest", "universal-hash"]
+reason = "Older release is requested only by third-party releases (aead, cipher, digest, universal-hash) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[darling]
+versions = ["0.20.11", "0.24.1"]
+pinned_by = ["bon-macros", "derive_builder_core", "serde_with_macros"]
+reason = "Older release is requested only by third-party releases (derive_builder_core) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[darling_core]
+versions = ["0.20.11", "0.24.1"]
+pinned_by = ["darling", "darling_macro"]
+reason = "Older release is requested only by third-party releases (darling, darling_macro) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[darling_macro]
+versions = ["0.20.11", "0.24.1"]
+pinned_by = ["darling"]
+reason = "Older release is requested only by third-party releases (darling) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[der]
+versions = ["0.7.10", "0.8.2"]
+pinned_by = ["ecdsa", "pkcs1", "pkcs8", "sec1", "ureq"]
+reason = "Older release is requested only by third-party releases (ecdsa, pkcs1, pkcs8, sec1, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[digest]
+versions = ["0.10.7", "0.11.3"]
+pinned_by = ["apache-avro", "blake2", "crc-fast", "curve25519-dalek", "hmac", "md-5", "sha1"]
+reason = "Older release is requested only by third-party releases (apache-avro, blake2, crc-fast, curve25519-dalek, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[embedded-io]
+versions = ["0.4.0", "0.6.1"]
+pinned_by = ["postcard"]
+reason = "Older release is requested only by third-party releases (postcard) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[fallible-iterator]
+versions = ["0.2.0", "0.3.0"]
+pinned_by = ["duckdb", "postgres-protocol", "postgres-types", "tokio-postgres"]
+reason = "Older release is requested only by third-party releases (postgres-protocol, postgres-types, tokio-postgres) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[foldhash]
+versions = ["0.1.5", "0.2.0"]
+pinned_by = ["datafusion-common", "datafusion-functions-aggregate", "hashbrown", "polars-utils"]
+reason = "Older release is requested only by third-party releases (hashbrown) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[fs4]
+versions = ["0.13.1", "1.1.0"]
+pinned_by = ["medulla-engine", "medulla-h-query", "medulla-h-retrieve", "tantivy"]
+reason = "Older release is requested only by third-party releases (tantivy) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[getrandom]
+versions = ["0.2.17", "0.3.4", "0.4.3"]
+pinned_by = ["ahash", "const-random-macro", "jobserver", "jsonwebtoken", "lopdf", "polars-arrow", "polars-core", "rand", "rand_core", "tempfile"]
+reason = "Older release is requested only by third-party releases (ahash, const-random-macro, jsonwebtoken, polars-arrow, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[glam]
+versions = ["0.30.10", "0.31.1", "0.32.1", "0.33.12"]
+pinned_by = ["nalgebra"]
+reason = "Older release is requested only by third-party releases (nalgebra) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[hashbrown]
+versions = ["0.12.3", "0.14.5", "0.15.5", "0.16.1", "0.17.1"]
+pinned_by = ["arrow-array", "cranelift-codegen", "cranelift-frontend", "dashmap", "datafusion-common", "gimli", "hashlink", "indexmap", "lru", "ordered-multimap", "petgraph", "planus", "polars-arrow"]
+reason = "Older release is requested only by third-party releases (dashmap, gimli, hashlink, indexmap, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[hashlink]
+versions = ["0.10.0", "0.11.1"]
+pinned_by = ["duckdb", "sqlx-core"]
+reason = "Older release is requested only by third-party releases (duckdb) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[heck]
+versions = ["0.4.1", "0.5.0"]
+pinned_by = ["clap_derive", "cranelift-codegen-meta", "ouroboros_macro", "pyo3-macros-backend", "snafu-derive"]
+reason = "Older release is requested only by third-party releases (ouroboros_macro) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[hkdf]
+versions = ["0.12.4", "0.13.0"]
+pinned_by = ["elliptic-curve", "sqlx-postgres"]
+reason = "Older release is requested only by third-party releases (elliptic-curve) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[hmac]
+versions = ["0.12.1", "0.13.0"]
+pinned_by = ["aws-sigv4", "hkdf", "jsonwebtoken", "medulla-core", "medulla-engine", "postgres-protocol", "reqsign-core"]
+reason = "Older release is requested by workspace crates (medulla-core, medulla-engine, medulla-federation, medulla-h-graph, ...) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[indexmap]
+versions = ["1.9.3", "2.14.2"]
+pinned_by = ["arrow-json", "datafusion", "datafusion-common", "datafusion-expr", "serde_with"]
+reason = "Older release is requested only by third-party releases (serde_with) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[inout]
+versions = ["0.1.4", "0.2.6"]
+pinned_by = ["cipher"]
+reason = "Older release is requested only by third-party releases (cipher) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[itertools]
+versions = ["0.12.1", "0.13.0", "0.14.0", "0.15.0"]
+pinned_by = ["bindgen", "criterion", "criterion-plot", "datafusion", "datafusion-catalog", "datafusion-catalog-listing", "datafusion-common", "iceberg", "object_store", "openraft"]
+reason = "Older release is requested only by third-party releases (bindgen, criterion, criterion-plot, datafusion, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[libloading]
+versions = ["0.8.9", "0.9.0"]
+pinned_by = ["clang-sys", "cudarc", "ort"]
+reason = "Older release is requested only by third-party releases (clang-sys, cudarc) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[linux-raw-sys]
+versions = ["0.4.15", "0.12.1"]
+pinned_by = ["rustix"]
+reason = "Older release is requested only by third-party releases (rustix) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[lz4_flex]
+versions = ["0.11.6", "0.13.1", "0.14.0"]
+pinned_by = ["arrow-ipc", "medulla-kvcache", "orc-rust", "parquet", "tantivy"]
+reason = "Older release is requested only by third-party releases (arrow-ipc, orc-rust, parquet, tantivy) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[md-5]
+versions = ["0.10.6", "0.11.0"]
+pinned_by = ["lopdf", "medulla-cypher", "medulla-rdf", "medulla-sql", "medulla-sql-udfs", "object_store", "opendal-core", "opendal-service-s3"]
+reason = "Older release is requested only by workspace crates (medulla-cypher, medulla-rdf, medulla-sql, medulla-sql-udfs, ...); moving them is a source change outside this row, and the entry leaves the list when they move."
+
+[md5]
+versions = ["0.7.0", "0.8.1"]
+pinned_by = ["dust_dds", "pgwire"]
+reason = "Older release is requested only by third-party releases (dust_dds) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[miniz_oxide]
+versions = ["0.8.9", "0.9.1"]
+pinned_by = ["apache-avro", "flate2"]
+reason = "Older release is requested only by third-party releases (apache-avro) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[ndarray]
+versions = ["0.16.1", "0.17.2"]
+pinned_by = ["medulla-ann", "medulla-finance", "medulla-finance-quant", "medulla-numeric", "piper-rs"]
+reason = "Older release is requested only by third-party releases (piper-rs) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[nom]
+versions = ["7.1.3", "8.0.0"]
+pinned_by = ["cexpr", "lopdf", "tantivy-query-grammar"]
+reason = "Older release is requested only by third-party releases (cexpr, tantivy-query-grammar) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[object]
+versions = ["0.39.1", "0.40.0"]
+pinned_by = ["ar_archive_writer", "medulla-engine", "wasmtime", "wasmtime-environ", "wasmtime-internal-cranelift"]
+reason = "Older release is requested only by third-party releases (ar_archive_writer) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[object_store]
+versions = ["0.13.2", "0.14.2"]
+pinned_by = ["datafusion", "datafusion-catalog", "datafusion-catalog-listing", "datafusion-common", "medulla-engine", "medulla-persistence", "medulla-persistence-ops", "medulla-server-blob"]
+reason = "Older release is requested only by third-party releases (datafusion, datafusion-catalog, datafusion-catalog-listing, datafusion-common, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[ordered-float]
+versions = ["3.9.2", "4.6.0", "5.5.0"]
+pinned_by = ["iceberg", "tantivy-query-grammar", "thrift"]
+reason = "Older release is requested only by third-party releases (iceberg, thrift) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[pem-rfc7468]
+versions = ["0.7.0", "1.0.0"]
+pinned_by = ["der", "elliptic-curve"]
+reason = "Older release is requested only by third-party releases (der, elliptic-curve) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[phf]
+versions = ["0.11.3", "0.12.1", "0.13.1"]
+pinned_by = ["chrono-tz", "chrono-tz-build", "tokio-postgres"]
+reason = "Older release is requested only by third-party releases (chrono-tz, chrono-tz-build) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[phf_shared]
+versions = ["0.11.3", "0.12.1", "0.13.1"]
+pinned_by = ["phf", "phf_codegen", "phf_generator"]
+reason = "Older release is requested only by third-party releases (phf, phf_codegen, phf_generator) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[prettyplease]
+versions = ["0.2.37", "0.3.0"]
+pinned_by = ["bindgen", "bon-macros"]
+reason = "Older release is requested only by third-party releases (bindgen) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[prost]
+versions = ["0.13.5", "0.14.4"]
+pinned_by = ["medulla-engine", "medulla-server", "medulla-server-obs", "opentelemetry-otlp", "orc-rust"]
+reason = "Older release is requested only by third-party releases (orc-rust) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[prost-derive]
+versions = ["0.13.5", "0.14.4"]
+pinned_by = ["prost"]
+reason = "Older release is requested only by third-party releases (prost) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[quick-xml]
+versions = ["0.41.0", "0.42.0"]
+pinned_by = ["calamine", "medulla-core", "medulla-document", "medulla-rdf", "object_store", "reqsign-aws-core", "reqsign-aws-v4"]
+reason = "Older release is requested by workspace crates (medulla-core, medulla-document, medulla-rdf) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[r-efi]
+versions = ["5.3.0", "6.0.0"]
+pinned_by = ["getrandom"]
+reason = "Older release is requested only by third-party releases (getrandom) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[rand]
+versions = ["0.8.8", "0.9.5", "0.10.3"]
+pinned_by = ["apache-avro", "datafusion-datasource", "datafusion-execution", "datafusion-functions", "jsonwebtoken", "lopdf", "medulla-ann", "medulla-compute", "medulla-decision-policy", "object_store", "openraft"]
+reason = "Older release is requested by workspace crates (medulla-ann, medulla-compute, medulla-decision-policy, medulla-engine, ...) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[rand_chacha]
+versions = ["0.3.1", "0.9.0"]
+pinned_by = ["medulla-ann", "medulla-compute", "medulla-decision-policy", "medulla-decision-stats", "rand"]
+reason = "Older release is requested by workspace crates (medulla-ann, medulla-compute, medulla-decision-policy, medulla-decision-stats, ...) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[rand_core]
+versions = ["0.6.4", "0.9.5", "0.10.1"]
+pinned_by = ["chacha20", "crypto-bigint", "crypto-common", "elliptic-curve", "ff", "getrandom", "rand", "rand_chacha", "rand_xorshift"]
+reason = "Older release is requested only by third-party releases (crypto-bigint, crypto-common, elliptic-curve, ff, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[reqwest]
+versions = ["0.12.28", "0.13.5"]
+pinned_by = ["iceberg", "iceberg-catalog-rest", "medulla-engine", "medulla-quantum-hardware", "opendal-core", "opentelemetry-http"]
+reason = "Older release is requested only by third-party releases (iceberg, iceberg-catalog-rest) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[rustc-hash]
+versions = ["1.1.0", "2.1.3"]
+pinned_by = ["bindgen", "cranelift-codegen", "regalloc2", "tantivy"]
+reason = "Older release is requested only by third-party releases (bindgen) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[rustix]
+versions = ["0.38.44", "1.1.6"]
+pinned_by = ["crossterm", "fs4", "medulla-direct-state", "medulla-engine", "medulla-h-txn", "which"]
+reason = "Older release is requested only by third-party releases (crossterm, which) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[schemars]
+versions = ["0.9.0", "1.2.3"]
+pinned_by = ["byte-unit", "medulla-agent-types", "medulla-capabilities", "medulla-catalog-types", "serde_with"]
+reason = "Older release is requested only by third-party releases (serde_with) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[sha1]
+versions = ["0.10.7", "0.11.0"]
+pinned_by = ["medulla-compute", "medulla-cypher", "medulla-engine", "medulla-rdf", "reqsign-aws-core", "reqsign-core", "sqlx-mysql", "tungstenite"]
+reason = "Older release is requested only by workspace crates (medulla-compute, medulla-cypher, medulla-engine, medulla-rdf, ...); moving them is a source change outside this row, and the entry leaves the list when they move."
+
+[sha2]
+versions = ["0.10.9", "0.11.1"]
+pinned_by = ["aws-sigv4", "cranelift-codegen", "ed25519-dalek", "jsonwebtoken", "lopdf", "medulla-agent-types", "oxrdf", "postgres-protocol"]
+reason = "Older release is requested by workspace crates (medulla-agent-types, medulla-ann-codes, medulla-asr-whisper, medulla-audio, ...) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[shlex]
+versions = ["1.3.0", "2.0.1"]
+pinned_by = ["bindgen", "cc"]
+reason = "Older release is requested only by third-party releases (bindgen) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[socket2]
+versions = ["0.5.10", "0.6.5"]
+pinned_by = ["dust_dds", "hyper-util", "tokio", "tokio-postgres"]
+reason = "Older release is requested only by third-party releases (dust_dds) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[spin]
+versions = ["0.9.9", "0.10.1"]
+pinned_by = ["crc-fast", "lazy_static"]
+reason = "Older release is requested only by third-party releases (lazy_static) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[strum]
+versions = ["0.27.2", "0.28.0"]
+pinned_by = ["apache-avro", "duckdb", "iceberg", "medulla-protocol-types", "medulla-result-types", "medulla-types"]
+reason = "Older release is requested only by third-party releases (apache-avro, duckdb, iceberg) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[strum_macros]
+versions = ["0.27.2", "0.28.0"]
+pinned_by = ["apache-avro", "polars-arrow", "polars-compute", "polars-core", "strum"]
+reason = "Older release is requested only by third-party releases (apache-avro, polars-arrow, polars-compute, polars-core, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[syn]
+versions = ["2.0.119", "3.0.9"]
+pinned_by = ["async-trait", "aws-smithy-runtime-api-macros", "bindgen", "bon-macros", "borsh-derive", "bytemuck_derive", "curve25519-dalek-derive", "cyclonedds-derive"]
+reason = "Older release is requested by workspace crates (medulla-xtask) together with third-party crates; moving the workspace requirements is a source change outside this row, and the entry leaves the list when they move."
+
+[thiserror]
+versions = ["1.0.69", "2.0.21"]
+pinned_by = ["apache-avro", "cobs", "cyclonedds", "defmt-parser", "jni", "lzokay-native"]
+reason = "Older release is requested only by third-party releases (cyclonedds, lzokay-native) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[thiserror-impl]
+versions = ["1.0.69", "2.0.21"]
+pinned_by = ["thiserror"]
+reason = "Older release is requested only by third-party releases (thiserror) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[wasi]
+versions = ["0.11.1+wasi-snapshot-preview1", "0.14.7+wasi-0.2.4"]
+pinned_by = ["getrandom", "mio", "wasite"]
+reason = "Older release is requested only by third-party releases (getrandom, mio) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[wasm-encoder]
+versions = ["0.258.3", "0.262.0"]
+pinned_by = ["wasmtime-environ", "wast"]
+reason = "Older release is requested only by third-party releases (wasmtime-environ) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[wasmparser]
+versions = ["0.258.3", "0.262.0"]
+pinned_by = ["wasm-encoder", "wasmprinter", "wasmtime", "wasmtime-environ"]
+reason = "Older release is requested only by third-party releases (wasm-encoder, wasmprinter, wasmtime, wasmtime-environ, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[windows-core]
+versions = ["0.61.2", "0.62.2"]
+pinned_by = ["iana-time-zone", "windows", "windows-collections", "windows-future", "windows-numerics"]
+reason = "Older release is requested only by third-party releases (windows, windows-collections, windows-future, windows-numerics) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[windows-link]
+versions = ["0.1.3", "0.2.1"]
+pinned_by = ["chrono", "jiff", "jni", "libloading", "windows", "windows-core", "windows-future", "windows-numerics"]
+reason = "Older release is requested only by third-party releases (windows, windows-core, windows-future, windows-numerics, ...) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[windows-result]
+versions = ["0.3.4", "0.4.1"]
+pinned_by = ["windows-core"]
+reason = "Older release is requested only by third-party releases (windows-core) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[windows-strings]
+versions = ["0.4.2", "0.5.1"]
+pinned_by = ["windows-core"]
+reason = "Older release is requested only by third-party releases (windows-core) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[windows-sys]
+versions = ["0.52.0", "0.59.0", "0.61.2"]
+pinned_by = ["anstyle-query", "anstyle-wincon", "console", "errno", "fs4", "ring", "rustix", "socket2"]
+reason = "Older release is requested only by third-party releases (fs4, ring, rustix, socket2) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[zstd]
+versions = ["0.13.5", "0.14.3"]
+pinned_by = ["apache-avro", "arrow-ipc", "iceberg", "medulla-kvcache", "orc-rust"]
+reason = "Older release is requested only by third-party releases (orc-rust) that this repository cannot change; the entry leaves the list when they release against the newer version."
+
+[zstd-safe]
+versions = ["7.4.1", "8.2.0"]
+pinned_by = ["zstd"]
+reason = "Older release is requested only by third-party releases (zstd) that this repository cannot change; the entry leaves the list when they release against the newer version."
