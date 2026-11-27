@@ -7603,6 +7603,100 @@ class FinanceMarketOpAnalysisSnapshot(BaseModel):
     op: Literal["analysis_snapshot"]
 
 
+class CorporateActionKindSplit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["split"]
+    from_: int = Field(..., ge=0, alias="from")
+    to: Annotated[int, Field(ge=0)]
+
+
+class CorporateActionKindDividend(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["dividend"]
+    amount_ticks: int
+
+
+class CorporateActionKindSymbolChange(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["symbol_change"]
+    new_ticker: str
+
+
+class CorporateActionKindDelisting(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["delisting"]
+
+
+CorporateActionKind = Annotated[
+    CorporateActionKindSplit
+    | CorporateActionKindDividend
+    | CorporateActionKindSymbolChange
+    | CorporateActionKindDelisting,
+    Field(discriminator="kind"),
+]
+
+
+class CorporateAction(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    action: CorporateActionKind
+    effective_time: int
+    known_at: int
+    listing_id: str
+    revision: Annotated[int, Field(ge=0)]
+    source: str
+
+
+class OrderSide(str, Enum):
+    BUY = "Buy"
+
+
+class DollarCostAverageFixedAmountBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    amount_minor_units: int
+
+
+class StrategyKind(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    DollarCostAverageFixedAmount: DollarCostAverageFixedAmountBody
+
+
+class StrategySpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: StrategyKind
+    version: Annotated[int, Field(ge=0)]
+
+
+class ProposedAction(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    amount_minor_units: int
+    side: OrderSide
+    strategy_version: Annotated[int, Field(ge=0)]
+
+
+class FinanceMarketOpCorporateActions(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of: int | None = None
+    op: Literal["corporate_actions"]
+    records: list[CorporateAction]
+
+
+class FinanceMarketOpStrategyEvaluate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["strategy_evaluate"]
+    spec: StrategySpec
+
+
 FinanceMarketOp = Annotated[
     FinanceMarketOpEncodePoints
     | FinanceMarketOpResolve
@@ -7615,7 +7709,9 @@ FinanceMarketOp = Annotated[
     | FinanceMarketOpBacktestRun
     | FinanceMarketOpDecimate
     | FinanceMarketOpLiquidityPanel
-    | FinanceMarketOpAnalysisSnapshot,
+    | FinanceMarketOpAnalysisSnapshot
+    | FinanceMarketOpCorporateActions
+    | FinanceMarketOpStrategyEvaluate,
     Field(discriminator="op"),
 ]
 
@@ -48520,7 +48616,20 @@ __all__ = [
     "EvidenceRef",
     "FinanceKalmanVolatilityResult",
     "FinanceMarketOp",
+    "CorporateAction",
+    "CorporateActionKind",
+    "CorporateActionKindDelisting",
+    "CorporateActionKindDividend",
+    "CorporateActionKindSplit",
+    "CorporateActionKindSymbolChange",
+    "DollarCostAverageFixedAmountBody",
     "FinanceMarketOpAnalysisSnapshot",
+    "FinanceMarketOpCorporateActions",
+    "FinanceMarketOpStrategyEvaluate",
+    "OrderSide",
+    "ProposedAction",
+    "StrategyKind",
+    "StrategySpec",
     "FinanceMarketOpBacktestRun",
     "FinanceMarketOpDecimate",
     "FinanceMarketOpEncodePoints",

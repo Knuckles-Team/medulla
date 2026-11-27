@@ -277,6 +277,10 @@ method_results! {
     FinanceMarketLiquidityPanel(FinanceMarket / "liquidity_panel") => Raw<market::LiquidityPanel>;
     #[cfg(feature = "finance")]
     FinanceMarketAnalysisSnapshot(FinanceMarket / "analysis_snapshot") => Raw<market::AnalysisSnapshot>;
+    #[cfg(feature = "finance")]
+    FinanceMarketCorporateActions(FinanceMarket / "corporate_actions") => Raw<Vec<market::CorporateAction>>;
+    #[cfg(feature = "finance")]
+    FinanceMarketStrategyEvaluate(FinanceMarket / "strategy_evaluate") => Raw<market::ProposedAction>;
     // ── signal fusion and the strategic-insider model (EH-423 / AUD-30) ──
     #[cfg(feature = "finance")]
     FinanceSignalModelsBayesFuse(FinanceSignalModels / "bayes_fuse") => Raw<signal_models::BayesFusion>;

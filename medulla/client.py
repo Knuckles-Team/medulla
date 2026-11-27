@@ -11566,7 +11566,10 @@ class FinanceClient:
         ``signal_advance``, ``signal_scan``, ``flip_confidence``,
         ``backtest_run``, ``decimate`` (M4 chart thinning),
         ``liquidity_panel`` (versioned FRED net liquidity and heat components),
-        or ``analysis_snapshot`` (seal or re-verify an analysis record);
+        ``analysis_snapshot`` (seal or re-verify an analysis record),
+        ``corporate_actions`` (the point-in-time view over ``records`` as of
+        ``as_of``) or ``strategy_evaluate`` (one ``spec`` into a proposed
+        action, never an order);
         ``params`` are that op's fields. Prices are integer
         ticks and indicator values integer milli-ticks. Pure compute and
         informational only: no result authorises an order.

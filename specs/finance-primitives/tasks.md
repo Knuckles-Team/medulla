@@ -184,3 +184,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T465 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.3 Range windowing
 - [ ] T466 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.4 Served performance method and golden proof
 - [ ] T467 MEDULLA-FINANCE-PRIMITIVES-R015.1.4 Read the admission receipt of a promoted proposal
+- [ ] T468 MEDULLA-FINANCE-PRIMITIVES-R006.1 Serve the corporate-action view and the DCA evaluator as FinanceMarket ops

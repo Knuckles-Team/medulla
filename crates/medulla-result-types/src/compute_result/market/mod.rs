@@ -20,6 +20,7 @@ pub mod scan;
 pub mod signal;
 pub mod signal_machine;
 pub mod snapshot;
+pub mod strategy;
 
 pub use bars::{
     BarRecord, BarStatus, EarlyClose, ExchangeCalendar, FinalityFilter, PricedBar, SeriesPoint,
@@ -43,6 +44,7 @@ pub use signal::{
     IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalCheckpoint, SignalKey,
     SignalReplay, SignalReplayRequest, SuperTrendCheckpoint, TrendFlip,
 };
+pub use strategy::{OrderSide, ProposedAction, StrategyKind, StrategySpec, STRATEGY_SPEC_VERSION};
 pub use snapshot::{
     AnalysisSnapshot, AnalysisSnapshotDraft, BarWindow, ClaimAuthor, ClaimSource, SnapshotClaim,
     SnapshotNotices,

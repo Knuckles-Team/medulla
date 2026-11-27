@@ -9,7 +9,9 @@ use super::evidence::{BacktestRunDraft, FlipConfidenceRequest};
 use super::liquidity::LiquidityPanelRequest;
 use super::scan::ScanRequest;
 use super::signal::{IndicatorSpec, SignalCheckpoint, SignalReplayRequest};
+use super::corporate_action::CorporateAction;
 use super::snapshot::AnalysisSnapshotDraft;
+use super::strategy::StrategySpec;
 
 /// One market-signal operation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -63,6 +65,18 @@ pub enum FinanceMarketOp {
     /// Validate an analysis and seal it as a content-addressed snapshot with
     /// its notices; re-sealing a stored draft verifies the record.
     AnalysisSnapshot { draft: AnalysisSnapshotDraft },
+    /// The latest version of every corporate action over `records` known at or before `as_of`
+    /// (every version when absent), ordered by listing then effective time; two different
+    /// bodies at one revision refuse (MEDULLA-FINANCE-PRIMITIVES-R006).
+    CorporateActions {
+        records: Vec<CorporateAction>,
+        #[serde(default)]
+        as_of: Option<i64>,
+    },
+    /// Evaluate one versioned strategy specification into a proposed action; a spec that
+    /// proposes none refuses `INVALID_REQUEST`. Never places or authorizes an order
+    /// (MEDULLA-FINANCE-PRIMITIVES-R007.1).
+    StrategyEvaluate { spec: StrategySpec },
 }
 
 #[cfg(test)]
