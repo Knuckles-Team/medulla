@@ -20,7 +20,9 @@ pub use backend::{
     active_backend, clear_assign_backend, set_assign_backend, AssignBackend, CpuBackend, Rows,
 };
 pub use config::*;
-pub use distance::{lane_reduce, nearest, nearest_with_dist, sq_dist};
+pub use distance::{
+    lane_reduce, nearest, nearest_baseline, nearest_wide, nearest_with_dist, sq_dist,
+};
 pub use online::CentroidTracker;
 pub use plan::{plan, training_bytes, Mode, Plan};
 pub use refusal::ClusterRefusal;

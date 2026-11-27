@@ -132,3 +132,63 @@ fn recall_matches_exact_mode_within_budget() {
         "inertia {emeans_inertia} vs exact {exact_inertia}"
     );
 }
+
+/// The acceptance thresholds of MEDULLA-CLUSTER-R010.2, in one block. They are the starting
+/// values of the row until `research.md` D7 records the measured ones.
+mod acceptance {
+    /// The test's size: the row's 100,000 vectors scaled to the 60 second budget of a test.
+    pub const VECTORS: usize = 20_000;
+    pub const DIM: usize = 128;
+    pub const CELLS: usize = 1_024;
+    pub const GROUPS: usize = 80;
+    pub const QUERIES: usize = 60;
+    /// e-means build time at most this times the exact-mode build time.
+    pub const BUILD_TIME_RATIO_MAX: f64 = 0.33;
+    /// recall@10 at least the exact mode's minus this (0.5 points).
+    pub const RECALL_GAP_MAX: f64 = 0.005;
+    /// Inertia at most this times the exact mode's.
+    pub const INERTIA_RATIO_MAX: f64 = 1.03;
+}
+
+// spec: MEDULLA-CLUSTER-R010.2
+#[test]
+fn emeans_meets_the_acceptance_thresholds() {
+    use acceptance::*;
+    let data = clustered(VECTORS, DIM, GROUPS, 11);
+    let items: Vec<(u64, Vec<f32>)> = data
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, v)| (i as u64, v))
+        .collect();
+    let queries: Vec<usize> = (0..QUERIES).map(|i| i * 331 % VECTORS).collect();
+    let run = |exact: bool| {
+        let cluster = ClusterConfig {
+            exact,
+            ..ClusterConfig::default()
+        };
+        let started = std::time::Instant::now();
+        let mut idx = IvfPq::train(&params(DIM, CELLS, 0, cluster), &data);
+        let build = started.elapsed().as_secs_f64();
+        idx.add(&items);
+        (
+            build,
+            recall(&idx, &data, &queries),
+            coarse_inertia(&idx, &data),
+        )
+    };
+    let (exact_build, exact_recall, exact_inertia) = run(true);
+    let (emeans_build, emeans_recall, emeans_inertia) = run(false);
+    assert!(
+        emeans_build <= exact_build * BUILD_TIME_RATIO_MAX,
+        "build {emeans_build:.2}s is over {BUILD_TIME_RATIO_MAX} of exact {exact_build:.2}s"
+    );
+    assert!(
+        emeans_recall >= exact_recall - RECALL_GAP_MAX,
+        "recall {emeans_recall} vs exact {exact_recall}"
+    );
+    assert!(
+        emeans_inertia <= exact_inertia * INERTIA_RATIO_MAX,
+        "inertia {emeans_inertia} vs exact {exact_inertia}"
+    );
+}

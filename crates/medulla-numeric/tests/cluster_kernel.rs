@@ -597,8 +597,18 @@ fn kernel_has_no_ffi_and_no_target_cpu_flags() {
     for f in files {
         let src = std::fs::read_to_string(&f).unwrap();
         scanned += 1;
-        for banned in ["extern \"C\"", "extern crate", "target_feature(enable"] {
+        for banned in ["extern \"C\"", "extern crate"] {
             assert!(!src.contains(banned), "{} contains {banned}", f.display());
+        }
+        // A `target_feature` attribute is allowed only on the wide path of `distance.rs`, which
+        // runs only after `is_x86_feature_detected!` (MEDULLA-CLUSTER-R007.2): it pins nothing at
+        // compile time.
+        if src.contains("target_feature(enable") {
+            assert!(
+                f.ends_with("distance.rs") && src.contains("is_x86_feature_detected!(\"avx2\")"),
+                "{} enables a CPU feature outside the runtime-detected wide path",
+                f.display()
+            );
         }
     }
     assert!(scanned >= 8, "scanned only {scanned} kernel files");
@@ -666,4 +676,48 @@ fn kernel_is_the_only_trainer() {
     }
     assert!(scanned > 500, "scan universe too small: {scanned} files");
     assert!(findings.is_empty(), "second trainer found: {findings:#?}");
+}
+
+// spec: MEDULLA-CLUSTER-R007.2
+#[test]
+fn wide_path_is_bit_equal_to_baseline() {
+    use medulla_numeric::cluster::{nearest_baseline, nearest_wide};
+    let mut rng = ChaCha8Rng::seed_from_u64(77);
+    let mut compared = 0;
+    // Every width from 1 to 70 covers whole lanes, tails and the empty-lane case; a handful of
+    // centroids covers the tie rule.
+    for dim in 1..=70usize {
+        for k in [1usize, 3, 8] {
+            let v: Vec<f32> = (0..dim).map(|_| rng.gen::<f32>() * 8.0 - 4.0).collect();
+            let mut centroids: Vec<f32> = (0..dim * k).map(|_| rng.gen::<f32>() * 8.0 - 4.0).collect();
+            if k == 8 {
+                // Two equal centroids: the lowest index wins on both paths.
+                let (first, rest) = centroids.split_at_mut(dim);
+                rest[..dim].copy_from_slice(first);
+            }
+            let baseline = nearest_baseline(&v, &centroids, dim, k);
+            match nearest_wide(&v, &centroids, dim, k) {
+                Some(wide) => {
+                    assert_eq!(baseline.0, wide.0, "dim {dim} k {k}: the nearest differs");
+                    assert_eq!(
+                        baseline.1.to_bits(),
+                        wide.1.to_bits(),
+                        "dim {dim} k {k}: the distance differs in bits"
+                    );
+                    compared += 1;
+                }
+                None => {
+                    // A host without AVX2 runs the baseline on every call.
+                    assert_eq!(nearest(&v, &centroids, dim, k), baseline.0);
+                }
+            }
+        }
+    }
+    // The public scan answers the baseline's bits whichever path it takes.
+    let v: Vec<f32> = (0..19).map(|i| i as f32 * 0.37 - 2.0).collect();
+    let c: Vec<f32> = (0..38).map(|i| (i * i) as f32 * 0.011 + 0.5).collect();
+    let public = medulla_numeric::cluster::nearest_with_dist(&v, &c, 19, 2);
+    let baseline = nearest_baseline(&v, &c, 19, 2);
+    assert_eq!((public.0, public.1.to_bits()), (baseline.0, baseline.1.to_bits()));
+    println!("wide path compared on {compared} cases");
 }

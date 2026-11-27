@@ -2,7 +2,9 @@
 //!
 //! The 8-lane pairwise order is the contract: a sum has the same bits on every
 //! path and thread count. The code uses no fused multiply-add and no compile-time
-//! CPU flag (R007).
+//! CPU flag (R007). On x86-64 the nearest-centroid scan also runs as one `avx2` function chosen at
+//! run time with `is_x86_feature_detected!` (MEDULLA-CLUSTER-R007.2): it calls the same
+//! `lane_reduce` body, so a host without AVX2 and a host with it produce the same bits.
 
 /// Lane-chunked pairwise reduction `sum(term(a[i], b[i]))` over two equal-length
 /// slices: eight independent accumulators, then a fixed tree, then the scalar tail.
@@ -23,29 +25,65 @@ pub fn lane_reduce(a: &[f32], b: &[f32], term: impl Fn(f32, f32) -> f32) -> f32 
     s
 }
 
+/// The squared-difference term of `sq_dist`.
+#[inline(always)]
+fn sq_term(x: f32, y: f32) -> f32 {
+    let diff = x - y;
+    diff * diff
+}
+
 /// Squared Euclidean distance between two equal-length slices.
 #[inline]
 pub fn sq_dist(a: &[f32], b: &[f32]) -> f32 {
-    lane_reduce(a, b, |x, y| {
-        let diff = x - y;
-        diff * diff
-    })
+    lane_reduce(a, b, sq_term)
 }
 
-/// Index and squared distance of the nearest of `k` flattened `dim`-vectors.
-/// The lowest index wins a tie.
-#[inline]
-pub fn nearest_with_dist(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> (usize, f32) {
+/// The scan body both paths run: the one definition of the order in which candidates are
+/// compared, so the baseline and the wide path cannot differ.
+#[inline(always)]
+fn nearest_scan(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> (usize, f32) {
     let mut best = 0usize;
     let mut bestd = f32::INFINITY;
     for c in 0..k {
-        let d = sq_dist(v, &centroids[c * dim..(c + 1) * dim]);
+        let d = lane_reduce(v, &centroids[c * dim..(c + 1) * dim], sq_term);
         if d < bestd {
             bestd = d;
             best = c;
         }
     }
     (best, bestd)
+}
+
+/// The baseline path: no CPU feature beyond the target's own baseline.
+pub fn nearest_baseline(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> (usize, f32) {
+    nearest_scan(v, centroids, dim, k)
+}
+
+/// The same scan compiled for AVX2. It uses no fused multiply-add: `avx2` does not enable it
+/// and the compiler never contracts a float expression.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn nearest_avx2(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> (usize, f32) {
+    nearest_scan(v, centroids, dim, k)
+}
+
+/// The wide path, or `None` on a host without AVX2 (or off x86-64). A test forces it here and
+/// compares it with [`nearest_baseline`] (MEDULLA-CLUSTER-R007.2).
+pub fn nearest_wide(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> Option<(usize, f32)> {
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx2") {
+        // SAFETY: the running CPU reports AVX2, the one feature `nearest_avx2` requires.
+        return Some(unsafe { nearest_avx2(v, centroids, dim, k) });
+    }
+    let _ = (v, centroids, dim, k);
+    None
+}
+
+/// Index and squared distance of the nearest of `k` flattened `dim`-vectors.
+/// The lowest index wins a tie. Runs the wide path when the host has AVX2.
+#[inline]
+pub fn nearest_with_dist(v: &[f32], centroids: &[f32], dim: usize, k: usize) -> (usize, f32) {
+    nearest_wide(v, centroids, dim, k).unwrap_or_else(|| nearest_baseline(v, centroids, dim, k))
 }
 
 /// Index of the nearest of `k` flattened `dim`-vectors to `v`.
