@@ -961,7 +961,6 @@ const ARCHIVE_TENANT: &str = "engine";
 /// logged with its code and retried at the next interval.
 #[cfg(all(feature = "redb", feature = "object-store"))]
 fn spawn_archiver(state: SharedState) {
-    use medulla_persistence::AsRedb;
     let archive = match medulla_persistence::object_store_backend::archive_from_env() {
         Ok(None) => return,
         Ok(Some(archive)) => archive,
@@ -985,26 +984,35 @@ fn spawn_archiver(state: SharedState) {
             owner: "server".to_string(),
             kind: medulla_observe::registry::tasks::TaskKind::Maintenance,
         },
-        async move {
-            // The loop never ends; the unit pattern fixes the task's output type.
-            let () = loop {
-                let persistence = state.read().await.persistence.clone();
-                if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
-                    match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
-                        Ok(report) => tracing::debug!(
-                            "archive pass wrote {} segments holding {} records",
-                            report.segments_written,
-                            report.records_archived
-                        ),
-                        Err(error) => tracing::error!("archive pass failed: {error}"),
-                    }
-                    expire_archive(&archive, &policy).await;
-                }
-                medulla_observe::spawn::idle(std::time::Duration::from_secs(policy.interval_s))
-                    .await;
-            };
-        },
+        archive_loop(state, archive, policy),
     );
+}
+
+/// One archive pass and one retention pass per interval, for the life of the process. A named
+/// function, not an async block, so the task's output type is declared as `()` rather than
+/// inferred from a loop that never ends.
+#[cfg(all(feature = "redb", feature = "object-store"))]
+async fn archive_loop(
+    state: SharedState,
+    archive: medulla_storage::object::archive::ObjectArchive,
+    policy: medulla_storage::ArchivePolicy,
+) {
+    use medulla_persistence::AsRedb;
+    loop {
+        let persistence = state.read().await.persistence.clone();
+        if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
+            match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
+                Ok(report) => tracing::debug!(
+                    "archive pass wrote {} segments holding {} records",
+                    report.segments_written,
+                    report.records_archived
+                ),
+                Err(error) => tracing::error!("archive pass failed: {error}"),
+            }
+            expire_archive(&archive, &policy).await;
+        }
+        medulla_observe::spawn::idle(std::time::Duration::from_secs(policy.interval_s)).await;
+    }
 }
 
 /// Segment retention (MEDULLA-ENGINE-PARITY-R016.4): after each pass, expire from every scope
