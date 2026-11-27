@@ -123,6 +123,9 @@ def test_method_returns_typed_report(start_medulla_server) -> None:
         # No authority source is registered in the caller's catalog, so every class
         # abstains by name; the answer is returned, never an error.
         assert report["abstentions"]
+        assert all(
+            {"kind", "source", "class"} <= set(entry) for entry in report["abstentions"]
+        )
         assert report["sources_used"] == []
 
         with pytest.raises(Exception, match="CQ_CLASS_UNKNOWN"):
