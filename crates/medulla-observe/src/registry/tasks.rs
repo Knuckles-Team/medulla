@@ -379,6 +379,24 @@ fn record_progress(
     row.last_progress_location = Some(location);
 }
 
+/// Record that the task is alive and waiting (MEDULLA-OBSERVE-R005.2). Only the age the
+/// watchdog measures moves: the cursor, the units done and the progress location stay as they
+/// were, so a heartbeat is never read as work done. A task that has not started is started; a
+/// `Stalled` task returns to `Progressing` through the machine's own edge; a finished task is
+/// left alone.
+fn record_heartbeat(cell: &Cell, now_unix_ms: u64) {
+    let mut row = cell.lock();
+    let moved = match row.state {
+        TaskState::Registered => apply_event(&mut row, TaskEvent::Start),
+        TaskState::Stalled => apply_event(&mut row, TaskEvent::Progress),
+        TaskState::Running | TaskState::Progressing => Ok(()),
+        _ => return,
+    };
+    if moved.is_ok() {
+        row.last_progress_unix_ms = row.last_progress_unix_ms.max(now_unix_ms);
+    }
+}
+
 /// A cloneable reporter of one task's progress. [`crate::spawn::progress`] reaches the current
 /// task's reporter without a handle in scope.
 #[derive(Clone)]
@@ -391,6 +409,16 @@ impl TaskProgress {
     #[track_caller]
     pub fn progress(&self, cursor: ProgressCursor, units_done: u64) {
         record_progress(&self.cell, cursor, units_done, Location::caller());
+    }
+
+    /// Record that the task is alive while it waits, at the wall clock.
+    pub fn heartbeat(&self) {
+        record_heartbeat(&self.cell, unix_ms());
+    }
+
+    /// Record a heartbeat at `now_unix_ms`; the clock is the caller's.
+    pub fn heartbeat_at(&self, now_unix_ms: u64) {
+        record_heartbeat(&self.cell, now_unix_ms);
     }
 }
 
@@ -407,6 +435,16 @@ impl TaskHandle {
     #[track_caller]
     pub fn progress(&self, cursor: ProgressCursor, units_done: u64) {
         record_progress(&self.progress.cell, cursor, units_done, Location::caller());
+    }
+
+    /// Record that the task is alive while it waits, at the wall clock.
+    pub fn heartbeat(&self) {
+        self.progress.heartbeat();
+    }
+
+    /// Record a heartbeat at `now_unix_ms`; the clock is the caller's.
+    pub fn heartbeat_at(&self, now_unix_ms: u64) {
+        self.progress.heartbeat_at(now_unix_ms);
     }
 
     /// Record the request that spawned this task (MEDULLA-OBSERVE-R002.4).

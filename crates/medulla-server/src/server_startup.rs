@@ -978,7 +978,7 @@ fn spawn_archiver(state: SharedState) {
         policy.interval_s, policy.segment_bytes
     );
     // A registered task (MEDULLA-OBSERVE-R003.6). A pass is every `archive.interval_s`, which can
-    // exceed the stall threshold, so the loop reports no progress and is never marked stalled.
+    // exceed the stall threshold, so the wait sends heartbeats and an idle archiver is not marked stalled.
     medulla_observe::spawn::spawn(
         medulla_observe::registry::tasks::TaskSpec {
             name: "archiver".to_string(),
@@ -1000,7 +1000,7 @@ fn spawn_archiver(state: SharedState) {
                 }
                 expire_archive(&archive, &policy).await;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(policy.interval_s)).await;
+            medulla_observe::spawn::idle(std::time::Duration::from_secs(policy.interval_s)).await;
         };
         },
     );

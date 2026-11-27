@@ -87,3 +87,39 @@ fn stalled_materialization_task_degrades_its_graph_with_the_task_name() {
     assert!(found.iter().all(|stalled| stalled.degraded_graph.is_none()));
     assert_eq!(readiness.get("other").unwrap().state, ReadinessState::Opening);
 }
+
+// spec: MEDULLA-OBSERVE-R005.2
+#[test]
+fn idle_heartbeat_is_not_a_stall_and_silence_is() {
+    let tasks = TaskRegistry::new(16);
+    let readiness = ReadinessRegistry::new();
+    let waiting = tasks.register(spec("watchdog-test:waiting", TaskKind::Maintenance));
+    let silent = tasks.register(spec("watchdog-test:hung", TaskKind::Maintenance));
+    waiting.progress(ProgressCursor::Counter(1), 1);
+    silent.progress(ProgressCursor::Counter(1), 1);
+    let start = waiting.row().last_progress_unix_ms.max(silent.row().last_progress_unix_ms);
+
+    // The waiting loop sends heartbeats on the controlled clock across 4 thresholds.
+    for step in 1..=4 {
+        waiting.heartbeat_at(start + step * STALL_AFTER_MS);
+    }
+    let now = start + 4 * STALL_AFTER_MS + 1;
+    let found = scan(&tasks, &readiness, now, STALL_AFTER_MS);
+
+    // Only the task that stopped reporting is flagged; the idle one is not.
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].row.name, "watchdog-test:hung");
+    assert_eq!(waiting.row().state, TaskState::Progressing);
+    // A heartbeat is not work done: cursor and units are untouched.
+    assert_eq!(waiting.row().units_done, 1);
+
+    // Once the idle loop also goes silent past the threshold, it is flagged too.
+    let later = scan(&tasks, &readiness, now + STALL_AFTER_MS + 1, STALL_AFTER_MS);
+    assert_eq!(later.len(), 1);
+    assert_eq!(later[0].row.name, "watchdog-test:waiting");
+
+    // A heartbeat returns a stalled task to Progressing.
+    waiting.heartbeat_at(now + 3 * STALL_AFTER_MS);
+    assert_eq!(waiting.row().state, TaskState::Progressing);
+    drop(silent);
+}

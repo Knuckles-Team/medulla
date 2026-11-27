@@ -186,6 +186,35 @@ pub fn progress(cursor: ProgressCursor, units_done: u64) -> bool {
     true
 }
 
+/// Record that the job this call runs in is alive and waiting. Returns `false` outside a job
+/// started by [`spawn`].
+pub fn heartbeat() -> bool {
+    let Ok(reporter) = CURRENT.try_with(TaskProgress::clone) else {
+        return false;
+    };
+    reporter.heartbeat();
+    true
+}
+
+/// Wait `duration` as an idle job (MEDULLA-OBSERVE-R005.2): the wait is cut into slices of half
+/// `observe.task_stall_after_ms`, and the job sends a heartbeat before each, so a loop that
+/// sleeps longer than the stall threshold does not read as stalled. A job that stops reaching
+/// this call still goes stale and is flagged.
+pub async fn idle(duration: std::time::Duration) {
+    let slice = std::time::Duration::from_millis((crate::settings::task_stall_after_ms() / 2).max(1));
+    let mut left = duration;
+    loop {
+        heartbeat();
+        if left <= slice {
+            tokio::time::sleep(left).await;
+            heartbeat();
+            return;
+        }
+        tokio::time::sleep(slice).await;
+        left -= slice;
+    }
+}
+
 /// A cloneable reporter of the job this call runs in, or `None` outside a job started by
 /// [`spawn`]. Code that hands its progress to a blocking thread takes the reporter first: a
 /// task-local does not follow the work onto another thread.
