@@ -20,6 +20,6 @@ pub mod scalar;
 mod search;
 pub mod verify;
 
-use model::{Model, ModelError};
+pub use model::{Model, ModelError};
 pub use search::solve;
 pub use verify::{verify, StatusDefect, Verdict, VerifyError};
