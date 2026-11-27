@@ -196,6 +196,7 @@ async fn finished_task(name: &str) -> medulla_observe::registry::tasks::TaskRow 
 }
 
 // spec: MEDULLA-OBSERVE-R006.1
+// Proves every Introspect section answers over the served path with its limit and cursor refusals.
 #[tokio::test(flavor = "multi_thread")]
 async fn introspect_sections_answer_over_the_served_path() {
     let served = Served::new().await;
@@ -305,6 +306,7 @@ async fn lazy_paging_task_shows_cursor_in_introspect() {
 }
 
 // spec: MEDULLA-OBSERVE-R007.1
+// Proves a graph's readiness follows open, materialization and eviction.
 #[tokio::test(flavor = "multi_thread")]
 async fn graph_readiness_follows_open_migrate_materialize() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
@@ -333,6 +335,7 @@ async fn graph_readiness_follows_open_migrate_materialize() {
 }
 
 // spec: MEDULLA-OBSERVE-R006.2
+// Proves an in-flight request is listed with its phase, age and an opaque principal reference.
 #[tokio::test(flavor = "multi_thread")]
 async fn in_flight_request_is_listed_with_phase_and_age() {
     let served = Served::new().await;
@@ -359,6 +362,7 @@ async fn in_flight_request_is_listed_with_phase_and_age() {
 }
 
 // spec: MEDULLA-OBSERVE-R006.3
+// Proves a worker that spins across two windows is flagged in the runtime section.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn spinning_worker_is_flagged_in_runtime_section() {
     let served = Served::new().await;
@@ -407,6 +411,7 @@ async fn spinning_worker_is_flagged_in_runtime_section() {
 }
 
 // spec: MEDULLA-OBSERVE-R006.4
+// Proves a held graph lock shows its holder and a waiter, and an idle site shows none.
 #[tokio::test(flavor = "multi_thread")]
 async fn held_graph_lock_shows_holder_and_waiter() {
     let served = Served::new().await;

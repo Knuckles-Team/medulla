@@ -96,6 +96,8 @@ mod tests {
     use super::*;
 
     // spec: MEDULLA-OBSERVE-R009.1
+    // Proves the build identity carries the version, the git SHA, the profile and an ascending
+    // feature list.
     #[test]
     fn build_info_has_version_sha_and_features() {
         let info = &*BUILD_INFO;
@@ -111,6 +113,7 @@ mod tests {
     }
 
     // spec: MEDULLA-OBSERVE-R009.1
+    // Proves the executable's GNU build id is read from the note and a foreign image reads none.
     #[test]
     fn elf_build_id_reads_the_gnu_note_and_refuses_other_images() {
         // A minimal ELF64 header with one PT_NOTE program header and one build-id note.

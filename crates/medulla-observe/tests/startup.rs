@@ -3,6 +3,7 @@
 use medulla_observe::startup::{StartupReport, StepOutcome, STARTUP_STEP_ABANDONED};
 
 // spec: MEDULLA-OBSERVE-R008.1
+// Proves a step guard records its duration and its outcome, and an abandoned guard records a failure.
 #[test]
 fn step_guard_records_duration_and_outcome() {
     let report = StartupReport::new();

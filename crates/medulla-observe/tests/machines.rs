@@ -118,6 +118,7 @@ const REQUEST_EVENTS: [RequestEvent; 8] = [
 ];
 
 // spec: MEDULLA-OBSERVE-R004.3
+// Proves RequestMachine edges Q01 to Q13, that Handling and WaitingLock alternate, and that every other pair is refused.
 #[test]
 fn request_machine_edges_q01_to_q13() {
     assert_eq!(REQUEST_MACHINE.name, "RequestMachine");
