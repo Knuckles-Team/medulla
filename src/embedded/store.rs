@@ -132,6 +132,8 @@ impl EmbeddedRedbStore {
             &self.shard,
             &mut ops,
             &mut raft_log_ops,
+            // An embedded store has no served principal, so it keeps no write-day ledger.
+            &mut Vec::new(),
             &drain_id,
             0,
             self.crypto(),

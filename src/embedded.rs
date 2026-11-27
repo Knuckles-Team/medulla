@@ -823,6 +823,7 @@ fn status_result(tag: &str) -> medulla_sql_lang::sql::typed_result::TypedQueryRe
             ty: medulla_sql_lang::sql::typed_result::PgColType::Text,
         }],
         rows: vec![vec![serde_json::Value::String(tag.to_string())]],
+        stale_matviews: Vec::new(),
     }
 }
 
@@ -835,6 +836,7 @@ fn count_result(n: usize) -> medulla_sql_lang::sql::typed_result::TypedQueryResu
             ty: medulla_sql_lang::sql::typed_result::PgColType::Int8,
         }],
         rows: vec![vec![serde_json::Value::from(n as i64)]],
+        stale_matviews: Vec::new(),
     }
 }
 
