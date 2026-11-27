@@ -135,12 +135,18 @@ fn op(name: &str, request: Value) -> Value {
 /// with the same record id. Returns the record id.
 async fn write_and_replay(h: &Harness, scope: &str, name: &str, request: Value) -> String {
     let scopes = [scope];
-    let first = value_of(name, dispatch(h, TENANT, &scopes, op(name, request.clone())).await);
+    let first = value_of(
+        name,
+        dispatch(h, TENANT, &scopes, op(name, request.clone())).await,
+    );
     assert_eq!(first["disposition"], "written", "{name}: {first}");
     let repeat = value_of(name, dispatch(h, TENANT, &scopes, op(name, request)).await);
     assert_eq!(repeat["disposition"], "replayed", "{name}: {repeat}");
     assert_eq!(repeat["record_id"], first["record_id"], "{name}");
-    first["record_id"].as_str().expect("a record id").to_string()
+    first["record_id"]
+        .as_str()
+        .expect("a record id")
+        .to_string()
 }
 
 /// The records one served chain commits, in dependency order.
@@ -188,8 +194,7 @@ async fn seed_chain(h: &Harness) -> Chain {
     .await;
 
     let capture = capture_body(h, &capability_id, &base_id).await;
-    let capture_id =
-        write_and_replay(h, "policy:capture-write", "commit_capture", capture).await;
+    let capture_id = write_and_replay(h, "policy:capture-write", "commit_capture", capture).await;
 
     let run = json!({
         "capability_id": capability_id, "work_item_id": "work:1", "base_version_id": base_id,
@@ -224,7 +229,12 @@ async fn seed_chain(h: &Harness) -> Chain {
     }
 }
 
-fn evaluation_json(subject: Value, revision_ref: &str, champion: Option<&str>, held_out: &[&str]) -> Value {
+fn evaluation_json(
+    subject: Value,
+    revision_ref: &str,
+    champion: Option<&str>,
+    held_out: &[&str],
+) -> Value {
     json!({
         "subject": subject,
         "revision_ref": revision_ref, "champion_revision_ref": champion,
@@ -277,7 +287,9 @@ async fn capture_train_evaluate_and_promote() {
     );
     assert_eq!(read["record_id"], *run_id);
     assert_eq!(read["record"]["kind"], "training_run");
-    assert!(read["recorded_by"].as_str().is_some_and(|by| !by.is_empty()));
+    assert!(read["recorded_by"]
+        .as_str()
+        .is_some_and(|by| !by.is_empty()));
 
     // Another tenant reading the same id is told there is no such record: the
     // run is never returned.
@@ -321,7 +333,8 @@ async fn policy_evolution_refusals() {
         "controls": {"capture": {"enabled": false, "scope": null},
                      "train": {"enabled": true, "scope": "ops"}},
     });
-    let off_id = write_and_replay(&h, "admin:policy-capability", "put_capability", no_capture).await;
+    let off_id =
+        write_and_replay(&h, "admin:policy-capability", "put_capability", no_capture).await;
     assert_ne!(off_id, chain.capability_id);
     let capture = capture_body(&h, &off_id, &chain.base_id).await;
     let error = refusal_of(&h, "policy:capture-write", "commit_capture", capture).await;
@@ -335,7 +348,13 @@ async fn policy_evolution_refusals() {
         Some(&chain.base_id),
         &[TRAJECTORY],
     );
-    let error = refusal_of(&h, evaluate, "commit_policy_evaluation", trained_on_held_out).await;
+    let error = refusal_of(
+        &h,
+        evaluate,
+        "commit_policy_evaluation",
+        trained_on_held_out,
+    )
+    .await;
     assert!(
         error.starts_with("POLICY_EVALUATION_OVERLAPS_TRAINING"),
         "{error}"
@@ -401,7 +420,9 @@ async fn receipts_read_back_field_for_field() {
     );
     assert_eq!(view["record_id"], record_id);
     assert_eq!(view["record"]["kind"], "policy_evaluation");
-    assert!(view["recorded_by"].as_str().is_some_and(|by| !by.is_empty()));
+    assert!(view["recorded_by"]
+        .as_str()
+        .is_some_and(|by| !by.is_empty()));
     assert!(view["recorded_at_ms"].as_u64().is_some_and(|at| at > 0));
     let body = &view["record"]["record"];
     for (field, expected) in request.as_object().expect("an object") {
@@ -419,10 +440,7 @@ async fn receipts_read_back_field_for_field() {
         (&chain.run_id, "training_run"),
         (&chain.trained_id, "model_policy_version"),
     ] {
-        let view = value_of(
-            "get",
-            dispatch(&h, TENANT, &["policy:read"], get(id)).await,
-        );
+        let view = value_of("get", dispatch(&h, TENANT, &["policy:read"], get(id)).await);
         assert_eq!(view["record_id"], json!(id));
         assert_eq!(view["record"]["kind"], kind);
     }

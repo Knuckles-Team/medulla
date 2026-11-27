@@ -26,11 +26,11 @@ use medulla_jobs::JobStore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_source_types::ingest_job::IngestRetryPolicy;
 use medulla_work_types::scheduler_config::SchedulerConfig;
-use medulla_work_types::worker_registry::{WorkerRegistration, WorkerRegistry};
 use medulla_work_types::task_queue::{
-    ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome,
-    TaskRenew, TaskRenewed,
+    ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome, TaskRenew,
+    TaskRenewed,
 };
+use medulla_work_types::worker_registry::{WorkerRegistration, WorkerRegistry};
 
 const SECRET: &str = "medulla-durable-kernel-r072-task-queue-secret";
 const T0: i64 = 1_000_000;
@@ -82,44 +82,44 @@ fn admission(workers: &[&str]) -> AdmissionInputs {
     AdmissionInputs {
         registry,
         config: SchedulerConfig {
-        total_workers,
-        lane_floors: BTreeMap::new(),
-        cores_per_mille: 1000,
-        memory_per_worker_bytes: 1024 * 1024 * 1024,
-        max_queue_depth: 64,
-        analytics_workers: 1,
-        analytics_lease_ms: 60_000,
-        analytics_poll_ms: 250,
-        task_lease_ms: 60_000,
-        retry_after_ms: 250,
-        worker_ttl_ms: 30_000,
-        analytics_slots: 1,
-        hydration_scope_cap: 10_000,
-        hydration_split_target_files: 2_000,
-        architecture_view_max_containers: 512,
-        enrich_timeout_ms: 5_000,
-        history_max_commits: 100_000,
-        history_support_floor: 3,
-        history_confidence_floor_milli: 300,
-        history_max_files_per_commit: 200,
-        process_import_max_elements: 100_000,
-        process_compile_max_nodes: 100_000,
-        document_max_bytes: 67_108_864,
-        process_document_max_bytes: 16 * 1024 * 1024,
-        process_document_max_depth: 64,
-        changeset_max_blob_bytes:
-            medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
-        tree_checkpoint_interval:
-            medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
-        index_max_working_bytes:
-            medulla_work_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
-        ann_storage_ceiling_bytes:
-            medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
-        ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
-        orchestration_limits: Default::default(),
-        ingest_retry: Default::default(),
-        admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
-    },
+            total_workers,
+            lane_floors: BTreeMap::new(),
+            cores_per_mille: 1000,
+            memory_per_worker_bytes: 1024 * 1024 * 1024,
+            max_queue_depth: 64,
+            analytics_workers: 1,
+            analytics_lease_ms: 60_000,
+            analytics_poll_ms: 250,
+            task_lease_ms: 60_000,
+            retry_after_ms: 250,
+            worker_ttl_ms: 30_000,
+            analytics_slots: 1,
+            hydration_scope_cap: 10_000,
+            hydration_split_target_files: 2_000,
+            architecture_view_max_containers: 512,
+            enrich_timeout_ms: 5_000,
+            history_max_commits: 100_000,
+            history_support_floor: 3,
+            history_confidence_floor_milli: 300,
+            history_max_files_per_commit: 200,
+            process_import_max_elements: 100_000,
+            process_compile_max_nodes: 100_000,
+            document_max_bytes: 67_108_864,
+            process_document_max_bytes: 16 * 1024 * 1024,
+            process_document_max_depth: 64,
+            changeset_max_blob_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
+            tree_checkpoint_interval:
+                medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
+            index_max_working_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
+            ann_storage_ceiling_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
+            ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
+            orchestration_limits: Default::default(),
+            ingest_retry: Default::default(),
+            admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
+        },
         lane_load: BTreeMap::new(),
         shard_writer_width: 4,
     }
@@ -183,7 +183,13 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
     let duplicate = enqueue(&store, &call(tenant, T0), task("k1"));
     assert_eq!(refusal_code(&duplicate), "TASK_DUPLICATE");
 
-    let first: Option<ClaimedTask> = decode(&claim(&store, &call(tenant, T0), lease("w1", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let first: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0),
+        lease("w1", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     let first = first.expect("the task is leased");
     assert_eq!(first.task_id, enqueued.task_id);
     assert_eq!(first.queue, "ingest.scan");
@@ -193,8 +199,13 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
     assert_eq!(first.lease_expires_at_ms, T0 + 1_000);
 
     // Another tenant's claim sees no task, even with a live task queued.
-    let other: Option<ClaimedTask> =
-        decode(&claim(&store, &call("tenant-b", T0), lease("w9", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let other: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call("tenant-b", T0),
+        lease("w9", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert!(other.is_none(), "a cross-tenant claim returned a task");
 
     // The process restarts with the claim unacked.
@@ -203,12 +214,22 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
 
     // Before the lease lapses nothing is ready; after it lapses the same task
     // is leased again to another worker.
-    let early: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, T0 + 500), lease("w2", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let early: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 500),
+        lease("w2", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert!(early.is_none(), "a live lease was redelivered");
     let later = T0 + 1_001;
-    let second: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, later), lease("w2", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let second: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, later),
+        lease("w2", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     let second = second.expect("the lapsed lease redelivers");
     assert_eq!(second.task_id, enqueued.task_id);
     assert_eq!(second.attempt, 2);
@@ -229,8 +250,13 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
     ));
     assert_eq!(acked.task_id, enqueued.task_id);
     assert_eq!(acked.outcome, TaskOutcome::Succeeded);
-    let none: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, later + 2), lease("w2", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let none: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, later + 2),
+        lease("w2", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert!(none.is_none(), "an acked task was delivered again");
 }
 
@@ -250,7 +276,13 @@ fn renew_extends_lease_and_refuses_expired_or_foreign() {
     let tenant = "tenant-a";
     let store = open(&dir);
     let enqueued: TaskEnqueued = decode(&enqueue(&store, &call(tenant, T0), task("r1")));
-    let first: Option<ClaimedTask> = decode(&claim(&store, &call(tenant, T0), lease("w1", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let first: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0),
+        lease("w1", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     let first = first.expect("the task is leased");
     assert_eq!(first.attempt, 1);
 
@@ -264,8 +296,13 @@ fn renew_extends_lease_and_refuses_expired_or_foreign() {
     assert_eq!(renewed.lease_expires_at_ms, T0 + 500 + 5_000);
 
     // Past the original expiry the renewed lease still holds: nothing redelivers.
-    let held: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, T0 + 2_000), lease("w2", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let held: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 2_000),
+        lease("w2", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert!(held.is_none(), "a renewed lease was redelivered");
 
     // Another worker, another tenant, an unknown task and a zero lease refuse.
@@ -308,7 +345,7 @@ fn renew_extends_lease_and_refuses_expired_or_foreign() {
         &call(tenant, T0 + 500 + 5_001),
         lease("w2", 1_000),
         &admission(&["w1", "w2", "w9"]),
-    &unused_ingest_policy(),
+        &unused_ingest_policy(),
     ));
     assert_eq!(again.expect("redelivered").attempt, 2);
 }
@@ -323,7 +360,13 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
 
     // Retry releases the task and keeps its attempt count.
     let retried: TaskEnqueued = decode(&enqueue(&store, &call(tenant, T0), task("retry")));
-    let leased: Option<ClaimedTask> = decode(&claim(&store, &call(tenant, T0), lease("w1", 5_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let leased: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0),
+        lease("w1", 5_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert_eq!(leased.expect("leased").attempt, 1);
     let _: TaskAcked = decode(&ack(
         &store,
@@ -331,8 +374,13 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         ack_of(&retried.task_id, "w1", TaskOutcome::Retry),
         &unused_ingest_policy(),
     ));
-    let again: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, T0 + 2), lease("w1", 5_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let again: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 2),
+        lease("w1", 5_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     let again = again.expect("a released task is leased again");
     assert_eq!(again.task_id, retried.task_id);
     assert_eq!(again.attempt, 2);
@@ -344,14 +392,25 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         ack_of(&retried.task_id, "w1", TaskOutcome::Failed),
         &unused_ingest_policy(),
     ));
-    let gone: Option<ClaimedTask> =
-        decode(&claim(&store, &call(tenant, T0 + 4), lease("w1", 5_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let gone: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 4),
+        lease("w1", 5_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     assert!(gone.is_none(), "a failed task was delivered again");
 
     // An ack after the lease lapsed is refused, and so is an ack of a task the
     // worker never held.
     let lapsed: TaskEnqueued = decode(&enqueue(&store, &call(tenant, T0), task("lapse")));
-    let _: Option<ClaimedTask> = decode(&claim(&store, &call(tenant, T0 + 10), lease("w1", 1_000), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy()));
+    let _: Option<ClaimedTask> = decode(&claim(
+        &store,
+        &call(tenant, T0 + 10),
+        lease("w1", 1_000),
+        &admission(&["w1", "w2", "w9"]),
+        &unused_ingest_policy(),
+    ));
     let late = ack(
         &store,
         &call(tenant, T0 + 10 + 1_000),
@@ -375,7 +434,13 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         "TASK_QUEUE_NAME_BLANK"
     );
     assert_eq!(
-        refusal_code(&claim(&store, &call(tenant, T0), lease("w1", 0), &admission(&["w1", "w2", "w9"]), &unused_ingest_policy())),
+        refusal_code(&claim(
+            &store,
+            &call(tenant, T0),
+            lease("w1", 0),
+            &admission(&["w1", "w2", "w9"]),
+            &unused_ingest_policy()
+        )),
         "TASK_LEASE_ZERO"
     );
 }

@@ -6,9 +6,9 @@
 
 use super::*;
 use medulla_decision_types::decision::graph_intake::{GraphReference, IntakeSource};
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
 use medulla_types::contract::Digest256;
+use medulla_types::evidence_class::EvidenceClass;
 
 const GRAPH: &str = "kg-graph-intake";
 const AUTHORITY: &str = "graph:main";
@@ -150,7 +150,8 @@ async fn graph_intake_routes() {
 
     // Each source is one premise with its exact revision and digest.
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
-    assert!(facts.contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
+    assert!(facts
+        .contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
     assert!(facts.contains(&format!("intake:file=docs/a.md#{}", file_digest.to_hex()).as_str()));
     assert!(record
         .premises
@@ -162,7 +163,10 @@ async fn graph_intake_routes() {
     // Another owner's node is not visible: the reference does not resolve.
     let batch = decide(
         &h,
-        intake_request(&schema, vec![graph_source(AUTHORITY, "paper:theirs", 3, digest)]),
+        intake_request(
+            &schema,
+            vec![graph_source(AUTHORITY, "paper:theirs", 3, digest)],
+        ),
     )
     .await
     .unwrap();
@@ -172,7 +176,10 @@ async fn graph_intake_routes() {
     );
     let batch = decide(
         &h,
-        intake_request(&schema, vec![graph_source(AUTHORITY, "paper:foreign", 12, digest)]),
+        intake_request(
+            &schema,
+            vec![graph_source(AUTHORITY, "paper:foreign", 12, digest)],
+        ),
     )
     .await
     .unwrap();
@@ -315,10 +322,17 @@ async fn mixed_source_resolution() {
     .unwrap();
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
-    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
-    assert_eq!(record.evidence_class, medulla_types::evidence_class::EvidenceClass::Claim);
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+    assert_eq!(
+        record.evidence_class,
+        medulla_types::evidence_class::EvidenceClass::Claim
+    );
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
-    assert!(facts.contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
+    assert!(facts
+        .contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
     assert!(facts.contains(&format!("intake:file=docs/a.md#{}", file_digest.to_hex()).as_str()));
 
     // A file-only request opens no graph and needs no `graph` param.
@@ -336,7 +350,10 @@ async fn mixed_source_resolution() {
         }],
     );
     let batch = decide(&h, file_only).await.unwrap();
-    assert_eq!(batch.records.as_slice()[0].resolution_kind, ResolutionKind::Constraint);
+    assert_eq!(
+        batch.records.as_slice()[0].resolution_kind,
+        ResolutionKind::Constraint
+    );
 
     // Every refusal code is a sealed abstention.
     for (sources, code) in [

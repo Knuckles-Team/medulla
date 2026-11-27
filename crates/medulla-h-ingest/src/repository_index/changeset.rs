@@ -594,7 +594,11 @@ pub fn reindex_changeset(
         .flat_map(|result| result.nodes.iter())
         .filter_map(similarity_bands)
         .collect();
-    for edge in stored.edges.iter().filter(|edge| edge.edge_type == "similar_to") {
+    for edge in stored
+        .edges
+        .iter()
+        .filter(|edge| edge.edge_type == "similar_to")
+    {
         let far = if removed.contains(&edge.source) {
             &edge.target
         } else {
@@ -628,11 +632,7 @@ pub fn reindex_changeset(
         .iter()
         .flat_map(|result| result.nodes.iter().map(clone_node))
         .chain(context.values().map(|node| inert(extracted(node))))
-        .chain(
-            callers
-                .values()
-                .map(|(node, fed)| caller_node(node, fed)),
-        )
+        .chain(callers.values().map(|(node, fed)| caller_node(node, fed)))
         .collect();
     while !pending.is_empty() {
         let wanted: Vec<String> = resolution_names(&pending)
@@ -689,11 +689,7 @@ pub fn reindex_changeset(
             .values()
             .filter(|node| node.properties.get("type").map(String::as_str) == Some("SYMBOL"))
             .map(|node| inert(extracted(node)))
-            .chain(
-                callers
-                    .values()
-                    .map(|(node, fed)| caller_node(node, fed)),
-            )
+            .chain(callers.values().map(|(node, fed)| caller_node(node, fed)))
             .collect(),
         edges: raw_imports,
         symbols_extracted: 0,
@@ -798,15 +794,20 @@ pub fn reindex_changeset(
     // from each. A reference that no longer waits on its name leaves, and a bucket that
     // nothing references any longer leaves with it.
     let (bucket_nodes, bucket_edges) = unresolved_buckets(repo, &resolved.nodes);
-    let live: BTreeSet<&str> = bucket_nodes.iter().map(|node| node.node_id.as_str()).collect();
+    let live: BTreeSet<&str> = bucket_nodes
+        .iter()
+        .map(|node| node.node_id.as_str())
+        .collect();
     let mut emptied: BTreeSet<String> = stale.iter().map(|(_, bucket)| bucket.clone()).collect();
     emptied.extend(
         stored
             .edges
             .iter()
             .filter(|edge| {
-                matches!(edge.edge_type.as_str(), UNRESOLVED_CALL_EDGE | UNRESOLVED_IMPORT_EDGE)
-                    && removed.contains(&edge.source)
+                matches!(
+                    edge.edge_type.as_str(),
+                    UNRESOLVED_CALL_EDGE | UNRESOLVED_IMPORT_EDGE
+                ) && removed.contains(&edge.source)
             })
             .map(|edge| edge.target.clone()),
     );
@@ -817,7 +818,10 @@ pub fn reindex_changeset(
             relationship: None,
         });
     }
-    for bucket in emptied.iter().filter(|bucket| !live.contains(bucket.as_str())) {
+    for bucket in emptied
+        .iter()
+        .filter(|bucket| !live.contains(bucket.as_str()))
+    {
         let referenced = lookup.referents(bucket)?.iter().any(|(node, _)| {
             !removed.contains(&node.id) && !stale.contains(&(node.id.clone(), bucket.clone()))
         });
@@ -916,7 +920,9 @@ pub fn reindex_changeset(
 
     // (5) The next generation advances for every accepted changeset.
     let generation = next_generation(stored.generation.as_ref(), commit_id);
-    resolved.nodes.push(generation_node(&changeset.repo, &generation));
+    resolved
+        .nodes
+        .push(generation_node(&changeset.repo, &generation));
     let lowered: IndexResult = resolved;
     methods.extend(lower(&lowered)?.methods);
     for print in &prints {
@@ -1060,8 +1066,14 @@ mod tests {
     fn only_structural_paths_reparse_and_communities_stay_local() {
         let a = file("a.py", "def alpha():\n    return 1\n");
         let first = changeset("c1", None, vec![changed("a.py", PathOp::Add)]);
-        let landed = reindex_changeset(&first, "k1", std::slice::from_ref(&a), &StoredIndex::default(), &NoLookup)
-            .unwrap();
+        let landed = reindex_changeset(
+            &first,
+            "k1",
+            std::slice::from_ref(&a),
+            &StoredIndex::default(),
+            &NoLookup,
+        )
+        .unwrap();
         assert_eq!(landed.reparsed, vec!["a.py".to_string()]);
         assert_eq!(landed.generation.map_generation, 1);
         assert_eq!(landed.generation.base_revision, "k1");
@@ -1084,10 +1096,15 @@ mod tests {
         assert!(removed_ids(&outcome).contains("file:a.py"));
 
         // A changeset that does not chain from the stored base is refused.
-        let stray = changeset("c3", Some("elsewhere"), vec![changed("a.py", PathOp::Modify)]);
-        let refusal = reindex_changeset(&stray, "k3", &[file("a.py", "x = 1\n")], &stored, &NoLookup)
-            .err()
-            .unwrap();
+        let stray = changeset(
+            "c3",
+            Some("elsewhere"),
+            vec![changed("a.py", PathOp::Modify)],
+        );
+        let refusal =
+            reindex_changeset(&stray, "k3", &[file("a.py", "x = 1\n")], &stored, &NoLookup)
+                .err()
+                .unwrap();
         assert!(refusal.starts_with("INDEX_BASE_MISMATCH"), "{refusal}");
     }
 
@@ -1170,7 +1187,8 @@ mod tests {
                 .nodes
                 .iter()
                 .flat_map(|node| {
-                    let (_, edges) = unresolved_buckets("repo", std::slice::from_ref(&extracted(node)));
+                    let (_, edges) =
+                        unresolved_buckets("repo", std::slice::from_ref(&extracted(node)));
                     edges
                         .into_iter()
                         .filter(|edge| edge.target == bucket)
@@ -1187,7 +1205,11 @@ mod tests {
 
     impl Memory {
         fn marked(&self, keep: impl Fn(&StoredNode) -> bool) -> Vec<StoredNode> {
-            self.nodes.iter().filter(|node| keep(node)).cloned().collect()
+            self.nodes
+                .iter()
+                .filter(|node| keep(node))
+                .cloned()
+                .collect()
         }
     }
 
@@ -1231,7 +1253,10 @@ mod tests {
             .find(|node| node.node_id == generation_node_id("repo"))
             .expect("the full index writes the generation node");
         assert_eq!(node.node_type, GENERATION_TYPE);
-        assert_eq!(node.properties.get("base_revision").map(String::as_str), Some("k1"));
+        assert_eq!(
+            node.properties.get("base_revision").map(String::as_str),
+            Some("k1")
+        );
 
         // A changeset whose parent is the baseline is accepted, not refused.
         let stored = StoredIndex {
@@ -1294,7 +1319,10 @@ mod tests {
     fn edges_from_an_unchanged_file_survive_a_removal_with_their_properties() {
         let before = [
             ("a.py", "def alpha():\n    return 1\n"),
-            ("b.py", "def use():\n    return alpha()\n\nclass Child(Base):\n    pass\n"),
+            (
+                "b.py",
+                "def use():\n    return alpha()\n\nclass Child(Base):\n    pass\n",
+            ),
         ];
         let (nodes, edges) = indexed(&before);
         let alpha = symbol_id(&nodes, "alpha");
@@ -1353,7 +1381,10 @@ mod tests {
         let outcome = reindex_changeset(
             &modify,
             "k2",
-            &[file("a.py", "def alpha():\n    return 1\n\ndef extra():\n    return 2\n")],
+            &[file(
+                "a.py",
+                "def alpha():\n    return 1\n\ndef extra():\n    return 2\n",
+            )],
             &stored,
             &lookup,
         )
@@ -1407,8 +1438,9 @@ mod tests {
                     }
                     Method::RemoveNode { node_id } => {
                         self.nodes.remove(node_id);
-                        self.edges
-                            .retain(|(source, target, _), _| source != node_id && target != node_id);
+                        self.edges.retain(|(source, target, _), _| {
+                            source != node_id && target != node_id
+                        });
                     }
                     Method::RemoveEdge {
                         source_id,
@@ -1446,24 +1478,21 @@ mod tests {
                 .iter()
                 .map(|changed| changed.path.as_str())
                 .collect();
-            let generation = self.nodes.get(&generation_node_id("repo")).map(|properties| {
-                stored_generation(&serde_json::to_value(properties).unwrap())
-            });
+            let generation = self
+                .nodes
+                .get(&generation_node_id("repo"))
+                .map(|properties| stored_generation(&serde_json::to_value(properties).unwrap()));
             let mut stored = StoredIndex {
                 generation,
                 ..Default::default()
             };
             for path in &paths {
                 let id = fingerprint_node_id("repo", path).unwrap();
-                if let Some(print) = self
-                    .nodes
-                    .get(&id)
-                    .and_then(|properties| {
-                        super::enrich::fingerprint::stored_fingerprint(
-                            &serde_json::to_value(properties).unwrap(),
-                        )
-                    })
-                {
+                if let Some(print) = self.nodes.get(&id).and_then(|properties| {
+                    super::enrich::fingerprint::stored_fingerprint(
+                        &serde_json::to_value(properties).unwrap(),
+                    )
+                }) {
                     stored.prints.insert(print.path.clone(), print);
                 }
                 let ids: Vec<String> = self
@@ -1519,13 +1548,16 @@ mod tests {
 
         /// The code graph: everything but the generation record and the communities,
         /// which the changeset recomputes on the affected subgraph only.
-        fn code(&self) -> (BTreeMap<String, BTreeMap<String, String>>, BTreeMap<(String, String, String), BTreeMap<String, String>>) {
+        fn code(
+            &self,
+        ) -> (
+            BTreeMap<String, BTreeMap<String, String>>,
+            BTreeMap<(String, String, String), BTreeMap<String, String>>,
+        ) {
             let nodes = self
                 .nodes
                 .iter()
-                .filter(|(id, _)| {
-                    **id != generation_node_id("repo") && !id.starts_with("feature:")
-                })
+                .filter(|(id, _)| **id != generation_node_id("repo") && !id.starts_with("feature:"))
                 .map(|(id, properties)| (id.clone(), properties.clone()))
                 .collect();
             let edges = self
@@ -1557,7 +1589,10 @@ mod tests {
                 .collect())
         }
 
-        fn similar_candidates(&self, bands: &[(String, String)]) -> Result<Vec<StoredNode>, String> {
+        fn similar_candidates(
+            &self,
+            bands: &[(String, String)],
+        ) -> Result<Vec<StoredNode>, String> {
             Ok(self.marked(|properties| {
                 properties.get("type").map(String::as_str) == Some("SYMBOL")
                     && bands
@@ -1600,7 +1635,13 @@ mod tests {
 
     /// Land one changeset on `graph` the way the router does: read the stored index,
     /// re-index, write.
-    fn land(graph: &mut Graph, id: &str, parent: Option<&str>, commit: &str, steps: &[(&str, PathOp, Option<&str>)]) {
+    fn land(
+        graph: &mut Graph,
+        id: &str,
+        parent: Option<&str>,
+        commit: &str,
+        steps: &[(&str, PathOp, Option<&str>)],
+    ) {
         let paths = steps
             .iter()
             .map(|(path, op, _)| changed(path, *op))
@@ -1619,7 +1660,8 @@ mod tests {
     #[test]
     fn a_changeset_reindex_equals_a_full_reindex_of_the_resulting_tree() {
         let alpha = "def alpha(x):\n    total = 0\n    for i in x:\n        total = total + i\n    return total\n";
-        let beta = "def beta(y):\n    acc = 0\n    for j in y:\n        acc = acc + j\n    return acc\n";
+        let beta =
+            "def beta(y):\n    acc = 0\n    for j in y:\n        acc = acc + j\n    return acc\n";
         let util = format!("def helper():\n    return 1\n\n{alpha}");
         let util_extended = format!("{util}\ndef extra():\n    return 3\n");
         let main = "import lib\n\ndef run():\n    helper()\n    later()\n    return external()\n";
@@ -1731,18 +1773,26 @@ mod tests {
             .map(|(_, properties)| properties.clone())
             .unwrap();
         assert!(
-            main_run[UNRESOLVED_CALLS].split(';').any(|site| site == ":helper:0"),
+            main_run[UNRESOLVED_CALLS]
+                .split(';')
+                .any(|site| site == ":helper:0"),
             "{}",
             main_run[UNRESOLVED_CALLS]
         );
         // Each unresolved name is one bucket node with an edge from the node that waits on it.
-        assert!(incremental.nodes.contains_key(&unresolved_bucket_id("repo", "helper")));
-        assert!(!incremental.nodes.contains_key(&unresolved_bucket_id("repo", "later")));
+        assert!(incremental
+            .nodes
+            .contains_key(&unresolved_bucket_id("repo", "helper")));
+        assert!(!incremental
+            .nodes
+            .contains_key(&unresolved_bucket_id("repo", "later")));
         assert!(incremental
             .edges
             .keys()
-            .any(|(_, target, relationship)| target == &unresolved_bucket_id("repo", "external")
-                && relationship == UNRESOLVED_CALL_EDGE));
+            .any(
+                |(_, target, relationship)| target == &unresolved_bucket_id("repo", "external")
+                    && relationship == UNRESOLVED_CALL_EDGE
+            ));
         // No clone has more similar edges than the cap, and the capped family is the same.
         let mut degree: BTreeMap<&String, usize> = BTreeMap::new();
         for (source, target, relationship) in incremental.edges.keys() {
@@ -1752,7 +1802,10 @@ mod tests {
             }
         }
         assert!(degree.values().all(|count| *count <= 10));
-        assert!(degree.values().any(|count| *count == 10), "the family reaches the cap");
+        assert!(
+            degree.values().any(|count| *count == 10),
+            "the family reaches the cap"
+        );
         assert_eq!(
             incremental.nodes["file:main.py"].get(UNRESOLVED_IMPORTS),
             None,

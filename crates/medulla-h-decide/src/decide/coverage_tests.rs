@@ -63,19 +63,22 @@ fn publish(
     draft.classification = classification.iter().map(|c| c.to_string()).collect();
     draft.declared_capabilities = declared.iter().map(|c| c.to_string()).collect();
     store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                store,
-                tenant,
-                &format!("seed:{id}"),
-                nonce,
-                0,
-                "agent-component:publish",
-            ),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    store,
+                    tenant,
+                    &format!("seed:{id}"),
+                    nonce,
+                    0,
+                    "agent-component:publish",
+                ),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .expect("publishes");
 }
 

@@ -1247,7 +1247,12 @@ fn a_two_entity_generation_fixes_its_set_and_derives_s4_only_on_full_coverage() 
     let (lease, intent) = &held[0];
     let (completed, artifact) =
         lexical_completion_over(&pipeline, intent, 15, &expected, &mut members, None);
-    let first = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    let first = completed
+        .generation_checkpoint
+        .as_ref()
+        .unwrap()
+        .successor
+        .clone();
     assert!(!first.aggregate.is_complete());
     assert_eq!(first.aggregate.expected_entity_count, 2);
     pipeline
@@ -1262,7 +1267,12 @@ fn a_two_entity_generation_fixes_its_set_and_derives_s4_only_on_full_coverage() 
     let (lease, intent) = &held[1];
     let (completed, artifact) =
         lexical_completion_over(&pipeline, intent, 25, &expected, &mut members, Some(&first));
-    let full = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    let full = completed
+        .generation_checkpoint
+        .as_ref()
+        .unwrap()
+        .successor
+        .clone();
     assert!(full.aggregate.is_complete());
     assert_eq!(
         (
@@ -1305,7 +1315,12 @@ fn a_two_entity_generation_refuses_a_checkpoint_over_a_different_entity_set() {
     let (lease, intent) = &held[0];
     let (completed, artifact) =
         lexical_completion_over(&pipeline, intent, 15, &expected, &mut members, None);
-    let first = completed.generation_checkpoint.as_ref().unwrap().successor.clone();
+    let first = completed
+        .generation_checkpoint
+        .as_ref()
+        .unwrap()
+        .successor
+        .clone();
     pipeline
         .complete_generation(lease, &completed, &artifact, None)
         .unwrap();

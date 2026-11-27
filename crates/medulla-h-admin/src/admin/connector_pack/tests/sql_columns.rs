@@ -2,11 +2,11 @@
 //! which column values enter the embedding set and which are excluded, with
 //! the reason named in the receipt (MEDULLA-DECISION-ENGINE-R079.4, R079.6).
 
+use medulla_source_types::source_document::SourceIngestionOutcome;
 use medulla_source_types::source_ingestion::column_profile::{
     ColumnExclusion, ColumnExclusionReason, EmbeddingSetEntry, SqlColumnProfile, SqlColumnType,
     Q32_ONE,
 };
-use medulla_source_types::source_document::SourceIngestionOutcome;
 use medulla_source_types::source_ingestion::{
     SourceIngestionDisposition, SourceIngestionReceipt, SourceIngestionRequest, SourceJson,
 };

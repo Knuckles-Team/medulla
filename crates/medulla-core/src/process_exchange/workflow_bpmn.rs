@@ -96,13 +96,10 @@ pub fn workflow_to_bpmn(
     let kind_of: BTreeMap<&str, &CanonicalStep> =
         workflow.steps.iter().map(|s| (s.id.as_str(), s)).collect();
     let mut process = BpmnProcess {
-        id: xml_id(&format!(
-            "process_{}",
-            {
-                let hex = workflow_digest_hex(&workflow.digest);
-                &hex[..hex.len().min(12)]
-            }
-        )),
+        id: xml_id(&format!("process_{}", {
+            let hex = workflow_digest_hex(&workflow.digest);
+            &hex[..hex.len().min(12)]
+        })),
         name: workflow.name.clone(),
         ..BpmnProcess::default()
     };
@@ -204,13 +201,10 @@ pub fn workflow_to_bpmn(
         })
         .collect();
     Ok(BpmnDocument {
-        id: xml_id(&format!(
-            "definitions_{}",
-            {
-                let hex = workflow_digest_hex(&workflow.digest);
-                &hex[..hex.len().min(12)]
-            }
-        )),
+        id: xml_id(&format!("definitions_{}", {
+            let hex = workflow_digest_hex(&workflow.digest);
+            &hex[..hex.len().min(12)]
+        })),
         processes: vec![process],
         collaborations: Vec::new(),
         preserved: Vec::new(),

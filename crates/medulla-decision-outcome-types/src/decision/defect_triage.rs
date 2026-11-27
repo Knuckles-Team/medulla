@@ -8,9 +8,9 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::decision::codes;
+use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_decision_types::decision::DecisionPolicy;
-use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
 use medulla_source_types::lifecycle::Severity;
 use medulla_types::refusal_code::RefusalCode;
 
@@ -172,11 +172,7 @@ pub fn rank_suspects(
 
 /// Raise the severity one level when the defect has at least
 /// `knobs.escalate_symptoms` symptoms; `Critical` stays.
-pub fn escalate_severity(
-    severity: Severity,
-    symptom_count: u32,
-    knobs: &TriageKnobs,
-) -> Severity {
+pub fn escalate_severity(severity: Severity, symptom_count: u32, knobs: &TriageKnobs) -> Severity {
     if symptom_count < knobs.escalate_symptoms {
         return severity;
     }
@@ -217,9 +213,7 @@ pub fn find_duplicate(
         }
         let better = match best {
             None => true,
-            Some((top, id)) => {
-                overlap > top || (overlap == top && defect.defect_id.as_str() < id)
-            }
+            Some((top, id)) => overlap > top || (overlap == top && defect.defect_id.as_str() < id),
         };
         if better {
             best = Some((overlap, defect.defect_id.as_str()));
@@ -421,13 +415,25 @@ mod tests {
             max_suspects: 10,
             ..knobs
         };
-        assert_eq!(rank_suspects(&inputs, None, as_of, &wide), ["a", "b", "edge"]);
+        assert_eq!(
+            rank_suspects(&inputs, None, as_of, &wide),
+            ["a", "b", "edge"]
+        );
         assert_eq!(cap_frames(&[1, 2, 3], &knobs), [1, 2]);
 
         assert_eq!(escalate_severity(Severity::Low, 2, &knobs), Severity::Low);
-        assert_eq!(escalate_severity(Severity::Low, 3, &knobs), Severity::Medium);
-        assert_eq!(escalate_severity(Severity::Medium, 3, &knobs), Severity::High);
-        assert_eq!(escalate_severity(Severity::High, 3, &knobs), Severity::Critical);
+        assert_eq!(
+            escalate_severity(Severity::Low, 3, &knobs),
+            Severity::Medium
+        );
+        assert_eq!(
+            escalate_severity(Severity::Medium, 3, &knobs),
+            Severity::High
+        );
+        assert_eq!(
+            escalate_severity(Severity::High, 3, &knobs),
+            Severity::Critical
+        );
         assert_eq!(
             escalate_severity(Severity::Critical, 9, &knobs),
             Severity::Critical
@@ -445,13 +451,19 @@ mod tests {
             open("d1", "r", &["a", "b", "c", "d"]),
             open("d0", "other", &["a", "b"]),
         ];
-        assert_eq!(find_duplicate("r", &mine, &defects, &knobs).as_deref(), Some("d1"));
+        assert_eq!(
+            find_duplicate("r", &mine, &defects, &knobs).as_deref(),
+            Some("d1")
+        );
         assert_eq!(find_duplicate("none", &mine, &defects, &knobs), None);
         assert_eq!(
             find_duplicate("r", &mine, &[open("d2", "r", &["a", "c", "d"])], &knobs),
             None
         );
-        assert_eq!(find_duplicate("r", &[], &[open("d3", "r", &[])], &knobs), None);
+        assert_eq!(
+            find_duplicate("r", &[], &[open("d3", "r", &[])], &knobs),
+            None
+        );
     }
 
     // spec: MEDULLA-SDLC-R004.7

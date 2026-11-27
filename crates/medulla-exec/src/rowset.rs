@@ -221,7 +221,10 @@ impl RowSet {
     }
 
     /// Record why a top-`k` rank holds fewer than `k` rows (MEDULLA-FEDERATED-QUERY-R039).
-    pub fn with_shortfall(mut self, shortfall: Option<medulla_types::retrieval::Shortfall>) -> Self {
+    pub fn with_shortfall(
+        mut self,
+        shortfall: Option<medulla_types::retrieval::Shortfall>,
+    ) -> Self {
         self.shortfall = shortfall;
         self
     }

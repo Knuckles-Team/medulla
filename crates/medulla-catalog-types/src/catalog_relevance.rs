@@ -170,10 +170,18 @@ fn description_keys() -> [String; 5] {
     ]
 }
 fn term_keys() -> [String; 3] {
-    [format!("{CAT_NS}termLabel"), "termLabel".into(), "term_labels".into()]
+    [
+        format!("{CAT_NS}termLabel"),
+        "termLabel".into(),
+        "term_labels".into(),
+    ]
 }
 fn concept_keys() -> [String; 3] {
-    [format!("{CAT_NS}concept"), "concept".into(), "concepts".into()]
+    [
+        format!("{CAT_NS}concept"),
+        "concept".into(),
+        "concepts".into(),
+    ]
 }
 fn article_status_keys() -> [String; 2] {
     [format!("{CAT_NS}articleStatus"), "articleStatus".into()]
@@ -182,10 +190,7 @@ fn described_keys() -> [String; 2] {
     [format!("{CAT_NS}describedBest"), "describedBest".into()]
 }
 fn flag_keys() -> [String; 2] {
-    [
-        format!("{CAT_NS}flag"),
-        "flag".into(),
-    ]
+    [format!("{CAT_NS}flag"), "flag".into()]
 }
 
 /// The lexical form of one stored cell.
@@ -256,13 +261,20 @@ impl AssetDoc {
 
 /// The ranking text of one described asset, as stored in an article's `cat:describedBest`
 /// value: its names, descriptions, flags and the labels of the terms that define it.
-pub fn described_entry(obj: &Map<String, Value>, term_label_extras: &[String]) -> Map<String, Value> {
-    let strings = |values: Vec<String>| Value::Array(values.into_iter().map(Value::String).collect());
+pub fn described_entry(
+    obj: &Map<String, Value>,
+    term_label_extras: &[String],
+) -> Map<String, Value> {
+    let strings =
+        |values: Vec<String>| Value::Array(values.into_iter().map(Value::String).collect());
     let mut terms = collect(obj, &term_keys());
     terms.extend(term_label_extras.iter().cloned());
     let mut entry = Map::new();
     entry.insert("name".into(), strings(collect(obj, &name_keys())));
-    entry.insert("description".into(), strings(collect(obj, &description_keys())));
+    entry.insert(
+        "description".into(),
+        strings(collect(obj, &description_keys())),
+    );
     entry.insert("term_labels".into(), strings(terms));
     entry.insert("flag".into(), strings(collect(obj, &flag_keys())));
     entry
@@ -300,7 +312,10 @@ pub type UsageIndex = std::collections::HashMap<String, u64>;
 
 /// Sum the `asset_usage.reads` series (`(series name, summed count)`) per asset name.
 pub fn usage_index(series: &[(String, u64)]) -> UsageIndex {
-    let prefix = format!("{}|principal=", crate::asset_usage::ASSET_USAGE_READS_SERIES);
+    let prefix = format!(
+        "{}|principal=",
+        crate::asset_usage::ASSET_USAGE_READS_SERIES
+    );
     let mut out = UsageIndex::new();
     for (name, count) in series {
         let Some(rest) = name.strip_prefix(&prefix) else {
@@ -350,8 +365,9 @@ pub fn usage_sql_literal(index: &UsageIndex) -> String {
 /// Parse the usage argument `catalog_relevance` receives; an empty or malformed value is an
 /// error, never an empty index.
 pub fn parse_usage_argument(raw: &str) -> Result<UsageIndex, String> {
-    serde_json::from_str::<UsageIndex>(raw)
-        .map_err(|error| format!("CATALOG_USAGE_INVALID: the usage argument is not an index: {error}"))
+    serde_json::from_str::<UsageIndex>(raw).map_err(|error| {
+        format!("CATALOG_USAGE_INVALID: the usage argument is not an index: {error}")
+    })
 }
 
 /// Refusal code: a statement passed its own usage to `catalog_relevance`. Usage comes only
@@ -665,10 +681,16 @@ mod tests {
         let series = vec![
             ("asset_usage.reads|principal=a|asset=orders".to_string(), 4),
             ("asset_usage.reads|principal=b|asset=orders".to_string(), 6),
-            ("asset_usage.join|principal=a|asset=orders|with=x".to_string(), 9),
+            (
+                "asset_usage.join|principal=a|asset=orders|with=x".to_string(),
+                9,
+            ),
         ];
         let index = usage_index(&series);
-        assert_eq!(usage_of(&index, &["Orders".into(), "orders".into()], "<urn:x:y>"), 10);
+        assert_eq!(
+            usage_of(&index, &["Orders".into(), "orders".into()], "<urn:x:y>"),
+            10
+        );
         assert_eq!(usage_of(&index, &[], "<urn:medulla:asset:tool:orders>"), 10);
         assert_eq!(usage_of(&index, &["customers".into()], "<urn:x:y>"), 0);
     }
@@ -684,12 +706,19 @@ mod tests {
             rewritten,
             format!("SELECT id, CATALOG_RELEVANCE(props, 'a,(b', {literal}) AS s FROM nodes WHERE catalog_relevance (props, lower('x'), {literal}) > 0")
         );
-        assert_eq!(inject_usage_argument("SELECT 1", &literal).unwrap(), "SELECT 1");
-        assert!(inject_usage_argument("SELECT catalog_relevance(props, 'x', '{}')", &literal)
-            .unwrap_err()
-            .starts_with(CATALOG_USAGE_CLAIMED));
         assert_eq!(
-            parse_usage_argument("{\"orders\":7}").unwrap().get("orders"),
+            inject_usage_argument("SELECT 1", &literal).unwrap(),
+            "SELECT 1"
+        );
+        assert!(
+            inject_usage_argument("SELECT catalog_relevance(props, 'x', '{}')", &literal)
+                .unwrap_err()
+                .starts_with(CATALOG_USAGE_CLAIMED)
+        );
+        assert_eq!(
+            parse_usage_argument("{\"orders\":7}")
+                .unwrap()
+                .get("orders"),
             Some(&7)
         );
         assert!(parse_usage_argument("").is_err());
@@ -698,7 +727,9 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R108.16
     #[test]
     fn long_and_blank_queries_are_refused_with_their_codes() {
-        assert!(validate_query("   ").unwrap_err().starts_with(CATALOG_QUERY_EMPTY));
+        assert!(validate_query("   ")
+            .unwrap_err()
+            .starts_with(CATALOG_QUERY_EMPTY));
         let long = "a".repeat(1001);
         assert!(validate_query(&long)
             .unwrap_err()

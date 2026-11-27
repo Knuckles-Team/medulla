@@ -39,14 +39,15 @@ pub mod context_bundle;
 pub mod context_package;
 pub mod context_replacement;
 pub mod context_source;
+pub mod council;
 pub mod curriculum;
-pub mod held_out;
+pub mod defect_triage;
 pub mod delegation;
 pub mod delegation_quality;
 pub mod digest;
 pub mod entity_resolution;
-pub mod errors;
 pub mod entry_types;
+pub mod errors;
 pub mod evidence_stream;
 pub mod execution_part;
 pub mod feature_match;
@@ -54,6 +55,7 @@ pub mod field_shielding;
 pub mod graph_intake;
 pub mod harness_contrast;
 pub mod held_item;
+pub mod held_out;
 pub mod importance_penalty;
 pub mod indexless_retrieval;
 pub mod ingest_shortfall;
@@ -63,15 +65,14 @@ pub mod item_recommendation;
 pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
-pub mod defect_triage;
 pub mod lifecycle;
-pub mod merge_arming;
 pub mod limit_types;
-pub mod local_certification;
 pub mod load_set;
 pub mod load_set_knobs;
+pub mod local_certification;
 pub mod memory_benchmark;
 pub mod memory_rewrite;
+pub mod merge_arming;
 pub mod model_capacity;
 pub mod numeric;
 pub mod package_validation;
@@ -80,7 +81,6 @@ pub mod path_success;
 pub mod planner_cost_head;
 pub mod planning_admission;
 pub mod playbook;
-pub mod promotion_answer;
 pub mod policy;
 pub mod population;
 pub mod primitive;
@@ -89,10 +89,10 @@ pub mod process_plan;
 pub mod process_remediation;
 pub mod program;
 pub mod program_store;
+pub mod promotion_answer;
 pub mod promotion_tier;
 pub mod rapid_r015;
 pub mod record;
-pub mod council;
 pub mod recruit;
 pub mod recursive_trace;
 pub mod replay;
@@ -159,7 +159,7 @@ pub use importance_penalty::{FeatureImportance, ImportanceFeatures, PenaltyObjec
 pub use ingestion_admission::ContentClass;
 pub use jobs::{
     DecisionEvalOp, DecisionEvalReceipt, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobOutcome,
+    DecisionJobKind, DecisionJobOutcome, DecisionJobOutput, DecisionJobRecord,
     DecisionJobStatusRequest, DecisionReceiptGetRequest, DecisionReceiptListRequest,
     DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
     DecisionReceiptTimelineRequest, EvalCandidate, GoldGuarantee, GoldGuaranteeEvidence, HeadKind,
@@ -175,10 +175,10 @@ pub use policy::{
 };
 pub use record::{
     AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation,
-    DecisionInputs, PromptSelection, SelectedPromptFacts, DecisionOutcome, DecisionQuestion,
-    DecisionRecord, DerivationClass, DerivationEdge, EdgeSource, Elimination, PremiseClass,
-    PremiseProvenance, PremiseRef, ResolutionKind, SlotAssignment, SolverIdentity, TemplateFacts,
-    TraceFidelity, UniquenessProof, UniquenessScope, Violation, WhyNot,
+    DecisionInputs, DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass,
+    DerivationEdge, EdgeSource, Elimination, PremiseClass, PremiseProvenance, PremiseRef,
+    PromptSelection, ResolutionKind, SelectedPromptFacts, SlotAssignment, SolverIdentity,
+    TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope, Violation, WhyNot,
 };
 pub use replay::{
     EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,

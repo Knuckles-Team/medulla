@@ -74,8 +74,7 @@ pub(super) fn write(
     if let Some(bytes) = ctx.store.decision_artifact(ctx.tenant_id, &key)? {
         let recorded_ms = match kind {
             LifecycleRecordKind::WouldDispatch => {
-                decode_artifact::<StoredWouldDispatch>(&bytes, "would-dispatch record")?
-                    .recorded_ms
+                decode_artifact::<StoredWouldDispatch>(&bytes, "would-dispatch record")?.recorded_ms
             }
             LifecycleRecordKind::ScenarioRun => {
                 decode_artifact::<StoredScenarioRun>(&bytes, "scenario run")?.recorded_ms
@@ -148,5 +147,8 @@ pub(super) fn read(
 
 fn matches_query(run: &ScenarioRun, query: &LifecycleRecordQuery) -> bool {
     query.phase.as_ref().is_none_or(|phase| &run.phase == phase)
-        && query.branch.as_ref().is_none_or(|branch| &run.branch == branch)
+        && query
+            .branch
+            .as_ref()
+            .is_none_or(|branch| &run.branch == branch)
 }

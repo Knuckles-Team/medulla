@@ -6,7 +6,13 @@ use std::collections::BTreeSet;
 use medulla_sdlc::lifecycle::scenario::{bundle_completeness, latest_main_run};
 use medulla_source_types::lifecycle::{ScenarioResult, ScenarioRun, StoredScenarioRun};
 
-fn stored(phase: &str, branch: &str, result: ScenarioResult, at: u64, id: &str) -> StoredScenarioRun {
+fn stored(
+    phase: &str,
+    branch: &str,
+    result: ScenarioResult,
+    at: u64,
+    id: &str,
+) -> StoredScenarioRun {
     StoredScenarioRun {
         id: id.to_string(),
         run: ScenarioRun {
@@ -68,7 +74,10 @@ fn only_the_latest_run_of_the_phase_on_main_counts() {
     let mut failing = runs.to_vec();
     failing.push(stored("p1", "main", ScenarioResult::Failed, 40, "late"));
     assert!(!bundle_completeness(&scoped, &delivered, "p1", &failing).complete);
-    assert_eq!(latest_main_run("p1", &failing).map(|r| r.id.as_str()), Some("late"));
+    assert_eq!(
+        latest_main_run("p1", &failing).map(|r| r.id.as_str()),
+        Some("late")
+    );
 }
 
 // spec: MEDULLA-SDLC-R013

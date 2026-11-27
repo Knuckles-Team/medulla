@@ -34,7 +34,12 @@ pub(super) fn failed_run_filing(
     if reason == FINAL_ANSWER {
         return None;
     }
-    let text_of = |key: &str| props.get(key).and_then(Value::as_str).filter(|v| !v.trim().is_empty());
+    let text_of = |key: &str| {
+        props
+            .get(key)
+            .and_then(Value::as_str)
+            .filter(|v| !v.trim().is_empty())
+    };
     let run = text_of("run_trace_id").unwrap_or(node_id);
     let task_class = text_of("runTaskClass").unwrap_or("unclassified");
     let observed_at = props
@@ -82,7 +87,11 @@ pub(super) async fn plan_failed_run(
     method: &Method,
     now_ms: u64,
 ) -> Result<Option<Method>, String> {
-    let Method::AddNode { node_id, properties_msgpack } = method else {
+    let Method::AddNode {
+        node_id,
+        properties_msgpack,
+    } = method
+    else {
         return Ok(None);
     };
     let props = super::gateway_graph::decode_json_object(properties_msgpack);
@@ -165,8 +174,8 @@ mod tests {
     fn the_trace_and_its_defect_commit_in_one_batch() {
         let mut defect = Map::new();
         defect.insert("type".into(), "Defect".into());
-        let batch =
-            fold_trace_and_defect("t1", &trace(Some("error")), "defect:g:1", defect).expect("folds");
+        let batch = fold_trace_and_defect("t1", &trace(Some("error")), "defect:g:1", defect)
+            .expect("folds");
         let operations = ops(&batch);
         assert_eq!(operations.len(), 2);
         assert_eq!(operations[0]["op"], "add_node");

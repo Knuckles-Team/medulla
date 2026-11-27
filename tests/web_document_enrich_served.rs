@@ -469,7 +469,10 @@ async fn sections_and_links_run() {
     )
     .await;
     let receipt = enrich(&state, 3, "doc:sections", FetchBackend::Webarchiver).await;
-    let digest_hex = receipt.content_digest.trim_start_matches("sha256:").to_string();
+    let digest_hex = receipt
+        .content_digest
+        .trim_start_matches("sha256:")
+        .to_string();
     let section = |id: u32| format!("section:doc:sections:{}:{id}", &digest_hex[..16]);
 
     // Four sections: Guide, its intro, Part A under Guide, and Appendix.
@@ -503,7 +506,10 @@ async fn sections_and_links_run() {
         )
         .await;
         call_id += 1;
-        assert!(nested, "section {child} has no subsectionOf edge to section 0");
+        assert!(
+            nested,
+            "section {child} has no subsectionOf edge to section 0"
+        );
     }
 
     // Each chunk is in the section its first byte falls in.
@@ -605,7 +611,14 @@ async fn sections_and_links_run() {
         section(0),
         format!("processed-document:doc:sections:{}", &digest_hex[..32]),
     ] {
-        let present = bool_call(&state, call_id, Method::HasNode { node_id: old.clone() }).await;
+        let present = bool_call(
+            &state,
+            call_id,
+            Method::HasNode {
+                node_id: old.clone(),
+            },
+        )
+        .await;
         call_id += 1;
         assert!(!present, "{old} survived the new digest");
     }
@@ -689,7 +702,10 @@ async fn processed_document_reads_back_run() {
     )
     .await;
     let receipt = enrich(&state, 3, "doc:evidence", FetchBackend::Webarchiver).await;
-    let digest_hex = receipt.content_digest.trim_start_matches("sha256:").to_string();
+    let digest_hex = receipt
+        .content_digest
+        .trim_start_matches("sha256:")
+        .to_string();
     let node = format!("processed-document:doc:evidence:{}", &digest_hex[..32]);
     // A principal other than the enriching one reads the record back.
     let response = test_support::dispatch(

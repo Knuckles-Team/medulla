@@ -90,8 +90,12 @@ fn live_image(
     service: &SemanticIndexService,
     binding: &SemanticBinding,
 ) -> Result<LiveImage, String> {
-    let dimension = usize::try_from(binding.dimension)
-        .map_err(|_| format!("{}: binding dimension", ServerErrorCode::SearchProbeModelMismatch))?;
+    let dimension = usize::try_from(binding.dimension).map_err(|_| {
+        format!(
+            "{}: binding dimension",
+            ServerErrorCode::SearchProbeModelMismatch
+        )
+    })?;
     let (generation, image) = service
         .read_live()
         .map_err(|error| error.to_string())?

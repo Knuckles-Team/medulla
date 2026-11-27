@@ -45,7 +45,15 @@ pub(crate) fn expand_seeds(
     }
     let knobs = medulla_server_api::knob_config::knobs();
     let fanout = usize::try_from(knobs.discover_hop_fanout).unwrap_or(usize::MAX);
-    expand_hops(core, &seeds, hops, fanout, knobs.discover_hop_decay, k, scope)
+    expand_hops(
+        core,
+        &seeds,
+        hops,
+        fanout,
+        knobs.discover_hop_decay,
+        k,
+        scope,
+    )
 }
 
 use medulla_ingestion_types::ingestion_wire::{
@@ -364,13 +372,19 @@ mod tests {
         adapt_deep_arms(&mut deep, "adapter-1", |v| {
             (v.len() == 2).then(|| v.iter().map(|x| x * 2.0).collect())
         });
-        assert_eq!(deep.vectors, vec![vec![2.0, 4.0], vec![6.0, 8.0], vec![5.0]]);
+        assert_eq!(
+            deep.vectors,
+            vec![vec![2.0, 4.0], vec![6.0, 8.0], vec![5.0]]
+        );
         assert!(deep
             .evidence
             .iter()
             .all(|e| e.adapter_digest.as_deref() == Some("adapter-1")));
         assert_eq!(
-            deep.evidence.iter().map(|e| e.digest.as_str()).collect::<Vec<_>>(),
+            deep.evidence
+                .iter()
+                .map(|e| e.digest.as_str())
+                .collect::<Vec<_>>(),
             ["a", "b", "c"]
         );
     }

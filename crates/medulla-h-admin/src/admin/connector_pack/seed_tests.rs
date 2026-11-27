@@ -269,10 +269,7 @@ mod served {
 
     fn parts() -> Vec<Content> {
         vec![
-            seed_part(
-                "identity",
-                "<urn:seed:instance> a <urn:seed:Identity> .\n",
-            ),
+            seed_part("identity", "<urn:seed:instance> a <urn:seed:Identity> .\n"),
             seed_part("catalog", "<urn:seed:item> a <urn:seed:CatalogEntry> .\n"),
             seed_part(
                 "references",
@@ -380,7 +377,10 @@ mod served {
         let _env = served.with_graph_persistence().await;
         bind(&served, CONNECTOR, ADMIN).await;
         let first = imported(&served, &build_pack(CONNECTOR, &parts()), None).await;
-        let seed = first.seed.clone().expect("a pack with seed parts carries a receipt");
+        let seed = first
+            .seed
+            .clone()
+            .expect("a pack with seed parts carries a receipt");
         assert_eq!(seed.connector.as_str(), CONNECTOR);
         assert!(seed
             .outcomes
@@ -398,9 +398,18 @@ mod served {
         )
         .await;
         let reimport = second.seed.clone().expect("the reimport carries a receipt");
-        assert_eq!(reimport.outcomes[&SeedPartKey::Catalog], SeedPartOutcome::Replaced);
-        assert_eq!(reimport.outcomes[&SeedPartKey::Identity], SeedPartOutcome::Unchanged);
-        assert_eq!(reimport.outcomes[&SeedPartKey::References], SeedPartOutcome::Unchanged);
+        assert_eq!(
+            reimport.outcomes[&SeedPartKey::Catalog],
+            SeedPartOutcome::Replaced
+        );
+        assert_eq!(
+            reimport.outcomes[&SeedPartKey::Identity],
+            SeedPartOutcome::Unchanged
+        );
+        assert_eq!(
+            reimport.outcomes[&SeedPartKey::References],
+            SeedPartOutcome::Unchanged
+        );
         assert_ne!(reimport.content_digest, seed.content_digest);
         assert_ne!(reimport.graph_revision, seed.graph_revision);
 
@@ -431,20 +440,28 @@ mod served {
                 "urn:medulla:seed-receipt:{CONNECTOR}:{}:{part}",
                 reimport.content_digest.to_hex()
             );
-            let lines: Vec<&str> = projected.lines().filter(|line| line.contains(&node)).collect();
+            let lines: Vec<&str> = projected
+                .lines()
+                .filter(|line| line.contains(&node))
+                .collect();
             assert!(
-                lines.iter().any(|line| line.contains("connector-seed#outcome")
-                    && line.contains(&format!("\"{outcome}\""))),
+                lines
+                    .iter()
+                    .any(|line| line.contains("connector-seed#outcome")
+                        && line.contains(&format!("\"{outcome}\""))),
                 "{part} is {outcome}: {projected}"
             );
             assert!(
-                lines.iter().any(|line| line.contains("connector-seed#graphRevision")
-                    && line.contains(&reimport.graph_revision)),
+                lines
+                    .iter()
+                    .any(|line| line.contains("connector-seed#graphRevision")
+                        && line.contains(&reimport.graph_revision)),
                 "{part} names the revision node: {projected}"
             );
             assert!(
-                lines.iter().any(|line| line.contains("connector-seed#digest")
-                    && line.contains("sha256:")),
+                lines
+                    .iter()
+                    .any(|line| line.contains("connector-seed#digest") && line.contains("sha256:")),
                 "{part} has a digest: {projected}"
             );
         }

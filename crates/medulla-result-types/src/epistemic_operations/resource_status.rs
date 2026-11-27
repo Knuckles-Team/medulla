@@ -35,8 +35,7 @@ pub enum ResourceReservationStatusResultSchemaVersion {
 
 /// The state a reservation summary reports: the one `ResourceReservationMachine` state, not a copy
 /// (MEDULLA-PLACEMENT-R781.6).
-pub type ResourceReservationSummaryState =
-    super::resource_core::ResourceReservationRecordState;
+pub type ResourceReservationSummaryState = super::resource_core::ResourceReservationRecordState;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

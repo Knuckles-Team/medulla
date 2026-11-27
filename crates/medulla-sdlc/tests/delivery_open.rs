@@ -7,11 +7,7 @@ use medulla_sdlc::lifecycle::delivery::open::{
 use medulla_source_types::delivery::{AssignmentState, MandateStrength};
 use medulla_source_types::lifecycle::{ProjectMode, ProposalOrigin};
 
-fn input<'a>(
-    rows: &'a [String],
-    origin: ProposalOrigin,
-    mode: ProjectMode,
-) -> OpenDelivery<'a> {
+fn input<'a>(rows: &'a [String], origin: ProposalOrigin, mode: ProjectMode) -> OpenDelivery<'a> {
     OpenDelivery {
         tenant: "t1",
         repo: "medulla",
@@ -36,7 +32,10 @@ fn one_delivery_per_slice_and_idempotent_reopen() {
         None,
     )
     .expect("opens");
-    assert_eq!(requested.id, delivery_id("t1", "dec-1", "MEDULLA-SDLC-R019"));
+    assert_eq!(
+        requested.id,
+        delivery_id("t1", "dec-1", "MEDULLA-SDLC-R019")
+    );
     assert!(requested.id.starts_with("delivery:") && requested.id.len() == 9 + 32);
     assert_eq!(requested.scope_rows, ["A-R1", "B-R2"]);
     assert_eq!(requested.mandate.strength, MandateStrength::Explicit);
@@ -51,7 +50,10 @@ fn one_delivery_per_slice_and_idempotent_reopen() {
     )
     .expect("opens");
     assert_eq!(inferred.mandate.strength, MandateStrength::Inferred);
-    assert_eq!(inferred.mandate.basis, "inferred from dispatch decision dec-1");
+    assert_eq!(
+        inferred.mandate.basis,
+        "inferred from dispatch decision dec-1"
+    );
     // A second call with the same key returns the first delivery unchanged.
     let wider = vec!["A-R1".to_string(), "B-R2".to_string(), "C-R3".to_string()];
     let again = open_delivery(
@@ -98,8 +100,8 @@ fn unprompted_slice_is_recorded_not_run_in_development_mode() {
         (ProposalOrigin::Requested, ProjectMode::Development),
         (ProposalOrigin::Requested, ProjectMode::Evolving),
     ] {
-        let outcome = shadow_or_dispatch(&input(&rows, origin, mode), None, &digests)
-            .expect("decides");
+        let outcome =
+            shadow_or_dispatch(&input(&rows, origin, mode), None, &digests).expect("decides");
         assert!(matches!(outcome, DispatchOutcome::Dispatched(_)));
     }
     let reference = shadow_or_dispatch(

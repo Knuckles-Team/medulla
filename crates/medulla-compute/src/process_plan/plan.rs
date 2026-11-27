@@ -16,9 +16,9 @@ use medulla_decision_types::decision::process_plan::{
     PROCESS_PLAN_TOO_LARGE, PROCESS_STEP_UNBOUND, WORKFLOW_UNKNOWN,
 };
 use medulla_decision_types::decision::task_plan::{
-    ApprovalSpec, BranchArm, BranchCondition, BranchDecisionCondition,
-    BranchKind, BranchSpec, DecisionSpec, JoinSpec, TaskPlanCall, TaskPlanProposal,
-    TaskPlanTask, MAX_CONCURRENCY, MAX_DECISION_IRI_BYTES, MAX_TASKS,
+    ApprovalSpec, BranchArm, BranchCondition, BranchDecisionCondition, BranchKind, BranchSpec,
+    DecisionSpec, JoinSpec, TaskPlanCall, TaskPlanProposal, TaskPlanTask, MAX_CONCURRENCY,
+    MAX_DECISION_IRI_BYTES, MAX_TASKS,
 };
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_import::{
@@ -207,7 +207,10 @@ fn contract_anchors(graph: &mut Graph) {
                 graph.edges.push(Edge {
                     source: inbound.source.clone(),
                     target: outbound.target.clone(),
-                    condition: inbound.condition.clone().or_else(|| outbound.condition.clone()),
+                    condition: inbound
+                        .condition
+                        .clone()
+                        .or_else(|| outbound.condition.clone()),
                     default: inbound.default || outbound.default,
                 });
             }
@@ -225,7 +228,11 @@ fn lower_boundaries(graph: &mut Graph, digest: &str) {
         .iter()
         .filter(|n| n.step.kind == StepKind::Boundary)
         .map(|n| {
-            let trigger = n.step.reference.clone().unwrap_or_else(|| n.step.label.clone());
+            let trigger = n
+                .step
+                .reference
+                .clone()
+                .unwrap_or_else(|| n.step.label.clone());
             (n.id.clone(), trigger)
         })
         .collect();
@@ -462,10 +469,7 @@ fn task_of(
         }
         (StepKind::Join, _) => {
             let Some(split) = splits.get(&node.id) else {
-                return Err(refusal(
-                    "BRANCH_JOIN_UNMATCHED",
-                    vec![node.id.clone()],
-                ));
+                return Err(refusal("BRANCH_JOIN_UNMATCHED", vec![node.id.clone()]));
             };
             task.join = Some(JoinSpec {
                 branch_task_id: split.clone(),

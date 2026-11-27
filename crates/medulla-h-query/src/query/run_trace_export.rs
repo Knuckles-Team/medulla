@@ -111,10 +111,7 @@ fn children(core: &GraphCore, parent: &str) -> Vec<(&'static str, String)> {
 
 /// Walk the trace depth first and return its records in export order, with the span ids the
 /// walked runs declared.
-fn walk(
-    core: &GraphCore,
-    root: &str,
-) -> Result<(Vec<Found>, BTreeSet<String>), String> {
+fn walk(core: &GraphCore, root: &str) -> Result<(Vec<Found>, BTreeSet<String>), String> {
     let not_found = || format!("{RUN_TRACE_NOT_FOUND}: {root}");
     let root_props = node_props(core, root).ok_or_else(not_found)?;
     // The caller's projection already narrowed the graph to its tenant: a node of another
@@ -149,7 +146,9 @@ fn walk(
                 return Err(format!("{EXPORT_SPAN_DUPLICATE}: {child}"));
             }
             if found.len() >= MAX_RECORDS {
-                return Err(invalid(format!("the trace holds more than {MAX_RECORDS} records")));
+                return Err(invalid(format!(
+                    "the trace holds more than {MAX_RECORDS} records"
+                )));
             }
             if kind == RunTraceRecordKind::ChildAgent {
                 declared.extend(declared_spans(&props));
@@ -255,7 +254,10 @@ pub(crate) fn export_page(
     } as usize;
     // The revision pins the read: a caller that pinned another one reads a different graph.
     let revision = core.version();
-    if request.source_revision.is_some_and(|pinned| pinned != revision) {
+    if request
+        .source_revision
+        .is_some_and(|pinned| pinned != revision)
+    {
         return Err(format!(
             "{EXPORT_CURSOR_STALE}: the export is pinned to revision {} and the graph is at {revision}",
             request.source_revision.unwrap_or_default()
@@ -282,7 +284,10 @@ pub(crate) fn export_page(
         })
     };
     let selected: Vec<&Found> = found.iter().filter(|record| in_window(record)).collect();
-    let refs: Vec<&str> = selected.iter().map(|record| record.record_ref.as_str()).collect();
+    let refs: Vec<&str> = selected
+        .iter()
+        .map(|record| record.record_ref.as_str())
+        .collect();
     let digest = snapshot_digest(&refs);
 
     let offset = match request.page_token.as_deref() {
@@ -356,12 +361,7 @@ pub(crate) fn handle_run_trace_export(
     };
     let projected = authority.project_core(ctx.core);
     let page_size_max = medulla_server_api::knob_config::knobs().orchestration_limits_page_size_max;
-    match export_page(
-        &projected,
-        ctx.caller,
-        &request,
-        page_size_max,
-    ) {
+    match export_page(&projected, ctx.caller, &request, page_size_max) {
         Ok(page) => Response::ok(ctx.req_id, ResultPayload::of::<RunTraceExport>(page)),
         Err(message) => Response::err(ctx.req_id, message),
     }
@@ -404,10 +404,30 @@ mod tests {
                 "declaredSpans": ["span:a", "span:b"],
             }),
         );
-        put(&core, "run:child", "RunTrace", serde_json::json!({"started_at_ms": 150}));
-        put(&core, "span:a", "Span", serde_json::json!({"started_at_ms": 110, "output": "secret"}));
-        put(&core, "span:b", "Span", serde_json::json!({"started_at_ms": 120}));
-        put(&core, "call:1", "ToolCall", serde_json::json!({"started_at_ms": 130, "tool_name": "t"}));
+        put(
+            &core,
+            "run:child",
+            "RunTrace",
+            serde_json::json!({"started_at_ms": 150}),
+        );
+        put(
+            &core,
+            "span:a",
+            "Span",
+            serde_json::json!({"started_at_ms": 110, "output": "secret"}),
+        );
+        put(
+            &core,
+            "span:b",
+            "Span",
+            serde_json::json!({"started_at_ms": 120}),
+        );
+        put(
+            &core,
+            "call:1",
+            "ToolCall",
+            serde_json::json!({"started_at_ms": 130, "tool_name": "t"}),
+        );
         link(&core, "run:parent", "run:child", EDGE_HAS_CHILD_RUN);
         link(&core, "run:parent", "span:a", EDGE_HAS_SPAN);
         link(&core, "run:parent", "span:b", EDGE_HAS_SPAN);
@@ -426,12 +446,22 @@ mod tests {
     fn parent_with_children_exports_complete_and_stable() {
         let core = trace();
         let first = export_page(&core, "owner", &ask(), 100).unwrap();
-        let refs: Vec<&str> = first.records.iter().map(|r| r.record_ref.as_str()).collect();
+        let refs: Vec<&str> = first
+            .records
+            .iter()
+            .map(|r| r.record_ref.as_str())
+            .collect();
         // Parent first, then each child by node id with its own children right after it.
-        assert_eq!(refs, ["run:parent", "run:child", "call:1", "span:a", "span:b"]);
+        assert_eq!(
+            refs,
+            ["run:parent", "run:child", "call:1", "span:a", "span:b"]
+        );
         assert!(first.complete && first.refusal.is_none() && first.missing_children.is_empty());
         assert_eq!(first.records[0].kind, RunTraceRecordKind::ParentRun);
-        assert!(first.records.iter().all(|r| r.properties.is_none()), "digests only");
+        assert!(
+            first.records.iter().all(|r| r.properties.is_none()),
+            "digests only"
+        );
         let again = export_page(&core, "owner", &ask(), 100).unwrap();
         assert_eq!(first.snapshot_digest, again.snapshot_digest);
         assert!(first.snapshot_digest.starts_with("sha256:"));
@@ -468,7 +498,13 @@ mod tests {
         // A larger page size is clamped to the registry ceiling.
         request.page_token = None;
         request.page_size = Some(900);
-        assert_eq!(export_page(&core, "owner", &request, 3).unwrap().records.len(), 3);
+        assert_eq!(
+            export_page(&core, "owner", &request, 3)
+                .unwrap()
+                .records
+                .len(),
+            3
+        );
         // The trace changed after the token was issued.
         put(&core, "span:c", "Span", serde_json::json!({}));
         link(&core, "run:parent", "span:c", EDGE_HAS_SPAN);
@@ -509,7 +545,11 @@ mod tests {
         let mut request = ask();
         request.redaction_profile = RedactionProfile::StripContent;
         let page = export_page(&core, "someone", &request, 100).unwrap();
-        let span = page.records.iter().find(|r| r.record_ref == "span:a").unwrap();
+        let span = page
+            .records
+            .iter()
+            .find(|r| r.record_ref == "span:a")
+            .unwrap();
         let props = span.properties.as_ref().expect("structure kept");
         assert!(props.contains_key("started_at_ms") && !props.contains_key("output"));
 
@@ -517,17 +557,33 @@ mod tests {
         let refusal = export_page(&core, "someone", &request, 100).unwrap_err();
         assert!(refusal.starts_with("ACCESS_DENIED"), "{refusal}");
         let owned = export_page(&core, "owner", &request, 100).unwrap();
-        let span = owned.records.iter().find(|r| r.record_ref == "span:a").unwrap();
+        let span = owned
+            .records
+            .iter()
+            .find(|r| r.record_ref == "span:a")
+            .unwrap();
         assert_eq!(span.properties.as_ref().unwrap()["output"], "secret");
 
         request.redaction_profile = RedactionProfile::DigestsOnly;
-        request.time_range = Some(TimeRange { from_ms: 105, to_ms: 125 });
+        request.time_range = Some(TimeRange {
+            from_ms: 105,
+            to_ms: 125,
+        });
         let windowed = export_page(&core, "owner", &request, 100).unwrap();
-        let refs: Vec<&str> = windowed.records.iter().map(|r| r.record_ref.as_str()).collect();
+        let refs: Vec<&str> = windowed
+            .records
+            .iter()
+            .map(|r| r.record_ref.as_str())
+            .collect();
         assert_eq!(refs, ["span:a", "span:b"]);
 
-        request.time_range = Some(TimeRange { from_ms: 9, to_ms: 1 });
-        assert!(export_page(&core, "owner", &request, 100).unwrap_err().starts_with("INVALID_ARGUMENT"));
+        request.time_range = Some(TimeRange {
+            from_ms: 9,
+            to_ms: 1,
+        });
+        assert!(export_page(&core, "owner", &request, 100)
+            .unwrap_err()
+            .starts_with("INVALID_ARGUMENT"));
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R009.100

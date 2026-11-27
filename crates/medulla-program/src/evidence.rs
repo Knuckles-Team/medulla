@@ -66,7 +66,10 @@ pub fn check_held_out_split(examples: &[TrainingExample]) -> Result<(), HeldOutR
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FrontRefusal {
     /// The test split holds fewer examples than `knob front.min_eval_examples`.
-    EvalTooSmall { test_examples: usize, minimum: usize },
+    EvalTooSmall {
+        test_examples: usize,
+        minimum: usize,
+    },
     /// An evaluation carries no `benchmark_score`, so it has one objective
     /// where the front needs two.
     ScoreLength { subject_ref: String },
@@ -82,8 +85,7 @@ pub fn check_front_inputs(
     request: &OptimizationRequest,
     min_eval_examples: usize,
 ) -> Result<(), FrontRefusal> {
-    if request.optimizer != crate::OptimizerKind::Gepa || request.candidate_evaluations.is_empty()
-    {
+    if request.optimizer != crate::OptimizerKind::Gepa || request.candidate_evaluations.is_empty() {
         return Ok(());
     }
     let test_examples = request
@@ -125,7 +127,10 @@ pub fn program_held_out_evidence(
         .filter(|example| example.split == ExampleSplit::Test)
         .collect();
     tests.sort_by(|left, right| left.example_ref.as_str().cmp(right.example_ref.as_str()));
-    let test_refs: Vec<&str> = tests.iter().map(|example| example.example_ref.as_str()).collect();
+    let test_refs: Vec<&str> = tests
+        .iter()
+        .map(|example| example.example_ref.as_str())
+        .collect();
     let evaluation_set_digest = digest_text(HELD_OUT_SET_DIGEST_DOMAIN, &test_refs);
     let receipt = Sha256::digest(serde_json::to_vec(evaluation).ok()?);
     let challenger = ppm(evaluation.aggregate_score);

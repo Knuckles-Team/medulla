@@ -377,8 +377,8 @@ fn a_program_profiles_and_returns_channels() {
 // spec: MEDULLA-FEDERATED-QUERY-R706.5
 #[test]
 fn explain_lists_the_applied_policies() {
-    use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
     use medulla_exec::policy_mask::{PolicySet, RowFilterPolicy};
+    use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
     let (view, semantic) = fixture();
     let set = PolicySet {
         row_filters: vec![RowFilterPolicy {
@@ -390,8 +390,9 @@ fn explain_lists_the_applied_policies() {
     let bound = PlanCtx::new(&view, &semantic)
         .with_policies(&set)
         .with_principal("role:analyst");
-    let UqlResult::Explain { applied_policies, .. } =
-        run("EXPLAIN MATCH (:Doc)", &Params::new(), &bound).unwrap()
+    let UqlResult::Explain {
+        applied_policies, ..
+    } = run("EXPLAIN MATCH (:Doc)", &Params::new(), &bound).unwrap()
     else {
         panic!("explain expected")
     };
@@ -405,8 +406,9 @@ fn explain_lists_the_applied_policies() {
     );
     // No policy bound: nothing is listed.
     let plain = PlanCtx::new(&view, &semantic);
-    let UqlResult::Explain { applied_policies, .. } =
-        run("EXPLAIN MATCH (:Doc)", &Params::new(), &plain).unwrap()
+    let UqlResult::Explain {
+        applied_policies, ..
+    } = run("EXPLAIN MATCH (:Doc)", &Params::new(), &plain).unwrap()
     else {
         panic!("explain expected")
     };

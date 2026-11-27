@@ -127,9 +127,8 @@ pub fn extract_object_model(documents: &[&str]) -> Result<ObjectModel, ObjectMod
             .or_default()
             .push(&triple.object);
     }
-    let of_type = |class: &str| -> BTreeSet<String> {
-        subjects_of.get(class).cloned().unwrap_or_default()
-    };
+    let of_type =
+        |class: &str| -> BTreeSet<String> { subjects_of.get(class).cloned().unwrap_or_default() };
     let get = |subject: &str, predicate: &str| {
         let mut found: Vec<&Term> = objects
             .get(subject)

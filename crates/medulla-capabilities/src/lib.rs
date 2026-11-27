@@ -36,10 +36,10 @@
 pub mod catalog;
 mod descriptor;
 mod domains;
-#[cfg(feature = "contract-schema")]
-pub mod wire_vectors;
 pub mod error_routing;
 pub mod scopes;
+#[cfg(feature = "contract-schema")]
+pub mod wire_vectors;
 
 pub use catalog::{contract_catalog_digest, method_schema};
 

@@ -1134,8 +1134,18 @@ mod tests {
                         .is_ok_and(|fired| fired.id == edge.id)
                 })
                 .unwrap_or_else(|| panic!("edge {} never applies", edge.id));
-            assert_eq!(edge.from.apply(edge.event, &facts), Ok(edge.to), "{}", edge.id);
-            assert!(!edge.from.is_terminal(), "terminal {:?} has edge {}", edge.from, edge.id);
+            assert_eq!(
+                edge.from.apply(edge.event, &facts),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
+            assert!(
+                !edge.from.is_terminal(),
+                "terminal {:?} has edge {}",
+                edge.from,
+                edge.id
+            );
         }
     }
 
@@ -1167,12 +1177,16 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-        let offenders = raw_status_writers(&root.join("medulla-work-store/src/redb_store/work_item"));
+        let offenders =
+            raw_status_writers(&root.join("medulla-work-store/src/redb_store/work_item"));
         assert!(offenders.is_empty(), "raw status writes: {offenders:?}");
         // The census sites hold the typed state, never a status string.
         let production = |rel: &str| {
             let text = std::fs::read_to_string(root.join(rel)).expect(rel);
-            text.split("#[cfg(test)]").next().unwrap_or_default().to_string()
+            text.split("#[cfg(test)]")
+                .next()
+                .unwrap_or_default()
+                .to_string()
         };
         let submit = production("medulla-work-store/src/redb_store/work_item/submit.rs");
         for typed in ["status: &str", "status: &'args str", "status: &'a str"] {

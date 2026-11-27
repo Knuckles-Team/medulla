@@ -107,7 +107,10 @@ impl ScheduleCache {
 
 /// Start the tick task once per process, on the engine clock.
 pub(super) fn ensure_schedule_tick(state: Arc<RwLock<ServerState>>) {
-    spawn_schedule_tick(state, Arc::new(medulla_kernel::kernel::dispatch_support::EngineClock));
+    spawn_schedule_tick(
+        state,
+        Arc::new(medulla_kernel::kernel::dispatch_support::EngineClock),
+    );
 }
 
 /// The tick task reading time from `clock`, the one engine clock seam
@@ -120,7 +123,15 @@ fn spawn_schedule_tick(state: Arc<RwLock<ServerState>>, clock: Arc<dyn Clock>) {
         loop {
             let poll_s = medulla_server_api::knob_config::knobs().jobs_schedule_poll_s;
             tokio::time::sleep(Duration::from_secs(poll_s)).await;
-            tick_once(&state, &host, &mut cache, &mut last_ms, clock.as_ref(), poll_s).await;
+            tick_once(
+                &state,
+                &host,
+                &mut cache,
+                &mut last_ms,
+                clock.as_ref(),
+                poll_s,
+            )
+            .await;
         }
     });
 }
@@ -176,7 +187,9 @@ async fn tick_pass(
             }
             // MEDULLA-DURABLE-KERNEL-R877.3: the graphs of a bundle import that stopped before
             // it was `ready` are deleted, and its record is set `aborted`.
-            if let Err(error) = crate::bundle_import_recovery::recover_bundle_imports(state, now_ms).await {
+            if let Err(error) =
+                crate::bundle_import_recovery::recover_bundle_imports(state, now_ms).await
+            {
                 eprintln!("BUNDLE_IMPORT_RECOVERY_FAILED: {error}");
             }
         }
@@ -316,7 +329,8 @@ fn missing_drain_pages(
         let Some(body) = properties.get("drain_record").and_then(Value::as_str) else {
             continue;
         };
-        let Ok(record) = serde_json::from_str::<medulla_ingestion_types::ingest_drain::DrainRecord>(body)
+        let Ok(record) =
+            serde_json::from_str::<medulla_ingestion_types::ingest_drain::DrainRecord>(body)
         else {
             continue;
         };
@@ -498,8 +512,10 @@ async fn relint_stored_queries(
             .get("references")
             .and_then(|value| serde_json::from_value(value.clone()).ok())
             .unwrap_or_default();
-        let warnings: Vec<StoredQueryWarning> =
-            lint_stored_query(&references, &deprecated_assets(&flags, text("author_tenant")));
+        let warnings: Vec<StoredQueryWarning> = lint_stored_query(
+            &references,
+            &deprecated_assets(&flags, text("author_tenant")),
+        );
         let lint_id = format!("stored_query_lint:{}:{version}", text("name"));
         let held: Vec<StoredQueryWarning> = decode_node(core, &lint_id)
             .and_then(|lint| serde_json::from_value(lint.get("warnings")?.clone()).ok())
@@ -511,7 +527,10 @@ async fn relint_stored_queries(
         fields.insert("type".into(), "StoredQueryLint".into());
         fields.insert("name".into(), text("name").into());
         fields.insert("version".into(), version.into());
-        fields.insert("warnings".into(), serde_json::to_value(&warnings).map_err(|e| e.to_string())?);
+        fields.insert(
+            "warnings".into(),
+            serde_json::to_value(&warnings).map_err(|e| e.to_string())?,
+        );
         fields.insert("linted_at_ms".into(), now_ms.into());
         operations.push(upsert(&lint_id, fields));
     }
@@ -958,36 +977,58 @@ mod dashboard_purge_tick_tests {
         let removed_ms = decode_node(&core, &dashboard_node_id("purge-me"))
             .and_then(|node| node.get("removed_at_ms").and_then(Value::as_u64))
             .expect("the delete stamped removed_at_ms");
-        let body_of = |id: &str| {
-            decode_node(&core, id).and_then(|node| node.get("body").cloned())
-        };
+        let body_of = |id: &str| decode_node(&core, id).and_then(|node| node.get("body").cloned());
         let mut cache = ScheduleCache::default();
 
         // One pass a moment before the retention ends purges nothing.
-        tick_pass(&state, "engine:test", &mut cache, removed_ms, removed_ms + DAY_MS - 1, 1)
-            .await
-            .unwrap();
+        tick_pass(
+            &state,
+            "engine:test",
+            &mut cache,
+            removed_ms,
+            removed_ms + DAY_MS - 1,
+            1,
+        )
+        .await
+        .unwrap();
         assert!(body_of(&dashboard_node_id("purge-me")).is_some_and(|b| !b.is_null()));
 
         // One pass once the retention has ended nulls the body of the asset and of every
         // revision, keeps the revision nodes, and leaves the live dashboard alone.
-        tick_pass(&state, "engine:test", &mut cache, removed_ms + DAY_MS, removed_ms + DAY_MS + 1, 1)
-            .await
-            .unwrap();
+        tick_pass(
+            &state,
+            "engine:test",
+            &mut cache,
+            removed_ms + DAY_MS,
+            removed_ms + DAY_MS + 1,
+            1,
+        )
+        .await
+        .unwrap();
         for id in [
             dashboard_node_id("purge-me"),
             dashboard_revision_node_id("purge-me", 1),
             dashboard_revision_node_id("purge-me", 2),
         ] {
             assert!(decode_node(&core, &id).is_some(), "{id} stays");
-            assert!(body_of(&id).is_none_or(|b| b.is_null()), "{id} body is purged");
+            assert!(
+                body_of(&id).is_none_or(|b| b.is_null()),
+                "{id} body is purged"
+            );
         }
         assert!(body_of(&dashboard_node_id("kept")).is_some_and(|b| !b.is_null()));
 
         // The next read refuses as purged, and the restore is refused too.
-        let read = dashboard(&state, DashboardAssetOp::Get { id: "purge-me".into() }).await;
+        let read = dashboard(
+            &state,
+            DashboardAssetOp::Get {
+                id: "purge-me".into(),
+            },
+        )
+        .await;
         assert!(
-            read.refusal_text().is_some_and(|e| e.contains("DASHBOARD_PURGED")),
+            read.refusal_text()
+                .is_some_and(|e| e.contains("DASHBOARD_PURGED")),
             "{:?}",
             read.error
         );
@@ -1196,7 +1237,10 @@ mod schedule_lifecycle_tick_tests {
             assert_eq!(list.ticks.len(), 1, "{name}: {:?}", list.ticks);
             assert_eq!(list.ticks[0].outcome, "fired", "{name}");
             assert_eq!(list.ticks[0].window_start_ms, window0, "{name}");
-            assert!(list.ticks[0].work_item_id.is_some(), "{name} links its work item");
+            assert!(
+                list.ticks[0].work_item_id.is_some(),
+                "{name} links its work item"
+            );
             assert_eq!(list.ticks[0].reason, "", "{name}");
         }
 
@@ -1259,8 +1303,15 @@ mod schedule_lifecycle_tick_tests {
         // The served history reports every outcome in time order with the budget used.
         let history = ticks(&state, &clock, "runs").await;
         assert_eq!(history.schedule, "runs");
-        let windows: Vec<u64> = history.ticks.iter().map(|tick| tick.window_start_ms).collect();
-        assert!(windows.windows(2).all(|pair| pair[0] < pair[1]), "{windows:?}");
+        let windows: Vec<u64> = history
+            .ticks
+            .iter()
+            .map(|tick| tick.window_start_ms)
+            .collect();
+        assert!(
+            windows.windows(2).all(|pair| pair[0] < pair[1]),
+            "{windows:?}"
+        );
         let latest = history.ticks.last().expect("a tick after resume");
         assert_eq!(latest.outcome, "fired", "{:?}", history.ticks);
         assert!(latest.window_start_ms >= resumed_ms);

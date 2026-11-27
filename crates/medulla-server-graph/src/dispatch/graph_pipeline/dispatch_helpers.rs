@@ -249,7 +249,14 @@ pub async fn dispatch_op_audit_list(
     }
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb
-            .audit_list(&target.fname, target.tenant, op, request_id, after_seq, limit as usize)
+            .audit_list(
+                &target.fname,
+                target.tenant,
+                op,
+                request_id,
+                after_seq,
+                limit as usize,
+            )
             .await
         {
             Ok(page) => Response::ok(
@@ -951,12 +958,15 @@ mod write_principal_tests {
             node_id: "n".to_string(),
             properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).expect("encode"),
         };
-        let counted = medulla_server_api::request_scope::with_writer(
-            "writer-a".to_string(),
-            async { build(method()) },
-        )
-        .await;
-        assert_eq!(counted.mutation.write_principal.as_deref(), Some("writer-a"));
+        let counted =
+            medulla_server_api::request_scope::with_writer("writer-a".to_string(), async {
+                build(method())
+            })
+            .await;
+        assert_eq!(
+            counted.mutation.write_principal.as_deref(),
+            Some("writer-a")
+        );
         // The apply on a replica reads it back from the log entry.
         let wire = serde_json::to_vec(&counted.mutation).expect("encode context");
         let replica: medulla_server_api::api::persistence::RaftMutationContext =

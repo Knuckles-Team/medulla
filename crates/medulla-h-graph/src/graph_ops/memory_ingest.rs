@@ -72,9 +72,14 @@ pub(super) fn thread_requests(
     let episodic: Vec<usize> = order
         .iter()
         .copied()
-        .filter(|&index| records[index].tier == MemoryTier::Episodic && records[index].timestamp_ms > 0)
+        .filter(|&index| {
+            records[index].tier == MemoryTier::Episodic && records[index].timestamp_ms > 0
+        })
         .collect();
-    let stamps: Vec<i64> = episodic.iter().map(|&index| records[index].timestamp_ms).collect();
+    let stamps: Vec<i64> = episodic
+        .iter()
+        .map(|&index| records[index].timestamp_ms)
+        .collect();
     let runs = split_by_gap(&stamps, gap_ms);
     let closed = runs.len().saturating_sub(1);
     let mut specs: BTreeMap<usize, EpisodeSpec> = BTreeMap::new();
@@ -114,10 +119,16 @@ pub async fn remember_thread(
 ) -> Result<RememberedThread, String> {
     // A thread of another tenant answers like one that does not exist.
     if conversation.tenant.as_str() != ctx.tenant_scope {
-        return Err(super::memory_surface::absent_record(conversation.conversation_id.as_str()));
+        return Err(super::memory_surface::absent_record(
+            conversation.conversation_id.as_str(),
+        ));
     }
     if conversation.messages.is_empty() {
-        return Ok(RememberedThread { records: 0, episodes: 0, members: 0 });
+        return Ok(RememberedThread {
+            records: 0,
+            episodes: 0,
+            members: 0,
+        });
     }
     // Every distinct speaker joins the thread before any turn is remembered, so a speaker that is
     // not a stored participant refuses the whole write (MEDULLA-DECISION-ENGINE-R617.8).
@@ -128,18 +139,35 @@ pub async fn remember_thread(
         }
         None => 0,
     };
-    let embeddings = embed(conversation.messages.iter().map(|message| message.text.clone()).collect()).await?;
+    let embeddings = embed(
+        conversation
+            .messages
+            .iter()
+            .map(|message| message.text.clone())
+            .collect(),
+    )
+    .await?;
     let requests = thread_requests(conversation, embeddings, gap_ms())?;
     let summary = RememberedThread {
         records: requests.len(),
-        episodes: requests.iter().filter(|request| request.episode.is_some()).count(),
+        episodes: requests
+            .iter()
+            .filter(|request| request.episode.is_some())
+            .count(),
         members,
     };
     for request in requests {
-        let method = Method::MemoryRemember { request: Box::new(request) };
-        let response = super::memory_surface::handle_remember(ctx, ctx.tenant_scope, &method, &BTreeSet::new())
-            .await
-            .ok_or_else(|| "INTERNAL: the memory surface did not take the write".to_string())?;
+        let method = Method::MemoryRemember {
+            request: Box::new(request),
+        };
+        let response = super::memory_surface::handle_remember(
+            ctx,
+            ctx.tenant_scope,
+            &method,
+            &BTreeSet::new(),
+        )
+        .await
+        .ok_or_else(|| "INTERNAL: the memory surface did not take the write".to_string())?;
         if let Some(refusal) = response.refusal_text() {
             return Err(refusal);
         }

@@ -16,9 +16,11 @@ async fn durable_state() -> Arc<RwLock<ServerState>> {
     {
         state.write().await.persistence = Some(std::sync::Arc::new(
             medulla_persistence::redb_backend::RedbBackend::open(
-                medulla_server_api::api::dispatch_support::unique_temp_dir("medulla-share-dispatch")
-                    .to_string_lossy()
-                    .into_owned(),
+                medulla_server_api::api::dispatch_support::unique_temp_dir(
+                    "medulla-share-dispatch",
+                )
+                .to_string_lossy()
+                .into_owned(),
                 256,
             )
             .expect("open share test redb backend"),
@@ -31,7 +33,9 @@ fn owner() -> VerifiedRequestContext {
     context(OWNER, &["*"])
 }
 
-async fn properties(state: &Arc<RwLock<ServerState>>) -> serde_json::Map<String, serde_json::Value> {
+async fn properties(
+    state: &Arc<RwLock<ServerState>>,
+) -> serde_json::Map<String, serde_json::Value> {
     let response = send_method(
         state,
         owner(),
@@ -135,7 +139,12 @@ async fn add_node(state: &Arc<RwLock<ServerState>>, node_id: &str, value: serde_
 async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
     use medulla_server::commons_reconcile::{run_tick_at, RECONCILE_GRACE_MS};
     let state = durable_state().await;
-    add_node(&state, "a", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "a",
+        serde_json::json!({"type": "Note", "_owner_id": OWNER}),
+    )
+    .await;
     let promoted = send_method(
         &state,
         owner(),
@@ -147,8 +156,8 @@ async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
     assert!(promoted.error.is_none(), "{:?}", promoted.error);
     assert!(has_node(&state, "commons:a").await);
 
-    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
-        + 2 * RECONCILE_GRACE_MS;
+    let now =
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms() + 2 * RECONCILE_GRACE_MS;
     add_node(
         &state,
         "commons:b",
@@ -188,7 +197,12 @@ async fn a_write_after_a_share_succeeds() {
     // accounts each commit in the serving version: a write after a grant and
     // after a revoke must not meet `STALE_VERSION`.
     let state = durable_state().await;
-    add_node(&state, NODE, serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        NODE,
+        serde_json::json!({"type": "Note", "_owner_id": OWNER}),
+    )
+    .await;
     let granted = send_method(
         &state,
         owner(),
@@ -201,7 +215,12 @@ async fn a_write_after_a_share_succeeds() {
     )
     .await;
     assert!(granted.error.is_none(), "{:?}", granted.error);
-    add_node(&state, "after-grant", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "after-grant",
+        serde_json::json!({"type": "Note", "_owner_id": OWNER}),
+    )
+    .await;
     let revoked = send_method(
         &state,
         owner(),
@@ -211,7 +230,12 @@ async fn a_write_after_a_share_succeeds() {
     )
     .await;
     assert!(revoked.error.is_none(), "{:?}", revoked.error);
-    add_node(&state, "after-revoke", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "after-revoke",
+        serde_json::json!({"type": "Note", "_owner_id": OWNER}),
+    )
+    .await;
     assert!(has_node(&state, "after-grant").await);
     assert!(has_node(&state, "after-revoke").await);
 }
@@ -223,7 +247,11 @@ fn share_event_fields_validate() {
     use medulla_store::redb_store::audit_status::AuditStatus;
     let grants = vec!["usr:b".to_string(), "usr:a".to_string()];
     let event = ShareEvent::new("RbacAdmin.ShareGrant", NODE, "private", "org", &grants);
-    for (reservation, outcome) in [(true, AuditStatus::Ok), (false, AuditStatus::Ok), (false, AuditStatus::Error)] {
+    for (reservation, outcome) in [
+        (true, AuditStatus::Ok),
+        (false, AuditStatus::Ok),
+        (false, AuditStatus::Error),
+    ] {
         let record = event.audit_record("tenant-a", OWNER, reservation, outcome);
         record.validate().expect("the share event passes validate");
         assert_eq!(record.surface, "rbac_admin");

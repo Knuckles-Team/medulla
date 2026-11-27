@@ -35,17 +35,19 @@ pub struct DerivationInput<'a> {
 
 /// Which observers a flag pair adds, indexed by `2 * observe_self + observe_others`:
 /// `(the participant observes its own turns, the participant observes every other member's)`.
-const OBSERVER_SETS: [(bool, bool); 4] = [(false, false), (false, true), (true, false), (true, true)];
+const OBSERVER_SETS: [(bool, bool); 4] =
+    [(false, false), (false, true), (true, false), (true, true)];
 
 /// The setting of `member` in `session_id`: the last stored one, or the default (observes itself,
 /// not the others).
 fn flags_of(input: &DerivationInput<'_>, member: &ParticipantId) -> (bool, bool) {
-    let setting = input
-        .configs
-        .iter()
-        .rev()
-        .find(|config| config.session_id == input.session_id && &config.participant_id == member);
-    let (observe_self, observe_others) = setting.map_or((true, false), |config| (config.observe_self, config.observe_others));
+    let setting =
+        input.configs.iter().rev().find(|config| {
+            config.session_id == input.session_id && &config.participant_id == member
+        });
+    let (observe_self, observe_others) = setting.map_or((true, false), |config| {
+        (config.observe_self, config.observe_others)
+    });
     OBSERVER_SETS[usize::from(observe_self) * 2 + usize::from(observe_others)]
 }
 
@@ -121,7 +123,12 @@ pub fn due_at(last_turn_ms: u64, turns: u32, rule: DueRule) -> u64 {
 }
 
 /// Extend a pending range by one newer turn; the due time follows the rule.
-pub fn extend_payload(payload: &DerivePayload, turn_id: &str, turn_ms: u64, rule: DueRule) -> DerivePayload {
+pub fn extend_payload(
+    payload: &DerivePayload,
+    turn_id: &str,
+    turn_ms: u64,
+    rule: DueRule,
+) -> DerivePayload {
     let turns = payload.turns.saturating_add(1);
     let last_turn_ms = payload.last_turn_ms.max(turn_ms);
     DerivePayload {
@@ -147,7 +154,11 @@ pub fn key_digest(key: &DeriveKey, first_turn_id: &str) -> String {
         hasher.update((part.len() as u64).to_be_bytes());
         hasher.update(part.as_bytes());
     }
-    hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// The digest of a key alone: the id of the key's payload node (one node per key; its range is
@@ -227,12 +238,19 @@ pub fn conclusion_claim_prefix(key: &DeriveKey) -> String {
 /// whitespace-normalised, case-folded text, so a conclusion that repeats an existing one names the
 /// same claim.
 pub fn conclusion_claim_id(key: &DeriveKey, conclusion: &str) -> String {
-    let normalised = conclusion.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let normalised = conclusion
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
     let digest = Sha256::digest(normalised.as_bytes());
     format!(
         "{}{}",
         conclusion_claim_prefix(key),
-        digest.iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+        digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
     )
 }
 
@@ -249,7 +267,12 @@ mod tests {
         ParticipantId::new(slug).unwrap()
     }
 
-    fn config(session: &str, slug: &str, observe_self: bool, observe_others: bool) -> ObservationConfig {
+    fn config(
+        session: &str,
+        slug: &str,
+        observe_self: bool,
+        observe_others: bool,
+    ) -> ObservationConfig {
         ObservationConfig {
             session_id: session.into(),
             participant_id: id(slug),
@@ -259,16 +282,21 @@ mod tests {
     }
 
     fn targets(members: &[ParticipantId], configs: &[ObservationConfig]) -> Vec<(String, String)> {
-        derivation_targets(&DerivationInput { scope_id: "", session_id: "s1", members, configs })
-            .into_iter()
-            .map(|key| {
-                let observer = match key.observer {
-                    ObserverRef::System => "system".to_string(),
-                    ObserverRef::Participant(id) => id.as_str().to_string(),
-                };
-                (key.subject.as_str().to_string(), observer)
-            })
-            .collect()
+        derivation_targets(&DerivationInput {
+            scope_id: "",
+            session_id: "s1",
+            members,
+            configs,
+        })
+        .into_iter()
+        .map(|key| {
+            let observer = match key.observer {
+                ObserverRef::System => "system".to_string(),
+                ObserverRef::Participant(id) => id.as_str().to_string(),
+            };
+            (key.subject.as_str().to_string(), observer)
+        })
+        .collect()
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R651.10
@@ -300,7 +328,12 @@ mod tests {
         // A setting of another session or of a non-member changes nothing; the last setting wins.
         let ignored = targets(
             &members,
-            &[config("s2", "ada", true, true), config("s1", "zed", true, true), config("s1", "bo", true, true), config("s1", "bo", true, false)],
+            &[
+                config("s2", "ada", true, true),
+                config("s1", "zed", true, true),
+                config("s1", "bo", true, true),
+                config("s1", "bo", true, false),
+            ],
         );
         assert_eq!(ignored, defaults);
         // Sorted, no key twice, for every flag pair.
@@ -309,7 +342,10 @@ mod tests {
                 scope_id: "sc",
                 session_id: "s1",
                 members: &members,
-                configs: &[config("s1", "ada", own, others_flag), config("s1", "bo", others_flag, own)],
+                configs: &[
+                    config("s1", "ada", own, others_flag),
+                    config("s1", "bo", others_flag, own),
+                ],
             });
             let mut sorted = all.clone();
             sorted.sort();
@@ -321,7 +357,10 @@ mod tests {
         assert!(targets(&[], &[]).is_empty());
     }
 
-    const RULE: DueRule = DueRule { debounce_ms: 30_000, batch_turns: 3 };
+    const RULE: DueRule = DueRule {
+        debounce_ms: 30_000,
+        batch_turns: 3,
+    };
 
     fn payload(turns: u32, last_turn_ms: u64) -> DerivePayload {
         DerivePayload {
@@ -373,7 +412,12 @@ mod tests {
     }
 
     fn turn(id: &str, speaker: &str) -> DeriveTurn {
-        DeriveTurn { turn_id: id.into(), speaker: id_of(speaker), text: format!("text {id}"), timestamp_ms: 1 }
+        DeriveTurn {
+            turn_id: id.into(),
+            speaker: id_of(speaker),
+            text: format!("text {id}"),
+            timestamp_ms: 1,
+        }
     }
 
     fn id_of(slug: &str) -> ParticipantId {
@@ -384,9 +428,20 @@ mod tests {
     #[test]
     fn select_turns_keeps_the_subjects_turns_of_the_range() {
         let key = payload(1, 1).key;
-        let session = [turn("t0", "ada"), turn("t1", "bo"), turn("t2", "ada"), turn("t3", "ada")];
+        let session = [
+            turn("t0", "ada"),
+            turn("t1", "bo"),
+            turn("t2", "ada"),
+            turn("t3", "ada"),
+        ];
         let picked = select_turns(&key, "t0", "t2", &session, true);
-        assert_eq!(picked.iter().map(|t| t.turn_id.as_str()).collect::<Vec<_>>(), vec!["t0", "t2"]);
+        assert_eq!(
+            picked
+                .iter()
+                .map(|t| t.turn_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["t0", "t2"]
+        );
         // A scope that no longer holds the session, an unknown end and a reversed range select none.
         assert!(select_turns(&key, "t0", "t2", &session, false).is_empty());
         assert!(select_turns(&key, "t0", "zz", &session, true).is_empty());
@@ -396,7 +451,12 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R651.12
     #[test]
     fn a_range_after_a_gap_is_held() {
-        let session = [turn("t0", "ada"), turn("t1", "bo"), turn("t2", "ada"), turn("t3", "ada")];
+        let session = [
+            turn("t0", "ada"),
+            turn("t1", "bo"),
+            turn("t2", "ada"),
+            turn("t3", "ada"),
+        ];
         let ada = id_of("ada");
         assert!(!derive_held(&ada, &session, None, "t3"));
         // The checkpoint covers t0; t2 is the next of ada's turns, t3 skips it.

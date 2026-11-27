@@ -34,12 +34,15 @@ fn publish(
 ) -> AgentComponentEntry {
     let key = format!("seed:{}", draft.component_id);
     store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .expect("publishes")
         .result
         .component
@@ -165,7 +168,12 @@ pub fn decided(store: &AgentLibraryStore, tenant: &str) -> Assembly {
 
 /// The same solved assembly, decided at `created_at_ms`: a distinct record id per time.
 pub fn decided_at(store: &AgentLibraryStore, tenant: &str, created_at_ms: u64) -> Assembly {
-    decided_under(store, tenant, created_at_ms, DecisionPolicy::engine_default())
+    decided_under(
+        store,
+        tenant,
+        created_at_ms,
+        DecisionPolicy::engine_default(),
+    )
 }
 
 /// The same solved assembly, decided at `created_at_ms` under `policy`.
@@ -179,13 +187,7 @@ pub fn decided_under(
         .assembly_candidates(tenant, &request(tenant).candidates)
         .expect("reads");
     let candidates = candidate_facts(&entries).expect("facts");
-    let inputs = inputs(
-        request(tenant),
-        candidates,
-        Vec::new(),
-        policy,
-    )
-    .expect("inputs");
+    let inputs = inputs(request(tenant), candidates, Vec::new(), policy).expect("inputs");
     let identity = RecordIdentity {
         tenant_id: tenant.to_string(),
         caller_principal: "caller-a".to_string(),
@@ -215,7 +217,12 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let record = decided(&store, TENANT).record;
     let digest = record.inputs.catalog_digest.clone();
     let first = store
-        .commit_decision_record(commit_context(&store, TENANT, "commit-1", 1), &record, &digest, None)
+        .commit_decision_record(
+            commit_context(&store, TENANT, "commit-1", 1),
+            &record,
+            &digest,
+            None,
+        )
         .expect("commits");
     assert!(!first.replayed);
     assert_eq!(
@@ -229,7 +236,12 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let served: DecisionRecord = serde_json::from_slice(&content.body).expect("decodes");
     assert_eq!(served, record);
     let again = store
-        .commit_decision_record(commit_context(&store, TENANT, "commit-2", 2), &record, &digest, None)
+        .commit_decision_record(
+            commit_context(&store, TENANT, "commit-2", 2),
+            &record,
+            &digest,
+            None,
+        )
         .expect("a repeat commit is a replay");
     assert!(again.replayed);
     assert_eq!(again.result.component, first.result.component);
@@ -317,7 +329,10 @@ fn template_key_resolves_the_newest_published_rev_in_the_tenant() {
     let resolved = store
         .assembly_template_ref(TENANT, "deployment:compose-host")
         .expect("the key resolves");
-    assert_eq!(resolved, published[0], "the key resolves to the pinned revision");
+    assert_eq!(
+        resolved, published[0],
+        "the key resolves to the pinned revision"
+    );
 
     let unknown = store
         .assembly_template_ref(TENANT, "deployment:absent")
@@ -454,19 +469,22 @@ fn a_policy_component_whose_body_does_not_match_its_digest_is_refused() {
     let policy = DecisionPolicy::engine_default();
     let wrong = format!("sha256:{}", "0".repeat(64));
     let error = store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                &store,
-                TENANT,
-                "bad-policy",
-                131,
-                0,
-                "agent-component:publish",
-            ),
-            evaluation_receipt_digest: None,
-            component: policy_draft(&policy, wrong),
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    &store,
+                    TENANT,
+                    "bad-policy",
+                    131,
+                    0,
+                    "agent-component:publish",
+                ),
+                evaluation_receipt_digest: None,
+                component: policy_draft(&policy, wrong),
+                body: None,
+            },
+            None,
+        )
         .expect_err("refused");
     assert!(error.starts_with("POLICY_BODY_UNAVAILABLE: "), "{error}");
 }

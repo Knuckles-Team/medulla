@@ -261,7 +261,12 @@ fn check_policy(policy: &DocumentEncodingPolicy) -> Result<&'static dyn TextEmbe
         .iter()
         .find(|binding| binding.modality == Modality::Text)
     {
-        Some(binding) => registry.lookup(&binding.encoder, &space.id, space.dimensions, &space.revision),
+        Some(binding) => registry.lookup(
+            &binding.encoder,
+            &space.id,
+            space.dimensions,
+            &space.revision,
+        ),
         None => registry.lookup_by_space(&space.id, space.dimensions, &space.revision),
     };
     resolved.map_err(|error| {

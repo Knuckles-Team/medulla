@@ -44,7 +44,14 @@ fn store_policy_record_row(
     let created = nodes.get((graph, request.record_id.as_str()))?.is_none();
     if created {
         let mut row = request.row()?;
-        write_work_item_props(nodes, transitions, graph, &request.record_id, &mut row, crypto)?;
+        write_work_item_props(
+            nodes,
+            transitions,
+            graph,
+            &request.record_id,
+            &mut row,
+            crypto,
+        )?;
     }
     medulla_protocol_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(
         PolicyRecordStored {

@@ -24,7 +24,8 @@ pub const SKILL_WORKFLOW_AMBIGUOUS: RefusalCode = RefusalCode::new("SKILL_WORKFL
 pub const SKILL_WORKFLOW_MISSING_ERROR_HANDLER: RefusalCode =
     RefusalCode::new("SKILL_WORKFLOW_MISSING_ERROR_HANDLER");
 /// Request refusal: a step lacks input or output types.
-pub const SKILL_WORKFLOW_UNTYPED_STEP: RefusalCode = RefusalCode::new("SKILL_WORKFLOW_UNTYPED_STEP");
+pub const SKILL_WORKFLOW_UNTYPED_STEP: RefusalCode =
+    RefusalCode::new("SKILL_WORKFLOW_UNTYPED_STEP");
 /// Request refusal: the `next` edges form a cycle.
 pub const SKILL_WORKFLOW_CYCLE: RefusalCode = RefusalCode::new("SKILL_WORKFLOW_CYCLE");
 /// Request refusal: more than [`MAX_PROGRAM_STEPS`] steps.
@@ -163,7 +164,10 @@ pub struct DraftRefusal {
 
 impl DraftRefusal {
     fn new(code: RefusalCode, detail: impl Into<String>) -> Self {
-        Self { code, detail: detail.into() }
+        Self {
+            code,
+            detail: detail.into(),
+        }
     }
 }
 
@@ -181,7 +185,10 @@ impl SkillWorkflowDraft {
         if self.steps.len() > MAX_PROGRAM_STEPS {
             return Err(DraftRefusal::new(
                 SKILL_WORKFLOW_TOO_LONG,
-                format!("{} steps exceed the {MAX_PROGRAM_STEPS} step limit", self.steps.len()),
+                format!(
+                    "{} steps exceed the {MAX_PROGRAM_STEPS} step limit",
+                    self.steps.len()
+                ),
             ));
         }
         let mut seen = std::collections::BTreeSet::new();
@@ -194,10 +201,17 @@ impl SkillWorkflowDraft {
             }
         }
         for step in &self.steps {
-            if let Some(edge) = step.next.iter().find(|edge| !seen.contains(edge.step_id.as_str())) {
+            if let Some(edge) = step
+                .next
+                .iter()
+                .find(|edge| !seen.contains(edge.step_id.as_str()))
+            {
                 return Err(DraftRefusal::new(
                     SKILL_WORKFLOW_AMBIGUOUS,
-                    format!("step {}: next names the absent step {}", step.step_id, edge.step_id),
+                    format!(
+                        "step {}: next names the absent step {}",
+                        step.step_id, edge.step_id
+                    ),
                 ));
             }
             if step.next.len() > 1 && step.next.iter().any(|edge| edge.label.is_none()) {
@@ -211,7 +225,10 @@ impl SkillWorkflowDraft {
             if !step.action.starts_with(INTERNAL_ACTION_PREFIX) && step.on_error.is_none() {
                 return Err(DraftRefusal::new(
                     SKILL_WORKFLOW_MISSING_ERROR_HANDLER,
-                    format!("step {}: the external action {} has no on_error step", step.step_id, step.action),
+                    format!(
+                        "step {}: the external action {} has no on_error step",
+                        step.step_id, step.action
+                    ),
                 ));
             }
         }
@@ -268,7 +285,8 @@ impl SkillWorkflowDraft {
                     }
                     1 => {
                         // Everything from `target` along the path to here is on the cycle.
-                        if let Some(from) = path.iter().position(|(visited, _)| *visited == target) {
+                        if let Some(from) = path.iter().position(|(visited, _)| *visited == target)
+                        {
                             for (visited, _) in &path[from..] {
                                 on_cycle[*visited] = true;
                             }
@@ -278,7 +296,10 @@ impl SkillWorkflowDraft {
                 }
             }
         }
-        on_cycle.iter().position(|flag| *flag).map(|at| steps[at].step_id.as_str())
+        on_cycle
+            .iter()
+            .position(|flag| *flag)
+            .map(|at| steps[at].step_id.as_str())
     }
 }
 
@@ -390,22 +411,45 @@ mod tests {
         let mut recover = step("recover", &[]);
         recover.action = "internal.recover".into();
         // A complete draft passes: the external step has a handler, the handler is internal.
-        let ok = draft(vec![external("a", &["b"]), external("b", &[]), recover.clone()]);
+        let ok = draft(vec![
+            external("a", &["b"]),
+            external("b", &[]),
+            recover.clone(),
+        ]);
         assert_eq!(ok.check_complete(), Ok(()));
         // Two steps with one id.
-        let twice = draft(vec![external("a", &[]), external("a", &[]), recover.clone()]);
-        assert!(refused(&twice).starts_with("SKILL_WORKFLOW_AMBIGUOUS"), "{}", refused(&twice));
+        let twice = draft(vec![
+            external("a", &[]),
+            external("a", &[]),
+            recover.clone(),
+        ]);
+        assert!(
+            refused(&twice).starts_with("SKILL_WORKFLOW_AMBIGUOUS"),
+            "{}",
+            refused(&twice)
+        );
         assert!(refused(&twice).contains("step a"));
         // A next target that is absent, and a branch without a label.
         let absent = draft(vec![external("a", &["ghost"]), recover.clone()]);
         assert!(refused(&absent).starts_with("SKILL_WORKFLOW_AMBIGUOUS"));
         let mut branching = external("a", &["b", "c"]);
         branching.next = BoundedVec::new(vec![
-            StepEdge { step_id: "b".into(), label: Some("yes".into()) },
-            StepEdge { step_id: "c".into(), label: None },
+            StepEdge {
+                step_id: "b".into(),
+                label: Some("yes".into()),
+            },
+            StepEdge {
+                step_id: "c".into(),
+                label: None,
+            },
         ])
         .unwrap();
-        let unlabelled = draft(vec![branching, external("b", &[]), external("c", &[]), recover.clone()]);
+        let unlabelled = draft(vec![
+            branching,
+            external("b", &[]),
+            external("c", &[]),
+            recover.clone(),
+        ]);
         assert!(refused(&unlabelled).contains("a branch has no label"));
         // An external action with no handler.
         let unhandled = draft(vec![step("a", &[]), recover.clone()]);
@@ -417,7 +461,11 @@ mod tests {
         let bare = draft(vec![untyped, recover.clone()]);
         assert!(refused(&bare).starts_with("SKILL_WORKFLOW_UNTYPED_STEP"));
         // A cycle of next edges, and a self edge.
-        let cyclic = draft(vec![external("a", &["b"]), external("b", &["a"]), recover.clone()]);
+        let cyclic = draft(vec![
+            external("a", &["b"]),
+            external("b", &["a"]),
+            recover.clone(),
+        ]);
         assert!(refused(&cyclic).starts_with("SKILL_WORKFLOW_CYCLE"));
         assert!(refused(&cyclic).contains("step a"));
         let selfish = draft(vec![external("a", &["a"]), recover]);

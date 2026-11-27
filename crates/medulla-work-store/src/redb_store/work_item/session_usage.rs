@@ -75,7 +75,8 @@ pub fn read_session_usage(
             });
         }
     }
-    let mut result = aggregate_session_usage(tenant, principal, context_id, &expected, &records, &timings)?;
+    let mut result =
+        aggregate_session_usage(tenant, principal, context_id, &expected, &records, &timings)?;
     result.inventory_complete = complete;
     Ok(result)
 }

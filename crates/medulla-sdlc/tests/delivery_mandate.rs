@@ -37,7 +37,10 @@ fn resume_needs_open_rows_mode_and_principal() {
     let refused = |delivery: &Delivery, now: &MandateFacts| {
         revalidate_mandate(delivery, now).unwrap_err().code()
     };
-    assert_eq!(refused(&explicit, &facts(ProjectMode::Reference)), "MANDATE_REVOKED");
+    assert_eq!(
+        refused(&explicit, &facts(ProjectMode::Reference)),
+        "MANDATE_REVOKED"
+    );
     let mut closed = facts(ProjectMode::Development);
     closed.rows_open = false;
     assert_eq!(refused(&explicit, &closed), "MANDATE_REVOKED");
@@ -45,7 +48,10 @@ fn resume_needs_open_rows_mode_and_principal() {
     lost.actor_can_write = false;
     assert_eq!(refused(&explicit, &lost), "MANDATE_REVOKED");
     let inferred = delivery("inferred", Some("completed"));
-    assert_eq!(refused(&inferred, &facts(ProjectMode::Development)), "MANDATE_REVOKED");
+    assert_eq!(
+        refused(&inferred, &facts(ProjectMode::Development)),
+        "MANDATE_REVOKED"
+    );
     assert!(revalidate_mandate(&inferred, &facts(ProjectMode::Evolving)).is_ok());
 }
 
@@ -60,7 +66,10 @@ fn policy_change_adds_an_input_and_never_cancels() {
     assert_eq!(changed.ended, None::<DeliveryOutcome>);
     assert_eq!(changed.inputs.len(), 1);
     assert_eq!(changed.inputs[0].kind, FeedbackKind::PolicyChanged);
-    assert_eq!(changed.inputs[0].detail.as_deref(), Some("policy_version p1 -> p2"));
+    assert_eq!(
+        changed.inputs[0].detail.as_deref(),
+        Some("policy_version p1 -> p2")
+    );
     let ended = delivery("explicit", Some("merged"));
     assert_eq!(note_policy_change(&ended, &now), ended);
 }

@@ -92,7 +92,8 @@ pub const PROCESS_SYNC_SOURCE_NOT_SECONDARY: &str = "PROCESS_SYNC_SOURCE_NOT_SEC
 
 /// The IRI of the class a process model deploy proposes under: the `:ProcessModel` class of the
 /// core ontology (MEDULLA-CQ-ORCH-R703.3).
-pub const PROCESS_MODEL_CLASS_IRI: &str = "https://knuckles-team.github.io/ontology/core#ProcessModel";
+pub const PROCESS_MODEL_CLASS_IRI: &str =
+    "https://knuckles-team.github.io/ontology/core#ProcessModel";
 
 /// The answer of the served `ProcessDocumentExport` (MEDULLA-CQ-ORCH-R702.10).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,11 +126,20 @@ pub const REFUSALS: &[RefusalCode] = &[
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ProcessExchangeError {
-    Malformed { line: u64, column: u64 },
+    Malformed {
+        line: u64,
+        column: u64,
+    },
     EntityRefused,
-    TooLarge { bytes: u64 },
-    NamespaceUnknown { namespace: String },
-    NotDeployable { reason: String },
+    TooLarge {
+        bytes: u64,
+    },
+    NamespaceUnknown {
+        namespace: String,
+    },
+    NotDeployable {
+        reason: String,
+    },
     /// A decision-table rule whose entries do not match the table's clauses
     /// (MEDULLA-ORCH-VOCAB-R014.6).
     RuleEntriesMismatch {
@@ -217,8 +227,7 @@ mod tests {
         for error in &errors {
             let code = error.wire_code();
             assert!(
-                codes.contains(&code)
-                    || crate::process_import::EXPORT_REFUSALS.contains(&code),
+                codes.contains(&code) || crate::process_import::EXPORT_REFUSALS.contains(&code),
                 "{code} is not declared"
             );
         }

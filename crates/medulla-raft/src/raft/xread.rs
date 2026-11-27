@@ -604,7 +604,10 @@ mod tests {
         assert!(failed["status"].get("failed").is_some());
         let failed_leg = leg(ReadLegOutcome::Failed(ReadPageErrorCode::InvalidResponse));
         let bytes = rmp_serde::to_vec_named(&failed_leg).unwrap();
-        assert_eq!(rmp_serde::from_slice::<ReadLeg>(&bytes).unwrap(), failed_leg);
+        assert_eq!(
+            rmp_serde::from_slice::<ReadLeg>(&bytes).unwrap(),
+            failed_leg
+        );
     }
 
     #[test]

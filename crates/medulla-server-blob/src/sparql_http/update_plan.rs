@@ -67,7 +67,13 @@ pub async fn plan_update(
     update_text: &str,
     default_graph: &str,
     authorized_graphs: &[String],
-) -> Result<(Vec<PlannedGraphUpdate>, medulla_query_types::rdf_report::UpdateReport), String> {
+) -> Result<
+    (
+        Vec<PlannedGraphUpdate>,
+        medulla_query_types::rdf_report::UpdateReport,
+    ),
+    String,
+> {
     #[cfg(not(feature = "shacl"))]
     return Err("SPARQL UPDATE requires the shacl integrity-guard feature".to_string());
 
@@ -108,7 +114,13 @@ fn plan_detached_update(
     update_text: &str,
     live: LiveGraphSnapshot,
     default_graph: &str,
-) -> Result<(Vec<PlannedGraphUpdate>, medulla_query_types::rdf_report::UpdateReport), String> {
+) -> Result<
+    (
+        Vec<PlannedGraphUpdate>,
+        medulla_query_types::rdf_report::UpdateReport,
+    ),
+    String,
+> {
     let parsed = medulla_rdf::update::parse_update(update_text)?;
     let (mut before, staged_by_name, mut existed, mut graph_types) = stage_graphs(live)?;
     let default = staged_by_name

@@ -23,16 +23,19 @@ pub(super) async fn handle_index_harness_session_batch(
     let Method::IndexHarnessSessionBatch { batch: request } = method else {
         return None;
     };
-    let limit = usize::try_from(knobs().orchestration_limits_session_batch_max).unwrap_or(usize::MAX);
+    let limit =
+        usize::try_from(knobs().orchestration_limits_session_batch_max).unwrap_or(usize::MAX);
     let admission = match admit_batch(ctx.core, ctx.tenant_scope, request, limit) {
         Ok(admission) => admission,
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     if admission.operations.is_empty() {
-        return Some(match ResultPayload::of::<IndexHarnessSessionBatch>(admission.result) {
-            Ok(payload) => Response::ok(ctx.req_id, payload),
-            Err(error) => Response::err(ctx.req_id, error),
-        });
+        return Some(
+            match ResultPayload::of::<IndexHarnessSessionBatch>(admission.result) {
+                Ok(payload) => Response::ok(ctx.req_id, payload),
+                Err(error) => Response::err(ctx.req_id, error),
+            },
+        );
     }
     let write = match batch(&admission.operations) {
         Ok(write) => write,

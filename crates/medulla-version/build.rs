@@ -13,18 +13,27 @@ fn main() {
         .or_else(git_head)
         .unwrap_or_else(|| "unknown".to_string());
     let mut features: Vec<String> = std::env::vars()
-        .filter_map(|(key, _)| key.strip_prefix("CARGO_FEATURE_").map(str::to_ascii_lowercase))
+        .filter_map(|(key, _)| {
+            key.strip_prefix("CARGO_FEATURE_")
+                .map(str::to_ascii_lowercase)
+        })
         .collect();
     features.sort();
     let profile = std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string());
     println!("cargo:rustc-env=MEDULLA_BUILD_GIT_SHA={}", sha.trim());
-    println!("cargo:rustc-env=MEDULLA_BUILD_FEATURES={}", features.join(","));
+    println!(
+        "cargo:rustc-env=MEDULLA_BUILD_FEATURES={}",
+        features.join(",")
+    );
     println!("cargo:rustc-env=MEDULLA_BUILD_PROFILE={profile}");
 }
 
 /// The commit the source tree is at, from `git rev-parse HEAD`; `None` outside a checkout.
 fn git_head() -> Option<String> {
-    let output = Command::new("git").args(["rev-parse", "HEAD"]).output().ok()?;
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }

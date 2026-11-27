@@ -203,7 +203,13 @@ pub(crate) fn downstream_of(
     let max_columns = knobs.lineage_impact_max_columns as usize;
     let mut reached = std::collections::BTreeSet::new();
     for column in columns {
-        for edge in walk_impact(&stored, column, ImpactDirection::Downstream, depth, max_columns)? {
+        for edge in walk_impact(
+            &stored,
+            column,
+            ImpactDirection::Downstream,
+            depth,
+            max_columns,
+        )? {
             reached.insert(edge.target_column);
         }
     }

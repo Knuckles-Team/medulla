@@ -22,19 +22,19 @@ use medulla_catalog_types::foreign_read::{
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_result_types::source_query::{
     SourceQueryApprovalCheck, SourceQueryApprovalValidity, SourceQueryError, SourceQueryStep,
 };
 use medulla_server_api::source_query_authority::source_query_authority;
+use medulla_server_auth::access::OwnerScopedCall;
+use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_work_types::control_lease::ControlLeaseStatus;
 use medulla_work_types::source_query_approval::{
     source_query_refusal, SourceQueryApprovalGrant, SOURCE_QUERY_APPROVAL_GRANT_KEY,
     SOURCE_QUERY_APPROVAL_KIND,
 };
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_auth::access::OwnerScopedCall;
-use medulla_server_ops::api::query_txn::ForeignStateExt;
 
 /// Where a registration writes its `MetadataContract` (MEDULLA-UNIFIED-DATA-PLANE-R038.2.1): the
 /// request's graph, through the same durable mutation path as every other graph write.
@@ -76,12 +76,14 @@ fn stored_contract(
 ) -> Option<medulla_catalog_types::metadata_acceleration::MetadataContract> {
     let blob = core.get_node_properties(node_id)?;
     let value: serde_json::Value = rmp_serde::from_slice(&blob).ok()?;
-    Some(medulla_catalog_types::metadata_acceleration::MetadataContract {
-        source_kind: value.get("source_kind")?.as_str()?.to_string(),
-        source_name: value.get("source_name")?.as_str()?.to_string(),
-        schema_version: u32::try_from(value.get("schema_version")?.as_u64()?).ok()?,
-        content_hash: value.get("content_hash")?.as_str()?.to_string(),
-    })
+    Some(
+        medulla_catalog_types::metadata_acceleration::MetadataContract {
+            source_kind: value.get("source_kind")?.as_str()?.to_string(),
+            source_name: value.get("source_name")?.as_str()?.to_string(),
+            schema_version: u32::try_from(value.get("schema_version")?.as_u64()?).ok()?,
+            content_hash: value.get("content_hash")?.as_str()?.to_string(),
+        },
+    )
 }
 
 /// Write `contract` as one `AddNode` MutationBatch. A contract unchanged since the stored one is
@@ -179,11 +181,13 @@ fn check_share_request(
         return Ok(());
     }
     // A source the caller can address only through a share is visible, not owned.
-    Err(if catalog.visible_source(owner, isolation, name).is_some() {
-        format!("{SOURCE_OWNER_REQUIRED}: only the owner of {name} may change its sharing")
-    } else {
-        format!("{SOURCE_NOT_FOUND}: no source {name} is visible to the caller")
-    })
+    Err(
+        if catalog.visible_source(owner, isolation, name).is_some() {
+            format!("{SOURCE_OWNER_REQUIRED}: only the owner of {name} may change its sharing")
+        } else {
+            format!("{SOURCE_NOT_FOUND}: no source {name} is visible to the caller")
+        },
+    )
 }
 
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
@@ -246,16 +250,17 @@ pub async fn try_handle(
             // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a registration without a quota takes the
             // resolved `foreign.default_quota.*` knobs.
             let knobs = medulla_server_api::knob_config::knobs();
-            let quota = quota.unwrap_or(medulla_catalog_types::consolidation_isolation::SourceQuota {
-                max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
-                    .unwrap_or(u32::MAX),
-                max_rows: knobs.foreign_default_quota_max_rows,
-                max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
-            });
+            let quota = quota.unwrap_or(
+                medulla_catalog_types::consolidation_isolation::SourceQuota {
+                    max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
+                        .unwrap_or(u32::MAX),
+                    max_rows: knobs.foreign_default_quota_max_rows,
+                    max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
+                },
+            );
             let catalog = s.foreign_sources();
             let prior = catalog.prior_registration(&owner, &name);
-            if let Err(error) =
-                catalog.register(&owner, name.clone(), source, quota, acceleration)
+            if let Err(error) = catalog.register(&owner, name.clone(), source, quota, acceleration)
             {
                 return Ok(Response::err(req_id, error));
             }
@@ -306,7 +311,10 @@ pub async fn try_handle(
                 Err(refusal) => return Ok(refusal),
             };
             let s = call.state.read().await;
-            match s.foreign_sources().visible_source(&owner, &s.isolation, &name) {
+            match s
+                .foreign_sources()
+                .visible_source(&owner, &s.isolation, &name)
+            {
                 Some(view) => Ok(Response::ok(
                     req_id,
                     ResultPayload::of::<
@@ -324,7 +332,10 @@ pub async fn try_handle(
                 Err(refusal) => return Ok(refusal),
             };
             let s = call.state.read().await;
-            match s.foreign_sources().visible_source(&owner, &s.isolation, &name) {
+            match s
+                .foreign_sources()
+                .visible_source(&owner, &s.isolation, &name)
+            {
                 Some(view) => Ok(Response::ok(
                     req_id,
                     ResultPayload::of::<
@@ -345,18 +356,17 @@ pub async fn try_handle(
                 Err(refusal) => return Ok(refusal),
             };
             let mut s = call.state.write().await;
-            if let Err(error) = check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
+            if let Err(error) =
+                check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
             {
                 return Ok(Response::err(req_id, error));
             }
-            if let Err(error) =
-                medulla_server_ops::api::query_txn::foreign_share::share_source(
-                    &mut s.isolation,
-                    owner.agent_id(),
-                    &name,
-                    &grantees,
-                )
-            {
+            if let Err(error) = medulla_server_ops::api::query_txn::foreign_share::share_source(
+                &mut s.isolation,
+                owner.agent_id(),
+                &name,
+                &grantees,
+            ) {
                 return Ok(Response::err(req_id, error));
             }
             Ok(Response::ok(
@@ -372,18 +382,17 @@ pub async fn try_handle(
                 Err(refusal) => return Ok(refusal),
             };
             let mut s = call.state.write().await;
-            if let Err(error) = check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
+            if let Err(error) =
+                check_share_request(&s.foreign_sources(), &s.isolation, &owner, &name, &grantees)
             {
                 return Ok(Response::err(req_id, error));
             }
-            if let Err(error) =
-                medulla_server_ops::api::query_txn::foreign_share::unshare_source(
-                    &mut s.isolation,
-                    owner.agent_id(),
-                    &name,
-                    &grantees,
-                )
-            {
+            if let Err(error) = medulla_server_ops::api::query_txn::foreign_share::unshare_source(
+                &mut s.isolation,
+                owner.agent_id(),
+                &name,
+                &grantees,
+            ) {
                 return Ok(Response::err(req_id, error));
             }
             Ok(Response::ok(
@@ -422,9 +431,9 @@ pub async fn try_handle(
                 Ok(owner) => owner,
                 Err(refusal) => return Ok(refusal),
             };
-            if let Err(error) =
-                medulla_server_ops::api::query_txn::foreign_parity::validate_request(&tables, sample)
-            {
+            if let Err(error) = medulla_server_ops::api::query_txn::foreign_parity::validate_request(
+                &tables, sample,
+            ) {
                 return Ok(Response::err(req_id, error));
             }
             let registry = {
@@ -647,7 +656,8 @@ async fn verify_source_query_approval(
         .get(SOURCE_QUERY_APPROVAL_GRANT_KEY)
         .and_then(|grant| serde_json::from_value(grant.clone()).ok());
     let Some(stored) = stored.filter(|stored| {
-        lease.kind == SOURCE_QUERY_APPROVAL_KIND && *stored == SourceQueryApprovalGrant::of(approved)
+        lease.kind == SOURCE_QUERY_APPROVAL_KIND
+            && *stored == SourceQueryApprovalGrant::of(approved)
     }) else {
         return refuse(SourceQueryError::Unauthorized, identity);
     };
@@ -687,7 +697,12 @@ async fn verify_source_query_approval(
         };
         if state
             .foreign_sources()
-            .verify_registered_for(&owner, store, &source_approval, &approved.request.source_ref)
+            .verify_registered_for(
+                &owner,
+                store,
+                &source_approval,
+                &approved.request.source_ref,
+            )
             .is_err()
         {
             return refuse(SourceQueryError::Unauthorized, identity);
@@ -708,16 +723,16 @@ async fn verify_source_query_approval(
     }
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_protocol_types::result_contract::query::VerifySourceQueryApproval>(
-            SourceQueryApprovalValidity {
-                approval_id: approved.approval_id.clone(),
-                query_id: approved.query_id.clone(),
-                query_digest: approved.query_digest.clone(),
-                lease_revision: lease.revision,
-                checked_at_ms: now,
-                valid_until_ms: lease.expires_at_ms.min(lease.hard_expires_at_ms),
-            },
-        ),
+        ResultPayload::of::<
+            medulla_protocol_types::result_contract::query::VerifySourceQueryApproval,
+        >(SourceQueryApprovalValidity {
+            approval_id: approved.approval_id.clone(),
+            query_id: approved.query_id.clone(),
+            query_digest: approved.query_digest.clone(),
+            lease_revision: lease.revision,
+            checked_at_ms: now,
+            valid_until_ms: lease.expires_at_ms.min(lease.hard_expires_at_ms),
+        }),
     )
 }
 

@@ -195,7 +195,12 @@ pub(super) fn champion_pointer(
     let active = state.active.as_ref().ok_or_else(not_found)?;
     let target = active.target.as_deref().ok_or_else(not_found)?;
     let receipt = active.receipt_digest.as_deref().ok_or_else(not_found)?;
-    let parent_ref = match state.stack.as_slice().last().and_then(|event| event.target.as_deref()) {
+    let parent_ref = match state
+        .stack
+        .as_slice()
+        .last()
+        .and_then(|event| event.target.as_deref())
+    {
         Some(parent) => Some(opaque(parent)?),
         None => None,
     };

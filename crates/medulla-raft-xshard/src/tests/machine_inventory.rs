@@ -118,9 +118,8 @@ const INVENTORY: &[MachineRow] = &[
 ];
 
 /// Enums whose name ends in a lifecycle word but that carry no lifecycle.
-const NOT_A_LIFECYCLE: &[(&str, &str)] = &[
-    ("LockMode", "a lock kind (shared or exclusive), not a phase"),
-];
+const NOT_A_LIFECYCLE: &[(&str, &str)] =
+    &[("LockMode", "a lock kind (shared or exclusive), not a phase")];
 
 fn crates_dir() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

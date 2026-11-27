@@ -100,7 +100,11 @@ fn chosen(batch: &DecisionBatch) -> String {
     };
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
-    scores.iter().map(|s| s.option_id.clone()).collect::<Vec<_>>().join(",")
+    scores
+        .iter()
+        .map(|s| s.option_id.clone())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R832
@@ -108,7 +112,12 @@ fn chosen(batch: &DecisionBatch) -> String {
 async fn credential_reuse_admits_denies_and_abstains() {
     let h = Harness::new().await;
     let (schema, _) = publish_route_schema(&h);
-    let run = |usage: &Use| decide(&h, usage.request(&schema, TENANT, DecisionPolicyRef::Default));
+    let run = |usage: &Use| {
+        decide(
+            &h,
+            usage.request(&schema, TENANT, DecisionPolicyRef::Default),
+        )
+    };
 
     // Inside the binding: admitted.
     assert_eq!(chosen(&run(&Use::inside()).await.unwrap()), "admit");

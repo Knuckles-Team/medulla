@@ -100,12 +100,9 @@ impl GraphIndexReader {
                 .filter(|name| *name == whole || name.starts_with(&prefix))
                 .collect();
             names.sort();
-            names.iter().find_map(|name| {
-                state
-                    .registry
-                    .get(name)
-                    .and_then(|entry| read(&entry.core))
-            })
+            names
+                .iter()
+                .find_map(|name| state.registry.get(name).and_then(|entry| read(&entry.core)))
         })
     }
 }

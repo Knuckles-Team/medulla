@@ -27,8 +27,7 @@ pub const BOOKMARK_LIMIT_EXCEEDED: RefusalCode = RefusalCode::new("BOOKMARK_LIMI
 /// The semantic index has no live generation, or the cursor names another one.
 pub const BOOKMARK_INDEX_STALE: RefusalCode = RefusalCode::new("BOOKMARK_INDEX_STALE");
 /// The source revision a bookmark carries does not match the request.
-pub const BOOKMARK_REVISION_MISMATCH: RefusalCode =
-    RefusalCode::new("BOOKMARK_REVISION_MISMATCH");
+pub const BOOKMARK_REVISION_MISMATCH: RefusalCode = RefusalCode::new("BOOKMARK_REVISION_MISMATCH");
 /// The serialized response is above `max_response_bytes`.
 pub const BOOKMARK_RESPONSE_TOO_LARGE: RefusalCode =
     RefusalCode::new("BOOKMARK_RESPONSE_TOO_LARGE");

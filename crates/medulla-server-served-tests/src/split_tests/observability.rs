@@ -168,7 +168,11 @@ impl Served {
                 },
             )
             .await;
-        assert!(created.error.is_none(), "create {graph}: {:?}", created.error);
+        assert!(
+            created.error.is_none(),
+            "create {graph}: {:?}",
+            created.error
+        );
         for i in 0..nodes {
             let added = self
                 .call(
@@ -299,7 +303,10 @@ async fn introspect_sections_answer_over_the_served_path() {
     );
     assert_eq!(page.rows.len(), 1);
     assert_eq!(page.rows[0]["name"], "introspect-served:first");
-    assert_eq!(page.next_cursor.as_deref(), Some(first_id.to_string().as_str()));
+    assert_eq!(
+        page.next_cursor.as_deref(),
+        Some(first_id.to_string().as_str())
+    );
     let next = page_of(
         "Introspect tasks",
         served
@@ -365,7 +372,12 @@ async fn graph_readiness_follows_open_migrate_materialize() {
     assert!(row["reason_code"].is_null());
 
     // Evicting a ready graph reopens it: the row is back at opening until the next open.
-    assert!(served.state.write().await.registry.evict_resident("observe:ready"));
+    assert!(served
+        .state
+        .write()
+        .await
+        .registry
+        .evict_resident("observe:ready"));
     let page = served.page(IntrospectSection::Readiness).await;
     let row = page
         .rows
@@ -393,7 +405,10 @@ async fn in_flight_request_is_listed_with_phase_and_age() {
     assert!(row["waiting_for"].is_null());
     let principal_ref = row["principal_ref"].as_str().unwrap();
     assert!(principal_ref.starts_with("p:"));
-    assert!(!principal_ref.contains(PRINCIPAL), "the principal is never listed");
+    assert!(
+        !principal_ref.contains(PRINCIPAL),
+        "the principal is never listed"
+    );
     // Every exit path removes the row: the request that just returned is gone.
     let request_id = row["request_id"].as_u64().unwrap();
     assert!(medulla_observe::requests()
@@ -521,7 +536,10 @@ async fn health_names_the_blocking_graph_and_reason() {
 
     let report = health(&served).await;
     let readiness = report.readiness.expect("Health carries readiness");
-    assert!(!readiness.ready, "a blocked graph makes the engine not ready");
+    assert!(
+        !readiness.ready,
+        "a blocked graph makes the engine not ready"
+    );
     let blocker = |graph: &str| {
         readiness
             .blockers
@@ -555,7 +573,10 @@ async fn health_names_the_blocking_graph_and_reason() {
         .expect("opening graph materializes");
     let report = health(&served).await;
     let readiness = report.readiness.unwrap();
-    assert!(readiness.blockers.iter().all(|blocker| blocker.graph != opening));
+    assert!(readiness
+        .blockers
+        .iter()
+        .all(|blocker| blocker.graph != opening));
     medulla_observe::readiness().remove(opening);
     medulla_observe::readiness().remove(degraded);
 }
@@ -642,11 +663,8 @@ async fn stalled_materialization_degrades_graph_readiness() {
     assert_eq!(row["reason_task"], format!("lazy-page-in:{graph}"));
     let report = health(&served).await.readiness.unwrap();
     assert!(!report.ready);
-    assert!(report
-        .blockers
-        .iter()
-        .any(|blocker| blocker.graph == graph
-            && blocker.task.as_deref() == Some(format!("lazy-page-in:{graph}").as_str())));
+    assert!(report.blockers.iter().any(|blocker| blocker.graph == graph
+        && blocker.task.as_deref() == Some(format!("lazy-page-in:{graph}").as_str())));
     medulla_observe::readiness().remove(graph);
     drop(paging);
 }
@@ -695,7 +713,10 @@ async fn startup_report_lists_every_step_with_outcome() {
     );
     assert_eq!(
         outcome("test_step_failed"),
-        ("Failed".to_string(), Some("MATVIEW_RELOAD_FAILED".to_string()))
+        (
+            "Failed".to_string(),
+            Some("MATVIEW_RELOAD_FAILED".to_string())
+        )
     );
     // The page is ascending by start time: the steps of the whole page never go backwards.
     let starts: Vec<u64> = page
@@ -787,7 +808,10 @@ async fn introspect_rows_carry_no_token_or_payload() {
         "secret_field",
         "private-node",
     ] {
-        assert!(!text.contains(forbidden), "an Introspect row holds `{forbidden}`");
+        assert!(
+            !text.contains(forbidden),
+            "an Introspect row holds `{forbidden}`"
+        );
     }
     // A caller without `observe:read` is refused and the refusal names no graph.
     let denied = served
@@ -801,10 +825,18 @@ async fn introspect_rows_carry_no_token_or_payload() {
             vec!["node:read".to_string()],
         )
         .await;
-    let denial = denied.error.expect("a caller without observe:read is refused");
-    assert!(!denial.contains(graph), "the refusal names a graph: {denial}");
+    let denial = denied
+        .error
+        .expect("a caller without observe:read is refused");
+    assert!(
+        !denial.contains(graph),
+        "the refusal names a graph: {denial}"
+    );
     // The call writes nothing: the catalog is unchanged.
-    assert_eq!(served.state.read().await.registry.catalog_len(), catalog_before);
+    assert_eq!(
+        served.state.read().await.registry.catalog_len(),
+        catalog_before
+    );
 }
 
 // spec: MEDULLA-OBSERVE-R001.3
@@ -831,7 +863,9 @@ async fn collapsed_refusal_fails_the_harness() {
     assert_eq!(collapsed.len(), 1);
     assert_eq!(collapsed[0].request_id, id);
     assert!(
-        collapsed[0].module.starts_with("medulla-server-served-tests"),
+        collapsed[0]
+            .module
+            .starts_with("medulla-server-served-tests"),
         "the reporting crate is named: {}",
         collapsed[0].module
     );
@@ -839,7 +873,10 @@ async fn collapsed_refusal_fails_the_harness() {
     let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         tap.assert_no_collapse();
     }));
-    assert!(failed.is_err(), "an undeclared collapse must fail the harness");
+    assert!(
+        failed.is_err(),
+        "an undeclared collapse must fail the harness"
+    );
     // A request the tap did not issue is none of its business: parallel tests stay independent.
     let other = Response::err(next_id(), "another test's uncoded refusal");
     assert_eq!(other.error.as_deref(), Some("INTERNAL"));
@@ -885,7 +922,8 @@ async fn engine_log_line_inside_request_shows_ids() {
     let transitions: Vec<_> = mine
         .iter()
         .filter(|event| {
-            event.target == "medulla::transition" && event.field("machine") == Some("RequestMachine")
+            event.target == "medulla::transition"
+                && event.field("machine") == Some("RequestMachine")
         })
         .collect();
     assert!(
@@ -917,7 +955,11 @@ async fn engine_log_line_inside_request_shows_ids() {
                     )
                     .await
             }
-            None => served.introspect(IntrospectSection::Locks, None, None).await,
+            None => {
+                served
+                    .introspect(IntrospectSection::Locks, None, None)
+                    .await
+            }
         };
         assert!(response.error.is_none(), "{label}: {:?}", response.error);
         let id = served.last_request_id().to_string();
@@ -995,7 +1037,10 @@ async fn one_trace_id_follows_a_request_into_its_spawned_task() {
                 && event.field("subject") == Some(name.as_str())
         })
         .collect();
-    assert!(!inside_task.is_empty(), "the task's transitions were logged");
+    assert!(
+        !inside_task.is_empty(),
+        "the task's transitions were logged"
+    );
     for event in &inside_task {
         let span = event
             .span_with("request_id", &id_text)
@@ -1058,11 +1103,9 @@ async fn namespace_migration_task_and_steps_are_visible() {
     assert_eq!(step["outcome"], "Skipped");
     assert_eq!(step["detail"], "no retired namespace stored");
     let listed = served.page(IntrospectSection::Tasks).await;
-    assert!(listed
-        .rows
-        .iter()
-        .any(|row| row["name"] == medulla_h_admin::namespace_migration::TASK_NAME
-            && row["kind"] == "Migration"));
+    assert!(listed.rows.iter().any(|row| row["name"]
+        == medulla_h_admin::namespace_migration::TASK_NAME
+        && row["kind"] == "Migration"));
 }
 
 // spec: MEDULLA-OBSERVE-R008.3
@@ -1096,7 +1139,9 @@ async fn refused_commons_migration_is_recorded_and_degrades_readiness() {
         .find(|refusal| refusal.graph == graph)
         .expect("the cold graph's migration is refused");
     assert_eq!(refusal.code, "NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED");
-    assert!(refusal.detail.contains("NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED"));
+    assert!(refusal
+        .detail
+        .contains("NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED"));
 
     // The step names the graph and ends Refused with the typed code.
     let step = medulla_observe::startup()
@@ -1111,7 +1156,9 @@ async fn refused_commons_migration_is_recorded_and_degrades_readiness() {
         )
     );
     // The graph is degraded with the reason MIGRATION_REFUSED and names the migration task.
-    let readiness = medulla_observe::readiness().get(graph).expect("a readiness row");
+    let readiness = medulla_observe::readiness()
+        .get(graph)
+        .expect("a readiness row");
     assert_eq!(
         readiness.state,
         medulla_observe::machine::readiness::ReadinessState::Degraded
@@ -1159,7 +1206,9 @@ async fn every_inventoried_background_task_is_registered_after_boot() {
     medulla_h_admin::agent_library_projection::spawn(served.state.clone());
     medulla_h_retrieve::reasoning_projection::spawn(served.state.clone());
 
-    let page = served.introspect(IntrospectSection::Tasks, Some(500), None).await;
+    let page = served
+        .introspect(IntrospectSection::Tasks, Some(500), None)
+        .await;
     let page = page_of("Introspect tasks", page);
     for (name, built) in inventory {
         if !built {
@@ -1175,7 +1224,9 @@ async fn every_inventoried_background_task_is_registered_after_boot() {
             "`{name}` names its owner"
         );
         assert!(
-            row["registered_location"].as_str().is_some_and(|at| at.contains(".rs:")),
+            row["registered_location"]
+                .as_str()
+                .is_some_and(|at| at.contains(".rs:")),
             "`{name}` records where it was registered"
         );
     }
@@ -1259,7 +1310,9 @@ async fn previous_boot_report_is_queryable_after_restart() {
     // First boot: one recorded step, boot tasks run, and the report is stored when they end.
     let first = Served::new().await;
     let graph = "observe:restart";
-    medulla_observe::startup().step("restart_probe_first", graph).ok();
+    medulla_observe::startup()
+        .step("restart_probe_first", graph)
+        .ok();
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(first.state.clone()).await;
     let store = {
         let state = first.state.read().await;
@@ -1282,7 +1335,9 @@ async fn previous_boot_report_is_queryable_after_restart() {
     // step of the new boot.
     let dir = first.into_dir();
     let second = Served::new_in(dir).await;
-    medulla_observe::startup().step("restart_probe_second", graph).ok();
+    medulla_observe::startup()
+        .step("restart_probe_second", graph)
+        .ok();
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(second.state.clone()).await;
 
     let mut rows = Vec::new();
@@ -1301,12 +1356,14 @@ async fn previous_boot_report_is_queryable_after_restart() {
         }
     }
     let probe = |name: &str, boot_seq: u64| {
-        rows.iter().any(|row| {
-            row["name"] == name && row["graph"] == graph && row["boot_seq"] == boot_seq
-        })
+        rows.iter()
+            .any(|row| row["name"] == name && row["graph"] == graph && row["boot_seq"] == boot_seq)
     };
     // The earlier boot's report answers under its own sequence number and is not the current one.
-    assert!(probe("restart_probe_first", first_seq), "the previous report is queryable");
+    assert!(
+        probe("restart_probe_first", first_seq),
+        "the previous report is queryable"
+    );
     assert!(!probe("restart_probe_second", first_seq));
     // The new boot is the next sequence number and carries both probes in this process.
     let current = first_seq + 1;
@@ -1351,7 +1408,10 @@ async fn profile_samples_the_spinning_worker() {
             vec!["observe:read".to_string()],
         )
         .await;
-    assert!(denied.error.is_some(), "observe:read does not clear observe:profile");
+    assert!(
+        denied.error.is_some(),
+        "observe:read does not clear observe:profile"
+    );
 
     if !medulla_observe::profile::available() {
         let unavailable = refusal(
@@ -1359,7 +1419,10 @@ async fn profile_samples_the_spinning_worker() {
                 .call("__commons__", profile(ProfileKind::Stacks, 1))
                 .await,
         );
-        assert!(unavailable.starts_with("PROFILE_UNAVAILABLE"), "{unavailable}");
+        assert!(
+            unavailable.starts_with("PROFILE_UNAVAILABLE"),
+            "{unavailable}"
+        );
         return;
     }
     // Three workers spin while the sampler runs; the fourth and the test keep serving.
@@ -1388,7 +1451,11 @@ async fn profile_samples_the_spinning_worker() {
             .iter()
             .any(|stack| stack.thread.starts_with("tokio-runtime")),
         "the runtime workers are named by thread: {:?}",
-        report.stacks.iter().map(|stack| &stack.thread).collect::<Vec<_>>()
+        report
+            .stacks
+            .iter()
+            .map(|stack| &stack.thread)
+            .collect::<Vec<_>>()
     );
     // Every frame names its module and an offset in it.
     assert!(report
@@ -1464,7 +1531,10 @@ async fn task_dump_is_one_consistent_snapshot() {
     assert_eq!(first.kind, ProfileKind::TaskDump);
     // The four registries are listed by one read each, under one sequence number.
     assert!(first.seq > 0);
-    assert!(first.tasks.iter().any(|row| row["name"] == "task-dump:served"));
+    assert!(first
+        .tasks
+        .iter()
+        .any(|row| row["name"] == "task-dump:served"));
     assert!(
         first.requests.iter().any(|row| row["method"] == "Profile"),
         "the dump request itself is in flight"
@@ -1539,8 +1609,9 @@ async fn chaos_stalled_task_and_spinning_loop_are_named() {
         .expect_err("a loop whose cursor never moves must end");
     assert_eq!(error.name, "chaos-spin");
     assert_eq!(error.code().as_str(), "NO_PROGRESS");
-    assert!(medulla_observe::registry::tasks::file_line(error.location)
-        .contains("observability.rs"));
+    assert!(
+        medulla_observe::registry::tasks::file_line(error.location).contains("observability.rs")
+    );
     // The same loop as a registered task ends Failed with the typed code.
     medulla_observe::spawn::spawn(
         TaskSpec {
@@ -1619,14 +1690,19 @@ async fn frozen_paging_cursor_ends_typed_and_degrades_graph() {
         Some("NO_PROGRESS")
     );
     // The graph is degraded, with the paging task as the reason.
-    let readiness = medulla_observe::readiness().get(graph).expect("a readiness row");
+    let readiness = medulla_observe::readiness()
+        .get(graph)
+        .expect("a readiness row");
     assert_eq!(
         readiness.state,
         medulla_observe::machine::readiness::ReadinessState::Degraded
     );
     let reason = readiness.reason.expect("a degraded graph has a reason");
     assert_eq!(reason.code, "NO_PROGRESS");
-    assert_eq!(reason.task.as_deref(), Some(format!("lazy-page-in:{graph}").as_str()));
+    assert_eq!(
+        reason.task.as_deref(),
+        Some(format!("lazy-page-in:{graph}").as_str())
+    );
 
     // The failed partial core was evicted; the next read opens the graph again in pages of five
     // and meets the partial image: it is refused PARTIAL_MATERIALIZATION, typed on the wire.
@@ -1634,6 +1710,13 @@ async fn frozen_paging_cursor_ends_typed_and_degrades_graph() {
     let read = served.call(graph, Method::NodeIds).await;
     std::env::remove_var("MEDULLA_LAZY_OPEN_PAGE_SIZE");
     medulla_observe::chaos::thaw_cursor(graph);
-    assert_eq!(read.error.as_deref(), Some("PARTIAL_MATERIALIZATION"), "{read:?}");
-    assert!(read.error_detail.as_deref().is_some_and(|detail| detail.contains("\"phase\"")));
+    assert_eq!(
+        read.error.as_deref(),
+        Some("PARTIAL_MATERIALIZATION"),
+        "{read:?}"
+    );
+    assert!(read
+        .error_detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains("\"phase\"")));
 }

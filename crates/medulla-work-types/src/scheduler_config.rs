@@ -1145,8 +1145,7 @@ impl SourceQueryKnobs {
     }
 }
 
-static SOURCE_QUERY_KNOB_VALUES: std::sync::OnceLock<SourceQueryKnobs> =
-    std::sync::OnceLock::new();
+static SOURCE_QUERY_KNOB_VALUES: std::sync::OnceLock<SourceQueryKnobs> = std::sync::OnceLock::new();
 
 /// Install the startup-validated source-query knobs; the first install wins.
 pub fn install_source_query_knobs(knobs: SourceQueryKnobs) {

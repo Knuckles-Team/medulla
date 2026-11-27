@@ -128,10 +128,7 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
         for (key, value) in extra {
             properties.insert(key.clone(), value.clone());
         }
-        nodes.push((
-            id.to_owned(),
-            node(class, iri(id), id, properties),
-        ));
+        nodes.push((id.to_owned(), node(class, iri(id), id, properties)));
         known.insert(id.to_owned());
     };
     let mut push_edge = |from: &str, to: &str, predicate: &str| {
@@ -179,7 +176,12 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
                 let definition_id = format!("{}#{index}", element.id);
                 let mut kept = definition_properties(definition);
                 kept.push(("bpmnKind".to_owned(), definition.kind.clone()));
-                push_node(&definition_id, &definition_class(&definition.kind), "", &kept);
+                push_node(
+                    &definition_id,
+                    &definition_class(&definition.kind),
+                    "",
+                    &kept,
+                );
                 push_edge(&element.id, &definition_id, "hasEventDefinition");
             }
         }
@@ -203,7 +205,11 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
     // A fragment whose owner is not an element of the document stays on the document node.
     let mut kept: BTreeMap<String, String> = BTreeMap::new();
     for (owner, xml) in preserved {
-        let owner = if known.contains(owner) { owner } else { doc.id.as_str() };
+        let owner = if known.contains(owner) {
+            owner
+        } else {
+            doc.id.as_str()
+        };
         kept.entry(owner.to_owned()).or_default().push_str(&xml);
     }
     for (id, mutation) in &mut nodes {
@@ -329,9 +335,8 @@ pub fn bpmn_document(
         out.sort_unstable();
         out
     };
-    let name_of = |properties: &BTreeMap<String, String>| {
-        properties.get("name").cloned().unwrap_or_default()
-    };
+    let name_of =
+        |properties: &BTreeMap<String, String>| properties.get("name").cloned().unwrap_or_default();
     let kept = |owner: &str, properties: &BTreeMap<String, String>| {
         properties.get("bpmnPreservedXml").map(|xml| PreservedXml {
             owner: owner.to_owned(),
@@ -364,8 +369,7 @@ pub fn bpmn_document(
             .unwrap_or_default(),
         ..BpmnDocument::default()
     };
-    doc.preserved
-        .extend(kept(&doc.id, definitions_properties));
+    doc.preserved.extend(kept(&doc.id, definitions_properties));
 
     for (process_id, (label, properties)) in &nodes {
         if *label != "BpmnProcess" {

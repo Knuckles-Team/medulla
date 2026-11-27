@@ -612,19 +612,40 @@ mod tests {
         // Off the process channel, or not supporting: PROOF_RECEIPT_INVALID.
         let mut off_channel = evidence.clone();
         off_channel.channel = EvidenceChannel::Outcome;
-        assert_eq!(off_channel.check(), Err(ServerErrorCode::ProofReceiptInvalid));
+        assert_eq!(
+            off_channel.check(),
+            Err(ServerErrorCode::ProofReceiptInvalid)
+        );
         let mut opposing = evidence.clone();
         opposing.supports = false;
         assert_eq!(opposing.check(), Err(ServerErrorCode::ProofReceiptInvalid));
 
         // A malformed receipt: an empty field or a bad digest.
         for broken in [
-            ProofReceipt { checker_id: String::new(), ..sample_receipt() },
-            ProofReceipt { toolchain_version: String::new(), ..sample_receipt() },
-            ProofReceipt { declaration: String::new(), ..sample_receipt() },
-            ProofReceipt { artifact_digest: "ab".repeat(31), ..sample_receipt() },
-            ProofReceipt { artifact_digest: "AB".repeat(32), ..sample_receipt() },
-            ProofReceipt { artifact_digest: "zz".repeat(32), ..sample_receipt() },
+            ProofReceipt {
+                checker_id: String::new(),
+                ..sample_receipt()
+            },
+            ProofReceipt {
+                toolchain_version: String::new(),
+                ..sample_receipt()
+            },
+            ProofReceipt {
+                declaration: String::new(),
+                ..sample_receipt()
+            },
+            ProofReceipt {
+                artifact_digest: "ab".repeat(31),
+                ..sample_receipt()
+            },
+            ProofReceipt {
+                artifact_digest: "AB".repeat(32),
+                ..sample_receipt()
+            },
+            ProofReceipt {
+                artifact_digest: "zz".repeat(32),
+                ..sample_receipt()
+            },
         ] {
             evidence.proof = Some(broken);
             assert_eq!(evidence.check(), Err(ServerErrorCode::ProofReceiptInvalid));
@@ -632,7 +653,10 @@ mod tests {
 
         // A pass that still holds an unfinished step: PROOF_SORRY_PRESENT; a
         // failing verdict may carry it.
-        evidence.proof = Some(ProofReceipt { has_sorry: true, ..sample_receipt() });
+        evidence.proof = Some(ProofReceipt {
+            has_sorry: true,
+            ..sample_receipt()
+        });
         assert_eq!(evidence.check(), Err(ServerErrorCode::ProofSorryPresent));
         evidence.proof = Some(ProofReceipt {
             has_sorry: true,

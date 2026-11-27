@@ -63,8 +63,14 @@ pub(super) fn plan(
         }));
     }
     let critique = derive_critique(request).map_err(invalid_parameter)?;
-    row.insert(ROW_CRITIQUE_REF.into(), critique.critique_ref.clone().into());
-    row.insert(ROW_CRITIQUE_DIGEST.into(), request.content_digest.clone().into());
+    row.insert(
+        ROW_CRITIQUE_REF.into(),
+        critique.critique_ref.clone().into(),
+    );
+    row.insert(
+        ROW_CRITIQUE_DIGEST.into(),
+        request.content_digest.clone().into(),
+    );
     row.insert(ROW_CRITIQUE_VERDICT.into(), critique.verdict.into());
     row.insert(ROW_CRITIQUE_RECORDED_AT.into(), now_ms.into());
     row.insert(ROW_CRITIQUE_RECORDED_BY.into(), verified.agent_id().into());

@@ -12,7 +12,9 @@
 use std::time::{Duration, Instant};
 
 use medulla_core::sensitive_scan::{scan_values, NoResources, ScanLimits};
-use medulla_query_types::sensitive_detect::{DetectorRule, SensitiveDetectionMethod, SensitiveDetector};
+use medulla_query_types::sensitive_detect::{
+    DetectorRule, SensitiveDetectionMethod, SensitiveDetector,
+};
 
 const VALUES: usize = 10_000;
 const DETECTORS: usize = 20;
@@ -48,7 +50,9 @@ fn high_water_mib() -> f64 {
 }
 
 fn main() {
-    let owned: Vec<String> = (0..VALUES).map(|n| format!("person{}@example.test", n % 20)).collect();
+    let owned: Vec<String> = (0..VALUES)
+        .map(|n| format!("person{}@example.test", n % 20))
+        .collect();
     let values: Vec<Option<&str>> = owned.iter().map(|value| Some(value.as_str())).collect();
     let detectors = detectors();
     let limits = ScanLimits::default();
@@ -56,8 +60,15 @@ fn main() {
     let mut samples = Vec::with_capacity(SCANS);
     for _ in 0..SCANS {
         let started = Instant::now();
-        let detections = scan_values("col:bench.value", &values, &detectors, &limits, &NoResources, 0)
-            .expect("bench detectors are valid");
+        let detections = scan_values(
+            "col:bench.value",
+            &values,
+            &detectors,
+            &limits,
+            &NoResources,
+            0,
+        )
+        .expect("bench detectors are valid");
         samples.push(started.elapsed());
         assert_eq!(detections.len(), DETECTORS);
     }
@@ -68,5 +79,8 @@ fn main() {
         "decide/sensitive_scan p99 = {p99:?} (budget {BUDGET_P99:?}) peak_mib = {used:.1} (budget {BUDGET_MIB})"
     );
     assert!(p99 < BUDGET_P99, "p99 {p99:?} exceeds {BUDGET_P99:?}");
-    assert!(used < BUDGET_MIB, "peak {used:.1} MiB exceeds {BUDGET_MIB} MiB");
+    assert!(
+        used < BUDGET_MIB,
+        "peak {used:.1} MiB exceeds {BUDGET_MIB} MiB"
+    );
 }

@@ -64,7 +64,11 @@ fn load_is_linear_and_deterministic() {
     for n in [10usize, 1_000, 100_000] {
         let (nodes, edges) = chain(n);
         let graph = load_process_graph(PROCESS, &nodes, &edges, 1_000_000).expect("loads");
-        assert_eq!(graph.nodes.len(), n, "the :hasStep targets plus the closure");
+        assert_eq!(
+            graph.nodes.len(),
+            n,
+            "the :hasStep targets plus the closure"
+        );
         assert!(graph.nodes.iter().all(|x| x.element_id.starts_with('n')));
         assert_eq!(graph.edges.len(), n - 1);
         assert_eq!(graph.model_id, PROCESS);
@@ -122,8 +126,7 @@ fn cycle_needs_a_loop_gate_and_size_and_unbound_are_refused() {
     edges.retain(|e| e.target != "n00000003" && e.target != "n00000001" || e.source == PROCESS);
     edges.push(edge("n00000000", "n00000001", false));
     assert_eq!(
-        compile_process_view(PROCESS, &nodes, &edges, 1_000, ANNOTATIONS)
-            .map(|_| ()),
+        compile_process_view(PROCESS, &nodes, &edges, 1_000, ANNOTATIONS).map(|_| ()),
         Err(ProcessCompilationError::TaskUnbound {
             node_id: "n00000002".into()
         })

@@ -70,13 +70,15 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         #[cfg(feature = "raft")]
         routed_raft: ctx.routed_raft,
     };
-    Ok(match crate::work_item::try_handle(work_item_ctx, stamped).await {
-        Ok(response) => response,
-        Err(_) => Response::err(
-            ctx.req_id,
-            "ApproveSourceQuery is not served by this build".to_string(),
-        ),
-    })
+    Ok(
+        match crate::work_item::try_handle(work_item_ctx, stamped).await {
+            Ok(response) => response,
+            Err(_) => Response::err(
+                ctx.req_id,
+                "ApproveSourceQuery is not served by this build".to_string(),
+            ),
+        },
+    )
 }
 
 /// The checks of an approval, in order, before any commit. Every refusal replies in the
@@ -127,7 +129,10 @@ pub async fn admit_source_query(
         source_approval.committed_version,
         &source_approval.head.pack_digest.to_hex(),
     ) {
-        return Err(approval_refusal(SourceQueryError::StaleSource, &request.query));
+        return Err(approval_refusal(
+            SourceQueryError::StaleSource,
+            &request.query,
+        ));
     }
     // (6) The admission is derived from the verified context, never from the wire.
     let authority = source_query_authority(verified, ctx.graph_name)

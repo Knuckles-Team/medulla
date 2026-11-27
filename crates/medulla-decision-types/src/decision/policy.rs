@@ -199,7 +199,10 @@ pub struct DecisionPolicy {
     /// The source digests the engine holds, for the entry admission of
     /// `retrieved_entries` (MEDULLA-DECISION-ENGINE-R132.3). Empty is omitted
     /// from the wire and keeps an existing policy's digest.
-    #[serde(default, skip_serializing_if = "super::entry_types::EntryTrustPolicy::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "super::entry_types::EntryTrustPolicy::is_empty"
+    )]
     pub entry_trust: super::entry_types::EntryTrustPolicy,
     /// Whether a commit under this policy needs a reviewer's approval receipt
     /// (MEDULLA-DECISION-ENGINE-R019.100.2). `false` is omitted from the wire

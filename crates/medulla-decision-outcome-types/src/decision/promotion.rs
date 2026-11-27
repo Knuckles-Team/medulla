@@ -168,7 +168,9 @@ impl TryFrom<&crate::policy_evolution::PolicyEvaluation> for HeldOutEvidence {
     /// The held-out evidence a policy evaluation carries
     /// (MEDULLA-DECISION-ENGINE-R811.8). A failed safety outcome is not
     /// evidence: it refuses `PROMOTION_UNEVALUATED`.
-    fn try_from(evaluation: &crate::policy_evolution::PolicyEvaluation) -> Result<Self, RefusalCode> {
+    fn try_from(
+        evaluation: &crate::policy_evolution::PolicyEvaluation,
+    ) -> Result<Self, RefusalCode> {
         use crate::policy_evolution::SafetyOutcome;
         if evaluation.safety == SafetyOutcome::Failed {
             return Err(PROMOTION_UNEVALUATED);
@@ -441,7 +443,10 @@ mod tests {
                 Some(subject)
             );
         }
-        assert_eq!(RevisionSubject::from_pointer_key("champion:nothing:x"), None);
+        assert_eq!(
+            RevisionSubject::from_pointer_key("champion:nothing:x"),
+            None
+        );
         assert_eq!(RevisionSubject::from_pointer_key("pointer:x"), None);
     }
 
@@ -565,7 +570,10 @@ mod tests {
         assert_eq!(held.challenger_ref, "polver:v2");
         assert_eq!(held.champion_ref.as_deref(), Some("polver:v1"));
         assert_eq!(held.receipt_kind, ReceiptKind::PolicyEvaluation);
-        assert_eq!(held.evaluation_set_digest, Digest256::from_bytes([7; 32]).to_hex());
+        assert_eq!(
+            held.evaluation_set_digest,
+            Digest256::from_bytes([7; 32]).to_hex()
+        );
         assert_eq!(held.challenger_score_ppm, 800_000);
         assert_eq!(held.champion_score_ppm, Some(600_000));
         assert_eq!(held.delta_ppm, 200_000);
@@ -586,7 +594,10 @@ mod tests {
             verdict: EvaluationVerdict::Rejected,
             ..evaluation
         };
-        assert_eq!(HeldOutEvidence::try_from(&failed), Err(PROMOTION_UNEVALUATED));
+        assert_eq!(
+            HeldOutEvidence::try_from(&failed),
+            Err(PROMOTION_UNEVALUATED)
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R805.7

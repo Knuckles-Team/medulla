@@ -1,7 +1,7 @@
 use super::*;
 
-mod delivery;
 mod connector_runs;
+mod delivery;
 mod deploy;
 mod goals;
 mod source_connections;
@@ -10,37 +10,22 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_work_types::orchestration::visual_observation::{
-    ObservationRefusal, VisualObservation, VisualObservationReceipt,
-    VISUAL_OBSERVATION_NODE_TYPE, VISUAL_OBSERVATION_RECORD_PROPERTY,
-};
 use medulla_protocol_types::result_contract::ingestion::{
-    ConfigLayers as ConfigLayersResult, GoalPut as GoalPutResult,
-    ProjectModeGet as ProjectModeGetResult,
-    ProjectModeSet as ProjectModeSetResult,
-    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, PutObservation as PutObservationResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
-    ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
-    RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
+    ConfigLayers as ConfigLayersResult, FileDefect as FileDefectResult,
+    GetDefect as GetDefectResult, GoalPut as GoalPutResult,
+    LandingPolicyPut as LandingPolicyPutResult, LifecycleTrace as LifecycleTraceResult,
+    ProjectModeGet as ProjectModeGetResult, ProjectModeSet as ProjectModeSetResult,
+    ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    ProposalPut as ProposalPutResult, PutObservation as PutObservationResult,
+    RecordDeployment as RecordDeploymentResult, RecordGateVerdict as RecordGateVerdictResult,
+    RecordRelease as RecordReleaseResult, SpecQuestion as SpecQuestionResult,
+    SpecStatus as SpecStatusResult, TransitionDefect as TransitionDefectResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{
     authorized_graph_read, ensure_graph_resident, timed_read, typed_response,
-};
-use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
-use medulla_source_types::lifecycle::{
-    deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
-    handle_project_mode_get, handle_project_mode_set, project_mode_record, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
-    check_pull_request_target, pull_request_arguments, pull_request_outcome,
-    ProposalDecision, OPEN_PULL_REQUEST_TOOL, REPOSITORY_NODE_TYPE, resolve_source_connection, SourceConnection,
-    handle_file_defect, handle_get_defect, handle_transition_defect, defect_node_id, defect_from_node,
-    DefectFileOutcome, GetDefectReceipt, GetDefectRequest, TransitionDefectRequest, Defect, DefectWrite, FileDefectRequest,
-    DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
-    ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
-    ProposalWrite, PullRequestError, PullRequestTarget, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
-    DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
-    ProjectModeGetRequest, ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
 use medulla_source_types::config_layers::{
     config_layer_node_id, config_layer_record, ConfigLayerKind, ConfigLayersAnswer,
@@ -53,6 +38,26 @@ use medulla_source_types::gate_verdict::{
     LANDING_POLICY_TYPE,
 };
 use medulla_source_types::lifecycle::DefectIntake;
+use medulla_source_types::lifecycle::{
+    check_pull_request_target, defect_from_node, defect_node_id, deployment_node_id,
+    handle_file_defect, handle_get_defect, handle_goal_put, handle_project_mode_get,
+    handle_project_mode_set, handle_proposal_decide, handle_proposal_put, handle_record_deployment,
+    handle_record_release, handle_transition_defect, project_mode_node_id, project_mode_record,
+    pull_request_arguments, pull_request_outcome, release_node_id, resolve_source_connection,
+    Defect, DefectFileOutcome, DefectWrite, Deployment, DeploymentInput, DeploymentReceipt,
+    FileDefectRequest, GetDefectReceipt, GetDefectRequest, Goal, GoalReceipt, GoalWrite,
+    LifecycleRefusal, ProjectMode, ProjectModeGetRequest, ProjectModeReceipt, ProjectModeSet,
+    ProjectModeWrite, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalDecision,
+    ProposalEvidence, ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt,
+    ProposalState, ProposalWrite, PullRequestError, PullRequestTarget, Release, ReleaseReceipt,
+    SourceConnection, TransitionDefectRequest, DEFECT_TYPE, MAX_PROPOSAL_EVIDENCE,
+    OPEN_PULL_REQUEST_TOOL, REPOSITORY_NODE_TYPE,
+};
+use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
+use medulla_work_types::orchestration::visual_observation::{
+    ObservationRefusal, VisualObservation, VisualObservationReceipt, VISUAL_OBSERVATION_NODE_TYPE,
+    VISUAL_OBSERVATION_RECORD_PROPERTY,
+};
 use medulla_work_types::step_verdict::VerificationVerdict;
 use serde_json::{json, Map, Value};
 use tokio::sync::RwLock;
@@ -177,7 +182,12 @@ pub async fn dispatch_sdlc_methods(
             dispatch_boxed(source_connections::control(state, target, op)).await
         }
         Method::SourceMappingGet { connection_id } => {
-            dispatch_boxed(source_connections::mapping_get(state, target, connection_id)).await
+            dispatch_boxed(source_connections::mapping_get(
+                state,
+                target,
+                connection_id,
+            ))
+            .await
         }
         Method::SourceMappingControl { op } => {
             dispatch_boxed(source_connections::mapping_control(state, target, op)).await
@@ -251,9 +261,7 @@ pub async fn dispatch_sdlc_methods(
             };
             dispatch_boxed(spec_status(state, target, repo, rev, spec_id)).await
         }
-        Method::FileDefect { request } => {
-            dispatch_boxed(file_defect(state, target, request)).await
-        }
+        Method::FileDefect { request } => dispatch_boxed(file_defect(state, target, request)).await,
         Method::TransitionDefect { request } => {
             dispatch_boxed(transition_defect(state, target, request)).await
         }
@@ -361,13 +369,10 @@ async fn record_gate_verdict(
             .and_then(|node| node.get("repo").and_then(Value::as_str))
             .unwrap_or(target.graph)
             .to_string();
-        let stored: Option<GateVerdictRecord> = read(&gate_verdict_node_id(
-            &request.changeset,
-            &request.gate_id,
-        ))
-        .and_then(|node| {
-            serde_json::from_str(node.get(GATE_VERDICT_RECORD_PROPERTY)?.as_str()?).ok()
-        });
+        let stored: Option<GateVerdictRecord> =
+            read(&gate_verdict_node_id(&request.changeset, &request.gate_id)).and_then(|node| {
+                serde_json::from_str(node.get(GATE_VERDICT_RECORD_PROPERTY)?.as_str()?).ok()
+            });
         let tree_digest = if changeset_known {
             changeset_tree_digest(state, &target, &branch, &request.changeset).await?
         } else {
@@ -495,8 +500,9 @@ async fn spec_question(
         if question == medulla_source_types::spec_question::SpecQuestion::PlanUnknowns {
             let mode = stored_project_mode(state, &target, target.graph).await?;
             if mode == ProjectMode::Reference {
-                return Err(LifecycleRefusal::ModeReferenceNoProposals(target.graph.to_owned())
-                    .to_string());
+                return Err(
+                    LifecycleRefusal::ModeReferenceNoProposals(target.graph.to_owned()).to_string(),
+                );
             }
         }
         ensure_graph_resident(state, target.graph).await;
@@ -532,10 +538,9 @@ async fn research_tools(
     .await?;
     Ok(read
         .into_iter()
-        .map(|(connector, tool)| medulla_sdlc::lifecycle::research::ResearchTool {
-            connector,
-            tool,
-        })
+        .map(
+            |(connector, tool)| medulla_sdlc::lifecycle::research::ResearchTool { connector, tool },
+        )
         .collect())
 }
 
@@ -597,8 +602,8 @@ async fn trace_limits(
             medulla_decision_policy::policy::resolve_policy(&NoPolicyLibrary, tenant, reference)?
         }
         pinned => {
-            let store = medulla_persistence_records::agent_library::shared_agent_library(state)
-                .await?;
+            let store =
+                medulla_persistence_records::agent_library::shared_agent_library(state).await?;
             medulla_decision_policy::policy::resolve_policy(&LibraryHandle(store), tenant, pinned)?
         }
     };
@@ -721,7 +726,11 @@ fn spec_graph_view(
             else {
                 continue;
             };
-            if node.get("tenant_id").and_then(Value::as_str).is_some_and(|owner| owner != tenant) {
+            if node
+                .get("tenant_id")
+                .and_then(Value::as_str)
+                .is_some_and(|owner| owner != tenant)
+            {
                 continue;
             }
             let props = node
@@ -792,9 +801,14 @@ async fn stored_defect(
 ) -> Result<(String, Defect, Option<String>), String> {
     let node_id = defect_node_id(repo, defect_id);
     let unknown = || LifecycleRefusal::EndpointUnknown(node_id.clone()).to_string();
-    let node = visible_node(state, target, &node_id).await?.ok_or_else(unknown)?;
+    let node = visible_node(state, target, &node_id)
+        .await?
+        .ok_or_else(unknown)?;
     let defect = defect_from_node(&node, target.verified.tenant()).ok_or_else(unknown)?;
-    let fix = node.get("fix_changeset").and_then(Value::as_str).map(str::to_owned);
+    let fix = node
+        .get("fix_changeset")
+        .and_then(Value::as_str)
+        .map(str::to_owned);
     Ok((node_id, defect, fix))
 }
 
@@ -814,7 +828,9 @@ async fn transition_defect(
             stored_defect(state, &target, &request.repo, &request.defect_id).await?;
         let mut verdict_passed = false;
         if let (Some(fix), Some(gate)) = (stored_fix.as_deref(), request.gate_id.as_deref()) {
-            if let Some(node) = visible_node(state, &target, &gate_verdict_node_id(fix, gate)).await? {
+            if let Some(node) =
+                visible_node(state, &target, &gate_verdict_node_id(fix, gate)).await?
+            {
                 verdict_passed = node
                     .get(GATE_VERDICT_RECORD_PROPERTY)
                     .and_then(Value::as_str)
@@ -822,8 +838,9 @@ async fn transition_defect(
                     .is_some_and(|record| record.verdict == VerificationVerdict::Pass);
             }
         }
-        let moved = handle_transition_defect(&request, &defect, stored_fix.as_deref(), verdict_passed)
-            .map_err(|e| e.to_string())?;
+        let moved =
+            handle_transition_defect(&request, &defect, stored_fix.as_deref(), verdict_passed)
+                .map_err(|e| e.to_string())?;
         let write = DefectWrite {
             defect: moved.defect.clone(),
             outcome: DefectFileOutcome::Absorbed,
@@ -875,7 +892,9 @@ async fn file_defect_write(
     request: FileDefectRequest,
 ) -> Result<DefectWrite, String> {
     let existing = load_defects(state, target, &request.repo).await?;
-    Ok(medulla_h_ingest::defect_intake::file_defect(existing, request))
+    Ok(medulla_h_ingest::defect_intake::file_defect(
+        existing, request,
+    ))
 }
 
 /// The stored defects of `repo` the caller can see, owned by the verified tenant.
@@ -911,7 +930,10 @@ async fn load_defects(
 }
 
 /// The one `Defect` node of a filing, stamped with the verified tenant and owner.
-fn defect_properties(write: &DefectWrite, target: &SdlcTarget<'_>) -> Result<Map<String, Value>, String> {
+fn defect_properties(
+    write: &DefectWrite,
+    target: &SdlcTarget<'_>,
+) -> Result<Map<String, Value>, String> {
     let mut properties = write.node_properties()?;
     stamp(&mut properties, target);
     Ok(properties)
@@ -947,7 +969,8 @@ async fn landing_policy_put(
         .and_then(|node| {
             serde_json::from_str(node.get(LANDING_POLICY_RECORD_PROPERTY)?.as_str()?).ok()
         });
-        let write = handle_landing_policy_put(request, stored.as_ref()).map_err(|e| e.to_string())?;
+        let write =
+            handle_landing_policy_put(request, stored.as_ref()).map_err(|e| e.to_string())?;
         let body = serde_json::to_string(&write.request.policy)
             .map_err(|_| "landing policy encoding failed".to_string())?;
         let mut properties = Map::new();
@@ -994,7 +1017,9 @@ async fn put_observation(
         if tenant.trim().is_empty() {
             return Err("TENANT_SCOPE_REQUIRED".to_string());
         }
-        observation.validate().map_err(|refusal| refusal.to_string())?;
+        observation
+            .validate()
+            .map_err(|refusal| refusal.to_string())?;
         if observation.tenant_id != tenant {
             return Err(ObservationRefusal::ScopeUnknown.to_string());
         }
@@ -1129,10 +1154,12 @@ async fn changeset_tree_digest(
             0,
         )
         .map_err(|error| format!("{error:?}"))?;
-        Ok(Some(medulla_source_types::gate_verdict::tree_listing_digest(
-            tree.iter()
-                .map(|entry| (entry.path.as_str(), entry.blob_digest.as_str(), entry.mode)),
-        )))
+        Ok(Some(
+            medulla_source_types::gate_verdict::tree_listing_digest(
+                tree.iter()
+                    .map(|entry| (entry.path.as_str(), entry.blob_digest.as_str(), entry.mode)),
+            ),
+        ))
     })
     .await
     .map_err(|error| error.to_string())?
@@ -1262,7 +1289,9 @@ async fn check_cited_tools(
     let named: BTreeSet<String> = proposal
         .evidence
         .iter()
-        .filter(|cited| cited.kind == medulla_source_types::lifecycle::EvidenceKind::ResearchCitation)
+        .filter(|cited| {
+            cited.kind == medulla_source_types::lifecycle::EvidenceKind::ResearchCitation
+        })
         .filter_map(|cited| {
             let blob = core.get_node_properties(&cited.record_id)?;
             if !authority.can_see_node(&blob, core.is_schema_node(&cited.record_id)) {
@@ -1429,7 +1458,8 @@ pub(super) async fn check_spec_edit_provenance(
     message: &str,
 ) -> Result<(), String> {
     let loop_authored = verified.is_loop_principal();
-    if !loop_authored || !medulla_sdlc::lifecycle::proposals::touches_spec_tree(touched.iter().copied())
+    if !loop_authored
+        || !medulla_sdlc::lifecycle::proposals::touches_spec_tree(touched.iter().copied())
     {
         return Ok(());
     }
@@ -1476,8 +1506,16 @@ async fn proposal_list(
         Ok(proposals
             .into_iter()
             .filter(|stored| stored.project == request.repo)
-            .filter(|stored| request.state.is_none_or(|wanted| stored.entry.state == wanted))
-            .filter(|stored| request.kind.is_none_or(|wanted| stored.entry.kind == wanted))
+            .filter(|stored| {
+                request
+                    .state
+                    .is_none_or(|wanted| stored.entry.state == wanted)
+            })
+            .filter(|stored| {
+                request
+                    .kind
+                    .is_none_or(|wanted| stored.entry.kind == wanted)
+            })
             .map(|stored| stored.entry)
             .collect::<Vec<_>>())
     }
@@ -1505,7 +1543,8 @@ async fn proposal_decide(
             .iter()
             .find(|stored| stored.entry.id == request.id)
             .ok_or_else(|| LifecycleRefusal::ProposalNotFound(request.id.clone()).to_string())?;
-        let next = handle_proposal_decide(stored.entry.state, &request).map_err(|e| e.to_string())?;
+        let next =
+            handle_proposal_decide(stored.entry.state, &request).map_err(|e| e.to_string())?;
         if let Some(pull_request) = &request.pull_request {
             check_pull_request_target(pull_request).map_err(|e| e.to_string())?;
         }
@@ -1530,8 +1569,7 @@ async fn proposal_decide(
         {
             let opened = match repository_connection(state, &target, &stored.project).await {
                 Ok(connection) => {
-                    open_pull_request(&target, stored, &request.id, &connection, pull_request)
-                        .await
+                    open_pull_request(&target, stored, &request.id, &connection, pull_request).await
                 }
                 Err(error) => Err(error),
             };
@@ -1681,7 +1719,10 @@ async fn record_pull_request(
     let text = |value: Option<&String>| value.map_or(Value::Null, |text| text.clone().into());
     properties.insert("pull_request".into(), text(receipt.pull_request.as_ref()));
     let error = receipt.pull_request_error.as_ref();
-    properties.insert("pull_request_error_code".into(), text(error.map(|e| &e.code)));
+    properties.insert(
+        "pull_request_error_code".into(),
+        text(error.map(|e| &e.code)),
+    );
     properties.insert(
         "pull_request_error_message".into(),
         text(error.map(|e| &e.message)),
@@ -2040,12 +2081,7 @@ fn release_operations(
     stamp(&mut properties, target);
     let mut operations = vec![json!({"op": "upsert_node", "id": id, "properties": properties})];
     for changeset in &write.contains {
-        operations.push(edge(
-            &id,
-            "contains",
-            &commit_node_id(changeset),
-            target,
-        ));
+        operations.push(edge(&id, "contains", &commit_node_id(changeset), target));
     }
     bounded(operations)
 }

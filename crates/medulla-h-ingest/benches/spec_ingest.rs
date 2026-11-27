@@ -27,8 +27,8 @@ use medulla_h_ingest::source_ingestion::spec_projection::{
 use medulla_sdlc::lifecycle::proposals::{check_changeset_provenance, StoredBinding};
 use medulla_sdlc::lifecycle::research::{research_item_key, unknown_frontier};
 use medulla_source_types::lifecycle::{
-    handle_proposal_put, proposal_trailers, EvidenceKind, Proposal, ProposalEvidence,
-    ProposalKind, ProposalOrigin, ProposalState,
+    handle_proposal_put, proposal_trailers, EvidenceKind, Proposal, ProposalEvidence, ProposalKind,
+    ProposalOrigin, ProposalState,
 };
 
 const ITEMS: usize = 1_000;
@@ -72,7 +72,10 @@ fn research_trigger(c: &mut Criterion) {
         })
         .collect();
     let measured = p99(&mut samples);
-    assert!(measured <= RESEARCH_P99, "p99 {measured:?} over the 100 ms budget");
+    assert!(
+        measured <= RESEARCH_P99,
+        "p99 {measured:?} over the 100 ms budget"
+    );
     let mut group = c.benchmark_group("lifecycle/research_trigger");
     group.bench_function("plan_unknowns", |b| {
         b.iter(|| plan_unknowns(black_box(&text), 3, end))
@@ -126,14 +129,20 @@ fn proposals(c: &mut Criterion) {
         black_box(handle_proposal_put(black_box(input), &resolved)).expect("the proposal writes");
         puts.push(started.elapsed());
         let started = Instant::now();
-        black_box(check_changeset_provenance(true, "demo", &touched, &named, &stored))
-            .expect("an approved proposal lands");
+        black_box(check_changeset_provenance(
+            true, "demo", &touched, &named, &stored,
+        ))
+        .expect("an approved proposal lands");
         guards.push(started.elapsed());
         let started = Instant::now();
         black_box(proposal_trailers(black_box(&message)));
         reads.push(started.elapsed());
     }
-    for (name, samples) in [("put", &mut puts), ("guard", &mut guards), ("trailers", &mut reads)] {
+    for (name, samples) in [
+        ("put", &mut puts),
+        ("guard", &mut guards),
+        ("trailers", &mut reads),
+    ] {
         let measured = p99(samples);
         assert!(
             measured <= PROPOSAL_P99,
@@ -155,7 +164,8 @@ fn proposals(c: &mut Criterion) {
 }
 
 fn requirements_text() -> String {
-    let mut text = String::from("# Requirements\n\n| ID | Requirement | Acceptance |\n|----|----|----|\n");
+    let mut text =
+        String::from("# Requirements\n\n| ID | Requirement | Acceptance |\n|----|----|----|\n");
     for n in 1..=ROWS {
         text.push_str(&format!(
             "| `DEMO-R{n:04}` | **Row {n}.** Caller chain: `serve_{n}` -> `src/demo.py:{n}`. | \
@@ -174,7 +184,9 @@ fn tasks_text(ticked: usize) -> String {
     text
 }
 
-fn stored_of(plan: &medulla_h_ingest::source_ingestion::spec_projection::ReingestPlan) -> BTreeMap<String, StoredArtifact> {
+fn stored_of(
+    plan: &medulla_h_ingest::source_ingestion::spec_projection::ReingestPlan,
+) -> BTreeMap<String, StoredArtifact> {
     plan.operations
         .iter()
         .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "SpecArtifactFile")
@@ -184,7 +196,10 @@ fn stored_of(plan: &medulla_h_ingest::source_ingestion::spec_projection::Reinges
             (
                 properties["file"].as_str().unwrap_or_default().to_string(),
                 StoredArtifact {
-                    digest: properties["digest"].as_str().unwrap_or_default().to_string(),
+                    digest: properties["digest"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string(),
                     records: records
                         .split(',')
                         .filter(|id| !id.is_empty())
@@ -203,7 +218,10 @@ fn spec_ingest(c: &mut Criterion) {
     let none = BTreeMap::new();
     let first = reingest_changed_artifacts(
         "demo",
-        &[("specs/demo/requirements.md", requirements.as_str()), ("specs/demo/tasks.md", open.as_str())],
+        &[
+            ("specs/demo/requirements.md", requirements.as_str()),
+            ("specs/demo/tasks.md", open.as_str()),
+        ],
         &BTreeMap::new(),
         &none,
         &none,
@@ -225,7 +243,10 @@ fn spec_ingest(c: &mut Criterion) {
         })
         .collect();
     let measured = p99(&mut samples);
-    assert!(measured <= INGEST_P99, "p99 {measured:?} over the one second budget");
+    assert!(
+        measured <= INGEST_P99,
+        "p99 {measured:?} over the one second budget"
+    );
     let mut group = c.benchmark_group("lifecycle/spec_ingest");
     group.sample_size(10);
     group.bench_function("one_file_change", |b| {

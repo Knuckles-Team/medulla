@@ -255,7 +255,9 @@ pub struct ColumnUsageCounters {
 
 impl ColumnUsageCounters {
     fn locked(&self) -> std::sync::MutexGuard<'_, UsageState> {
-        self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Install the resolved knob values.
@@ -290,14 +292,17 @@ impl ColumnUsageCounters {
                     state.entries.remove(&oldest);
                 }
             }
-            let entry = state.entries.entry(key).or_insert_with(|| UsageObservation {
-                table: table.clone(),
-                column: column.clone(),
-                observed_schema_revision: schema_revision,
-                text_search_uses: 0,
-                first_seen_ms: now_ms,
-                last_seen_ms: now_ms,
-            });
+            let entry = state
+                .entries
+                .entry(key)
+                .or_insert_with(|| UsageObservation {
+                    table: table.clone(),
+                    column: column.clone(),
+                    observed_schema_revision: schema_revision,
+                    text_search_uses: 0,
+                    first_seen_ms: now_ms,
+                    last_seen_ms: now_ms,
+                });
             if entry.observed_schema_revision != schema_revision {
                 entry.observed_schema_revision = schema_revision;
                 entry.text_search_uses = 0;
@@ -412,8 +417,9 @@ mod tests {
 
         // fewer than min_samples total uses: everything is insufficient, score 0
         let few = rank_columns(&input(vec![column("a", 3), column("b", 2)]), &policy()).unwrap();
-        assert!(few.iter().all(|r| r.score == 0.0
-            && r.eligibility == AdviceEligibility::InsufficientObservations));
+        assert!(few.iter().all(
+            |r| r.score == 0.0 && r.eligibility == AdviceEligibility::InsufficientObservations
+        ));
 
         // an integer column is unsupported and sinks
         let mut int = column("n", 100);
@@ -447,7 +453,11 @@ mod tests {
             ["b", "c"]
         );
         counters.observe(&pair("b"), 2, 60);
-        let b = counters.read(60).into_iter().find(|e| e.column == "b").unwrap();
+        let b = counters
+            .read(60)
+            .into_iter()
+            .find(|e| e.column == "b")
+            .unwrap();
         assert_eq!((b.observed_schema_revision, b.text_search_uses), (2, 1));
         assert!(counters.read(5000).is_empty());
     }

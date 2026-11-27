@@ -45,6 +45,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use crate::tables::matview_incremental::ViewRowChanges;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_mutation_types::mutation_scope::MutationScope;
@@ -54,7 +55,6 @@ use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use crate::tables::matview_incremental::ViewRowChanges;
 use medulla_types::row_change::{RowChange, RowChangeSink, ViewRowChange};
 
 /// What one durable commit changed: the user-table rows, in the order its ops ran, and the rows
@@ -1884,10 +1884,7 @@ impl TableStore {
 
     /// The materialized view `name`, or `None` when no such view exists
     /// (MEDULLA-ENGINE-PARITY-R014.1).
-    pub fn get_matview(
-        &self,
-        name: &str,
-    ) -> Result<Option<super::matview::MatViewSpec>, String> {
+    pub fn get_matview(&self, name: &str) -> Result<Option<super::matview::MatViewSpec>, String> {
         let rtx = self.authority.read()?;
         let matviews = rtx.open_owner_table(MATVIEWS)?;
         match matviews.get(name).map_err(map_err)? {
@@ -4039,10 +4036,7 @@ fn create_view_in(
 /// Record `spec` in the materialized-view catalog. A name that is already a
 /// view, a property graph or a materialized view is refused `MATVIEW_EXISTS`;
 /// the result table of the same name is created by the op before it.
-fn put_matview_in(
-    wtx: &SqlWrite<'_>,
-    spec: &super::matview::MatViewSpec,
-) -> Result<(), String> {
+fn put_matview_in(wtx: &SqlWrite<'_>, spec: &super::matview::MatViewSpec) -> Result<(), String> {
     let name = spec.name.as_str();
     let is_view = {
         let views = wtx.open_table(VIEWS)?;

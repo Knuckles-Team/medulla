@@ -36,7 +36,10 @@ impl TtsOutcome {
     pub fn is_terminal(self) -> bool {
         matches!(
             self,
-            TtsOutcome::Cancelled | TtsOutcome::Succeeded | TtsOutcome::Degraded | TtsOutcome::Failed
+            TtsOutcome::Cancelled
+                | TtsOutcome::Succeeded
+                | TtsOutcome::Degraded
+                | TtsOutcome::Failed
         )
     }
 }

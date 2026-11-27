@@ -140,7 +140,8 @@ impl StartupReport {
     pub fn load_previous(&self, mut previous: Vec<StoredBoot>) {
         previous.sort_by_key(|boot| boot.boot_seq);
         let next = previous.last().map_or(1, |boot| boot.boot_seq + 1);
-        self.boot_seq.store(next, std::sync::atomic::Ordering::Relaxed);
+        self.boot_seq
+            .store(next, std::sync::atomic::Ordering::Relaxed);
         *self.previous.lock() = previous;
     }
 

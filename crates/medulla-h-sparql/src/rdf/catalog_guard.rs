@@ -188,12 +188,14 @@ pub(super) fn guard_article_versions(
     let status_key = format!("{CAT}articleStatus");
     let rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     let literal_of = |subject: &NamedOrBlankNode, predicate: &str| {
-        triples.iter().find_map(|t| match (&t.object, t.predicate.as_str()) {
-            (Term::Literal(value), p) if p == predicate && &t.subject == subject => {
-                Some(value.value().to_string())
-            }
-            _ => None,
-        })
+        triples
+            .iter()
+            .find_map(|t| match (&t.object, t.predicate.as_str()) {
+                (Term::Literal(value), p) if p == predicate && &t.subject == subject => {
+                    Some(value.value().to_string())
+                }
+                _ => None,
+            })
     };
     let refuse = |detail: String| format!("ARTICLE_VERSION_INVALID: {detail}");
     for triple in triples {
@@ -205,7 +207,8 @@ pub(super) fn guard_article_versions(
         {
             continue;
         }
-        let incoming = literal_of(&triple.subject, &version_key).and_then(|v| v.parse::<u64>().ok());
+        let incoming =
+            literal_of(&triple.subject, &version_key).and_then(|v| v.parse::<u64>().ok());
         let stored = core
             .get_node_properties(&format!("<{}>", subject.as_str()))
             .and_then(|bytes| medulla_types::msgpack::decode_property_value(&bytes).ok());
@@ -214,7 +217,10 @@ pub(super) fn guard_article_versions(
                 let held = node
                     .get(&version_key)
                     .or_else(|| node.get("articleVersion"))
-                    .and_then(|v| v.as_u64().or_else(|| v.as_str().and_then(|s| s.parse().ok())));
+                    .and_then(|v| {
+                        v.as_u64()
+                            .or_else(|| v.as_str().and_then(|s| s.parse().ok()))
+                    });
                 if let (Some(incoming), Some(held)) = (incoming, held) {
                     if incoming < held {
                         return Err(refuse(format!(
@@ -243,18 +249,22 @@ fn stored_node(
     core: &medulla_graph_core::graph::GraphCore,
     iri: &str,
 ) -> Option<(String, serde_json::Map<String, serde_json::Value>)> {
-    [format!("<{iri}>"), iri.to_string()].into_iter().find_map(|key| {
-        let bytes = core.get_node_properties(&key)?;
-        match medulla_types::msgpack::decode_property_value(&bytes).ok()? {
-            serde_json::Value::Object(map) => Some((key, map)),
-            _ => None,
-        }
-    })
+    [format!("<{iri}>"), iri.to_string()]
+        .into_iter()
+        .find_map(|key| {
+            let bytes = core.get_node_properties(&key)?;
+            match medulla_types::msgpack::decode_property_value(&bytes).ok()? {
+                serde_json::Value::Object(map) => Some((key, map)),
+                _ => None,
+            }
+        })
 }
 
 /// The bare IRI of a stored node key.
 fn bare_iri(key: &str) -> &str {
-    key.strip_prefix('<').and_then(|k| k.strip_suffix('>')).unwrap_or(key)
+    key.strip_prefix('<')
+        .and_then(|k| k.strip_suffix('>'))
+        .unwrap_or(key)
 }
 
 /// Whether the stored edge `from -> to` carries the relationship local name `name`.
@@ -267,7 +277,10 @@ fn has_relationship(
     core.get_edge_properties(from, to).iter().any(|blob| {
         medulla_types::msgpack::decode_property_value(blob)
             .ok()
-            .and_then(|v| v.get("relationship").and_then(|r| r.as_str().map(str::to_string)))
+            .and_then(|v| {
+                v.get("relationship")
+                    .and_then(|r| r.as_str().map(str::to_string))
+            })
             .is_some_and(|rel| rel.trim_matches(['<', '>']).rsplit(['#', '/']).next() == Some(name))
     })
 }
@@ -334,7 +347,10 @@ pub(super) fn materialize_described_best(
         if stored.is_none() && in_batch.is_none() {
             return None;
         }
-        let mut merged = stored.as_ref().map(|(_, map)| map.clone()).unwrap_or_default();
+        let mut merged = stored
+            .as_ref()
+            .map(|(_, map)| map.clone())
+            .unwrap_or_default();
         for (key, value) in in_batch.into_iter().flatten() {
             merged.insert(key.clone(), value.clone());
         }
@@ -360,8 +376,10 @@ pub(super) fn materialize_described_best(
                 }
             }
         }
-        let entries: Vec<Map<String, Value>> =
-            targets.iter().filter_map(|target| asset_entry(target)).collect();
+        let entries: Vec<Map<String, Value>> = targets
+            .iter()
+            .filter_map(|target| asset_entry(target))
+            .collect();
         let (Ok(subject), Ok(predicate_node)) = (
             oxrdf::NamedNode::new(article.clone()),
             oxrdf::NamedNode::new(predicate.clone()),
@@ -415,7 +433,9 @@ fn schema_digest_triples(catalog: &[Triple]) -> Vec<Triple> {
             .filter_map(|field| {
                 Some(DigestColumn {
                     name: literal(catalog, field, &name)?.to_string(),
-                    type_name: literal(catalog, field, &kind).unwrap_or_default().to_string(),
+                    type_name: literal(catalog, field, &kind)
+                        .unwrap_or_default()
+                        .to_string(),
                     nullable: literal(catalog, field, &nullable) != Some("false"),
                 })
             })
@@ -511,7 +531,10 @@ mod tests {
         assert_eq!(one.len(), 1);
         assert_eq!(one, two);
         assert!(one[0].starts_with("\"sha256:"));
-        let forged = digest_of(&batch(&[("a", "int"), ("b", "text")], "; cat:schemaDigest \"sha256:forged\""));
+        let forged = digest_of(&batch(
+            &[("a", "int"), ("b", "text")],
+            "; cat:schemaDigest \"sha256:forged\"",
+        ));
         assert_eq!(forged, one);
         let changed = digest_of(&batch(&[("a", "bigint"), ("b", "text")], ""));
         assert_ne!(changed, one);

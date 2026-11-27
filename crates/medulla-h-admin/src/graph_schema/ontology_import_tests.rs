@@ -405,13 +405,11 @@ mod served {
                 medulla_types::contract::Digest256::sha256(EX_B.as_bytes()),
             ]
         );
-        assert!(history
-            .iter()
-            .all(|entry| entry.importer
-                == medulla_server_api::mutation_batch::identity_metadata::principal_persistence_id(
-                    AGENT
-                )
-                && entry.at > 0));
+        assert!(history.iter().all(|entry| entry.importer
+            == medulla_server_api::mutation_batch::identity_metadata::principal_persistence_id(
+                AGENT
+            )
+            && entry.at > 0));
         assert_eq!(
             history
                 .iter()

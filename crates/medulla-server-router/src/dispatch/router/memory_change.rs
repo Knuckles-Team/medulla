@@ -26,7 +26,13 @@ pub async fn dispatch_consolidate_method(
         return ControlFlow::Continue(method);
     };
     ControlFlow::Break(
-        handle_consolidate(ctx, episodic_ids, semantic_props_msgpack, admit_receipt_digests).await,
+        handle_consolidate(
+            ctx,
+            episodic_ids,
+            semantic_props_msgpack,
+            admit_receipt_digests,
+        )
+        .await,
     )
 }
 
@@ -133,8 +139,15 @@ async fn handle_sync_memory(
     if let Err(error) = request.validate() {
         return Response::err(req.id, error.code.as_str());
     }
-    let stamp = stamp_for(req.agent_id.as_deref(), verified_context.tenant(), &req.graph);
-    let mut last = Response::err(req.id, "BUSY: the memory snapshot moved between plan and commit");
+    let stamp = stamp_for(
+        req.agent_id.as_deref(),
+        verified_context.tenant(),
+        &req.graph,
+    );
+    let mut last = Response::err(
+        req.id,
+        "BUSY: the memory snapshot moved between plan and commit",
+    );
     for _ in 0..SYNC_PLAN_ATTEMPTS {
         medulla_server_api::api::reentry::ensure_graph_resident(state, &req.graph).await;
         let core = {
@@ -152,13 +165,14 @@ async fn handle_sync_memory(
         };
         // The pre-commit CAS step: a head whose content the CAS cannot serve reads
         // as the `Unavailable` standing.
-        let head_content_held = match medulla_h_graph::graph_ops::memory_snapshot::head_content_digest(
-            &core,
-            &request.doc_id,
-        ) {
-            Some(digest) => holder::content_held(state, &digest).await,
-            None => true,
-        };
+        let head_content_held =
+            match medulla_h_graph::graph_ops::memory_snapshot::head_content_digest(
+                &core,
+                &request.doc_id,
+            ) {
+                Some(digest) => holder::content_held(state, &digest).await,
+                None => true,
+            };
         let (outcome, snapshot) = decide_sync(&core, &request, &stamp, head_content_held);
         if let Err(refusal) = check_doc_kind(&request, &outcome, &snapshot) {
             return Response::err(req.id, refusal);
@@ -176,8 +190,7 @@ async fn handle_sync_memory(
         ) {
             return Response::err(
                 req.id,
-                medulla_mutation_types::memory_sync::MemorySyncRefusal::RetentionExhausted
-                    .as_str(),
+                medulla_mutation_types::memory_sync::MemorySyncRefusal::RetentionExhausted.as_str(),
             );
         }
         if let Some((change, digest, _)) = content_change(&request, &outcome, &snapshot) {
@@ -194,8 +207,14 @@ async fn handle_sync_memory(
                     &format!("sha256:{}", digest.to_hex()),
                 )
                 .await?;
-                require_admit_receipts(state, verified_context, kind, &candidate, &request.admit_receipt_digests)
-                    .await
+                require_admit_receipts(
+                    state,
+                    verified_context,
+                    kind,
+                    &candidate,
+                    &request.admit_receipt_digests,
+                )
+                .await
             }
             .await;
             if let Err(refusal) = admitted {
@@ -349,7 +368,11 @@ mod tests {
             let mut state = h.state.write().await;
             state
                 .registry
-                .create_graph("default", medulla_protocol_types::protocol::GraphType::Global, None)
+                .create_graph(
+                    "default",
+                    medulla_protocol_types::protocol::GraphType::Global,
+                    None,
+                )
                 .expect("graph");
         }
         let scopes = ["kg:read", "kg:write"];
@@ -379,7 +402,15 @@ mod tests {
             .unwrap();
         let version = |h: &Harness| {
             let h = h.state.clone();
-            async move { h.read().await.registry.get("default").unwrap().core.version() }
+            async move {
+                h.read()
+                    .await
+                    .registry
+                    .get("default")
+                    .unwrap()
+                    .core
+                    .version()
+            }
         };
         let before = version(&h).await;
         // No receipt, an unknown digest, a discard, another candidate and another head
@@ -387,7 +418,10 @@ mod tests {
         for (digests, code) in [
             (Vec::new(), "MEMORY_RECEIPT_REQUIRED"),
             (vec!["sha256:absent".to_string()], "MEMORY_RECEIPT_REQUIRED"),
-            (vec![discard.receipt_digest.clone()], "MEMORY_RECEIPT_NOT_ADMIT"),
+            (
+                vec![discard.receipt_digest.clone()],
+                "MEMORY_RECEIPT_NOT_ADMIT",
+            ),
             (vec![other.receipt_digest.clone()], "MEMORY_RECEIPT_STALE"),
             (vec![old.receipt_digest.clone()], "MEMORY_RECEIPT_STALE"),
         ] {
@@ -411,9 +445,10 @@ mod tests {
         assert_eq!(&semantic, id);
         let state = h.state.read().await;
         let core = &state.registry.get("default").unwrap().core;
-        let node =
-            medulla_types::msgpack::decode_property_object(&core.get_node_properties(&semantic).unwrap())
-                .unwrap();
+        let node = medulla_types::msgpack::decode_property_object(
+            &core.get_node_properties(&semantic).unwrap(),
+        )
+        .unwrap();
         assert_eq!(
             node["premises"],
             serde_json::json!([format!("memory:receipt={}", good.receipt_digest)])

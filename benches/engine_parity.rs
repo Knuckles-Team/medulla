@@ -58,16 +58,16 @@
 
 #![allow(dead_code)]
 
-#[path = "../tests/common/mod.rs"]
-mod common;
-#[path = "../tests/common/test_support.rs"]
-mod test_support;
 #[path = "../crates/medulla-sql-tests/tests/common/commit_batch.rs"]
 mod commit_batch;
+#[path = "../tests/common/mod.rs"]
+mod common;
 #[path = "common/redb_fan_in.rs"]
 mod redb_fan_in;
 #[path = "../crates/medulla-persistence/tests/common/replay_fixture.rs"]
 mod replay_fixture;
+#[path = "../tests/common/test_support.rs"]
+mod test_support;
 
 use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -704,11 +704,9 @@ fn pgwire_introspection(rt: &tokio::runtime::Runtime) -> Record {
             );
             state.write().await.isolation.seed_wire_login(record);
         }
-        let addr = test_support::spawn_pgwire_listener(
-            state,
-            medulla_wire::pgwire::PgWireAuthMode::Scram,
-        )
-        .await;
+        let addr =
+            test_support::spawn_pgwire_listener(state, medulla_wire::pgwire::PgWireAuthMode::Scram)
+                .await;
         let owner = test_support::connect_pgwire_with_password(
             &addr,
             PASSWORD,
@@ -723,13 +721,12 @@ fn pgwire_introspection(rt: &tokio::runtime::Runtime) -> Record {
         ] {
             owner.simple_query(table).await.expect("CREATE TABLE");
         }
-        let carrier = CarrierAuthority::from_verified(
-            &VerifiedRequestContext::verified_for_test_in_tenant(
+        let carrier =
+            CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
                 "intro-owner",
                 common::TEST_TENANT,
-            ),
-        )
-        .expect("owner carrier");
+            ))
+            .expect("owner carrier");
         medulla_server_auth::sql_catalog_acl::grant(
             std::path::Path::new(&persist_dir),
             &carrier,
@@ -1193,12 +1190,19 @@ fn external_join(rt: &tokio::runtime::Runtime) -> Record {
         for first in (0..EXTERNAL_JOIN_OUTSIDE_ROWS).step_by(1_000) {
             let values: Vec<String> = (first..first + 1_000)
                 .map(|i| {
-                    let key = if i < EXTERNAL_JOIN_SELECTED_ROWS { "hit" } else { "miss" };
+                    let key = if i < EXTERNAL_JOIN_SELECTED_ROWS {
+                        "hit"
+                    } else {
+                        "miss"
+                    };
                     format!("('row:{i}', '{key}')")
                 })
                 .collect();
             client
-                .batch_execute(&format!("INSERT INTO ext (id, k) VALUES {}", values.join(", ")))
+                .batch_execute(&format!(
+                    "INSERT INTO ext (id, k) VALUES {}",
+                    values.join(", ")
+                ))
                 .await
                 .expect("seed the outside table");
         }
@@ -1226,7 +1230,8 @@ fn external_join(rt: &tokio::runtime::Runtime) -> Record {
     );
     let federated = FederatedExec::with_registry(&registry);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
-    let source = "MATCH (:Row) |> FOREIGN SCAN 'ext_join_source' JOIN |> WHERE k = 'hit' |> RETURN id";
+    let source =
+        "MATCH (:Row) |> FOREIGN SCAN 'ext_join_source' JOIN |> WHERE k = 'hit' |> RETURN id";
     let statement = parse_statement(source, &Params::new()).expect("the joined read parses");
 
     let mut samples = Vec::with_capacity(EXTERNAL_JOIN_SAMPLES);

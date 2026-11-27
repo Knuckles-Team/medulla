@@ -105,14 +105,13 @@ async fn program_promotion_identity(
     {
         return Ok(None);
     }
-    let active_revision_ref =
-        current_program_active_revision_ref(
-            state,
-            &job.policy.tenant,
-            &job.input_snapshot.graph,
-            &program.program_ref,
-        )
-        .await?;
+    let active_revision_ref = current_program_active_revision_ref(
+        state,
+        &job.policy.tenant,
+        &job.input_snapshot.graph,
+        &program.program_ref,
+    )
+    .await?;
     let promotion_result_ref = OpaqueRef::new(job.result_ref())
         .map_err(|_| "program promotion result identity is invalid".to_string())?;
     optimization
@@ -139,7 +138,12 @@ async fn program_promotion_identity(
                 identity
                     .with_held_out(optimization.held_out.clone())
                     .with_dev_score(corpus.dev_score_ppm())
-                    .with_front_digest(optimization.front.as_ref().map(|front| front.digest.clone()))
+                    .with_front_digest(
+                        optimization
+                            .front
+                            .as_ref()
+                            .map(|front| front.digest.clone()),
+                    )
             })
         })
         .transpose()
@@ -158,8 +162,8 @@ async fn run_program_kernel(
     let kernel_token = cancellation.clone();
     // The reflective front is bounded by registry knob `front.max_size`
     // (MEDULLA-DECISION-ENGINE-R800.3); the kernel crate carries no knob.
-    let front_max_size =
-        usize::try_from(medulla_server_api::knob_config::knobs().front_max_size).unwrap_or(usize::MAX);
+    let front_max_size = usize::try_from(medulla_server_api::knob_config::knobs().front_max_size)
+        .unwrap_or(usize::MAX);
     let mut kernel = tokio::task::spawn_blocking(move || {
         NativeCompiler::compile_with_front_bound(&request, &kernel_token, front_max_size)
     });
@@ -223,7 +227,8 @@ fn finish_cancelled_kernel(
             let _ = store.fail_attempt_fenced(job_id, worker_ref, epoch, reason, unix_ms());
         }
         None => {
-            let _ = store.fail_attempt_fenced(job_id, worker_ref, epoch, "kernel_failure", unix_ms());
+            let _ =
+                store.fail_attempt_fenced(job_id, worker_ref, epoch, "kernel_failure", unix_ms());
         }
     }
 }

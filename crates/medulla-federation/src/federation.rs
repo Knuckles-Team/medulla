@@ -2115,7 +2115,8 @@ pub struct ForeignSourceRegistry {
     quotas: HashMap<String, medulla_catalog_types::consolidation_isolation::SourceQuota>,
     /// The acceleration policy each registered name carries
     /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
-    accelerations: HashMap<String, medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
+    accelerations:
+        HashMap<String, medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
     cache_scope: Option<Arc<crate::federation_opt::FragmentCacheScope>>,
 }
 
@@ -2233,7 +2234,10 @@ impl ForeignSourceRegistry {
     }
 
     /// The quota `name` was registered under (`None` for a source registered without one).
-    pub fn quota(&self, name: &str) -> Option<medulla_catalog_types::consolidation_isolation::SourceQuota> {
+    pub fn quota(
+        &self,
+        name: &str,
+    ) -> Option<medulla_catalog_types::consolidation_isolation::SourceQuota> {
         self.quotas.get(name).copied()
     }
 
@@ -2432,7 +2436,9 @@ impl ForeignSourceRegistry {
                 crate::federation_opt::PushdownSupport::Unsupported
             }),
             ForeignSourceSpec::Warehouse { .. } => (true, crate::warehouse_foreign::filter_support),
-            ForeignSourceSpec::ClickHouse { .. } => (true, crate::warehouse_foreign::filter_support),
+            ForeignSourceSpec::ClickHouse { .. } => {
+                (true, crate::warehouse_foreign::filter_support)
+            }
             _ => unreachable!("only mapped source kinds reach column planning"),
         };
         let plan = ColumnPlan::new(

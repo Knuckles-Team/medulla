@@ -19,7 +19,12 @@ use medulla_types::evidence_class::EvidenceClass;
 const FOREIGN: &str = "tenant-foreign";
 const SIGNATURE: &str = "summarize-report";
 
-pub(super) fn trace(run_id: &str, outcome: RunOutcome, steps: usize, title: &str) -> RunTraceRecord {
+pub(super) fn trace(
+    run_id: &str,
+    outcome: RunOutcome,
+    steps: usize,
+    title: &str,
+) -> RunTraceRecord {
     let make = |index: usize| TraceStep {
         index: index as u32,
         kind: StepKind::ToolCall,

@@ -87,28 +87,28 @@ const MAX_JOB_PUBLICATION_PLAN_BYTES: usize = 16 * 1024 * 1024;
 mod association_hash_tests;
 mod core;
 mod data_plane_write;
+mod dataset_profile;
 mod downtime_complete;
 mod downtime_worker;
+mod executor_analytical;
 mod executor_claim;
 mod executor_loop;
-mod host_capabilities;
-mod executor_usage_cluster;
-mod dataset_profile;
-pub mod sensitive_claims;
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
-mod executor_analytical;
 mod executor_quality;
 mod executor_query_log;
+mod executor_usage_cluster;
 #[cfg(test)]
 mod graph_tests;
 mod helpers;
+mod host_capabilities;
 #[cfg(feature = "knowledge-batch")]
 mod native_validation;
 mod prelude_jobs;
 mod prelude_server;
 mod prelude_std;
+pub mod sensitive_claims;
 // The program-optimization handler, its result governance and its typed
 // results are built only behind program optimization.
 #[cfg(feature = "program-optimization")]
@@ -312,6 +312,7 @@ use core::{
     compile_job_batch, job_record, job_response, job_store, owned_job, parse_algorithm,
     reproducibility_manifest,
 };
+use executor_analytical::*;
 #[cfg(feature = "jobs")]
 use executor_claim::*;
 use executor_loop::*;
@@ -320,7 +321,6 @@ use executor_profile::{check_profile_submit, execute_profile_claim, ProfileTarge
 use executor_program::*;
 use executor_quality::{execute_quality_claim, QualityTarget};
 use executor_query_log::*;
-use executor_analytical::*;
 use executor_usage_cluster::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
@@ -1148,9 +1148,7 @@ pub fn observe_downtime_job(
         JobState::Submitted { checkpoint } => {
             (DowntimeJobState::Submitted, false, checkpoint.as_ref())
         }
-        JobState::Running { checkpoint, .. } => {
-            (DowntimeJobState::Running, true, Some(checkpoint))
-        }
+        JobState::Running { checkpoint, .. } => (DowntimeJobState::Running, true, Some(checkpoint)),
         JobState::Publishing { checkpoint, .. } => {
             (DowntimeJobState::Publishing, true, Some(checkpoint))
         }
@@ -1163,7 +1161,9 @@ pub fn observe_downtime_job(
         JobState::Succeeded { checkpoint, .. } => {
             (DowntimeJobState::Succeeded, false, Some(checkpoint))
         }
-        JobState::Failed { checkpoint, .. } => (DowntimeJobState::Failed, false, checkpoint.as_ref()),
+        JobState::Failed { checkpoint, .. } => {
+            (DowntimeJobState::Failed, false, checkpoint.as_ref())
+        }
         JobState::Cancelled { checkpoint } => {
             (DowntimeJobState::Cancelled, false, checkpoint.as_ref())
         }

@@ -176,9 +176,7 @@ pub(super) fn placement_plan_outcome(
 ) -> Result<(StatisticalOutcome, Option<PlacementPlan>), String> {
     let question = question_of(request)?;
     let read = question.read.as_ref().ok_or_else(|| {
-        invalid_parameter(
-            "the placement plan read is missing: the engine fills it before deciding",
-        )
+        invalid_parameter("the placement plan read is missing: the engine fills it before deciding")
     })?;
     match plan_services(&read.hosts, &question.body.services, &plan_knobs(policy))? {
         PlanOutcome::Planned(plan) => {
@@ -191,7 +189,10 @@ pub(super) fn placement_plan_outcome(
                 probability: None,
             }];
             Ok((
-                StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false),
+                StatisticalOutcome::advisory(
+                    BoundedVec::new(scores).map_err(invalid_parameter)?,
+                    false,
+                ),
                 Some(plan),
             ))
         }

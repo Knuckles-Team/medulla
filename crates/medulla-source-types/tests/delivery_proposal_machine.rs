@@ -1,8 +1,6 @@
 //! MEDULLA-SDLC-R019.7: the proposal machine of a delivery.
 
-use medulla_source_types::delivery::{
-    ProposalEvent, ProposalState, DELIVERY_PROPOSAL_MACHINE,
-};
+use medulla_source_types::delivery::{ProposalEvent, ProposalState, DELIVERY_PROPOSAL_MACHINE};
 use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
 // spec: MEDULLA-SDLC-R019.7

@@ -112,9 +112,9 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
             span.record("complete", response.complete);
             Response::ok(
                 req_id,
-                ResultPayload::of_ref::<
-                    medulla_protocol_types::result_contract::reasoning::RunRules,
-                >(&response),
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::reasoning::RunRules>(
+                    &response,
+                ),
             )
         }
         Ok(Err(msg)) => Response::err(req_id, format!("RunRules error: {msg}")),

@@ -262,7 +262,10 @@ pub(super) fn premises(inputs: &DecisionInputs, solved: bool) -> Vec<PremiseRef>
         for capability in selected.covered_capabilities.iter() {
             premises.push(field(id, format!("covered_capability={capability}")));
         }
-        premises.push(field(id, format!("prompt_score_q32={}", selected.score_q32)));
+        premises.push(field(
+            id,
+            format!("prompt_score_q32={}", selected.score_q32),
+        ));
     }
     for excluded in selection.excluded.iter() {
         premises.push(field(excluded, format!("excluded_prompt:{excluded}")));

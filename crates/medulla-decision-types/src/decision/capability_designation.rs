@@ -333,7 +333,8 @@ pub struct DesignatedCapability {
     /// and carrying the reliability derived from `reward_q32`
     /// (MEDULLA-DECISION-ENGINE-R650.3). Omitted when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub descriptors: Vec<medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor>,
+    pub descriptors:
+        Vec<medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor>,
     /// The record's own revision, the graph revision the pack facts were read at.
     #[serde(default)]
     pub record_revision: u64,

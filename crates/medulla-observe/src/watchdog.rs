@@ -56,10 +56,7 @@ pub fn scan(
                     let reason = DegradeReason {
                         code: NO_PROGRESS.to_string(),
                         task: Some(row.name.clone()),
-                        detail: format!(
-                            "task {} stalled after {} units",
-                            row.name, row.units_done
-                        ),
+                        detail: format!("task {} stalled after {} units", row.name, row.units_done),
                     };
                     readiness
                         .degrade(graph, reason)
@@ -69,7 +66,10 @@ pub fn scan(
             } else {
                 None
             };
-            StalledTask { row, degraded_graph }
+            StalledTask {
+                row,
+                degraded_graph,
+            }
         })
         .collect()
 }

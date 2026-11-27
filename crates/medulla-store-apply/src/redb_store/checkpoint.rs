@@ -13,10 +13,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use medulla_storage::ScopedOwnerTableMut;
 
 use super::*;
-use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::mutation_batch::{MutationBatch, VersionExpectation};
-use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::shard::DrainCommit;
+use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 pub(crate) const CHECKPOINT_RESOURCE_REFUSAL: &str = "checkpoint resource domain validation failed";
 
@@ -385,10 +385,14 @@ struct RestoreTables<'m, 'g> {
 }
 
 impl medulla_storage::GraphTableVisitor for RestoreTables<'_, '_> {
-    fn visit<K, V>(&mut self, definition: redb::TableDefinition<'static, K, V>) -> Result<(), String>
+    fn visit<K, V>(
+        &mut self,
+        definition: redb::TableDefinition<'static, K, V>,
+    ) -> Result<(), String>
     where
         K: redb::Key + 'static,
-        for<'k> K::SelfType<'k>: medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
+        for<'k> K::SelfType<'k>:
+            medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
         V: redb::Value + 'static,
     {
         let name = redb::TableHandle::name(&definition).to_string();

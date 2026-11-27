@@ -305,16 +305,17 @@ pub(super) fn normalize_record(
                         )))
                     }
                 };
-                let bytes = read_blob(content_ref).map_err(|refusal| {
-                    match refusal.split_once(": ") {
+                let bytes =
+                    read_blob(content_ref).map_err(|refusal| match refusal.split_once(": ") {
                         Some((code, detail)) => DocumentIngestError::from_reader_code(code, detail),
                         None => normalization_failed(refusal),
-                    }
-                })?;
+                    })?;
                 file_sha256 = Some(Digest256::sha256(&bytes));
                 let fragments = readers
                     .read(&normalize_media_type(media_type), &bytes)
-                    .map_err(|error| DocumentIngestError::from_reader_code(error.code, &error.detail))?;
+                    .map_err(|error| {
+                        DocumentIngestError::from_reader_code(error.code, &error.detail)
+                    })?;
                 extracted = fragments
                     .iter()
                     .map(|fragment| fragment.text.as_str())
@@ -362,13 +363,9 @@ pub(super) fn normalize_record(
             ))
         })?;
     }
-    let record_node_id = super::source_node_id(
-        tenant,
-        connector,
-        record.stream.as_str(),
-        &record.record_id,
-    )
-    .map_err(normalization_failed)?;
+    let record_node_id =
+        super::source_node_id(tenant, connector, record.stream.as_str(), &record.record_id)
+            .map_err(normalization_failed)?;
     let signature = document_signature(text, layout).signature().to_vec();
     Ok(Some(DocumentOutput {
         document: NormalizedDocument {
@@ -727,12 +724,32 @@ mod tests {
         let rec = record(serde_json::json!({
             "text": "The engine stores facts in one graph. Always use short reports."
         }));
-        let first = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap()
-            .unwrap();
-        let second = normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap()
-            .unwrap();
+        let first = normalize_record(
+            "t1",
+            "demo",
+            &rec,
+            &fields(),
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap()
+        .unwrap();
+        let second = normalize_record(
+            "t1",
+            "demo",
+            &rec,
+            &fields(),
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap()
+        .unwrap();
         // A retry yields the same document identity, atoms and receipt.
         assert_eq!(first, second);
         assert_eq!(first.document.document_id.len(), 64);
@@ -743,17 +760,37 @@ mod tests {
             .iter()
             .all(|atom| atom.provenance_key.starts_with(&first.document.document_id)));
         // Identity moves with tenant, connector and content.
-        let other_tenant = normalize_record("t2", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap()
-            .unwrap();
+        let other_tenant = normalize_record(
+            "t2",
+            "demo",
+            &rec,
+            &fields(),
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap()
+        .unwrap();
         assert_ne!(
             first.document.document_id,
             other_tenant.document.document_id
         );
         let changed = record(serde_json::json!({"text": "A different body."}));
-        let other = normalize_record("t1", "demo", &changed, &fields(), 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap()
-            .unwrap();
+        let other = normalize_record(
+            "t1",
+            "demo",
+            &changed,
+            &fields(),
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap()
+        .unwrap();
         assert_ne!(first.document.document_id, other.document.document_id);
 
         // complete_document refuses empty text and a record with no body.
@@ -782,10 +819,23 @@ mod tests {
         // A blob-backed document with no media type fails.
         let blob_fields = BTreeMap::from([("blob".to_string(), "content_ref".to_string())]);
         let blob = record(serde_json::json!({"blob": "cas:sha256:ab"}));
-        let error = normalize_record("t1", "demo", &blob, &blob_fields, 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("has content_ref without media_type"), "{error}");
+        let error = normalize_record(
+            "t1",
+            "demo",
+            &blob,
+            &blob_fields,
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            error.contains("has content_ref without media_type"),
+            "{error}"
+        );
     }
 
     // spec: MEDULLA-INGEST-WORKER-R700.3
@@ -800,22 +850,54 @@ mod tests {
             assert_eq!(content_ref, "cas:sha256:aa");
             Ok(csv.clone())
         };
-        let rec = record(serde_json::json!({"blob": "cas:sha256:aa", "type": "text/csv; charset=utf-8"}));
-        let output = normalize_record("t1", "demo", &rec, &blob_fields, 4, 200, &layout(), &readers(), &read_csv)
-            .unwrap()
-            .expect("the reader yields a document");
+        let rec =
+            record(serde_json::json!({"blob": "cas:sha256:aa", "type": "text/csv; charset=utf-8"}));
+        let output = normalize_record(
+            "t1",
+            "demo",
+            &rec,
+            &blob_fields,
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &read_csv,
+        )
+        .unwrap()
+        .expect("the reader yields a document");
         assert!(!output.atoms.is_empty(), "at least one atom per document");
         assert_eq!(output.document.atom_ids.len(), output.atoms.len());
         // An unreadable blob and an unknown media type fail the record.
         let missing = |_: &str| -> Result<Vec<u8>, String> { Err("BODY_MISSING: absent".into()) };
-        let error = normalize_record("t1", "demo", &rec, &blob_fields, 4, 200, &layout(), &readers(), &missing)
-            .unwrap_err()
-            .to_string();
+        let error = normalize_record(
+            "t1",
+            "demo",
+            &rec,
+            &blob_fields,
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &missing,
+        )
+        .unwrap_err()
+        .to_string();
         assert!(error.contains("BODY_MISSING"), "{error}");
-        let odd = record(serde_json::json!({"blob": "cas:sha256:aa", "type": "application/x-unknown"}));
-        let error = normalize_record("t1", "demo", &odd, &blob_fields, 4, 200, &layout(), &readers(), &read_csv)
-            .unwrap_err()
-            .to_string();
+        let odd =
+            record(serde_json::json!({"blob": "cas:sha256:aa", "type": "application/x-unknown"}));
+        let error = normalize_record(
+            "t1",
+            "demo",
+            &odd,
+            &blob_fields,
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &read_csv,
+        )
+        .unwrap_err()
+        .to_string();
         assert!(error.contains("READER_UNSUPPORTED_MEDIA_TYPE"), "{error}");
     }
 
@@ -863,7 +945,10 @@ mod tests {
             &no_blob,
         )
         .unwrap_err();
-        assert_eq!(error.quarantine_reason(), QuarantineReason::NormalizationFailed);
+        assert_eq!(
+            error.quarantine_reason(),
+            QuarantineReason::NormalizationFailed
+        );
     }
 
     #[test]
@@ -886,9 +971,19 @@ mod tests {
     fn document(id: &str, text: &str) -> DocumentOutput {
         let mut rec = record(serde_json::json!({ "text": text }));
         rec.record_id = id.into();
-        normalize_record("t1", "demo", &rec, &fields(), 4, 200, &layout(), &readers(), &no_blob)
-            .unwrap()
-            .unwrap()
+        normalize_record(
+            "t1",
+            "demo",
+            &rec,
+            &fields(),
+            4,
+            200,
+            &layout(),
+            &readers(),
+            &no_blob,
+        )
+        .unwrap()
+        .unwrap()
     }
 
     fn words(prefix: &str, last: &str) -> String {
@@ -971,7 +1066,9 @@ mod tests {
             },
         );
         for id in candidate_bucket_ids("t1", &layout, std::slice::from_ref(&first)).unwrap() {
-            stored.buckets.insert(id, vec![first.record_node_id.clone()]);
+            stored
+                .buckets
+                .insert(id, vec![first.record_node_id.clone()]);
         }
         let plan = dedup_documents("t1", &layout, vec![near.clone()], &stored, 0.8, 9).unwrap();
         assert!(matches!(
@@ -1142,7 +1239,10 @@ mod tests {
         assert!(prepared.mappings.is_empty());
         assert_eq!(prepared.affected_count(), 0);
         let receipt = prepared.quarantine.as_ref().expect("a quarantine receipt");
-        assert_eq!(receipt.restricted_evidence_ref, format!("quarantine:{node_id}"));
+        assert_eq!(
+            receipt.restricted_evidence_ref,
+            format!("quarantine:{node_id}")
+        );
         assert_eq!(
             receipt.prior_accepted_checkpoint.as_ref(),
             Some(&batch.provider_checkpoint)
@@ -1178,10 +1278,7 @@ mod tests {
                 replication: None,
                 write_conflict: None,
             };
-            Response::ok(
-                1,
-                ResultPayload::Json(serde_json::to_value(body).unwrap()),
-            )
+            Response::ok(1, ResultPayload::Json(serde_json::to_value(body).unwrap()))
         };
         let finished = crate::source_ingestion::finish(prepared, applied(false));
         let Some(ResultPayload::Raw(bytes)) = finished.result else {
@@ -1194,15 +1291,10 @@ mod tests {
         );
         // The replay reads the stored evidence node and returns the same receipt,
         // with the prior checkpoint as first stored; it never resets the checkpoint.
-        let replayed = crate::source_ingestion::replay_quarantine(
-            "t",
-            &batch,
-            digest,
-            &batch_id,
-            &envelope,
-        )
-        .unwrap()
-        .expect("the stored envelope is a quarantine");
+        let replayed =
+            crate::source_ingestion::replay_quarantine("t", &batch, digest, &batch_id, &envelope)
+                .unwrap()
+                .expect("the stored envelope is a quarantine");
         assert_eq!(replayed.reason, first_receipt.reason);
         assert_eq!(replayed.rule_id, first_receipt.rule_id);
         assert_eq!(replayed.source_digest, first_receipt.source_digest);
@@ -1215,7 +1307,10 @@ mod tests {
             replayed.prior_accepted_checkpoint,
             first_receipt.prior_accepted_checkpoint
         );
-        assert_eq!(replayed.committed_graph_version, first_receipt.committed_graph_version);
+        assert_eq!(
+            replayed.committed_graph_version,
+            first_receipt.committed_graph_version
+        );
     }
 
     /// A commit substrate for the quarantine tests: a test double that answers the
@@ -1275,19 +1370,27 @@ mod tests {
         // The commit fails: the answer is a refusal, it carries no receipt of any kind,
         // and nothing landed.
         substrate.fail.set(true);
-        let refused = crate::source_ingestion::finish(
-            prepared,
-            substrate.commit(&envelope, &batch_id),
+        let refused =
+            crate::source_ingestion::finish(prepared, substrate.commit(&envelope, &batch_id));
+        assert!(
+            refused.refusal_text().is_some(),
+            "a failed commit is refused: {refused:?}"
         );
-        assert!(refused.refusal_text().is_some(), "a failed commit is refused: {refused:?}");
-        assert!(refused.result.is_none(), "a failed commit reports no receipt");
-        assert!(substrate.landed.borrow().is_empty(), "a failed commit left no evidence");
+        assert!(
+            refused.result.is_none(),
+            "a failed commit reports no receipt"
+        );
+        assert!(
+            substrate.landed.borrow().is_empty(),
+            "a failed commit left no evidence"
+        );
 
         // The same batch committed once the substrate recovers reports the receipt, and
         // the commit that landed is the one the receipt names.
         substrate.fail.set(false);
         let (_batch, _digest, batch_id, prepared) = quarantine_fixture();
-        let finished = crate::source_ingestion::finish(prepared, substrate.commit(&envelope, &batch_id));
+        let finished =
+            crate::source_ingestion::finish(prepared, substrate.commit(&envelope, &batch_id));
         let Some(ResultPayload::Raw(bytes)) = finished.result else {
             panic!("finish answers a raw outcome: {finished:?}");
         };
@@ -1296,8 +1399,6 @@ mod tests {
             panic!("the recovered commit reports the quarantine");
         };
         assert_eq!(substrate.landed.borrow().len(), 1);
-        assert!(receipt
-            .restricted_evidence_ref
-            .starts_with("quarantine:"));
+        assert!(receipt.restricted_evidence_ref.starts_with("quarantine:"));
     }
 }

@@ -240,7 +240,9 @@ mod tests {
         assert_eq!(Lane::hydration().as_str(), "hydration");
 
         // A lane must be in the registry.
-        assert!(Lane::general().registered_in(["general", "hydration"]).is_ok());
+        assert!(Lane::general()
+            .registered_in(["general", "hydration"])
+            .is_ok());
         assert_eq!(
             lane.registered_in(["general"]).unwrap_err(),
             LaneError::Unregistered("gpu-2".into())
@@ -308,7 +310,10 @@ medulla_admit_refused_total{lane=\"general\"} not-a-number\n";
         assert_eq!(depth.labels["lane"], "general");
         assert_eq!(depth.labels["queue_class"], "fast");
         assert_eq!(report.series[5].labels["lane"], "a\"b");
-        assert_eq!(ingest_series_from_exposition(""), IngestWorkerStatusReport::default());
+        assert_eq!(
+            ingest_series_from_exposition(""),
+            IngestWorkerStatusReport::default()
+        );
         let json = serde_json::to_string(&report).unwrap();
         assert_eq!(
             serde_json::from_str::<IngestWorkerStatusReport>(&json).unwrap(),

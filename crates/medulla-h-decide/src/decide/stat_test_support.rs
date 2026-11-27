@@ -652,7 +652,9 @@ pub fn store_admit_receipts(
         receipt_digest: String::new(),
     };
     benchmark.receipt_digest = benchmark.compute_receipt_digest();
-    let mut rows = vec![super::stat_memory_change::benchmark_receipt_row(&benchmark)?];
+    let mut rows = vec![super::stat_memory_change::benchmark_receipt_row(
+        &benchmark,
+    )?];
     let mut digests = vec![benchmark.receipt_digest.clone()];
     if kind == ChangeKind::Rewrite {
         let signals = |count: usize| -> Vec<String> {

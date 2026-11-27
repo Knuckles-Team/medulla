@@ -14,11 +14,11 @@ pub struct ReadBlameFields {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod served {
+    use super::super::read_path_history::RegistryHistory;
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_history::read_blame;
     use medulla_mutation_types::branch::BranchRef;
-    use super::super::read_path_history::RegistryHistory;
     use medulla_server_auth::access::path_grant;
     use medulla_source_types::source_changeset::ReadBlameReceipt;
     use medulla_source_types::source_path_grant::PathAccess;
@@ -50,19 +50,29 @@ mod served {
             Err(error) => return ops::target_error_response(req.id, error),
         };
         // MEDULLA-SCM-R007: `read` on the path, from grants read inside the same snapshot.
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let answered = target
             .read_blocking(move |registry, branch| {
                 let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
-                if let Err(refusal) = path_grant::check(&grants, &[request.path.as_str()], PathAccess::Read) {
-                    return Ok(Err(format!("{}: no read grant covers the path", refusal.code())));
+                if let Err(refusal) =
+                    path_grant::check(&grants, &[request.path.as_str()], PathAccess::Read)
+                {
+                    return Ok(Err(format!(
+                        "{}: no read grant covers the path",
+                        refusal.code()
+                    )));
                 }
                 let head = match registry.get(branch)? {
                     Some(row) => row.head_commit,
                     None => return Err("the resolved branch has no registry row".to_string()),
                 };
-                Ok(read_blame(&RegistryHistory { registry, branch }, &head, &request)?
-                    .map_err(|refusal| refusal.message()))
+                Ok(
+                    read_blame(&RegistryHistory { registry, branch }, &head, &request)?
+                        .map_err(|refusal| refusal.message()),
+                )
             })
             .await;
         match answered {
@@ -84,8 +94,5 @@ pub async fn handle_read_blame(
     _verified: &VerifiedRequestContext,
     _fields: ReadBlameFields,
 ) -> Response {
-    Response::err(
-        req.id,
-        "ReadBlame requires the `redb` and `blob` features",
-    )
+    Response::err(req.id, "ReadBlame requires the `redb` and `blob` features")
 }

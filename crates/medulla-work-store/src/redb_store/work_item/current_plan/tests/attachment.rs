@@ -160,7 +160,14 @@ fn terminal_or_superseded_lease_hides_but_does_not_erase_attachment() {
             drop(bytes);
             assert!(!row.contains_key("task_plan"));
             row.insert(field.into(), value);
-            write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                &id,
+                &mut row,
+                DurableCrypto::none(),
+            )
         });
         assert!(read(shard, "owner", 2000).is_none());
         assert!(apply(

@@ -93,7 +93,10 @@ pub async fn handle_plan(
         name_hint: name_hint(graph),
     };
     if let Err(error) = signals.validate() {
-        return Response::err(req_id, format!("INTERNAL: ownership signals invalid: {error:?}"));
+        return Response::err(
+            req_id,
+            format!("INTERNAL: ownership signals invalid: {error:?}"),
+        );
     }
     let share = match OwnershipWriterShare::new(
         medulla_server_api::knob_config::knobs().identity_ownership_writer_share,

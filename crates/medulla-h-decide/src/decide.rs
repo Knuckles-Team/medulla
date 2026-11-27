@@ -10,30 +10,30 @@ pub type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::st
 pub(crate) mod assemble;
 pub(crate) mod belief_revise;
 pub(crate) mod claims;
+pub(crate) mod commit;
+pub mod correction;
+pub(crate) mod coverage;
+#[cfg(all(test, feature = "decide"))]
+mod coverage_tests;
+pub(crate) mod execution_answer;
+#[cfg(all(test, feature = "decide", feature = "redb"))]
+mod execution_answer_tests;
+pub mod failure_ingest;
+pub(crate) mod feature_ledger;
+pub mod friction;
+pub(crate) mod guardrail;
+pub(crate) mod jobs;
+pub mod knowledge_curation;
+pub mod knowledge_flag;
+pub(crate) mod log;
+pub(crate) mod loops;
 pub(crate) mod participant_ask;
 pub(crate) mod participant_card;
 pub(crate) mod participant_derivation;
-pub(crate) mod commit;
-pub(crate) mod coverage;
-#[cfg(all(test, feature = "decide", feature = "redb"))]
-mod execution_answer_tests;
-pub(crate) mod execution_answer;
-#[cfg(all(test, feature = "decide"))]
-mod coverage_tests;
-pub mod correction;
-pub mod failure_ingest;
-pub mod friction;
-pub mod skill_telemetry;
-pub mod knowledge_curation;
-pub mod knowledge_flag;
-pub(crate) mod feature_ledger;
-pub(crate) mod guardrail;
-pub(crate) mod jobs;
-pub(crate) mod log;
-pub(crate) mod loops;
 pub mod planned_write;
 #[cfg(feature = "decide")]
 pub(crate) mod shape;
+pub mod skill_telemetry;
 pub(crate) mod statistical;
 
 // The statistical package (EH-056 ... EH-074): candidate sources, the
@@ -41,18 +41,18 @@ pub(crate) mod statistical;
 #[cfg(feature = "decide")]
 mod candidates;
 #[cfg(feature = "decide")]
-mod prompt_candidates;
-#[cfg(feature = "decide")]
-pub mod connector_points;
-#[cfg(feature = "decide")]
-mod features;
-#[cfg(feature = "decide")]
 #[cfg(feature = "redb")]
 pub mod capability_feed;
+#[cfg(feature = "decide")]
+pub mod connector_points;
 #[cfg(feature = "decide")]
 pub mod drift_registry;
 #[cfg(feature = "decide")]
 mod family;
+#[cfg(feature = "decide")]
+mod features;
+#[cfg(feature = "decide")]
+mod prompt_candidates;
 #[cfg(feature = "decide")]
 pub use family::task_context::read_task_context;
 #[cfg(feature = "decide")]
@@ -71,11 +71,9 @@ mod stat_concentration;
 #[allow(missing_docs)]
 pub mod stat_decide;
 #[cfg(feature = "decide")]
-mod stat_delegation;
+mod stat_decision_reads;
 #[cfg(feature = "decide")]
-mod stat_skill_ablation;
-mod stat_skill_tier;
-mod stat_skill_eval;
+mod stat_delegation;
 #[cfg(feature = "decide")]
 mod stat_designation;
 #[cfg(feature = "decide")]
@@ -94,27 +92,29 @@ pub(crate) mod stat_generation_space;
 mod stat_gold_guarantee;
 #[cfg(feature = "decide")]
 mod stat_grounded_eval;
-#[cfg(feature = "decide")]
-mod stat_decision_reads;
 mod stat_harness_adoption;
-mod stat_lifecycle_record;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]
 mod stat_jobs;
 #[cfg(feature = "decide")]
 mod stat_learning;
+mod stat_lifecycle_record;
 #[cfg(feature = "decide")]
 mod stat_load_set;
-mod stat_model_capacity;
 #[cfg(feature = "decide")]
 mod stat_log;
 #[cfg(feature = "decide")]
 pub mod stat_memory_change;
+mod stat_model_capacity;
 #[cfg(feature = "decide")]
 mod stat_nl;
 #[cfg(feature = "decide")]
 mod stat_penalty;
+#[cfg(feature = "decide")]
+mod stat_skill_ablation;
+mod stat_skill_eval;
+mod stat_skill_tier;
 // MEDULLA-ORCH-VOCAB-R012.7.3: the policy review record, the activation guard and the loader.
 #[cfg(feature = "decide")]
 mod policy_activation;
@@ -144,13 +144,13 @@ mod limit_stage;
 #[cfg(feature = "decide")]
 mod entry_stage;
 #[cfg(feature = "decide")]
-mod stat_resolve;
-#[cfg(feature = "decide")]
-mod stat_team;
-#[cfg(feature = "decide")]
 mod stat_feedback;
 #[cfg(feature = "decide")]
 mod stat_package_run;
+#[cfg(feature = "decide")]
+mod stat_resolve;
+#[cfg(feature = "decide")]
+mod stat_team;
 #[cfg(feature = "decide")]
 mod stat_usage_guidance;
 mod stat_verdict_dataset;
@@ -233,30 +233,27 @@ mod telemetry;
 // the schema entailments and capacity headroom a topology question reads, and
 // the publish-time topology shape check.
 #[cfg(feature = "decide")]
-mod capacity_premise;
-#[cfg(feature = "decide")]
 mod assemble_shield;
+#[cfg(feature = "decide")]
+mod capacity_premise;
 #[cfg(feature = "decide")]
 mod definitions_read;
 #[cfg(feature = "decide")]
 mod steps_read;
 #[cfg(feature = "decide")]
-mod triage;
-mod triage_read;
-mod windows_read;
-#[cfg(feature = "decide")]
 mod topology_read;
 #[cfg(feature = "decide")]
 mod topology_schema;
+#[cfg(feature = "decide")]
+mod triage;
+mod triage_read;
+mod windows_read;
 
 pub use assemble::handle_agent_assemble;
 #[cfg(feature = "statechart")]
 pub use belief_revise::enqueue_touched;
 pub use belief_revise::handle_belief_revise;
 pub use claims::{handle_claims, handle_claims_planned, ClaimsServed};
-pub use participant_ask::handle_participant_ask;
-pub use participant_derivation::check_derivation_count;
-pub use participant_card::{handle_participant_card, plan_card_refresh};
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
 pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};
@@ -268,6 +265,9 @@ pub use jobs::{
 };
 pub use log::handle_decision_log;
 pub use loops::handle_loops;
+pub use participant_ask::handle_participant_ask;
+pub use participant_card::{handle_participant_card, plan_card_refresh};
+pub use participant_derivation::check_derivation_count;
 pub use stat_proposals::handle_revision_proposal_list;
 pub use statistical::handle_decide;
 pub use triage::{handle_triage_defect, TriageDefectOutcome};

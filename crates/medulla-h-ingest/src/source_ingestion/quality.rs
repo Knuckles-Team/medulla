@@ -122,9 +122,9 @@ pub fn normalize_quality_score(
     now_ms: i64,
 ) -> Result<QualityScore, String> {
     let payload = record.payload.value()?;
-    let source = payload
-        .as_object()
-        .ok_or_else(|| format!("{QUALITY_SCORE_INVALID}: a quality score record is not an object"))?;
+    let source = payload.as_object().ok_or_else(|| {
+        format!("{QUALITY_SCORE_INVALID}: a quality score record is not an object")
+    })?;
     normalize_payload(source, fields, now_ms)
 }
 
@@ -291,7 +291,10 @@ pub fn score_methods(
         let stored = &rules[&rule_id];
         let mut properties = stored.properties.clone();
         properties.insert(RULE_FAILURES_PROPERTY.to_string(), stored.failures.into());
-        methods.push(node_method(stored.node_id.clone(), &Value::Object(properties))?);
+        methods.push(node_method(
+            stored.node_id.clone(),
+            &Value::Object(properties),
+        )?);
     }
     Ok(ScoreOutcome {
         methods,
@@ -338,9 +341,11 @@ pub fn incident_methods(
                 node_ids.push(id.clone());
                 methods.push(node_method(id, &properties)?);
             }
-            Some("upsert_edge") => {
-                methods.push(edge_method(field("source")?, field("target")?, &properties)?)
-            }
+            Some("upsert_edge") => methods.push(edge_method(
+                field("source")?,
+                field("target")?,
+                &properties,
+            )?),
             _ => return Err("incident operation has an unknown op".to_string()),
         }
     }
@@ -410,14 +415,10 @@ mod tests {
     use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
 
     fn fields() -> BTreeMap<String, String> {
-        [
-            ("checker", "checker"),
-            ("rule", "rule"),
-            ("score", "value"),
-        ]
-        .into_iter()
-        .map(|(field, property)| (field.to_string(), property.to_string()))
-        .collect()
+        [("checker", "checker"), ("rule", "rule"), ("score", "value")]
+            .into_iter()
+            .map(|(field, property)| (field.to_string(), property.to_string()))
+            .collect()
     }
 
     fn payload(value: Value) -> Map<String, Value> {
@@ -453,21 +454,26 @@ mod tests {
     #[test]
     fn normalize_reads_checker_rule_and_value_and_refuses_bad_ones() {
         let score = outside(0.4, 7);
-        assert_eq!((score.checker.as_str(), score.rule.as_str()), ("dq-tool", "r1"));
+        assert_eq!(
+            (score.checker.as_str(), score.rule.as_str()),
+            ("dq-tool", "r1")
+        );
         assert_eq!((score.value, score.at), (0.4, 7));
         assert_eq!(score.query_digest.len(), 64);
 
-        let refused = |value: Value| {
-            normalize_payload(&payload(value), &fields(), 0).unwrap_err()
-        };
+        let refused = |value: Value| normalize_payload(&payload(value), &fields(), 0).unwrap_err();
         assert!(refused(json!({"checker": "t", "rule": "r1", "score": 1.5}))
             .starts_with(QUALITY_THRESHOLD_INVALID));
-        assert!(refused(json!({"checker": "t", "rule": "r1", "score": -0.1}))
-            .starts_with(QUALITY_THRESHOLD_INVALID));
+        assert!(
+            refused(json!({"checker": "t", "rule": "r1", "score": -0.1}))
+                .starts_with(QUALITY_THRESHOLD_INVALID)
+        );
         assert!(refused(json!({"checker": "t", "score": 0.5})).starts_with(QUALITY_RULE_UNKNOWN));
         assert!(refused(json!({"rule": "r1", "score": 0.5})).starts_with("QUALITY_RULE_INVALID"));
-        assert!(refused(json!({"checker": "native", "rule": "r1", "score": 0.5}))
-            .starts_with("QUALITY_RULE_INVALID"));
+        assert!(
+            refused(json!({"checker": "native", "rule": "r1", "score": 0.5}))
+                .starts_with("QUALITY_RULE_INVALID")
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R762.8
@@ -482,13 +488,20 @@ mod tests {
         // Three score nodes, three scoreOf edges and the updated rule node.
         assert_eq!(outcome.methods.len(), 7);
 
-        let reset = score_methods("acme", "agent", &mut rules, vec![outside(0.95, 4)], 3, 11)
-            .unwrap();
+        let reset =
+            score_methods("acme", "agent", &mut rules, vec![outside(0.95, 4)], 3, 11).unwrap();
         assert!(reset.readings.is_empty());
         assert_eq!(rules["r1"].failures, 0);
 
-        let unknown = score_methods("acme", "agent", &mut BTreeMap::new(), vec![outside(0.5, 5)], 3, 12)
-            .unwrap_err();
+        let unknown = score_methods(
+            "acme",
+            "agent",
+            &mut BTreeMap::new(),
+            vec![outside(0.5, 5)],
+            3,
+            12,
+        )
+        .unwrap_err();
         assert!(unknown.starts_with(QUALITY_RULE_UNKNOWN));
     }
 }

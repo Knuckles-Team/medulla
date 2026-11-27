@@ -595,7 +595,10 @@ async fn ingest_reroute(
         .flatten();
         named[slot] = properties
             .filter(|properties| {
-                properties.get("tenant_id").and_then(serde_json::Value::as_str) == Some(tenant)
+                properties
+                    .get("tenant_id")
+                    .and_then(serde_json::Value::as_str)
+                    == Some(tenant)
             })
             .and_then(|properties| {
                 properties
@@ -671,9 +674,7 @@ async fn route_source_ingestion_status(
 /// (MEDULLA-INGEST-WORKER-R701.9). `None` when the graph is not opted in to the cascade.
 fn reasoner_subclass_closure(
     ctx: &GraphOpRouting<'_>,
-) -> Option<
-    Arc<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>>,
-> {
+) -> Option<Arc<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>>> {
     #[cfg(feature = "streaming")]
     {
         ctx.cdc
@@ -715,7 +716,8 @@ async fn route_source_ingestion_request(
     // (MEDULLA-DECISION-ENGINE-R617.3). The projection is read before the request moves; an
     // error in it surfaces only after the thread commit, so a malformed batch keeps the refusal
     // `prepare` gives it.
-    let conversation = medulla_h_ingest::source_ingestion::conversation_of(ctx.tenant_scope, &request);
+    let conversation =
+        medulla_h_ingest::source_ingestion::conversation_of(ctx.tenant_scope, &request);
     let prepared = match medulla_h_ingest::source_ingestion::prepare(
         medulla_h_ingest::source_ingestion::PrepareContext {
             state: ctx.state,
@@ -777,7 +779,9 @@ async fn remember_thread_of(
     conversation: &medulla_work_types::memory::ConversationRecord,
 ) -> Result<(), String> {
     let Some((isolation, graph_type, owner)) = ctx.gateway_authz_ctx.as_ref() else {
-        return Err("ACCESS_DENIED: a transcript thread needs a resolved graph authority".to_string());
+        return Err(
+            "ACCESS_DENIED: a transcript thread needs a resolved graph authority".to_string(),
+        );
     };
     let principal = ctx.verified_context.principal_persistence_id();
     let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
@@ -808,15 +812,16 @@ async fn remember_thread_of(
     medulla_h_graph::graph_ops::memory_ingest::remember_thread(&mutation_ctx, conversation).await?;
     #[cfg(feature = "jobs")]
     if !fresh.is_empty() {
-        let outcome = super::memory_derive::enqueue_derivations(super::memory_derive::EnqueueRequest {
-            state: ctx.state,
-            graph_name: ctx.graph_name,
-            req_id: ctx.req_id,
-            caller: ctx.caller,
-            verified_context: ctx.verified_context,
-            fresh,
-        })
-        .await;
+        let outcome =
+            super::memory_derive::enqueue_derivations(super::memory_derive::EnqueueRequest {
+                state: ctx.state,
+                graph_name: ctx.graph_name,
+                req_id: ctx.req_id,
+                caller: ctx.caller,
+                verified_context: ctx.verified_context,
+                fresh,
+            })
+            .await;
         if !outcome.refused.is_empty() {
             tracing::error!(codes = ?outcome.refused, "derive enqueue refused; the turns are committed");
         }

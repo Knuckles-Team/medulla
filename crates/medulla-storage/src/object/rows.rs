@@ -29,7 +29,11 @@ impl RowBatch {
     pub fn rows(&self) -> u64 {
         (self.nodes.len()
             + self.edges.len()
-            + self.tables.iter().map(|table| table.rows.len()).sum::<usize>()) as u64
+            + self
+                .tables
+                .iter()
+                .map(|table| table.rows.len())
+                .sum::<usize>()) as u64
     }
 }
 

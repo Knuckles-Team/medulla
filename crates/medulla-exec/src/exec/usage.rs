@@ -224,9 +224,9 @@ fn ranked(tallies: BTreeMap<String, Tally>) -> RowSet {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_catalog_types::asset_usage::{usage_query_series_name, usage_series_name};
     use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
-    use medulla_catalog_types::asset_usage::{usage_query_series_name, usage_series_name};
     use serde_json::json;
 
     const WINDOW: UsageWindow = UsageWindow {

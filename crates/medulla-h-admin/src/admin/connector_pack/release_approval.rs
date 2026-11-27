@@ -85,14 +85,7 @@ pub async fn activate_held_release(
                         .to_string()
                 })?;
             let version = held.release.version.version.clone();
-            super::import::commit_staged(
-                &store,
-                &*blob.store,
-                context,
-                &held,
-                &cancel,
-                &usage,
-            )?;
+            super::import::commit_staged(&store, &*blob.store, context, &held, &cancel, &usage)?;
             Ok(Some(version))
         },
     )

@@ -8,7 +8,9 @@ use std::collections::BTreeMap;
 
 use medulla_compute::source_bisect::next_step;
 use medulla_compute::source_history::{decode_seq, id_key, seq_key, HistoryIndex};
-use medulla_source_types::source_bisect::{BisectLink, BisectRefusal, BisectStepReceipt, BisectStepRequest};
+use medulla_source_types::source_bisect::{
+    BisectLink, BisectRefusal, BisectStepReceipt, BisectStepRequest,
+};
 use medulla_work_types::step_verdict::VerificationVerdict;
 
 /// The most changesets one bisect window holds. A longer range refuses `INVALID_ARGUMENT`

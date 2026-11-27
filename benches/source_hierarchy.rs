@@ -63,7 +63,8 @@ fn high_water_mib() -> f64 {
 
 fn main() {
     let core = GraphCore::new();
-    let written = upsert_containers(&core, "tenant:bench", &tree(), SYNCED_AT_MS).expect("the tree is valid");
+    let written =
+        upsert_containers(&core, "tenant:bench", &tree(), SYNCED_AT_MS).expect("the tree is valid");
     assert_eq!(written.nodes, CONTAINERS as u64);
     let root = container_node_id("tenant:bench", "drive", "root").expect("root id");
     let mut samples = Vec::with_capacity(RESOLUTIONS);

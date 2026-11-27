@@ -16,7 +16,7 @@ use serde_json::Value;
 
 use super::{
     decode_stored, delete_in, get_schema_in, insert_in, list_secondary_indexes_write, map_err,
-    rowid_from_entry_key, row_map, secondary_entry_range, validate_secondary_spec,
+    row_map, rowid_from_entry_key, secondary_entry_range, validate_secondary_spec,
     SecondaryIndexLookup, SqlWrite, MATVIEWS, MAX_SECONDARY_INDEX_CANDIDATES, ROWS,
     SECONDARY_INDEX_ENTRIES,
 };
@@ -89,7 +89,10 @@ fn existing_rows(
     let rows = wtx.open_table(ROWS)?;
     let width = schema.columns().len();
     let mut found = BTreeMap::new();
-    for entry in rows.range((view, 0u64)..=(view, u64::MAX)).map_err(map_err)? {
+    for entry in rows
+        .range((view, 0u64)..=(view, u64::MAX))
+        .map_err(map_err)?
+    {
         let (_, value) = entry.map_err(map_err)?;
         let mut cells: Vec<medulla_tables::schema::Cell> = decode_stored(value.value(), "row")?;
         if cells.len() < width {
@@ -176,7 +179,6 @@ fn write_result(
     Ok(changes)
 }
 
-
 /// The knob `MEDULLA_VIEW_JOIN_FANOUT` (MEDULLA-INCREMENTAL-VIEWS-R013.2): the most rows one
 /// join probe may read per key. Default 10000, range [1, 1000000]; an out-of-range or unparsable
 /// value falls back to the default with one warning. Read once at first use.
@@ -204,7 +206,10 @@ fn table_rows(wtx: &SqlWrite<'_>, table: &str, schema: &TableSchema) -> Result<V
     let rows = wtx.open_table(ROWS)?;
     let width = schema.columns().len();
     let mut out = Vec::new();
-    for entry in rows.range((table, 0u64)..=(table, u64::MAX)).map_err(map_err)? {
+    for entry in rows
+        .range((table, 0u64)..=(table, u64::MAX))
+        .map_err(map_err)?
+    {
         let (_, value) = entry.map_err(map_err)?;
         let mut cells: Vec<medulla_tables::schema::Cell> = decode_stored(value.value(), "row")?;
         if cells.len() < width {
@@ -320,7 +325,10 @@ fn probe<'a>(rows: &'a [Row], column: &str, key: &Value) -> Result<Vec<&'a Row>,
     if key.is_null() {
         return Ok(Vec::new());
     }
-    let matched: Vec<&Row> = rows.iter().filter(|row| row.get(column) == Some(key)).collect();
+    let matched: Vec<&Row> = rows
+        .iter()
+        .filter(|row| row.get(column) == Some(key))
+        .collect();
     if matched.len() > join_fanout() {
         return Err(format!(
             "STATE_BUDGET_EXCEEDED: a join probe on `{column}` matched {} rows, above MEDULLA_VIEW_JOIN_FANOUT {}",
@@ -358,13 +366,20 @@ fn maintain_join(
     // most once per commit.
     let (mut a_scan, mut b_scan): (Option<Vec<Row>>, Option<Vec<Row>>) = (None, None);
     let schema = get_schema_in(wtx, &program.view)?.ok_or_else(|| {
-        format!("MATVIEW_STATE_CORRUPT: result table `{}` is missing", program.view)
+        format!(
+            "MATVIEW_STATE_CORRUPT: result table `{}` is missing",
+            program.view
+        )
     })?;
 
     // (net weight, last entering merged row, pair key)
     let mut net: BTreeMap<String, (i64, Option<Row>)> = BTreeMap::new();
     let mut emit = |weight: i64, a: &Row, b: &Row| -> Result<(), String> {
-        let key = format!("{}|{}", row_key_text(&left_pk, a), row_key_text(&right_pk, b));
+        let key = format!(
+            "{}|{}",
+            row_key_text(&left_pk, a),
+            row_key_text(&right_pk, b)
+        );
         let merged = merged_row(&program.table, a, &join.right, b);
         let entry = net.entry(key).or_insert((0, None));
         entry.0 += weight;
@@ -374,14 +389,22 @@ fn maintain_join(
         Ok(())
     };
     for delta in &da {
-        let key = delta.row.get(&join.left_key).cloned().unwrap_or(Value::Null);
+        let key = delta
+            .row
+            .get(&join.left_key)
+            .cloned()
+            .unwrap_or(Value::Null);
         let side = (join.right.as_str(), &right_schema);
         for b in probe_side(wtx, tenant_scope, side, &join.right_key, &key, &mut b_scan)? {
             emit(delta.weight, &delta.row, &b)?;
         }
     }
     for delta in &db {
-        let key = delta.row.get(&join.right_key).cloned().unwrap_or(Value::Null);
+        let key = delta
+            .row
+            .get(&join.right_key)
+            .cloned()
+            .unwrap_or(Value::Null);
         let side = (program.table.as_str(), &left_schema);
         for a in probe_side(wtx, tenant_scope, side, &join.left_key, &key, &mut a_scan)? {
             emit(delta.weight, &a, &delta.row)?;
@@ -428,8 +451,12 @@ fn maintain_one(
         return maintain_join(wtx, tenant_scope, program, changes);
     }
     let deltas = deltas_of(wtx, &program.table, changes)?;
-    let schema = get_schema_in(wtx, &program.view)?
-        .ok_or_else(|| format!("MATVIEW_STATE_CORRUPT: result table `{}` is missing", program.view))?;
+    let schema = get_schema_in(wtx, &program.view)?.ok_or_else(|| {
+        format!(
+            "MATVIEW_STATE_CORRUPT: result table `{}` is missing",
+            program.view
+        )
+    })?;
     match &program.output {
         ViewOutput::Rows(_) => {
             // The state a key ends in after the changes, replayed in commit order.
@@ -441,7 +468,10 @@ fn maintain_one(
                 if delta.weight < 0 {
                     target.insert(delta.key.clone(), None);
                 } else {
-                    target.insert(delta.key.clone(), Some(program.project(&delta.row, &delta.key)?));
+                    target.insert(
+                        delta.key.clone(),
+                        Some(program.project(&delta.row, &delta.key)?),
+                    );
                 }
             }
             let keys: BTreeSet<String> = target.keys().cloned().collect();
@@ -457,10 +487,11 @@ fn maintain_one(
                     continue;
                 }
                 let values = program.group_values(&delta.row)?;
-                touched
-                    .entry(group_key_text(&values))
-                    .or_default()
-                    .push((delta.weight, &delta.row, values));
+                touched.entry(group_key_text(&values)).or_default().push((
+                    delta.weight,
+                    &delta.row,
+                    values,
+                ));
             }
             let names: BTreeSet<String> = touched.keys().cloned().collect();
             let before = existing_rows(wtx, &program.view, &schema, &names)?;
@@ -533,7 +564,10 @@ pub(super) fn maintain_views(
     for program in programs {
         let touches = changes.iter().any(|change| {
             change.table == program.table
-                || program.join.as_ref().is_some_and(|join| change.table == join.right)
+                || program
+                    .join
+                    .as_ref()
+                    .is_some_and(|join| change.table == join.right)
         });
         if !touches {
             continue;

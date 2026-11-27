@@ -181,9 +181,15 @@ pub enum DrainAckStep {
 pub fn drain_ack_plan(outcome: &DrainAckOutcome, lease_held: bool) -> Vec<DrainAckStep> {
     let ordered = |record: &DrainRecord, next: Option<&IngestJobEnvelope>| {
         let mut steps = if lease_held {
-            vec![DrainAckStep::WriteNode(record.clone()), DrainAckStep::AckTask]
+            vec![
+                DrainAckStep::WriteNode(record.clone()),
+                DrainAckStep::AckTask,
+            ]
         } else {
-            vec![DrainAckStep::AckTask, DrainAckStep::WriteNode(record.clone())]
+            vec![
+                DrainAckStep::AckTask,
+                DrainAckStep::WriteNode(record.clone()),
+            ]
         };
         if let Some(next) = next {
             steps.push(DrainAckStep::EnqueuePage(next.clone()));
@@ -293,7 +299,9 @@ mod tests {
         // The same start is the same drain.
         assert_eq!(
             started().handle,
-            start_drain("acme", "crm", "accounts", "full", "main", 1_000).unwrap().handle
+            start_drain("acme", "crm", "accounts", "full", "main", 1_000)
+                .unwrap()
+                .handle
         );
         let page0 = drain.first_page.page.clone().unwrap();
         let ack = DrainAck {
@@ -358,14 +366,19 @@ mod tests {
         // holds the lease: replay, and the next page is the one the first attempt would enqueue.
         assert_eq!(
             on_ingest_drain_ack(&record, &page0, &ack, 500, 2_100, true).unwrap(),
-            DrainAckOutcome::Replay { next: Some(next.clone()) }
+            DrainAckOutcome::Replay {
+                next: Some(next.clone())
+            }
         );
         // Without the lease, or with a different cursor, the ack is stale.
         assert_eq!(
             on_ingest_drain_ack(&record, &page0, &ack, 500, 2_100, false).unwrap(),
             DrainAckOutcome::Stale
         );
-        let other = DrainAck { next_cursor: Some("c9".into()), ..ack.clone() };
+        let other = DrainAck {
+            next_cursor: Some("c9".into()),
+            ..ack.clone()
+        };
         assert_eq!(
             on_ingest_drain_ack(&record, &page0, &other, 500, 2_100, true).unwrap(),
             DrainAckOutcome::Stale
@@ -374,7 +387,11 @@ mod tests {
         assert_eq!(recovery_page(&record).unwrap(), Some(next.clone()));
         // A closed drain replays its closing ack with nothing to enqueue and has no recovery page.
         let page1 = next.page.clone().unwrap();
-        let close = DrainAck { items: 1, next_cursor: None, profile: Vec::new() };
+        let close = DrainAck {
+            items: 1,
+            next_cursor: None,
+            profile: Vec::new(),
+        };
         let DrainAckOutcome::Closed { record: closed } =
             on_ingest_drain_ack(&record, &page1, &close, 500, 3_000, true).unwrap()
         else {
@@ -400,12 +417,22 @@ mod tests {
     impl Substrate {
         fn new(drain: &StartedDrain) -> Self {
             let mut tasks = std::collections::BTreeMap::new();
-            tasks.insert(medulla_source_types::ingest_job::task_id(&drain.first_page), false);
-            Self { node: drain.record.clone(), tasks, steps_run: 0, crash_at: None }
+            tasks.insert(
+                medulla_source_types::ingest_job::task_id(&drain.first_page),
+                false,
+            );
+            Self {
+                node: drain.record.clone(),
+                tasks,
+                steps_run: 0,
+                crash_at: None,
+            }
         }
 
         fn lease_held(&self, page: &IngestJobEnvelope) -> bool {
-            self.tasks.get(&medulla_source_types::ingest_job::task_id(page)) == Some(&false)
+            self.tasks
+                .get(&medulla_source_types::ingest_job::task_id(page))
+                == Some(&false)
         }
 
         /// Run the plan of one ack; `Err` is the injected crash, after which nothing else runs.
@@ -419,7 +446,8 @@ mod tests {
                 match step {
                     DrainAckStep::WriteNode(record) => self.node = record.clone(),
                     DrainAckStep::AckTask => {
-                        self.tasks.insert(medulla_source_types::ingest_job::task_id(page), true);
+                        self.tasks
+                            .insert(medulla_source_types::ingest_job::task_id(page), true);
                     }
                     DrainAckStep::EnqueuePage(next) => {
                         self.tasks
@@ -453,8 +481,16 @@ mod tests {
                 let drain = started();
                 let mut world = Substrate::new(&drain);
                 let acks = [
-                    DrainAck { items: 10, next_cursor: Some("c1".into()), profile: Vec::new() },
-                    DrainAck { items: 5, next_cursor: None, profile: Vec::new() },
+                    DrainAck {
+                        items: 10,
+                        next_cursor: Some("c1".into()),
+                        profile: Vec::new(),
+                    },
+                    DrainAck {
+                        items: 5,
+                        next_cursor: None,
+                        profile: Vec::new(),
+                    },
                 ];
                 let mut page = drain.first_page.clone();
                 for (index, ack) in acks.iter().enumerate() {
@@ -488,12 +524,21 @@ mod tests {
                     world.recover();
                     if let Some(waiting) = recovery_page(&world.node).unwrap() {
                         page = waiting;
-                        assert!(world.tasks.contains_key(&medulla_source_types::ingest_job::task_id(&page)));
+                        assert!(world
+                            .tasks
+                            .contains_key(&medulla_source_types::ingest_job::task_id(&page)));
                     }
                 }
                 assert_eq!(world.node.state, DrainState::Complete, "crash {crash_at}");
-                assert_eq!((world.node.pages, world.node.items), (2, 15), "crash {crash_at}");
-                assert!(world.tasks.values().all(|acked| *acked), "every page task acked");
+                assert_eq!(
+                    (world.node.pages, world.node.items),
+                    (2, 15),
+                    "crash {crash_at}"
+                );
+                assert!(
+                    world.tasks.values().all(|acked| *acked),
+                    "every page task acked"
+                );
                 assert_eq!(world.tasks.len(), 2, "no duplicate page task");
             }
         }
@@ -509,7 +554,10 @@ mod tests {
         let op = drain_node_operation(&drain.record, "agent").unwrap();
         assert_eq!(op["id"], format!("source_drain:{}", drain.record.drain_id));
         let properties = op["properties"].as_object().unwrap();
-        assert_eq!(drain_from_node(properties, "acme"), Some(drain.record.clone()));
+        assert_eq!(
+            drain_from_node(properties, "acme"),
+            Some(drain.record.clone())
+        );
         assert_eq!(drain_from_node(properties, "other"), None);
         assert_eq!(drain_status(&drain.record, "other"), None);
         assert_eq!(drain_status(&drain.record, "acme").unwrap().pages, 0);

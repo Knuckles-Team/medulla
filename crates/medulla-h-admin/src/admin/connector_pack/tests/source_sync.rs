@@ -478,8 +478,7 @@ async fn two_way_sync_applies_proposes_and_records_conflicts() {
                     Method::CompareAndSetNodeFields {
                         node_id: node.to_string(),
                         conditions_msgpack: rmp_serde::to_vec_named(&json!({})).unwrap(),
-                        updates_msgpack: rmp_serde::to_vec_named(&json!({ "name": name }))
-                            .unwrap(),
+                        updates_msgpack: rmp_serde::to_vec_named(&json!({ "name": name })).unwrap(),
                     },
                 )
                 .await,

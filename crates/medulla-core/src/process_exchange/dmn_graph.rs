@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 
 use super::dmn_read::{
-    DmnClause, DmnDecision, DmnDocument, DmnInputData, DmnRequirement, DmnRequirementKind,
-    DmnRule, DmnTable,
+    DmnClause, DmnDecision, DmnDocument, DmnInputData, DmnRequirement, DmnRequirementKind, DmnRule,
+    DmnTable,
 };
 use super::PreservedXml;
 use crate::architecture_exchange::graph::ExchangeMutation;
@@ -163,7 +163,9 @@ pub fn dmn_mutations(doc: &DmnDocument, model_iri: &str) -> Vec<ExchangeMutation
         } else {
             doc.id.as_str()
         };
-        kept.entry(owner.to_owned()).or_default().push_str(&fragment.xml);
+        kept.entry(owner.to_owned())
+            .or_default()
+            .push_str(&fragment.xml);
     }
     for (id, mutation) in &mut nodes {
         if let ExchangeMutation::UpsertNode { properties, .. } = mutation {
@@ -255,9 +257,8 @@ pub fn dmn_document(
             reason: "the model has no single DmnDecisionRequirements node".into(),
         });
     };
-    let name_of = |properties: &BTreeMap<String, String>| {
-        properties.get("name").cloned().unwrap_or_default()
-    };
+    let name_of =
+        |properties: &BTreeMap<String, String>| properties.get("name").cloned().unwrap_or_default();
     let mut doc = DmnDocument {
         id: (*root_id).to_owned(),
         name: name_of(root),

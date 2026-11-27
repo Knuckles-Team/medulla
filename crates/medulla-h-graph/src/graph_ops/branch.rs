@@ -20,9 +20,8 @@ pub mod publish;
 use std::sync::Arc;
 
 use medulla_mutation_types::branch::{
-    branch_target_graph, classify, merge_base, validate_branch_name, Branch,
-    BranchMergeReceipt, BranchMutationRefusal, BranchRef, BranchWriteReceipt, Head, MergeOutcome,
-    RESERVED_BRANCH_NAME,
+    branch_target_graph, classify, merge_base, validate_branch_name, Branch, BranchMergeReceipt,
+    BranchMutationRefusal, BranchRef, BranchWriteReceipt, Head, MergeOutcome, RESERVED_BRANCH_NAME,
 };
 use medulla_persistence::branch_registry_store::{
     shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
@@ -322,8 +321,8 @@ pub async fn plan_branch_merge(
             &request.graph,
             request.policy.clone(),
         )
-            .await
-            .map_err(|error| publish_error_response(req_id, error));
+        .await
+        .map_err(|error| publish_error_response(req_id, error));
     }
     let tenant = verified.tenant().to_string();
     let pinned = request.merge_base.clone();
@@ -488,7 +487,8 @@ impl BranchTarget {
         principal: &str,
     ) -> Result<Vec<medulla_source_types::source_path_grant::PathGrant>, String> {
         let registry = Arc::clone(&self.registry);
-        let (tenant, repo, principal) = (tenant.to_string(), repo.to_string(), principal.to_string());
+        let (tenant, repo, principal) =
+            (tenant.to_string(), repo.to_string(), principal.to_string());
         tokio::task::spawn_blocking(move || registry.path_grants(&tenant, &repo, &principal))
             .await
             .map_err(|error| error.to_string())?
@@ -721,7 +721,9 @@ mod tests {
         // A base the caller pinned that is not the computed one is stale.
         assert_eq!(
             classify_merge(&left, &right, Some("g@6")),
-            Err(MergeClassifyError::Refused(ServerErrorCode::MergeTargetStale))
+            Err(MergeClassifyError::Refused(
+                ServerErrorCode::MergeTargetStale
+            ))
         );
 
         // Disjoint chains never get an implicit base.

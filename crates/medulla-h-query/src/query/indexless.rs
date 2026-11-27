@@ -30,8 +30,9 @@ use super::segment_filter::ReadScope;
 use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_decision_types::decision::indexless_retrieval::{
-    ceiling_premises, clamp_budget, operation_id, tenant_ceiling, unit_costs, verify_span, BudgetMeter,
-    IndexlessErrorCode, IndexlessOp, IndexlessRequest, IndexlessResult, IndexlessUnitCosts,
+    ceiling_premises, clamp_budget, operation_id, tenant_ceiling, unit_costs, verify_span,
+    BudgetMeter, IndexlessErrorCode, IndexlessOp, IndexlessRequest, IndexlessResult,
+    IndexlessUnitCosts,
 };
 use medulla_protocol_types::result_contract::query::IndexlessRetrieve;
 use medulla_query_types::indexless_cost::CostReport;
@@ -169,7 +170,10 @@ fn run_ops(
                     .get(document_id)
                     .ok_or_else(|| not_found(document_id))?;
                 meter.charge(&id, 1, 1, costs.verify).map_err(|code| {
-                    exhausted(code, "the span check exceeds the applied budget".to_string())
+                    exhausted(
+                        code,
+                        "the span check exceeds the applied budget".to_string(),
+                    )
                 })?;
                 verify_span(text, *start_byte, *end_byte, expected_digest).map_err(|code| {
                     exhausted(

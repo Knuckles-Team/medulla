@@ -16,9 +16,7 @@ use medulla_decision_types::decision::resolve_conflict::{
     min_margin, recency_tiebreak, ConflictRefusal, CONFLICT_NONFINITE, CONFLICT_OPTION,
     CONFLICT_POLICY_MISSING, CONFLICT_UNRESOLVED, PARAM_CONFLICT, WINNER_A, WINNER_B,
 };
-use medulla_decision_types::decision::statistical::declared::{
-    ConflictCandidates, DeclaredOption,
-};
+use medulla_decision_types::decision::statistical::declared::{ConflictCandidates, DeclaredOption};
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
@@ -77,7 +75,11 @@ fn winner(
     }
     let margin = min_margin(policy);
     if (score_a - score_b).abs() >= margin {
-        return Ok(if score_a > score_b { WINNER_A } else { WINNER_B });
+        return Ok(if score_a > score_b {
+            WINNER_A
+        } else {
+            WINNER_B
+        });
     }
     let (a, b) = (&pair.candidate_a, &pair.candidate_b);
     if recency_tiebreak(policy) && a.overlaps(b) && a.valid_from != b.valid_from {

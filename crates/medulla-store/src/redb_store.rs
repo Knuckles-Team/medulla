@@ -128,13 +128,13 @@ pub use commit_timing::CommitPhaseTimer;
 pub use store_types::*;
 pub use unreadable::{NodeUnreadable, UnsealFailure};
 
+pub mod commit_publish;
 pub mod enrichment_budget;
-/// The per-graph write ledger and creator (MEDULLA-IDENTITY-R700.7).
-pub mod write_ledger;
 /// The graph shard as a kernel-owned store (RF-RULING-004 step 8).
 #[cfg(feature = "redb")]
 pub mod shard;
-pub mod commit_publish;
+/// The per-graph write ledger and creator (MEDULLA-IDENTITY-R700.7).
+pub mod write_ledger;
 
 pub mod audit;
 pub mod audit_machine;
@@ -149,14 +149,12 @@ pub mod operation_audit;
 #[cfg(feature = "security")]
 pub use audit::{
     append_audit_entry, append_audit_entry_with_line, prove_inclusion, provenance_anchor_commit,
-    provenance_leaf_hashes,
-    verify_audit, AuditTailCache, ProvenanceAnchorCache,
+    provenance_leaf_hashes, verify_audit, AuditTailCache, ProvenanceAnchorCache,
 };
 #[cfg(feature = "security")]
 pub use operation_audit::{
     audit_writer_unavailable, operation_audit_append, operation_audit_list, operation_audit_read,
-    read_audit_chain_scope,
-    OperationAuditEvent,
+    read_audit_chain_scope, OperationAuditEvent,
 };
 pub use shard::{Shard, ShardWrite};
 // ── Cross-shard 2PC durable rows (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — pure, server-INDEPENDENT ──

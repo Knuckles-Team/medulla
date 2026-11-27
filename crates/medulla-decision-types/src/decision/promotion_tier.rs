@@ -38,7 +38,8 @@ pub const ALWAYS_ON_CAPACITY_REACHED: RefusalCode = RefusalCode::new("ALWAYS_ON_
 /// `PERSONA_UNKNOWN`: the graph holds no persona of that id.
 pub const PERSONA_UNKNOWN: RefusalCode = RefusalCode::new("PERSONA_UNKNOWN");
 /// `TIER_DOWNGRADE_NEEDS_REVIEW`: a move to a lower tier has no approver.
-pub const TIER_DOWNGRADE_NEEDS_REVIEW: RefusalCode = RefusalCode::new("TIER_DOWNGRADE_NEEDS_REVIEW");
+pub const TIER_DOWNGRADE_NEEDS_REVIEW: RefusalCode =
+    RefusalCode::new("TIER_DOWNGRADE_NEEDS_REVIEW");
 /// `ALWAYS_ON_TOOL_REMOVED`: a tenant policy removes an always-on capability.
 pub const ALWAYS_ON_TOOL_REMOVED: RefusalCode = RefusalCode::new("ALWAYS_ON_TOOL_REMOVED");
 

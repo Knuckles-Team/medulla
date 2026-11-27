@@ -878,7 +878,8 @@ mod nl_plan_only_tests {
     // spec: MEDULLA-FEDERATED-QUERY-R058.1
     #[test]
     fn served_plan_helper_uses_the_view_free_typed_seam() {
-        let (uql, plan) = super::plan_nl_only(&PurePlanner, "MATCH (:Doc)", 1, 1_700_000_000.0).expect("plan");
+        let (uql, plan) =
+            super::plan_nl_only(&PurePlanner, "MATCH (:Doc)", 1, 1_700_000_000.0).expect("plan");
         assert_eq!(uql, "MATCH (:Doc)");
         assert_eq!(plan.ops.len(), 1);
     }

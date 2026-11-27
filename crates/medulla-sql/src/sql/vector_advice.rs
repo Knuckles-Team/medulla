@@ -90,7 +90,10 @@ fn column_stats(cells: impl Iterator<Item = Option<String>>) -> (f64, f64) {
     if count == 0 {
         return (0.0, 0.0);
     }
-    (bytes as f64 / count as f64, distinct.len() as f64 / count as f64)
+    (
+        bytes as f64 / count as f64,
+        distinct.len() as f64 / count as f64,
+    )
 }
 
 fn cell_text(cell: &Cell) -> Option<String> {
@@ -198,12 +201,7 @@ pub(crate) fn read_advice(
             };
             if pin.is_some_and(|(table, name)| *table == schema.name && *name == column.name) {
                 admit_pinned(&advice_column, revision).map_err(|error| {
-                    format!(
-                        "{}: column `{}.{}`",
-                        error.code(),
-                        schema.name,
-                        column.name
-                    )
+                    format!("{}: column `{}.{}`", error.code(), schema.name, column.name)
                 })?;
             }
             columns.push(advice_column);
@@ -271,7 +269,9 @@ pub(crate) fn register(ctx: &SessionContext, rows: &[ColumnVectorAdvice]) -> Res
         Arc::new(Int64Array::from(rows.iter().map(pick).collect::<Vec<_>>()))
     };
     let float = |pick: fn(&ColumnVectorAdvice) -> f64| -> ArrayRef {
-        Arc::new(Float64Array::from(rows.iter().map(pick).collect::<Vec<_>>()))
+        Arc::new(Float64Array::from(
+            rows.iter().map(pick).collect::<Vec<_>>(),
+        ))
     };
     let columns: Vec<ArrayRef> = vec![
         text(|row| row.table.clone()),

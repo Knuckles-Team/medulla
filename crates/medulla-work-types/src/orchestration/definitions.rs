@@ -222,7 +222,10 @@ mod tests {
 
     fn four_values() -> Vec<(String, SlotValue)> {
         vec![
-            ("subject".to_string(), SlotValue::Text("{{x}} ticket".to_string())),
+            (
+                "subject".to_string(),
+                SlotValue::Text("{{x}} ticket".to_string()),
+            ),
             ("limit".to_string(), SlotValue::Integer(-42)),
             ("target".to_string(), SlotValue::Iri("urn:t:1".to_string())),
             (

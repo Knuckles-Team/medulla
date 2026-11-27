@@ -14,13 +14,16 @@ struct Graph(HashMap<String, Vec<ForestRelation>>);
 
 impl Graph {
     fn link(&mut self, from: &str, to: &str, kind: RelationKind, strength: f32, cost: f32) {
-        self.0.entry(from.to_string()).or_default().push(ForestRelation {
-            target: to.to_string(),
-            kind,
-            strength,
-            verify_cost: cost,
-            tokens: 10,
-        });
+        self.0
+            .entry(from.to_string())
+            .or_default()
+            .push(ForestRelation {
+                target: to.to_string(),
+                kind,
+                strength,
+                verify_cost: cost,
+                tokens: 10,
+            });
     }
 }
 
@@ -51,10 +54,17 @@ fn expansion_respects_hops_and_cap() {
     assert_eq!((hops, cap), (2, 2_000));
     let two = expand_candidates(&seeds(), &graph, hops, cap).unwrap();
     let ids: Vec<&str> = two.iter().map(|c| c.memory_id.as_str()).collect();
-    assert_eq!(ids, ["b", "a", "c"], "support order; `d` is three hops away");
+    assert_eq!(
+        ids,
+        ["b", "a", "c"],
+        "support order; `d` is three hops away"
+    );
     let c = two.iter().find(|c| c.memory_id == "c").unwrap();
     assert_eq!(c.support, 0.25);
-    assert_eq!(c.verify_cost, 0.1, "the cost of the relation to its parent, not the support");
+    assert_eq!(
+        c.verify_cost, 0.1,
+        "the cost of the relation to its parent, not the support"
+    );
 
     let one = expand_candidates(&seeds(), &graph, 1, cap).unwrap();
     assert_eq!(one.len(), 2);

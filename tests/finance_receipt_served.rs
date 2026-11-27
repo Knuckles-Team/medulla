@@ -119,7 +119,10 @@ fn view_of(response: &Response) -> FinanceReceiptView {
 fn refused_with(response: &Response, code: &str) {
     assert!(response.result.is_none(), "{response:?}");
     assert!(
-        response.error_detail.as_deref().is_some_and(|d| d.contains(code))
+        response
+            .error_detail
+            .as_deref()
+            .is_some_and(|d| d.contains(code))
             || response.error.as_deref().is_some_and(|e| e.contains(code)),
         "{response:?}"
     );
@@ -147,7 +150,9 @@ async fn finance_receipt_moves_only_through_its_machine_and_lists_by_tenant_key(
     assert!(created.error.is_none(), "{:?}", created.error_detail);
     let call = |id: u64, method: Method| {
         let state = &state;
-        async move { test_support::dispatch(state, test_support::request(SECRET, id, graph, method)).await }
+        async move {
+            test_support::dispatch(state, test_support::request(SECRET, id, graph, method)).await
+        }
     };
     let Method::CreateNodeIfAbsent { node_id, .. } = receipt("key-1") else {
         unreachable!()
@@ -183,7 +188,10 @@ async fn finance_receipt_moves_only_through_its_machine_and_lists_by_tenant_key(
     assert_eq!(retried.receipt_state, FinanceReceiptState::Due);
     assert_eq!(retried.attempt, 2);
     // An event no edge accepts is refused and leaves the receipt where it was.
-    refused_with(&call(8, transition(FinanceReceiptEvent::Complete)).await, "TRANSITION_REFUSED");
+    refused_with(
+        &call(8, transition(FinanceReceiptEvent::Complete)).await,
+        "TRANSITION_REFUSED",
+    );
     // A second identical create does not reset the state.
     assert!(matches!(
         call(9, receipt("key-1")).await.result,

@@ -908,11 +908,11 @@ async fn publish_native(
 // spec: MEDULLA-TYPED-PACKS-R002.12
 #[tokio::test]
 async fn native_component_event_projects() {
+    use crate::connector_pack_projection::worker::native::sweep as native_sweep;
     use medulla_agent_types::agent_component::{
         AgentComponentFacts, ComponentDependency, PromptMode, PROMPT_SCHEMA_REVISION,
     };
     use medulla_catalog_types::connector_pack::ids::native_component_projection_graph_name;
-    use crate::connector_pack_projection::worker::native::sweep as native_sweep;
 
     let served = Served::new();
     let _env = served.with_graph_persistence().await;

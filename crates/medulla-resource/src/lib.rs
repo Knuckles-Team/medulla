@@ -21,8 +21,8 @@
 //! rounded up to a second lane.
 
 pub mod admission;
-pub mod circuit_breaker_machine;
 mod cgroup;
+pub mod circuit_breaker_machine;
 use cgroup::{
     finite_cpu_limit, read_cgroup_file, read_cgroup_metadata, read_cpu_v1_pair,
     resolve_cgroup_mount_paths,

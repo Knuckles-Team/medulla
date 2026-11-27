@@ -236,11 +236,7 @@ pub fn resource_result_payload(
                 held,
             )
         }
-        None => (
-            ResourceReservationResultState::Absent,
-            0,
-            (0, 0, 0, 0),
-        ),
+        None => (ResourceReservationResultState::Absent, 0, (0, 0, 0, 0)),
     };
     let host_ref = record
         .as_ref()

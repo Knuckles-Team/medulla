@@ -19,14 +19,14 @@ use medulla_decision_rank::rank::capability_rank::{
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::capability_designation::{
     compute_capability_eligibility, CapabilityDesignation, CapabilityIri, CapabilityReward,
-    DesignatedCapability, DesignationAsk, PackOrigin, DesignationKnobs, SchemaProjection, DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
-    DESIGNATION_CLOSURE_TOO_LARGE, DESIGNATION_DIM_MISMATCH,
-    DESIGNATION_EMBEDDING_VERSION_MISMATCH, DESIGNATION_EMPTY_QUERY_VECTOR,
-    DESIGNATION_INDEX_CAPACITY_EXCEEDED, DESIGNATION_MALFORMED_QUERY_VECTOR,
-    DESIGNATION_NO_CAPABLE_CANDIDATE, DESIGNATION_NO_DESIGNATED_COMPONENT,
-    DESIGNATION_STALE_PACK_REVISION, DESIGNATION_TOO_MANY_CANDIDATES,
-    DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES, DESIGNATION_UNKNOWN_TARGET_CLASS,
-    KNOBS as DESIGNATION_KNOBS,
+    DesignatedCapability, DesignationAsk, DesignationKnobs, PackOrigin, SchemaProjection,
+    DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, DESIGNATION_CLOSURE_TOO_LARGE,
+    DESIGNATION_DIM_MISMATCH, DESIGNATION_EMBEDDING_VERSION_MISMATCH,
+    DESIGNATION_EMPTY_QUERY_VECTOR, DESIGNATION_INDEX_CAPACITY_EXCEEDED,
+    DESIGNATION_MALFORMED_QUERY_VECTOR, DESIGNATION_NO_CAPABLE_CANDIDATE,
+    DESIGNATION_NO_DESIGNATED_COMPONENT, DESIGNATION_STALE_PACK_REVISION,
+    DESIGNATION_TOO_MANY_CANDIDATES, DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES,
+    DESIGNATION_UNKNOWN_TARGET_CLASS, KNOBS as DESIGNATION_KNOBS,
 };
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
@@ -703,7 +703,12 @@ pub(crate) fn designate(
                 applies_to: hit.record.applies_to.clone(),
                 executes: hit.record.executes.clone(),
                 pack: hit.record.pack.clone(),
-                descriptors: descriptors_of_entity(runtime, hit.record.pack.as_ref(), &hit.record.capabilities, candidate.reward_q32),
+                descriptors: descriptors_of_entity(
+                    runtime,
+                    hit.record.pack.as_ref(),
+                    &hit.record.capabilities,
+                    candidate.reward_q32,
+                ),
                 record_revision: hit.record.record_revision,
                 eligibility,
             })

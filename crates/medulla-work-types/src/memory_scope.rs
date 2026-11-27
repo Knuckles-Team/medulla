@@ -163,17 +163,28 @@ mod tests {
             state
         };
         let pick = |bits: u64| -> BTreeSet<String> {
-            (0..16).filter(|n| bits >> n & 1 == 1).map(|n| format!("s{n}")).collect()
+            (0..16)
+                .filter(|n| bits >> n & 1 == 1)
+                .map(|n| format!("s{n}"))
+                .collect()
         };
         for _ in 0..2_000 {
             let visible = pick(next());
             let named = pick(next());
-            let scope = MemoryScope { session_ids: named.clone(), ..scope(&[]) };
+            let scope = MemoryScope {
+                session_ids: named.clone(),
+                ..scope(&[])
+            };
             let resolved = resolve_scope_sessions(&scope, &visible);
             assert!(resolved.is_subset(&visible), "never exceeds visible");
-            assert!(resolved.is_subset(&named), "never names a session the scope lacks");
             assert!(
-                visible.intersection(&named).all(|session| resolved.contains(session)),
+                resolved.is_subset(&named),
+                "never names a session the scope lacks"
+            );
+            assert!(
+                visible
+                    .intersection(&named)
+                    .all(|session| resolved.contains(session)),
                 "keeps every session both allow"
             );
         }

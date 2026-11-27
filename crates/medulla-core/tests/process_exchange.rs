@@ -478,7 +478,11 @@ fn bpmn_mapping_is_deterministic() {
     let doc = parse_bpmn(EVERY_KIND, BpmnLimits::default()).unwrap();
     let model = "model:every";
     let out = bpmn_mutations(&doc, model);
-    assert_eq!(out, bpmn_mutations(&doc, model), "equal input, equal output");
+    assert_eq!(
+        out,
+        bpmn_mutations(&doc, model),
+        "equal input, equal output"
+    );
 
     let node = |id: &str| {
         out.iter()
@@ -487,7 +491,9 @@ fn bpmn_mapping_is_deterministic() {
                     id: node_id,
                     label,
                     properties,
-                } if *node_id == element_iri(model, id) => Some((label.clone(), properties.clone())),
+                } if *node_id == element_iri(model, id) => {
+                    Some((label.clone(), properties.clone()))
+                }
                 _ => None,
             })
             .unwrap_or_else(|| panic!("{id} is a node"))

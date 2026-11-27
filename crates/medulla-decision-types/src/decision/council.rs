@@ -206,7 +206,9 @@ pub struct CouncilInput<'a> {
 pub fn check(input: &CouncilInput<'_>, quorum_floor_micros: u32) -> Result<(), CouncilRefusal> {
     let incomplete = |detail: &str| CouncilRefusal::new(COUNCIL_INCOMPLETE_INPUT, detail);
     if input.council_id.is_empty() || input.positions.is_empty() {
-        return Err(incomplete("a council request names its council and positions"));
+        return Err(incomplete(
+            "a council request names its council and positions",
+        ));
     }
     for position in input.positions {
         if position.position_id.is_empty()
@@ -438,7 +440,10 @@ mod tests {
         );
         assert!(result.abstention.is_none());
         let json = serde_json::to_string(&result).unwrap();
-        assert_eq!(serde_json::from_str::<CouncilResult>(&json).unwrap(), result);
+        assert_eq!(
+            serde_json::from_str::<CouncilResult>(&json).unwrap(),
+            result
+        );
         // Input order does not change the digests: positions sort by id.
         let mut shuffled = positions.clone();
         shuffled.reverse();
@@ -459,7 +464,10 @@ mod tests {
         let (policy, heads) = (policy(), [head("e1")]);
         let tie = vec![position("p1", "a", "x"), position("p2", "b", "y")];
         let result = conclude(&input(&tie, &policy, &heads)).unwrap();
-        assert_eq!(result.abstention, Some(CouncilAbstention::UnresolvedConflict));
+        assert_eq!(
+            result.abstention,
+            Some(CouncilAbstention::UnresolvedConflict)
+        );
         assert!(result.accepted_position_ids.is_empty());
         let split = vec![
             position("p1", "a", "x"),

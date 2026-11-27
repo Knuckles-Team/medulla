@@ -395,7 +395,9 @@ pub fn mapping_node_id(tenant: &str, connection_id: &str) -> String {
 }
 
 fn invalid<T>(what: &str) -> Result<T, ConnectionRefusal> {
-    Err(ConnectionRefusal::Invalid(format!("{what} is out of bounds")))
+    Err(ConnectionRefusal::Invalid(format!(
+        "{what} is out of bounds"
+    )))
 }
 
 fn id_ok(value: &str) -> bool {
@@ -487,7 +489,8 @@ impl SourceMapping {
             return None;
         }
         let text = |key: &str| node.get(key).and_then(Value::as_str).map(str::to_owned);
-        let mapping: Map<String, Value> = serde_json::from_str(node.get("mapping")?.as_str()?).ok()?;
+        let mapping: Map<String, Value> =
+            serde_json::from_str(node.get("mapping")?.as_str()?).ok()?;
         let digest = text("digest")?;
         (digest == mapping_digest(&mapping)).then_some(())?;
         Some(Self {
@@ -503,13 +506,20 @@ impl SourceMapping {
 pub fn mapping_digest(mapping: &Map<String, Value>) -> String {
     format!(
         "sha256:{}",
-        sha256_hex(serde_json::to_string(mapping).unwrap_or_default().as_bytes())
+        sha256_hex(
+            serde_json::to_string(mapping)
+                .unwrap_or_default()
+                .as_bytes()
+        )
     )
 }
 
 fn digest_ok(value: &str) -> bool {
     value.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
     })
 }
 
@@ -601,7 +611,11 @@ pub fn handle_connection_list(
     connections.sort_by(|left, right| left.connection_id.cmp(&right.connection_id));
     let rest: Vec<SourceConnection> = connections
         .into_iter()
-        .filter(|connection| after.as_ref().is_none_or(|key| connection.connection_id > *key))
+        .filter(|connection| {
+            after
+                .as_ref()
+                .is_none_or(|key| connection.connection_id > *key)
+        })
         .collect();
     let more = rest.len() > limit;
     let page: Vec<SourceConnection> = rest.into_iter().take(limit).collect();
@@ -624,7 +638,8 @@ pub fn handle_mapping_get(
     stored: Option<SourceMapping>,
 ) -> Result<SourceMapping, ConnectionRefusal> {
     connection.ok_or_else(ConnectionRefusal::not_found)?;
-    stored.ok_or_else(|| ConnectionRefusal::MappingNotFound("no mapping for this connection".into()))
+    stored
+        .ok_or_else(|| ConnectionRefusal::MappingNotFound("no mapping for this connection".into()))
 }
 
 /// What [`handle_mapping_control`] decided.
@@ -747,7 +762,10 @@ mod tests {
     fn a_connection_keeps_a_locator_never_a_value_and_put_replays_the_same_body() {
         let made = handle_connection_control("acme", None, put("c1")).expect("put");
         let stored = made.connection.clone().expect("a connection");
-        assert_eq!((stored.state, made.replayed), (ConnectionState::Active, false));
+        assert_eq!(
+            (stored.state, made.replayed),
+            (ConnectionState::Active, false)
+        );
         let again = handle_connection_control("acme", Some(&stored), put("c1")).expect("replay");
         assert!(again.replayed && again.receipt.replayed);
         let mut changed = input("c1", "env://GITHUB_TOKEN");
@@ -755,17 +773,29 @@ mod tests {
         let replaced = handle_connection_control(
             "acme",
             Some(&stored),
-            SourceConnectionOp::Put { connection: changed },
+            SourceConnectionOp::Put {
+                connection: changed,
+            },
         )
         .expect("replace");
         assert!(!replaced.replayed);
-        assert_eq!(replaced.connection.expect("stored").state, ConnectionState::Paused);
+        assert_eq!(
+            replaced.connection.expect("stored").state,
+            ConnectionState::Paused
+        );
 
-        for bad in ["ghp_abcdef0123456789", "env://", "openbao://has space", "https://x"] {
+        for bad in [
+            "ghp_abcdef0123456789",
+            "env://",
+            "openbao://has space",
+            "https://x",
+        ] {
             let refused = handle_connection_control(
                 "acme",
                 None,
-                SourceConnectionOp::Put { connection: input("c1", bad) },
+                SourceConnectionOp::Put {
+                    connection: input("c1", bad),
+                },
             )
             .expect_err("a value or a bad locator");
             assert_eq!(refused.code(), SOURCE_CONNECTION_INVALID, "{bad}");
@@ -783,18 +813,25 @@ mod tests {
         let gone = handle_connection_control(
             "acme",
             Some(&stored),
-            SourceConnectionOp::Delete { connection_id: "c1".into() },
+            SourceConnectionOp::Delete {
+                connection_id: "c1".into(),
+            },
         )
         .expect("delete");
         assert!(gone.connection.is_none() && gone.receipt.deleted);
         let absent = handle_connection_control(
             "acme",
             None,
-            SourceConnectionOp::Delete { connection_id: "c1".into() },
+            SourceConnectionOp::Delete {
+                connection_id: "c1".into(),
+            },
         )
         .expect_err("absent");
         assert_eq!(absent, ConnectionRefusal::not_found());
-        assert_eq!(handle_connection_get(None), Err(ConnectionRefusal::not_found()));
+        assert_eq!(
+            handle_connection_get(None),
+            Err(ConnectionRefusal::not_found())
+        );
         assert_eq!(handle_connection_get(Some(stored.clone())), Ok(stored));
     }
 
@@ -811,14 +848,20 @@ mod tests {
         let all = vec![connection("b"), connection("a"), connection("c")];
         let first = handle_connection_list(all.clone(), "acme", Some(2), None).expect("page");
         assert_eq!(
-            first.connections.iter().map(|c| c.connection_id.as_str()).collect::<Vec<_>>(),
+            first
+                .connections
+                .iter()
+                .map(|c| c.connection_id.as_str())
+                .collect::<Vec<_>>(),
             ["a", "b"]
         );
         let cursor = first.next_cursor.expect("more");
-        let rest = handle_connection_list(all.clone(), "acme", Some(2), Some(&cursor)).expect("page");
+        let rest =
+            handle_connection_list(all.clone(), "acme", Some(2), Some(&cursor)).expect("page");
         assert_eq!(rest.connections.len(), 1);
         assert!(rest.next_cursor.is_none());
-        let foreign = handle_connection_list(all.clone(), "globex", None, Some(&cursor)).expect_err("foreign");
+        let foreign = handle_connection_list(all.clone(), "globex", None, Some(&cursor))
+            .expect_err("foreign");
         assert_eq!(foreign.code(), SOURCE_CONNECTION_INVALID);
         assert!(handle_connection_list(all, "acme", Some(0), None).is_err());
     }
@@ -834,8 +877,12 @@ mod tests {
     #[test]
     fn a_mapping_is_proposed_approved_at_its_digest_and_a_stale_digest_refuses() {
         let c = connection("c1");
-        let first = handle_mapping_control(Some(&c), None, propose(json!({"title": "name"}))).expect("propose");
-        assert_eq!((first.mapping.state, first.replayed), (MappingState::Proposed, false));
+        let first = handle_mapping_control(Some(&c), None, propose(json!({"title": "name"})))
+            .expect("propose");
+        assert_eq!(
+            (first.mapping.state, first.replayed),
+            (MappingState::Proposed, false)
+        );
         let digest = first.mapping.digest.clone();
 
         // Approving a digest that is not the stored one refuses; the stored one approves.
@@ -843,20 +890,35 @@ mod tests {
             connection_id: "c1".into(),
             mapping_digest: format!("sha256:{}", "0".repeat(64)),
         };
-        let refused = handle_mapping_control(Some(&c), Some(first.mapping.clone()), stale).expect_err("stale");
+        let refused = handle_mapping_control(Some(&c), Some(first.mapping.clone()), stale)
+            .expect_err("stale");
         assert_eq!(refused.code(), MAPPING_CHANGED);
-        let approve = SourceMappingOp::Approve { connection_id: "c1".into(), mapping_digest: digest.clone() };
-        let approved = handle_mapping_control(Some(&c), Some(first.mapping.clone()), approve.clone()).expect("approve");
+        let approve = SourceMappingOp::Approve {
+            connection_id: "c1".into(),
+            mapping_digest: digest.clone(),
+        };
+        let approved =
+            handle_mapping_control(Some(&c), Some(first.mapping.clone()), approve.clone())
+                .expect("approve");
         assert_eq!(approved.mapping.state, MappingState::Approved);
-        let again = handle_mapping_control(Some(&c), Some(approved.mapping.clone()), approve).expect("replay");
+        let again = handle_mapping_control(Some(&c), Some(approved.mapping.clone()), approve)
+            .expect("replay");
         assert!(again.replayed);
 
         // The same proposal keeps an approved mapping approved; a changed one is proposed again.
-        let same = handle_mapping_control(Some(&c), Some(approved.mapping.clone()), propose(json!({"title": "name"})))
-            .expect("same");
+        let same = handle_mapping_control(
+            Some(&c),
+            Some(approved.mapping.clone()),
+            propose(json!({"title": "name"})),
+        )
+        .expect("same");
         assert!(same.replayed && same.mapping.state == MappingState::Approved);
-        let changed = handle_mapping_control(Some(&c), Some(approved.mapping), propose(json!({"title": "headline"})))
-            .expect("changed");
+        let changed = handle_mapping_control(
+            Some(&c),
+            Some(approved.mapping),
+            propose(json!({"title": "headline"})),
+        )
+        .expect("changed");
         assert_eq!(changed.mapping.state, MappingState::Proposed);
         assert_ne!(changed.mapping.digest, digest);
 
@@ -868,12 +930,21 @@ mod tests {
         let missing = handle_mapping_control(
             Some(&c),
             None,
-            SourceMappingOp::Approve { connection_id: "c1".into(), mapping_digest: digest },
+            SourceMappingOp::Approve {
+                connection_id: "c1".into(),
+                mapping_digest: digest,
+            },
         )
         .expect_err("no mapping");
         assert_eq!(missing.code(), MAPPING_NOT_FOUND);
-        assert_eq!(handle_mapping_get(Some(&c), None).expect_err("none").code(), MAPPING_NOT_FOUND);
-        assert_eq!(handle_mapping_get(None, None).expect_err("none"), ConnectionRefusal::not_found());
+        assert_eq!(
+            handle_mapping_get(Some(&c), None).expect_err("none").code(),
+            MAPPING_NOT_FOUND
+        );
+        assert_eq!(
+            handle_mapping_get(None, None).expect_err("none"),
+            ConnectionRefusal::not_found()
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R791
@@ -884,7 +955,12 @@ mod tests {
             "provider": "github", "label": "Main", "settings": "{}",
             "credential_ref": "env://X", "state": "paused",
         });
-        assert_eq!(SourceConnection::from_node(&node, "acme").expect("a connection").state, ConnectionState::Paused);
+        assert_eq!(
+            SourceConnection::from_node(&node, "acme")
+                .expect("a connection")
+                .state,
+            ConnectionState::Paused
+        );
         assert!(SourceConnection::from_node(&node, "globex").is_none());
         let map = json!({"a": 1}).as_object().cloned().expect("object");
         let mapping = json!({
@@ -894,9 +970,15 @@ mod tests {
         assert!(SourceMapping::from_node(&mapping, "acme").is_some());
         let mut forged = mapping.clone();
         forged["digest"] = json!(format!("sha256:{}", "1".repeat(64)));
-        assert!(SourceMapping::from_node(&forged, "acme").is_none(), "a digest must match its mapping");
+        assert!(
+            SourceMapping::from_node(&forged, "acme").is_none(),
+            "a digest must match its mapping"
+        );
         assert!(!connection_node_id("acme", "c1").contains("acme"));
-        assert_ne!(mapping_node_id("acme", "c1"), mapping_node_id("globex", "c1"));
+        assert_ne!(
+            mapping_node_id("acme", "c1"),
+            mapping_node_id("globex", "c1")
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R791
@@ -911,7 +993,9 @@ mod tests {
                 match (edge, state.apply(event)) {
                     (Some(edge), result) => assert_eq!(result, Ok(edge.to)),
                     (None, Err(refused)) => assert_eq!(refused.machine, "SourceMappingMachine"),
-                    (None, Ok(next)) => panic!("{state:?} {event:?} must be refused, took {next:?}"),
+                    (None, Ok(next)) => {
+                        panic!("{state:?} {event:?} must be refused, took {next:?}")
+                    }
                 }
             }
         }

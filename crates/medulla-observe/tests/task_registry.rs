@@ -19,7 +19,10 @@ fn register_progress_finish_and_drop_record_states() {
     let registry = TaskRegistry::new(8);
 
     let handle = registry.register(spec("finishes"));
-    assert_eq!(registry.get("finishes").unwrap().state, TaskState::Registered);
+    assert_eq!(
+        registry.get("finishes").unwrap().state,
+        TaskState::Registered
+    );
     handle.progress(ProgressCursor::Counter(3), 3);
     let row = registry.get("finishes").unwrap();
     assert_eq!(row.state, TaskState::Progressing);
@@ -28,9 +31,15 @@ fn register_progress_finish_and_drop_record_states() {
     assert!(row.last_progress_unix_ms > 0);
     // The caller location of `progress` is this file, not the registry's.
     let progress_at = file_line(row.last_progress_location.unwrap());
-    assert!(progress_at.contains("tests/task_registry.rs"), "{progress_at}");
+    assert!(
+        progress_at.contains("tests/task_registry.rs"),
+        "{progress_at}"
+    );
     let registered_at = file_line(row.registered_location);
-    assert!(registered_at.contains("tests/task_registry.rs"), "{registered_at}");
+    assert!(
+        registered_at.contains("tests/task_registry.rs"),
+        "{registered_at}"
+    );
     // Units never decrease.
     handle.progress(ProgressCursor::Counter(4), 1);
     assert_eq!(registry.get("finishes").unwrap().units_done, 3);
@@ -45,11 +54,17 @@ fn register_progress_finish_and_drop_record_states() {
     }));
     let row = registry.get("fails").unwrap();
     assert_eq!(row.state, TaskState::Failed);
-    assert_eq!(row.failure.as_ref().map(TaskFailure::code), Some("STALE_VERSION"));
+    assert_eq!(
+        row.failure.as_ref().map(TaskFailure::code),
+        Some("STALE_VERSION")
+    );
 
     let handle = registry.register(spec("cancelled"));
     handle.finish(Outcome::Cancelled);
-    assert_eq!(registry.get("cancelled").unwrap().state, TaskState::Cancelled);
+    assert_eq!(
+        registry.get("cancelled").unwrap().state,
+        TaskState::Cancelled
+    );
 
     let handle = registry.register(spec("dropped"));
     handle.progress(ProgressCursor::opaque("page 2"), 1);
@@ -57,7 +72,10 @@ fn register_progress_finish_and_drop_record_states() {
     let row = registry.get("dropped").unwrap();
     assert_eq!(row.state, TaskState::Failed);
     assert_eq!(row.failure, Some(TaskFailure::Dropped));
-    assert_eq!(row.failure.as_ref().map(TaskFailure::code), Some("TASK_DROPPED"));
+    assert_eq!(
+        row.failure.as_ref().map(TaskFailure::code),
+        Some("TASK_DROPPED")
+    );
 }
 
 // spec: MEDULLA-OBSERVE-R003.1

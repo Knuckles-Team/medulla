@@ -128,7 +128,12 @@ async fn paired_run_adopts_and_refuses() {
     }
     let record = decide(
         &h,
-        promotion_request(&pinned.0, &strategy(), &rollout_set_digest(&adopted), "strategy:hyde"),
+        promotion_request(
+            &pinned.0,
+            &strategy(),
+            &rollout_set_digest(&adopted),
+            "strategy:hyde",
+        ),
     )
     .await
     .unwrap()
@@ -138,7 +143,9 @@ async fn paired_run_adopts_and_refuses() {
     commit(&h, &record).await;
     let state = pointer_state(
         &h,
-        PointerRef::Champion { subject: strategy() },
+        PointerRef::Champion {
+            subject: strategy(),
+        },
         activate("strategy:hyde", &record.record_id),
     )
     .await
@@ -146,7 +153,12 @@ async fn paired_run_adopts_and_refuses() {
     assert_eq!(state.key, "champion:retrieval_strategy:hyde-rrf");
     let refused = decide(
         &h,
-        promotion_request(&pinned.0, &strategy(), &rollout_set_digest(&unproven), "strategy:plain"),
+        promotion_request(
+            &pinned.0,
+            &strategy(),
+            &rollout_set_digest(&unproven),
+            "strategy:plain",
+        ),
     )
     .await
     .unwrap()
@@ -160,7 +172,10 @@ async fn paired_run_adopts_and_refuses() {
     );
     let other = h
         .store
-        .decision_artifact(OTHER, &super::super::stat_promotion::rollouts_key(&rollout_set_digest(&adopted)))
+        .decision_artifact(
+            OTHER,
+            &super::super::stat_promotion::rollouts_key(&rollout_set_digest(&adopted)),
+        )
         .unwrap();
     assert!(other.is_none(), "another tenant holds no such paired run");
 }

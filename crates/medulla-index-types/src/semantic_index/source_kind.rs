@@ -10,7 +10,9 @@ use serde::{Deserialize, Serialize};
 use super::digest::SemanticDigest;
 use super::state::SemanticIndexError;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SemanticSourceKind {
@@ -86,7 +88,9 @@ impl<'a> SemanticSourceRevision<'a> {
     pub fn parse(revision: &'a str) -> Option<Self> {
         let (authority, epoch) = revision.rsplit_once(":epoch:")?;
         let (kind, digest) = SemanticSourceKind::ALL.into_iter().find_map(|kind| {
-            let digest = authority.strip_prefix(kind.revision_tag())?.strip_prefix(':')?;
+            let digest = authority
+                .strip_prefix(kind.revision_tag())?
+                .strip_prefix(':')?;
             Some((kind, digest))
         })?;
         SemanticDigest::parse(digest).ok()?;
@@ -103,7 +107,9 @@ impl<'a> SemanticSourceRevision<'a> {
 }
 
 fn epoch_text(revision: &str) -> &str {
-    revision.rsplit_once(":epoch:").map_or("", |(_, epoch)| epoch)
+    revision
+        .rsplit_once(":epoch:")
+        .map_or("", |(_, epoch)| epoch)
 }
 
 #[cfg(test)]
@@ -130,8 +136,12 @@ mod tests {
 
     #[test]
     fn the_two_kinds_never_share_a_lineage() {
-        let sql = SemanticSourceKind::Sql.revision_for_epoch(digest(1), 9).unwrap();
-        let graph = SemanticSourceKind::Graph.revision_for_epoch(digest(1), 9).unwrap();
+        let sql = SemanticSourceKind::Sql
+            .revision_for_epoch(digest(1), 9)
+            .unwrap();
+        let graph = SemanticSourceKind::Graph
+            .revision_for_epoch(digest(1), 9)
+            .unwrap();
         let sql = SemanticSourceRevision::parse(&sql).unwrap();
         let graph = SemanticSourceRevision::parse(&graph).unwrap();
         assert_ne!(sql.authority, graph.authority);
@@ -140,7 +150,9 @@ mod tests {
 
     #[test]
     fn malformed_revisions_are_refused() {
-        let good = SemanticSourceKind::Graph.revision_for_epoch(digest(2), 1).unwrap();
+        let good = SemanticSourceKind::Graph
+            .revision_for_epoch(digest(2), 1)
+            .unwrap();
         assert!(SemanticSourceRevision::parse(&good).is_some());
         let base = format!("{}", digest(2));
         for invalid in [
@@ -156,9 +168,14 @@ mod tests {
             format!("other-source:{base}:epoch:1"),
             format!("{base}:epoch:1"),
         ] {
-            assert!(SemanticSourceRevision::parse(&invalid).is_none(), "{invalid}");
+            assert!(
+                SemanticSourceRevision::parse(&invalid).is_none(),
+                "{invalid}"
+            );
         }
-        assert!(SemanticSourceKind::Graph.revision_for_epoch(digest(2), 0).is_err());
+        assert!(SemanticSourceKind::Graph
+            .revision_for_epoch(digest(2), 0)
+            .is_err());
     }
 
     #[test]
@@ -175,7 +192,10 @@ mod tests {
             "semantic-graph-source:nope",
             "semantic-sql-sourcesha256:00",
         ] {
-            assert!(SemanticSourceKind::parse_entity_id(invalid).is_none(), "{invalid}");
+            assert!(
+                SemanticSourceKind::parse_entity_id(invalid).is_none(),
+                "{invalid}"
+            );
         }
     }
 }

@@ -121,7 +121,10 @@ mod served {
                 }
             }
         };
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let owner = match medulla_server_api::carrier::CarrierAuthority::from_verified(verified) {
             Ok(authority) => authority.owner_scope().to_string(),
             Err(error) => return Response::err(req.id, error),

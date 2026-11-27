@@ -37,12 +37,13 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 
-#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
-pub mod changeset_lifecycle;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod change_envelope;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod change_envelope_draft;
+#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
+pub mod changeset_lifecycle;
+pub mod credential_receipt;
 #[allow(missing_docs)]
 pub mod dashboard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -55,11 +56,10 @@ pub mod graph_pipeline;
 pub mod policy_evolution;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod shared;
-#[allow(missing_docs)]
-pub mod stewardship;
-pub mod credential_receipt;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sparql_update;
+#[allow(missing_docs)]
+pub mod stewardship;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod request_boundary;

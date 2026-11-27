@@ -14,40 +14,44 @@
 //! record (`stat_promotion::qualified_champion`).
 
 use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, PromotionVerdict};
-use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
-use medulla_decision_stats::decision::promotion::{regression_rollback, subject_gate, PromotionGate};
+use medulla_decision_stats::decision::promotion::{
+    regression_rollback, subject_gate, PromotionGate,
+};
 use medulla_decision_stats::decision::promotion_tier::tier_gate;
 use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};
-use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierContext, TierKnobs, TierReview, PARAM_TIER_REVIEWER, PLATFORM_TEAM,
-    PREMISE_ALWAYS_ON, PREMISE_TARGET,
-};
 use medulla_decision_types::decision::codes::{
     ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
     CANARY_TRAFFIC_OUT_OF_BOUNDS,
 };
+use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
+use medulla_decision_types::decision::promotion_answer::{PromotionAnswer, PromotionAnswerVerdict};
+use medulla_decision_types::decision::promotion_tier::{
+    SkillTier, TierContext, TierKnobs, TierReview, PARAM_TIER_REVIEWER, PLATFORM_TEAM,
+    PREMISE_ALWAYS_ON, PREMISE_TARGET,
+};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, QuestionKind, StatisticalOutcome,
+};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_decision_types::skill_eval::{
     CompileState, ModelCompile, CANARY_TRAFFIC_MAX_PPM, CANARY_TRAFFIC_MIN_PPM,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_types::refusal_code::RefusalCode;
-use medulla_decision_types::decision::promotion_answer::{PromotionAnswer, PromotionAnswerVerdict};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::OpaqueId;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
 };
-use medulla_persistence_records::decision_jobs::read_pointer;
 use crate::decide::stat_promotion::{
     held_out_evidence, EvidenceError, EvidenceSources, PREMISE_PREFIX,
 };
 use crate::decide::SharedState;
+use medulla_persistence_records::decision_jobs::read_pointer;
 
 use super::support::{
     abstained, advisory, advisory_scored, invalid, json_param, text_param, unsigned_param,
@@ -140,7 +144,11 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
         option: only.option_id.clone(),
         traffic: unsigned_param(request, PARAM_TRAFFIC)?,
         regression: text_param(request, PARAM_REGRESSION)?.map(str::to_owned),
-        tier_review: match request.params.iter().any(|param| param.name == PARAM_TIER_REVIEW) {
+        tier_review: match request
+            .params
+            .iter()
+            .any(|param| param.name == PARAM_TIER_REVIEW)
+        {
             true => Some(json_param(request, PARAM_TIER_REVIEW)?),
             false => None,
         },
@@ -167,7 +175,8 @@ fn premise(fact: String, receipt: &str) -> FamilyPremise {
 }
 
 fn opaque(value: &str) -> Result<OpaqueId, String> {
-    OpaqueId::new(value.to_owned()).map_err(|_| invalid(format!("`{value}` is not a revision reference")))
+    OpaqueId::new(value.to_owned())
+        .map_err(|_| invalid(format!("`{value}` is not a revision reference")))
 }
 
 fn resolve(
@@ -347,11 +356,17 @@ fn tier_verdict(
     ) {
         Ok(()) => Ok(Ok(vec![
             format!("{PREMISE_TARGET}{}", tier.as_str()),
-            format!("{PREMISE_ALWAYS_ON}{always_on}/{}", gate_knobs.always_on_max),
+            format!(
+                "{PREMISE_ALWAYS_ON}{always_on}/{}",
+                gate_knobs.always_on_max
+            ),
         ])),
         Err(code) => Ok(Err(PromotionRefusal(
             code,
-            format!("the review does not qualify {skill_ref} for tier {}", tier.as_str()),
+            format!(
+                "the review does not qualify {skill_ref} for tier {}",
+                tier.as_str()
+            ),
         ))),
     }
 }
@@ -414,16 +429,17 @@ fn promote(
         state.target().unwrap_or("none")
     ));
     match subject_gate(&ask.subject, &evidence, policy) {
-        PromotionGate::Promote => {
-            decided(ask, "promote", facts, Some(&ask.option), state.target())
-        }
+        PromotionGate::Promote => decided(ask, "promote", facts, Some(&ask.option), state.target()),
         PromotionGate::Hold { reason } => {
             facts.push(format!("hold_reason={reason}"));
             decided(ask, "hold", facts, None, state.target())
         }
         PromotionGate::Abstain(code) => Ok(refuse(
             ask,
-            &PromotionRefusal(code, "the held-out evidence cannot decide a promotion".to_owned()),
+            &PromotionRefusal(
+                code,
+                "the held-out evidence cannot decide a promotion".to_owned(),
+            ),
         )),
     }
 }
@@ -445,7 +461,8 @@ fn review(
         );
     };
     let promoted_by = active.receipt_digest.clone().unwrap_or_default();
-    let promoted_digest = crate::decide::stat_promotion::promoted_receipt(ctx.store, ctx.tenant_id, &promoted_by)?;
+    let promoted_digest =
+        crate::decide::stat_promotion::promoted_receipt(ctx.store, ctx.tenant_id, &promoted_by)?;
     let latest = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
         Ok(evidence) => evidence,
         Err(refusal) => return Ok(refuse(ask, &refusal)),
@@ -469,7 +486,12 @@ fn review(
     let pointer = ChampionPointer {
         subject: ask.subject.clone(),
         revision_ref: opaque(&target)?,
-        parent_ref: match state.stack.as_slice().last().and_then(|event| event.target.as_deref()) {
+        parent_ref: match state
+            .stack
+            .as_slice()
+            .last()
+            .and_then(|event| event.target.as_deref())
+        {
             Some(parent) => Some(opaque(parent)?),
             None => None,
         },
@@ -487,7 +509,9 @@ fn review(
             facts.push(format!("hold_reason={reason}"));
             decided(ask, "hold", facts, None, Some(target.as_str()))
         }
-        PromotionVerdict::Promote { .. } => decided(ask, "hold", facts, None, Some(target.as_str())),
+        PromotionVerdict::Promote { .. } => {
+            decided(ask, "hold", facts, None, Some(target.as_str()))
+        }
     }
 }
 
@@ -522,7 +546,12 @@ fn regressed(
     let pointer = ChampionPointer {
         subject: ask.subject.clone(),
         revision_ref: opaque(active.target.as_deref().unwrap_or_default())?,
-        parent_ref: match state.stack.as_slice().last().and_then(|event| event.target.as_deref()) {
+        parent_ref: match state
+            .stack
+            .as_slice()
+            .last()
+            .and_then(|event| event.target.as_deref())
+        {
             Some(parent) => Some(opaque(parent)?),
             None => None,
         },
@@ -546,12 +575,13 @@ fn canary(
     let RevisionSubject::Skill { skill_ref, .. } = &ask.subject else {
         return Err(invalid("a canary promotes a skill revision"));
     };
-    let refused = |code, detail: &str| {
-        Ok(refuse(ask, &PromotionRefusal(code, detail.to_owned())))
-    };
+    let refused = |code, detail: &str| Ok(refuse(ask, &PromotionRefusal(code, detail.to_owned())));
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
     if state.active.is_none() {
-        return refused(CANARY_NO_CHAMPION, "the skill has no champion to run a canary against");
+        return refused(
+            CANARY_NO_CHAMPION,
+            "the skill has no champion to run a canary against",
+        );
     }
     let knob_traffic = medulla_server_api::knob_config::knobs().canary_traffic_ppm;
     let traffic = match check_traffic(
@@ -560,12 +590,20 @@ fn canary(
         CANARY_TRAFFIC_MAX_PPM,
     ) {
         Ok(traffic) => traffic,
-        Err(_) => return refused(CANARY_TRAFFIC_OUT_OF_BOUNDS, "the traffic share is outside its bounds"),
+        Err(_) => {
+            return refused(
+                CANARY_TRAFFIC_OUT_OF_BOUNDS,
+                "the traffic share is outside its bounds",
+            )
+        }
     };
     let Some(noise) =
         crate::decide::stat_skill_ablation::read_noise_band(ctx.store, ctx.tenant_id, skill_ref)?
     else {
-        return refused(ABLATION_NOISE_BAND_MISSING, "no identical runs are recorded for the skill");
+        return refused(
+            ABLATION_NOISE_BAND_MISSING,
+            "no identical runs are recorded for the skill",
+        );
     };
     let evidence = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
         Ok(evidence) => evidence,
@@ -598,16 +636,22 @@ fn canary(
             Some(format!("rollback:{}", ask.option))
         }
     };
-    decided(ask, verdict.as_str(), facts, chosen.as_deref(), state.target())
+    decided(
+        ask,
+        verdict.as_str(),
+        facts,
+        chosen.as_deref(),
+        state.target(),
+    )
 }
 
 /// How many compiled rows of `skill_ref` are stale.
 fn stale_compiles(ctx: &ExecutionContext, skill_ref: &str) -> Result<usize, String> {
     use medulla_persistence_records::decision_jobs::decode_artifact;
     let mut stale = 0;
-    for (_, bytes) in ctx
-        .store
-        .decision_artifacts_with_prefix(ctx.tenant_id, "model-compile:", 10_000)?
+    for (_, bytes) in
+        ctx.store
+            .decision_artifacts_with_prefix(ctx.tenant_id, "model-compile:", 10_000)?
     {
         let row: ModelCompile = decode_artifact(&bytes, "model compile")?;
         if row.skill_ref == skill_ref && row.state == CompileState::Stale {

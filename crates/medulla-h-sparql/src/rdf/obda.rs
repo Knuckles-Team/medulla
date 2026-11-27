@@ -204,12 +204,10 @@ fn sparql_virtual(
     let outcome = medulla_virtual_graph::obda::run_outcome_virtual(&vg, &reg, query, &proj)?;
     let (vars, rows) = match outcome {
         medulla_rdf::sparql::QueryOutcome::Solutions(res) => res.to_rows(),
-        medulla_rdf::sparql::QueryOutcome::Boolean(b) => {
-            (
-                vec!["_ask".to_string()],
-                vec![vec![Some(medulla_rdf::sparql::Binding::boolean(b))]],
-            )
-        }
+        medulla_rdf::sparql::QueryOutcome::Boolean(b) => (
+            vec!["_ask".to_string()],
+            vec![vec![Some(medulla_rdf::sparql::Binding::boolean(b))]],
+        ),
         #[cfg(feature = "rdf")]
         medulla_rdf::sparql::QueryOutcome::Graph(_) => (Vec::new(), Vec::new()),
     };

@@ -238,7 +238,8 @@ impl IdentityStore {
         {
             return Err(IdentityRefusal::Collision);
         }
-        if !self.policy_bundles.contains_key(&key) && self.policy_bundles.len() >= MAX_POLICY_BUNDLES
+        if !self.policy_bundles.contains_key(&key)
+            && self.policy_bundles.len() >= MAX_POLICY_BUNDLES
         {
             return Err(IdentityRefusal::Full);
         }

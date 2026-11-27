@@ -62,7 +62,10 @@ fn profile_refusals_and_admission_wiring() {
         admission.items[1].refusal.as_deref(),
         Some("PROPOSAL_NOT_ADMITTED")
     );
-    assert_eq!(admission.items[1].failing_check.as_deref(), Some("coverage"));
+    assert_eq!(
+        admission.items[1].failing_check.as_deref(),
+        Some("coverage")
+    );
 
     let dangling = item(serde_json::json!({
         "proposal_id": "dangling",
@@ -80,5 +83,7 @@ fn profile_refusals_and_admission_wiring() {
         .map(|n| serde_json::json!({"iri": format!("C{n}"), "instances": 2}))
         .collect();
     let big = item(serde_json::json!({"proposal_id": "big", "profile": {"classes": classes}}));
-    assert!(decode_proposals(&[big]).unwrap_err().starts_with("PROFILE_TOO_LARGE"));
+    assert!(decode_proposals(&[big])
+        .unwrap_err()
+        .starts_with("PROFILE_TOO_LARGE"));
 }

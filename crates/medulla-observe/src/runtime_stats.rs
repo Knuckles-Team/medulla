@@ -83,7 +83,8 @@ impl RuntimeSampler {
 
     /// Set `observe.worker_spin_busy_ratio`.
     pub fn set_spin_busy_ratio(&self, ratio: f64) {
-        self.spin_ratio_bits.store(ratio.to_bits(), Ordering::Relaxed);
+        self.spin_ratio_bits
+            .store(ratio.to_bits(), Ordering::Relaxed);
     }
 
     fn spin_busy_ratio(&self) -> f64 {

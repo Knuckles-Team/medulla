@@ -188,7 +188,9 @@ impl ResolvedScope {
             id: id.to_string(),
             knowledge_set: text("knowledge_set"),
             container_ref: None,
-            source_kind: text("source_kind").or_else(|| text("source")).unwrap_or_default(),
+            source_kind: text("source_kind")
+                .or_else(|| text("source"))
+                .unwrap_or_default(),
             timestamp,
         }
     }
@@ -209,7 +211,9 @@ impl ResolvedScope {
     ) -> Vec<(String, f32)> {
         let candidates = scored
             .into_iter()
-            .filter(|(id, _)| self.containers.is_none() || self.container_in_scope(core, id).is_some())
+            .filter(|(id, _)| {
+                self.containers.is_none() || self.container_in_scope(core, id).is_some()
+            })
             .map(|(id, score)| (self.candidate(core, &id), f64::from(score)))
             .collect();
         scoped_top_k(&self.scope, candidates, k)

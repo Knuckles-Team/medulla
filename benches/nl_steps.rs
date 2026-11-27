@@ -73,8 +73,8 @@ async fn ask(state: &test_support::SharedState, id: u64, text: &str) {
         dialect: NlDialect::Auto,
         max_steps: None,
     };
-    let response = test_support::dispatch(state, test_support::request(SECRET, id, GRAPH, method))
-        .await;
+    let response =
+        test_support::dispatch(state, test_support::request(SECRET, id, GRAPH, method)).await;
     assert!(response.error.is_none(), "{:?}", response.error);
 }
 

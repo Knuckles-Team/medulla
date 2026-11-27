@@ -184,8 +184,14 @@ fn the_issuer_key_ring_rotates_and_publishes_retired_keys_for_the_grace_only() {
         panic!("a rotation answers the ring");
     };
     assert_eq!(rotated.len(), 2);
-    assert_eq!((rotated[0].kid.as_str(), rotated[0].state.as_str()), ("key-2", "active"));
-    assert_eq!((rotated[1].kid.as_str(), rotated[1].state.as_str()), ("key-1", "retired"));
+    assert_eq!(
+        (rotated[0].kid.as_str(), rotated[0].state.as_str()),
+        ("key-2", "active")
+    );
+    assert_eq!(
+        (rotated[1].kid.as_str(), rotated[1].state.as_str()),
+        ("key-1", "retired")
+    );
 
     // The retired key leaves the ring once its grace has passed; the active one stays.
     let after_grace = later + ISSUER_KEY_GRACE_MS + 1;
@@ -259,7 +265,12 @@ fn a_scim_client_credential_is_created_read_updated_and_deleted() {
         Err(IdentityRefusal::Collision)
     );
     assert_eq!(
-        apply_kept(&mut store, &scim_create("scim-2"), &broker_with(&["s"]), NOW),
+        apply_kept(
+            &mut store,
+            &scim_create("scim-2"),
+            &broker_with(&["s"]),
+            NOW
+        ),
         Err(IdentityRefusal::NotAuthorized)
     );
 
@@ -524,10 +535,20 @@ fn an_mfa_challenge_is_single_use_and_expires_after_five_minutes_on_the_injected
     );
 
     // The challenge of the other kind is separate, and a newer one replaces the older.
-    apply_kept(&mut store, &challenge_issue(MfaChallengeKind::Enrollment, "one"), &session, NOW)
-        .unwrap();
-    apply_kept(&mut store, &challenge_issue(MfaChallengeKind::Enrollment, "two"), &session, NOW)
-        .unwrap();
+    apply_kept(
+        &mut store,
+        &challenge_issue(MfaChallengeKind::Enrollment, "one"),
+        &session,
+        NOW,
+    )
+    .unwrap();
+    apply_kept(
+        &mut store,
+        &challenge_issue(MfaChallengeKind::Enrollment, "two"),
+        &session,
+        NOW,
+    )
+    .unwrap();
     let IdentityReply::MfaChallenge(latest) = apply_kept(
         &mut store,
         &challenge_consume(MfaChallengeKind::Enrollment),
@@ -546,7 +567,13 @@ fn an_mfa_challenge_is_single_use_and_expires_after_five_minutes_on_the_injected
         Err(IdentityRefusal::NotFound)
     );
     apply_kept(&mut store, &issue, &session, NOW).unwrap();
-    assert!(apply_kept(&mut store, &consume, &session, NOW + MFA_CHALLENGE_TTL_MS - 1).is_ok());
+    assert!(apply_kept(
+        &mut store,
+        &consume,
+        &session,
+        NOW + MFA_CHALLENGE_TTL_MS - 1
+    )
+    .is_ok());
 
     // A session that is not live holds no challenge, and the store survives a round trip.
     apply_kept(&mut store, &issue, &session, NOW).unwrap();
@@ -554,7 +581,12 @@ fn an_mfa_challenge_is_single_use_and_expires_after_five_minutes_on_the_injected
     let mut restored: IdentityStore = serde_json::from_str(&image).unwrap();
     assert!(apply_kept(&mut restored, &consume, &session, NOW + 10).is_ok());
     assert_eq!(
-        apply_kept(&mut store, &consume, &broker_with(&["no-such-session"]), NOW),
+        apply_kept(
+            &mut store,
+            &consume,
+            &broker_with(&["no-such-session"]),
+            NOW
+        ),
         Err(IdentityRefusal::NotAuthorized)
     );
 }

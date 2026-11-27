@@ -53,9 +53,9 @@ use medulla_decision_types::{
 };
 
 pub use seal::{encoded_len, RecordIdentity};
-pub use why_not::explain_option;
 pub use topology::admit::admit_topology;
 pub use topology::standalone::{decide_topology, TopologyConclusion, TopologyQuestionInputs};
+pub use why_not::explain_option;
 
 /// One decided assembly: the record, and -- only when it is `Solved` -- the
 /// agent and graph drafts it proves plus the exact model its certificate

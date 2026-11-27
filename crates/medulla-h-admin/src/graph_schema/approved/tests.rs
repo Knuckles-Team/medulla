@@ -26,8 +26,8 @@ use medulla_work_types::{
 };
 
 use super::*;
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_mutation_types::governed_change::{governed_approval_ref, SOURCE_AUTHORITY_KIND};
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::dispatch_test_on_heap;
 
@@ -459,8 +459,11 @@ async fn an_approval_decided_by_the_executing_caller_is_refused_as_self_approved
         "{:?}",
         refused.error
     );
-    let listed: GraphSchemaSourcesView =
-        decode(served.call(GRAPH, "list-own", Method::GraphSchemaList).await);
+    let listed: GraphSchemaSourcesView = decode(
+        served
+            .call(GRAPH, "list-own", Method::GraphSchemaList)
+            .await,
+    );
     assert!(listed
         .dynamic_sources
         .iter()
@@ -672,23 +675,43 @@ async fn authority_candidate_needs_matching_action_and_digest() {
         .approval("action_approval:ordinary", &digest, true)
         .await;
     let wrong_action = served
-        .attach_contract("attach:ordinary", "action_approval:ordinary", authority.clone(), None)
+        .attach_contract(
+            "attach:ordinary",
+            "action_approval:ordinary",
+            authority.clone(),
+            None,
+        )
         .await;
     assert!(refusal(&wrong_action).starts_with("SCHEMA_APPROVAL_MISMATCH"));
 
     // A source-authority grant does not approve an ordinary candidate.
     served
-        .approval_of("action_approval:authority", SOURCE_AUTHORITY_KIND, &digest, true)
+        .approval_of(
+            "action_approval:authority",
+            SOURCE_AUTHORITY_KIND,
+            &digest,
+            true,
+        )
         .await;
     let ordinary = served
-        .attach_contract("attach:plain", "action_approval:authority", contract(), None)
+        .attach_contract(
+            "attach:plain",
+            "action_approval:authority",
+            contract(),
+            None,
+        )
         .await;
     assert!(refusal(&ordinary).starts_with("SCHEMA_APPROVAL_MISMATCH"));
 
     // A reference that names no governed change is refused, and so is a
     // governed reference to a change the ledger does not hold.
     served
-        .approval_of("action_approval:unbound", SOURCE_AUTHORITY_KIND, &digest, false)
+        .approval_of(
+            "action_approval:unbound",
+            SOURCE_AUTHORITY_KIND,
+            &digest,
+            false,
+        )
         .await;
     let unbound = served
         .attach_contract(
@@ -828,7 +851,13 @@ async fn another_tenants_approved_change_answers_like_an_unknown_change() {
 
     // The proposing tenant's change, attached by another tenant, is refused
     // exactly as a change id the ledger does not hold.
-    let foreign = foreign_attach(&served, authority.clone(), approval_ref.clone(), "foreign:held").await;
+    let foreign = foreign_attach(
+        &served,
+        authority.clone(),
+        approval_ref.clone(),
+        "foreign:held",
+    )
+    .await;
     let unknown = foreign_attach(
         &served,
         authority.clone(),
@@ -939,14 +968,22 @@ async fn governed_ledger_reads_are_scoped_to_the_proposing_tenant() {
         },
     )
     .await;
-    assert_eq!(format!("{:?}", foreign.result), format!("{:?}", unknown.result));
+    assert_eq!(
+        format!("{:?}", foreign.result),
+        format!("{:?}", unknown.result)
+    );
     assert_eq!(foreign.error, unknown.error);
     assert_eq!(foreign.error_detail, unknown.error_detail);
     assert!(!format!("{:?}", foreign.result).contains("change-read"));
 
     // Another tenant's List holds none of this tenant's changes.
-    let foreign_list =
-        governed_read(&served, "tenant-foreign", "list:foreign", GovernedChangeOp::List).await;
+    let foreign_list = governed_read(
+        &served,
+        "tenant-foreign",
+        "list:foreign",
+        GovernedChangeOp::List,
+    )
+    .await;
     assert!(foreign_list.error.is_none(), "{:?}", foreign_list.error);
     assert!(!format!("{:?}", foreign_list.result).contains("change-read"));
 }

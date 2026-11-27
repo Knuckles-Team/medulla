@@ -44,12 +44,18 @@ fn tag_ingest_wire_contract() {
     let value = serde_json::to_value(plain.as_batch()).unwrap();
     assert!(value.get("features").is_none());
     let decoded: SourceIngestionRequest = serde_json::from_value(value).unwrap();
-    assert_eq!(decoded.batch_digest().unwrap(), plain.batch_digest().unwrap());
+    assert_eq!(
+        decoded.batch_digest().unwrap(),
+        plain.batch_digest().unwrap()
+    );
 
     // A tag feature decodes and changes the digest (the digest covers `features`).
     let tagged: SourceIngestionRequest =
         serde_json::from_value(batch_with(vec![feature(0)])).unwrap();
-    assert_ne!(tagged.batch_digest().unwrap(), plain.batch_digest().unwrap());
+    assert_ne!(
+        tagged.batch_digest().unwrap(),
+        plain.batch_digest().unwrap()
+    );
     let stored: MediaTagValue =
         rmp_serde::from_slice(&tagged.as_batch().features.as_slice()[0].value_msgpack).unwrap();
     assert_eq!(stored, tag_value());
@@ -60,14 +66,20 @@ fn tag_ingest_wire_contract() {
     ))
     .unwrap_err()
     .to_string();
-    assert!(refusal.contains("collection exceeds 1024 items"), "{refusal}");
+    assert!(
+        refusal.contains("collection exceeds 1024 items"),
+        "{refusal}"
+    );
 
     // A duplicate feature id and an unsupported kind are refused.
     let duplicate =
         serde_json::from_value::<SourceIngestionRequest>(batch_with(vec![feature(0), feature(0)]))
             .unwrap_err()
             .to_string();
-    assert!(duplicate.contains("duplicate source feature"), "{duplicate}");
+    assert!(
+        duplicate.contains("duplicate source feature"),
+        "{duplicate}"
+    );
     let mut other = feature(1);
     other["kind"] = json!("embedding");
     let unsupported = serde_json::from_value::<SourceIngestionRequest>(batch_with(vec![other]))
@@ -80,5 +92,8 @@ fn tag_ingest_wire_contract() {
 
     // The two refusal codes of the tag ingest.
     let codes: Vec<&str> = REFUSALS.iter().map(|code| code.as_str()).collect();
-    assert_eq!(codes, ["TAG_PROVENANCE_MISSING", "TAG_MEDIA_REVISION_STALE"]);
+    assert_eq!(
+        codes,
+        ["TAG_PROVENANCE_MISSING", "TAG_MEDIA_REVISION_STALE"]
+    );
 }

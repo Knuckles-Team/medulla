@@ -547,7 +547,10 @@ mod tests {
         definition.steps[1].served_by = vec!["not-an-iri".into()];
         assert!(matches!(
             emit_asset(AssetRecord::WorkflowDefinition(&definition), &links),
-            Err(EmitError::LinkNotIri { role: "step asset", .. })
+            Err(EmitError::LinkNotIri {
+                role: "step asset",
+                ..
+            })
         ));
     }
 
@@ -849,13 +852,41 @@ mod tests {
         };
         let definition = workflow();
         let flow = emit_asset(AssetRecord::WorkflowDefinition(&definition), &links).unwrap();
-        let flow_node = asset_node("workflow", &WorkflowRegistrationEntry::node_id(&definition.identity));
+        let flow_node = asset_node(
+            "workflow",
+            &WorkflowRegistrationEntry::node_id(&definition.identity),
+        );
         let edge = asset_node("lineage-edge", &format!("{}>{flow_node}", upstream[0]));
-        assert!(has(&flow, &edge, RDF_TYPE, &Object::Iri(format!("{CAT}LineageEdge"))));
-        assert!(has(&flow, &edge, &format!("{CAT}from"), &Object::Iri(upstream[0].clone())));
-        assert!(has(&flow, &edge, &format!("{CAT}to"), &Object::Iri(flow_node.clone())));
-        assert!(has(&flow, &edge, &format!("{CAT}hop"), &Object::Literal("transform".into())));
-        assert!(has(&flow, &upstream[0], &format!("{CAT}lineageTo"), &Object::Iri(flow_node)));
+        assert!(has(
+            &flow,
+            &edge,
+            RDF_TYPE,
+            &Object::Iri(format!("{CAT}LineageEdge"))
+        ));
+        assert!(has(
+            &flow,
+            &edge,
+            &format!("{CAT}from"),
+            &Object::Iri(upstream[0].clone())
+        ));
+        assert!(has(
+            &flow,
+            &edge,
+            &format!("{CAT}to"),
+            &Object::Iri(flow_node.clone())
+        ));
+        assert!(has(
+            &flow,
+            &edge,
+            &format!("{CAT}hop"),
+            &Object::Literal("transform".into())
+        ));
+        assert!(has(
+            &flow,
+            &upstream[0],
+            &format!("{CAT}lineageTo"),
+            &Object::Iri(flow_node)
+        ));
 
         let run = emit_asset(
             AssetRecord::WorkflowRun(WorkflowRunRecord {
@@ -867,7 +898,8 @@ mod tests {
         .unwrap();
         assert!(run
             .iter()
-            .any(|t| t.predicate == format!("{CAT}hop") && t.object == Object::Literal("ingest".into())));
+            .any(|t| t.predicate == format!("{CAT}hop")
+                && t.object == Object::Literal("ingest".into())));
     }
     // spec: MEDULLA-TYPED-PACKS-R108.14
     #[test]
@@ -886,16 +918,36 @@ mod tests {
         };
         let triples = emit_asset(AssetRecord::StoredQuery(&query), &AssetLinks::default()).unwrap();
         let node = asset_node("stored-query", "sales-by-region:2");
-        assert!(has(&triples, &node, RDF_TYPE, &Object::Iri(format!("{CAT}SavedQueryAsset"))));
+        assert!(has(
+            &triples,
+            &node,
+            RDF_TYPE,
+            &Object::Iri(format!("{CAT}SavedQueryAsset"))
+        ));
         assert!(has(
             &triples,
             &node,
             &format!("{CAT}sourceRecord"),
             &Object::Literal("stored_query:sales-by-region:2".into())
         ));
-        assert!(has(&triples, &node, SKOS_PREF_LABEL, &Object::Literal("sales-by-region".into())));
-        assert!(has(&triples, &node, &format!("{CAT}queryLanguage"), &Object::Literal("sparql".into())));
-        assert!(has(&triples, &node, &format!("{CAT}parameterName"), &Object::Literal("region".into())));
+        assert!(has(
+            &triples,
+            &node,
+            SKOS_PREF_LABEL,
+            &Object::Literal("sales-by-region".into())
+        ));
+        assert!(has(
+            &triples,
+            &node,
+            &format!("{CAT}queryLanguage"),
+            &Object::Literal("sparql".into())
+        ));
+        assert!(has(
+            &triples,
+            &node,
+            &format!("{CAT}parameterName"),
+            &Object::Literal("region".into())
+        ));
         // No owner resolved: the node is flagged, and the text is nowhere in the output.
         assert!(has(
             &triples,

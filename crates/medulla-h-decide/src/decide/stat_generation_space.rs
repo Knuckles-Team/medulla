@@ -22,9 +22,9 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_query_types::solve_scalar::digest_text;
 
 use super::stat_generation::generation_pointer;
-use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_support::invalid_parameter as invalid;
 use super::SharedState;
+use medulla_persistence_records::decision_jobs::read_pointer;
 
 /// Domain of a model's pinned weights identity.
 const MODEL_HASH_DOMAIN: &str = "eg/generation-model/v1";

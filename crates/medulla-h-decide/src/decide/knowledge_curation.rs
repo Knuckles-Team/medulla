@@ -100,7 +100,10 @@ mod served {
         created_ms: u64,
     }
 
-    fn refuse(code: medulla_types::refusal_code::RefusalCode, detail: impl std::fmt::Display) -> String {
+    fn refuse(
+        code: medulla_types::refusal_code::RefusalCode,
+        detail: impl std::fmt::Display,
+    ) -> String {
         format!("{}: {detail}", code.as_str())
     }
 
@@ -139,7 +142,10 @@ mod served {
                     ));
                 }
                 let inputs = inputs_of(&view, tenant, cursor.as_deref(), limit, due)?;
-                Ok(read_only(graph, ResultPayload::of::<KnowledgeCurationInputs>(inputs)?))
+                Ok(read_only(
+                    graph,
+                    ResultPayload::of::<KnowledgeCurationInputs>(inputs)?,
+                ))
             }
             CurationOp::Propose {
                 loop_id,
@@ -161,7 +167,10 @@ mod served {
                         raised_at_ms: flag.raised_at_ms,
                         state: flag.state,
                         reopened: flag.reopened,
-                        curated_times: row.get("curated_times").and_then(Value::as_u64).unwrap_or(0),
+                        curated_times: row
+                            .get("curated_times")
+                            .and_then(Value::as_u64)
+                            .unwrap_or(0),
                         resolved_at_ms: row.get("resolved_at_ms").and_then(Value::as_u64),
                     })
                     .collect();
@@ -286,7 +295,9 @@ mod served {
         limit: Option<u32>,
         due: bool,
     ) -> Result<CurationInputs, String> {
-        let page = limit.map_or(CURATION_PAGE_MAX, |n| (n as usize).clamp(1, CURATION_PAGE_MAX));
+        let page = limit.map_or(CURATION_PAGE_MAX, |n| {
+            (n as usize).clamp(1, CURATION_PAGE_MAX)
+        });
         let skip: usize = match cursor {
             Some(text) => text
                 .parse()
@@ -329,7 +340,10 @@ mod served {
                     .and_then(Value::as_str)
                     .unwrap_or(&id)
                     .to_string(),
-                target: row.get("target").and_then(Value::as_str).map(str::to_string),
+                target: row
+                    .get("target")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
                 correction_node_id: id,
             })
             .take(CURATION_PAGE_MAX)
@@ -465,7 +479,9 @@ mod served {
         tenant: &str,
     ) -> Result<Vec<(ProposalRecord, RevisionStage)>, String> {
         let mut out = Vec::new();
-        for (_, bytes) in store.decision_artifacts_with_prefix(tenant, PROPOSAL_PREFIX, SCAN_LIMIT)? {
+        for (_, bytes) in
+            store.decision_artifacts_with_prefix(tenant, PROPOSAL_PREFIX, SCAN_LIMIT)?
+        {
             let record: ProposalRecord = decode_artifact(&bytes, "knowledge proposal")?;
             let stage = revision_stage(store, tenant, &record)?;
             out.push((record, stage));
@@ -481,12 +497,12 @@ mod served {
         record: &ProposalRecord,
     ) -> Result<RevisionStage, String> {
         let mut newest: Option<RevisionRow> = None;
-        for (_, bytes) in
-            store.decision_artifacts_with_prefix(tenant, "revision:", SCAN_LIMIT)?
-        {
+        for (_, bytes) in store.decision_artifacts_with_prefix(tenant, "revision:", SCAN_LIMIT)? {
             let row: RevisionRow = decode_artifact(&bytes, "revision")?;
             if row.id == record.revision_id
-                && newest.as_ref().is_none_or(|held| row.created_ms > held.created_ms)
+                && newest
+                    .as_ref()
+                    .is_none_or(|held| row.created_ms > held.created_ms)
             {
                 newest = Some(row);
             }
@@ -530,10 +546,14 @@ mod served {
             ));
         }
         if proposal.proposal_id.is_empty() || proposal.flag_ids.is_empty() {
-            return Err(invalid_parameter("a proposal names an id and at least one flag"));
+            return Err(invalid_parameter(
+                "a proposal names an id and at least one flag",
+            ));
         }
         if Digest256::sha256(body.as_bytes()).to_hex() != proposal.edit.body_digest {
-            return Err(invalid_parameter("edit.body_digest is not the digest of the body"));
+            return Err(invalid_parameter(
+                "edit.body_digest is not the digest of the body",
+            ));
         }
         let record_key = format!("{PROPOSAL_PREFIX}{}", proposal.proposal_id);
         let node = proposal_node_id(&proposal.proposal_id);
@@ -647,7 +667,12 @@ mod served {
             .contains_key(&proposal.target_ref)
             .then_some(&proposal.target_ref)
         {
-            operations.push(edge_operation(&node, target, CURATION_PROPOSES, &receipt_id));
+            operations.push(edge_operation(
+                &node,
+                target,
+                CURATION_PROPOSES,
+                &receipt_id,
+            ));
         }
         // The one owner write: revision, record, body and cycle marker. A failure writes none.
         store.put_decision_artifacts(tenant, &rows)?;

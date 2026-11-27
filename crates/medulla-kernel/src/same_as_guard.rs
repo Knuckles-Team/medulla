@@ -110,7 +110,11 @@ mod tests {
             Method::NodeCount,
         ];
         for method in &passing {
-            assert_eq!(refuse_unapproved_same_as_write(method), Ok(()), "{method:?}");
+            assert_eq!(
+                refuse_unapproved_same_as_write(method),
+                Ok(()),
+                "{method:?}"
+            );
         }
     }
 }

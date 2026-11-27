@@ -390,8 +390,8 @@ fn change_envelope_projection_failure_never_partially_publishes() {
 fn change_envelope_projects_declare_embedding_space() {
     use medulla_index_types::embedding::EmbeddingSpaceRef;
     use medulla_protocol_types::change_envelope::{
-        ChangeEnvelope, ContentVersion, ContentVersionPosition, MaterialClass,
-        PrivacyAttestation, CHANGE_ENVELOPE_VERSION,
+        ChangeEnvelope, ContentVersion, ContentVersionPosition, MaterialClass, PrivacyAttestation,
+        CHANGE_ENVELOPE_VERSION,
     };
 
     let core = Arc::new(GraphCore::new());

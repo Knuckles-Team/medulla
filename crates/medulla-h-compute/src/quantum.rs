@@ -78,7 +78,7 @@ use medulla_protocol_types::result_contract::ingestion as results;
 use medulla_quantum_core::backend::{BackendDescriptor, BackendId, QuantumBackend, RunOptions};
 use medulla_quantum_core::estimate::{estimate, EstimateOptions};
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, ParamValue, ProgramMetadata, QuantumProgram, IR_VERSION,
 };
 use medulla_quantum_core::planner::{select_backend, PlannerDecision, PlannerOptions, PlannerRule};

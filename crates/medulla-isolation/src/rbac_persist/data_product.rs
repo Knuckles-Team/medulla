@@ -133,8 +133,14 @@ impl RbacStore {
             return Err(invalid("product"));
         }
         let rows = [
-            (product_key(tenant, &product.id), serde_json::to_vec(product)?),
-            (contract_key(tenant, &product.id), serde_json::to_vec(contract)?),
+            (
+                product_key(tenant, &product.id),
+                serde_json::to_vec(product)?,
+            ),
+            (
+                contract_key(tenant, &product.id),
+                serde_json::to_vec(contract)?,
+            ),
         ];
         let digest = batch_digest("product", &rows[0].0, &rows[0].1);
         commit_authority_mutation(

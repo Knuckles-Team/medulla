@@ -248,12 +248,21 @@ async fn arm_needs_owner_approval_on_head_and_passing_gates() {
     assert_eq!(outcome_of(&decide(&h, &pin, &good(), 400)), "verdict:arm");
     // Over the line budget, or gates whose seal does not verify, only hold.
     assert_eq!(outcome_of(&decide(&h, &pin, &good(), 401)), "verdict:hold");
-    let forged = World { seal_ok: false, ..good() };
+    let forged = World {
+        seal_ok: false,
+        ..good()
+    };
     assert_eq!(outcome_of(&decide(&h, &pin, &forged, 10)), "verdict:hold");
     // No approval, or an approval of another commit, abstains with the registered code.
-    let none = World { approval: None, ..good() };
+    let none = World {
+        approval: None,
+        ..good()
+    };
     assert!(outcome_of(&decide(&h, &pin, &none, 10)).contains("ARMING_APPROVAL_MISSING"));
-    let stale = World { approval: Some("sha256:old"), ..good() };
+    let stale = World {
+        approval: Some("sha256:old"),
+        ..good()
+    };
     assert!(outcome_of(&decide(&h, &pin, &stale, 10)).contains("ARMING_HEAD_MISMATCH"));
 }
 
@@ -263,8 +272,15 @@ async fn arm_needs_owner_approval_on_head_and_passing_gates() {
 async fn a_moved_head_or_a_requested_change_disarms() {
     let h = Harness::new().await;
     let pin = publish_route_schema(&h).0;
-    let moved = World { reviewed_head: "sha256:older", ..good() };
+    let moved = World {
+        reviewed_head: "sha256:older",
+        ..good()
+    };
     assert_eq!(outcome_of(&decide(&h, &pin, &moved, 10)), "verdict:disarm");
-    let asked = World { changes_requested: true, approval: None, ..good() };
+    let asked = World {
+        changes_requested: true,
+        approval: None,
+        ..good()
+    };
     assert_eq!(outcome_of(&decide(&h, &pin, &asked, 10)), "verdict:disarm");
 }

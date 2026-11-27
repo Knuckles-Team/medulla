@@ -70,7 +70,9 @@ pub(super) fn governance(
     target: &StewardshipTarget,
 ) -> Result<CatalogReadAnswer, String> {
     if target.asset.is_none() && target.concept_scheme.is_none() && target.domain.is_none() {
-        return Err(invalid("the target names no asset, concept scheme or domain"));
+        return Err(invalid(
+            "the target names no asset, concept scheme or domain",
+        ));
     }
     let assignments: Vec<StewardshipAssignment> = tenant_nodes(ctx, ASSIGNMENT_LABEL)
         .iter()

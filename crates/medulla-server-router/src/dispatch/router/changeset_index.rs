@@ -38,7 +38,9 @@ fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 fn stored_node(core: &GraphCore, id: &str) -> Option<StoredNode> {
-    let node = core.get_node_properties(id).and_then(|blob| decode(&blob))?;
+    let node = core
+        .get_node_properties(id)
+        .and_then(|blob| decode(&blob))?;
     Some(StoredNode {
         id: id.to_string(),
         properties: node
@@ -352,10 +354,9 @@ pub async fn reindex(
         let mut files = Vec::new();
         for changed in &changeset.changed_paths {
             if matches!(changed.op, PathOp::Add | PathOp::Modify | PathOp::Rename) {
-                let digest = changed
-                    .new_blob
-                    .as_deref()
-                    .ok_or_else(|| format!("CHANGESET_INVALID: {} has no new blob", changed.path))?;
+                let digest = changed.new_blob.as_deref().ok_or_else(|| {
+                    format!("CHANGESET_INVALID: {} has no new blob", changed.path)
+                })?;
                 files.push(ChangesetFile {
                     path: changed.path.clone(),
                     bytes: blobs.read(digest)?,
@@ -363,7 +364,13 @@ pub async fn reindex(
             }
         }
         let stored = stored_index(&work_core, &changeset)?;
-        let outcome = reindex_changeset(&changeset, &commit_id, &files, &stored, &CoreLookup(&work_core))?;
+        let outcome = reindex_changeset(
+            &changeset,
+            &commit_id,
+            &files,
+            &stored,
+            &CoreLookup(&work_core),
+        )?;
         let operations = operations(&work_core, &outcome.write_set.methods)?;
         Ok::<_, String>((outcome, operations))
     })

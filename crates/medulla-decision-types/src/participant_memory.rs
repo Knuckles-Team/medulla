@@ -206,7 +206,10 @@ mod tests {
         T: Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
     {
         let wire = serde_json::to_string(value).unwrap();
-        assert_eq!(wire, vector, "the Python mirror is tested against this vector");
+        assert_eq!(
+            wire, vector,
+            "the Python mirror is tested against this vector"
+        );
         assert_eq!(&serde_json::from_str::<T>(vector).unwrap(), value);
         let packed = rmp_serde::to_vec_named(value).unwrap();
         assert_eq!(&rmp_serde::from_slice::<T>(&packed).unwrap(), value);
@@ -220,7 +223,9 @@ mod tests {
                 subject: ada(),
                 observer: ObserverRef::Participant(ParticipantId::new("bo-2").unwrap()),
                 question: "what does she prefer".into(),
-                memory_scope: Some(ScopeRef { scope_id: "work".into() }),
+                memory_scope: Some(ScopeRef {
+                    scope_id: "work".into(),
+                }),
                 as_of_ms: Some(1_700),
             },
             r#"{"subject":"ada-1","observer":{"participant":"bo-2"},"question":"what does she prefer","memory_scope":{"scope_id":"work"},"as_of_ms":1700}"#,
@@ -238,7 +243,10 @@ mod tests {
         round_trip(
             &ParticipantAnswer {
                 text: "She prefers tea.".into(),
-                citations: vec![Citation { claim_id: "c1".into(), turn_ids: vec!["m1".into(), "m2".into()] }],
+                citations: vec![Citation {
+                    claim_id: "c1".into(),
+                    turn_ids: vec!["m1".into(), "m2".into()],
+                }],
                 abstained: None,
             },
             r#"{"text":"She prefers tea.","citations":[{"claim_id":"c1","turn_ids":["m1","m2"]}]}"#,
@@ -272,12 +280,20 @@ mod tests {
         );
         round_trip(&ParticipantReadOp::List, r#"{"op":"list"}"#);
         round_trip(
-            &ParticipantReadOp::Card { subject: ada(), observer: ObserverRef::System },
+            &ParticipantReadOp::Card {
+                subject: ada(),
+                observer: ObserverRef::System,
+            },
             r#"{"op":"card","subject":"ada-1","observer":"system"}"#,
         );
-        round_trip(&ParticipantReadOp::Status { memory_scope: None }, r#"{"op":"status"}"#);
         round_trip(
-            &ParticipantReadOp::DeriveInput { payload_ref: "derive_payload:t:ab".into() },
+            &ParticipantReadOp::Status { memory_scope: None },
+            r#"{"op":"status"}"#,
+        );
+        round_trip(
+            &ParticipantReadOp::DeriveInput {
+                payload_ref: "derive_payload:t:ab".into(),
+            },
             r#"{"op":"derive_input","payload_ref":"derive_payload:t:ab"}"#,
         );
         round_trip(
@@ -288,7 +304,12 @@ mod tests {
                 observer: ObserverRef::System,
                 first_turn_id: "m1".into(),
                 last_turn_id: "m2".into(),
-                turns: vec![DeriveTurn { turn_id: "m1".into(), speaker: ada(), text: "hi".into(), timestamp_ms: 4 }],
+                turns: vec![DeriveTurn {
+                    turn_id: "m1".into(),
+                    speaker: ada(),
+                    text: "hi".into(),
+                    timestamp_ms: 4,
+                }],
                 max_conclusions: 8,
                 claim_prefix: "derived:ab:".into(),
             },
@@ -299,6 +320,9 @@ mod tests {
             r#"{"subject":"ada-1","observer":"system","question":"q","extra":1}"#
         )
         .is_err());
-        assert!(serde_json::from_str::<ParticipantReadOp>(r#"{"op":"get","participant_id":"Bad Slug"}"#).is_err());
+        assert!(serde_json::from_str::<ParticipantReadOp>(
+            r#"{"op":"get","participant_id":"Bad Slug"}"#
+        )
+        .is_err());
     }
 }

@@ -80,15 +80,15 @@ pub mod screen;
 // call it. No handler type, std-only, always-on.
 pub mod line_merge;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
-pub mod source_symbol_edit;
+/// Bisect over the gate verdicts of the source-changeset chain (MEDULLA-SCM-R009).
+pub mod source_bisect;
 /// Git object ids, trees, commits and version-2 packs (MEDULLA-SCM-R010).
 pub mod source_git_objects;
 /// Derived history indexes of the source-changeset chain (MEDULLA-SCM-R005).
 pub mod source_history;
+pub mod source_symbol_edit;
 /// Tree materialization of the source-changeset chain (MEDULLA-SCM-R004).
 pub mod source_tree;
-/// Bisect over the gate verdicts of the source-changeset chain (MEDULLA-SCM-R009).
-pub mod source_bisect;
 /// Shared parser fixtures for this crate's unit tests and downstream test
 /// consumers. The feature is dev-only in the facade and absent from releases.
 #[cfg(all(any(test, feature = "test-support"), feature = "ast"))]

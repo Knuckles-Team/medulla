@@ -34,16 +34,16 @@ pub mod failure_patterns;
 pub mod friction;
 pub mod knowledge_curation;
 pub mod knowledge_flag;
-pub mod skill_eval;
-pub mod skill_telemetry;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod loops;
+/// Memory events and the topic table (MEDULLA-DECISION-ENGINE-R073.6).
+pub mod memory_events;
 /// Generated decision ontology and shapes (MEDULLA-DECISION-ENGINE-R054.1).
 #[cfg(feature = "contract-schema")]
 pub mod ontology;
-/// Memory events and the topic table (MEDULLA-DECISION-ENGINE-R073.6).
-pub mod memory_events;
 pub mod participant_memory;
+pub mod skill_eval;
+pub mod skill_telemetry;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod solve;
 // MEDULLA-DECISION-ENGINE-R153.1 — source table of contents and line index.

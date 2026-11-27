@@ -51,7 +51,11 @@ async fn call(
 
 async fn fixture(
     with_agent_library: bool,
-) -> (tempfile::TempDir, Arc<RwLock<ServerState>>, Arc<RedbBackend>) {
+) -> (
+    tempfile::TempDir,
+    Arc<RwLock<ServerState>>,
+    Arc<RedbBackend>,
+) {
     let dir = tempfile::tempdir().unwrap();
     let mut state = medulla_server::seams_install::new_state_for_test(
         SECRET,
@@ -167,7 +171,10 @@ async fn approval_requires_authority_and_native_commit() {
         },
     )
     .await;
-    assert!(refused.result.is_none(), "an unregistered source has no result");
+    assert!(
+        refused.result.is_none(),
+        "an unregistered source has no result"
+    );
     let error = refused.error.as_deref().expect("approval is refused");
     assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{error}");
     assert!(

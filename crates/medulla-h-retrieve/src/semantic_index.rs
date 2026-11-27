@@ -165,7 +165,9 @@ async fn run_s6_worker(
     .await;
     match outcome {
         Ok(Ok(_)) => {}
-        Ok(Err(error)) => tracing::warn!(%error, "the S6 stage worker did not activate the generation"),
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "the S6 stage worker did not activate the generation")
+        }
         Err(_) => tracing::warn!("the S6 stage worker could not be scheduled"),
     }
 }

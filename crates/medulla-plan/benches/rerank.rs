@@ -44,7 +44,8 @@ fn bench_rerank(c: &mut Criterion) {
     .expect("a calibration curve");
     c.bench_function("rerank_top64", |b| {
         b.iter(|| {
-            let (hits, _) = rerank_top(black_box(query), black_box(&docs), CANDIDATES, Some(&curve));
+            let (hits, _) =
+                rerank_top(black_box(query), black_box(&docs), CANDIDATES, Some(&curve));
             black_box(hits);
         });
     });

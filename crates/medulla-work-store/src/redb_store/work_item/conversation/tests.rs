@@ -29,15 +29,27 @@ fn admit(shard: &Shard, request: &SubmitWorkItemRequest, owner: &str) -> Result<
 
 fn state(shard: &Shard, run: &str, status: &str) {
     let id = super::super::run_owner::work_item_id(GRAPH, "tenant", run).unwrap();
-    with_node_rows(shard, &format!("state-{run}-{status}"), |nodes, transitions| {
-        let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
-        let mut row: serde_json::Map<String, serde_json::Value> = decode_durable(bytes.value())?;
-        drop(bytes);
-        row.insert("status".into(), status.into());
-        // Deliberately reverse wall-clock order: it must not decide continuity.
-        row.insert("updated_at".into(), 0.into());
-        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
-    });
+    with_node_rows(
+        shard,
+        &format!("state-{run}-{status}"),
+        |nodes, transitions| {
+            let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
+            let mut row: serde_json::Map<String, serde_json::Value> =
+                decode_durable(bytes.value())?;
+            drop(bytes);
+            row.insert("status".into(), status.into());
+            // Deliberately reverse wall-clock order: it must not decide continuity.
+            row.insert("updated_at".into(), 0.into());
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                &id,
+                &mut row,
+                DurableCrypto::none(),
+            )
+        },
+    );
 }
 
 fn read_head(shard: &Shard) -> Head {

@@ -35,9 +35,10 @@ fn durable_state(dir: &std::path::Path) -> Arc<RwLock<ServerState>> {
             roles: Vec::new(),
         })
         .expect("bootstrap the System identity");
-    Arc::new(RwLock::new(
-        super::super::test_support::new_state_for_test("dispatch-test-secret", layer),
-    ))
+    Arc::new(RwLock::new(super::super::test_support::new_state_for_test(
+        "dispatch-test-secret",
+        layer,
+    )))
 }
 
 fn editors_group() -> IdentityOp {
@@ -179,9 +180,7 @@ async fn bundle_compiles_enforces_and_refuses_both_codes() {
     let refused = send(
         &state,
         admin(),
-        IdentityOp::Policy(PolicyBundleOp::Bind {
-            bundle: escalating,
-        }),
+        IdentityOp::Policy(PolicyBundleOp::Bind { bundle: escalating }),
     )
     .await;
     assert!(

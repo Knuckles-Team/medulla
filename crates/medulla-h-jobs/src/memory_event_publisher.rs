@@ -94,7 +94,8 @@ async fn publish_row(
             server.persistence.clone(),
         )
     };
-    let core = core.ok_or_else(|| format!("MEMORY_EVENT_GRAPH_UNAVAILABLE: graph {graph} is not served"))?;
+    let core =
+        core.ok_or_else(|| format!("MEMORY_EVENT_GRAPH_UNAVAILABLE: graph {graph} is not served"))?;
     let operations_msgpack = rmp_serde::to_vec_named(&vec![node])
         .map_err(|error| format!("memory event batch encoding failed: {error}"))?;
     let batch_id =
@@ -119,6 +120,12 @@ async fn publish_row(
     acknowledge(store, lease, now_ms)
 }
 
-fn acknowledge(store: &Arc<StatechartStore>, lease: &MutationOutboxLease, now_ms: u64) -> Result<(), String> {
-    store.outbox_ack(lease, now_ms).map_err(|error| error.to_string())
+fn acknowledge(
+    store: &Arc<StatechartStore>,
+    lease: &MutationOutboxLease,
+    now_ms: u64,
+) -> Result<(), String> {
+    store
+        .outbox_ack(lease, now_ms)
+        .map_err(|error| error.to_string())
 }

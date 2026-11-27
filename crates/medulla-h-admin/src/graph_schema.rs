@@ -100,8 +100,7 @@ pub(crate) async fn commit_pack_projection(
     )?;
     let core =
         resident_internal_graph(state, req_id, verified, &graph_name, idempotency_key).await?;
-    prevalidate_pack_projection(&core, verified.tenant(), connector, record_id, &documents)
-        .await?;
+    prevalidate_pack_projection(&core, verified.tenant(), connector, record_id, &documents).await?;
     let result_graph_name = graph_name.clone();
     let source = connector.clone();
     let connector = connector.clone();
@@ -698,8 +697,9 @@ fn pack_external_coverage(
         return Ok(Vec::new());
     }
     let schema_revision = sources.composed_digest().to_hex();
-    let platform_revision =
-        medulla_graph_core::graph::GraphSchemaSources::default().composed_digest().to_hex();
+    let platform_revision = medulla_graph_core::graph::GraphSchemaSources::default()
+        .composed_digest()
+        .to_hex();
     let mut coverage = Vec::with_capacity(documents.len());
     for document in documents {
         let value: serde_json::Value = serde_json::from_str(&document.body).map_err(|error| {
@@ -716,7 +716,11 @@ fn pack_external_coverage(
             &platform_revision,
         )
         .map_err(|(refusal, detail)| {
-            format!("{}: external schema member '{}': {detail}", refusal.code(), document.uri)
+            format!(
+                "{}: external schema member '{}': {detail}",
+                refusal.code(),
+                document.uri
+            )
         })?;
         coverage.push(admitted);
     }

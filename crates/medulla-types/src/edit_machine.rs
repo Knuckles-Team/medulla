@@ -190,7 +190,9 @@ mod tests {
             let writes: Vec<&str> = production
                 .lines()
                 .map(str::trim)
-                .filter(|l| !l.starts_with("//") && l.contains(" = EditStatus::") && !l.contains("=="))
+                .filter(|l| {
+                    !l.starts_with("//") && l.contains(" = EditStatus::") && !l.contains("==")
+                })
                 .collect();
             assert!(writes.is_empty(), "{writes:?}");
         }

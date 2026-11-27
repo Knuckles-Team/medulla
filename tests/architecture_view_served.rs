@@ -147,12 +147,23 @@ async fn served_operation_returns_view() {
     assert!(answer.view.containers[0]
         .support
         .contains(&"services/orders/Cargo.toml".to_string()));
-    let revision = answer.revision.clone().expect("a committed snapshot digest");
+    let revision = answer
+        .revision
+        .clone()
+        .expect("a committed snapshot digest");
     assert_eq!(revision.len(), 64);
     assert_eq!(answer.digest.len(), 64);
 
     // A stated revision equal to the digest returns the same view.
-    let again = payload(send(&state, next + 1, GRAPH, view_request(Some(revision.clone()))).await);
+    let again = payload(
+        send(
+            &state,
+            next + 1,
+            GRAPH,
+            view_request(Some(revision.clone())),
+        )
+        .await,
+    );
     assert_eq!(again.view, answer.view);
     assert_eq!(again.revision, Some(revision));
 }
@@ -245,7 +256,11 @@ async fn served_view_over_fixture_repository() {
             },
         )
         .await;
-        assert!(response.error.is_none(), "AddEdge {target}: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "AddEdge {target}: {:?}",
+            response.error
+        );
         id += 1;
     }
 
@@ -264,10 +279,18 @@ async fn served_view_over_fixture_repository() {
     id += 1;
 
     let answer = payload(send(&state, id, GRAPH, view_request(None)).await);
-    let names: Vec<&str> = answer.view.containers.iter().map(|c| c.name.as_str()).collect();
+    let names: Vec<&str> = answer
+        .view
+        .containers
+        .iter()
+        .map(|c| c.name.as_str())
+        .collect();
     assert_eq!(names, ["Billing", "ledger", "orders"], "{:?}", answer.view);
     let billing = &answer.view.containers[0];
-    assert!(billing.support.is_empty(), "a diagram-only container cites no file");
+    assert!(
+        billing.support.is_empty(),
+        "a diagram-only container cites no file"
+    );
     let orders = &answer.view.containers[2];
     assert_eq!(
         orders.support,
@@ -276,7 +299,12 @@ async fn served_view_over_fixture_repository() {
     assert_eq!(answer.view.edges.len(), 1, "{:?}", answer.view.edges);
     let edge = &answer.view.edges[0];
     assert_eq!(
-        (edge.from.as_str(), edge.to.as_str(), edge.kind.as_str(), edge.call_count),
+        (
+            edge.from.as_str(),
+            edge.to.as_str(),
+            edge.kind.as_str(),
+            edge.call_count
+        ),
         ("orders", "ledger", "calls", 2)
     );
 }

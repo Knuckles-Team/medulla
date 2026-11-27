@@ -199,10 +199,10 @@ pub async fn apply_cascade(
                     .count() as u64,
             };
             Response::ok(
-            committed.id,
-            ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::DocumentDelete>(
-                receipt,
-            ),
+                committed.id,
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::ingestion::DocumentDelete,
+                >(receipt),
             )
         }
     }

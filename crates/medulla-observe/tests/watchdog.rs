@@ -28,11 +28,22 @@ fn idle_task_goes_stalled_and_recovers_on_progress() {
     assert_eq!(handle.row().state, TaskState::Progressing);
 
     // Within the threshold nothing is marked, whatever the clock.
-    assert!(scan(&tasks, &readiness, progressed_at + STALL_AFTER_MS, STALL_AFTER_MS).is_empty());
+    assert!(scan(
+        &tasks,
+        &readiness,
+        progressed_at + STALL_AFTER_MS,
+        STALL_AFTER_MS
+    )
+    .is_empty());
     assert_eq!(handle.row().state, TaskState::Progressing);
 
     // Past the threshold the task is Stalled; the scan reports its row.
-    let found = scan(&tasks, &readiness, progressed_at + STALL_AFTER_MS + 1, STALL_AFTER_MS);
+    let found = scan(
+        &tasks,
+        &readiness,
+        progressed_at + STALL_AFTER_MS + 1,
+        STALL_AFTER_MS,
+    );
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].row.name, "watchdog-test:idle");
     assert_eq!(found[0].row.state, TaskState::Stalled);
@@ -40,7 +51,13 @@ fn idle_task_goes_stalled_and_recovers_on_progress() {
     assert_eq!(handle.row().state, TaskState::Stalled);
 
     // A stalled task is not marked twice.
-    assert!(scan(&tasks, &readiness, progressed_at + 10 * STALL_AFTER_MS, STALL_AFTER_MS).is_empty());
+    assert!(scan(
+        &tasks,
+        &readiness,
+        progressed_at + 10 * STALL_AFTER_MS,
+        STALL_AFTER_MS
+    )
+    .is_empty());
 
     // Progress returns it to Progressing, and the next scan finds it healthy.
     handle.progress(ProgressCursor::Counter(2), 2);
@@ -85,7 +102,10 @@ fn stalled_materialization_task_degrades_its_graph_with_the_task_name() {
     let at = index.row().last_progress_unix_ms;
     let found = scan(&tasks, &readiness, at + STALL_AFTER_MS + 1, STALL_AFTER_MS);
     assert!(found.iter().all(|stalled| stalled.degraded_graph.is_none()));
-    assert_eq!(readiness.get("other").unwrap().state, ReadinessState::Opening);
+    assert_eq!(
+        readiness.get("other").unwrap().state,
+        ReadinessState::Opening
+    );
 }
 
 // spec: MEDULLA-OBSERVE-R005.2
@@ -97,7 +117,10 @@ fn idle_heartbeat_is_not_a_stall_and_silence_is() {
     let silent = tasks.register(spec("watchdog-test:hung", TaskKind::Maintenance));
     waiting.progress(ProgressCursor::Counter(1), 1);
     silent.progress(ProgressCursor::Counter(1), 1);
-    let start = waiting.row().last_progress_unix_ms.max(silent.row().last_progress_unix_ms);
+    let start = waiting
+        .row()
+        .last_progress_unix_ms
+        .max(silent.row().last_progress_unix_ms);
 
     // The waiting loop sends heartbeats on the controlled clock across 4 thresholds.
     for step in 1..=4 {

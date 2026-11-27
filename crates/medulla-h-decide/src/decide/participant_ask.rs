@@ -33,7 +33,10 @@ pub async fn handle_participant_ask(
 ) -> Response {
     #[cfg(feature = "statechart")]
     {
-        match ask(state, graph, verified, &question).await.and_then(ResultPayload::of::<ParticipantReadAsk>) {
+        match ask(state, graph, verified, &question)
+            .await
+            .and_then(ResultPayload::of::<ParticipantReadAsk>)
+        {
             Ok(payload) => Response::ok(req_id, payload),
             Err(error) => Response::err(req_id, error),
         }
@@ -41,7 +44,10 @@ pub async fn handle_participant_ask(
     #[cfg(not(feature = "statechart"))]
     {
         let _ = (state, graph, verified, question);
-        Response::err(req_id, "ParticipantRead Ask requires the `statechart` feature")
+        Response::err(
+            req_id,
+            "ParticipantRead Ask requires the `statechart` feature",
+        )
     }
 }
 
@@ -52,7 +58,11 @@ fn turn_ids(record: &ClaimRecord) -> Vec<String> {
         .iter()
         .filter(|evidence| evidence.channel == EvidenceChannel::Mined)
         .map(|evidence| {
-            evidence.source_digest.strip_prefix(TURN_PREFIX).unwrap_or(&evidence.source_digest).to_string()
+            evidence
+                .source_digest
+                .strip_prefix(TURN_PREFIX)
+                .unwrap_or(&evidence.source_digest)
+                .to_string()
         })
         .collect()
 }
@@ -68,16 +78,26 @@ async fn ask(
     use medulla_h_graph::graph_ops::participant_surface::{
         participant_exists, participant_unavailable, principal_view, resolve_scope_ref,
     };
-    let max_chars = usize::try_from(default_u64("participant.ask_question_max_chars")).unwrap_or(usize::MAX);
+    let max_chars =
+        usize::try_from(default_u64("participant.ask_question_max_chars")).unwrap_or(usize::MAX);
     if question.question.trim().is_empty() || question.question.chars().count() > max_chars {
-        return Err("INVALID_ARGUMENT: the question is empty or over participant.ask_question_max_chars".to_string());
+        return Err(
+            "INVALID_ARGUMENT: the question is empty or over participant.ask_question_max_chars"
+                .to_string(),
+        );
     }
     if question.as_of_ms.is_some() {
-        return Err("INVALID_ARGUMENT: a claim carries no creation time, so as_of_ms is not served".to_string());
+        return Err(
+            "INVALID_ARGUMENT: a claim carries no creation time, so as_of_ms is not served"
+                .to_string(),
+        );
     }
     let tenant = verified.tenant();
     let core = super::claims::participants_of(state, graph).await;
-    let exists = |slug: &_| core.as_ref().is_some_and(|core| participant_exists(core, tenant, slug));
+    let exists = |slug: &_| {
+        core.as_ref()
+            .is_some_and(|core| participant_exists(core, tenant, slug))
+    };
     if !exists(&question.subject) {
         return Err(participant_unavailable(question.subject.as_str()));
     }
@@ -89,7 +109,13 @@ async fn ask(
     let core = core.ok_or_else(|| participant_unavailable(question.subject.as_str()))?;
     let view = principal_view(&core, tenant, verified.agent_id(), Some(&question.observer))?;
     let sessions = match &question.memory_scope {
-        Some(reference) => resolve_scope_ref(&core, tenant, verified.agent_id(), reference, &view.sessions)?,
+        Some(reference) => resolve_scope_ref(
+            &core,
+            tenant,
+            verified.agent_id(),
+            reference,
+            &view.sessions,
+        )?,
         None => view.sessions.clone(),
     };
     let reader = medulla_epistemic::claims::ReaderView::of(view.observer, sessions);
@@ -112,7 +138,8 @@ async fn ask(
             })
         })
         .collect();
-    let max_claims = usize::try_from(default_u64("participant.ask_max_claims")).unwrap_or(usize::MAX);
+    let max_claims =
+        usize::try_from(default_u64("participant.ask_max_claims")).unwrap_or(usize::MAX);
     let grounded = ground(&question.question, &held, max_claims);
     if grounded.is_empty() {
         return Ok(ParticipantAnswer {
@@ -126,5 +153,9 @@ async fn ask(
         });
     }
     let (text, citations) = cite(&grounded);
-    Ok(ParticipantAnswer { text, citations, abstained: None })
+    Ok(ParticipantAnswer {
+        text,
+        citations,
+        abstained: None,
+    })
 }

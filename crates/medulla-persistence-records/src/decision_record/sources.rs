@@ -67,7 +67,8 @@ impl AgentLibraryStore {
         self.graph_revisions(tenant_id, template_key)?
             .into_iter()
             .filter(|entry| {
-                entry.lifecycle == medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
+                entry.lifecycle
+                    == medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
             })
             .max_by_key(|entry| entry.entry_revision)
             .map(|entry| AgentGraphEntryRef::from_entry(&entry))

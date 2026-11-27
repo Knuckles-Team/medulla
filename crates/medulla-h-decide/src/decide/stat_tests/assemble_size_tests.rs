@@ -76,19 +76,22 @@ fn publish_policy(
         serde_json::to_string(policy).unwrap(),
     );
     let committed = store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                store,
-                TENANT,
-                &format!("seed:{id}"),
-                nonce,
-                0,
-                "agent-component:publish",
-            ),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    store,
+                    TENANT,
+                    &format!("seed:{id}"),
+                    nonce,
+                    0,
+                    "agent-component:publish",
+                ),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .expect("the policy publishes");
     ComponentDependency {
         component_id: id.to_string(),

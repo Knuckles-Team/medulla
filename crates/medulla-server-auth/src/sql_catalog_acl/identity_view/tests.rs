@@ -55,8 +55,14 @@ fn query_as(
     authority: &CarrierAuthority,
     sql: &str,
 ) -> Result<Vec<Vec<String>>, String> {
-    let projection =
-        super::super::authorized_read_store_for_query(authority, dir, sql, None, &no_graph(), None)?;
+    let projection = super::super::authorized_read_store_for_query(
+        authority,
+        dir,
+        sql,
+        None,
+        &no_graph(),
+        None,
+    )?;
     let view = medulla_graph_core::graph::GraphView::default();
     let typed = medulla_sql::sql::exec_sql_typed_with_tables(&view, projection.store(), sql)?;
     Ok(typed

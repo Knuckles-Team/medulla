@@ -545,7 +545,9 @@ async fn cross_tenant_candidates_never_returned() {
         panic!("the exact pair still acts: {:?}", record.outcome)
     };
     assert!(!option_id.contains(&foreign));
-    assert!(prediction_set.iter().all(|option| !option.contains(&foreign)));
+    assert!(prediction_set
+        .iter()
+        .all(|option| !option.contains(&foreign)));
 
     // The asking tenant's own neighbours are proposed in its place.
     let proposed = facts(record, "entity_pair:");

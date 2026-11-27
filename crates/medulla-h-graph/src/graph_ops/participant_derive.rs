@@ -9,14 +9,14 @@
 use super::assistant_profile::node_blob;
 use super::*;
 use medulla_decision_stats::decision::participant_derive::{
-    conclusion_claim_prefix, derivation_targets, derive_held, key_node_digest, select_turns, DerivationInput, DeriveCheckpoint,
-    DeriveKey, DerivePayload,
+    conclusion_claim_prefix, derivation_targets, derive_held, key_node_digest, select_turns,
+    DerivationInput, DeriveCheckpoint, DeriveKey, DerivePayload,
 };
 use medulla_decision_types::memory_events::{DerivationCompleted, MemoryEvent};
 use medulla_decision_types::participant_memory::{DeriveInput, DeriveTurn};
-use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
 use medulla_isolation::profile_access::read_stored;
 use medulla_work_types::memory_scope::ObservationConfig;
+use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
 use medulla_work_types::participant::ParticipantId;
 
 pub use super::memory_surface::{session_turns, SessionTurn};
@@ -33,7 +33,9 @@ pub fn observation_configs(
 ) -> Vec<ObservationConfig> {
     members
         .iter()
-        .filter_map(|member| super::participant_surface::observation_stored(core, tenant, session_id, member))
+        .filter_map(|member| {
+            super::participant_surface::observation_stored(core, tenant, session_id, member)
+        })
         .collect()
 }
 
@@ -49,7 +51,11 @@ pub fn read_payload(core: &GraphCore, tenant: &str, node_id: &str) -> Option<Der
 
 /// The node upsert that stores `payload` at `node_id`; it commits through the same durable write
 /// path as every other node.
-pub fn payload_write(tenant: &str, node_id: &str, payload: &DerivePayload) -> Result<Method, String> {
+pub fn payload_write(
+    tenant: &str,
+    node_id: &str,
+    payload: &DerivePayload,
+) -> Result<Method, String> {
     Ok(Method::AddNode {
         node_id: node_id.to_string(),
         properties_msgpack: node_blob(PAYLOAD_LABEL, tenant, payload)?,
@@ -69,8 +75,17 @@ pub fn checkpoint_node_id(tenant: &str, key: &DeriveKey) -> String {
 }
 
 /// The stored checkpoint of `key`, when a job has completed for it.
-pub fn read_checkpoint(core: &GraphCore, tenant: &str, key: &DeriveKey) -> Option<DeriveCheckpoint> {
-    read_stored(core, &checkpoint_node_id(tenant, key), CHECKPOINT_LABEL, tenant)
+pub fn read_checkpoint(
+    core: &GraphCore,
+    tenant: &str,
+    key: &DeriveKey,
+) -> Option<DeriveCheckpoint> {
+    read_stored(
+        core,
+        &checkpoint_node_id(tenant, key),
+        CHECKPOINT_LABEL,
+        tenant,
+    )
 }
 
 /// Every turn of the key's session, in stored order, as the worker reads them.
@@ -88,8 +103,12 @@ fn session_view(core: &GraphCore, tenant: &str, session_id: &str) -> Vec<DeriveT
 
 /// The payload a derive task names, or the one absent envelope.
 fn payload_of(core: &GraphCore, tenant: &str, payload_ref: &str) -> Result<DerivePayload, String> {
-    read_payload(core, tenant, payload_ref)
-        .ok_or_else(|| refuse("DERIVE_PAYLOAD_NOT_FOUND", format!("no derive payload {payload_ref}")))
+    read_payload(core, tenant, payload_ref).ok_or_else(|| {
+        refuse(
+            "DERIVE_PAYLOAD_NOT_FOUND",
+            format!("no derive payload {payload_ref}"),
+        )
+    })
 }
 
 /// Whether the memory scope the key runs under still holds the key's session; a key with no scope
@@ -98,8 +117,13 @@ fn scope_holds(core: &GraphCore, tenant: &str, key: &DeriveKey) -> bool {
     if key.scope_id.is_empty() {
         return true;
     }
-    read_stored::<MemoryScope>(core, &scope_node_id(tenant, &key.scope_id), SCOPE_LABEL, tenant)
-        .is_some_and(|scope| scope.session_ids.contains(&key.session_id))
+    read_stored::<MemoryScope>(
+        core,
+        &scope_node_id(tenant, &key.scope_id),
+        SCOPE_LABEL,
+        tenant,
+    )
+    .is_some_and(|scope| scope.session_ids.contains(&key.session_id))
 }
 
 /// Whether the key is still one of its session's derivation targets under the stored observation
@@ -123,22 +147,35 @@ fn still_a_target(core: &GraphCore, tenant: &str, key: &DeriveKey, turns: &[Deri
 
 /// `memory.derive_max_conclusions` as a count.
 fn max_conclusions() -> u32 {
-    u32::try_from(medulla_server_api::knob_config::knobs().memory_derive_max_conclusions).unwrap_or(u32::MAX)
+    u32::try_from(medulla_server_api::knob_config::knobs().memory_derive_max_conclusions)
+        .unwrap_or(u32::MAX)
 }
 
 /// What a derive worker reads for the task whose payload is `payload_ref`
 /// (MEDULLA-DECISION-ENGINE-R651.12): the key's perspective and the subject's turns of the range
 /// that the perspective may see. A range that starts after a gap in the checkpoint is
 /// `DERIVE_ORDER_HELD`; a payload the tenant does not hold reads as absent.
-pub fn derive_input(core: &GraphCore, tenant: &str, payload_ref: &str) -> Result<DeriveInput, String> {
+pub fn derive_input(
+    core: &GraphCore,
+    tenant: &str,
+    payload_ref: &str,
+) -> Result<DeriveInput, String> {
     let payload = payload_of(core, tenant, payload_ref)?;
     let key = &payload.key;
     let session = session_view(core, tenant, &key.session_id);
     let checkpoint = read_checkpoint(core, tenant, key);
-    if derive_held(&key.subject, &session, checkpoint.as_ref().map(|c| c.last_turn_id.as_str()), &payload.first_turn_id) {
+    if derive_held(
+        &key.subject,
+        &session,
+        checkpoint.as_ref().map(|c| c.last_turn_id.as_str()),
+        &payload.first_turn_id,
+    ) {
         return Err(refuse(
             "DERIVE_ORDER_HELD",
-            format!("an earlier range of session {} is not derived yet", key.session_id),
+            format!(
+                "an earlier range of session {} is not derived yet",
+                key.session_id
+            ),
         ));
     }
     let allowed = scope_holds(core, tenant, key) && still_a_target(core, tenant, key, &session);
@@ -149,7 +186,13 @@ pub fn derive_input(core: &GraphCore, tenant: &str, payload_ref: &str) -> Result
         observer: key.observer.clone(),
         first_turn_id: payload.first_turn_id.clone(),
         last_turn_id: payload.last_turn_id.clone(),
-        turns: select_turns(key, &payload.first_turn_id, &payload.last_turn_id, &session, allowed),
+        turns: select_turns(
+            key,
+            &payload.first_turn_id,
+            &payload.last_turn_id,
+            &session,
+            allowed,
+        ),
         max_conclusions: max_conclusions(),
         claim_prefix: conclusion_claim_prefix(key),
     })
@@ -176,10 +219,18 @@ pub fn advance_checkpoint(
     }
     let session = session_view(core, tenant, &key.session_id);
     let checkpoint = read_checkpoint(core, tenant, key);
-    if derive_held(&key.subject, &session, checkpoint.as_ref().map(|c| c.last_turn_id.as_str()), &payload.first_turn_id) {
+    if derive_held(
+        &key.subject,
+        &session,
+        checkpoint.as_ref().map(|c| c.last_turn_id.as_str()),
+        &payload.first_turn_id,
+    ) {
         return Err(refuse(
             "DERIVE_ORDER_HELD",
-            format!("an earlier range of session {} is not derived yet", key.session_id),
+            format!(
+                "an earlier range of session {} is not derived yet",
+                key.session_id
+            ),
         ));
     }
     let completed = DerivationCompleted {
@@ -190,11 +241,18 @@ pub fn advance_checkpoint(
         claims_written,
         last_turn_id: payload.last_turn_id.clone(),
     };
-    if checkpoint.as_ref().is_some_and(|stored| stored.last_turn_id == payload.last_turn_id) {
+    if checkpoint
+        .as_ref()
+        .is_some_and(|stored| stored.last_turn_id == payload.last_turn_id)
+    {
         return Ok((None, completed));
     }
-    let stored = DeriveCheckpoint { last_turn_id: payload.last_turn_id.clone(), completed_at_ms: at_ms };
-    let json = serde_json::to_string(&stored).map_err(|error| format!("checkpoint encoding failed: {error}"))?;
+    let stored = DeriveCheckpoint {
+        last_turn_id: payload.last_turn_id.clone(),
+        completed_at_ms: at_ms,
+    };
+    let json = serde_json::to_string(&stored)
+        .map_err(|error| format!("checkpoint encoding failed: {error}"))?;
     let operations = vec![
         serde_json::json!({
             "op": "upsert_node",
@@ -219,5 +277,7 @@ pub fn stored_payloads(core: &GraphCore, tenant: &str) -> Vec<DerivePayload> {
         .map(|(id, _)| id)
         .collect();
     ids.sort();
-    ids.into_iter().filter_map(|id| read_payload(core, tenant, &id)).collect()
+    ids.into_iter()
+        .filter_map(|id| read_payload(core, tenant, &id))
+        .collect()
 }

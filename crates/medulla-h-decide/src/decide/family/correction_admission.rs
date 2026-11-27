@@ -16,10 +16,10 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::trace_fix_binding::{
     check_receipt_pattern, CorrectionBinding, RevisionOutcome,
 };
-use medulla_types::contract::Digest256;
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
+use medulla_types::contract::Digest256;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -154,7 +154,10 @@ fn conclude_admission(request: &DecideRequest) -> Result<Executed, String> {
                 outcome_at(&binding.test.after_revision)
             ),
         ),
-        claim("binding_decision", format!("binding:decision={ADMIT_OPTION}")),
+        claim(
+            "binding_decision",
+            format!("binding:decision={ADMIT_OPTION}"),
+        ),
     ]);
     Ok(executed)
 }

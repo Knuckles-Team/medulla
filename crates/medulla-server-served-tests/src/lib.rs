@@ -148,7 +148,9 @@ pub mod log_capture {
 
         /// The first enclosing span that has the field `name` equal to `value`.
         pub fn span_with(&self, name: &str, value: &str) -> Option<&CapturedSpan> {
-            self.spans.iter().find(|span| span.field(name) == Some(value))
+            self.spans
+                .iter()
+                .find(|span| span.field(name) == Some(value))
         }
     }
 
@@ -160,7 +162,8 @@ pub mod log_capture {
             if field.name() == "message" {
                 self.1 = format!("{value:?}");
             } else {
-                self.0.push((field.name().to_string(), format!("{value:?}")));
+                self.0
+                    .push((field.name().to_string(), format!("{value:?}")));
             }
         }
 
@@ -227,12 +230,16 @@ pub mod log_capture {
                     .collect()
             });
             drop(spans);
-            self.0.events.lock().expect("event list").push(CapturedEvent {
-                target: event.metadata().target().to_string(),
-                message: fields.1,
-                fields: fields.0,
-                spans: chain,
-            });
+            self.0
+                .events
+                .lock()
+                .expect("event list")
+                .push(CapturedEvent {
+                    target: event.metadata().target().to_string(),
+                    message: fields.1,
+                    fields: fields.0,
+                    spans: chain,
+                });
         }
 
         fn enter(&self, span: &Id) {

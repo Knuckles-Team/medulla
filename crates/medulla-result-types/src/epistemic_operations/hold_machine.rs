@@ -259,7 +259,12 @@ mod tests {
         let machine = &LANE_HOLD_MACHINE;
         assert!(!machine.edges.is_empty());
         for edge in machine.edges {
-            assert_eq!(edge.from.apply(edge.event, |_| true), Ok(edge.to), "{}", edge.id);
+            assert_eq!(
+                edge.from.apply(edge.event, |_| true),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
         }
     }
 

@@ -20,12 +20,12 @@ pub mod atom_context;
 /// Served data-prep declarations (MEDULLA-INGEST-WORKER-R001.1007).
 pub mod data_prep_declaration;
 
-/// Served ingest queue entry: enqueue maps onto the served task queue with
-/// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
-pub mod ingest_queue;
 /// Chunked source drains: a chain of bounded page tasks over the one task queue
 /// (MEDULLA-INGEST-WORKER-R605.2).
 pub mod ingest_drain;
+/// Served ingest queue entry: enqueue maps onto the served task queue with
+/// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
+pub mod ingest_queue;
 /// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
 pub mod ingest_readback;
 /// Per-span embedding admission (MEDULLA-DECISION-ENGINE-R079.2, R079.3).
@@ -71,11 +71,11 @@ pub mod source_batch;
 #[cfg(feature = "blob")]
 pub mod source_changeset;
 
+pub mod source_bisect;
 /// `ReadTree` handler and the tree checkpoint written with an accepted
 /// changeset (MEDULLA-SCM-R004).
 #[cfg(feature = "blob")]
 pub mod source_tree;
-pub mod source_bisect;
 // MEDULLA-SCM-R009.1: the plan that inverts one changeset of a branch chain.
 pub mod source_revert;
 
@@ -86,9 +86,9 @@ pub mod source_symbol_edit;
 // MEDULLA-ORCH-VOCAB-R009.101.1: the harness session index admission.
 pub mod harness_session;
 // MEDULLA-SCM-R008 — gate verdicts are sealed records.
-pub mod gate_verdict;
 /// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).
 pub mod defect_intake;
+pub mod gate_verdict;
 
 /// The graph read of a served `SpecStatus` (MEDULLA-SDLC-R005.3).
 pub mod lifecycle_status;

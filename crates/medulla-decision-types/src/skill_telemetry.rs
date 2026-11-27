@@ -123,9 +123,9 @@ impl InvocationOutcome {
             Self::Error { code } => {
                 !code.is_empty()
                     && code.len() <= ERROR_CODE_MAX_BYTES
-                    && code
-                        .bytes()
-                        .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+                    && code.bytes().all(|byte| {
+                        byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_'
+                    })
             }
         }
     }
@@ -419,7 +419,10 @@ mod tests {
         // The error code is a closed form of at most 64 bytes.
         assert!(parsed.outcome.code_valid());
         for bad in ["", "lower case", &"X".repeat(65)] {
-            assert!(!InvocationOutcome::Error { code: bad.to_string() }.code_valid());
+            assert!(!InvocationOutcome::Error {
+                code: bad.to_string()
+            }
+            .code_valid());
         }
         // The pseudonym is stable, tenant-bound and salted.
         let one = principal_pseudonym("t", "alice", 1);
@@ -439,10 +442,36 @@ mod tests {
         let day = INDEX_DAY_MS;
         assert_eq!(started_day(day - 1), 0);
         assert_eq!(started_day(day), 1);
-        assert_eq!(window_days(Window { start_ms: 0, end_ms: 3 * day }), Some(0..=2));
-        assert_eq!(window_days(Window { start_ms: day / 2, end_ms: day + 1 }), Some(0..=1));
-        assert_eq!(window_days(Window { start_ms: 5, end_ms: 5 }), None);
-        assert!(window_days(Window { start_ms: 0, end_ms: INDEX_DAYS_MAX * day }).is_some());
-        assert!(window_days(Window { start_ms: 0, end_ms: (INDEX_DAYS_MAX + 1) * day }).is_none());
+        assert_eq!(
+            window_days(Window {
+                start_ms: 0,
+                end_ms: 3 * day
+            }),
+            Some(0..=2)
+        );
+        assert_eq!(
+            window_days(Window {
+                start_ms: day / 2,
+                end_ms: day + 1
+            }),
+            Some(0..=1)
+        );
+        assert_eq!(
+            window_days(Window {
+                start_ms: 5,
+                end_ms: 5
+            }),
+            None
+        );
+        assert!(window_days(Window {
+            start_ms: 0,
+            end_ms: INDEX_DAYS_MAX * day
+        })
+        .is_some());
+        assert!(window_days(Window {
+            start_ms: 0,
+            end_ms: (INDEX_DAYS_MAX + 1) * day
+        })
+        .is_none());
     }
 }

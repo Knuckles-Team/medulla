@@ -219,6 +219,9 @@ mod tests {
         assert_eq!(split_by_gap(&[5], 10), vec![0..1]);
         // A gap equal to the knob does not split; a larger one does.
         assert_eq!(split_by_gap(&[0, 10, 20], 10), vec![0..3]);
-        assert_eq!(split_by_gap(&[0, 10, 21, 22, 100], 10), vec![0..2, 2..4, 4..5]);
+        assert_eq!(
+            split_by_gap(&[0, 10, 21, 22, 100], 10),
+            vec![0..2, 2..4, 4..5]
+        );
     }
 }

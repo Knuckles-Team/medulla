@@ -248,9 +248,7 @@ impl IncidentAuthority {
     ) -> Result<(), IncidentRefusal> {
         let from = self.evidence(tenant, id)?.status;
         let event = IncidentStatus::event_to(to).ok_or_else(|| {
-            IncidentRefusal::InvalidArgument(
-                "an incident never moves back to open".to_string(),
-            )
+            IncidentRefusal::InvalidArgument("an incident never moves back to open".to_string())
         })?;
         let to = from.apply(event).map_err(IncidentRefusal::Transition)?;
         let record = self.incidents.get_mut(id).expect("checked above");

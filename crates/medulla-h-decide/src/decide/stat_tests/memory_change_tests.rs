@@ -50,7 +50,8 @@ async fn seed_head(h: &Harness) -> u64 {
             },
             admit_receipt_digests: Vec::new(),
         };
-        let (_, plan) = medulla_h_graph::graph_ops::memory_snapshot::decide_sync(&core, &request, &stamp, true);
+        let (_, plan) =
+            medulla_h_graph::graph_ops::memory_snapshot::decide_sync(&core, &request, &stamp, true);
         medulla_graph_core::memory_snapshot::apply_plan(&core, &plan);
         expected = Some(index as u64 + 1);
     }

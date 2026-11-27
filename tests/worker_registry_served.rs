@@ -366,9 +366,10 @@ mod admit_served {
         .expect("worker registry method");
         assert!(registered.error.is_none(), "{:?}", registered.error);
 
-        let first = medulla_h_jobs::worker_registry::try_handle(&state, 2, &owner, admit("worker-1"))
-            .await
-            .expect("worker registry method");
+        let first =
+            medulla_h_jobs::worker_registry::try_handle(&state, 2, &owner, admit("worker-1"))
+                .await
+                .expect("worker registry method");
         let WorkerAdmission::Granted(grant) = admission(&first) else {
             panic!("a one-worker pool was refused")
         };
@@ -408,9 +409,10 @@ mod admit_served {
         .expect("task queue method");
         assert!(claimed.error.is_none(), "{:?}", claimed.error);
 
-        let second = medulla_h_jobs::worker_registry::try_handle(&state, 5, &owner, admit("worker-1"))
-            .await
-            .expect("worker registry method");
+        let second =
+            medulla_h_jobs::worker_registry::try_handle(&state, 5, &owner, admit("worker-1"))
+                .await
+                .expect("worker registry method");
         match admission(&second) {
             WorkerAdmission::Refused(WorkerAdmissionRefusal::AdmitHeldForReserve { lane }) => {
                 assert_eq!(lane, "general")
@@ -419,9 +421,10 @@ mod admit_served {
         }
 
         // Another principal's call for the same worker is refused.
-        let denied = medulla_h_jobs::worker_registry::try_handle(&state, 6, &other, admit("worker-1"))
-            .await
-            .expect("worker registry method");
+        let denied =
+            medulla_h_jobs::worker_registry::try_handle(&state, 6, &other, admit("worker-1"))
+                .await
+                .expect("worker registry method");
         assert!(denied.result.is_none());
         assert!(denied
             .error

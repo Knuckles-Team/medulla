@@ -419,8 +419,7 @@ pub fn shape_digest(ops: &[Op]) -> Result<String, String> {
             _ => {}
         }
     }
-    let mut value =
-        serde_json::to_value(ops).map_err(|error| format!("shape digest: {error}"))?;
+    let mut value = serde_json::to_value(ops).map_err(|error| format!("shape digest: {error}"))?;
     blank(&mut value);
     let bytes = rmp_serde::to_vec(&value).map_err(|error| format!("shape digest: {error}"))?;
     medulla_types::contract::Digest256::framed(b"eg/plan-record/v1", &[&bytes])
@@ -447,7 +446,10 @@ fn revision_digest(corrections: &[CostCorrectionArtifact], knobs: &[(String, Str
         .iter()
         .map(|c| (c.op_kind.as_str(), c.coeffs.as_slice()))
         .collect();
-    let knobs: Vec<(&str, &str)> = knobs.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    let knobs: Vec<(&str, &str)> = knobs
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
     medulla_decision_types::decision::planner_cost_head::cost_head_digest(&curves, &knobs)
 }
 
@@ -630,7 +632,9 @@ impl PlanRecordStore {
     /// a fraction of the digest space, fall below the bound fraction.
     pub fn in_shadow_sample(&self, plan_digest: &str) -> bool {
         let fraction = f64::from_bits(self.shadow_fraction_bits.load(Ordering::Relaxed));
-        let Some(head) = plan_digest.get(..16).and_then(|h| u64::from_str_radix(h, 16).ok())
+        let Some(head) = plan_digest
+            .get(..16)
+            .and_then(|h| u64::from_str_radix(h, 16).ok())
         else {
             return false;
         };
@@ -729,13 +733,19 @@ mod tests {
             doubling.corrections.clone(),
             vec![("join_cost".into(), "2".into())],
         );
-        assert_ne!(doubling.digest, tuned.digest, "knob values are part of the digest");
+        assert_ne!(
+            doubling.digest, tuned.digest,
+            "knob values are part of the digest"
+        );
 
         // A challenger never changes what the planner reads.
         store.promote(doubling.clone());
         store.set_challenger(Some(tripling.clone()));
         assert_eq!(store.champion().digest, doubling.digest);
-        assert_eq!(store.challenger().map(|c| c.digest.clone()), Some(tripling.digest.clone()));
+        assert_eq!(
+            store.challenger().map(|c| c.digest.clone()),
+            Some(tripling.digest.clone())
+        );
         assert!((store.champion().correct("Scan", 100.0) - 200.0).abs() < 1e-6);
         assert!((tripling.correct("Scan", 100.0) - 300.0).abs() < 1e-6);
         assert_eq!(store.champion().correct("Filter", 7.0), 7.0);
@@ -754,7 +764,11 @@ mod tests {
             store.record(record("t1", serial));
         }
         store.record(record("t2", 100));
-        let kept: Vec<u64> = store.records("t1").iter().map(|r| r.measured_cost_us).collect();
+        let kept: Vec<u64> = store
+            .records("t1")
+            .iter()
+            .map(|r| r.measured_cost_us)
+            .collect();
         assert_eq!(kept, vec![2, 3, 4], "the oldest are evicted first");
         let other = store.records("t2");
         assert_eq!(other.len(), 1);

@@ -11,8 +11,7 @@ pub use crate::result_contract::security::LedgerReadResult;
 #[cfg(feature = "security")]
 pub use crate::result_contract::security::{
     AuditAppendReceipt, AuditChain, AuditEventProof, AuditListPage, AuditListRecord, AuditReport,
-    MerkleInclusionReport,
-    MerkleProofStep, MerkleSide,
+    MerkleInclusionReport, MerkleProofStep, MerkleSide,
 };
 
 /// Deserialize an explicitly present nullable field.

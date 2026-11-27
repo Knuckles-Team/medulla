@@ -368,8 +368,14 @@ async fn dispatch_decision_methods(
             .await
         }
         Method::TriageDefect { request } => {
-            dispatch_boxed(triage_defect(state, req.id, req.agent_id.as_deref(), verified_context, *request))
-                .await
+            dispatch_boxed(triage_defect(
+                state,
+                req.id,
+                req.agent_id.as_deref(),
+                verified_context,
+                *request,
+            ))
+            .await
         }
         Method::DecisionFit { op } => {
             dispatch_boxed(async {
@@ -399,7 +405,9 @@ async fn dispatch_decision_methods(
                         }
                     }
                     // A case is a graph node too (MEDULLA-DECISION-ENGINE-R711.7).
-                    medulla_decision_types::decision::DecisionEvalOp::SkillEvalCaseAdd { request } => {
+                    medulla_decision_types::decision::DecisionEvalOp::SkillEvalCaseAdd {
+                        request,
+                    } => {
                         match medulla_h_decide::decide::handle_skill_eval_case_add(
                             verified_context,
                             &req.graph,
@@ -414,7 +422,9 @@ async fn dispatch_decision_methods(
                         }
                     }
                     // A critique is recorded on the proposal's node (MEDULLA-DECISION-ENGINE-R038.6).
-                    medulla_decision_types::decision::DecisionEvalOp::HeldItemCritique { request } => {
+                    medulla_decision_types::decision::DecisionEvalOp::HeldItemCritique {
+                        request,
+                    } => {
                         match medulla_h_decide::decide::handle_held_item_critique(
                             state,
                             verified_context,
@@ -599,7 +609,10 @@ async fn dispatch_decision_methods(
                 .await
             }
             // MEDULLA-DECISION-ENGINE-R655.4: a card is filtered through the claim store.
-            medulla_decision_types::participant_memory::ParticipantReadOp::Card { subject, observer } => {
+            medulla_decision_types::participant_memory::ParticipantReadOp::Card {
+                subject,
+                observer,
+            } => {
                 dispatch_boxed(async {
                     medulla_h_decide::decide::handle_participant_card(
                         state,
@@ -614,7 +627,9 @@ async fn dispatch_decision_methods(
                 .await
             }
             other => {
-                return ControlFlow::Continue(Method::ParticipantRead { op: Box::new(other) })
+                return ControlFlow::Continue(Method::ParticipantRead {
+                    op: Box::new(other),
+                })
             }
         },
         // MEDULLA-DECISION-ENGINE-R651.12: the graph is the authority on how many claims a derive
@@ -636,13 +651,19 @@ async fn dispatch_decision_methods(
                     return ControlFlow::Break(Response::err(req.id, error));
                 }
                 return ControlFlow::Continue(Method::Participant {
-                    op: Box::new(medulla_work_types::participant::ParticipantOp::CompleteDerivation {
-                        payload_ref,
-                        claims_written,
-                    }),
+                    op: Box::new(
+                        medulla_work_types::participant::ParticipantOp::CompleteDerivation {
+                            payload_ref,
+                            claims_written,
+                        },
+                    ),
                 });
             }
-            other => return ControlFlow::Continue(Method::Participant { op: Box::new(other) }),
+            other => {
+                return ControlFlow::Continue(Method::Participant {
+                    op: Box::new(other),
+                })
+            }
         },
         Method::Loops { op } => {
             dispatch_boxed(async {
@@ -743,9 +764,9 @@ async fn dispatch_catalog_admin_methods(
                 medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Register {
                     registration,
                 } => Some(registration.clone()),
-                medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Read { .. } => {
-                    None
-                }
+                medulla_work_types::orchestration::workflows::WorkflowRegistryOp::Read {
+                    ..
+                } => None,
             };
             let response = dispatch_boxed(dispatch_graph_op(
                 state,
@@ -875,8 +896,14 @@ async fn dispatch_catalog_admin_methods(
                 // release activates it through `ContractHistory::approve`, the one path.
                 match applied {
                     Some(request_id) if response.refusal_text().is_none() => {
-                        activate_held_pack_release(state, req, verified_context, &request_id, response)
-                            .await
+                        activate_held_pack_release(
+                            state,
+                            req,
+                            verified_context,
+                            &request_id,
+                            response,
+                        )
+                        .await
                     }
                     _ => response,
                 }
@@ -885,16 +912,18 @@ async fn dispatch_catalog_admin_methods(
         }
         // MEDULLA-IDENTITY-R753: the credential receipt commits through the graph gateway.
         Method::CredentialReceipt { op } => {
-            dispatch_boxed(medulla_server_graph::dispatch::credential_receipt::dispatch_credential_receipt(
-                state,
-                medulla_server_graph::dispatch::graph_client::GraphTarget {
-                    graph: &req.graph,
-                    req_id: req.id,
-                    caller: req.agent_id.as_deref(),
-                    verified: verified_context,
-                },
-                *op,
-            ))
+            dispatch_boxed(
+                medulla_server_graph::dispatch::credential_receipt::dispatch_credential_receipt(
+                    state,
+                    medulla_server_graph::dispatch::graph_client::GraphTarget {
+                        graph: &req.graph,
+                        req_id: req.id,
+                        caller: req.agent_id.as_deref(),
+                        verified: verified_context,
+                    },
+                    *op,
+                ),
+            )
             .await
         }
         // MEDULLA-TYPED-PACKS-R109.3: the dashboard ops commit through the graph gateway.
@@ -916,12 +945,22 @@ async fn dispatch_catalog_admin_methods(
         }
         // MEDULLA-TYPED-PACKS-R806: the served schema drift records and repair approval.
         Method::SchemaDriftList { request } => {
-            dispatch_boxed(super::schema_drift::drift_list(state, req, verified_context, request))
-                .await
+            dispatch_boxed(super::schema_drift::drift_list(
+                state,
+                req,
+                verified_context,
+                request,
+            ))
+            .await
         }
         Method::SchemaDriftGet { request } => {
-            dispatch_boxed(super::schema_drift::drift_get(state, req, verified_context, request))
-                .await
+            dispatch_boxed(super::schema_drift::drift_get(
+                state,
+                req,
+                verified_context,
+                request,
+            ))
+            .await
         }
         Method::SchemaRepairPropose { request } => {
             dispatch_boxed(super::schema_drift::repair_propose(
@@ -1077,8 +1116,9 @@ async fn triage_defect(
     use medulla_protocol_types::result_contract::ingestion::TriageDefect as TriageDefectResult;
     let graph = request.graph.clone();
     let result = async {
-        let outcome = medulla_h_decide::decide::handle_triage_defect(state, req_id, verified, request)
-            .await?;
+        let outcome =
+            medulla_h_decide::decide::handle_triage_defect(state, req_id, verified, request)
+                .await?;
         let mut edges_written = 0u32;
         if outcome.decision.abstain_reason.is_none() {
             let operations: Vec<serde_json::Value> = outcome

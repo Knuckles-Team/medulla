@@ -13,9 +13,7 @@ use medulla_decision_types::decision::model_capacity::{
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseRef,
-};
+use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_resource::admission::{
     AgentProcess, CircuitBreaker, CircuitState, CognitiveDecision, CognitiveScheduler,
@@ -25,8 +23,8 @@ use medulla_resource::admission::{
 use medulla_types::contract::BoundedVec;
 use sha2::{Digest, Sha256};
 
-use super::family::{advisory, invalid, json_param, single_option, text_param};
 use super::family::DecisionFamily;
+use super::family::{advisory, invalid, json_param, single_option, text_param};
 use super::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
 
 /// The family of the `model_capacity` question kind.
@@ -41,7 +39,9 @@ fn observations(request: &DecideRequest) -> Result<Vec<CapacityObservation>, Str
         )));
     }
     if rows.windows(2).any(|pair| pair[1].at_ms < pair[0].at_ms) {
-        return Err(invalid(format!("{PARAM_OBSERVATIONS} at_ms must not decrease")));
+        return Err(invalid(format!(
+            "{PARAM_OBSERVATIONS} at_ms must not decrease"
+        )));
     }
     Ok(rows)
 }
@@ -90,9 +90,7 @@ fn decide_capacity(request: &DecideRequest, policy: &DecisionPolicy) -> Result<E
             CapacityOutcome::Success => Outcome::Success,
             CapacityOutcome::Failure => Outcome::Failure,
         };
-        breaker
-            .observe(Some(outcome), row.at_ms)
-            .map_err(invalid)?;
+        breaker.observe(Some(outcome), row.at_ms).map_err(invalid)?;
     }
     breaker.tick(bounds.now_ms);
     // The group's slots are the scheduler's budget: each grant is one

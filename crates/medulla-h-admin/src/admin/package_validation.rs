@@ -61,19 +61,14 @@ fn publish(
     // (3) The tenant's own run history, in ascending run id order.
     let rows = store
         .decision_artifacts_with_prefix(tenant, &package_run_prefix(&digest), MAX_PACKAGE_RUNS)
-        .map_err(|error| {
-            format!(
-                "{}: {error}",
-                PACKAGE_RUN_SET_INVALID.as_str()
-            )
-        })?;
+        .map_err(|error| format!("{}: {error}", PACKAGE_RUN_SET_INVALID.as_str()))?;
     let history = rows
         .iter()
         .map(|(_, bytes)| decode_artifact::<RunHistoryEntry>(bytes, "package run"))
         .collect::<Result<Vec<_>, String>>()?;
     // (4) The pure validation; a refusal returns its code and writes nothing.
-    let validation =
-        validate_rendered_package(&request.package, &history).map_err(|refusal| refusal.to_string())?;
+    let validation = validate_rendered_package(&request.package, &history)
+        .map_err(|refusal| refusal.to_string())?;
     // (5) Mint the receipt and write it once.
     let receipt = PublicationReceipt {
         package_id: request.package_id,
@@ -83,4 +78,3 @@ fn publish(
     store.put_decision_artifacts(tenant, &[(key, encode_artifact(&receipt)?)])?;
     Ok(receipt)
 }
-

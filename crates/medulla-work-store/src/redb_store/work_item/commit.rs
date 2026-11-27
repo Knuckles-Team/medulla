@@ -800,15 +800,25 @@ fn stamp_run_trace(
         rmp_serde::from_slice(&stamped).map_err(|error| error.to_string())?;
     match workflow {
         Some(identity) => {
-            properties.insert(RUN_TRACE_WORKFLOW_ID.into(), identity.workflow_id.clone().into());
-            properties.insert(RUN_TRACE_WORKFLOW_VERSION.into(), identity.version.clone().into());
+            properties.insert(
+                RUN_TRACE_WORKFLOW_ID.into(),
+                identity.workflow_id.clone().into(),
+            );
+            properties.insert(
+                RUN_TRACE_WORKFLOW_VERSION.into(),
+                identity.version.clone().into(),
+            );
             properties.insert(
                 RUN_TRACE_WORKFLOW_DIGEST.into(),
                 identity.content_digest.clone().into(),
             );
         }
         None => {
-            for key in [RUN_TRACE_WORKFLOW_ID, RUN_TRACE_WORKFLOW_VERSION, RUN_TRACE_WORKFLOW_DIGEST] {
+            for key in [
+                RUN_TRACE_WORKFLOW_ID,
+                RUN_TRACE_WORKFLOW_VERSION,
+                RUN_TRACE_WORKFLOW_DIGEST,
+            ] {
                 properties.remove(key);
             }
         }
@@ -869,7 +879,9 @@ fn validate_ordinary_completion(
 mod tests {
     use super::*;
     use crate::redb_store::graph_row_tables::GraphRowTables;
-    use crate::redb_store::work_item::test_shard::{apply, open, with_node_rows, with_write, GRAPH};
+    use crate::redb_store::work_item::test_shard::{
+        apply, open, with_node_rows, with_write, GRAPH,
+    };
     use medulla_result_types::outcome_bundle::{
         CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
         TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION,

@@ -20,7 +20,11 @@ pub(crate) fn cited_node_ids(payload: &Value) -> Vec<String> {
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|declaration| declaration.get("cited_canonical_id").and_then(Value::as_str))
+        .filter_map(|declaration| {
+            declaration
+                .get("cited_canonical_id")
+                .and_then(Value::as_str)
+        })
         .filter(|id| !id.trim().is_empty() && !id.starts_with("unidentified:"))
         .map(paper_node_id)
         .collect()

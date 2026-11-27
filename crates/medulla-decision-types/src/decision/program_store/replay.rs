@@ -74,7 +74,9 @@ impl ReplayKnobs {
             KnobValue::DurationMs(v) => i64::try_from(v).unwrap_or(i64::MAX),
         };
         Self {
-            window: usize::try_from(value(&REPLAY_WINDOW)).unwrap_or(5).clamp(5, 200),
+            window: usize::try_from(value(&REPLAY_WINDOW))
+                .unwrap_or(5)
+                .clamp(5, 200),
             demote_min_replays: usize::try_from(value(&DEMOTE_MIN_REPLAYS))
                 .unwrap_or(1)
                 .clamp(1, 100),
@@ -125,7 +127,8 @@ pub fn replay_verdict(
         .filter(|row| row.replay.outcome == ReplayOutcome::Fallback)
         .count();
     let demoted = replays >= knobs.demote_min_replays
-        && (fallbacks as i128) * 1_000_000 >= i128::from(knobs.demote_fallback_rate_micros) * (replays as i128);
+        && (fallbacks as i128) * 1_000_000
+            >= i128::from(knobs.demote_fallback_rate_micros) * (replays as i128);
     ReplayVerdict {
         replays,
         fallbacks,
@@ -215,7 +218,8 @@ impl ProgramReplay {
     /// [`REPLAY_RECORD_INVALID`].
     pub fn validate(&self) -> Result<(), String> {
         let broken = |rule: &str| Err(format!("{}: {rule}", REPLAY_RECORD_INVALID.as_str()));
-        let present = |value: &Option<String>| value.as_deref().is_some_and(|v| !v.trim().is_empty());
+        let present =
+            |value: &Option<String>| value.as_deref().is_some_and(|v| !v.trim().is_empty());
         if self.run_id.trim().is_empty()
             || self.task_signature.trim().is_empty()
             || self.decision_record_digest.trim().is_empty()
@@ -268,7 +272,10 @@ mod tests {
     fn each_outcome_needs_its_fields() {
         // hit
         let mut hit = replay(ReplayOutcome::Hit);
-        assert!(hit.validate().unwrap_err().starts_with("REPLAY_RECORD_INVALID"));
+        assert!(hit
+            .validate()
+            .unwrap_err()
+            .starts_with("REPLAY_RECORD_INVALID"));
         hit.program_digest = Some("cd".repeat(32));
         assert!(hit.validate().is_ok());
         hit.failed_step = Some(2);
@@ -301,7 +308,10 @@ mod tests {
             }
             assert!(broken.validate().is_err());
         }
-        assert_eq!(replay_key("sig", "run-1"), "run_record/program_replay/sig/run-1");
+        assert_eq!(
+            replay_key("sig", "run-1"),
+            "run_record/program_replay/sig/run-1"
+        );
         let wire = serde_json::to_value(replay(ReplayOutcome::Hit)).unwrap();
         assert_eq!(wire["outcome"], "hit");
     }
@@ -340,7 +350,10 @@ mod tests {
             .collect();
         rows.extend((0..5).map(|i| stored(&format!("new{i}"), 100 + i, ReplayOutcome::Hit, "p")));
         let verdict = replay_verdict(&rows, "p", &knobs);
-        assert_eq!((verdict.replays, verdict.fallbacks, verdict.demoted), (5, 0, false));
+        assert_eq!(
+            (verdict.replays, verdict.fallbacks, verdict.demoted),
+            (5, 0, false)
+        );
         // The rate: 2 fallbacks of 5 is 400000 < 500000; 3 of 5 is 600000.
         let mixed = |fallbacks: usize| -> Vec<StoredReplay> {
             (0..5)
@@ -361,7 +374,11 @@ mod tests {
             stored("a", 7, ReplayOutcome::Fallback, "p"),
             stored("b", 7, ReplayOutcome::Hit, "p"),
         ];
-        let one = ReplayKnobs { window: 1, demote_min_replays: 1, ..knobs };
+        let one = ReplayKnobs {
+            window: 1,
+            demote_min_replays: 1,
+            ..knobs
+        };
         assert!(!replay_verdict(&tied, "p", &one).demoted);
         // The knobs' bounds.
         let policy = DecisionPolicy::engine_default();

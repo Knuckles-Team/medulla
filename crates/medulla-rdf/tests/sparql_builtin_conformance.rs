@@ -98,7 +98,11 @@ fn every_builtin_matches_its_w3c_vector() {
         scalar_under(base, r#"IRI("/root")"#).as_deref(),
         Some("<http://ex/root>")
     );
-    assert_eq!(scalar(r#"IRI("b")"#), None, "a relative reference with no BASE");
+    assert_eq!(
+        scalar(r#"IRI("b")"#),
+        None,
+        "a relative reference with no BASE"
+    );
 
     // Constructors: BNODE, STRDT, STRLANG, UUID, STRUUID.
     assert_eq!(term(r#"BNODE("tag")"#), Some(Binding::blank("tag")));
@@ -201,7 +205,11 @@ fn hash_builtins_match_their_vectors() {
         text(r#"SHA512("abc")"#),
         "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
     );
-    assert_eq!(scalar("SHA256(<http://ex/a>)"), None, "an IRI is not a string");
+    assert_eq!(
+        scalar("SHA256(<http://ex/a>)"),
+        None,
+        "an IRI is not a string"
+    );
 }
 
 #[test]
@@ -222,7 +230,8 @@ fn a_function_on_a_wrong_typed_argument_is_an_error_value() {
         assert_eq!(scalar(expr), None, "{expr}");
     }
     // A FILTER treats the error value as false, so no row survives.
-    let kept = rows(r#"SELECT ?x WHERE { BIND(1 AS ?x) FILTER(STRSTARTS(<http://ex/a>, "http")) }"#);
+    let kept =
+        rows(r#"SELECT ?x WHERE { BIND(1 AS ?x) FILTER(STRSTARTS(<http://ex/a>, "http")) }"#);
     assert!(kept.is_empty(), "{kept:?}");
 }
 
@@ -234,7 +243,9 @@ fn now_is_one_value_for_the_whole_query_and_uuids_are_fresh_per_row() {
     );
     assert_eq!(found.len(), 5);
     let instant = &found[0]["a"];
-    assert!(found.iter().all(|row| &row["a"] == instant && &row["b"] == instant));
+    assert!(found
+        .iter()
+        .all(|row| &row["a"] == instant && &row["b"] == instant));
     let mut uuids: Vec<&String> = found.iter().map(|row| &row["u"]).collect();
     uuids.sort();
     uuids.dedup();
@@ -249,14 +260,23 @@ fn typed_terms_match_the_w3c_vectors() {
 
     // LANG: the tag of a tagged literal, the empty string for any other literal.
     assert_eq!(term(r#"LANG("chat"@fr)"#), Some(Binding::string("fr")));
-    assert_eq!(term(r#"LANG("chat"@EN-gb)"#), Some(Binding::string("en-gb")));
+    assert_eq!(
+        term(r#"LANG("chat"@EN-gb)"#),
+        Some(Binding::string("en-gb"))
+    );
     assert_eq!(term(r#"LANG("abc")"#), Some(Binding::string("")));
     assert_eq!(term("LANG(42)"), Some(Binding::string("")));
     assert_eq!(term("LANG(<http://ex/a>)"), None, "LANG of an IRI");
-    assert_eq!(term(r#"LANGMATCHES(LANG("chat"@fr), "FR")"#), Some(Binding::boolean(true)));
+    assert_eq!(
+        term(r#"LANGMATCHES(LANG("chat"@fr), "FR")"#),
+        Some(Binding::boolean(true))
+    );
 
     // DATATYPE: the datatype IRI of every kind of literal.
-    assert_eq!(term(r#"DATATYPE("abc")"#), Some(Binding::iri(xsd("string"))));
+    assert_eq!(
+        term(r#"DATATYPE("abc")"#),
+        Some(Binding::iri(xsd("string")))
+    );
     assert_eq!(term(r#"DATATYPE("abc"@en)"#), Some(Binding::iri(RDF_LANG)));
     assert_eq!(term("DATATYPE(42)"), Some(Binding::iri(xsd("integer"))));
     assert_eq!(term("DATATYPE(4.5)"), Some(Binding::iri(xsd("decimal"))));
@@ -269,15 +289,29 @@ fn typed_terms_match_the_w3c_vectors() {
     assert_eq!(term("DATATYPE(<http://ex/a>)"), None, "DATATYPE of an IRI");
 
     // STRLANG: a language-tagged literal; the tag is read back by LANG.
-    assert_eq!(term(r#"STRLANG("chat", "fr")"#), Some(Binding::lang("chat", "fr")));
-    assert_eq!(term(r#"LANG(STRLANG("chat", "FR"))"#), Some(Binding::string("fr")));
+    assert_eq!(
+        term(r#"STRLANG("chat", "fr")"#),
+        Some(Binding::lang("chat", "fr"))
+    );
+    assert_eq!(
+        term(r#"LANG(STRLANG("chat", "FR"))"#),
+        Some(Binding::string("fr"))
+    );
     assert_eq!(
         term(r#"DATATYPE(STRLANG("chat", "fr"))"#),
         Some(Binding::iri(RDF_LANG))
     );
     assert_eq!(term(r#"STRLANG("chat", "")"#), None, "an empty tag");
-    assert_eq!(term(r#"STRLANG("chat"@en, "fr")"#), None, "a tagged lexical form");
-    assert_eq!(term(r#"STRLANG(42, "fr")"#), None, "a non-string lexical form");
+    assert_eq!(
+        term(r#"STRLANG("chat"@en, "fr")"#),
+        None,
+        "a tagged lexical form"
+    );
+    assert_eq!(
+        term(r#"STRLANG(42, "fr")"#),
+        None,
+        "a non-string lexical form"
+    );
 
     // STRDT: a typed literal; the datatype is read back by DATATYPE and drives isNumeric.
     assert_eq!(
@@ -296,7 +330,11 @@ fn typed_terms_match_the_w3c_vectors() {
         term(&format!(r#"isNumeric(STRDT("42", <{}>))"#, xsd("string"))),
         Some(Binding::boolean(false))
     );
-    assert_eq!(term(r#"STRDT("42", "integer")"#), None, "a datatype that is not an IRI");
+    assert_eq!(
+        term(r#"STRDT("42", "integer")"#),
+        None,
+        "a datatype that is not an IRI"
+    );
     assert_eq!(term(&format!(r#"STRDT(42, <{}>)"#, xsd("integer"))), None);
     assert_eq!(
         term(&format!(r#"STRDT("x", <{RDF_LANG}>)"#)),
@@ -312,14 +350,20 @@ fn typed_terms_match_the_w3c_vectors() {
     assert_eq!(term("1e0 + 2"), Some(Binding::typed("3", xsd("double"))));
 
     // A string builtin keeps the language tag and refuses an IRI or a non-string literal.
-    assert_eq!(term(r#"UCASE("chat"@fr)"#), Some(Binding::lang("CHAT", "fr")));
+    assert_eq!(
+        term(r#"UCASE("chat"@fr)"#),
+        Some(Binding::lang("CHAT", "fr"))
+    );
     assert_eq!(term("UCASE(<http://ex/a>)"), None);
     assert_eq!(term("UCASE(42)"), None);
 
     // Equality: numerics by value, every other pair by term; sameTerm is identity.
     assert_eq!(term("1 = 1.0"), Some(Binding::boolean(true)));
     assert_eq!(term(r#""a"@en = "a"@fr"#), Some(Binding::boolean(false)));
-    assert_eq!(term(r#"sameTerm("a"@en, "a"@en)"#), Some(Binding::boolean(true)));
+    assert_eq!(
+        term(r#"sameTerm("a"@en, "a"@en)"#),
+        Some(Binding::boolean(true))
+    );
     assert_eq!(term(r#"sameTerm("1", 1)"#), Some(Binding::boolean(false)));
     assert_eq!(term(r#""urn:x" = <urn:x>"#), Some(Binding::boolean(false)));
 }

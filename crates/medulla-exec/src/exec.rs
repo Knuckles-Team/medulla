@@ -22,9 +22,9 @@ use std::collections::HashSet;
 use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 
-use medulla_query_types::wire::{Op, Plan, Pred};
 use crate::rowset::RowSet;
 use medulla_query_types::wire::TimeAxis;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 // EH-523 — the `ATTRIBUTE` stage (contribution attribution over the incoming rows).
 pub(crate) mod attribution;
@@ -44,8 +44,8 @@ pub use usage::{UsageSeries, UsageSource, UsageWindow};
 // MEDULLA-FEDERATED-QUERY-R078.7 — the `COMPANY CONTEXT` source over the pinned snapshot.
 mod company_context;
 // MEDULLA-FEDERATED-QUERY-R078.6 — the plan scope's allow set at every scan and vector leaf.
-mod scope_allow;
 pub(crate) mod dispatch;
+mod scope_allow;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;
 // MEDULLA-BUSINESS-OPS-R002.7 — the `EVALUATE RULE` executor over medulla-numeric's rule registry.
@@ -413,7 +413,10 @@ impl EncodingRecorder {
 
     /// The recorded calls, in call order.
     pub fn calls(&self) -> Vec<medulla_types::retrieval::EncodingCall> {
-        self.calls.lock().map(|calls| calls.clone()).unwrap_or_default()
+        self.calls
+            .lock()
+            .map(|calls| calls.clone())
+            .unwrap_or_default()
     }
 
     /// The encoder revision, reported when at least one call was recorded.
@@ -889,7 +892,10 @@ impl<'a> PlanCtx<'a> {
 /// leaves the plan byte-for-byte as lowered and the list empty (the default ctx is
 /// unchanged); the rewrite is pure and writes nothing. `EXPLAIN` lists the same records,
 /// so the list a statement reports is the one its execution applies.
-pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<medulla_query_types::wire::AppliedPolicy>) {
+pub fn mask_plan(
+    plan: &Plan,
+    ctx: &PlanCtx,
+) -> (Plan, Vec<medulla_query_types::wire::AppliedPolicy>) {
     let mut plan = plan.clone();
     let applied = match ctx.policies {
         Some(set) => {
@@ -899,13 +905,15 @@ pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<medulla_query_types::
             let mut applied = crate::policy_mask::apply_policies(&mut plan, set, &principal);
             // MEDULLA-FEDERATED-QUERY-R706.8: the shape policies rewrite no plan; `EXPLAIN`
             // lists them so a statement reports every policy its result is held to.
-            applied.extend(set.shapes.iter().map(|shape| medulla_query_types::wire::AppliedPolicy {
-                tag: shape.policy_id.clone(),
-                kind: medulla_query_types::wire::PolicyKind::Shape,
-                column: match shape.effect {
-                    crate::policy_mask::ShapeEffect::Filter => "filter".to_string(),
-                    crate::policy_mask::ShapeEffect::Refuse => "refuse".to_string(),
-                },
+            applied.extend(set.shapes.iter().map(|shape| {
+                medulla_query_types::wire::AppliedPolicy {
+                    tag: shape.policy_id.clone(),
+                    kind: medulla_query_types::wire::PolicyKind::Shape,
+                    column: match shape.effect {
+                        crate::policy_mask::ShapeEffect::Filter => "filter".to_string(),
+                        crate::policy_mask::ShapeEffect::Refuse => "refuse".to_string(),
+                    },
+                }
             }));
             applied
         }
@@ -3519,19 +3527,31 @@ mod shadow_tests {
         store.set_per_tenant_cap(4_096);
         store.set_shadow_fraction(1.0);
         store.set_challenger(Some(CostHeadRevision::new(Vec::new(), Vec::new())));
-        let plan = Plan::new(vec![Op::Scan { label: "Doc".into() }, Op::Limit { k: 3 }]);
+        let plan = Plan::new(vec![
+            Op::Scan {
+                label: "Doc".into(),
+            },
+            Op::Limit { k: 3 },
+        ]);
         let tenant = "shadow-test-tenant";
         let interactive = PlanCtx::new(&view, &semantic)
             .with_tenant(tenant)
             .with_interactive(true);
         let champion = plan.execute(&interactive).unwrap();
-        let run = store.records(tenant).pop().expect("the champion run is recorded");
+        let run = store
+            .records(tenant)
+            .pop()
+            .expect("the champion run is recorded");
 
         let differing = |_: Plan, _: &PlanCtx| {
-            Ok(("other-plan".to_string(), RowSet::from_ids(["z".to_string()])))
+            Ok((
+                "other-plan".to_string(),
+                RowSet::from_ids(["z".to_string()]),
+            ))
         };
         let failing = |_: Plan, _: &PlanCtx| Err::<(String, RowSet), String>("boom".into());
-        let panicking = |_: Plan, _: &PlanCtx| -> Result<(String, RowSet), String> { panic!("boom") };
+        let panicking =
+            |_: Plan, _: &PlanCtx| -> Result<(String, RowSet), String> { panic!("boom") };
         shadow_run(plan.clone(), &interactive, &champion, &run, &differing);
         shadow_run(plan.clone(), &interactive, &champion, &run, &failing);
         shadow_run(plan.clone(), &interactive, &champion, &run, &panicking);
@@ -3540,7 +3560,9 @@ mod shadow_tests {
         // The answer is the champion's, whatever the challenger did.
         assert_eq!(real.result_digest(), champion.result_digest());
         let shadows = store.shadows(tenant);
-        assert!(shadows.iter().any(|s| !s.result_match && !s.challenger_failed));
+        assert!(shadows
+            .iter()
+            .any(|s| !s.result_match && !s.challenger_failed));
         assert_eq!(shadows.iter().filter(|s| s.challenger_failed).count(), 2);
         assert!(shadows
             .iter()

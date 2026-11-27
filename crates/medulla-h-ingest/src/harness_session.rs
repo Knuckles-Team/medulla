@@ -86,7 +86,10 @@ fn properties_of(core: &GraphCore, id: &str) -> Option<Map<String, Value>> {
 }
 
 fn text<'a>(properties: &'a Map<String, Value>, name: &str) -> &'a str {
-    properties.get(name).and_then(Value::as_str).unwrap_or_default()
+    properties
+        .get(name)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
 }
 
 fn number(properties: &Map<String, Value>, name: &str) -> Option<u64> {
@@ -113,7 +116,10 @@ fn run_trace(core: &GraphCore, tenant: &str, id: &str) -> Option<Map<String, Val
         return None;
     }
     let owners = [text(&properties, "tenant"), text(&properties, "tenant_id")];
-    if owners.iter().any(|owner| !owner.is_empty() && *owner != tenant) {
+    if owners
+        .iter()
+        .any(|owner| !owner.is_empty() && *owner != tenant)
+    {
         return None;
     }
     Some(properties)
@@ -180,7 +186,9 @@ pub fn admit_batch(
         )));
     }
     if !is_hex64(&batch.manifest_digest) || !is_hex64(&batch.sync_receipt_digest) {
-        return Err(unsupported("a manifest or receipt digest is not 64 lowercase hex"));
+        return Err(unsupported(
+            "a manifest or receipt digest is not 64 lowercase hex",
+        ));
     }
     for record in &batch.records {
         if record.adapter_revision == 0 || !is_hex64(&record.trace_digest) {
@@ -216,7 +224,10 @@ pub fn admit_batch(
         if text(&existing, "sync_receipt_digest") != batch.sync_receipt_digest {
             return Err(refuse(
                 SESSION_CONTENT_CHANGED,
-                format!("receipt {} is recorded with another digest", batch.sync_receipt_id),
+                format!(
+                    "receipt {} is recorded with another digest",
+                    batch.sync_receipt_id
+                ),
             ));
         }
         receipt_known = true;
@@ -348,7 +359,10 @@ mod tests {
     use medulla_types::harness_session::UnavailableSession;
 
     fn put(core: &GraphCore, id: &str, properties: Value) {
-        core.add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
+        core.add_node(
+            id.to_string(),
+            rmp_serde::to_vec_named(&properties).unwrap(),
+        );
     }
 
     fn trace_properties(tenant: &str) -> Value {
@@ -387,7 +401,11 @@ mod tests {
     fn apply(core: &GraphCore, admission: &SessionAdmission) {
         for operation in &admission.operations {
             if operation["op"] == "upsert_node" {
-                put(core, operation["id"].as_str().unwrap(), operation["properties"].clone());
+                put(
+                    core,
+                    operation["id"].as_str().unwrap(),
+                    operation["properties"].clone(),
+                );
             }
         }
     }
@@ -416,14 +434,21 @@ mod tests {
         let batch = batch_for(&core, "t1");
         let first = admit_batch(&core, "t1", &batch, 500).unwrap();
         assert_eq!(
-            (first.result.indexed, first.result.unavailable, first.result.index_revision),
+            (
+                first.result.indexed,
+                first.result.unavailable,
+                first.result.index_revision
+            ),
             (1, 1, 1)
         );
         apply(&core, &first);
         // An identical replay plans nothing and keeps the revision.
         let replay = admit_batch(&core, "t1", &batch, 500).unwrap();
         assert!(replay.operations.is_empty());
-        assert_eq!((replay.result.unchanged, replay.result.index_revision), (2, 1));
+        assert_eq!(
+            (replay.result.unchanged, replay.result.index_revision),
+            (2, 1)
+        );
         // Equal sequence, other digest of the run trace: the trace changed.
         put(
             &core,
@@ -449,7 +474,10 @@ mod tests {
         higher.records[0].source_sequence = 6;
         higher.sync_receipt_id = "r2".into();
         let replaced = admit_batch(&core, "t1", &higher, 500).unwrap();
-        assert_eq!((replaced.result.indexed, replaced.result.index_revision), (1, 2));
+        assert_eq!(
+            (replaced.result.indexed, replaced.result.index_revision),
+            (1, 2)
+        );
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R009.101.1

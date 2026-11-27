@@ -93,10 +93,10 @@ pub mod work_market;
 // (`src/server/handlers/viz.rs`, facade feature `viz-static-export`) is the one
 // place that parses `VizRenderRequest::spec_json` into a real
 // `medulla_viz_core::ViewSpec` and resolves it.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod run_usage;
 /// The reply of the served `DowntimeSelections` method (MEDULLA-DURABLE-KERNEL-R101.3).
 pub mod downtime;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod run_usage;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod scheduler_config;

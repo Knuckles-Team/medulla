@@ -8,8 +8,8 @@ use super::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, sql_source_stage_artifact,
     validate_page_revision_against_binding, SemanticIndexService,
     SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationEvent,
-    SemanticSourceReconciliationPhase, SemanticSqlSourceReadPage, SemanticSqlSourceReadPort, SemanticSqlSourceRecord,
-    SemanticSqlSourceValue,
+    SemanticSourceReconciliationPhase, SemanticSqlSourceReadPage, SemanticSqlSourceReadPort,
+    SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };
 use crate::test_scope_grant::TEST_PRINCIPAL;
 use crate::test_scope_grant::TEST_PROOF;

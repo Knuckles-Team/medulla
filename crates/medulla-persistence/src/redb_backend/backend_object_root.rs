@@ -39,15 +39,15 @@ impl RedbBackend {
     pub fn seal_key_id(&self) -> Result<Option<String>, String> {
         #[cfg(feature = "security")]
         {
-            let mut ids = self
-                .shards
-                .iter()
-                .map(|writer| writer.cipher.as_ref().map(|cipher| cipher.key_ref().id.clone()));
+            let mut ids = self.shards.iter().map(|writer| {
+                writer
+                    .cipher
+                    .as_ref()
+                    .map(|cipher| cipher.key_ref().id.clone())
+            });
             let first = ids.next().flatten();
             if ids.any(|id| id != first) {
-                return Err(
-                    "encryption key reference differs between durable shards".to_string(),
-                );
+                return Err("encryption key reference differs between durable shards".to_string());
             }
             Ok(first)
         }
@@ -71,8 +71,10 @@ impl RedbBackend {
         else {
             return Ok(None);
         };
-        let version =
-            medulla_store::redb_store::store_read::read_mutation_graph_version(&shard, graph_fname)?;
+        let version = medulla_store::redb_store::store_read::read_mutation_graph_version(
+            &shard,
+            graph_fname,
+        )?;
         Ok(Some((name, graph_type, version)))
     }
 
@@ -124,7 +126,8 @@ impl RedbBackend {
             graph: graph_fname.to_string(),
             done,
         };
-        self.enqueue(graph_fname, cmd, "replay_version_bump").await?;
+        self.enqueue(graph_fname, cmd, "replay_version_bump")
+            .await?;
         rx.await
             .map_err(|_| "redb writer dropped replay_version_bump completion".to_string())?
     }

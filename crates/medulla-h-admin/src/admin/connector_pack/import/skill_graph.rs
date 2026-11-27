@@ -195,8 +195,10 @@ pub(super) fn bind_layers(
                 ),
             ));
         }
-        let orphans =
-            medulla_rdf::pack::ontology_orphan_classes(&[text], super::validation::parent_classes());
+        let orphans = medulla_rdf::pack::ontology_orphan_classes(
+            &[text],
+            super::validation::parent_classes(),
+        );
         if !orphans.is_empty() {
             return Err(violation(
                 PackViolationCode::OntologyOrphan,
@@ -527,7 +529,8 @@ mod tests {
         let mut put = |kind: PackEntryKind, name: &str, body: &[u8]| {
             let offset = archive.len() as u64;
             archive.extend_from_slice(body);
-            let mut entry = medulla_catalog_types::catalog_fixtures::contract_pack::entry(kind, name);
+            let mut entry =
+                medulla_catalog_types::catalog_fixtures::contract_pack::entry(kind, name);
             entry.body = PackSection {
                 offset,
                 length: body.len() as u64,
@@ -591,7 +594,9 @@ mod tests {
         let refused = bind(Some(foreign.as_str())).unwrap_err();
         assert_eq!(refused.code, PackViolationCode::SkillGraphLayerIriMismatch);
         assert!(refused.detail.starts_with("SKILL_GRAPH_LAYER_IRI_MISMATCH"));
-        assert!(refused.detail.contains("https://example.org/ontology/other"));
+        assert!(refused
+            .detail
+            .contains("https://example.org/ontology/other"));
 
         // A class that does not roll up to the core is refused as an orphan.
         let orphan = layer_turtle(&layer_iri, "https://example.org/ontology/unrelated#Thing");
@@ -608,7 +613,10 @@ mod tests {
         let refs: Vec<&PackEntry> = entries.iter().collect();
         let layers = bind_layers(&archive, &refs).unwrap();
         assert_eq!(
-            layers.iter().map(|layer| layer.graph.as_str()).collect::<Vec<_>>(),
+            layers
+                .iter()
+                .map(|layer| layer.graph.as_str())
+                .collect::<Vec<_>>(),
             vec![GRAPH, "other"]
         );
 

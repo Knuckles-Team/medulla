@@ -102,7 +102,10 @@ pub fn drain_page_envelope(
         tenant: record.tenant.clone(),
         corpus_key: record.connector.clone(),
         kind: IngestJobKind::Document,
-        target: format!("drain:{}/{}/{}", record.connector, record.stream, record.mode),
+        target: format!(
+            "drain:{}/{}/{}",
+            record.connector, record.stream, record.mode
+        ),
         attempt: 1,
         page: Some(checkpoint),
     }
@@ -456,7 +459,10 @@ mod tests {
                 match on_ingest_ack(&policy, attempt, &id, outcome) {
                     IngestAckDecision::Redeliver { delay_ms } => {
                         let ceiling = 1_000u64 << (attempt - 1);
-                        assert!(delay_ms <= ceiling && delay_ms * 10 >= ceiling * 8, "{delay_ms}");
+                        assert!(
+                            delay_ms <= ceiling && delay_ms * 10 >= ceiling * 8,
+                            "{delay_ms}"
+                        );
                         // The same attempt and task always draw the same delay.
                         assert_eq!(
                             on_ingest_ack(&policy, attempt, &id, outcome),

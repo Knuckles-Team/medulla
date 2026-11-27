@@ -31,6 +31,9 @@ pub mod sql_analysis;
 pub mod federation_capabilities;
 // The federation foreign-source seam (CONCEPT:MEDULLA-KG.query.query-federation) — the `ForeignSource` trait +
 // the remote-engine / HTTP-JSON kinds backing `Op::ForeignScan`. Implies `query`.
+/// A live ClickHouse table read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2).
+#[cfg(feature = "federation")]
+pub mod clickhouse_foreign;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod federation;
@@ -91,9 +94,6 @@ pub mod mirror_target;
 pub mod sqlite_foreign;
 #[cfg(all(any(test, feature = "test-support"), feature = "federation"))]
 pub mod test_guard;
-/// A live ClickHouse table read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2).
-#[cfg(feature = "federation")]
-pub mod clickhouse_foreign;
 /// Warehouse and lake sources read through a host-registered reader (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2).
 #[cfg(feature = "federation")]
 pub mod warehouse_foreign;

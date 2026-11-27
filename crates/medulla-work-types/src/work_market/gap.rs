@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::offer::WorkOfferView;
 use super::gap_machine::{GapEvent, GAP_VIEW_MACHINE};
+use super::offer::WorkOfferView;
 use super::{bounded, bounded_list, bounded_ppm, severity_bucket, GapStatus, GAP_NODE_TYPE};
 use crate::work_item_read::WORK_ITEM_ROW_REVISION;
 

@@ -193,8 +193,7 @@ fn declared_skills_are_stored_and_read_back_and_a_bad_declaration_refuses() {
         Admitted::Same(_)
     ));
     request.skills = vec![skill("skill-a")];
-    let Admitted::Write(write, _) =
-        admit_registration(&core, TENANT, "scope-a", &request).unwrap()
+    let Admitted::Write(write, _) = admit_registration(&core, TENANT, "scope-a", &request).unwrap()
     else {
         panic!("another skill list writes");
     };
@@ -211,8 +210,8 @@ fn declared_skills_are_stored_and_read_back_and_a_bad_declaration_refuses() {
         panic!("a first registration writes");
     };
     apply_coalescable_write(&other, &write).unwrap();
-    let read = read_registration(stored(&other, &identity()).as_ref(), "scope-a", &identity())
-        .unwrap();
+    let read =
+        read_registration(stored(&other, &identity()).as_ref(), "scope-a", &identity()).unwrap();
     assert!(read.skills.is_empty());
 
     // A foreign kind, a duplicate and an empty digest refuse and write nothing.
@@ -231,7 +230,10 @@ fn declared_skills_are_stored_and_read_back_and_a_bad_declaration_refuses() {
     }];
     for bad in [wrong_kind, twice, undigested] {
         let refused = admit_registration(&fresh, TENANT, "scope-a", &bad).unwrap_err();
-        assert!(refused.starts_with("INVALID_ARGUMENT: workflow skills"), "{refused}");
+        assert!(
+            refused.starts_with("INVALID_ARGUMENT: workflow skills"),
+            "{refused}"
+        );
     }
     assert_eq!(fresh.node_count(), 0);
 }

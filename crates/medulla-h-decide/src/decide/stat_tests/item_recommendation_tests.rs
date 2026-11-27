@@ -276,8 +276,9 @@ mod served {
         let claim = medulla_mutation_types::benchmark_claim::BenchmarkClaim {
             comparison:
                 medulla_mutation_types::benchmark_claim::BenchmarkComparison::NdcgItemRecommendation,
-            configuration: "4 clusters of 6 items, top 6, 2 levels of 4 codes, 0 versus 2 pause steps"
-                .to_string(),
+            configuration:
+                "4 clusters of 6 items, top 6, 2 levels of 4 codes, 0 versus 2 pause steps"
+                    .to_string(),
             measured_result: format!("ndcg@6 with pause steps {with:.6}, without {without:.6}"),
             passed: with >= without,
         };

@@ -6,10 +6,10 @@ use super::*;
 use crate::dispatch::request_boundary::authorization::{
     check_agent_run_delegation, DispatchAuthority,
 };
+use medulla_protocol_types::protocol::Request;
 use medulla_result_types::epistemic_operations::{
     RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
 };
-use medulla_protocol_types::protocol::Request;
 use medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant;
 use medulla_work_types::native_control::{NativeControlSchemaVersion, SubmitWorkItemRequest};
 use std::collections::BTreeMap;

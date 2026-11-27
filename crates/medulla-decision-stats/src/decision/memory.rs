@@ -9,13 +9,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_types::contract::ResourceId;
 use medulla_decision_types::decision::statistical::tool_subset::{
     smallest_covering_subset, ToolCoverageCandidate, ToolSubsetRefusal, ToolSubsetRequestBody,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
-    ConsolidationPlan, ContextBudget, MemoryClass, MemoryRecord, MemoryTier, MergeGroup, Memento,
+    ConsolidationPlan, ContextBudget, Memento, MemoryClass, MemoryRecord, MemoryTier, MergeGroup,
     PromotionGroup, RetentionPolicy, TrajectoryEntry,
 };
 use sha2::{Digest, Sha256};
@@ -166,7 +166,12 @@ pub fn plan_consolidation(
                 ordered[a]
                     .importance
                     .total_cmp(&ordered[b].importance)
-                    .then_with(|| ordered[b].memory_id.as_str().cmp(ordered[a].memory_id.as_str()))
+                    .then_with(|| {
+                        ordered[b]
+                            .memory_id
+                            .as_str()
+                            .cmp(ordered[a].memory_id.as_str())
+                    })
             })
             .expect("a group has members");
         let merged: Vec<ResourceId> = members
@@ -249,7 +254,12 @@ pub fn compress_to_mementos(records: &[MemoryRecord], token_cap: u32) -> Vec<Mem
 }
 
 /// Close the open memento, when it holds any record.
-fn seal_memento(mementos: &mut Vec<Memento>, ids: &mut Vec<ResourceId>, texts: &[&str], tokens: u32) {
+fn seal_memento(
+    mementos: &mut Vec<Memento>,
+    ids: &mut Vec<ResourceId>,
+    texts: &[&str],
+    tokens: u32,
+) {
     if ids.is_empty() {
         return;
     }
@@ -291,11 +301,7 @@ pub fn linear_cka(first: &[Vec<f64>], second: &[Vec<f64>]) -> Option<f64> {
         let mut total = 0.0;
         for i in 0..lw {
             for j in 0..rw {
-                let entry: f64 = left
-                    .iter()
-                    .zip(right)
-                    .map(|(l, r)| l[i] * r[j])
-                    .sum();
+                let entry: f64 = left.iter().zip(right).map(|(l, r)| l[i] * r[j]).sum();
                 total += entry * entry;
             }
         }
@@ -342,7 +348,9 @@ pub fn prune_trajectory(entries: &[TrajectoryEntry], importance_floor: f64) -> V
 /// Whether `record` has expired at `as_of_ms`: its `expires_at_ms` is at or below it
 /// (MEDULLA-DECISION-ENGINE-R617.2.3). Recall hides an expired record.
 pub fn is_expired(record: &MemoryRecord, as_of_ms: i64) -> bool {
-    record.expires_at_ms.is_some_and(|expires| expires <= as_of_ms)
+    record
+        .expires_at_ms
+        .is_some_and(|expires| expires <= as_of_ms)
 }
 
 /// One retention prune step: the records to remove and the candidates a legal hold keeps.
@@ -366,7 +374,8 @@ pub fn plan_prune(records: &[MemoryRecord], policy: &RetentionPolicy, now_ms: i6
         .filter(|record| {
             let age = now_ms.saturating_sub(record.timestamp_ms);
             !record.forgotten
-                && (u64::try_from(age).is_ok_and(|age| age > policy.min_age_ms) || is_expired(record, now_ms))
+                && (u64::try_from(age).is_ok_and(|age| age > policy.min_age_ms)
+                    || is_expired(record, now_ms))
         })
         .collect();
     candidates.sort_by(|a, b| {
@@ -403,7 +412,8 @@ pub fn cover_memories(
         .filter_map(|record| {
             Some(ToolCoverageCandidate {
                 tool_id: record.memory_id.as_str().to_string(),
-                capabilities: BoundedVec::new(record.topics.iter().take(64).cloned().collect()).ok()?,
+                capabilities: BoundedVec::new(record.topics.iter().take(64).cloned().collect())
+                    .ok()?,
                 token_cost: record.token_estimate,
             })
         })
@@ -412,7 +422,8 @@ pub fn cover_memories(
         required_capabilities: BoundedVec::new(topics.iter().take(64).cloned().collect())
             .map_err(|_| ToolSubsetRefusal::CapabilityUncoverable)?,
         context_budget_tokens: u32::try_from(budget.max_tokens).unwrap_or(u32::MAX),
-        candidates: BoundedVec::new(candidates).map_err(|_| ToolSubsetRefusal::CapabilityUncoverable)?,
+        candidates: BoundedVec::new(candidates)
+            .map_err(|_| ToolSubsetRefusal::CapabilityUncoverable)?,
     };
     let chosen = smallest_covering_subset(&body)?;
     Ok(chosen
@@ -530,10 +541,16 @@ mod tests {
             assert_eq!(handle.join().unwrap(), expected);
         }
         assert!(!expected.held.is_empty());
-        assert!(expected.promotions.iter().all(|group| group.support_count > 1));
+        assert!(expected
+            .promotions
+            .iter()
+            .all(|group| group.support_count > 1));
         let mut reversed = records.clone();
         reversed.reverse();
-        assert_eq!(plan_consolidation(&reversed, &neighbours, 0.92, 0.05), expected);
+        assert_eq!(
+            plan_consolidation(&reversed, &neighbours, 0.92, 0.05),
+            expected
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R651.2.1
@@ -604,10 +621,7 @@ mod tests {
         ];
         // e1 is referenced by the later e2; e4 is not low; e3 and e5 are
         // unreferenced and below the floor, listed in trajectory order.
-        assert_eq!(
-            prune_trajectory(&entries, 0.05),
-            vec![id("e3"), id("e5")]
-        );
+        assert_eq!(prune_trajectory(&entries, 0.05), vec![id("e3"), id("e5")]);
         // An earlier entry's reference does not protect a later one.
         let early = vec![entry("a", 0.9, &["b"]), entry("b", 0.01, &[])];
         assert_eq!(prune_trajectory(&early, 0.05), vec![id("b")]);
@@ -620,7 +634,14 @@ mod tests {
     }
 
     fn policy(max_per_step: u32) -> RetentionPolicy {
-        RetentionPolicy::new("tenant-a", "policy:1", 1_000, vec![MemoryClass::MemoryNode], max_per_step).unwrap()
+        RetentionPolicy::new(
+            "tenant-a",
+            "policy:1",
+            1_000,
+            vec![MemoryClass::MemoryNode],
+            max_per_step,
+        )
+        .unwrap()
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R617.2.2
@@ -643,9 +664,19 @@ mod tests {
         // Oldest first, ties to the lowest id, at most three, never the young or forgotten.
         let removed: Vec<&str> = plan.remove.iter().map(ResourceId::as_str).collect();
         assert_eq!(removed, ["m:oldest", "m:a", "m:b"]);
-        assert_eq!(plan.held.iter().map(ResourceId::as_str).collect::<Vec<_>>(), ["m:held"]);
+        assert_eq!(
+            plan.held.iter().map(ResourceId::as_str).collect::<Vec<_>>(),
+            ["m:held"]
+        );
         // A policy that does not prune memory nodes plans nothing.
-        let other = RetentionPolicy::new("tenant-a", "policy:2", 1_000, vec![MemoryClass::Conversation], 5).unwrap();
+        let other = RetentionPolicy::new(
+            "tenant-a",
+            "policy:2",
+            1_000,
+            vec![MemoryClass::Conversation],
+            5,
+        )
+        .unwrap();
         assert_eq!(plan_prune(&records, &other, 10_000), PrunePlan::default());
     }
 
@@ -658,7 +689,13 @@ mod tests {
         assert!(is_expired(&expiring, 9_950), "at or below as_of is expired");
         // Too young for the age rule, yet the expiry lists it as a prune candidate.
         let plan = plan_prune(&[expiring, aged("m:fresh", 9_900)], &policy(5), 10_000);
-        assert_eq!(plan.remove.iter().map(ResourceId::as_str).collect::<Vec<_>>(), ["m:expiring"]);
+        assert_eq!(
+            plan.remove
+                .iter()
+                .map(ResourceId::as_str)
+                .collect::<Vec<_>>(),
+            ["m:expiring"]
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R617.2.4
@@ -682,12 +719,21 @@ mod tests {
         // Density decides: the two cheap single-topic records beat the one wide record, and the
         // tie between them goes to the lower id.
         let covered = cover_memories(&records, &topics, &budget(100, 5)).unwrap();
-        assert_eq!(covered.iter().map(ResourceId::as_str).collect::<Vec<_>>(), ["m:graph", "m:rust"]);
+        assert_eq!(
+            covered.iter().map(ResourceId::as_str).collect::<Vec<_>>(),
+            ["m:graph", "m:rust"]
+        );
         // The item cap trims the chosen set.
         let trimmed = cover_memories(&records, &topics, &budget(100, 1)).unwrap();
-        assert_eq!(trimmed.iter().map(ResourceId::as_str).collect::<Vec<_>>(), ["m:graph"]);
+        assert_eq!(
+            trimmed.iter().map(ResourceId::as_str).collect::<Vec<_>>(),
+            ["m:graph"]
+        );
         // A budget below any covering choice is refused, and an uncoverable topic too.
-        assert_eq!(cover_memories(&records, &topics, &budget(5, 5)), Err(ToolSubsetRefusal::BudgetExceeded));
+        assert_eq!(
+            cover_memories(&records, &topics, &budget(5, 5)),
+            Err(ToolSubsetRefusal::BudgetExceeded)
+        );
         assert_eq!(
             cover_memories(&records, &["missing".to_string()], &budget(100, 5)),
             Err(ToolSubsetRefusal::CapabilityUncoverable)

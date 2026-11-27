@@ -79,4 +79,3 @@ pub struct RefusedEntry {
     pub tier: TrustTier,
     pub check: EntryCheck,
 }
-

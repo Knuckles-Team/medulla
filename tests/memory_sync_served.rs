@@ -4,11 +4,11 @@
 #![cfg(feature = "redb")]
 
 mod common;
-#[path = "common/test_support.rs"]
-mod test_support;
 #[cfg(feature = "blob")]
 #[path = "common/failable_blob.rs"]
 mod failable_blob;
+#[path = "common/test_support.rs"]
+mod test_support;
 
 use medulla_mutation_types::memory_sync::{
     DocId, MemorySnapshotRead, RequestId, Resolution, SyncAction, SyncOutcome, SyncReceipt,
@@ -302,7 +302,10 @@ async fn wire_methods_reach_durable_gateway() {
         },
     )
     .await;
-    assert!(forged_doc.error.is_some(), "the forged row was never written");
+    assert!(
+        forged_doc.error.is_some(),
+        "the forged row was never written"
+    );
     let accepted = submit("wire", None, "one");
     let outcome: SyncOutcome = json_of(send(&state, 2, accepted).await);
     assert!(matches!(outcome, SyncOutcome::Accepted { ref head } if head.revision == 1));
@@ -326,10 +329,7 @@ async fn sync_rewrite_requires_a_current_admit_receipt() {
     .await;
     let first: SyncOutcome = json_of(send(&state, 2, submit("g1", None, "one")).await);
     assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
-    for (id, digests) in [
-        (3, Vec::new()),
-        (4, vec!["sha256:absent".to_string()]),
-    ] {
+    for (id, digests) in [(3, Vec::new()), (4, vec!["sha256:absent".to_string()])] {
         let mut method = submit(&format!("g{id}"), Some(1), "two");
         if let Method::SyncMemorySnapshot { request, .. } = &mut method {
             request.admit_receipt_digests = digests;
@@ -407,7 +407,10 @@ async fn denied_and_malformed_requests_have_no_effects() {
     };
     let existing = send(&state, 7, resolve("n4", DOC)).await;
     let absent = send(&state, 8, resolve("n5", "notes/absent.md")).await;
-    assert!(error_of(&existing).contains("MEMSYNC_NOT_AVAILABLE"), "{existing:?}");
+    assert!(
+        error_of(&existing).contains("MEMSYNC_NOT_AVAILABLE"),
+        "{existing:?}"
+    );
     assert_eq!(error_of(&existing), error_of(&absent));
     assert_eq!(existing.error_detail, absent.error_detail);
     // A creation attempt that names a revision of an absent document is the same refusal.
@@ -448,7 +451,11 @@ async fn denied_and_malformed_requests_have_no_effects() {
     .await;
     assert!(denied.error.is_some(), "{denied:?}");
 
-    assert_eq!(head_bytes(&state, 12).await, before, "no refusal wrote anything");
+    assert_eq!(
+        head_bytes(&state, 12).await,
+        before,
+        "no refusal wrote anything"
+    );
     let none: Response = read(&state, 13, Some(2)).await;
     assert!(none.error.is_some(), "no second revision exists");
 }
@@ -508,16 +515,24 @@ async fn provenance_and_materialization_ack_survive_restart() {
     let first: SyncOutcome = json_of(send(&state, 2, submit("a1", None, "one")).await);
     assert!(matches!(first, SyncOutcome::Accepted { .. }));
     // Matching revision, digest and generation is in sync; a wrong digest is pending.
-    let ok = standing_of(json_of(send(&state, 3, acknowledge("a2", 1, "one", 5)).await));
+    let ok = standing_of(json_of(
+        send(&state, 3, acknowledge("a2", 1, "one", 5)).await,
+    ));
     assert_eq!(ok, SyncStanding::InSync);
-    let wrong = standing_of(json_of(send(&state, 4, acknowledge("a3", 1, "other", 6)).await));
+    let wrong = standing_of(json_of(
+        send(&state, 4, acknowledge("a3", 1, "other", 6)).await,
+    ));
     assert_eq!(wrong, SyncStanding::Pending);
     // An acknowledgment older than the latest observation is pending.
-    let stale = standing_of(json_of(send(&state, 5, acknowledge("a4", 1, "one", 2)).await));
+    let stale = standing_of(json_of(
+        send(&state, 5, acknowledge("a4", 1, "one", 2)).await,
+    ));
     assert_eq!(stale, SyncStanding::Pending);
     // An unresolved conflict is a conflict, whatever the acknowledgment says.
     let _: SyncOutcome = json_of(send(&state, 6, submit("a5", None, "rival")).await);
-    let conflict = standing_of(json_of(send(&state, 7, acknowledge("a6", 1, "one", 9)).await));
+    let conflict = standing_of(json_of(
+        send(&state, 7, acknowledge("a6", 1, "one", 9)).await,
+    ));
     assert_eq!(conflict, SyncStanding::Conflict);
     let head: MemorySnapshotRead = json_of(read(&state, 8, None).await);
     assert_eq!(head.head.provenance.request_id.as_str(), "a1");
@@ -528,8 +543,14 @@ async fn provenance_and_materialization_ack_survive_restart() {
     let after: MemorySnapshotRead = json_of(read(&state, 10, None).await);
     assert_eq!(after.head, head.head, "provenance survives the restart");
     // The retained candidate is durable, so the standing is still a conflict.
-    let stale = standing_of(json_of(send(&state, 11, acknowledge("a7", 1, "one", 3)).await));
-    assert_eq!(stale, SyncStanding::Conflict, "the conflict survives the restart");
+    let stale = standing_of(json_of(
+        send(&state, 11, acknowledge("a7", 1, "one", 3)).await,
+    ));
+    assert_eq!(
+        stale,
+        SyncStanding::Conflict,
+        "the conflict survives the restart"
+    );
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R085.7
@@ -601,7 +622,10 @@ async fn conflicts_survive_gc_and_retention_refusal() {
         },
     )
     .await;
-    assert!(missing.error.is_some(), "the refused write left no document");
+    assert!(
+        missing.error.is_some(),
+        "the refused write left no document"
+    );
     let after: MemorySnapshotRead = json_of(read(&state, 9, None).await);
     assert_eq!(after.head.revision, 3);
 
@@ -643,7 +667,10 @@ async fn a_storage_failure_refuses_before_commit_and_a_holder_failure_warns() {
         error_of(&refused).contains("MEMSYNC_STORAGE_UNAVAILABLE"),
         "{refused:?}"
     );
-    assert!(read(&state, 3, None).await.error.is_some(), "nothing committed");
+    assert!(
+        read(&state, 3, None).await.error.is_some(),
+        "nothing committed"
+    );
 
     // The content reaches the CAS but the holder cannot be registered: the write
     // is committed, so the answer is a success carrying the receipt warning.
@@ -699,10 +726,16 @@ async fn complete_memory_sync_journey() {
     let (alpha, beta) = ("client-alpha", "client-beta");
 
     // Read and list an empty store.
-    let absent = send_as(&state, alpha, 2, GRAPH, Method::ReadMemorySnapshot {
-        doc_id: DOC.to_string(),
-        revision: None,
-    })
+    let absent = send_as(
+        &state,
+        alpha,
+        2,
+        GRAPH,
+        Method::ReadMemorySnapshot {
+            doc_id: DOC.to_string(),
+            revision: None,
+        },
+    )
     .await;
     assert!(absent.error.is_some(), "nothing to read yet");
     let empty: medulla_mutation_types::memory_sync::MemorySnapshotList =
@@ -715,7 +748,10 @@ async fn complete_memory_sync_journey() {
     assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
     let replay: SyncOutcome =
         json_of(send_as(&state, alpha, 5, GRAPH, submit("j1", None, "alpha text")).await);
-    assert_eq!(replay, first, "a replayed request id answers the same outcome");
+    assert_eq!(
+        replay, first,
+        "a replayed request id answers the same outcome"
+    );
     let rival: SyncOutcome =
         json_of(send_as(&state, beta, 6, GRAPH, submit("j2", None, "beta text")).await);
     let SyncOutcome::ConflictRetained {
@@ -727,7 +763,14 @@ async fn complete_memory_sync_journey() {
 
     // The conflict reads as such, and one resolution settles it once.
     let conflict = standing_of(json_of(
-        send_as(&state, beta, 7, GRAPH, acknowledge("j3", 1, "alpha text", 1)).await,
+        send_as(
+            &state,
+            beta,
+            7,
+            GRAPH,
+            acknowledge("j3", 1, "alpha text", 1),
+        )
+        .await,
     ));
     assert_eq!(conflict, SyncStanding::Conflict);
     let resolve = admitted(
@@ -748,13 +791,23 @@ async fn complete_memory_sync_journey() {
     let resolved: SyncOutcome = json_of(send_as(&state, alpha, 8, GRAPH, resolve.clone()).await);
     assert!(matches!(resolved, SyncOutcome::Resolved { ref head } if head.revision == 2));
     assert!(
-        send_as(&state, beta, 9, GRAPH, resolve).await.error.is_some(),
+        send_as(&state, beta, 9, GRAPH, resolve)
+            .await
+            .error
+            .is_some(),
         "a resolved candidate resolves once"
     );
 
     // Acknowledgment: in sync once revision, digest and generation match.
     let synced = standing_of(json_of(
-        send_as(&state, beta, 10, GRAPH, acknowledge("j5", 2, "beta text", 2)).await,
+        send_as(
+            &state,
+            beta,
+            10,
+            GRAPH,
+            acknowledge("j5", 2, "beta text", 2),
+        )
+        .await,
     ));
     assert_eq!(synced, SyncStanding::InSync);
 
@@ -776,7 +829,14 @@ async fn complete_memory_sync_journey() {
     assert!(cross.error.is_some(), "{cross:?}");
     let wrong_graph = send_as(&state, alpha, 12, "other-graph", submit("j7", Some(2), "x")).await;
     assert!(wrong_graph.error.is_some(), "{wrong_graph:?}");
-    let stale = send_as(&state, alpha, 13, GRAPH, list(Some("stale-cursor".to_string()))).await;
+    let stale = send_as(
+        &state,
+        alpha,
+        13,
+        GRAPH,
+        list(Some("stale-cursor".to_string())),
+    )
+    .await;
     assert!(error_of(&stale).contains("MEMSYNC_CURSOR_INVALID"));
     let mut reader = common::context_for(alpha);
     reader.scopes = vec!["memory:read".to_string()];
@@ -797,29 +857,51 @@ async fn complete_memory_sync_journey() {
     let state = restart(&dir, backend, state).await;
     for (id, agent) in [(20, alpha), (21, beta)] {
         let head: MemorySnapshotRead = json_of(
-            send_as(&state, agent, id, GRAPH, Method::ReadMemorySnapshot {
-                doc_id: DOC.to_string(),
-                revision: None,
-            })
+            send_as(
+                &state,
+                agent,
+                id,
+                GRAPH,
+                Method::ReadMemorySnapshot {
+                    doc_id: DOC.to_string(),
+                    revision: None,
+                },
+            )
             .await,
         );
-        assert_eq!((head.head.revision, head.content.as_str()), (2, "beta text"));
+        assert_eq!(
+            (head.head.revision, head.content.as_str()),
+            (2, "beta text")
+        );
         let old: MemorySnapshotRead = json_of(
-            send_as(&state, agent, id + 10, GRAPH, Method::ReadMemorySnapshot {
-                doc_id: DOC.to_string(),
-                revision: Some(1),
-            })
+            send_as(
+                &state,
+                agent,
+                id + 10,
+                GRAPH,
+                Method::ReadMemorySnapshot {
+                    doc_id: DOC.to_string(),
+                    revision: Some(1),
+                },
+            )
             .await,
         );
         assert_eq!(old.content, "alpha text");
     }
-    let listing: medulla_mutation_types::memory_sync::MemorySnapshotList =
-        json_of(send_as(&state, beta, 40, GRAPH, Method::ListMemorySnapshots {
-            prefix: "notes/".to_string(),
-            limit: Some(10),
-            cursor: None,
-        })
-        .await);
+    let listing: medulla_mutation_types::memory_sync::MemorySnapshotList = json_of(
+        send_as(
+            &state,
+            beta,
+            40,
+            GRAPH,
+            Method::ListMemorySnapshots {
+                prefix: "notes/".to_string(),
+                limit: Some(10),
+                cursor: None,
+            },
+        )
+        .await,
+    );
     assert_eq!(listing.heads.len(), 1);
     assert_eq!(listing.heads[0].revision, 2);
 }
@@ -910,7 +992,10 @@ async fn search_state_wire_reaches_the_gateway() {
         ),
     )
     .await;
-    assert!(theirs.error.is_some(), "a foreign tenant reads nothing: {theirs:?}");
+    assert!(
+        theirs.error.is_some(),
+        "a foreign tenant reads nothing: {theirs:?}"
+    );
     let overwrite = test_support::dispatch(
         &state,
         common::signed_request_with_context(
@@ -948,10 +1033,16 @@ async fn incomplete_state_refuses() {
         value.as_object_mut().unwrap().remove(field);
         value.to_string()
     };
-    let mut cases: Vec<(String, &str)> = ["search_run_id", "transcript", "evidence", "constraints", "open_claims"]
-        .iter()
-        .map(|field| (without(field), "SEARCH_STATE_INCOMPLETE"))
-        .collect();
+    let mut cases: Vec<(String, &str)> = [
+        "search_run_id",
+        "transcript",
+        "evidence",
+        "constraints",
+        "open_claims",
+    ]
+    .iter()
+    .map(|field| (without(field), "SEARCH_STATE_INCOMPLETE"))
+    .collect();
     cases.push(("[1,2]".to_string(), "SEARCH_STATE_MALFORMED"));
     cases.push((
         search_state_body("", 2, "m").to_string(),
@@ -986,7 +1077,11 @@ async fn incomplete_state_refuses() {
             error_of(&refused).contains(code),
             "{index}: {code}: {refused:?}"
         );
-        assert_eq!(head_bytes(&state, 40).await, before, "{code} leaves the head");
+        assert_eq!(
+            head_bytes(&state, 40).await,
+            before,
+            "{code} leaves the head"
+        );
     }
 
     // A stale expected revision keeps the head and answers the R085 conflict.
@@ -1035,7 +1130,9 @@ async fn state_evidence_lists_four_digests() {
     let (saved, body) = save_state(&state, 2, "run-3", 1).await;
     assert!(matches!(saved, SyncOutcome::Accepted { .. }));
     let read: MemorySnapshotRead = json_of(read(&state, 3, None).await);
-    let evidence = read.search_state.expect("a search state carries its evidence");
+    let evidence = read
+        .search_state
+        .expect("a search state carries its evidence");
     let value: serde_json::Value = serde_json::from_str(&body).unwrap();
     let digest = |field: &str| {
         let bytes = serde_json::to_vec(&value[field]).unwrap();
@@ -1108,7 +1205,10 @@ async fn search_state_survives_context_eviction() {
     assert_eq!(envelope.constraints.len(), 1);
     assert_eq!(envelope.open_claims.len(), 1);
     let evidence = read.search_state.expect("evidence on the read");
-    assert_eq!(evidence.transcript_digest, envelope.transcript_digest().to_hex());
+    assert_eq!(
+        evidence.transcript_digest,
+        envelope.transcript_digest().to_hex()
+    );
     assert_eq!(evidence.state_revision, 2);
 
     // A stale save against revision 1 answers the conflict outcome.
@@ -1127,7 +1227,12 @@ async fn search_state_survives_context_eviction() {
 
 const NOTE_TEXT: &str = "deploy runbook";
 
-fn session_note(id: &str, run: &str, output: u8, source_revision: u64) -> medulla_work_types::memory::SessionNoteBody {
+fn session_note(
+    id: &str,
+    run: &str,
+    output: u8,
+    source_revision: u64,
+) -> medulla_work_types::memory::SessionNoteBody {
     medulla_work_types::memory::SessionNoteBody {
         schema_version: 1,
         note_id: id.to_string(),
@@ -1243,24 +1348,36 @@ async fn session_notes_recalled_with_flags() {
     }
     // A failed run captures nothing.
     let refused = send(&state, 5, capture(session_note("note-d", "run-bad", 9, 5))).await;
-    assert!(error_of(&refused).contains("NOTE_RUN_NOT_SUCCESSFUL"), "{refused:?}");
+    assert!(
+        error_of(&refused).contains("NOTE_RUN_NOT_SUCCESSFUL"),
+        "{refused:?}"
+    );
 
     let recalled: medulla_work_types::memory::MemoryRecallResult =
         json_of(send(&state, 6, recall_notes(None, Some(5))).await);
     let ids: Vec<&str> = recalled.notes.iter().map(|n| n.note_id.as_str()).collect();
-    assert!(!ids.contains(&"note-d"), "the refused note was never stored");
+    assert!(
+        !ids.contains(&"note-d"),
+        "the refused note was never stored"
+    );
     let view = |id: &str| recalled.notes.iter().find(|n| n.note_id == id).expect(id);
     // The two notes of input one with different outputs conflict and are not applied.
     assert!(view("note-a").conflict && view("note-b").conflict);
     assert!(!view("note-a").applied && !view("note-b").applied);
     // The note recorded against revision 4 is stale at revision 5 and stays visible.
     assert!(view("note-c").stale && !view("note-a").stale);
-    assert!(recalled.hits.iter().any(|hit| hit.record.memory_id.as_str() == "note-c"));
+    assert!(recalled
+        .hits
+        .iter()
+        .any(|hit| hit.record.memory_id.as_str() == "note-c"));
     assert_eq!(view("note-a").relevance_q4, 10_000);
 
     // A relevance floor outside [0, 1] refuses by name.
     let out_of_range = send(&state, 7, recall_notes(Some(1.5), None)).await;
-    assert!(error_of(&out_of_range).contains("NOTE_RELEVANCE_OUT_OF_RANGE"), "{out_of_range:?}");
+    assert!(
+        error_of(&out_of_range).contains("NOTE_RELEVANCE_OUT_OF_RANGE"),
+        "{out_of_range:?}"
+    );
 
     // Another tenant recalls none of these notes.
     let mut foreign = common::context_for(common::TEST_AGENT);
@@ -1315,8 +1432,14 @@ async fn session_note_age_boundaries_follow_the_engine_clock() {
     let almost = recall_after(5, 14 * DAY_MS - 3_600_000, false).await;
     assert!(almost.notes[0].stale && !almost.notes[0].archived);
     let archived = recall_after(6, 14 * DAY_MS + 3_600_000, false).await;
-    assert!(archived.notes.is_empty(), "an archived note stays out of recall");
-    assert!(!archived.hits.iter().any(|hit| hit.record.memory_id.as_str() == "note-aged"));
+    assert!(
+        archived.notes.is_empty(),
+        "an archived note stays out of recall"
+    );
+    assert!(!archived
+        .hits
+        .iter()
+        .any(|hit| hit.record.memory_id.as_str() == "note-aged"));
 
     // The request that asks for archived notes sees it flagged and not applied; nothing is deleted.
     let kept = recall_after(7, 14 * DAY_MS + 3_600_000, true).await;
@@ -1345,8 +1468,14 @@ async fn session_note_evidence_lists_flags() {
     assert!(has("note:relevance_q4=10000".to_string()));
     assert!(has("note:stale=false".to_string()));
     assert!(has("note:conflict=false".to_string()));
-    assert!(recalled.note_premises.iter().any(|p| p.starts_with("note:digest=")));
-    assert!(recalled.note_premises.iter().any(|p| p.starts_with("knob:memory.note_min_relevance=")));
+    assert!(recalled
+        .note_premises
+        .iter()
+        .any(|p| p.starts_with("note:digest=")));
+    assert!(recalled
+        .note_premises
+        .iter()
+        .any(|p| p.starts_with("knob:memory.note_min_relevance=")));
 
     // A stale and a conflicting note are listed with their flags and no applied premises.
     for (id, note) in [
@@ -1359,9 +1488,20 @@ async fn session_note_evidence_lists_flags() {
     }
     let again: medulla_work_types::memory::MemoryRecallResult =
         json_of(send(&state, 7, recall_notes(None, Some(5))).await);
-    let flags = |id: &str| again.notes.iter().find(|n| n.note_id == id).unwrap().clone();
+    let flags = |id: &str| {
+        again
+            .notes
+            .iter()
+            .find(|n| n.note_id == id)
+            .unwrap()
+            .clone()
+    };
     assert!(flags("note-old").stale);
     assert!(flags("note-rival-1").conflict && flags("note-rival-2").conflict);
-    assert!(!again.note_premises.contains(&"note:id=note-rival-1".to_string()));
-    assert!(again.note_premises.contains(&"note:id=note-lone".to_string()));
+    assert!(!again
+        .note_premises
+        .contains(&"note:id=note-rival-1".to_string()));
+    assert!(again
+        .note_premises
+        .contains(&"note:id=note-lone".to_string()));
 }

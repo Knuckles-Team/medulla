@@ -271,8 +271,12 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R614.2.6
     #[test]
     fn a_refit_writes_the_topic_as_one_whole_document_replace() {
-        let first = lower_fit(&fitted(7000), "billing", "sched-1").unwrap().unwrap();
-        let second = lower_fit(&fitted(8000), "billing", "sched-2").unwrap().unwrap();
+        let first = lower_fit(&fitted(7000), "billing", "sched-1")
+            .unwrap()
+            .unwrap();
+        let second = lower_fit(&fitted(8000), "billing", "sched-2")
+            .unwrap()
+            .unwrap();
         let document = |set: &IndexWriteSet| match &set.methods()[0] {
             Method::AddNode {
                 node_id,
@@ -290,14 +294,9 @@ mod tests {
         assert_eq!(first_doc["floor_bp"], 7000);
         assert_eq!(second_doc["floor_bp"], 8000);
         // The document is complete: the same property keys under both fits.
-        let keys = |doc: &Value| {
-            doc.as_object().unwrap().keys().cloned().collect::<Vec<_>>()
-        };
+        let keys = |doc: &Value| doc.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
         assert_eq!(keys(&first_doc), keys(&second_doc));
         // The centroid follows the node write as its embedding.
-        assert!(matches!(
-            second.methods()[1],
-            Method::AddEmbedding { .. }
-        ));
+        assert!(matches!(second.methods()[1], Method::AddEmbedding { .. }));
     }
 }

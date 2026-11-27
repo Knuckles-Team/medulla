@@ -1527,8 +1527,12 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
     // must still be present — no lost committed entry.
     let backend2: Arc<dyn PersistenceBackend> =
         Arc::new(RedbBackend::open(dir.clone(), 4096).expect("reopen redb"));
-    let mut store2 =
-        MedullaStore::open(medulla_direct_state::direct_state::DEFAULT_GROUP, backend2.clone(), ctx).unwrap();
+    let mut store2 = MedullaStore::open(
+        medulla_direct_state::direct_state::DEFAULT_GROUP,
+        backend2.clone(),
+        ctx,
+    )
+    .unwrap();
     let entries = store2
         .try_get_log_entries(1..=8)
         .await
@@ -1811,7 +1815,10 @@ fn group_router_distributes_tenants_across_ring() {
     let r = GroupRouter::new();
     // Default (no ring): every graph routes to DEFAULT_GROUP — scaffold behavior.
     for g in ["a", "b", "__commons__", "tenant-42"] {
-        assert_eq!(r.group_of(g), medulla_direct_state::direct_state::DEFAULT_GROUP);
+        assert_eq!(
+            r.group_of(g),
+            medulla_direct_state::direct_state::DEFAULT_GROUP
+        );
     }
 
     // Configure a 4-group tenant-range ring (sorted + de-duplicated).

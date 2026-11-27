@@ -32,7 +32,10 @@ pub(crate) fn allows(ctx: &PlanCtx, leaf: PlanScopeLeaf, id: &str) -> bool {
     let Some(props) = ctx.view.node_row_object(id) else {
         return true;
     };
-    if let Some(tenant) = props.get(TENANT_PROPERTY).and_then(serde_json::Value::as_str) {
+    if let Some(tenant) = props
+        .get(TENANT_PROPERTY)
+        .and_then(serde_json::Value::as_str)
+    {
         if tenant != scope.tenant {
             return false;
         }
@@ -97,7 +100,9 @@ mod tests {
         core.add_node("open".into(), blob(serde_json::json!({ "type": "Doc" })));
         core.add_node(
             "mine".into(),
-            blob(serde_json::json!({ "type": "Doc", "tenant": "tenant-a", "clearance": "internal" })),
+            blob(
+                serde_json::json!({ "type": "Doc", "tenant": "tenant-a", "clearance": "internal" }),
+            ),
         );
         core.add_node(
             "secret".into(),

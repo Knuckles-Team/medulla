@@ -321,22 +321,22 @@ async fn missing_stale_and_mismatched_approval_refuse_without_write() {
             Some(medulla_types::contract::Nonce::from_bytes([nonce; 32])),
         )
     };
-    let commit_request = |key: &str, nonce: u8, approval: Option<RecommendationApproval>| {
-        DecisionCommitRequest {
+    let commit_request =
+        |key: &str, nonce: u8, approval: Option<RecommendationApproval>| DecisionCommitRequest {
             context: commit_context(&store, TENANT, key, nonce),
             expected_catalog_digest: assembled.inputs.catalog_digest.clone(),
             record: assembled.clone(),
             topology: None,
             retry_of: None,
             approval,
-        }
-    };
+        };
     let try_commit = |key: &'static str, nonce: u8, approval: Option<RecommendationApproval>| {
-        let (state, request, verified) =
-            (state.clone(), commit_request(key, nonce, approval), verified(key, nonce));
-        async move {
-            super::super::commit::handle_decision_commit(&state, 1, &verified, request).await
-        }
+        let (state, request, verified) = (
+            state.clone(),
+            commit_request(key, nonce, approval),
+            verified(key, nonce),
+        );
+        async move { super::super::commit::handle_decision_commit(&state, 1, &verified, request).await }
     };
     for (key, nonce, receipt, code) in [
         ("missing", 1_u8, None, "APPROVAL_MISSING"),

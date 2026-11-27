@@ -159,7 +159,8 @@ pub async fn archive_store_pass(
             let encoded = rmp_serde::to_vec_named(&segment).map_err(|error| error.to_string())?;
             let first_seq = slice[0].0;
             let last_seq = slice[slice.len() - 1].0;
-            let last_committed_at_ms = decode_batch_record(&slice[slice.len() - 1].1)?.committed_at_ms;
+            let last_committed_at_ms =
+                decode_batch_record(&slice[slice.len() - 1].1)?.committed_at_ms;
             match archive
                 .put_segment(
                     tenant,

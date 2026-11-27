@@ -398,10 +398,20 @@ const KIND_NAMES: [&str; 5] = [
 
 fn unsupported_kind(value: &serde_json::Value) -> Option<String> {
     let mut kinds: Vec<&serde_json::Value> = Vec::new();
-    for term in value.get("terms").and_then(|v| v.as_array()).into_iter().flatten() {
+    for term in value
+        .get("terms")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+    {
         kinds.extend(term.get("kind"));
     }
-    for mapping in value.get("mappings").and_then(|v| v.as_array()).into_iter().flatten() {
+    for mapping in value
+        .get("mappings")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+    {
         kinds.extend(mapping.get("external_kind"));
         kinds.extend(mapping.get("platform_kind"));
     }
@@ -423,16 +433,26 @@ pub fn admit_external_schema(
 ) -> Result<(ExternalSchemaBody, ExternalOntologyCoverage), (ExternalSchemaRefusal, String)> {
     use ExternalSchemaRefusal as R;
     if let Some(kind) = unsupported_kind(value) {
-        return Err((R::KindUnsupported, format!("kind {kind:?} is not supported")));
+        return Err((
+            R::KindUnsupported,
+            format!("kind {kind:?} is not supported"),
+        ));
     }
-    let body: ExternalSchemaBody = serde_json::from_value(value.clone())
-        .map_err(|error| (R::Malformed, format!("external schema body is invalid: {error}")))?;
+    let body: ExternalSchemaBody = serde_json::from_value(value.clone()).map_err(|error| {
+        (
+            R::Malformed,
+            format!("external schema body is invalid: {error}"),
+        )
+    })?;
     version(body.schema_version).map_err(|error| (R::Malformed, error.to_string()))?;
     let platform = medulla_types::ontology_base!();
     let mut seen = std::collections::BTreeSet::new();
     for term in &body.terms {
         if !seen.insert(term.external_iri.as_str()) {
-            return Err((R::TermDuplicate, format!("{} is listed twice", term.external_iri)));
+            return Err((
+                R::TermDuplicate,
+                format!("{} is listed twice", term.external_iri),
+            ));
         }
         if term.external_iri.starts_with(platform) {
             return Err((
@@ -442,23 +462,34 @@ pub fn admit_external_schema(
         }
     }
     for mapping in &body.mappings {
-        mapping.validate().map_err(|error| (R::Malformed, error.to_string()))?;
+        mapping
+            .validate()
+            .map_err(|error| (R::Malformed, error.to_string()))?;
         if mapping.source_schema_digest != body.source_schema_digest
             || mapping.source_revision != body.source_revision
             || mapping.mapping_revision != body.mapping_revision
         {
             return Err((
                 R::MappingStale,
-                format!("the mapping of {} is for another schema or revision", mapping.external_iri),
+                format!(
+                    "the mapping of {} is for another schema or revision",
+                    mapping.external_iri
+                ),
             ));
         }
-        let term = body.terms.iter().find(|term| term.external_iri == mapping.external_iri);
+        let term = body
+            .terms
+            .iter()
+            .find(|term| term.external_iri == mapping.external_iri);
         // A mapping whose external IRI names no term of the body is outside the
         // pinned source set, as a crosswalk source outside it is.
         if term.is_none() {
             return Err((
                 R::SourceOutOfScope,
-                format!("the mapping names {}, which is no term of the body", mapping.external_iri),
+                format!(
+                    "the mapping names {}, which is no term of the body",
+                    mapping.external_iri
+                ),
             ));
         }
         let mismatched = term.is_some_and(|term| term.kind != mapping.external_kind)
@@ -466,7 +497,10 @@ pub fn admit_external_schema(
         if mismatched {
             return Err((
                 R::KindMismatch,
-                format!("the mapping of {} does not match its kinds", mapping.external_iri),
+                format!(
+                    "the mapping of {} does not match its kinds",
+                    mapping.external_iri
+                ),
             ));
         }
     }
@@ -643,7 +677,11 @@ mod tests {
 
         // Sorted by IRI; the compatible mapping is adopted, the kind-incompatible and the
         // undeclared terms are reported and never become platform terms.
-        let iris: Vec<&str> = first.terms.iter().map(|t| t.external_iri.as_str()).collect();
+        let iris: Vec<&str> = first
+            .terms
+            .iter()
+            .map(|t| t.external_iri.as_str())
+            .collect();
         assert_eq!(
             iris,
             vec![
@@ -652,9 +690,18 @@ mod tests {
                 format!("{EX}status")
             ]
         );
-        assert!(matches!(first.terms[0].result, ExternalTermResult::Mapped { .. }));
-        assert!(matches!(first.terms[1].result, ExternalTermResult::Unmapped { .. }));
-        assert!(matches!(first.terms[2].result, ExternalTermResult::Unmapped { .. }));
+        assert!(matches!(
+            first.terms[0].result,
+            ExternalTermResult::Mapped { .. }
+        ));
+        assert!(matches!(
+            first.terms[1].result,
+            ExternalTermResult::Unmapped { .. }
+        ));
+        assert!(matches!(
+            first.terms[2].result,
+            ExternalTermResult::Unmapped { .. }
+        ));
 
         // A term listed twice refuses.
         let mut duplicated = terms.clone();
@@ -703,8 +750,14 @@ mod tests {
             admit_external_schema(value, "pack-3", "schema-9", "kg-2026")
         };
         let (_, coverage) = admit(&good).expect("admitted");
-        assert!(matches!(coverage.terms[0].result, ExternalTermResult::Mapped { .. }));
-        assert!(matches!(coverage.terms[1].result, ExternalTermResult::Unmapped { .. }));
+        assert!(matches!(
+            coverage.terms[0].result,
+            ExternalTermResult::Mapped { .. }
+        ));
+        assert!(matches!(
+            coverage.terms[1].result,
+            ExternalTermResult::Unmapped { .. }
+        ));
 
         let refused = |edit: &dyn Fn(&mut serde_json::Value)| {
             let mut value = good.clone();
@@ -712,13 +765,22 @@ mod tests {
             admit(&value).unwrap_err().0
         };
         use ExternalSchemaRefusal as R;
-        assert_eq!(refused(&|v| v["terms"][0]["kind"] = json!("blank_node")), R::KindUnsupported);
+        assert_eq!(
+            refused(&|v| v["terms"][0]["kind"] = json!("blank_node")),
+            R::KindUnsupported
+        );
         assert_eq!(
             refused(&|v| v["terms"][1]["external_iri"] = json!(format!("{EX}Patient"))),
             R::TermDuplicate
         );
-        assert_eq!(refused(&|v| v["terms"][0]["kind"] = json!("object_property")), R::KindMismatch);
-        assert_eq!(refused(&|v| v["mappings"][0]["mapping_revision"] = json!("map-0")), R::MappingStale);
+        assert_eq!(
+            refused(&|v| v["terms"][0]["kind"] = json!("object_property")),
+            R::KindMismatch
+        );
+        assert_eq!(
+            refused(&|v| v["mappings"][0]["mapping_revision"] = json!("map-0")),
+            R::MappingStale
+        );
         assert_eq!(
             refused(&|v| v["terms"][1]["external_iri"] =
                 json!("https://knuckles-team.github.io/ontology/core#Thing")),

@@ -457,14 +457,28 @@ mod tests {
                 "STATECHART_NO_TRANSITION: instance '{instance_id}' in state 'locked' has no transition on event 'push'"
             )
         );
-        let stored = op_get_state(&store, auth.tenant_scope(), auth.actor_scope(), &instance_id)
-            .unwrap();
+        let stored = op_get_state(
+            &store,
+            auth.tenant_scope(),
+            auth.actor_scope(),
+            &instance_id,
+        )
+        .unwrap();
         assert_eq!(stored["version"], serde_json::json!(0));
-        assert_eq!(stored["configuration"]["active"], serde_json::json!(["locked"]));
+        assert_eq!(
+            stored["configuration"]["active"],
+            serde_json::json!(["locked"])
+        );
 
         // An unregistered definition is refused with its own code.
-        let error = op_instantiate(&store, 2, &auth, "eg:statechart:absent", serde_json::Value::Null)
-            .unwrap_err();
+        let error = op_instantiate(
+            &store,
+            2,
+            &auth,
+            "eg:statechart:absent",
+            serde_json::Value::Null,
+        )
+        .unwrap_err();
         assert_eq!(
             error,
             "INSTANCE_DEFINITION_UNREGISTERED: statechart definition 'eg:statechart:absent' is not registered"

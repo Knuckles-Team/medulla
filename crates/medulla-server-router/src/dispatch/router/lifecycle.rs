@@ -146,7 +146,9 @@ pub async fn mark_graph_ready(
     use medulla_persistence::AsRedb;
     let backend = timed_read(state).await.persistence.clone();
     let Some(backend) = backend else {
-        return Err("ENGINE_UNAVAILABLE: ending an import requires durable persistence".to_string());
+        return Err(
+            "ENGINE_UNAVAILABLE: ending an import requires durable persistence".to_string(),
+        );
     };
     if let Some(redb) = backend.as_redb() {
         redb.set_graph_importing(&medulla_kernel::persist::sanitize(graph_name), None)
@@ -314,7 +316,10 @@ async fn create_declared_graph(
     if let Some(import_id) = importing.as_deref() {
         use medulla_persistence::AsRedb;
         if let Some(redb) = backend.as_redb() {
-            if let Err(error) = redb.set_graph_importing(&graph_fname, Some(import_id)).await {
+            if let Err(error) = redb
+                .set_graph_importing(&graph_fname, Some(import_id))
+                .await
+            {
                 return Response::err(
                     req_id,
                     medulla_protocol_types::error_registry::classify_refusal(

@@ -38,7 +38,10 @@ fn program_optimize_job_end_to_end() {
             let state = program_job_support::redb_state(directory.path());
             let journey = evaluated_journey(&state).await;
             assert_eq!(journey.revision["type"], "ProgramRevision");
-            assert_eq!(journey.revision["revision_ref"], journey.revision_ref.as_str());
+            assert_eq!(
+                journey.revision["revision_ref"],
+                journey.revision_ref.as_str()
+            );
 
             let foreign = foreign_status(&state, 3_000, &journey.job_id).await;
             assert!(
@@ -81,8 +84,8 @@ where
 #[test]
 fn program_job_refusals() {
     with_state(|state| async move {
-        let mut unknown = serde_json::to_value(program_request("unknown", Vec::new()))
-            .expect("request as json");
+        let mut unknown =
+            serde_json::to_value(program_request("unknown", Vec::new())).expect("request as json");
         unknown["optimizer"] = "gradient_descent".into();
         let text = refused_submit_bytes(
             &state,

@@ -21,14 +21,24 @@ fn verdict(gate: &str, outcome: VerificationVerdict, input: &str) -> GateVerdict
 #[test]
 fn verdict_writes_one_judges_edge_and_refuses_unknown_changeset() {
     let tree = tree_listing_digest([("src/a.rs", "sha256:x", 0o100644)]);
-    let write = record(verdict("fmt", VerificationVerdict::Pass, &tree), true, Some(&tree), None)
-        .expect("a verdict of a known changeset records");
+    let write = record(
+        verdict("fmt", VerificationVerdict::Pass, &tree),
+        true,
+        Some(&tree),
+        None,
+    )
+    .expect("a verdict of a known changeset records");
     let (from, to) = write.judges();
     assert_eq!(from, format!("gate_verdict:{}:fmt", "a".repeat(64)));
     assert_eq!(to, format!("commit:{}", "a".repeat(64)));
 
-    let refusal = record(verdict("fmt", VerificationVerdict::Pass, &tree), false, Some(&tree), None)
-        .expect_err("no changeset node");
+    let refusal = record(
+        verdict("fmt", VerificationVerdict::Pass, &tree),
+        false,
+        Some(&tree),
+        None,
+    )
+    .expect_err("no changeset node");
     assert_eq!(refusal.code(), "LIFECYCLE_ENDPOINT_UNKNOWN");
 }
 
@@ -71,6 +81,12 @@ fn a_failed_or_missing_required_verdict_blocks_the_landing() {
         ("fmt".to_string(), VerificationVerdict::Pass),
         ("test".to_string(), VerificationVerdict::Fail),
     ];
-    assert_eq!(landing_gate_check(&policy, &failed).unwrap_err().code(), "LANDING_GATE_BLOCKED");
-    assert_eq!(landing_gate_check(&policy, &both[..1]).unwrap_err().code(), "LANDING_GATE_BLOCKED");
+    assert_eq!(
+        landing_gate_check(&policy, &failed).unwrap_err().code(),
+        "LANDING_GATE_BLOCKED"
+    );
+    assert_eq!(
+        landing_gate_check(&policy, &both[..1]).unwrap_err().code(),
+        "LANDING_GATE_BLOCKED"
+    );
 }

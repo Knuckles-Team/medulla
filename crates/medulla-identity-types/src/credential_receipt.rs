@@ -84,10 +84,9 @@ impl CredentialReceipt {
         ] {
             text_field(name, value)?;
         }
-        let hex = self
-            .binding_digest
-            .strip_prefix("sha256:")
-            .ok_or_else(|| "INVALID_ARGUMENT: binding_digest is not a sha256: digest".to_string())?;
+        let hex = self.binding_digest.strip_prefix("sha256:").ok_or_else(|| {
+            "INVALID_ARGUMENT: binding_digest is not a sha256: digest".to_string()
+        })?;
         Digest256::parse(hex)
             .map(|_| ())
             .map_err(|_| "INVALID_ARGUMENT: binding_digest is not a sha256: digest".to_string())

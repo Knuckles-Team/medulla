@@ -280,7 +280,6 @@ impl ObservationStore {
     }
 }
 
-
 impl ObservationStore {
     /// The `limit` most frequently observed shapes of `tenant` with their observation
     /// counts, most frequent first, ties by digest (MEDULLA-FEDERATED-QUERY-R091.2).
@@ -374,7 +373,9 @@ impl PlanEvolutionRefusal {
     pub fn code(self) -> medulla_types::contract::ServerErrorCode {
         match self {
             Self::ResultMismatch => medulla_types::contract::ServerErrorCode::PlanResultMismatch,
-            Self::AuthorityExpired => medulla_types::contract::ServerErrorCode::PlanAuthorityExpired,
+            Self::AuthorityExpired => {
+                medulla_types::contract::ServerErrorCode::PlanAuthorityExpired
+            }
         }
     }
 }
@@ -393,7 +394,8 @@ fn p50(mut values: Vec<u64>) -> u64 {
 
 fn improves(baseline: u64, candidate: u64, min_gain_percent: u64) -> bool {
     baseline > 0
-        && u128::from(candidate) * 100 <= u128::from(baseline) * u128::from(100 - min_gain_percent.min(100))
+        && u128::from(candidate) * 100
+            <= u128::from(baseline) * u128::from(100 - min_gain_percent.min(100))
 }
 
 fn sorted(results: &[String]) -> Vec<&str> {
@@ -422,8 +424,11 @@ pub fn keep_on_measured_gain(
     }
     let latency = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.latency_us).collect());
     let bytes = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.bytes_fetched).collect());
-    if improves(latency(baseline), latency(candidate), policy.min_gain_percent)
-        || improves(bytes(baseline), bytes(candidate), policy.min_gain_percent)
+    if improves(
+        latency(baseline),
+        latency(candidate),
+        policy.min_gain_percent,
+    ) || improves(bytes(baseline), bytes(candidate), policy.min_gain_percent)
     {
         Decision::Keep
     } else {
@@ -465,9 +470,13 @@ pub fn rewrite(
     tenant: &str,
     policy: &EvolutionPolicy,
 ) -> Vec<PlanCandidate> {
-    top_candidates(store, tenant, policy, CandidateKind::Rewrite, |shape, baseline| {
-        derived_digest(&["rewrite", baseline, &shape.query_template])
-    })
+    top_candidates(
+        store,
+        tenant,
+        policy,
+        CandidateKind::Rewrite,
+        |shape, baseline| derived_digest(&["rewrite", baseline, &shape.query_template]),
+    )
 }
 
 /// The `pushdown_choice` generator: for each top shape, the observed plan with the fewest
@@ -706,7 +715,11 @@ pub fn observe(tenant: &str, trace: &FragmentTrace, replay: ReplayInput) {
     if trace.keys_pushed > 0 {
         pushdowns.push("keys".to_string());
     }
-    let plan_digest = derived_digest(&["plan", &format!("{:?}", trace.strategy), &pushdowns.join(",")]);
+    let plan_digest = derived_digest(&[
+        "plan",
+        &format!("{:?}", trace.strategy),
+        &pushdowns.join(","),
+    ]);
     let shape = PlanShape {
         shape_digest: shape_digest.clone(),
         query_template: trace.source.clone(),
@@ -788,7 +801,11 @@ impl KeptStore {
 
 fn global_kept() -> &'static Mutex<KeptStore> {
     static KEPT: OnceLock<Mutex<KeptStore>> = OnceLock::new();
-    KEPT.get_or_init(|| Mutex::new(KeptStore::new(medulla_federation_limits().shapes_per_tenant)))
+    KEPT.get_or_init(|| {
+        Mutex::new(KeptStore::new(
+            medulla_federation_limits().shapes_per_tenant,
+        ))
+    })
 }
 
 /// The baseline plan `tenant` runs most often for `shape_digest`, when it has observed the
@@ -886,7 +903,9 @@ mod tests {
     #[test]
     fn only_a_result_mismatch_reverts_with_a_registered_refusal() {
         assert_eq!(
-            RevertReason::ResultsDiffer.refusal().map(|refusal| refusal.code().to_string()),
+            RevertReason::ResultsDiffer
+                .refusal()
+                .map(|refusal| refusal.code().to_string()),
             Some("PLAN_RESULT_MISMATCH".to_string())
         );
         assert_eq!(RevertReason::TooFewReplays.refusal(), None);
@@ -1156,7 +1175,9 @@ mod tests {
             }]
         );
         // Below the replay threshold, or with no filtered column, nothing is suggested.
-        assert!(generate_index_suggestions(&seeded(&[("p1", "src", pushed)], 2), "t", &p).is_empty());
+        assert!(
+            generate_index_suggestions(&seeded(&[("p1", "src", pushed)], 2), "t", &p).is_empty()
+        );
         let bare = seeded(&[("p1", "src", vec!["limit:5".into()])], 3);
         assert!(generate_index_suggestions(&bare, "t", &p).is_empty());
     }
@@ -1179,7 +1200,10 @@ mod tests {
         store.keep("tenant-a", "s2", kept_plan("p2"));
         store.keep("tenant-a", "s3", kept_plan("p3"));
         assert_eq!(store.len("tenant-a"), 2);
-        assert!(store.get("tenant-a", "s1").is_none(), "the oldest is dropped first");
+        assert!(
+            store.get("tenant-a", "s1").is_none(),
+            "the oldest is dropped first"
+        );
         assert_eq!(store.get("tenant-a", "s3").unwrap().plan_digest, "p3");
         // Keeping again replaces; another tenant never sees the plan.
         store.keep("tenant-a", "s3", kept_plan("p4"));

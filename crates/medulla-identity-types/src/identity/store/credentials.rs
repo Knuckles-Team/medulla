@@ -8,11 +8,11 @@
 
 use super::super::audit::IdentityEvent;
 use super::super::credentials::{
-    AdminResetIssue, ApiKeyAdminIssue, ApiKeyView, IssuerKeyRecord, IssuerKeyRotate,
-    IssuerKeyView, MfaChallengeConsume, MfaChallengeIssue, MfaChallengeKind, MfaChallengeRecord,
-    MfaChallengeView, ScimClientCreate, ScimClientRecord, ScimClientUpdate, ScimClientView,
-    SessionHandleRef, ISSUER_KEY_ALGORITHMS, MAX_ISSUER_KEYS, MAX_MFA_CHALLENGES,
-    MAX_SCIM_CLIENTS, MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
+    AdminResetIssue, ApiKeyAdminIssue, ApiKeyView, IssuerKeyRecord, IssuerKeyRotate, IssuerKeyView,
+    MfaChallengeConsume, MfaChallengeIssue, MfaChallengeKind, MfaChallengeRecord, MfaChallengeView,
+    ScimClientCreate, ScimClientRecord, ScimClientUpdate, ScimClientView, SessionHandleRef,
+    ISSUER_KEY_ALGORITHMS, MAX_ISSUER_KEYS, MAX_MFA_CHALLENGES, MAX_SCIM_CLIENTS,
+    MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
 };
 use super::super::model::{OneTimeToken, TokenPurpose};
 use super::super::stamp::IdentityStamp;
@@ -305,7 +305,10 @@ impl IdentityStore {
     }
 
     /// `get_scim_client`.
-    pub(super) fn get_scim_client(&self, client_id: &str) -> Result<IdentityReply, IdentityRefusal> {
+    pub(super) fn get_scim_client(
+        &self,
+        client_id: &str,
+    ) -> Result<IdentityReply, IdentityRefusal> {
         self.scim_clients
             .get(client_id)
             .map(|record| IdentityReply::ScimClient(scim_view(record)))
@@ -397,7 +400,12 @@ impl IdentityStore {
         self.scim_clients
             .remove(client_id)
             .ok_or(IdentityRefusal::NotFound)?;
-        self.audit_event(stamp, now_ms, IdentityEvent::ScimClientChanged, Some(client_id));
+        self.audit_event(
+            stamp,
+            now_ms,
+            IdentityEvent::ScimClientChanged,
+            Some(client_id),
+        );
         Ok(IdentityReply::Done { changed: true })
     }
 
@@ -423,7 +431,8 @@ impl IdentityStore {
         self.mfa_challenges
             .retain(|_, record| record.expires_at_ms > ctx.now_ms);
         let key = Self::challenge_key(&principal, request.kind);
-        if !self.mfa_challenges.contains_key(&key) && self.mfa_challenges.len() >= MAX_MFA_CHALLENGES
+        if !self.mfa_challenges.contains_key(&key)
+            && self.mfa_challenges.len() >= MAX_MFA_CHALLENGES
         {
             return Err(IdentityRefusal::Full);
         }

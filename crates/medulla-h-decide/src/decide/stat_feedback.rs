@@ -10,13 +10,13 @@
 //! event older than a stored revision of its id is refused. Every check runs
 //! before the write, so a refusal writes nothing.
 
+use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::statistical::feedback::{
     feedback_key, feedback_prefix, FeedbackEvent, StoredFeedback, FEEDBACK_EVIDENCE_MISMATCH,
     FEEDBACK_JOIN_INCOMPLETE, FEEDBACK_SOURCE_STALE, KNOBS,
 };
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_types::refusal_code::RefusalCode;
 use medulla_decision_types::decision::DecisionPolicy;
+use medulla_types::refusal_code::RefusalCode;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{executed_option, store_once, visible_entry, LogReader};
@@ -95,7 +95,10 @@ pub(super) fn record_feedback(
     }) {
         return Err(coded(
             FEEDBACK_EVIDENCE_MISMATCH,
-            format!("evidence {unknown} was not returned by record {}", event.record_id),
+            format!(
+                "evidence {unknown} was not returned by record {}",
+                event.record_id
+            ),
         ));
     }
     let stored_revision = highest_stored_revision(ctx, &event.event_id)?;

@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use medulla_query_types::wire::Op;
 use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_query_types::wire::Op;
 
 use super::accel::CopyKnobs;
 use super::budget::BudgetMeter;
@@ -245,7 +245,9 @@ impl FederationSession {
     /// `RankText` branch of an enclosing `FuseRrf`.
     #[cfg(test)]
     pub(crate) fn bind_search_text(&self, op: &Op, text: &str) {
-        self.lock().search_texts.push((op.clone(), text.to_string()));
+        self.lock()
+            .search_texts
+            .push((op.clone(), text.to_string()));
     }
 
     /// The full-text query pushed into the search source `op`: the `RankText` query of the

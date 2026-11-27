@@ -8,8 +8,7 @@
 //! delivery, assignments included, in one batch.
 
 use medulla_source_types::delivery::{
-    AssignmentState, Delivery, DeliveryOutcome, DeliveryReportState, ProposalEvent,
-    ProposalState,
+    AssignmentState, Delivery, DeliveryOutcome, DeliveryReportState, ProposalEvent, ProposalState,
 };
 use medulla_types::transition_refused::TransitionRefused;
 

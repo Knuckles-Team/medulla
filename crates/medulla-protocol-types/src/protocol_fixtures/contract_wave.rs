@@ -119,18 +119,26 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             .into_iter()
             .map(|(label, op)| (label, Method::MutationOutbox { op: Box::new(op) })),
     );
-    samples.extend(classification_claim_ops().into_iter().map(|(label, op)| {
-        (label, Method::ClassificationClaim { op })
-    }));
-    samples.extend(glossary_ops().into_iter().map(|(label, op)| {
-        (label, Method::Glossary { op: Box::new(op) })
-    }));
-    samples.extend(stewardship_ops().into_iter().map(|(label, op)| {
-        (label, Method::Stewardship { op: Box::new(op) })
-    }));
-    samples.extend(dashboard_ops().into_iter().map(|(label, op)| {
-        (label, Method::DashboardAsset { op: Box::new(op) })
-    }));
+    samples.extend(
+        classification_claim_ops()
+            .into_iter()
+            .map(|(label, op)| (label, Method::ClassificationClaim { op })),
+    );
+    samples.extend(
+        glossary_ops()
+            .into_iter()
+            .map(|(label, op)| (label, Method::Glossary { op: Box::new(op) })),
+    );
+    samples.extend(
+        stewardship_ops()
+            .into_iter()
+            .map(|(label, op)| (label, Method::Stewardship { op: Box::new(op) })),
+    );
+    samples.extend(
+        dashboard_ops()
+            .into_iter()
+            .map(|(label, op)| (label, Method::DashboardAsset { op: Box::new(op) })),
+    );
     samples
 }
 
@@ -275,10 +283,7 @@ fn stewardship_ops() -> Vec<(
 }
 
 /// One valid `Glossary` op per op (MEDULLA-TYPED-PACKS-R801.3).
-fn glossary_ops() -> Vec<(
-    &'static str,
-    medulla_catalog_types::glossary::GlossaryOp,
-)> {
+fn glossary_ops() -> Vec<(&'static str, medulla_catalog_types::glossary::GlossaryOp)> {
     use medulla_catalog_types::glossary::{
         GlossaryOp, GlossaryTerm, GlossaryTermEntry, GlossaryTransition,
     };

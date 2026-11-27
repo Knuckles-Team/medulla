@@ -126,16 +126,29 @@ async fn serve(
             "OUTBOX_OWNER_UNAVAILABLE: no durable persistence backend".to_string()
         })?;
         return match op {
-            MutationOutboxOp::Pull { target, consumer, topics, limit } => {
-                memory_events::pull(&persistence, verified, &target, &consumer, &topics, limit, now_ms)
-                    .await
-                    .map(Answer::Pulled)
-            }
-            MutationOutboxOp::Ack { target, consumer, lease } => {
-                memory_events::ack(&persistence, verified, &target, &consumer, &lease, now_ms)
-                    .await
-                    .map(Answer::Acked)
-            }
+            MutationOutboxOp::Pull {
+                target,
+                consumer,
+                topics,
+                limit,
+            } => memory_events::pull(
+                &persistence,
+                verified,
+                &target,
+                &consumer,
+                &topics,
+                limit,
+                now_ms,
+            )
+            .await
+            .map(Answer::Pulled),
+            MutationOutboxOp::Ack {
+                target,
+                consumer,
+                lease,
+            } => memory_events::ack(&persistence, verified, &target, &consumer, &lease, now_ms)
+                .await
+                .map(Answer::Acked),
             _ => Err("INTERNAL: not a memory event operation".to_string()),
         };
     }

@@ -190,7 +190,12 @@ fn module_of(file: &str) -> &str {
 pub fn unclassified_by_module() -> Vec<(String, u64)> {
     UNCLASSIFIED_BY_MODULE
         .lock()
-        .map(|counts| counts.iter().map(|(module, n)| (module.clone(), *n)).collect())
+        .map(|counts| {
+            counts
+                .iter()
+                .map(|(module, n)| (module.clone(), *n))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -360,9 +365,8 @@ impl Response {
     ) -> Self {
         use medulla_result_types::{
             epistemic_operations::OperationRedirect, epistemic_operations::OperationRedirectKind,
-            epistemic_operations::OperationResult,
+            epistemic_operations::OperationResult, epistemic_operations::OperationResultOutcome,
             epistemic_operations::OperationResultSchemaVersion,
-            epistemic_operations::OperationResultOutcome,
         };
 
         let detail = OperationResult {

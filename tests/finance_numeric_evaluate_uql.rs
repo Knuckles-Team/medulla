@@ -95,7 +95,8 @@ impl Served {
     }
 
     async fn numeric(&mut self, op: Op) -> Response {
-        self.call(Method::NumericEvaluate { op: Box::new(op) }).await
+        self.call(Method::NumericEvaluate { op: Box::new(op) })
+            .await
     }
 
     /// The served `NumericEvaluate` object result.
@@ -103,7 +104,10 @@ impl Served {
         let response = self.numeric(op).await;
         match response.result {
             Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
-            other => panic!("expected a raw result, got {other:?} / {:?}", response.error_detail),
+            other => panic!(
+                "expected a raw result, got {other:?} / {:?}",
+                response.error_detail
+            ),
         }
     }
 
@@ -112,7 +116,10 @@ impl Served {
         let response = self.numeric(op).await;
         match response.result {
             Some(ResultPayload::Float(value)) => value,
-            other => panic!("expected a float, got {other:?} / {:?}", response.error_detail),
+            other => panic!(
+                "expected a float, got {other:?} / {:?}",
+                response.error_detail
+            ),
         }
     }
 }
@@ -178,12 +185,21 @@ async fn diebold_mariano_uql_matches_vectors() {
     )
     .await;
     let want = s
-        .object(Op::DieboldMariano { losses_a: a, losses_b: b, h: 2 })
+        .object(Op::DieboldMariano {
+            losses_a: a,
+            losses_b: b,
+            h: 2,
+        })
         .await;
     close(got[0], field(&want, "statistic"));
     close(got[1], field(&want, "p_value"));
     assert_eq!(got[2] == 1.0, want["a_better"].as_bool().unwrap());
-    refusal(&mut s, "diebold_mariano OF v0 AGAINST v0 HORIZON 0", "KERNEL_PARAM_INVALID").await;
+    refusal(
+        &mut s,
+        "diebold_mariano OF v0 AGAINST v0 HORIZON 0",
+        "KERNEL_PARAM_INVALID",
+    )
+    .await;
 }
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.7
@@ -192,13 +208,23 @@ async fn deflated_sharpe_uql_matches_vectors() {
     let mut s = Served::open();
     let returns: Vec<f64> = noise(3, 60).iter().map(|v| v * 0.01 + 0.002).collect();
     s.append("s", &[returns.clone()]).await;
-    let got = report(&mut s, "deflated_sharpe OF v0 TRIALS 10 OBSERVED 0.8", &["value"]).await;
+    let got = report(
+        &mut s,
+        "deflated_sharpe OF v0 TRIALS 10 OBSERVED 0.8",
+        &["value"],
+    )
+    .await;
     let want = s
-        .scalar(Op::DeflatedSharpe { observed_sr: 0.8, n_trials: 10, sr_returns: returns })
+        .scalar(Op::DeflatedSharpe {
+            observed_sr: 0.8,
+            n_trials: 10,
+            sr_returns: returns,
+        })
         .await;
     close(got[0], want);
     s.append("short", &[vec![0.1, 0.2]]).await;
-    let text = "TSSCAN ['short'] FROM 0 TO 3600 |> EVALUATE deflated_sharpe OF v0 TRIALS 10 OBSERVED 0.5";
+    let text =
+        "TSSCAN ['short'] FROM 0 TO 3600 |> EVALUATE deflated_sharpe OF v0 TRIALS 10 OBSERVED 0.5";
     let detail = s.uql(text).await.expect_err("too short");
     assert!(detail.contains("KERNEL_INPUT_SHORT"), "{detail}");
 }
@@ -225,7 +251,12 @@ async fn purged_cv_uql_matches_vectors() {
     let splits = want["splits"].as_array().expect("splits");
     assert_eq!(rows.len(), splits.len());
     for (i, split) in splits.iter().enumerate() {
-        let test: Vec<u64> = split["test"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
+        let test: Vec<u64> = split["test"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_u64().unwrap())
+            .collect();
         let channels: Vec<f64> = rows[i].channels.iter().map(|c| c.unwrap()).collect();
         assert_eq!(channels[0], i as f64);
         assert_eq!(channels[1], split["train"].as_array().unwrap().len() as f64);
@@ -233,7 +264,12 @@ async fn purged_cv_uql_matches_vectors() {
         assert_eq!(channels[3], *test.iter().min().unwrap() as f64);
         assert_eq!(channels[4], *test.iter().max().unwrap() as f64);
     }
-    refusal(&mut s, "purged_cpcv SAMPLES 40 GROUPS 5 TEST 9 PURGE 1 EMBARGO 1", "KERNEL_PARAM_INVALID").await;
+    refusal(
+        &mut s,
+        "purged_cpcv SAMPLES 40 GROUPS 5 TEST 9 PURGE 1 EMBARGO 1",
+        "KERNEL_PARAM_INVALID",
+    )
+    .await;
 }
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.9
@@ -271,10 +307,18 @@ async fn pbo_uql_matches_vectors() {
 async fn brier_uql_matches_vectors() {
     let mut s = Served::open();
     let forecasts: Vec<f64> = noise(5, 20).iter().map(|v| (v + 1.0) / 2.0).collect();
-    let outcomes: Vec<f64> = noise(6, 20).iter().map(|v| if *v > 0.0 { 1.0 } else { 0.0 }).collect();
+    let outcomes: Vec<f64> = noise(6, 20)
+        .iter()
+        .map(|v| if *v > 0.0 { 1.0 } else { 0.0 })
+        .collect();
     s.append("s", &[forecasts.clone(), outcomes.clone()]).await;
     let got = report(&mut s, "brier OF v0 AGAINST v1", &["value"]).await;
-    let want = s.scalar(Op::Brier { forecasts, outcomes }).await;
+    let want = s
+        .scalar(Op::Brier {
+            forecasts,
+            outcomes,
+        })
+        .await;
     close(got[0], want);
     let exact = report(&mut s, "brier OF v0 AGAINST v0", &["value"]).await;
     assert!(exact[0].is_finite());
@@ -298,7 +342,10 @@ async fn ou_uql_matches_vectors() {
     )
     .await;
     let want = s.object(Op::OuCalibrate { spread, dt: 1.0 }).await;
-    for (i, name) in ["theta", "mu", "sigma", "half_life", "sigma_eq"].iter().enumerate() {
+    for (i, name) in ["theta", "mu", "sigma", "half_life", "sigma_eq"]
+        .iter()
+        .enumerate()
+    {
         close(got[i], field(&want, name));
     }
     s.append("short", &[vec![1.0, 2.0]]).await;
@@ -319,9 +366,20 @@ async fn adf_uql_matches_vectors() {
         walk.push(last + e);
     }
     s.append("s", &[walk.clone()]).await;
-    let names = ["statistic", "used_lag", "n_obs", "p_value_approx", "stationary_5pct"];
+    let names = [
+        "statistic",
+        "used_lag",
+        "n_obs",
+        "p_value_approx",
+        "stationary_5pct",
+    ];
     let got = report(&mut s, "adf OF v0 MAXLAG 1", &names).await;
-    let want = s.object(Op::Adf { series: walk, max_lag: 1 }).await;
+    let want = s
+        .object(Op::Adf {
+            series: walk,
+            max_lag: 1,
+        })
+        .await;
     close(got[0], field(&want, "statistic"));
     close(got[1], field(&want, "used_lag"));
     close(got[2], field(&want, "n_obs"));
@@ -343,17 +401,35 @@ async fn regime_hmm_uql_matches_vectors() {
     let returns: Vec<f64> = eps
         .iter()
         .enumerate()
-        .map(|(i, e)| if (i / 30) % 2 == 0 { 0.05 * e - 0.02 } else { 0.01 * e + 0.03 })
+        .map(|(i, e)| {
+            if (i / 30) % 2 == 0 {
+                0.05 * e - 0.02
+            } else {
+                0.01 * e + 0.03
+            }
+        })
         .collect();
     s.append("s", &[returns.clone()]).await;
     let got = report(
         &mut s,
         "regime_hmm OF v0 STATES 2 ITER 50 TOL 0.0001",
-        &["log_likelihood", "n_iterations", "mean_0", "std_0", "mean_1", "std_1"],
+        &[
+            "log_likelihood",
+            "n_iterations",
+            "mean_0",
+            "std_0",
+            "mean_1",
+            "std_1",
+        ],
     )
     .await;
     let want = s
-        .object(Op::RegimeHmm { observations: returns, n_states: 2, max_iter: 50, tol: 1e-4 })
+        .object(Op::RegimeHmm {
+            observations: returns,
+            n_states: 2,
+            max_iter: 50,
+            tol: 1e-4,
+        })
         .await;
     close(got[0], field(&want, "log_likelihood"));
     close(got[1], field(&want, "n_iterations"));
@@ -379,7 +455,11 @@ async fn evaluate_stage_reports_every_kernel() {
     // The same call through the stage and through `NumericEvaluate`.
     let stage = report(&mut s, "diebold_mariano OF v0 AGAINST v1", &["statistic"]).await;
     let direct = s
-        .object(Op::DieboldMariano { losses_a: a.clone(), losses_b: b.clone(), h: 1 })
+        .object(Op::DieboldMariano {
+            losses_a: a.clone(),
+            losses_b: b.clone(),
+            h: 1,
+        })
         .await;
     close(stage[0], field(&direct, "statistic"));
     // Report rows are series rows a later `DERIVE` can read.
@@ -411,7 +491,9 @@ async fn rolling_z_score_uql_matches_vectors() {
     let values: Vec<f64> = noise(13, 6).iter().map(|v| v * 3.0).collect();
     s.append("s", &[values.clone()]).await;
     let rows = s
-        .uql(&format!("{SCAN} |> DERIVE zscore(v0, 3) AS out |> RETURN out"))
+        .uql(&format!(
+            "{SCAN} |> DERIVE zscore(v0, 3) AS out |> RETURN out"
+        ))
         .await
         .expect("DERIVE runs");
     let want = s.object(Op::RollingZScore { values, window: 3 }).await;
@@ -428,7 +510,10 @@ async fn rolling_z_score_uql_matches_vectors() {
         .uql(&format!("{SCAN} |> DERIVE zscore(v0, 0) AS out"))
         .await
         .expect_err("a zero window");
-    assert!(detail.contains("UQL_E_SERIES_ARG") || detail.contains("KERNEL_PARAM_INVALID"), "{detail}");
+    assert!(
+        detail.contains("UQL_E_SERIES_ARG") || detail.contains("KERNEL_PARAM_INVALID"),
+        "{detail}"
+    );
 }
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.2
@@ -438,11 +523,16 @@ async fn ewma_uql_matches_vectors() {
     let values: Vec<f64> = noise(14, 5).iter().map(|v| v + 2.0).collect();
     s.append("s", &[values.clone()]).await;
     let rows = s
-        .uql(&format!("{SCAN} |> DERIVE ewma(v0, 3) AS out |> RETURN out"))
+        .uql(&format!(
+            "{SCAN} |> DERIVE ewma(v0, 3) AS out |> RETURN out"
+        ))
         .await
         .expect("DERIVE runs");
     let want = s
-        .object(Op::Ewma { values, smoothing: EwmaSmoothing::Span(3.0) })
+        .object(Op::Ewma {
+            values,
+            smoothing: EwmaSmoothing::Span(3.0),
+        })
         .await;
     let want = want.as_array().expect("series").clone();
     assert_eq!(rows.len(), want.len());
@@ -463,7 +553,9 @@ async fn kalman_uql_matches_vectors() {
     // filter seeded at x0 = v0[0], p0 = r, worked by hand: P = 1, S = 2, K = 1/2, x = 3.
     s.append("s", &[vec![2.0, 4.0]]).await;
     let rows = s
-        .uql(&format!("{SCAN} |> DERIVE kalman(v0, 0, 1) AS out |> RETURN out"))
+        .uql(&format!(
+            "{SCAN} |> DERIVE kalman(v0, 0, 1) AS out |> RETURN out"
+        ))
         .await
         .expect("DERIVE runs");
     let want = s
@@ -486,7 +578,9 @@ async fn kalman_uql_matches_vectors() {
     let mut s = Served::open();
     s.append("s", &[vec![2.0, 4.0], vec![1.0, 2.0]]).await;
     let rows = s
-        .uql(&format!("{SCAN} |> DERIVE kbeta(v0, v1, 0, 1) AS out |> RETURN out"))
+        .uql(&format!(
+            "{SCAN} |> DERIVE kbeta(v0, v1, 0, 1) AS out |> RETURN out"
+        ))
         .await
         .expect("DERIVE runs");
     let want = s
@@ -502,7 +596,10 @@ async fn kalman_uql_matches_vectors() {
     let states = want["states"].as_array().expect("states").clone();
     assert_eq!(rows.len(), states.len());
     for (row, expected) in rows.iter().zip(&states) {
-        close(row.channels[0].expect("a beta row"), expected.as_f64().unwrap());
+        close(
+            row.channels[0].expect("a beta row"),
+            expected.as_f64().unwrap(),
+        );
     }
     close(rows[0].channels[0].unwrap(), 1.0);
     close(rows[1].channels[0].unwrap(), 5.0 / 3.0);
@@ -518,12 +615,18 @@ async fn kalman_uql_matches_vectors() {
             p0: 1.0,
         })
         .await;
-    assert!(empty.error_detail.unwrap_or_default().contains("KERNEL_INPUT_SHORT"));
+    assert!(empty
+        .error_detail
+        .unwrap_or_default()
+        .contains("KERNEL_INPUT_SHORT"));
     let detail = s
         .uql(&format!("{SCAN} |> DERIVE kalman(v0, -1, 1) AS out"))
         .await
         .expect_err("a negative process noise");
-    assert!(detail.contains("UQL_E_SERIES_ARG") || detail.contains("KERNEL_PARAM_INVALID"), "{detail}");
+    assert!(
+        detail.contains("UQL_E_SERIES_ARG") || detail.contains("KERNEL_PARAM_INVALID"),
+        "{detail}"
+    );
 }
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.3
@@ -534,10 +637,15 @@ async fn information_coefficient_uql_matches_vectors() {
     let rising: Vec<f64> = signal.iter().map(|v| v * 2.0).collect();
     s.append("s", &[signal.clone(), rising]).await;
     let rows = s
-        .uql(&format!("{SCAN} |> DERIVE ic(v0, v1, 8) AS out |> RETURN out"))
+        .uql(&format!(
+            "{SCAN} |> DERIVE ic(v0, v1, 8) AS out |> RETURN out"
+        ))
         .await
         .expect("DERIVE runs");
-    let last = rows.last().and_then(|r| r.channels[0]).expect("a full window");
+    let last = rows
+        .last()
+        .and_then(|r| r.channels[0])
+        .expect("a full window");
     let want = s
         .scalar(Op::InformationCoefficient {
             signal: signal.clone(),
@@ -566,7 +674,10 @@ async fn information_ratio_uql_matches_vectors() {
     let mut s = Served::open();
     let rows = skill_rows(&mut s, "ir, n_eff, mean_ic").await;
     let want = s
-        .scalar(Op::InformationRatio { ic: 1.0, n_independent: 2.0 })
+        .scalar(Op::InformationRatio {
+            ic: 1.0,
+            n_independent: 2.0,
+        })
         .await;
     for row in &rows {
         let ir = row.channels[0].expect("the ir channel");
@@ -577,7 +688,10 @@ async fn information_ratio_uql_matches_vectors() {
     close(want, 2f64.sqrt());
     // A non-positive independent count is refused by the kernel with its code.
     let response = s
-        .numeric(Op::InformationRatio { ic: 0.05, n_independent: -1.0 })
+        .numeric(Op::InformationRatio {
+            ic: 0.05,
+            n_independent: -1.0,
+        })
         .await;
     assert!(response.error.is_some());
     let detail = response.error_detail.unwrap_or_default();
@@ -601,7 +715,9 @@ async fn effective_sample_size_uql_matches_vectors() {
     }
     // An empty matrix is refused by the kernel with its code.
     let response = s
-        .numeric(Op::EffectiveIndependentN { returns_matrix: Vec::new() })
+        .numeric(Op::EffectiveIndependentN {
+            returns_matrix: Vec::new(),
+        })
         .await;
     assert!(response.error.is_some());
     let detail = response.error_detail.unwrap_or_default();

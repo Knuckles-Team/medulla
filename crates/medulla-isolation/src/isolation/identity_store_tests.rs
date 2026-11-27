@@ -4,13 +4,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use super::{AccessLevel, AuditActor, IdentityStoreError, IsolationLayer};
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use crate::rbac::RbacPolicy;
 use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,
 };
-use medulla_identity_types::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_identity_types::acl::{ApplyOwnership, RollbackOwnership};
+use medulla_identity_types::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
 use medulla_identity_types::identity::*;
 use medulla_protocol_types::protocol::GraphType;
 
@@ -310,7 +310,11 @@ fn ownership_layer() -> IsolationLayer {
             actor(),
         )
         .unwrap();
-    for (id, roles) in [("usr:a", vec!["ops"]), ("usr:b", vec![]), ("usr:c", vec!["extra"])] {
+    for (id, roles) in [
+        ("usr:a", vec!["ops"]),
+        ("usr:b", vec![]),
+        ("usr:c", vec!["extra"]),
+    ] {
         let mut identity = agent(id);
         identity.roles = roles.into_iter().map(str::to_string).collect();
         layer.try_register_agent_audited(identity, actor()).unwrap();
@@ -322,7 +326,11 @@ fn roles_of(layer: &IsolationLayer, id: &str) -> Vec<String> {
     layer.agents[id].roles.clone()
 }
 
-fn plan_entry(principal: &str, disposition: OwnershipDisposition, roles: &[&str]) -> GrantPlanEntry {
+fn plan_entry(
+    principal: &str,
+    disposition: OwnershipDisposition,
+    roles: &[&str],
+) -> GrantPlanEntry {
     GrantPlanEntry {
         schema_version: OWNERSHIP_SCHEMA_VERSION,
         principal: principal.to_string(),
@@ -360,34 +368,61 @@ fn ownership_refusals_change_nothing() {
     // (1) a digest that is not the plan's, an unregistered principal.
     let mut tampered = apply_op(
         "g",
-        vec![plan_entry("usr:b", OwnershipDisposition::Reader, &["graph:g:reader"])],
+        vec![plan_entry(
+            "usr:b",
+            OwnershipDisposition::Reader,
+            &["graph:g:reader"],
+        )],
     );
     tampered.plan_digest = "0".repeat(64);
-    let refused = layer.try_apply_ownership_audited(tampered, actor()).unwrap_err();
+    let refused = layer
+        .try_apply_ownership_audited(tampered, actor())
+        .unwrap_err();
     assert!(refused.starts_with("INVALID_ARGUMENT"), "{refused}");
     let ghost = apply_op(
         "g",
-        vec![plan_entry("usr:ghost", OwnershipDisposition::Reader, &["graph:g:reader"])],
+        vec![plan_entry(
+            "usr:ghost",
+            OwnershipDisposition::Reader,
+            &["graph:g:reader"],
+        )],
     );
-    let refused = layer.try_apply_ownership_audited(ghost, actor()).unwrap_err();
+    let refused = layer
+        .try_apply_ownership_audited(ghost, actor())
+        .unwrap_err();
     assert!(refused.starts_with("INVALID_ARGUMENT"), "{refused}");
     unchanged(&layer);
 
     // (2) a role of another graph.
     let widening = apply_op(
         "g",
-        vec![plan_entry("usr:b", OwnershipDisposition::Owner, &["graph:other:owner"])],
+        vec![plan_entry(
+            "usr:b",
+            OwnershipDisposition::Owner,
+            &["graph:other:owner"],
+        )],
     );
-    let refused = layer.try_apply_ownership_audited(widening, actor()).unwrap_err();
-    assert!(refused.starts_with("OWNERSHIP_WIDENS_TENANT: "), "{refused}");
+    let refused = layer
+        .try_apply_ownership_audited(widening, actor())
+        .unwrap_err();
+    assert!(
+        refused.starts_with("OWNERSHIP_WIDENS_TENANT: "),
+        "{refused}"
+    );
     unchanged(&layer);
 
     // (3) the only administrator is demoted to a reader.
     let demoting = apply_op(
         "g",
-        vec![plan_entry("usr:a", OwnershipDisposition::Reader, &["graph:g:reader"])],
+        vec![plan_entry(
+            "usr:a",
+            OwnershipDisposition::Reader,
+            &["graph:g:reader"],
+        )],
     );
-    let refused = layer.try_apply_ownership_audited(demoting, actor()).unwrap_err();
+    let refused = layer
+        .try_apply_ownership_audited(demoting, actor())
+        .unwrap_err();
     assert!(refused.starts_with("OWNERSHIP_LAST_ADMIN: "), "{refused}");
     unchanged(&layer);
 
@@ -396,20 +431,36 @@ fn ownership_refusals_change_nothing() {
         graph: "g".to_string(),
         plan_digest: "f".repeat(64),
     };
-    let refused = layer.try_rollback_ownership_audited(unknown, actor()).unwrap_err();
+    let refused = layer
+        .try_rollback_ownership_audited(unknown, actor())
+        .unwrap_err();
     assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
     unchanged(&layer);
 
     // A valid plan applies, stores its record, and rolls back exactly once.
     let plan = vec![
-        plan_entry("usr:a", OwnershipDisposition::Owner, &["graph:g:owner", "ops"]),
+        plan_entry(
+            "usr:a",
+            OwnershipDisposition::Owner,
+            &["graph:g:owner", "ops"],
+        ),
         plan_entry("usr:b", OwnershipDisposition::Reader, &["graph:g:reader"]),
-        plan_entry("usr:c", OwnershipDisposition::Writer, &["extra", "graph:g:writer"]),
+        plan_entry(
+            "usr:c",
+            OwnershipDisposition::Writer,
+            &["extra", "graph:g:writer"],
+        ),
     ];
     let valid = apply_op("g", plan);
     let digest = valid.plan_digest.clone();
-    assert_eq!(layer.try_apply_ownership_audited(valid.clone(), actor()), Ok(3));
-    assert_eq!(roles_of(&layer, "usr:b"), vec!["graph:g:reader".to_string()]);
+    assert_eq!(
+        layer.try_apply_ownership_audited(valid.clone(), actor()),
+        Ok(3)
+    );
+    assert_eq!(
+        roles_of(&layer, "usr:b"),
+        vec!["graph:g:reader".to_string()]
+    );
     let record = layer
         .rbac()
         .identity_store()
@@ -420,7 +471,9 @@ fn ownership_refusals_change_nothing() {
     assert_eq!(record.applied_at_ms, NOW);
     assert!(!record.rolled_back);
     // The same live plan is not applied twice: that would overwrite the true prior sets.
-    let refused = layer.try_apply_ownership_audited(valid, actor()).unwrap_err();
+    let refused = layer
+        .try_apply_ownership_audited(valid, actor())
+        .unwrap_err();
     assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
 
     let rollback = RollbackOwnership {
@@ -431,8 +484,17 @@ fn ownership_refusals_change_nothing() {
         .try_rollback_ownership_audited(rollback.clone(), actor())
         .unwrap();
     unchanged(&layer);
-    assert!(layer.rbac().identity_store().ownership_record("g", &digest).unwrap().rolled_back);
-    let refused = layer.try_rollback_ownership_audited(rollback, actor()).unwrap_err();
+    assert!(
+        layer
+            .rbac()
+            .identity_store()
+            .ownership_record("g", &digest)
+            .unwrap()
+            .rolled_back
+    );
+    let refused = layer
+        .try_rollback_ownership_audited(rollback, actor())
+        .unwrap_err();
     assert!(refused.starts_with("OWNERSHIP_NO_ROLLBACK: "), "{refused}");
 }
 
@@ -765,14 +827,23 @@ fn resource_grant_survives_reopen_and_revoke_is_audited() {
         layer
             .rbac()
             .resource_grants()
-            .matching(&subjects, "github-mcp", ResourceProtocol::Mcp, "create_issue")
+            .matching(
+                &subjects,
+                "github-mcp",
+                ResourceProtocol::Mcp,
+                "create_issue",
+            )
             .count()
     };
     let audit_len =
         |layer: &IsolationLayer| layer.rbac().identity_store().audit_trail().entries().len();
     let dir = durable_fixture_dir("resource-grant");
     {
-        let source = seeded().policy_store().unwrap().authority_snapshot().unwrap();
+        let source = seeded()
+            .policy_store()
+            .unwrap()
+            .authority_snapshot()
+            .unwrap();
         let disk = open_test_store(&dir).unwrap();
         let empty = disk.authority_snapshot().unwrap();
         disk.compare_and_save(
@@ -835,7 +906,10 @@ fn resource_grant_survives_reopen_and_revoke_is_audited() {
         let reopened =
             IsolationLayer::with_policy_store(Arc::new(open_test_store(&dir).unwrap())).unwrap();
         assert_eq!(held(&reopened), 0);
-        assert!(!reopened.rbac().resource_grants().names_resource("github-mcp"));
+        assert!(!reopened
+            .rbac()
+            .resource_grants()
+            .names_resource("github-mcp"));
     }
     // A grant whose id does not derive from its fields is refused and stores nothing.
     let mut forged = grant.clone();

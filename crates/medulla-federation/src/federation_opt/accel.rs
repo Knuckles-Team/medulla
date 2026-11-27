@@ -76,7 +76,11 @@ pub(super) fn parse_rfc3339_ms(text: &str) -> Option<u64> {
     }
     let (year, month, day) = (num(0..4)?, num(5..7)?, num(8..10)?);
     let (hour, minute, second) = (num(11..13)?, num(14..16)?, num(17..19)?);
-    if !(1..=12).contains(&month) || !(1..=31).contains(&day) || hour > 23 || minute > 59 || second > 60
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || hour > 23
+        || minute > 59
+        || second > 60
     {
         return None;
     }
@@ -91,7 +95,11 @@ pub(super) fn parse_rfc3339_ms(text: &str) -> Option<u64> {
         if at == start {
             return None;
         }
-        let digits: String = text[start..at].chars().chain("000".chars()).take(3).collect();
+        let digits: String = text[start..at]
+            .chars()
+            .chain("000".chars())
+            .take(3)
+            .collect();
         millis = digits.parse().ok()?;
     }
     let offset_minutes = match bytes.get(at)? {
@@ -134,8 +142,14 @@ mod tests {
     #[test]
     fn rfc3339_parses_to_unix_milliseconds() {
         assert_eq!(parse_rfc3339_ms("1970-01-01T00:00:01Z"), Some(1_000));
-        assert_eq!(parse_rfc3339_ms("2026-01-01T00:00:00.250Z"), Some(1_767_225_600_250));
-        assert_eq!(parse_rfc3339_ms("2026-01-01T01:00:00+01:00"), Some(1_767_225_600_000));
+        assert_eq!(
+            parse_rfc3339_ms("2026-01-01T00:00:00.250Z"),
+            Some(1_767_225_600_250)
+        );
+        assert_eq!(
+            parse_rfc3339_ms("2026-01-01T01:00:00+01:00"),
+            Some(1_767_225_600_000)
+        );
         assert_eq!(parse_rfc3339_ms("lsn:42"), None);
     }
 
@@ -157,6 +171,9 @@ mod tests {
             copy_route(&policy(Some("not a time")), 0, 1, knobs),
             Err(LiveReason::Policy)
         );
-        assert_eq!(copy_route(&policy(None), 0, 1, knobs), Err(LiveReason::Policy));
+        assert_eq!(
+            copy_route(&policy(None), 0, 1, knobs),
+            Err(LiveReason::Policy)
+        );
     }
 }

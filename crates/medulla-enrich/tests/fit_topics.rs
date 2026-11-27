@@ -18,8 +18,22 @@ fn example(topic: &str, n: u32, vector: [f32; 2]) -> LabelledVector {
 
 /// Two well-separated topics of six examples each.
 fn fixed_examples() -> Vec<LabelledVector> {
-    let storage = [[1.0, 0.0], [1.0, 0.1], [0.9, 0.05], [1.0, -0.1], [0.95, 0.0], [1.0, 0.2]];
-    let network = [[0.0, 1.0], [0.1, 1.0], [0.05, 0.9], [-0.1, 1.0], [0.0, 0.95], [0.2, 1.0]];
+    let storage = [
+        [1.0, 0.0],
+        [1.0, 0.1],
+        [0.9, 0.05],
+        [1.0, -0.1],
+        [0.95, 0.0],
+        [1.0, 0.2],
+    ];
+    let network = [
+        [0.0, 1.0],
+        [0.1, 1.0],
+        [0.05, 0.9],
+        [-0.1, 1.0],
+        [0.0, 0.95],
+        [0.2, 1.0],
+    ];
     let mut examples = Vec::new();
     for (n, vector) in storage.into_iter().enumerate() {
         examples.push(example("topic:storage", n as u32, vector));
@@ -37,7 +51,10 @@ fn centroids_floor_and_refusals_on_fixed_examples() {
     let fit = fit_topics(&examples, HOLDOUT_BP_DEFAULT).unwrap();
     assert_eq!(fit.holdout_bp, HOLDOUT_BP_DEFAULT);
     assert_eq!(
-        fit.topics.iter().map(|t| t.topic.as_str()).collect::<Vec<_>>(),
+        fit.topics
+            .iter()
+            .map(|t| t.topic.as_str())
+            .collect::<Vec<_>>(),
         ["topic:network", "topic:storage"]
     );
 
@@ -73,7 +90,9 @@ fn centroids_floor_and_refusals_on_fixed_examples() {
             .iter()
             .map(|held| {
                 let vector = &examples.iter().find(|e| &e.example == held).unwrap().vector;
-                let hit = classify_with_floor(held, vector, &centroids, 0).unwrap().unwrap();
+                let hit = classify_with_floor(held, vector, &centroids, 0)
+                    .unwrap()
+                    .unwrap();
                 assert_eq!(hit.topic, topic.topic);
                 hit.confidence.basis_points()
             })
@@ -96,8 +115,14 @@ fn centroids_floor_and_refusals_on_fixed_examples() {
         fit_topics(&wide, HOLDOUT_BP_DEFAULT).unwrap_err().code,
         VECTOR_DIMENSION_MISMATCH
     );
-    assert_eq!(fit_topics(&examples, 5_001).unwrap_err().code, KNOB_OUT_OF_BOUNDS);
-    assert!(fit_topics(&examples, 0).is_ok(), "no hold-out leaves every example to train");
+    assert_eq!(
+        fit_topics(&examples, 5_001).unwrap_err().code,
+        KNOB_OUT_OF_BOUNDS
+    );
+    assert!(
+        fit_topics(&examples, 0).is_ok(),
+        "no hold-out leaves every example to train"
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R614.2.5
@@ -111,7 +136,12 @@ fn a_topic_the_holdout_cannot_separate_gets_the_highest_floor() {
         examples.push(example("topic:b", n, [1.0, 0.0]));
     }
     let fit = fit_topics(&examples, HOLDOUT_BP_DEFAULT).unwrap();
-    let worst = fit.topics.iter().map(|t| t.holdout_precision_bp).min().unwrap();
+    let worst = fit
+        .topics
+        .iter()
+        .map(|t| t.holdout_precision_bp)
+        .min()
+        .unwrap();
     assert!(worst < 9_000, "precision {worst}");
     for topic in fit.topics.iter().filter(|t| t.holdout_precision_bp < 9_000) {
         assert_eq!(topic.floor_bp, 10_000);

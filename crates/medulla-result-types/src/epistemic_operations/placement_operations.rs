@@ -289,6 +289,9 @@ mod tests {
              \"fencing_token\":3,\"leader_ref\":\"node:2\"}}"
         );
         let bytes = rmp_serde::to_vec_named(&result).unwrap();
-        assert_eq!(rmp_serde::from_slice::<OperationResult>(&bytes).unwrap(), result);
+        assert_eq!(
+            rmp_serde::from_slice::<OperationResult>(&bytes).unwrap(),
+            result
+        );
     }
 }

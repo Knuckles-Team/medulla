@@ -31,7 +31,10 @@ fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
 }
 
 fn not_found(receipt_id: &str) -> String {
-    refuse("RECEIPT_NOT_FOUND", format!("no receipt {receipt_id} under this tenant"))
+    refuse(
+        "RECEIPT_NOT_FOUND",
+        format!("no receipt {receipt_id} under this tenant"),
+    )
 }
 
 fn is_receipt(props: &Properties) -> bool {
@@ -95,7 +98,11 @@ fn stamp_new(node_id: &str, tenant_scope: &str, props: &mut Properties) -> Resul
 
 /// The stored receipt `receipt_id` of `tenant_scope`; an absent, foreign or non-receipt node
 /// is the one `RECEIPT_NOT_FOUND`.
-fn stored_receipt(core: &GraphCore, tenant_scope: &str, receipt_id: &str) -> Result<Properties, String> {
+fn stored_receipt(
+    core: &GraphCore,
+    tenant_scope: &str,
+    receipt_id: &str,
+) -> Result<Properties, String> {
     core.get_node_properties(receipt_id)
         .and_then(|blob| medulla_types::msgpack::decode_property_object(&blob).ok())
         .filter(|props| {
@@ -117,7 +124,10 @@ fn admit_transition(
     };
     let mut props = stored_receipt(core, tenant_scope, receipt_id)?;
     let current = FinanceReceiptView::from_properties(receipt_id, &props).ok_or_else(|| {
-        refuse("RECEIPT_STATE_INVALID", format!("{receipt_id} is not a complete receipt"))
+        refuse(
+            "RECEIPT_STATE_INVALID",
+            format!("{receipt_id} is not a complete receipt"),
+        )
     })?;
     let (state, attempt) = current
         .receipt_state
@@ -125,9 +135,14 @@ fn admit_transition(
         .map_err(|refused| refused.to_string())?;
     props.insert(
         "receiptState".to_owned(),
-        serde_json::Value::String(medulla_types::transition_refused::MachineState::stored(state).to_owned()),
+        serde_json::Value::String(
+            medulla_types::transition_refused::MachineState::stored(state).to_owned(),
+        ),
     );
-    props.insert("receiptAttempt".to_owned(), serde_json::Value::from(attempt));
+    props.insert(
+        "receiptAttempt".to_owned(),
+        serde_json::Value::from(attempt),
+    );
     let view = FinanceReceiptView::from_properties(receipt_id, &props)
         .ok_or_else(|| not_found(receipt_id))?;
     let blob = rmp_serde::to_vec_named(&props)
@@ -151,7 +166,9 @@ pub(super) async fn transition(ctx: &MutationCtx<'_>, method: &Method) -> Option
             // since the check above moves the machine from its new state, never from a stale one.
             let (blob, view) = admit_transition(core, &scope, &owned)?;
             core.add_node(view.receipt_id.clone(), blob);
-            ResultPayload::of::<medulla_protocol_types::result_contract::graph::FinanceReceiptTransition>(view)
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::graph::FinanceReceiptTransition,
+            >(view)
         })
         .await,
     )
@@ -217,7 +234,9 @@ pub(super) async fn handle_receipt_list(
             };
             if view.tenant_key == *tenant_key
                 && wanted_state.is_none_or(|wanted| view.receipt_state == wanted)
-                && kind.as_deref().is_none_or(|wanted| view.receipt_kind == wanted)
+                && kind
+                    .as_deref()
+                    .is_none_or(|wanted| view.receipt_kind == wanted)
             {
                 receipts.push(view);
             }
@@ -230,7 +249,9 @@ pub(super) async fn handle_receipt_list(
     receipts.truncate(limit as usize);
     let page = FinanceReceiptPage { receipts };
     ControlFlow::Break(
-        match ResultPayload::of::<medulla_protocol_types::result_contract::graph::FinanceReceiptList>(page) {
+        match ResultPayload::of::<medulla_protocol_types::result_contract::graph::FinanceReceiptList>(
+            page,
+        ) {
             Ok(payload) => Response::ok(ctx.req_id, payload),
             Err(error) => Response::err(ctx.req_id, error),
         },

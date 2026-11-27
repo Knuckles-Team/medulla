@@ -21,12 +21,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_direct_state::direct_state::GroupId;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::placement::split_tenant_key;
 use medulla_raft::raft::reshard::TenantManager;
-use medulla_direct_state::direct_state::GroupId;
 use medulla_raft::raft::RaftRequest;
 use medulla_raft_xshard::harness::cluster::fixture;
 
@@ -70,7 +70,11 @@ async fn bring_up(
         backend,
         current_isolation(),
         "placement-test",
-        &[GROUP_A, GROUP_B, medulla_direct_state::direct_state::DEFAULT_GROUP],
+        &[
+            GROUP_A,
+            GROUP_B,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
+        ],
     )
     .await;
     medulla_server::seams_install::install_seams_on(&state).await;
@@ -179,8 +183,14 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
         "distinct plans must not share a durable replay key"
     );
     let (response_a, response_b) = tokio::join!(
-        multi.client_write_group(medulla_direct_state::direct_state::DEFAULT_GROUP, request_a.clone()),
-        multi.client_write_group(medulla_direct_state::direct_state::DEFAULT_GROUP, request_b.clone()),
+        multi.client_write_group(
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
+            request_a.clone()
+        ),
+        multi.client_write_group(
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
+            request_b.clone()
+        ),
     );
     let applied_a = bool_response(response_a);
     let applied_b = bool_response(response_b);
@@ -215,7 +225,10 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
     let loser_retry = epoch_cas_request(loser_plan, 14, method.clone()).expect("loser retry");
     assert!(!bool_response(
         multi
-            .client_write_group(medulla_direct_state::direct_state::DEFAULT_GROUP, loser_retry)
+            .client_write_group(
+                medulla_direct_state::direct_state::DEFAULT_GROUP,
+                loser_retry
+            )
             .await
     ));
 

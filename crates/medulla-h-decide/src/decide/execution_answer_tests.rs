@@ -77,7 +77,11 @@ async fn served_answer_fills_seven_parts() {
             (TASK, core("hasStep"), "urn:step:report"),
             ("urn:step:gather", core("precedes"), "urn:step:report"),
             ("urn:step:gather", core("handsOffTo"), "urn:step:report"),
-            ("urn:step:gather", SOURCE_PREDICATE.to_string(), "urn:source:spec"),
+            (
+                "urn:step:gather",
+                SOURCE_PREDICATE.to_string(),
+                "urn:source:spec",
+            ),
         ],
     )
     .await;
@@ -123,7 +127,10 @@ async fn served_answer_fills_seven_parts() {
 
     // The certificate digest is the digest of the sealed record AgentAssemble returns.
     let solved = assemble(&h, assembly).await.expect("assembles");
-    assert!(matches!(solved.record.outcome, DecisionOutcome::Solved { .. }));
+    assert!(matches!(
+        solved.record.outcome,
+        DecisionOutcome::Solved { .. }
+    ));
     assert_eq!(answer.certificate_digest, solved.record.record_digest);
     assert!(!answer.certificate_digest.is_empty());
 
@@ -202,7 +209,12 @@ fn no_source_fault_abstains_one_part_by_code() {
         Err(PartFault::NoSource("read failed".into())),
     );
     let ExecutionAnswerPart::Abstain {
-        reason: AbstainReason::Family { family, code, detail },
+        reason:
+            AbstainReason::Family {
+                family,
+                code,
+                detail,
+            },
         ..
     } = &part
     else {
@@ -211,10 +223,7 @@ fn no_source_fault_abstains_one_part_by_code() {
     assert_eq!(family, &QuestionKind::TaskPlan);
     assert_eq!(code.as_str(), "ORCH_PART_NO_SOURCE");
     assert_eq!(detail, "read failed");
-    assert_eq!(
-        family_abstention(&part, "coverage"),
-        "ORCH_PART_NO_SOURCE"
-    );
+    assert_eq!(family_abstention(&part, "coverage"), "ORCH_PART_NO_SOURCE");
 }
 
 // spec: MEDULLA-CQ-ORCH-R008.3
@@ -273,7 +282,10 @@ async fn abstained_assembly_abstains_its_three_parts_and_keeps_the_others() {
         ("bindings", &answer.parts.bindings),
         ("dag", &answer.parts.dag),
     ] {
-        assert_eq!(family_abstention(part, name), "ORCH_PART_ASSEMBLY_ABSTAINED");
+        assert_eq!(
+            family_abstention(part, name),
+            "ORCH_PART_ASSEMBLY_ABSTAINED"
+        );
     }
     assert!(answer.certificate_digest.is_empty());
 }

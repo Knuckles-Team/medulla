@@ -89,10 +89,11 @@ impl ProcessPlanKnobs {
             KnobValue::DurationMs(v) => i64::try_from(v).unwrap_or(i64::MAX),
         };
         Self {
-            min_tool_score_micros: u64::try_from(number(policy.knob(&KNOBS[0])).clamp(0, 1_000_000))
-                .unwrap_or(600_000),
-            max_call_depth: u32::try_from(number(policy.knob(&KNOBS[1])).clamp(1, 16))
-                .unwrap_or(4),
+            min_tool_score_micros: u64::try_from(
+                number(policy.knob(&KNOBS[0])).clamp(0, 1_000_000),
+            )
+            .unwrap_or(600_000),
+            max_call_depth: u32::try_from(number(policy.knob(&KNOBS[1])).clamp(1, 16)).unwrap_or(4),
             approval_timeout_s: u64::try_from(number(policy.knob(&KNOBS[2])).clamp(60, 2_592_000))
                 .unwrap_or(86_400),
         }
@@ -225,6 +226,8 @@ mod tests {
             r#"{"kind":"approval","approver_role":"r","x":1}"#
         )
         .is_err());
-        assert!(serde_json::from_str::<BindingTarget>(r#"{"kind":"shell","command":"x"}"#).is_err());
+        assert!(
+            serde_json::from_str::<BindingTarget>(r#"{"kind":"shell","command":"x"}"#).is_err()
+        );
     }
 }

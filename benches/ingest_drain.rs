@@ -39,7 +39,10 @@ fn submit(store: &JobStore, envelope: &IngestJobEnvelope, now_ms: i64) {
         job_id: None,
         max_attempts: None,
     };
-    match store.submit_task(spec, now_ms).expect("submit the page task") {
+    match store
+        .submit_task(spec, now_ms)
+        .expect("submit the page task")
+    {
         TaskSubmitOutcome::Enqueued(_) => {}
         TaskSubmitOutcome::Duplicate => panic!("a fresh page task is never a duplicate"),
     }
@@ -60,8 +63,8 @@ fn main() {
     )
     .expect("open the job store");
 
-    let started = start_drain("bench", "crm", "accounts", "full", "main", 1_000)
-        .expect("the drain starts");
+    let started =
+        start_drain("bench", "crm", "accounts", "full", "main", 1_000).expect("the drain starts");
     let mut record = started.record;
     let mut envelope = started.first_page;
     submit(&store, &envelope, 1_000);
@@ -80,8 +83,11 @@ fn main() {
             .expect("claim")
             .expect("the page task is ready");
         let checkpoint = envelope.page.clone().expect("a drain page");
-        let DrainAckOutcome::Advanced { record: next_record, next } =
-            on_ingest_drain_ack(&record, &checkpoint, &ack, 500, now_ms, true).expect("ack decision")
+        let DrainAckOutcome::Advanced {
+            record: next_record,
+            next,
+        } = on_ingest_drain_ack(&record, &checkpoint, &ack, 500, now_ms, true)
+            .expect("ack decision")
         else {
             panic!("a cursor advances the drain");
         };

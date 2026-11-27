@@ -99,7 +99,10 @@ async fn status_of(state: &test_support::SharedState, id: u64, node: &str) -> St
 }
 
 /// One `Method::Sparql` against `__commons__` with the given statement text.
-async fn sparql(state: &test_support::SharedState, id: u64, query: String,
+async fn sparql(
+    state: &test_support::SharedState,
+    id: u64,
+    query: String,
 ) -> Vec<Vec<Option<SparqlTerm>>> {
     let response = ok(
         state,
@@ -173,7 +176,10 @@ async fn terminal_work_item_lists_no_event() {
 #[tokio::test(flavor = "multi_thread")]
 async fn every_medulla_machine_answers_next_events() {
     let state = served().await;
-    let prefix = format!("PREFIX : <{}> ", medulla_h_query::query::state_machine_next::CORE_NAMESPACE);
+    let prefix = format!(
+        "PREFIX : <{}> ",
+        medulla_h_query::query::state_machine_next::CORE_NAMESPACE
+    );
     let machines = sparql(
         &state,
         3,

@@ -246,13 +246,21 @@ impl TaskRegistry {
         if let Some(cell) = live.by_name.get(name) {
             return Some(cell.lock().clone());
         }
-        live.finished.iter().rev().find(|row| row.name == name).cloned()
+        live.finished
+            .iter()
+            .rev()
+            .find(|row| row.name == name)
+            .cloned()
     }
 
     /// The live rows and the finished rows still kept, ordered by registration.
     pub fn all(&self) -> Vec<TaskRow> {
         let live = self.inner.live.lock();
-        let mut rows: Vec<TaskRow> = live.by_name.values().map(|cell| cell.lock().clone()).collect();
+        let mut rows: Vec<TaskRow> = live
+            .by_name
+            .values()
+            .map(|cell| cell.lock().clone())
+            .collect();
         rows.extend(live.finished.iter().cloned());
         rows.sort_by_key(|row| row.id);
         rows
@@ -266,7 +274,11 @@ impl TaskRegistry {
     /// The live rows, ordered by registration.
     pub fn live(&self) -> Vec<TaskRow> {
         let live = self.inner.live.lock();
-        let mut rows: Vec<TaskRow> = live.by_name.values().map(|cell| cell.lock().clone()).collect();
+        let mut rows: Vec<TaskRow> = live
+            .by_name
+            .values()
+            .map(|cell| cell.lock().clone())
+            .collect();
         rows.sort_by_key(|row| row.id);
         rows
     }

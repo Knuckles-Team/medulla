@@ -95,7 +95,10 @@ pub const SEMANTIC_SOURCE_RECONCILIATION_MACHINE: MachineDef<
 
 impl SemanticSourceReconciliationPhase {
     /// The one transition function: the next phase, or the typed refusal.
-    pub fn apply(self, event: SemanticSourceReconciliationEvent) -> Result<Self, TransitionRefused> {
+    pub fn apply(
+        self,
+        event: SemanticSourceReconciliationEvent,
+    ) -> Result<Self, TransitionRefused> {
         transition(
             &SEMANTIC_SOURCE_RECONCILIATION_MACHINE,
             self,

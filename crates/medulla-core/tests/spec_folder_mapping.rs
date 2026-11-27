@@ -27,9 +27,15 @@ fn node_kinds_are_closed_and_declared() {
             .unwrap_or_else(|| panic!("{class} is declared"));
         let block = &ONTOLOGY[at..];
         let block = &block[..block.find(" .\n").unwrap()];
-        assert!(block.contains(&format!("rdfs:subClassOf :{parent}")), "{class}");
+        assert!(
+            block.contains(&format!("rdfs:subClassOf :{parent}")),
+            "{class}"
+        );
         assert_eq!(block.matches("rdfs:subClassOf").count(), 1, "{class}");
-        assert!(SHAPES.contains(&format!("sh:targetClass :{class} ;")), "{class}");
+        assert!(
+            SHAPES.contains(&format!("sh:targetClass :{class} ;")),
+            "{class}"
+        );
     }
     assert!(ONTOLOGY.contains(":classifiedByRule a owl:DatatypeProperty"));
     assert_eq!(SHAPES.matches("sh:path :classifiedByRule").count(), 4);
@@ -62,7 +68,10 @@ fn default_rules_classify_each_file_kind() {
     );
 
     let with = |pairs: &[(&str, &str)]| -> BTreeMap<String, String> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     };
     assert_eq!(
         classify_spec_file_by_rule("notes/a.md", &with(&[("kind", "policy")])),

@@ -256,7 +256,10 @@ fn an_enabled_override_decides_the_effective_enabled_of_a_skill_or_tool() {
     ) else {
         panic!("a published skill projects as a skill row");
     };
-    assert!(!skill_row.component.enabled, "an override turns a skill off");
+    assert!(
+        !skill_row.component.enabled,
+        "an override turns a skill off"
+    );
     let Some(FleetCatalogRow::Tool { row: tool_row }) = component_row(
         FleetCatalogKind::Tools,
         &tool_entry,

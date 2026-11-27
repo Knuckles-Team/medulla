@@ -22,7 +22,7 @@ use medulla_decision_stats::decision::instruction_disclosure::{
 };
 use medulla_decision_types::decision::instruction_disclosure::{
     instruction_version_prefix, instructions_hash, scan_limit, timeout_s, DisclosureEvent,
-    DisclosureTrigger, DisclosureTiming, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
+    DisclosureTiming, DisclosureTrigger, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
 };
 use medulla_decision_types::decision::record::outcome::AbstainReason;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;

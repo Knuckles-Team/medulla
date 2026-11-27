@@ -115,7 +115,9 @@ impl std::fmt::Display for ScanError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Detector(invalid) => invalid.fmt(f),
-            Self::ResourceMissing { detector } => write!(f, "{DETECTOR_RESOURCE_MISSING}: {detector}"),
+            Self::ResourceMissing { detector } => {
+                write!(f, "{DETECTOR_RESOURCE_MISSING}: {detector}")
+            }
             Self::LimitsInvalid { knob } => write!(f, "{SCAN_LIMITS_INVALID}: {knob}"),
         }
     }
@@ -309,7 +311,10 @@ pub fn scan_values(
                 (hits, scored.len())
             }
             other => (
-                sample.iter().filter(|value| value_hits(other, value)).count(),
+                sample
+                    .iter()
+                    .filter(|value| value_hits(other, value))
+                    .count(),
                 sample.len(),
             ),
         };
@@ -374,7 +379,12 @@ pub fn scan_chunks(
         detector.validate()?;
     }
     let scanned_chunks = &chunks[..chunks.len().min(max_chunks)];
-    let matchers = compile_matchers(detectors, limits, resources, scanned_chunks.first().copied())?;
+    let matchers = compile_matchers(
+        detectors,
+        limits,
+        resources,
+        scanned_chunks.first().copied(),
+    )?;
     let candidates: Vec<Vec<String>> = scanned_chunks
         .iter()
         .map(|chunk| chunk_candidates(chunk))
@@ -384,7 +394,8 @@ pub fn scan_chunks(
     for (detector, matcher) in detectors.iter().zip(&matchers) {
         let (hits, scanned) = match matcher {
             Matcher::Model(exemplar_set) => {
-                let scored = &scanned_chunks[..scanned_chunks.len().min(limits.model_sample_values)];
+                let scored =
+                    &scanned_chunks[..scanned_chunks.len().min(limits.model_sample_values)];
                 let threshold = detector.threshold as f32;
                 let hits = scored
                     .iter()

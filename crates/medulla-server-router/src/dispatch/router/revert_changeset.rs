@@ -77,7 +77,10 @@ mod served {
             Ok(target) => target,
             Err(error) => return ops::target_error_response(req.id, error),
         };
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let (repo, changeset_id) = (request.repo.clone(), request.changeset.clone());
         let window = target
             .read_blocking(move |registry, branch| {
@@ -101,10 +104,18 @@ mod served {
             let s = state.read().await;
             match s.blob_cursors() {
                 Some(cursors) => Arc::clone(&cursors.store),
-                None => return Response::err(req.id, "Blob substrate disabled (no persist dir configured)"),
+                None => {
+                    return Response::err(
+                        req.id,
+                        "Blob substrate disabled (no persist dir configured)",
+                    )
+                }
             }
         };
-        let changesets: Vec<Changeset> = window.iter().map(|(_, changeset)| changeset.clone()).collect();
+        let changesets: Vec<Changeset> = window
+            .iter()
+            .map(|(_, changeset)| changeset.clone())
+            .collect();
         let planned = {
             let store = Arc::clone(&store);
             let changeset_id = request.changeset.clone();
@@ -120,14 +131,14 @@ mod served {
         match planned {
             Ok(Ok(RevertPlan::Existing(index))) => {
                 let (commit, changeset) = window[index].clone();
-                match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::RevertChangeset>(
-                    SubmitChangesetReceipt {
-                        changeset,
-                        branch_head: commit,
-                        replayed: true,
-                        index: None,
-                    },
-                ) {
+                match ResultPayload::of::<
+                    medulla_protocol_types::result_contract::cluster::RevertChangeset,
+                >(SubmitChangesetReceipt {
+                    changeset,
+                    branch_head: commit,
+                    replayed: true,
+                    index: None,
+                }) {
                     Ok(payload) => Response::ok(req.id, payload),
                     Err(error) => Response::err(req.id, error),
                 }
@@ -160,5 +171,8 @@ pub async fn handle_revert_changeset(
     _verified: &VerifiedRequestContext,
     _fields: RevertChangesetFields,
 ) -> Response {
-    Response::err(req.id, "RevertChangeset requires the `redb` and `blob` features")
+    Response::err(
+        req.id,
+        "RevertChangeset requires the `redb` and `blob` features",
+    )
 }

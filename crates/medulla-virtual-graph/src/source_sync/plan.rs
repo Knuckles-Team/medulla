@@ -12,8 +12,9 @@ use medulla_types::contract::Digest256;
 use serde_json::{Map, Value};
 
 use super::{
-    reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule, SyncAction,
-    RecordScreen, SyncAdapter, SyncEdge, SyncMutation, SyncOutcome, SYNCED_FROM_PROPERTY, SYNC_STATE_CLASS,
+    reconcile, sync_batch, sync_conflict_mutations, sync_state_mutations, ConflictRule,
+    RecordScreen, SyncAction, SyncAdapter, SyncEdge, SyncMutation, SyncOutcome,
+    SYNCED_FROM_PROPERTY, SYNC_STATE_CLASS,
 };
 
 /// Every visible graph node: id to its decoded property map.

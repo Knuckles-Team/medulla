@@ -21,7 +21,6 @@ use medulla_decision_types::decision::digest::policy_digest;
 use medulla_decision_types::decision::indexless_retrieval::{
     IndexlessOp, IndexlessRequest, IndexlessResult,
 };
-use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 use medulla_decision_types::decision::knob_families::indexless::MAX_ROWS;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
@@ -30,6 +29,7 @@ use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
@@ -176,7 +176,12 @@ fn row_ids(result: &IndexlessResult) -> Vec<String> {
     result
         .rows
         .iter()
-        .map(|row| row["document_id"].as_str().expect("a document id").to_string())
+        .map(|row| {
+            row["document_id"]
+                .as_str()
+                .expect("a document id")
+                .to_string()
+        })
         .collect()
 }
 
@@ -207,7 +212,9 @@ async fn publish_policy(
         evaluation_receipt_digest: None,
         body: None,
     };
-    let committed = store.publish_component(request, None).expect("publish policy");
+    let committed = store
+        .publish_component(request, None)
+        .expect("publish policy");
     ComponentDependency {
         component_id: id.to_string(),
         kind: AgentComponentKind::DecisionPolicy,
@@ -228,7 +235,10 @@ async fn indexless_retrieval_reports_cost_and_refuses_over_budget() {
     assert_eq!(row_ids(&fifty), (0..50).map(doc_id).collect::<Vec<_>>());
     assert_eq!(fifty.cost.rows_visited, 50);
     assert_eq!(fifty.cost.visits, 50);
-    assert_eq!(fifty.cost.cost_used, 50, "indexless.scan_cost defaults to 1");
+    assert_eq!(
+        fifty.cost.cost_used, 50,
+        "indexless.scan_cost defaults to 1"
+    );
     assert_eq!(fifty.cost.remaining, budget(50, 950, 950));
     assert_eq!(fifty.cost.applied_budget, limit);
 
@@ -259,13 +269,8 @@ async fn indexless_retrieval_reports_cost_and_refuses_over_budget() {
     decode(retrieve(&state, request(vec![span(start + 2, good.clone())], None)).await);
     let (code, _, _) = refused(retrieve(&state, request(vec![span(start + 1, good)], None)).await);
     assert_eq!(code, "INDEXLESS_SPAN_INVALID");
-    let (code, _, _) = refused(
-        retrieve(
-            &state,
-            request(vec![span(start + 2, "0".repeat(64))], None),
-        )
-        .await,
-    );
+    let (code, _, _) =
+        refused(retrieve(&state, request(vec![span(start + 2, "0".repeat(64))], None)).await);
     assert_eq!(code, "INDEXLESS_SPAN_INVALID");
 }
 
@@ -344,7 +349,10 @@ async fn budget_exhaustion_refuses() {
     );
     let report = report.expect("a cost report");
     assert_eq!(report.rows_visited, 100);
-    assert_eq!(report.remaining.max_rows, 0, "zero in the exhausted dimension");
+    assert_eq!(
+        report.remaining.max_rows, 0,
+        "zero in the exhausted dimension"
+    );
     assert_eq!(report.remaining.max_visits, 900);
     assert_eq!(report.operation_ids.as_slice().to_vec(), ["0:corpus_scan"]);
 

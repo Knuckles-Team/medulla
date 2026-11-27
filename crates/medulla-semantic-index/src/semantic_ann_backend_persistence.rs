@@ -63,7 +63,11 @@ impl AnnIndexImage {
         }
         Ok(ids
             .into_iter()
-            .zip(self.codes.codes.chunks_exact(dimension * std::mem::size_of::<f32>()))
+            .zip(
+                self.codes
+                    .codes
+                    .chunks_exact(dimension * std::mem::size_of::<f32>()),
+            )
             .map(|(id, row)| {
                 let vector = row
                     .chunks_exact(std::mem::size_of::<f32>())

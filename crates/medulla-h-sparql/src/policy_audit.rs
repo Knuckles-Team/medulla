@@ -12,7 +12,9 @@ use medulla_types::contract::ServerErrorCode;
 /// `filtered` and `violation` results, with no node id and no node value.
 /// `AUDIT_UNAVAILABLE` when the audit queue is full.
 pub fn append_policy_evaluation(
-    persistence: Option<std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    persistence: Option<
+        std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    >,
     caller: &medulla_server_api::read_scope::ReadCaller,
     graph_name: &str,
     req_id: u64,

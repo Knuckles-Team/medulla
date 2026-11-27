@@ -1,8 +1,7 @@
 //! Media memory planning and recall matching (`MEDULLA-MEDIA-VOCAB-R650.2`).
 
 use medulla_modality::media_memory::{
-    match_derivation, plan_media_write, DerivationInput, DerivationKind, MediaBlobRef,
-    MediaRefusal,
+    match_derivation, plan_media_write, DerivationInput, DerivationKind, MediaBlobRef, MediaRefusal,
 };
 
 fn blob() -> MediaBlobRef {
@@ -36,10 +35,16 @@ fn blob_written_once_and_recall_is_deterministic() {
     let mut sorted = ids.clone();
     sorted.sort_unstable();
     assert_eq!(ids, sorted, "the output is sorted by id");
-    assert!(first.derivations.iter().all(|d| d.derived_from == blob().digest));
+    assert!(first
+        .derivations
+        .iter()
+        .all(|d| d.derived_from == blob().digest));
 
     let second = plan_media_write(&blob(), true, &derivations).unwrap();
-    assert_eq!(second.blob, None, "a second write of the digest adds no blob");
+    assert_eq!(
+        second.blob, None,
+        "a second write of the digest adds no blob"
+    );
     assert_eq!(second.derivations, first.derivations, "the same ids");
 
     // Equal scores order by id, whatever the thread count.
@@ -84,7 +89,11 @@ fn refusals_and_skips() {
         ("ok".to_string(), vec![0.0, 1.0]),
     ];
     let hits = match_derivation(&[0.0, 1.0], &candidates, 10);
-    assert_eq!(hits.len(), 1, "a length mismatch and a zero norm are not hits");
+    assert_eq!(
+        hits.len(),
+        1,
+        "a length mismatch and a zero norm are not hits"
+    );
     assert_eq!(hits[0].id, "ok");
 }
 
@@ -113,7 +122,10 @@ fn sniff_table_names_each_supported_type() {
         assert_eq!(sniff_mime(&head), Some(mime));
     }
     // An unlisted type, a short head and a form tag without the RIFF tag name nothing.
-    assert_eq!(sniff_mime(b"MZ\x90\0\x03\0\0\0\x04\0\0\0\xff\xff\0\0"), None);
+    assert_eq!(
+        sniff_mime(b"MZ\x90\0\x03\0\0\0\x04\0\0\0\xff\xff\0\0"),
+        None
+    );
     assert_eq!(sniff_mime(b"\xff"), None);
     assert_eq!(sniff_mime(b"XXXX\0\0\0\0WEBPVP8 "), None);
 }

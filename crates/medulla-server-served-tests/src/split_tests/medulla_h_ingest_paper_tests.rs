@@ -28,7 +28,11 @@ fn node_id(canonical_id: &str) -> String {
 
 /// The `id` of a paper: the SHA-256 of the compact JSON `[canonical_id, revision]`.
 fn identity(canonical_id: &str, revision: Option<&str>) -> String {
-    sha256_hex(serde_json::to_string(&json!([canonical_id, revision])).unwrap().as_bytes())
+    sha256_hex(
+        serde_json::to_string(&json!([canonical_id, revision]))
+            .unwrap()
+            .as_bytes(),
+    )
 }
 
 fn provenance(field: &str) -> Value {
@@ -69,7 +73,9 @@ fn receipt(canonical_id: &str, tenant: &str, sha: &str) -> Value {
     })
 }
 
-fn refusals(receipt: &medulla_source_types::source_ingestion::SourceIngestionReceipt) -> Vec<(String, String)> {
+fn refusals(
+    receipt: &medulla_source_types::source_ingestion::SourceIngestionReceipt,
+) -> Vec<(String, String)> {
     receipt
         .papers
         .refusals
@@ -95,8 +101,14 @@ async fn mixed_result_refuses_only_the_unidentified_paper() {
         refusals(&accepted),
         vec![("bad".to_string(), "PAPER_IDENTITY_INVALID".to_string())]
     );
-    assert!(served.properties(&node_id("doi:10.1234/good")).await.is_some());
-    assert!(served.properties(&node_id("doi:10.1234/bad")).await.is_none());
+    assert!(served
+        .properties(&node_id("doi:10.1234/good"))
+        .await
+        .is_some());
+    assert!(served
+        .properties(&node_id("doi:10.1234/bad"))
+        .await
+        .is_none());
 
     // A receipt of another tenant refuses only that paper.
     let sha = sha256_hex(b"document");
@@ -111,8 +123,14 @@ async fn mixed_result_refuses_only_the_unidentified_paper() {
         refusals(&accepted),
         vec![("foreign".to_string(), "PAPER_RECEIPT_MISMATCH".to_string())]
     );
-    assert!(served.properties(&node_id("doi:10.1234/foreign")).await.is_none());
-    assert!(served.properties(&node_id("doi:10.1234/own")).await.is_some());
+    assert!(served
+        .properties(&node_id("doi:10.1234/foreign"))
+        .await
+        .is_none());
+    assert!(served
+        .properties(&node_id("doi:10.1234/own"))
+        .await
+        .is_some());
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R002.5.2
@@ -136,7 +154,10 @@ async fn receipt_bound_paper_facts_round_trip() {
             .unwrap_or_else(|| panic!("the paper has no `{key}`"))
             .to_string()
     };
-    let properties = served.properties(&node_id(canonical_id)).await.expect("the paper node");
+    let properties = served
+        .properties(&node_id(canonical_id))
+        .await
+        .expect("the paper node");
     // The facts.
     assert_eq!(read(&properties, "type"), "ResearchPaper");
     assert_eq!(read(&properties, "canonical_id"), canonical_id);
@@ -175,12 +196,18 @@ async fn receipt_bound_paper_facts_round_trip() {
         .iter()
         .find(|entry| entry["field"] == "authors")
         .expect("an authors provenance entry");
-    assert_eq!(authors["provider_ref_or_document_digest"], "crossref:authors-1");
+    assert_eq!(
+        authors["provider_ref_or_document_digest"],
+        "crossref:authors-1"
+    );
 
     // Replay of the same identity, revision and digest is idempotent.
     let replay = served.ingest(STREAM, &[("facts", payload)]).await;
     assert!(refusals(&replay).is_empty());
-    let replayed = served.properties(&node_id(canonical_id)).await.expect("the paper node");
+    let replayed = served
+        .properties(&node_id(canonical_id))
+        .await
+        .expect("the paper node");
     assert_eq!(replayed, properties);
     assert_eq!(
         served.uql_ids("MATCH (:ResearchPaper)").await,
@@ -215,14 +242,20 @@ async fn count_only_record_creates_no_edge() {
         node_id("doi:10.1234/cited")
     )));
     // The cited paper is a stub; a full record for it overwrites the stub without the marker.
-    let stub = served.properties(&node_id("doi:10.1234/cited")).await.expect("the stub");
+    let stub = served
+        .properties(&node_id("doi:10.1234/cited"))
+        .await
+        .expect("the stub");
     assert_eq!(stub.get("stub"), Some(&json!(true)));
     assert_eq!(stub.get("type"), Some(&json!("ResearchPaper")));
     let accepted = served
         .ingest(STREAM, &[("cited", paper("doi:10.1234/cited"))])
         .await;
     assert!(refusals(&accepted).is_empty());
-    let full = served.properties(&node_id("doi:10.1234/cited")).await.expect("the full paper");
+    let full = served
+        .properties(&node_id("doi:10.1234/cited"))
+        .await
+        .expect("the full paper");
     assert!(full.get("stub").is_none());
     assert_eq!(full.get("title"), Some(&json!("A Study")));
     assert_eq!(served.uql_ids("EDGES :cites").await.len(), 1);
@@ -265,15 +298,22 @@ async fn paper_refusals_leave_store_unchanged() {
         vec![
             ("identity".to_string(), "PAPER_IDENTITY_INVALID".to_string()),
             ("receipt".to_string(), "PAPER_RECEIPT_MISMATCH".to_string()),
-            ("absolute".to_string(), "PAPER_ARTIFACT_UNAVAILABLE".to_string()),
-            ("document".to_string(), "PAPER_ARTIFACT_UNAVAILABLE".to_string()),
-            ("provenance".to_string(), "PAPER_FIELD_PROVENANCE_MISSING".to_string()),
+            (
+                "absolute".to_string(),
+                "PAPER_ARTIFACT_UNAVAILABLE".to_string()
+            ),
+            (
+                "document".to_string(),
+                "PAPER_ARTIFACT_UNAVAILABLE".to_string()
+            ),
+            (
+                "provenance".to_string(),
+                "PAPER_FIELD_PROVENANCE_MISSING".to_string()
+            ),
         ]
     );
     // Every refusal happened before the paper's nodes were added: the store holds no paper.
-    for canonical_id in [
-        "identity", "receipt", "absolute", "document", "provenance",
-    ] {
+    for canonical_id in ["identity", "receipt", "absolute", "document", "provenance"] {
         assert!(
             served
                 .properties(&node_id(&format!("doi:10.1234/{canonical_id}")))

@@ -36,9 +36,16 @@ fn formalizes_is_declared_once_in_core_with_entity_domain_and_range() {
     assert_eq!(declaring, [CORE], "only core declares :formalizes");
 
     let core = &files.iter().find(|(name, _)| name == CORE).unwrap().1;
-    assert_eq!(core.matches(DECLARATION).count(), 1, "declared once in core");
+    assert_eq!(
+        core.matches(DECLARATION).count(),
+        1,
+        "declared once in core"
+    );
     let start = core.find(DECLARATION).unwrap();
-    let block = &core[start..core[start..].find(" .\n").map_or(core.len(), |end| start + end)];
+    let block = &core[start
+        ..core[start..]
+            .find(" .\n")
+            .map_or(core.len(), |end| start + end)];
     assert!(block.contains("rdfs:label \"formalizes\""), "{block}");
     assert!(block.contains("rdfs:comment"), "{block}");
     // The entity class is bfo:0000001 for both ends, like :derivedFrom.

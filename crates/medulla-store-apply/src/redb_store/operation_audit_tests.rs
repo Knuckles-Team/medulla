@@ -448,7 +448,9 @@ fn evidence_is_bounded_rendered_in_the_chain_line_and_part_of_the_outcome_equali
     let mut store = Store::seeded(dir.path());
     let mut reserved = event("request-ev", "reserved");
     reserved.evidence.insert("rule_ids".into(), "r1,r2".into());
-    reserved.evidence.insert("redaction_count".into(), "3".into());
+    reserved
+        .evidence
+        .insert("redaction_count".into(), "3".into());
     store.append(&reserved).unwrap();
     let mut same = reserved.clone();
     same.status = AuditStatus::Ok;
@@ -510,21 +512,38 @@ fn the_audit_list_keeps_the_callers_tenant_and_one_operation_and_pages_by_sequen
     store.append(&event("request-d", "reserved")).unwrap();
 
     let all = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, None, 100).unwrap();
-    assert!(all.records.iter().all(|r| r.event_line.contains(&format!("tenant={TENANT}|"))));
-    assert!(all.records.iter().all(|r| !r.event_line.contains("other-tenant")));
+    assert!(all
+        .records
+        .iter()
+        .all(|r| r.event_line.contains(&format!("tenant={TENANT}|"))));
+    assert!(all
+        .records
+        .iter()
+        .all(|r| !r.event_line.contains("other-tenant")));
     assert_eq!(all.records.len(), 3);
     assert_eq!(all.next_after_seq, None);
 
-    let writes =
-        operation_audit_list(&store.shard, GRAPH, TENANT, Some("graph.nodes.write"), None, None, 100)
-            .unwrap();
+    let writes = operation_audit_list(
+        &store.shard,
+        GRAPH,
+        TENANT,
+        Some("graph.nodes.write"),
+        None,
+        None,
+        100,
+    )
+    .unwrap();
     assert_eq!(writes.records.len(), 2);
-    assert!(writes.records.iter().all(|r| r.event_line.contains("|op=graph.nodes.write|")));
+    assert!(writes
+        .records
+        .iter()
+        .all(|r| r.event_line.contains("|op=graph.nodes.write|")));
 
     let first = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, None, 1).unwrap();
     assert_eq!(first.records.len(), 1);
     let resume = first.next_after_seq.expect("more records remain");
-    let rest = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, Some(resume), 100).unwrap();
+    let rest =
+        operation_audit_list(&store.shard, GRAPH, TENANT, None, None, Some(resume), 100).unwrap();
     assert_eq!(rest.records.len(), 2);
     assert!(rest.records[0].seq > resume);
 }
@@ -538,12 +557,21 @@ fn an_operator_record_is_listed_by_request_id_and_never_read_back_as_a_tenant_ev
     let mut withheld = event("request-w", "reserved");
     withheld.audit_class = OPERATOR_AUDIT_CLASS.into();
     withheld.op = "query.projections".into();
-    withheld.evidence.insert("withheld_count".into(), "3".into());
+    withheld
+        .evidence
+        .insert("withheld_count".into(), "3".into());
     let receipt = store.append(&withheld).unwrap();
 
-    let listed =
-        operation_audit_list(&store.shard, GRAPH, TENANT, None, Some("request-w"), None, 100)
-            .unwrap();
+    let listed = operation_audit_list(
+        &store.shard,
+        GRAPH,
+        TENANT,
+        None,
+        Some("request-w"),
+        None,
+        100,
+    )
+    .unwrap();
     assert_eq!(listed.records.len(), 1);
     assert!(listed.records[0].event_line.contains("|class=operator"));
     assert!(listed.records[0].event_line.contains("withheld_count=3"));

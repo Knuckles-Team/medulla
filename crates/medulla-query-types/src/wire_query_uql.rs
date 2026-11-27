@@ -690,7 +690,13 @@ fn propagate(
         let layers = history
             .layers
             .iter()
-            .map(|layer| Ok(format!("{} {}", uql_quote(&layer.layer), uql_num(layer.weight)?)))
+            .map(|layer| {
+                Ok(format!(
+                    "{} {}",
+                    uql_quote(&layer.layer),
+                    uql_num(layer.weight)?
+                ))
+            })
             .collect::<Result<Vec<_>, UqlPrintError>>()?
             .join(", ");
         text.push_str(&format!(

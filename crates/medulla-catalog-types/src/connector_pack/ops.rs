@@ -338,7 +338,11 @@ mod tests {
         ),
         ("catalog_binding_status", false, "agent:pack-control"),
         ("catalog_owner_principal", false, "agent:pack-control"),
-        ("catalog_reconciliation_receipt", false, "agent:pack-control"),
+        (
+            "catalog_reconciliation_receipt",
+            false,
+            "agent:pack-control",
+        ),
         (
             "catalog_request_owner_principal",
             false,

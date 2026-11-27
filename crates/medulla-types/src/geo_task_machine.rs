@@ -67,10 +67,21 @@ impl MachineEvent for TaskEvent {
 /// `GeoTaskMachine`: the closed edge table. Every other pair is refused.
 pub static GEO_TASK_MACHINE: MachineDef<TaskStatusKind, TaskEvent, &'static str> = MachineDef {
     name: "GeoTaskMachine",
-    states: &[TaskStatusKind::Pending, TaskStatusKind::Assigned, TaskStatusKind::InProgress, TaskStatusKind::Done, TaskStatusKind::Cancelled],
+    states: &[
+        TaskStatusKind::Pending,
+        TaskStatusKind::Assigned,
+        TaskStatusKind::InProgress,
+        TaskStatusKind::Done,
+        TaskStatusKind::Cancelled,
+    ],
     initial: TaskStatusKind::Pending,
     terminals: &[TaskStatusKind::Done, TaskStatusKind::Cancelled],
-    events: &[TaskEvent::Assign, TaskEvent::Start, TaskEvent::Complete, TaskEvent::Cancel],
+    events: &[
+        TaskEvent::Assign,
+        TaskEvent::Start,
+        TaskEvent::Complete,
+        TaskEvent::Cancel,
+    ],
     guards: &[],
     edges: &[
         Edge {
@@ -120,7 +131,13 @@ pub static GEO_TASK_MACHINE: MachineDef<TaskStatusKind, TaskEvent, &'static str>
 
 impl TaskStatusKind {
     /// Every state, in declaration order.
-    pub const ALL: [TaskStatusKind; 5] = [TaskStatusKind::Pending, TaskStatusKind::Assigned, TaskStatusKind::InProgress, TaskStatusKind::Done, TaskStatusKind::Cancelled];
+    pub const ALL: [TaskStatusKind; 5] = [
+        TaskStatusKind::Pending,
+        TaskStatusKind::Assigned,
+        TaskStatusKind::InProgress,
+        TaskStatusKind::Done,
+        TaskStatusKind::Cancelled,
+    ];
 
     /// The state a new record takes.
     pub const fn initial() -> Self {
@@ -183,7 +200,11 @@ mod tests {
         let machine = &GEO_TASK_MACHINE;
         for &state in machine.states {
             for &event in machine.events {
-                if machine.edges.iter().any(|e| e.from == state && e.event == event) {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
                     continue;
                 }
                 let refused = state.apply(event).unwrap_err();
@@ -208,8 +229,17 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let source = include_str!("../../medulla-geo/src/geotask.rs");
-        assert!(source.contains("pub fn apply(&mut self, event: TaskEvent)"), "the writer routes through the machine");
-        assert!(!source.contains("fn with_status"), "no builder sets the status directly");
-        assert!(!source.contains("enum TaskStatus"), "the status enum is the machine kind");
+        assert!(
+            source.contains("pub fn apply(&mut self, event: TaskEvent)"),
+            "the writer routes through the machine"
+        );
+        assert!(
+            !source.contains("fn with_status"),
+            "no builder sets the status directly"
+        );
+        assert!(
+            !source.contains("enum TaskStatus"),
+            "the status enum is the machine kind"
+        );
     }
 }

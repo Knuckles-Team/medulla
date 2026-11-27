@@ -12,8 +12,7 @@ use medulla_storage::{
     create_predecessor_owner_file, AgentLibraryOwner, GraphShardOwner, LayoutPredecessor,
     OwnerLayout, StorageKernel, AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_REVISIONS,
     BLOB_BEFORE_HOLDERS, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
-    GRAPH_SHARD_BEFORE_ENRICHMENT,
-    OFFLINE_STORE_UPGRADES,
+    GRAPH_SHARD_BEFORE_ENRICHMENT, OFFLINE_STORE_UPGRADES,
 };
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
@@ -589,10 +588,7 @@ fn pre_effect_receipts_shard_upgrades_offline_and_old_layout_refuses_open() {
     // The offline command upgrades it, keeps its rows, and the current layout opens.
     let report = apply(dir.path(), &confirmed());
     assert_eq!(report.exit_code, EXIT_NOTHING_TO_DO, "{}", report.render());
-    assert_eq!(
-        statuses(&report),
-        [("graph-0.redb", StoreStatus::Upgraded)]
-    );
+    assert_eq!(statuses(&report), [("graph-0.redb", StoreStatus::Upgraded)]);
     assert!(report.stores[0]
         .detail
         .contains(GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label));

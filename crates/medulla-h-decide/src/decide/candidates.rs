@@ -28,8 +28,8 @@ use medulla_decision_types::decision::statistical::graph_rows::{
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
 use medulla_decision_types::{
     decision::statistical::declared::check_declared,
-    decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
     decision::statistical::declared::DeclaredOption,
+    decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
 };
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::StatisticalErrorCode,
@@ -695,10 +695,7 @@ fn rank_embedder() -> Option<impl Fn(&[String]) -> Option<Vec<Vec<f32>>>> {
     {
         let embedder = medulla_server_ops::api::query_txn::query_support::uql_text_embedder()?;
         Some(move |texts: &[String]| -> Option<Vec<Vec<f32>>> {
-            texts
-                .iter()
-                .map(|text| embedder.embed(text).ok())
-                .collect()
+            texts.iter().map(|text| embedder.embed(text).ok()).collect()
         })
     }
     #[cfg(not(feature = "query"))]

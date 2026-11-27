@@ -9,7 +9,13 @@
 //! variable is unset); P2 replays the same statements unmodified on the engine and lists every
 //! statement whose outcome differs. Each phase writes `conformance/native_hosting/<phase>.json`.
 
-#![cfg(all(unix, feature = "pgwire", feature = "rdf", feature = "obda", feature = "federation-sql"))]
+#![cfg(all(
+    unix,
+    feature = "pgwire",
+    feature = "rdf",
+    feature = "obda",
+    feature = "federation-sql"
+))]
 
 mod common;
 #[path = "support/family_tree.rs"]
@@ -18,10 +24,10 @@ mod family_tree;
 mod test_support;
 
 use medulla_catalog_types::gramps_baseline_digest::GrampsBaselineDigest;
+use medulla_catalog_types::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
 use medulla_catalog_types::schema_context::{
     SchemaContextAnswer, SchemaContextIntent, SCHEMA_CONTEXT_UNMAPPED,
 };
-use medulla_catalog_types::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, ResultPayload};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -241,13 +247,14 @@ impl Native {
                     signature: String::new(),
                     roles: roles.clone(),
                 };
-                let bytes = medulla_protocol_types::protocol::build_context_operation_signature_bytes(
-                    "eg-register-identity-v2",
-                    context,
-                    &idempotency_key,
-                    graph,
-                    &unsigned.canonical_body_bytes(),
-                );
+                let bytes =
+                    medulla_protocol_types::protocol::build_context_operation_signature_bytes(
+                        "eg-register-identity-v2",
+                        context,
+                        &idempotency_key,
+                        graph,
+                        &unsigned.canonical_body_bytes(),
+                    );
                 let digest = Sha256::digest(bytes);
                 let mut mac = hmac::Hmac::<Sha256>::new_from_slice(ADMIN_SIGNER_KEY.as_bytes())
                     .expect("signing key");
@@ -471,7 +478,11 @@ async fn p0_p1_p2_exit_artifacts() {
     // P0: import the tree, export it, record the digest; two fresh graphs agree.
     let export = import_and_export(&mut native, "gramps-p0-a").await;
     let again = import_and_export(&mut native, "gramps-p0-b").await;
-    assert_eq!(export.lines().count(), 1_019, "the export holds every triple");
+    assert_eq!(
+        export.lines().count(),
+        1_019,
+        "the export holds every triple"
+    );
     assert_eq!(sha256_hex(&export), sha256_hex(&again), "two imports agree");
     let baseline = GrampsBaselineDigest {
         record_count: (family_tree::PEOPLE + family_tree::FAMILIES) as u64,
@@ -631,10 +642,13 @@ async fn tables_digest(client: &tokio_postgres::Client) -> GrampsBaselineDigest 
 
 /// The graph digest: SHA-256 of the exact `GetRdf` string of `graph`.
 async fn graph_digest(native: &mut Native, graph: &str) -> String {
-    match native.ok(graph, &Native::context(&["*"]), Method::GetRdf).await {
-        Some(ResultPayload::Raw(bytes)) => sha256_hex(
-            &rmp_serde::from_slice::<String>(&bytes).expect("GetRdf answers one string"),
-        ),
+    match native
+        .ok(graph, &Native::context(&["*"]), Method::GetRdf)
+        .await
+    {
+        Some(ResultPayload::Raw(bytes)) => {
+            sha256_hex(&rmp_serde::from_slice::<String>(&bytes).expect("GetRdf answers one string"))
+        }
         other => panic!("GetRdf answered {other:?}"),
     }
 }
@@ -672,7 +686,11 @@ async fn assert_restored(
     let mut native = Native::connect(&server.socket).await;
     ensure_admin(&mut native).await;
     let client = pg(server, TABLE_GRAPH).await;
-    assert_eq!(&tables_digest(&client).await, tables_before, "{path}: table digest");
+    assert_eq!(
+        &tables_digest(&client).await,
+        tables_before,
+        "{path}: table digest"
+    );
     if check_graph {
         assert_eq!(
             graph_digest(&mut native, BASELINE_GRAPH).await,
@@ -787,7 +805,10 @@ async fn p4_restore_and_p5_schema() {
         }
         other => panic!("AwaitWatermark answered {other:?}"),
     };
-    assert!(settled.reached, "the catalog probe did not settle within 30 seconds");
+    assert!(
+        settled.reached,
+        "the catalog probe did not settle within 30 seconds"
+    );
     let probe = native
         .call(
             TABLE_GRAPH,
@@ -805,18 +826,35 @@ async fn p4_restore_and_p5_schema() {
     };
     let definition = answer(
         native
-            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Definition), None)
+            .call(
+                TABLE_GRAPH,
+                &context,
+                schema_context(SchemaContextIntent::Definition),
+                None,
+            )
             .await,
     );
     let mut columns: Vec<String> = definition.columns.iter().map(|c| c.name.clone()).collect();
     columns.sort();
     assert_eq!(
         columns,
-        ["birth_year", "first_name", "gender", "gid", "handle", "surname"]
+        [
+            "birth_year",
+            "first_name",
+            "gender",
+            "gid",
+            "handle",
+            "surname"
+        ]
     );
     let joins = answer(
         native
-            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Joins), None)
+            .call(
+                TABLE_GRAPH,
+                &context,
+                schema_context(SchemaContextIntent::Joins),
+                None,
+            )
             .await,
     );
     let joined: std::collections::BTreeSet<&str> = joins
@@ -824,15 +862,28 @@ async fn p4_restore_and_p5_schema() {
         .iter()
         .map(|join| join.joined_table.rsplit('.').next().unwrap_or(""))
         .collect();
-    assert!(joined.contains("family") && joined.contains("child_ref"), "joins: {joined:?}");
+    assert!(
+        joined.contains("family") && joined.contains("child_ref"),
+        "joins: {joined:?}"
+    );
     let owner = answer(
         native
-            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Owner), None)
+            .call(
+                TABLE_GRAPH,
+                &context,
+                schema_context(SchemaContextIntent::Owner),
+                None,
+            )
             .await,
     );
     assert_eq!(owner.owner, ADMIN, "the registering agent owns the source");
     let ontology = native
-        .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Ontology), None)
+        .call(
+            TABLE_GRAPH,
+            &context,
+            schema_context(SchemaContextIntent::Ontology),
+            None,
+        )
         .await;
     assert!(
         format!("{:?}", ontology.error).contains(SCHEMA_CONTEXT_UNMAPPED),
@@ -841,10 +892,18 @@ async fn p4_restore_and_p5_schema() {
     );
     let impact = answer(
         native
-            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Impact), None)
+            .call(
+                TABLE_GRAPH,
+                &context,
+                schema_context(SchemaContextIntent::Impact),
+                None,
+            )
             .await,
     );
-    assert_eq!(impact.change_impact, "no downstream column reads this table");
+    assert_eq!(
+        impact.change_impact,
+        "no downstream column reads this table"
+    );
 
     let client = pg(&engine_a, TABLE_GRAPH).await;
     let expected = text_rows(
@@ -862,7 +921,11 @@ async fn p4_restore_and_p5_schema() {
                         GROUP BY ?surname ORDER BY ?surname"
                     .to_string(),
                 mapping: PERSON_MAPPING.to_string(),
-                tables: vec!["person".to_string(), "family".to_string(), "child_ref".to_string()],
+                tables: vec![
+                    "person".to_string(),
+                    "family".to_string(),
+                    "child_ref".to_string(),
+                ],
                 external_sources: Vec::new(),
             },
         )
@@ -881,7 +944,10 @@ async fn p4_restore_and_p5_schema() {
                 .join("\t")
         })
         .collect();
-    assert_eq!(virtual_rows, expected, "the virtual graph answers statement 8");
+    assert_eq!(
+        virtual_rows, expected,
+        "the virtual graph answers statement 8"
+    );
     write_artifact(
         "p5",
         &json!({
@@ -923,7 +989,11 @@ async fn p4_restore_and_p5_schema() {
     let mut native_s = Native::connect(&engine_s.socket).await;
     load_baseline(&mut native_s, &engine_s).await;
     let source_client = pg(&engine_s, TABLE_GRAPH).await;
-    assert_eq!(&tables_digest(&source_client).await, &tables_before, "dump source");
+    assert_eq!(
+        &tables_digest(&source_client).await,
+        &tables_before,
+        "dump source"
+    );
     let mut dumps = Vec::new();
     for table in ["person", "family", "child_ref"] {
         let stream = source_client
@@ -951,10 +1021,16 @@ async fn p4_restore_and_p5_schema() {
             .await
             .unwrap_or_else(|error| panic!("COPY {table} FROM STDIN: {error}"));
         futures_util::pin_mut!(sink);
-        sink.send(bytes::Bytes::from(data)).await.expect("copy rows");
+        sink.send(bytes::Bytes::from(data))
+            .await
+            .expect("copy rows");
         sink.finish().await.expect("copy finish");
     }
-    assert_eq!(&tables_digest(&reload).await, &tables_before, "sql dump: table digest");
+    assert_eq!(
+        &tables_digest(&reload).await,
+        &tables_before,
+        "sql dump: table digest"
+    );
     drop((reload, native_c));
     engine_c.stop();
 

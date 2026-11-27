@@ -111,7 +111,9 @@ mod tests {
         // The id is stable, and every field of its derivation changes it.
         assert_eq!(
             valid.grant_id,
-            grant(alice(), "github-mcp", "create_issue").unwrap().grant_id
+            grant(alice(), "github-mcp", "create_issue")
+                .unwrap()
+                .grant_id
         );
         for other in [
             grant(
@@ -174,7 +176,10 @@ mod tests {
         };
         refused(ceiling(vec!["b".into(), "a".into()], 2_000));
         refused(ceiling(vec!["a".into(), "a".into()], 2_000));
-        refused(ceiling((0..65).map(|n| format!("scope:{n:03}")).collect(), 2_000));
+        refused(ceiling(
+            (0..65).map(|n| format!("scope:{n:03}")).collect(),
+            2_000,
+        ));
         assert!(ceiling((0..64).map(|n| format!("scope:{n:03}")).collect(), 2_000).is_ok());
         refused(ceiling(Vec::new(), 1_000));
         refused(ceiling(Vec::new(), 999));

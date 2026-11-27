@@ -101,9 +101,14 @@ pub fn apply_work_item_rows(
                 crypto,
             ))
         }
-        Method::ClaimWorkItem { request } => {
-            apply_claim_work_item_row(graph, request, nodes, transitions, native_work_items, crypto)
-        }
+        Method::ClaimWorkItem { request } => apply_claim_work_item_row(
+            graph,
+            request,
+            nodes,
+            transitions,
+            native_work_items,
+            crypto,
+        ),
         Method::RenewWorkItemLease {
             tenant,
             work_item_id,
@@ -127,9 +132,14 @@ pub fn apply_work_item_rows(
             transitions: &mut *transitions,
             crypto,
         }),
-        Method::CasWorkItemMetadata { request } => {
-            apply_cas_work_item_metadata_row(graph, request, committed_at_ms, nodes, transitions, crypto)
-        }
+        Method::CasWorkItemMetadata { request } => apply_cas_work_item_metadata_row(
+            graph,
+            request,
+            committed_at_ms,
+            nodes,
+            transitions,
+            crypto,
+        ),
         Method::CommitWorkItemResult {
             tenant,
             work_item_id,

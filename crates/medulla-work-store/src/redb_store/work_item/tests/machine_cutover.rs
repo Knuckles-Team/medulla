@@ -197,12 +197,7 @@ fn claim(shard: &Shard, id: &str) -> ClaimWorkItemResult {
     payload(apply(shard, &format!("claim/{id}"), method, 2_000).expect("the claim applies"))
 }
 
-fn commit(
-    id: &str,
-    lease_epoch: u64,
-    fencing_token: u64,
-    key: &str,
-) -> Method {
+fn commit(id: &str, lease_epoch: u64, fencing_token: u64, key: &str) -> Method {
     Method::CommitWorkItemResult {
         tenant: "tenant".into(),
         work_item_id: id.to_string(),
@@ -250,8 +245,13 @@ fn illegal_work_item_transitions_answer_typed_outcomes_through_the_row_dispatch(
     assert_eq!(outcome.outcome, WorkItemCancelOutcome::Cancelled);
     assert_eq!(status(shard, &cancelled), serde_json::json!("cancelled"));
     let after: WorkItemTransition<WorkItemCommitOutcome> = payload(
-        apply(shard, "commit-after-cancel", commit(&cancelled, 1, 1, "commit-1"), 4_500)
-            .unwrap(),
+        apply(
+            shard,
+            "commit-after-cancel",
+            commit(&cancelled, 1, 1, "commit-1"),
+            4_500,
+        )
+        .unwrap(),
     );
     assert_eq!(after.outcome, WorkItemCommitOutcome::Noop);
     assert_eq!(status(shard, &cancelled), serde_json::json!("cancelled"));

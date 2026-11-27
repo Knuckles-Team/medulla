@@ -232,8 +232,7 @@ pub(super) fn handle_worker_fail(
         if matches!(
             &job.state,
             JobState::Submitted { .. } | JobState::Backoff { .. } | JobState::Failed { .. }
-        )
-            && job.last_worker_ref == worker_ref
+        ) && job.last_worker_ref == worker_ref
             && job.lease_epoch == lease_epoch
         {
             return job_response::<
@@ -259,12 +258,24 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = super::super::core::open_job_store(dir.path()).expect("job store opens");
         let fail = |code: &str| {
-            handle_worker_fail(&store, 1, Some("worker"), true, "instance", "job-none", 1, code)
+            handle_worker_fail(
+                &store,
+                1,
+                Some("worker"),
+                true,
+                "instance",
+                "job-none",
+                1,
+                code,
+            )
         };
         let cancelled = fail("kernel_cancelled");
         let outside = fail("not_a_code");
         assert!(cancelled.error.is_some());
-        assert_eq!(cancelled.error, outside.error, "refused like any code outside the set");
+        assert_eq!(
+            cancelled.error, outside.error,
+            "refused like any code outside the set"
+        );
         assert_eq!(cancelled.error_detail, outside.error_detail);
         // A code of the closed set passes the code check and reaches the store, which
         // refuses the unknown job with a different reason.

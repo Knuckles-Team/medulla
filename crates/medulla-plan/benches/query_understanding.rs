@@ -14,14 +14,22 @@ use medulla_plan::query_understanding::{understand, RelationshipName};
 use std::hint::black_box;
 
 /// Twenty whitespace-separated tokens: two filters, a quoted phrase and a relational clause.
-const QUERY: &str = "type:Doc source:wiki after:2026-01-01 \"replica recovery\" which team owns the \
+const QUERY: &str =
+    "type:Doc source:wiki after:2026-01-01 \"replica recovery\" which team owns the \
                      replica notes that describe wal replay and snapshot restore for every cluster";
 
 fn relationships() -> Vec<RelationshipName> {
-    ["owns", "depends_on", "describes", "supersedes", "cites", "reviews"]
-        .into_iter()
-        .map(|name| RelationshipName::new(name.to_string(), None))
-        .collect()
+    [
+        "owns",
+        "depends_on",
+        "describes",
+        "supersedes",
+        "cites",
+        "reviews",
+    ]
+    .into_iter()
+    .map(|name| RelationshipName::new(name.to_string(), None))
+    .collect()
 }
 
 fn bench_understand(c: &mut Criterion) {

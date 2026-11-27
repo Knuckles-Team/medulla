@@ -80,9 +80,7 @@ impl IdentityStore {
                 self.register_login_state(request.ttl_ms, stamp, ctx.now_ms)
             }
             TokenOp::ConsumeLoginState { .. } => self.consume_login_state(stamp, ctx.now_ms),
-            TokenOp::RegisterAssertion { request } => {
-                self.register_assertion(request, ctx.now_ms)
-            }
+            TokenOp::RegisterAssertion { request } => self.register_assertion(request, ctx.now_ms),
         }
     }
 

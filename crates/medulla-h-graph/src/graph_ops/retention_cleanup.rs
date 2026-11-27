@@ -304,7 +304,8 @@ pub fn cleanup_graph(
                 .get_node_properties(&id)
                 .map(|blob| decode_row(&blob))
                 .unwrap_or_default();
-            let is_record = row.get("type").and_then(serde_json::Value::as_str) == Some(RECORD_LABEL);
+            let is_record =
+                row.get("type").and_then(serde_json::Value::as_str) == Some(RECORD_LABEL);
             if !is_record
                 && !metadata_has(&row, "owner_ref")
                 && older_than(row_ms(&row, "created_at"), policy, now_ms)
@@ -350,16 +351,12 @@ pub(super) async fn handle_retention_cleanup_run(
         operations_msgpack: operations_msgpack.clone(),
     };
     let plan = MutationPlan::for_method(&write);
-    let response = medulla_server_ops::api::ingest::graph::commit_gateway(
-        ctx,
-        &plan,
-        &write,
-        move |core| {
+    let response =
+        medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
             medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)
                 .and_then(|_| payload(wire))
-        },
-    )
-    .await;
+        })
+        .await;
     // The counter moves only after the batch committed.
     if response.error.is_none() {
         let metrics = medulla_kernel::metrics::process();
@@ -601,7 +598,10 @@ mod tests {
     #[test]
     fn policy_refusals_name_their_codes() {
         let no_hold = policy_from_spec(r#"{"age_ms":1,"batch":1,"holds":[]}"#).unwrap_err();
-        assert!(no_hold.starts_with("RETENTION_HOLD_CHECK_REQUIRED"), "{no_hold}");
+        assert!(
+            no_hold.starts_with("RETENTION_HOLD_CHECK_REQUIRED"),
+            "{no_hold}"
+        );
         for bad in [
             r#"{"age_ms":0,"batch":1,"holds":["legal_hold"]}"#,
             r#"{"age_ms":1,"batch":0,"holds":["legal_hold"]}"#,
@@ -609,7 +609,10 @@ mod tests {
             "not json",
         ] {
             let refusal = policy_from_spec(bad).unwrap_err();
-            assert!(refusal.starts_with("RETENTION_POLICY_INVALID"), "{bad}: {refusal}");
+            assert!(
+                refusal.starts_with("RETENTION_POLICY_INVALID"),
+                "{bad}: {refusal}"
+            );
         }
         assert!(policy_from_spec(r#"{"age_ms":1,"batch":1,"holds":["legal_hold"]}"#).is_ok());
     }
@@ -646,7 +649,10 @@ mod tests {
         assert_eq!(operations[1]["op"], "add_node");
         assert_eq!(operations[1]["properties"]["type"], RECORD_LABEL);
         assert_eq!(operations[1]["properties"]["removed"], 2);
-        assert_eq!(operations[1]["properties"]["policy_digest"], "ab".repeat(32));
+        assert_eq!(
+            operations[1]["properties"]["policy_digest"],
+            "ab".repeat(32)
+        );
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R700.5

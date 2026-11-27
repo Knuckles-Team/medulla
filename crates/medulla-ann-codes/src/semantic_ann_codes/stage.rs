@@ -12,19 +12,17 @@ use super::{
 };
 use medulla_index_types::{
     semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
-    semantic_index::SemanticEvent,
-    semantic_index::SemanticIndexMutation, semantic_index::SemanticQueueClass,
-    semantic_index::SemanticSourceProgress, semantic_index::SemanticStage,
-    semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
-    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
-    semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
+    semantic_index::SemanticEvent, semantic_index::SemanticIndexMutation,
+    semantic_index::SemanticQueueClass, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageIntentDraft, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageScope,
+    semantic_index::SemanticStageTransition,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-use medulla_storage::{
-    ScopedRead, SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES,
-};
+use medulla_storage::{ScopedRead, SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, OutboxClaimBudget, OutboxClaimOutcome};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -720,12 +718,15 @@ impl SemanticCodeStore {
         ) {
             return Ok(Vec::new());
         }
-        let at = GenerationCoordinates::of_intent(self.tenant.as_str(), self.binding.as_str(), intent);
+        let at =
+            GenerationCoordinates::of_intent(self.tenant.as_str(), self.binding.as_str(), intent);
         let (_, members) = authoritative_generation_state(
             &read
                 .open_owner_table(SEMANTIC_SOURCE_PROGRESS)
                 .map_err(kernel_error)?,
-            &read.open_owner_table(SEMANTIC_STAGES).map_err(kernel_error)?,
+            &read
+                .open_owner_table(SEMANTIC_STAGES)
+                .map_err(kernel_error)?,
             at,
             intent.stage,
             intent.stage,

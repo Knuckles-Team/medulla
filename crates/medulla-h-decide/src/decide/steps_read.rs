@@ -29,9 +29,7 @@ fn invalid(what: impl std::fmt::Display) -> String {
 fn iri_objects(facts: &[Fact], subject: &str, name: &str) -> BTreeSet<String> {
     facts
         .iter()
-        .filter(|fact| {
-            fact.subject == subject && fact.predicate.strip_prefix(CORE) == Some(name)
-        })
+        .filter(|fact| fact.subject == subject && fact.predicate.strip_prefix(CORE) == Some(name))
         .filter_map(|fact| match &fact.object {
             Object::Iri(iri) => Some(iri.clone()),
             Object::Literal(_) => None,
@@ -85,15 +83,13 @@ fn steps_of(facts: &[Fact], tasks: &[String]) -> Result<Vec<AssemblyStep>, Strin
     if plan.is_empty() {
         return Ok(Vec::new());
     }
-    let order = order_steps(
-        &plan,
-        &BTreeMap::new(),
-        &UsageKnobs { min_trials: 0 },
-    )
-    .map_err(|error| match error {
-        OrderError::Cyclic(ids) => format!("{STEP_ORDER_CYCLE}: {}", ids.join(", ")),
-        OrderError::DuplicateStep(id) => invalid(format!("step {id} is declared twice")),
-    })?;
+    let order =
+        order_steps(&plan, &BTreeMap::new(), &UsageKnobs { min_trials: 0 }).map_err(|error| {
+            match error {
+                OrderError::Cyclic(ids) => format!("{STEP_ORDER_CYCLE}: {}", ids.join(", ")),
+                OrderError::DuplicateStep(id) => invalid(format!("step {id} is declared twice")),
+            }
+        })?;
     let task_of: BTreeMap<&str, &str> = plan
         .iter()
         .map(|step| step.step_id.as_str())
@@ -109,7 +105,11 @@ fn steps_of(facts: &[Fact], tasks: &[String]) -> Result<Vec<AssemblyStep>, Strin
                 .map(|set| set.iter().cloned().collect())
                 .unwrap_or_default();
             Ok(AssemblyStep {
-                task: task_of.get(step.as_str()).copied().unwrap_or_default().to_string(),
+                task: task_of
+                    .get(step.as_str())
+                    .copied()
+                    .unwrap_or_default()
+                    .to_string(),
                 step: step.clone(),
                 position: u16::try_from(index).map_err(|error| invalid(error))?,
                 capabilities: BoundedVec::new(held).map_err(|error| invalid(error))?,
@@ -139,9 +139,15 @@ mod tests {
             fact("s1", "requiresCapability", "eg:capability/retrieval"),
         ];
         let steps = steps_of(&facts, &["t".to_string()]).unwrap();
-        let ids: Vec<(&str, u16)> = steps.iter().map(|s| (s.step.as_str(), s.position)).collect();
+        let ids: Vec<(&str, u16)> = steps
+            .iter()
+            .map(|s| (s.step.as_str(), s.position))
+            .collect();
         assert_eq!(ids, vec![("s1", 0), ("s2", 1)]);
-        assert_eq!(steps[0].capabilities.as_slice(), ["eg:capability/retrieval"]);
+        assert_eq!(
+            steps[0].capabilities.as_slice(),
+            ["eg:capability/retrieval"]
+        );
         assert!(steps_of(&facts, &["other".to_string()]).unwrap().is_empty());
     }
 

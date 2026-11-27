@@ -328,7 +328,9 @@ fn guard_metric_terms(
             if let Some(label) = reference.strip_prefix("term:") {
                 wanted.push(label.trim().to_string());
             } else if let Some(iri) = reference.strip_prefix("prop:") {
-                if iri.chars().any(char::is_whitespace) || medulla_rdf::oxrdf::NamedNode::new(iri).is_err() {
+                if iri.chars().any(char::is_whitespace)
+                    || medulla_rdf::oxrdf::NamedNode::new(iri).is_err()
+                {
                     return Err(refuse(format!("`{{prop:{iri}}}` is not an absolute IRI")));
                 }
             } else {
@@ -375,7 +377,10 @@ fn guard_metric_terms(
                     }
                     Some(serde_json::Value::Array(values)) => {
                         known.extend(
-                            values.iter().filter_map(|v| v.as_str()).map(|t| t.trim().to_string()),
+                            values
+                                .iter()
+                                .filter_map(|v| v.as_str())
+                                .map(|t| t.trim().to_string()),
                         );
                     }
                     _ => {}
@@ -384,7 +389,9 @@ fn guard_metric_terms(
         }
     }
     match wanted.iter().find(|label| !known.contains(*label)) {
-        Some(label) => Err(refuse(format!("no glossary term has the preferred label `{label}`"))),
+        Some(label) => Err(refuse(format!(
+            "no glossary term has the preferred label `{label}`"
+        ))),
         None => Ok(()),
     }
 }

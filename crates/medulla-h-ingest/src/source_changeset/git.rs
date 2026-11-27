@@ -193,7 +193,11 @@ fn closure(
     Ok(found)
 }
 
-fn diff(old: &Flat, new: &Flat, objects: &PackObjects) -> Result<Vec<PlannedChange>, SubmitRefusal> {
+fn diff(
+    old: &Flat,
+    new: &Flat,
+    objects: &PackObjects,
+) -> Result<Vec<PlannedChange>, SubmitRefusal> {
     let content_of = |mode: u32, id: &str| -> Result<Vec<u8>, SubmitRefusal> {
         if mode == MODE_SUBMODULE {
             return Ok(id.as_bytes().to_vec());
@@ -292,7 +296,10 @@ pub fn plan_import(
     if line.len() as u64 > max_commits {
         return Err(SubmitRefusal::new(
             ChangesetRefusal::ChangesetInvalid,
-            format!("{} new commits exceed the limit of {max_commits}", line.len()),
+            format!(
+                "{} new commits exceed the limit of {max_commits}",
+                line.len()
+            ),
         ));
     }
     line.reverse();
@@ -306,7 +313,12 @@ pub fn plan_import(
             let parent_commit = commit_of(objects, parent)?;
             previous = Some(flatten(format, objects, &parent_commit.tree_id)?);
             if has_merge {
-                seen = closure(format, objects, std::slice::from_ref(parent), &BTreeSet::new())?;
+                seen = closure(
+                    format,
+                    objects,
+                    std::slice::from_ref(parent),
+                    &BTreeSet::new(),
+                )?;
             }
         }
     }
@@ -376,7 +388,8 @@ pub fn materialize(
     branch: &str,
     base_head: Option<String>,
 ) -> Result<ImportStep, SubmitRefusal> {
-    let store_failed = |detail: String| SubmitRefusal::new(ChangesetRefusal::ChangesetInvalid, detail);
+    let store_failed =
+        |detail: String| SubmitRefusal::new(ChangesetRefusal::ChangesetInvalid, detail);
     let mut paths = Vec::with_capacity(planned.changes.len());
     for change in &planned.changes {
         let blob = match &change.content {
@@ -843,7 +856,9 @@ mod tests {
             let changeset = accept(&*chain, &step.request, &ctx).unwrap();
             chain.head = changeset.id.clone();
             chain.order.push(changeset.id.clone());
-            chain.changesets.insert(changeset.id.clone(), changeset.clone());
+            chain
+                .changesets
+                .insert(changeset.id.clone(), changeset.clone());
             appended.push(changeset);
         }
         appended
@@ -860,7 +875,13 @@ mod tests {
     }
 
     impl Fixture {
-        fn commit(&mut self, name: &str, files: &Files, parents: &[&String], message: &str) -> String {
+        fn commit(
+            &mut self,
+            name: &str,
+            files: &Files,
+            parents: &[&String],
+            message: &str,
+        ) -> String {
             let mut flat: BTreeMap<String, (u32, String)> = BTreeMap::new();
             for (path, (mode, content)) in files {
                 let id = if *mode == MODE_SUBMODULE {
@@ -931,13 +952,23 @@ mod tests {
         files.remove("dir/x.txt");
         last = fx.commit("c6", &files, &[&last], "c6 delete\n");
         for n in 7..=9 {
-            put(&mut files, &format!("f{n}.txt"), MODE_FILE, &format!("f{n}\n"));
+            put(
+                &mut files,
+                &format!("f{n}.txt"),
+                MODE_FILE,
+                &format!("f{n}\n"),
+            );
             last = fx.commit(&format!("c{n}"), &files, &[&last], &format!("c{n}\n"));
         }
         let fork = last.clone();
         let fork_files = files.clone();
         for n in 10..=14 {
-            put(&mut files, &format!("f{n}.txt"), MODE_FILE, &format!("f{n}\n"));
+            put(
+                &mut files,
+                &format!("f{n}.txt"),
+                MODE_FILE,
+                &format!("f{n}\n"),
+            );
             last = fx.commit(&format!("c{n}"), &files, &[&last], &format!("c{n}\n"));
         }
         let c14 = last.clone();
@@ -955,7 +986,12 @@ mod tests {
         last = fx.commit("m", &files, &[&c14, &s], "merge side\n");
         put(&mut files, "a.txt", MODE_FILE, "alpha3\n");
         last = fx.commit("c16", &files, &[&last], "c16\n");
-        put(&mut files, "notes.txt", MODE_FILE, "l1\nl2\nl3\nside1\ntail\n");
+        put(
+            &mut files,
+            "notes.txt",
+            MODE_FILE,
+            "l1\nl2\nl3\nside1\ntail\n",
+        );
         fx.commit("c17", &files, &[&last], "c17\n");
         fx
     }
@@ -972,13 +1008,20 @@ mod tests {
     fn export_import_preserves_commit_and_tree_ids() {
         for format in [GitObjectFormat::Sha1, GitObjectFormat::Sha256] {
             let fx = history(format);
-            assert_eq!(fx.objects.iter().filter(|o| o.0 == GitObjectKind::Commit).count(), 20);
+            assert_eq!(
+                fx.objects
+                    .iter()
+                    .filter(|o| o.0 == GitObjectKind::Commit)
+                    .count(),
+                20
+            );
             let objects = fx.pack();
             let head = fx.ids["c17"].clone();
             let blobs = MemBlobs::default();
             let mut chain = MemChain::new();
 
-            let plan = plan_import(format, &objects, &head, &BranchHeadGit::Empty, 100_000).unwrap();
+            let plan =
+                plan_import(format, &objects, &head, &BranchHeadGit::Empty, 100_000).unwrap();
             assert_eq!(plan.skipped, 0);
             assert_eq!(plan.commits.len(), 17);
             let appended = apply(&plan, &mut chain, &blobs);
@@ -988,7 +1031,10 @@ mod tests {
             // The merge changeset.
             let merge = appended[14].git.as_ref().unwrap();
             assert_eq!(merge.commit_id, fx.ids["m"]);
-            assert_eq!(merge.parent_commit_ids, vec![fx.ids["c14"].clone(), fx.ids["s3"].clone()]);
+            assert_eq!(
+                merge.parent_commit_ids,
+                vec![fx.ids["c14"].clone(), fx.ids["s3"].clone()]
+            );
             assert!(merge.side_pack_digest.is_some());
             let merged_paths: Vec<&str> = appended[14]
                 .changed_paths
@@ -1154,7 +1200,11 @@ mod tests {
         )
         .unwrap()
         .unwrap();
-        let ids: Vec<&str> = history.entries.iter().map(|e| e.changeset_id.as_str()).collect();
+        let ids: Vec<&str> = history
+            .entries
+            .iter()
+            .map(|e| e.changeset_id.as_str())
+            .collect();
         assert_eq!(ids, [c17.id.as_str(), merge.id.as_str(), c1.id.as_str()]);
         assert!(history
             .entries
@@ -1214,8 +1264,8 @@ mod tests {
         // A commit the pack lacks.
         let missing = fx.ids["c3"].clone();
         objects.remove(&missing);
-        let refusal = plan_import(format, &objects, &fx.ids["c5"], &BranchHeadGit::Empty, 100)
-            .unwrap_err();
+        let refusal =
+            plan_import(format, &objects, &fx.ids["c5"], &BranchHeadGit::Empty, 100).unwrap_err();
         assert_eq!(refusal.refusal, ChangesetRefusal::GitGraphMalformed);
 
         // A branch head that is not on the first-parent line of head.
@@ -1229,13 +1279,13 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(refusal.refusal, ChangesetRefusal::GitGraphMalformed);
-        let refusal = plan_import(format, &objects, &fx.ids["c5"], &BranchHeadGit::Native, 100)
-            .unwrap_err();
+        let refusal =
+            plan_import(format, &objects, &fx.ids["c5"], &BranchHeadGit::Native, 100).unwrap_err();
         assert_eq!(refusal.refusal, ChangesetRefusal::GitGraphMalformed);
 
         // More new commits than the limit.
-        let refusal = plan_import(format, &objects, &fx.ids["c17"], &BranchHeadGit::Empty, 5)
-            .unwrap_err();
+        let refusal =
+            plan_import(format, &objects, &fx.ids["c17"], &BranchHeadGit::Empty, 5).unwrap_err();
         assert_eq!(refusal.refusal, ChangesetRefusal::ChangesetInvalid);
 
         // A tree entry with a mode outside the four file modes.
@@ -1253,7 +1303,8 @@ mod tests {
         bad.insert(blob, (GitObjectKind::Blob, b"x".to_vec()));
         bad.insert(tree_id, (GitObjectKind::Tree, tree));
         bad.insert(commit_id.clone(), (GitObjectKind::Commit, commit));
-        let refusal = plan_import(format, &bad, &commit_id, &BranchHeadGit::Empty, 100).unwrap_err();
+        let refusal =
+            plan_import(format, &bad, &commit_id, &BranchHeadGit::Empty, 100).unwrap_err();
         assert_eq!(refusal.refusal, ChangesetRefusal::GitModeUnsupported);
     }
 }

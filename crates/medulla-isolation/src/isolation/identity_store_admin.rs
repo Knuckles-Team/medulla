@@ -12,7 +12,7 @@
 #![cfg(feature = "security")]
 
 use medulla_identity_types::acl::{
-    ApplyOwnership, Grant, GrantEffect, RbacAction, RbacAdminOp, RollbackOwnership, Role,
+    ApplyOwnership, Grant, GrantEffect, RbacAction, RbacAdminOp, Role, RollbackOwnership,
 };
 use medulla_identity_types::{
     identity::ApplyContext, identity::AuditRecord, identity::ConfigOp, identity::DenialSample,
@@ -267,9 +267,7 @@ impl IsolationLayer {
             RbacAdminOp::ShareGrant(_) | RbacAdminOp::ShareRevoke(_) => return Ok(false),
             // The ownership apply and rollback are served by their own functions
             // (`try_apply_ownership_audited`, `try_rollback_ownership_audited`).
-            RbacAdminOp::ApplyOwnership(_) | RbacAdminOp::RollbackOwnership(_) => {
-                return Ok(false)
-            }
+            RbacAdminOp::ApplyOwnership(_) | RbacAdminOp::RollbackOwnership(_) => return Ok(false),
             RbacAdminOp::List => return Ok(false),
         };
         if touches_store {
@@ -526,7 +524,10 @@ impl IsolationLayer {
             return Err("INVALID_ARGUMENT: plan_digest does not match the plan".to_string());
         }
         let hex64 = |value: &str| {
-            value.len() == 64 && value.bytes().all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
         };
         if !hex64(&op.signals_digest) {
             return Err("INVALID_ARGUMENT: signals_digest is not 64 lowercase hex".to_string());
@@ -567,7 +568,10 @@ impl IsolationLayer {
             {
                 return Err(ownership_refusal(
                     IdentityRefusal::OwnershipWidensTenant,
-                    &format!("role '{role}' is neither held by '{}' nor a role of this graph", entry.principal),
+                    &format!(
+                        "role '{role}' is neither held by '{}' nor a role of this graph",
+                        entry.principal
+                    ),
                 ));
             }
         }
@@ -611,9 +615,7 @@ impl IsolationLayer {
         op: ApplyOwnership,
         actor: AuditActor<'_>,
     ) -> Result<u32, String> {
-        use medulla_identity_types::identity::{
-            OwnershipRecord, OWNERSHIP_SCHEMA_VERSION,
-        };
+        use medulla_identity_types::identity::{OwnershipRecord, OWNERSHIP_SCHEMA_VERSION};
         self.check_ownership_apply(&op)?;
         let principals = u32::try_from(op.plan.len()).unwrap_or(u32::MAX);
         let prior_agents = self.agents.clone();
@@ -656,7 +658,10 @@ impl IsolationLayer {
         op: RollbackOwnership,
         actor: AuditActor<'_>,
     ) -> Result<(), String> {
-        let entries = match self.rbac.identity_store().ownership_record(&op.graph, &op.plan_digest)
+        let entries = match self
+            .rbac
+            .identity_store()
+            .ownership_record(&op.graph, &op.plan_digest)
         {
             Some(record) if !record.rolled_back => record.rollback.clone(),
             _ => {

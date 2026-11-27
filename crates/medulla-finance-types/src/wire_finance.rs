@@ -256,7 +256,9 @@ mod order_refusal_tests {
         use medulla_types::contract::ServerErrorCode;
         for code in crate::finance_order::ORDER_REFUSALS {
             assert!(
-                ServerErrorCode::ALL.iter().any(|item| item.as_str() == *code),
+                ServerErrorCode::ALL
+                    .iter()
+                    .any(|item| item.as_str() == *code),
                 "{code} is not a ServerErrorCode"
             );
         }

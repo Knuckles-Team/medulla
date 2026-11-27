@@ -46,12 +46,12 @@ pub mod freshness;
 /// owner and the server's durable commit-intent writer.
 pub mod fs;
 // MEDULLA-SDLC — derived lifecycle edges, defect intake, requirement state and trace.
-pub mod lifecycle;
-/// MEDULLA-MEDIA-VOCAB-R001.101.2 — the pure meeting transcript revision function.
-pub mod meeting_transcript;
 /// MEDULLA-BUSINESS-OPS-R001.7 — the approval request state machine.
 pub mod approval_machine;
+pub mod lifecycle;
 pub mod materialization_machine;
+/// MEDULLA-MEDIA-VOCAB-R001.101.2 — the pure meeting transcript revision function.
+pub mod meeting_transcript;
 /// MEDULLA-BUSINESS-OPS-R001.5 — the compliance obligation instance state machine.
 pub mod obligation_machine;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape

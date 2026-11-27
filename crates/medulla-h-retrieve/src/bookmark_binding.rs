@@ -125,9 +125,13 @@ pub async fn author_bookmark_binding(
 ) -> Result<bool, String> {
     let persist_dir = {
         let guard = state.read().await;
-        guard.persist_dir.as_deref().map(std::path::PathBuf::from).ok_or_else(|| {
-            "ENGINE_UNAVAILABLE: semantic index storage is unavailable".to_string()
-        })?
+        guard
+            .persist_dir
+            .as_deref()
+            .map(std::path::PathBuf::from)
+            .ok_or_else(|| {
+                "ENGINE_UNAVAILABLE: semantic index storage is unavailable".to_string()
+            })?
     };
     let service = crate::semantic_index_runtime::open_semantic_service(
         &persist_dir,

@@ -163,11 +163,16 @@ async fn read_is_classified_and_tenant_filtered() {
     seen.sort();
     assert_eq!(seen, ["hub", "own-0", "own-1", "own-2"]);
     assert!(
-        own.hidden.iter().all(|h| h.count == 0 || h.node_id != "hub"),
+        own.hidden
+            .iter()
+            .all(|h| h.count == 0 || h.node_id != "hub"),
         "a hidden count never includes a neighbor the caller may not read: {:?}",
         own.hidden
     );
-    assert!(own.edges.iter().all(|edge| !edge.target.starts_with("foreign")));
+    assert!(own
+        .edges
+        .iter()
+        .all(|edge| !edge.target.starts_with("foreign")));
 
     // The other tenant cannot see the hub: it is not found, not forbidden.
     let text = refusal(served.read_as(OTHER_TENANT, params("hub", 1, 10, 10)).await);
@@ -183,12 +188,36 @@ async fn refusals_and_visibility() {
     served.link("hub", "leaf").await;
 
     for (label, request, code) in [
-        ("depth 0", params("hub", 0, 10, 10), "NEIGHBORHOOD_DEPTH_EXCEEDED"),
-        ("depth 4", params("hub", 4, 10, 10), "NEIGHBORHOOD_DEPTH_EXCEEDED"),
-        ("no per-node limit", params("hub", 1, 0, 10), "NEIGHBORHOOD_LIMIT_REQUIRED"),
-        ("no total limit", params("hub", 1, 10, 0), "NEIGHBORHOOD_LIMIT_REQUIRED"),
-        ("total above 5000", params("hub", 1, 10, 5_001), "NEIGHBORHOOD_LIMIT_EXCEEDED"),
-        ("unknown node", params("nobody", 1, 10, 10), "NODE_NOT_FOUND"),
+        (
+            "depth 0",
+            params("hub", 0, 10, 10),
+            "NEIGHBORHOOD_DEPTH_EXCEEDED",
+        ),
+        (
+            "depth 4",
+            params("hub", 4, 10, 10),
+            "NEIGHBORHOOD_DEPTH_EXCEEDED",
+        ),
+        (
+            "no per-node limit",
+            params("hub", 1, 0, 10),
+            "NEIGHBORHOOD_LIMIT_REQUIRED",
+        ),
+        (
+            "no total limit",
+            params("hub", 1, 10, 0),
+            "NEIGHBORHOOD_LIMIT_REQUIRED",
+        ),
+        (
+            "total above 5000",
+            params("hub", 1, 10, 5_001),
+            "NEIGHBORHOOD_LIMIT_EXCEEDED",
+        ),
+        (
+            "unknown node",
+            params("nobody", 1, 10, 10),
+            "NODE_NOT_FOUND",
+        ),
     ] {
         let text = refusal(served.read_as(TENANT, request).await);
         assert!(text.starts_with(code), "{label}: {text}");
@@ -207,7 +236,10 @@ async fn refusals_and_visibility() {
         served.link("hub", &id).await;
     }
     let first = answer(served.read_as(TENANT, params("hub", 1, 2, 10)).await);
-    let cursor = first.next_cursor.clone().expect("the hub dropped neighbors");
+    let cursor = first
+        .next_cursor
+        .clone()
+        .expect("the hub dropped neighbors");
     let mut resumed = params("hub", 1, 2, 10);
     resumed["cursor"] = serde_json::json!(cursor);
     let page = answer(served.read_as(TENANT, resumed.clone()).await);
@@ -225,7 +257,10 @@ async fn audit_line_carries_counts_only() {
     served.node("leaf", TENANT).await;
     served.link("hub", "leaf").await;
     let result = answer(served.read_as(TENANT, params("hub", 1, 10, 10)).await);
-    assert!(result.graph_revision > 0, "the result carries the graph revision");
+    assert!(
+        result.graph_revision > 0,
+        "the result carries the graph revision"
+    );
 
     let line = medulla_graph_core::neighborhood::audit_line(
         "hub",

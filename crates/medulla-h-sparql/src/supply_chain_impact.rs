@@ -122,7 +122,8 @@ fn contract_covers(
     read_authority: Option<&GraphReadAuthority>,
     contracts: &[String],
 ) -> Result<Vec<(String, String)>, String> {
-    let visible = |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
+    let visible =
+        |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
     let out = outgoing_edges(core);
     let mut covers = Vec::new();
     for contract in contracts {
@@ -153,7 +154,8 @@ fn impact_rows(
     core: &GraphCore,
     read_authority: Option<&GraphReadAuthority>,
 ) -> Result<Vec<ImpactRow>, String> {
-    let visible = |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
+    let visible =
+        |id: &str| read_authority.is_none_or(|authority| authority.node_visible(core, id));
     let out = outgoing_edges(core);
     let targets = |relation: &str, from: &str| -> Vec<String> {
         out.get(&(relation.to_string(), from.to_string()))
@@ -299,9 +301,9 @@ pub async fn handle(
         .map(|row| row.source.clone())
         .filter(|source| !connected.contains(source))
         .collect();
-    let fixture = absent
-        .iter()
-        .fold(fixture, |fixture, source| fixture.with_unconnected_source(source));
+    let fixture = absent.iter().fold(fixture, |fixture, source| {
+        fixture.with_unconnected_source(source)
+    });
     let roots = match resolve_roots(&fixture, roots) {
         Ok(roots) => roots,
         Err(refusal) => return Response::err(req_id, refusal),
@@ -340,7 +342,10 @@ mod tests {
             1,
         );
         let resolved = resolve_roots(&fixture, &["Supplier".to_string()]).unwrap();
-        assert_eq!(resolved, vec!["https://example.org/ns/Supplier".to_string()]);
+        assert_eq!(
+            resolved,
+            vec!["https://example.org/ns/Supplier".to_string()]
+        );
         let refusal = resolve_roots(&fixture, &["Gadget".to_string()]).unwrap_err();
         assert!(refusal.starts_with("CQ_CLASS_UNKNOWN"));
     }

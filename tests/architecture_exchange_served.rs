@@ -377,6 +377,8 @@ async fn export_import_round_trip_keeps_digests() {
     assert_eq!(exported[0].document_digest, exported[1].document_digest);
     for digest in [&exported[0].model_digest, &exported[0].document_digest] {
         assert_eq!(digest.len(), 64);
-        assert!(digest.chars().all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
+        assert!(digest
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)));
     }
 }

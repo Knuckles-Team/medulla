@@ -129,7 +129,11 @@ mod ne_004_ne_005_tests {
     async fn new_session(state: Arc<RwLock<ServerState>>, graph: &str) -> WireSession {
         let session = WireSession::new(state, graph.to_string());
         session
-            .bind_authenticated_sql_actor("pgwire", AGENT, &medulla_identity_types::identity::default_wire_login_scopes())
+            .bind_authenticated_sql_actor(
+                "pgwire",
+                AGENT,
+                &medulla_identity_types::identity::default_wire_login_scopes(),
+            )
             .await
             .expect("bind test identity");
         session
@@ -1569,7 +1573,10 @@ pub mod wired_catalog_tests {
         let fresh = read_rows(&owner, "SELECT id FROM parts_mv")
             .await
             .expect("read the fresh matview");
-        assert!(fresh.stale_matviews.is_empty(), "a fresh view is not reported");
+        assert!(
+            fresh.stale_matviews.is_empty(),
+            "a fresh view is not reported"
+        );
 
         owner
             .execute("INSERT INTO parts (id, sku) VALUES ('2', 'b')")
@@ -1589,7 +1596,10 @@ pub mod wired_catalog_tests {
             .await
             .expect("read the refreshed matview");
         assert_eq!(refreshed.rows.len(), 2);
-        assert!(refreshed.stale_matviews.is_empty(), "a refresh clears the flag");
+        assert!(
+            refreshed.stale_matviews.is_empty(),
+            "a refresh clears the flag"
+        );
     }
 
     #[tokio::test]

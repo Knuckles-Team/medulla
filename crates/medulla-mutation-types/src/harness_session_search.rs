@@ -126,8 +126,13 @@ impl SessionSearchQuery {
             }
         };
         let search = text_param("text").map(|text| text.to_lowercase());
-        if search.as_ref().is_some_and(|text| text.chars().count() > MAX_TEXT_CHARS) {
-            return Err(invalid(format!("$text holds at most {MAX_TEXT_CHARS} characters")));
+        if search
+            .as_ref()
+            .is_some_and(|text| text.chars().count() > MAX_TEXT_CHARS)
+        {
+            return Err(invalid(format!(
+                "$text holds at most {MAX_TEXT_CHARS} characters"
+            )));
         }
         let page_size = match whole("page_size")? {
             None => page_size_max,
@@ -205,7 +210,9 @@ fn cost_columns(
         .collect();
     if traces.is_empty()
         || revisions.len() != 1
-        || traces.iter().any(|trace| trace.get("accounting_revision").is_none())
+        || traces
+            .iter()
+            .any(|trace| trace.get("accounting_revision").is_none())
     {
         unknown("attribution_missing", &mut columns);
         return columns;
@@ -251,7 +258,11 @@ fn cost_columns(
         unknown(mapped, &mut columns);
         return columns;
     }
-    let value = |index: usize| row.values[index].map(|v| (v as u64).to_string()).unwrap_or_default();
+    let value = |index: usize| {
+        row.values[index]
+            .map(|v| (v as u64).to_string())
+            .unwrap_or_default()
+    };
     columns.insert("cost_status", "measured".to_string());
     for (name, index) in [
         ("uncached_input", 0),
@@ -318,7 +329,10 @@ pub fn harness_session_search(
             let text_ok = query.text.as_ref().is_none_or(|needle| {
                 harness.to_lowercase().contains(needle) || source.to_lowercase().contains(needle)
             });
-            let harness_ok = query.harness_id.as_deref().is_none_or(|wanted| wanted == harness);
+            let harness_ok = query
+                .harness_id
+                .as_deref()
+                .is_none_or(|wanted| wanted == harness);
             let window_ok = !windowed
                 || session.end_ms.is_some_and(|end| {
                     query.from_ms.is_none_or(|from| end >= from)
@@ -331,7 +345,9 @@ pub fn harness_session_search(
         number(b.props, "source_sequence")
             .unwrap_or(0)
             .cmp(&number(a.props, "source_sequence").unwrap_or(0))
-            .then_with(|| text(a.props, "source_session_id").cmp(text(b.props, "source_session_id")))
+            .then_with(|| {
+                text(a.props, "source_session_id").cmp(text(b.props, "source_session_id"))
+            })
     });
     let mut rows = Vec::new();
     if query.cursor.is_none() {
@@ -339,14 +355,17 @@ pub fn harness_session_search(
         let mut newest: BTreeMap<&str, &Map<String, Value>> = BTreeMap::new();
         for receipt in &receipts {
             let manifest = text(receipt, "manifest_id");
-            let better = newest
-                .get(manifest)
-                .is_none_or(|held| number(receipt, "index_revision") > number(held, "index_revision"));
+            let better = newest.get(manifest).is_none_or(|held| {
+                number(receipt, "index_revision") > number(held, "index_revision")
+            });
             if better {
                 newest.insert(manifest, receipt);
             }
         }
-        let declared: u64 = newest.values().filter_map(|r| number(r, "declared_total")).sum();
+        let declared: u64 = newest
+            .values()
+            .filter_map(|r| number(r, "declared_total"))
+            .sum();
         let watermark = receipts
             .iter()
             .max_by_key(|receipt| number(receipt, "index_revision"))
@@ -384,7 +403,8 @@ pub fn harness_session_search(
             after.is_none_or(|cursor| {
                 let sequence = number(session.props, "source_sequence").unwrap_or(0);
                 let id = text(session.props, "source_session_id");
-                sequence < cursor.sequence || (sequence == cursor.sequence && id > cursor.session_id.as_str())
+                sequence < cursor.sequence
+                    || (sequence == cursor.sequence && id > cursor.session_id.as_str())
             })
         })
         .collect();
@@ -397,13 +417,19 @@ pub fn harness_session_search(
         let mut columns: BTreeMap<&'static str, String> = BTreeMap::new();
         columns.insert("kind", "entry".to_string());
         columns.insert("harness_id", text(props, "harness_id").to_string());
-        columns.insert("source_session_id", text(props, "source_session_id").to_string());
+        columns.insert(
+            "source_session_id",
+            text(props, "source_session_id").to_string(),
+        );
         columns.insert("status", text(props, "status").to_string());
         columns.insert("reason", text(props, "reason").to_string());
         columns.insert("run_trace_id", text(props, "run_trace_id").to_string());
         columns.insert(
             "end_ms",
-            session.end_ms.map(|end| end.to_string()).unwrap_or_default(),
+            session
+                .end_ms
+                .map(|end| end.to_string())
+                .unwrap_or_default(),
         );
         columns.insert("source_sequence", sequence.to_string());
         last = Some((sequence, text(props, "source_session_id").to_string()));
@@ -458,8 +484,10 @@ mod tests {
             session("s-3", "unavailable", 0, ""),
             (
                 "harnesssync:t:r1".into(),
-                object(json!({"type": "HarnessSync", "manifest_id": "m", "declared_total": declared.to_string(),
-                    "source_cursor": "cursor-9", "index_revision": "3"})),
+                object(
+                    json!({"type": "HarnessSync", "manifest_id": "m", "declared_total": declared.to_string(),
+                    "source_cursor": "cursor-9", "index_revision": "3"}),
+                ),
             ),
             (
                 "harnesssessionindex:t".into(),
@@ -498,7 +526,12 @@ mod tests {
 
     fn query(params: &[(&str, &str)], numbers: &[(&str, f64)]) -> SessionSearchQuery {
         SessionSearchQuery::from_params(
-            |name| params.iter().find(|(k, _)| *k == name).map(|(_, v)| v.to_string()),
+            |name| {
+                params
+                    .iter()
+                    .find(|(k, _)| *k == name)
+                    .map(|(_, v)| v.to_string())
+            },
             |name| numbers.iter().find(|(k, _)| *k == name).map(|(_, v)| *v),
             100,
         )
@@ -526,7 +559,10 @@ mod tests {
         let four = harness_session_search(&query(&[], &[]), &fixture(4, true)).unwrap();
         assert_eq!(four.rows[0].columns["pending"], "1");
         // Entries order by sequence descending, then session id.
-        let ids: Vec<&str> = page.rows[1..].iter().map(|row| row.columns["source_session_id"].as_str()).collect();
+        let ids: Vec<&str> = page.rows[1..]
+            .iter()
+            .map(|row| row.columns["source_session_id"].as_str())
+            .collect();
         assert_eq!(ids, ["s-1", "s-2", "s-3"]);
     }
 
@@ -542,7 +578,8 @@ mod tests {
         let no_table = harness_session_search(&query(&[], &[]), &fixture(3, true)).unwrap();
         assert_eq!(no_table.rows[0].columns["cost_reason"], "price_missing");
         // A page cursor binds the index revision: a moved index refuses.
-        let paged = harness_session_search(&query(&[], &[("page_size", 1.0)]), &fixture(3, true)).unwrap();
+        let paged =
+            harness_session_search(&query(&[], &[("page_size", 1.0)]), &fixture(3, true)).unwrap();
         let cursor = paged.next_cursor.clone().expect("more pages");
         let resumed = query(&[("cursor", &cursor)], &[("page_size", 1.0)]);
         assert!(harness_session_search(&resumed, &fixture(3, true)).is_ok());
@@ -565,7 +602,8 @@ mod tests {
     // spec: MEDULLA-ORCH-VOCAB-R009.101.2
     #[test]
     fn text_harness_and_window_filter_the_entries() {
-        let by_text = harness_session_search(&query(&[("text", "S-2")], &[]), &fixture(3, true)).unwrap();
+        let by_text =
+            harness_session_search(&query(&[("text", "S-2")], &[]), &fixture(3, true)).unwrap();
         assert_eq!(by_text.rows.len(), 2);
         assert_eq!(by_text.rows[1].columns["source_session_id"], "s-2");
         let by_window = harness_session_search(
@@ -574,10 +612,15 @@ mod tests {
         )
         .unwrap();
         // Only the session whose trace ended in [150, 300) remains; the unavailable one has no trace.
-        let ids: Vec<&str> = by_window.rows[1..].iter().map(|r| r.columns["source_session_id"].as_str()).collect();
+        let ids: Vec<&str> = by_window.rows[1..]
+            .iter()
+            .map(|r| r.columns["source_session_id"].as_str())
+            .collect();
         assert_eq!(ids, ["s-2"]);
         assert_eq!(by_window.rows[0].columns["received"], "1");
-        let none = harness_session_search(&query(&[("harness_id", "absent")], &[]), &fixture(3, true)).unwrap();
+        let none =
+            harness_session_search(&query(&[("harness_id", "absent")], &[]), &fixture(3, true))
+                .unwrap();
         assert_eq!(none.rows.len(), 1);
     }
 

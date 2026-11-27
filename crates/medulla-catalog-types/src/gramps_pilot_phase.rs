@@ -180,7 +180,10 @@ mod tests {
         let progress = GrampsPilotProgress::default();
         assert!(progress.admits(GrampsPilotMilestone::P0Baseline));
         assert!(!progress.admits(GrampsPilotMilestone::P1PostgresControl));
-        assert_eq!(progress.next_phase(), Some(GrampsPilotMilestone::P0Baseline));
+        assert_eq!(
+            progress.next_phase(),
+            Some(GrampsPilotMilestone::P0Baseline)
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
@@ -201,7 +204,10 @@ mod tests {
         let progress = GrampsPilotProgress {
             exits: vec![bad_exit],
         };
-        assert_eq!(progress.next_phase(), Some(GrampsPilotMilestone::P0Baseline));
+        assert_eq!(
+            progress.next_phase(),
+            Some(GrampsPilotMilestone::P0Baseline)
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1

@@ -6,7 +6,11 @@ use medulla_source_types::delivery::{
 };
 use serde_json::json;
 
-fn delivery(assignment_state: &str, report: serde_json::Value, proposals: serde_json::Value) -> Delivery {
+fn delivery(
+    assignment_state: &str,
+    report: serde_json::Value,
+    proposals: serde_json::Value,
+) -> Delivery {
     decode_delivery(json!({
         "schema_version": 1, "id": "d1", "tenant": "t1", "repo": "medulla",
         "slice_root": "S", "scope_rows": ["R"],
@@ -43,7 +47,11 @@ fn merge_of_last_open_proposal_ends_as_merged() {
     assert_eq!(merged.ended, Some(DeliveryOutcome::Merged));
     assert_eq!(merged.assignments[0].state, AssignmentState::Ended);
     assert_eq!(merged.assignments[0].ended_at, Some(9));
-    assert_eq!(merged.follows, ["pr-1"], "an ended delivery keeps its follows");
+    assert_eq!(
+        merged.follows,
+        ["pr-1"],
+        "an ended delivery keeps its follows"
+    );
     // The last close decides: a merge then a close ends as closed.
     let mixed = apply_proposal_event(&first, "pr-2", ProposalEvent::Closed).expect("applies");
     let closed = end_if_done(&mixed, EndTrigger::ProposalClosed(ProposalEvent::Closed), 9);
@@ -60,7 +68,11 @@ fn a_close_waits_for_the_running_assignment_and_reports_and_stops_end() {
         json!(null),
         json!([{"id": "pr-1", "state": "closed"}]),
     );
-    let waiting = end_if_done(&running, EndTrigger::ProposalClosed(ProposalEvent::Closed), 5);
+    let waiting = end_if_done(
+        &running,
+        EndTrigger::ProposalClosed(ProposalEvent::Closed),
+        5,
+    );
     assert_eq!(waiting.ended, None::<DeliveryOutcome>);
     let ready = delivery("running", report("ready", None), json!([]));
     assert_eq!(
@@ -72,7 +84,10 @@ fn a_close_waits_for_the_running_assignment_and_reports_and_stops_end() {
         report("ready", Some("pr-1")),
         json!([{"id": "pr-1", "state": "open"}]),
     );
-    assert_eq!(end_if_done(&with_proposal, EndTrigger::Report, 5).ended, None::<DeliveryOutcome>);
+    assert_eq!(
+        end_if_done(&with_proposal, EndTrigger::Report, 5).ended,
+        None::<DeliveryOutcome>
+    );
     let dropped = delivery("running", report("dropped", None), json!([]));
     assert_eq!(
         end_if_done(&dropped, EndTrigger::Report, 5).ended,

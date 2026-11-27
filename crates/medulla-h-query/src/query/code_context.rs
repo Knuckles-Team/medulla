@@ -13,19 +13,19 @@
 //! Nothing here writes.
 
 use super::*;
+use medulla_ingestion_types::code_health::{
+    sweep, CodeGraph, CodeHealthReport, CodeHealthSweepRequest,
+};
 use medulla_plan::code_context::{
     code_context, diagnose, CodeContextError, CodeEdge, CodeIndex, OpsLink, OpsLinkKind, OpsNode,
     OPS_STAGE_BY_LABEL,
-};
-use medulla_ingestion_types::code_health::{
-    sweep, CodeGraph, CodeHealthReport, CodeHealthSweepRequest,
 };
 use medulla_protocol_types::result_contract::query::{
     CodeContext, CodeHealthSweep, CodeNavigation, Diagnose,
 };
 use medulla_types::code_context::{
-    CodeContextRequest, CodeLocation, CodeNavAction, CodeNavigationAnswer,
-    CodeNavigationRequest, DiagnoseRequest,
+    CodeContextRequest, CodeLocation, CodeNavAction, CodeNavigationAnswer, CodeNavigationRequest,
+    DiagnoseRequest,
 };
 use std::collections::BTreeSet;
 
@@ -129,9 +129,10 @@ struct CodeSite {
 /// A numeric property, stored as a number or as its text.
 fn line_of(props: &Props, key: &str) -> u32 {
     match props.get(key) {
-        Some(serde_json::Value::Number(number)) => {
-            number.as_u64().and_then(|n| u32::try_from(n).ok()).unwrap_or(0)
-        }
+        Some(serde_json::Value::Number(number)) => number
+            .as_u64()
+            .and_then(|n| u32::try_from(n).ok())
+            .unwrap_or(0),
         Some(serde_json::Value::String(text)) => text.parse().unwrap_or(0),
         _ => 0,
     }
@@ -244,9 +245,7 @@ fn navigate(
                 .collect()
         }
     };
-    found.sort_by(|a, b| {
-        (&a.symbol, &a.path, a.line).cmp(&(&b.symbol, &b.path, b.line))
-    });
+    found.sort_by(|a, b| (&a.symbol, &a.path, a.line).cmp(&(&b.symbol, &b.path, b.line)));
     found.dedup();
     found.truncate(limit);
     Ok(found)
@@ -523,8 +522,13 @@ mod navigation_tests {
     #[test]
     fn nav_answers_the_definition_of_a_suffix_at_a_qualifier_boundary() {
         let (sites, calls) = index();
-        let items =
-            navigate(&sites, &calls, &request(CodeNavAction::Nav, Some("parse")), 10).unwrap();
+        let items = navigate(
+            &sites,
+            &calls,
+            &request(CodeNavAction::Nav, Some("parse")),
+            10,
+        )
+        .unwrap();
         assert_eq!(
             items,
             vec![CodeLocation {
@@ -551,8 +555,13 @@ mod navigation_tests {
         .unwrap();
         let names: Vec<&str> = items.iter().map(|item| item.symbol.as_str()).collect();
         assert_eq!(names, ["repo::a::main", "repo::a::run"]);
-        let none =
-            navigate(&sites, &calls, &request(CodeNavAction::Instances, Some("nope")), 10).unwrap();
+        let none = navigate(
+            &sites,
+            &calls,
+            &request(CodeNavAction::Instances, Some("nope")),
+            10,
+        )
+        .unwrap();
         assert!(none.is_empty());
         assert!(navigate(&sites, &calls, &request(CodeNavAction::Instances, None), 10).is_err());
         assert!(navigate(&sites, &calls, &request(CodeNavAction::Nav, Some(" ")), 10).is_err());

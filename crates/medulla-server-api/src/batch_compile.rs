@@ -29,8 +29,7 @@ pub use compile::compile_sql_source_batch;
 pub use compile::effective_policy_digest;
 pub use compile::{
     authoritative_graph_version, compile_crossmodal, compile_methods, compile_methods_with_outbox,
-    compile_methods_with_source_dirty, recorded_source_dirty_input, CompileBatch,
-    SourceDirtyBasis,
+    compile_methods_with_source_dirty, recorded_source_dirty_input, CompileBatch, SourceDirtyBasis,
 };
 #[cfg(any(
     feature = "raft",

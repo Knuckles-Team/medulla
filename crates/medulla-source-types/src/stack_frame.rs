@@ -70,7 +70,11 @@ impl SymbolIndex {
                     .or_default()
                     .push(symbol.clone());
             }
-            index.by_file.entry(symbol.file_path.clone()).or_default().push(symbol);
+            index
+                .by_file
+                .entry(symbol.file_path.clone())
+                .or_default()
+                .push(symbol);
         }
         index
     }
@@ -104,9 +108,7 @@ impl SymbolIndex {
             .get(path)?
             .iter()
             .filter(|symbol| symbol.line <= line && line <= symbol.end_line)
-            .min_by(|a, b| {
-                (a.end_line - a.line, &a.id).cmp(&(b.end_line - b.line, &b.id))
-            })
+            .min_by(|a, b| (a.end_line - a.line, &a.id).cmp(&(b.end_line - b.line, &b.id)))
     }
 }
 
@@ -150,16 +152,24 @@ mod tests {
     #[test]
     fn a_location_resolves_to_the_smallest_enclosing_symbol() {
         let index = index();
-        let found = index.resolve_frame("at run (src/a.rs:15:3)").expect("resolves");
+        let found = index
+            .resolve_frame("at run (src/a.rs:15:3)")
+            .expect("resolves");
         assert_eq!(found.id, "symbol:b");
-        assert_eq!(index.resolve_frame("src/a.rs:50").expect("outer").id, "symbol:a");
+        assert_eq!(
+            index.resolve_frame("src/a.rs:50").expect("outer").id,
+            "symbol:a"
+        );
         assert!(index.resolve_frame("src/a.rs:101").is_none());
     }
 
     #[test]
     fn a_qualified_name_resolves_only_when_unique() {
         let index = index();
-        assert_eq!(index.resolve_frame("in Outer::run").expect("unique").id, "symbol:b");
+        assert_eq!(
+            index.resolve_frame("in Outer::run").expect("unique").id,
+            "symbol:b"
+        );
         assert!(index.resolve_frame("in dup").is_none());
     }
 
@@ -167,7 +177,10 @@ mod tests {
     fn the_first_resolving_token_wins_and_unknown_frames_resolve_to_nothing() {
         let index = index();
         assert_eq!(
-            index.resolve_frame("nowhere.rs:1 Outer::run src/c.rs:6").expect("name").id,
+            index
+                .resolve_frame("nowhere.rs:1 Outer::run src/c.rs:6")
+                .expect("name")
+                .id,
             "symbol:b"
         );
         assert!(index.resolve_frame("no frame here").is_none());

@@ -12,11 +12,11 @@ use medulla_decision_types::decision::promotion_tier::{
     TIER_KEY_PREFIX, TIER_REVIEW_SCOPE_REQUIRED,
 };
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedParam, TypedValue};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::contract::BoundedVec;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::contract::BoundedVec;
 
 use super::stat_support::edges_named;
 
@@ -61,9 +61,14 @@ pub(super) fn read_tiers(
     tenant: &str,
 ) -> Result<BTreeMap<String, SkillTier>, String> {
     let mut tiers = BTreeMap::new();
-    for (key, bytes) in store.decision_artifacts_with_prefix(tenant, TIER_KEY_PREFIX, MAX_TIER_ROWS)? {
+    for (key, bytes) in
+        store.decision_artifacts_with_prefix(tenant, TIER_KEY_PREFIX, MAX_TIER_ROWS)?
+    {
         if let Some(skill_ref) = key.strip_prefix(TIER_KEY_PREFIX) {
-            tiers.insert(skill_ref.to_string(), decode_artifact(&bytes, "skill tier")?);
+            tiers.insert(
+                skill_ref.to_string(),
+                decode_artifact(&bytes, "skill tier")?,
+            );
         }
     }
     Ok(tiers)

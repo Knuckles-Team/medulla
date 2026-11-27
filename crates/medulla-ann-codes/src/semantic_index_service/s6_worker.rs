@@ -81,7 +81,9 @@ impl SemanticIndexService {
             ann_checkpoint_digest,
         } = &intent.predecessor
         else {
-            return Err(refuse("S6 intent has no lexical/ANN activation predecessor"));
+            return Err(refuse(
+                "S6 intent has no lexical/ANN activation predecessor",
+            ));
         };
         let inputs = self.store.read_s6_inputs(intent)?;
         let binding = &inputs.binding;
@@ -90,16 +92,16 @@ impl SemanticIndexService {
                 "the pinned embedding space is not the binding's model space",
             ));
         }
-        if (
-            *lexical_checkpoint_digest,
-            *ann_checkpoint_digest,
-        ) != (
-            inputs.lexical_checkpoint.checkpoint_digest,
-            inputs.ann_checkpoint.checkpoint_digest,
-        ) {
+        if (*lexical_checkpoint_digest, *ann_checkpoint_digest)
+            != (
+                inputs.lexical_checkpoint.checkpoint_digest,
+                inputs.ann_checkpoint.checkpoint_digest,
+            )
+        {
             return Err(refuse("S6 predecessor is not the current lexical/ANN head"));
         }
-        let mut store = SemanticStore::new_in_space(space.clone()).map_err(SemanticCodeError::Refused)?;
+        let mut store =
+            SemanticStore::new_in_space(space.clone()).map_err(SemanticCodeError::Refused)?;
         for vector in inputs.vectors {
             store
                 .add_embedding(vector.source_entity_id, vector.values)

@@ -17,8 +17,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_graph_core::graph::GraphView;
-use medulla_types::shape_report::{IntegrityShape, ShapeReport, Violation};
 use medulla_query_types::wire::ShapeKeep;
+use medulla_types::shape_report::{IntegrityShape, ShapeReport, Violation};
 
 use crate::exec::PlanCtx;
 use crate::rowset::{RowSet, TextChannels};
@@ -131,7 +131,11 @@ fn consistency_findings(
             findings.insert(ShapeReport::new(
                 shape,
                 focus.clone(),
-                format!("{} violates {}: {detail}", violation.kind().as_str(), violation.axiom_id),
+                format!(
+                    "{} violates {}: {detail}",
+                    violation.kind().as_str(),
+                    violation.axiom_id
+                ),
             ));
             if findings.len() > MAX_FINDINGS_PER_SHAPE {
                 findings.pop_last();
@@ -347,18 +351,34 @@ mod tests {
     fn fail_on_fatal_refuses_blocking_findings_only() {
         // A fatal shape's kept row blocks: the refusal names the code, the shape id and the
         // severity counts, and returns no rows.
-        let fatal = run("integrity:invalid_reference:owner", ShapeKeep::Violating, None);
+        let fatal = run(
+            "integrity:invalid_reference:owner",
+            ShapeKeep::Violating,
+            None,
+        );
         let refused = refuse_on_fatal(fatal).unwrap_err();
         assert!(refused.starts_with("SHAPE_FATAL_FINDING: "), "{refused}");
         assert!(refused.contains("fatal=1 warn=0 info=0"), "{refused}");
         // A warn shape is not blocking: the rows come back.
-        let warn = run("integrity:required_property:name", ShapeKeep::Violating, None);
+        let warn = run(
+            "integrity:required_property:name",
+            ShapeKeep::Violating,
+            None,
+        );
         assert_eq!(ids(&refuse_on_fatal(warn).unwrap()), ["c"]);
         // A conforming result carries no finding and never refuses.
-        let clean = run("integrity:invalid_reference:owner", ShapeKeep::Conforming, None);
+        let clean = run(
+            "integrity:invalid_reference:owner",
+            ShapeKeep::Conforming,
+            None,
+        );
         assert!(refuse_on_fatal(clean).is_ok());
         // A gap result scanned nothing, so nothing is claimed and the clause does not refuse.
-        let gap = run("integrity:invalid_reference:owner", ShapeKeep::Violating, Some(1));
+        let gap = run(
+            "integrity:invalid_reference:owner",
+            ShapeKeep::Violating,
+            Some(1),
+        );
         assert_eq!(gap.text("a", "shape.coverage"), Some("gap:0/1"));
         assert_eq!(ids(&refuse_on_fatal(gap).unwrap()), ["a", "b", "c", "d"]);
     }

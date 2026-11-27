@@ -59,6 +59,8 @@ use dashmap::DashMap;
 use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
 #[cfg(feature = "federation")]
 use medulla_catalog_types::connector_pack::PackSourceKind;
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 use medulla_catalog_types::probe_machine::{ProbeRecord, ProbeState};
 use medulla_catalog_types::{
     connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
@@ -66,8 +68,6 @@ use medulla_catalog_types::{
 };
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_query_types::wire::ForeignSourceSpec;
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
-use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 use medulla_types::contract::Digest256;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
@@ -464,7 +464,12 @@ impl ForeignSourceCatalog {
         let mut owners: Vec<(String, String)> = self
             .entries
             .iter()
-            .map(|entry| (entry.key().owner_scope.clone(), entry.value().owner_agent.clone()))
+            .map(|entry| {
+                (
+                    entry.key().owner_scope.clone(),
+                    entry.value().owner_agent.clone(),
+                )
+            })
             .collect();
         owners.sort();
         owners.dedup();
@@ -834,9 +839,7 @@ impl ForeignSourceCatalog {
         let tenant_scope = medulla_server_api::carrier::tenant_scope_of(tenant);
         self.entries
             .iter()
-            .filter(|entry| {
-                entry.key().name == name && entry.value().tenant_scope == tenant_scope
-            })
+            .filter(|entry| entry.key().name == name && entry.value().tenant_scope == tenant_scope)
             .min_by(|a, b| a.key().owner_scope.cmp(&b.key().owner_scope))
             .map(|entry| entry.value().spec.clone())
     }
@@ -1381,10 +1384,22 @@ mod tests {
         assert_eq!(a.tenant_scope(), b.tenant_scope(), "one engine, one tenant");
         let catalog = ForeignSourceCatalog::default();
         catalog
-            .register(&a, "src".into(), http_spec("http://a.invalid/"), quota(), None)
+            .register(
+                &a,
+                "src".into(),
+                http_spec("http://a.invalid/"),
+                quota(),
+                None,
+            )
             .expect("http sources are not outbound-gated here");
         catalog
-            .register(&b, "src".into(), http_spec("http://b.invalid/"), quota(), None)
+            .register(
+                &b,
+                "src".into(),
+                http_spec("http://b.invalid/"),
+                quota(),
+                None,
+            )
             .expect("http sources are not outbound-gated here");
         assert_eq!(
             catalog.spec_for(&a, "src"),
@@ -1418,12 +1433,18 @@ mod tests {
         }
         assert!(catalog.detach(&a, "src"), "the owner held it");
         assert_eq!(catalog.spec_for(&a, "src"), None);
-        assert!(catalog.spec_for(&a, "other").is_some(), "other sources stay");
+        assert!(
+            catalog.spec_for(&a, "other").is_some(),
+            "other sources stay"
+        );
         assert!(
             catalog.spec_for(&b, "src").is_some(),
             "another owner's same-named source stays"
         );
-        assert!(!catalog.detach(&a, "src"), "a second detach changes nothing");
+        assert!(
+            !catalog.detach(&a, "src"),
+            "a second detach changes nothing"
+        );
         assert!(!catalog.detach(&a, "never-registered"));
     }
 

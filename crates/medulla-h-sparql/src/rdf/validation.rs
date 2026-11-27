@@ -329,7 +329,8 @@ mod graph_schema_shapes_tests {
         live.install_schema_sources(Arc::new(updated));
         let later_digest = live.schema_sources().composed_digest().to_hex();
 
-        let report = medulla_shacl::validate(&loaded.graph, &medulla_rdf::oxrdf::Graph::new()).unwrap();
+        let report =
+            medulla_shacl::validate(&loaded.graph, &medulla_rdf::oxrdf::Graph::new()).unwrap();
         let receipt = shacl_report_wire(report, loaded.schema_digests, loaded.composed_digest);
         assert_ne!(used_digest, later_digest);
         assert_eq!(

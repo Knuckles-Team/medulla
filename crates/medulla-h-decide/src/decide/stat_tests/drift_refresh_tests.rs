@@ -13,8 +13,8 @@ use super::retrieval_tests::learn;
 use super::*;
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
 use medulla_decision_types::decision::statistical::retrieval_drift::{
-    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftPolicyNode, DriftRefreshed, ScheduledRefresh,
-    ShardSwap,
+    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftPolicyNode,
+    DriftRefreshed, ScheduledRefresh, ShardSwap,
 };
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_persistence::redb_backend::RedbBackend;
@@ -239,7 +239,11 @@ fn grow_vocabulary(graph: &str, tenant: &str, shards: &[u32], drifting: &[u32]) 
         }
     }
     for &shard in shards {
-        let token = if drifting.contains(&shard) { "never-seen-before" } else { "known" };
+        let token = if drifting.contains(&shard) {
+            "never-seen-before"
+        } else {
+            "known"
+        };
         for seed in 0..window {
             report_in(graph, tenant, shard, seed, token, u64::from(window + seed));
         }
@@ -254,11 +258,18 @@ fn served_tenant() -> String {
 }
 
 /// The typed documents the refresh re-embeds, in a materialized graph named `graph`.
-async fn documents(h: &Harness, graph: &str, count: usize) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
+async fn documents(
+    h: &Harness,
+    graph: &str,
+    count: usize,
+) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
     let core = super::learning_tests::graph_with(h, graph, "1", 384, Vec::new()).await;
     for index in 0..count {
         let props = serde_json::json!({"type": "Document", "text": format!("document {index}")});
-        core.add_node(format!("doc-{index}"), rmp_serde::to_vec_named(&props).unwrap());
+        core.add_node(
+            format!("doc-{index}"),
+            rmp_serde::to_vec_named(&props).unwrap(),
+        );
     }
     core
 }
@@ -349,7 +360,10 @@ const REFUSAL_GRAPH: &str = "drift-l3-refusals";
 const RECEIPT_GRAPH: &str = "drift-l3-receipt";
 
 fn generations_of(tenant: &str, graph: &str) -> Vec<(String, u64)> {
-    let mut read = discover_signals().unwrap().read(tenant, graph).shard_generations;
+    let mut read = discover_signals()
+        .unwrap()
+        .read(tenant, graph)
+        .shard_generations;
     read.sort();
     read
 }
@@ -370,14 +384,30 @@ async fn refresh_refusals() {
     // A graph with no policy refuses before any plan is stored.
     let missing = evaluate_in(&h, "decider", REFUSAL_GRAPH, RefreshPriority::Downtime).await;
     assert!(missing.unwrap_err().starts_with("DRIFT_POLICY_MISSING"));
-    assert!(h.store.decision_artifacts_with_prefix(TENANT, "drift-plan:", 16).unwrap().is_empty());
+    assert!(h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "drift-plan:", 16)
+        .unwrap()
+        .is_empty());
 
     // A budget of one region refuses a firing plan of two (two evaluations fire a signal).
-    assert_eq!(register_policy(&h, REFUSAL_GRAPH, 1).await.unwrap().region_budget, 1);
-    evaluate_in(&h, "decider", REFUSAL_GRAPH, RefreshPriority::Downtime).await.unwrap();
+    assert_eq!(
+        register_policy(&h, REFUSAL_GRAPH, 1)
+            .await
+            .unwrap()
+            .region_budget,
+        1
+    );
+    evaluate_in(&h, "decider", REFUSAL_GRAPH, RefreshPriority::Downtime)
+        .await
+        .unwrap();
     let over = evaluate_in(&h, "decider", REFUSAL_GRAPH, RefreshPriority::Downtime).await;
     assert!(over.unwrap_err().starts_with("REFRESH_REGION_BUDGET"));
-    assert!(h.store.decision_artifacts_with_prefix(TENANT, "drift-plan:", 16).unwrap().is_empty());
+    assert!(h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "drift-plan:", 16)
+        .unwrap()
+        .is_empty());
 
     // A plan whose shard generations moved since it was scheduled refuses and changes nothing.
     register_policy(&h, REFUSAL_GRAPH, 4096).await.unwrap();
@@ -392,7 +422,8 @@ async fn refresh_refusals() {
     assert_ne!(moved, before);
     let mut stale: ScheduledRefresh = plan.clone();
     stale.plan.target_generation = "refresh-stale".into();
-    stale.plan_digest = medulla_query_types::solve_scalar::digest_text("eg/drift-refresh-plan/v1", &stale.plan);
+    stale.plan_digest =
+        medulla_query_types::solve_scalar::digest_text("eg/drift-refresh-plan/v1", &stale.plan);
     h.store
         .put_decision_artifacts(
             TENANT,
@@ -421,12 +452,16 @@ async fn signal_premises_and_refresh_receipt() {
     let ledger = tempfile::tempdir().unwrap();
     with_ledger_for(&h, ledger.path(), RECEIPT_GRAPH).await;
     let tenant = served_tenant();
-    let window = u64::from(super::super::drift_registry::reference_vectors(&DecisionPolicy::engine_default()) as u32);
+    let window = u64::from(super::super::drift_registry::reference_vectors(
+        &DecisionPolicy::engine_default(),
+    ) as u32);
     grow_vocabulary(RECEIPT_GRAPH, &tenant, &[1, 2], &[1]);
     let core = documents(&h, RECEIPT_GRAPH, 5).await;
     register_policy(&h, RECEIPT_GRAPH, 4096).await.unwrap();
 
-    evaluate_in(&h, "decider", RECEIPT_GRAPH, RefreshPriority::Downtime).await.unwrap();
+    evaluate_in(&h, "decider", RECEIPT_GRAPH, RefreshPriority::Downtime)
+        .await
+        .unwrap();
     let plan = evaluate_in(&h, "decider", RECEIPT_GRAPH, RefreshPriority::Downtime)
         .await
         .unwrap()
@@ -434,7 +469,10 @@ async fn signal_premises_and_refresh_receipt() {
         .expect("one firing shard schedules a plan");
     // The stored plan carries the signal and the generation its swap checks.
     let stored: ScheduledRefresh = medulla_persistence_records::decision_jobs::decode_artifact(
-        &h.store.decision_artifact(TENANT, &format!("drift-plan:{}", plan.plan_digest)).unwrap().unwrap(),
+        &h.store
+            .decision_artifact(TENANT, &format!("drift-plan:{}", plan.plan_digest))
+            .unwrap()
+            .unwrap(),
         "plan",
     )
     .unwrap();
@@ -453,12 +491,18 @@ async fn signal_premises_and_refresh_receipt() {
     assert_eq!(receipt.reembedded_nodes, 5);
     assert_eq!(
         receipt.shards,
-        vec![ShardSwap { shard_id: 1, generation_before: 1, generation_after: 2 }]
+        vec![ShardSwap {
+            shard_id: 1,
+            generation_before: 1,
+            generation_after: 2
+        }]
     );
     assert_eq!(receipt.signals, stored.signals);
     // The shard's durable pointer node holds the swapped generation, and the registry agrees.
     let pointer: serde_json::Value = rmp_serde::from_slice(
-        &core.get_node_properties(&shard_generation_node_id(RECEIPT_GRAPH, 1)).expect("the pointer node"),
+        &core
+            .get_node_properties(&shard_generation_node_id(RECEIPT_GRAPH, 1))
+            .expect("the pointer node"),
     )
     .unwrap();
     assert_eq!(pointer["generation"], 2);

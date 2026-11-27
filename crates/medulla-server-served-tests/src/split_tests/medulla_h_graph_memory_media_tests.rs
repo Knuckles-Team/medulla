@@ -30,14 +30,23 @@ fn media_derivation_feature_wire_contract() {
     let mut batch = serde_json::to_value(plain.as_batch()).unwrap();
     batch["features"] = json!([derivation_feature()]);
     let request: SourceIngestionRequest = serde_json::from_value(batch).unwrap();
-    assert_ne!(request.batch_digest().unwrap(), plain.batch_digest().unwrap());
+    assert_ne!(
+        request.batch_digest().unwrap(),
+        plain.batch_digest().unwrap()
+    );
     let stored: MediaDerivationValue =
         rmp_serde::from_slice(&request.as_batch().features.as_slice()[0].value_msgpack).unwrap();
     assert_eq!(stored.kind, "caption");
     assert_eq!(stored.embedding, vec![1.0, 0.0]);
 }
 
-#[cfg(all(unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+#[cfg(all(
+    unix,
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
 mod served {
     use medulla_protocol_types::protocol::{Method, Response};
     use medulla_types::contract::{ResourceId, TenantId};
@@ -62,7 +71,10 @@ mod served {
 
     /// The refusal text of a refused response, whichever field carries it.
     fn refusal(label: &str, response: &Response) -> String {
-        assert!(response.error.is_some(), "{label} was not refused: {response:?}");
+        assert!(
+            response.error.is_some(),
+            "{label} was not refused: {response:?}"
+        );
         format!("{response:?}")
     }
 
@@ -108,7 +120,8 @@ mod served {
                 }),
             };
             if tenant == TENANT {
-                self.call_on(GRAPH, &format!("remember:{}", next_id()), method).await
+                self.call_on(GRAPH, &format!("remember:{}", next_id()), method)
+                    .await
             } else {
                 self.verified(tenant, &["*"], method).await
             }
@@ -136,7 +149,8 @@ mod served {
                 }),
             };
             let response = if tenant == TENANT {
-                self.call_on(GRAPH, &format!("recall:{}", next_id()), method).await
+                self.call_on(GRAPH, &format!("recall:{}", next_id()), method)
+                    .await
             } else {
                 self.verified(tenant, &["*"], method).await
             };
@@ -145,8 +159,10 @@ mod served {
     }
 
     fn node_id(record_id: &str) -> String {
-        medulla_h_ingest::source_ingestion::source_record_node_id(TENANT, CONNECTOR, STREAM, record_id)
-            .unwrap()
+        medulla_h_ingest::source_ingestion::source_record_node_id(
+            TENANT, CONNECTOR, STREAM, record_id,
+        )
+        .unwrap()
     }
 
     /// The id of the derivation the engine plans for a caption of the item whose raw record
@@ -246,7 +262,10 @@ mod served {
         let remembered: MemoryRememberResult = ok(
             "MemoryRemember",
             served
-                .remember(TENANT, memory("mem-img", TENANT, Some(journey.attachment())))
+                .remember(
+                    TENANT,
+                    memory("mem-img", TENANT, Some(journey.attachment())),
+                )
                 .await,
         );
         assert!(remembered.stored);
@@ -273,7 +292,10 @@ mod served {
         // Cross-tenant negative: the other tenant recalls nothing of it and cannot attach a
         // blob its own owner scope does not hold.
         let other = served.recall(OTHER_TENANT, true).await;
-        assert!(other.hits.iter().all(|hit| hit.record.memory_id.as_str() != "mem-img"));
+        assert!(other
+            .hits
+            .iter()
+            .all(|hit| hit.record.memory_id.as_str() != "mem-img"));
         let refused = refusal(
             "other tenant remember",
             &served
@@ -302,12 +324,12 @@ mod served {
                         include_plan: false,
                         include_media: true,
                         previous_manifest_digest: None,
-                    document_set_ids: Vec::new(),
-                    min_relevance: None,
-                    include_archived: false,
-                    current_revision: None,
-                    episode_scope: None,
-                    memory_scope: None,
+                        document_set_ids: Vec::new(),
+                        min_relevance: None,
+                        include_archived: false,
+                        current_revision: None,
+                        episode_scope: None,
+                        memory_scope: None,
                     }),
                 },
             )
@@ -398,40 +420,53 @@ mod served {
         let _: MemoryRememberResult = ok(
             "MemoryRemember",
             served
-                .remember(TENANT, memory("mem-evidence", TENANT, Some(journey.attachment())))
+                .remember(
+                    TENANT,
+                    memory("mem-evidence", TENANT, Some(journey.attachment())),
+                )
                 .await,
         );
 
         // A reader holding only `kg:read` finds the derivation node by UQL, and its
         // `wasDerivedFrom` edge reaches the item.
         let derivations = served
-            .uql_ids(&format!("MATCH (:MediaDerivation) WHERE id = '{}'", journey.derivation))
+            .uql_ids(&format!(
+                "MATCH (:MediaDerivation) WHERE id = '{}'",
+                journey.derivation
+            ))
             .await;
         assert_eq!(derivations, vec![journey.derivation.clone()]);
         let reached = served
-            .uql_ids(
-                &format!(
-                    "MATCH (:MediaDerivation) WHERE id = '{}' |> TRAVERSE -[:wasDerivedFrom]->{{1,1}}",
-                    journey.derivation
-                ),
-            )
+            .uql_ids(&format!(
+                "MATCH (:MediaDerivation) WHERE id = '{}' |> TRAVERSE -[:wasDerivedFrom]->{{1,1}}",
+                journey.derivation
+            ))
             .await;
         assert!(reached.contains(&journey.item), "{reached:?}");
 
         // Every stored field of the derivation node.
-        let derivation = served.properties(&journey.derivation).await.expect("derivation node");
+        let derivation = served
+            .properties(&journey.derivation)
+            .await
+            .expect("derivation node");
         assert_eq!(derivation["type"], "MediaDerivation");
         assert_eq!(derivation["derivationKind"], "caption");
         assert_eq!(derivation["derivationText"], CAPTION);
         assert_eq!(derivation["producerRevision"], PRODUCER);
 
         // Every stored field of the citing memory node: digest, length, MIME and derivation ids.
-        let node = served.properties("mem-evidence").await.expect("memory node");
+        let node = served
+            .properties("mem-evidence")
+            .await
+            .expect("memory node");
         let attachments = node["attachments"].as_array().expect("attachments array");
         assert_eq!(attachments.len(), 1);
         assert_eq!(attachments[0]["blob_digest"], journey.png_digest);
         assert_eq!(attachments[0]["mime"], "image/png");
         assert_eq!(attachments[0]["byte_len"], journey.png.len() as u64);
-        assert_eq!(attachments[0]["derivation_ids"], json!([journey.derivation]));
+        assert_eq!(
+            attachments[0]["derivation_ids"],
+            json!([journey.derivation])
+        );
     }
 }

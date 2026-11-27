@@ -6,9 +6,9 @@ use super::kernel_family_support::kernel_request;
 use super::path_preference_tests::{pins, OTHER};
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
 use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
 
 const TOOL: &str = "tool:search";
 const MODEL: &str = "model:a";
@@ -71,7 +71,14 @@ fn publish_known(h: &Harness, tool: bool, model: bool) {
 }
 
 async fn seed(h: &Harness, graph: &str, rows: Vec<(String, serde_json::Value)>) {
-    seed_owned(h, graph, medulla_protocol_types::protocol::GraphType::Team, None, rows).await;
+    seed_owned(
+        h,
+        graph,
+        medulla_protocol_types::protocol::GraphType::Team,
+        None,
+        rows,
+    )
+    .await;
 }
 
 async fn seed_owned(
@@ -298,9 +305,13 @@ async fn unknown_measurements_refuse() {
 
     let refusal_of = |outcome: Result<DecisionBatch, String>| outcome.unwrap_err();
 
-    let none_published = refusal_of(decide(&h, necessity_request(&pins.0, "kg-old-traces", true)).await);
+    let none_published =
+        refusal_of(decide(&h, necessity_request(&pins.0, "kg-old-traces", true)).await);
     assert!(none_published.contains("TOOL_UNKNOWN"), "{none_published}");
-    assert!(none_published.starts_with("PARAMETER_INVALID"), "{none_published}");
+    assert!(
+        none_published.starts_with("PARAMETER_INVALID"),
+        "{none_published}"
+    );
 
     publish_known(&h, true, false);
     let no_model = refusal_of(decide(&h, necessity_request(&pins.0, "kg-old-traces", true)).await);

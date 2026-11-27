@@ -10,8 +10,8 @@
 use super::SharedState;
 use medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAnswerRequest;
 use medulla_protocol_types::protocol::Response;
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// The steps of the task, each with its successor and the source that states it.
 #[cfg(feature = "decide")]
@@ -506,9 +506,7 @@ fn agent_prompts(
         let cell = |index: usize| row.get(index).cloned().flatten().map(|v| lexical(&v));
         let Some(prompt) = cell(0) else { continue };
         if prompts.iter().any(|held| {
-            held.prompt == prompt
-                && held.agent_kind == cell(1)
-                && held.business_role == cell(2)
+            held.prompt == prompt && held.agent_kind == cell(1) && held.business_role == cell(2)
         }) {
             continue;
         }
@@ -865,7 +863,12 @@ pub async fn read_contract_tools(
     .unwrap_or(usize::MAX);
     let mut tools: Vec<(String, String)> = contract_steps(&view, task_iri, max_rows)?
         .into_iter()
-        .map(|step| (connector_of(&step.contract), local_name(&step.tool).to_string()))
+        .map(|step| {
+            (
+                connector_of(&step.contract),
+                local_name(&step.tool).to_string(),
+            )
+        })
         .collect();
     tools.sort();
     tools.dedup();

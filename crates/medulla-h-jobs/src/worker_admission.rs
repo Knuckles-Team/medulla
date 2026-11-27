@@ -66,11 +66,11 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_source_types::ingest_job::IngestLane;
 use medulla_work_types::scheduler_config::SchedulerConfig;
-use tokio::sync::RwLock;
 use medulla_work_types::worker_registry::{
     admit_reserved_worker_task, LaneLoad, WorkerAdmission, WorkerAdmissionRefusal, WorkerRegistry,
     WorkerSizingInput,
 };
+use tokio::sync::RwLock;
 
 /// The inputs of the one reserved-worker admission rule, built once per call so
 /// `AdmitWorkerTask` and `TaskQueueClaim` never restate the rule or its inputs
@@ -130,7 +130,9 @@ pub async fn admission_inputs(
         let load = store
             .task_queue_load(tenant, lane.queue_name())
             .map_err(|error| format!("INTERNAL: {error}"))?;
-        let entry = lane_load.entry(lane.lane_id().as_str().to_string()).or_default();
+        let entry = lane_load
+            .entry(lane.lane_id().as_str().to_string())
+            .or_default();
         entry.running = entry.running.saturating_add(saturate(load.running));
         entry.queued = entry.queued.saturating_add(saturate(load.queued));
     }

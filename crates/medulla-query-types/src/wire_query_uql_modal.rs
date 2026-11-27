@@ -102,7 +102,10 @@ pub(super) fn evaluate(spec: &crate::series_expr::EvaluateOp) -> Printed {
     if spec.channels.len() != kernel.channels {
         return Err(refuse(
             UqlPrintCode::DegenerateShape,
-            format!("EVALUATE {} reads {} channel(s)", kernel.name, kernel.channels),
+            format!(
+                "EVALUATE {} reads {} channel(s)",
+                kernel.name, kernel.channels
+            ),
         ));
     }
     let mut out = format!("EVALUATE {}", kernel.name);

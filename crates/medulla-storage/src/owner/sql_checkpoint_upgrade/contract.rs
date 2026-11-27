@@ -3,8 +3,8 @@
 use super::super::contract::expected_table_contracts;
 use super::super::layout::{layout_digest_over, OwnerLayout};
 use super::super::lineage::{
-    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
-    SQL_BEFORE_MATVIEWS, SQL_BEFORE_TRIGGER_REACTIONS,
+    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_MATVIEWS, SQL_BEFORE_NAMED_SEQUENCES,
+    SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use crate::physical::incarnation::STORAGE_KERNEL_SCHEMA_VERSION;
 use crate::physical::manifest::{OwnerManifest, TableContract, TableOwnership};

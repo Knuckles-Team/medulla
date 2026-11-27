@@ -14,7 +14,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_numeric::evaluation::registry;
 use medulla_query_types::series_expr::{evaluate_kernel, EvaluateKernel, EvaluateOp};
-use medulla_types::numeric_kernel::{KernelCode, KernelRefusal, NumericEvaluateOp, NumericKernelOutput};
+use medulla_types::numeric_kernel::{
+    KernelCode, KernelRefusal, NumericEvaluateOp, NumericKernelOutput,
+};
 
 use super::derive::{named_series_groups, read_channel};
 use crate::rowset::{parse_series_row_id, series_row_id, RowSet, ValueChannels};
@@ -37,14 +39,33 @@ fn kernel_error(code: KernelCode, detail: impl std::fmt::Display) -> String {
 /// A kernel together with its resolved parameters (defaults applied, required keys
 /// present), so a parameter refusal never depends on the data.
 enum Resolved {
-    DieboldMariano { h: usize },
-    DeflatedSharpe { trials: usize, observed: Option<f64> },
-    PurgedCpcv { samples: usize, groups: usize, test: usize, purge: usize, embargo: usize },
+    DieboldMariano {
+        h: usize,
+    },
+    DeflatedSharpe {
+        trials: usize,
+        observed: Option<f64>,
+    },
+    PurgedCpcv {
+        samples: usize,
+        groups: usize,
+        test: usize,
+        purge: usize,
+        embargo: usize,
+    },
     ProbabilityOfBacktestOverfit,
     Brier,
-    OuCalibrate { dt: f64 },
-    Adf { max_lag: usize },
-    RegimeHmm { states: usize, iter: usize, tol: f64 },
+    OuCalibrate {
+        dt: f64,
+    },
+    Adf {
+        max_lag: usize,
+    },
+    RegimeHmm {
+        states: usize,
+        iter: usize,
+        tol: f64,
+    },
 }
 
 /// The parameters of one stage, read by key (ASCII case-insensitive).
@@ -317,7 +338,14 @@ fn aligned(
 
 /// `purged_cpcv`: no channel and no series; one row per split.
 fn purged_cpcv(resolved: &Resolved) -> Result<RowSet, String> {
-    let Resolved::PurgedCpcv { samples, groups, test, purge, embargo } = resolved else {
+    let Resolved::PurgedCpcv {
+        samples,
+        groups,
+        test,
+        purge,
+        embargo,
+    } = resolved
+    else {
         return Err("UQL_E_EVALUATE_KERNEL: not purged_cpcv".to_string());
     };
     let output = registry::evaluate(&NumericEvaluateOp::PurgedCpcv {
@@ -379,11 +407,9 @@ fn backtest_overfit(per_series: &BTreeMap<&str, Aligned>) -> Result<RowSet, Stri
         .iter()
         .map(|ts| by_ts.iter().map(|series| series[ts][1]).collect())
         .collect();
-    let output = registry::evaluate(&NumericEvaluateOp::ProbabilityOfBacktestOverfit {
-        insample,
-        oos,
-    })
-    .map_err(|refusal| refusal_text(&refusal))?;
+    let output =
+        registry::evaluate(&NumericEvaluateOp::ProbabilityOfBacktestOverfit { insample, oos })
+            .map_err(|refusal| refusal_text(&refusal))?;
     let (score, row) = report(&output)?;
     let mut scored = Vec::new();
     let mut channels = ValueChannels::new();
@@ -455,7 +481,9 @@ mod tests {
             let b = ((t * 5) % 13) as f64 / 10.0;
             values.insert(
                 id.clone(),
-                [("a".to_string(), a), ("b".to_string(), b)].into_iter().collect(),
+                [("a".to_string(), a), ("b".to_string(), b)]
+                    .into_iter()
+                    .collect(),
             );
             ids.push(id);
         }
@@ -468,21 +496,19 @@ mod tests {
         let unknown = evaluate_op(series(12), &op("no_such", &["a"], &[]), 1_000).unwrap_err();
         assert!(unknown.starts_with("UQL_E_EVALUATE_KERNEL"), "{unknown}");
 
-        let missing = evaluate_op(series(12), &op("deflated_sharpe", &["a"], &[]), 1_000).unwrap_err();
+        let missing =
+            evaluate_op(series(12), &op("deflated_sharpe", &["a"], &[]), 1_000).unwrap_err();
         assert_eq!(
             missing,
             "KERNEL_PARAM_INVALID: TRIALS is required by deflated_sharpe"
         );
 
-        let budget = evaluate_op(
-            series(12),
-            &op("diebold_mariano", &["a", "b"], &[]),
-            5,
-        )
-        .unwrap_err();
+        let budget =
+            evaluate_op(series(12), &op("diebold_mariano", &["a", "b"], &[]), 5).unwrap_err();
         assert_eq!(budget, "KERNEL_WORK_BUDGET: 12 aligned points exceed 5");
 
-        let omitted = evaluate_op(series(12), &op("diebold_mariano", &["a", "b"], &[]), 1_000).unwrap();
+        let omitted =
+            evaluate_op(series(12), &op("diebold_mariano", &["a", "b"], &[]), 1_000).unwrap();
         let explicit = evaluate_op(
             series(12),
             &op("diebold_mariano", &["a", "b"], &[("HORIZON", 1.0)]),
@@ -496,9 +522,7 @@ mod tests {
                 omitted.value("s:eval@diebold_mariano@0", channel),
                 explicit.value("s:eval@diebold_mariano@0", channel)
             );
-            assert!(omitted
-                .value("s:eval@diebold_mariano@0", channel)
-                .is_some());
+            assert!(omitted.value("s:eval@diebold_mariano@0", channel).is_some());
         }
     }
 }

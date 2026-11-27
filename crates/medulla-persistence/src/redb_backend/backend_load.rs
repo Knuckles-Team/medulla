@@ -29,19 +29,15 @@ impl RedbBackend {
     /// startup load, before the server answers a request, so a graph a crash left `importing`
     /// is hidden by `check_graph_access` before any recovery pass runs
     /// (MEDULLA-DURABLE-KERNEL-R877.3).
-    async fn load_importing_flags(
-        &self,
-        state: &Arc<RwLock<ServerState>>,
-    ) -> Result<(), String> {
+    async fn load_importing_flags(&self, state: &Arc<RwLock<ServerState>>) -> Result<(), String> {
         let mut tasks = Vec::with_capacity(self.shards.len());
         for writer in &self.shards {
             let shard = writer
                 .shard
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
-            tasks.push(move || {
-                medulla_store_apply::redb_store::dump::read_importing_graphs(&shard)
-            });
+            tasks
+                .push(move || medulla_store_apply::redb_store::dump::read_importing_graphs(&shard));
         }
         let rows = join_blocking_in_order(tasks).await?;
         let mut s = state.write().await;

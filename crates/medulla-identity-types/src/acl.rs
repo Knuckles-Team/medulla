@@ -437,7 +437,8 @@ impl ResourceGrant {
         granted_at_ms: u64,
         expires_at_ms: u64,
     ) -> Result<Self, IdentityRefusal> {
-        let grant_id = Self::derive_id(&subject, &resource_ref, protocol, &operation, granted_at_ms)?;
+        let grant_id =
+            Self::derive_id(&subject, &resource_ref, protocol, &operation, granted_at_ms)?;
         let grant = Self {
             grant_id,
             subject,
@@ -681,16 +682,22 @@ mod tests {
         assert!(ShareGrant::commons("node-1".into()).unwrap().commons);
         let refused = |text: &str| serde_json::from_str::<ShareGrant>(text).is_err();
         assert!(refused(r#"{"node_id":"n","scope":"world","grantees":[]}"#));
-        assert!(refused(r#"{"node_id":"n","scope":"private","grantees":["a"]}"#));
+        assert!(refused(
+            r#"{"node_id":"n","scope":"private","grantees":["a"]}"#
+        ));
         assert!(refused(
             r#"{"node_id":"n","scope":"tenant","commons":true,"grantees":["a"]}"#
         ));
         assert!(refused(
             r#"{"node_id":"n","scope":"private","commons":true,"grantees":[]}"#
         ));
-        assert!(refused(r#"{"node_id":"n","scope":"placement","grantees":[]}"#));
+        assert!(refused(
+            r#"{"node_id":"n","scope":"placement","grantees":[]}"#
+        ));
         assert!(refused(r#"{"node_id":"","scope":"tenant","grantees":[]}"#));
-        assert!(refused(r#"{"node_id":"n","scope":"tenant","grantees":["a b"]}"#));
+        assert!(refused(
+            r#"{"node_id":"n","scope":"tenant","grantees":["a b"]}"#
+        ));
         let many = vec!["usr:x".to_string(); 65]
             .into_iter()
             .enumerate()

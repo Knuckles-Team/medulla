@@ -27,7 +27,8 @@ pub struct ObserveStartupStore {
 
 impl std::fmt::Debug for ObserveStartupStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ObserveStartupStore").finish_non_exhaustive()
+        f.debug_struct("ObserveStartupStore")
+            .finish_non_exhaustive()
     }
 }
 
@@ -72,7 +73,10 @@ impl ObserveStartupStore {
             let keys: Vec<u64> = table
                 .iter()
                 .map_err(|error| error.to_string())?
-                .map(|row| row.map(|(key, _)| key.value()).map_err(|error| error.to_string()))
+                .map(|row| {
+                    row.map(|(key, _)| key.value())
+                        .map_err(|error| error.to_string())
+                })
                 .collect::<Result<_, _>>()?;
             let excess = keys.len().saturating_sub(keep.max(1) as usize);
             for key in keys.into_iter().take(excess) {
@@ -95,10 +99,9 @@ pub fn shared_observe_startup_store(
     {
         return Ok(store);
     }
-    let persist_dir = state
-        .persist_dir
-        .as_deref()
-        .ok_or_else(|| "the startup report store requires a configured persist directory".to_string())?;
+    let persist_dir = state.persist_dir.as_deref().ok_or_else(|| {
+        "the startup report store requires a configured persist directory".to_string()
+    })?;
     let store = Arc::new(ObserveStartupStore::open(persist_dir)?);
     *guard = Some(Arc::clone(&store) as medulla_server_api::state::ErasedHandle);
     Ok(store)
@@ -137,7 +140,12 @@ mod tests {
             }
         }
         let store = ObserveStartupStore::open(persist).unwrap();
-        let kept: Vec<u64> = store.list().unwrap().iter().map(|boot| boot.boot_seq).collect();
+        let kept: Vec<u64> = store
+            .list()
+            .unwrap()
+            .iter()
+            .map(|boot| boot.boot_seq)
+            .collect();
         assert_eq!(kept, vec![3, 4, 5]);
         assert_eq!(store.list().unwrap()[2], boot(5));
     }

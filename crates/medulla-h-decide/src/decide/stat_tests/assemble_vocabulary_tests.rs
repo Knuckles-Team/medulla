@@ -191,8 +191,7 @@ async fn shield_declares_schema_and_digest_only() {
 
     // A contract naming a step no request task has refuses `INVALID_PARAMS`.
     let mut foreign = asking(&[TASK]);
-    foreign.step_contracts =
-        BoundedVec::new(vec![shield_contract("urn:step:unknown")]).unwrap();
+    foreign.step_contracts = BoundedVec::new(vec![shield_contract("urn:step:unknown")]).unwrap();
     let error = assemble(&h, foreign).await.expect_err("refuses");
     assert!(error.starts_with("INVALID_PARAMS: "), "{error}");
 }
@@ -233,8 +232,12 @@ async fn assemble_enforces_slot_agent_kind() {
         None,
         |_| {},
     );
-    let read = library_candidates(store, super::assemble_tests::TENANT, &request(Vec::new()).candidates)
-        .expect("candidates read");
+    let read = library_candidates(
+        store,
+        super::assemble_tests::TENANT,
+        &request(Vec::new()).candidates,
+    )
+    .expect("candidates read");
     let mut verifier_slot = slot("check", SlotRole::Verifier, (1, 1), Some(100));
     verifier_slot.required_agent_kind = Some(verifier.clone());
     let kept = filter_by_slot_kind(&[verifier_slot.clone()], &read.entries, &read.views)

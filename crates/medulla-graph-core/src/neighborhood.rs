@@ -134,7 +134,13 @@ pub fn validate(query: &NeighborhoodQuery<'_>) -> Result<(), NeighborhoodRefusal
 
 /// The audit line of one neighborhood read (MEDULLA-DURABLE-KERNEL-R876.5): the node id, the
 /// depth, the node and edge counts and the truncation flag. It names no property value.
-pub fn audit_line(node_id: &str, depth: u32, nodes: usize, edges: usize, truncated: bool) -> String {
+pub fn audit_line(
+    node_id: &str,
+    depth: u32,
+    nodes: usize,
+    edges: usize,
+    truncated: bool,
+) -> String {
     format!(
         "GET_NEIGHBORHOOD|{node_id}|depth={depth}|nodes={nodes}|edges={edges}|truncated={truncated}"
     )
@@ -439,7 +445,11 @@ mod tests {
         assert_eq!(first.hidden.first(), Some(&("hub".to_string(), 2)));
         assert_eq!(first.next_skip, Some(3));
         assert!(first.truncated);
-        assert_eq!(walk(&source, &q).expect("again"), first, "equal calls, equal answers");
+        assert_eq!(
+            walk(&source, &q).expect("again"),
+            first,
+            "equal calls, equal answers"
+        );
 
         // The cursor resumes at the first dropped neighbor.
         let mut resumed = q;
@@ -456,12 +466,10 @@ mod tests {
         let walked = walk(&source, &capped).expect("capped");
         assert_eq!(walked.nodes, vec!["hub", "a", "b"]);
         assert_eq!(walked.hidden, vec![("hub".to_string(), 1)]);
-        assert!(walked
-            .edges
-            .contains(&NeighborhoodEdge {
-                source: "hub".into(),
-                target: "c".into()
-            }));
+        assert!(walked.edges.contains(&NeighborhoodEdge {
+            source: "hub".into(),
+            target: "c".into()
+        }));
 
         // Depth 2 walks on from kept neighbors; last-level nodes report what stays hidden.
         let deep = walk(&source, &query("hub", 2, 10, 10)).expect("deep");
@@ -494,10 +502,15 @@ mod tests {
             walk(&source, &query("zz", 1, 1, 1)).unwrap_err(),
             NeighborhoodRefusal::NodeNotFound
         );
-        let big: Vec<String> = (0..=MAX_NEIGHBORHOOD_EXCLUDE).map(|i| i.to_string()).collect();
+        let big: Vec<String> = (0..=MAX_NEIGHBORHOOD_EXCLUDE)
+            .map(|i| i.to_string())
+            .collect();
         let mut q = query("a", 1, 1, 1);
         q.exclude = &big;
-        assert_eq!(walk(&source, &q).unwrap_err(), NeighborhoodRefusal::ExcludeTooLarge);
+        assert_eq!(
+            walk(&source, &q).unwrap_err(),
+            NeighborhoodRefusal::ExcludeTooLarge
+        );
         assert_eq!(decode_cursor(&encode_cursor(7, 50)), Some((7, 50)));
         assert_eq!(decode_cursor("garbage"), None);
     }

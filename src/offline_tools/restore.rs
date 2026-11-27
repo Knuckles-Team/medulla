@@ -186,9 +186,11 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
                     Err(e) => refuse_text(&e),
                 };
                 if let Err(refusal) = medulla_storage::replay_to(&target, &bounds) {
-                    refuse_typed(&medulla_storage::ArchiveRefusal::RecoveryTargetUnavailable {
-                        detail: format!("{refusal:?}"),
-                    });
+                    refuse_typed(
+                        &medulla_storage::ArchiveRefusal::RecoveryTargetUnavailable {
+                            detail: format!("{refusal:?}"),
+                        },
+                    );
                 }
                 archive_replay = Some((archive, target));
                 None

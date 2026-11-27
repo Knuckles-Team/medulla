@@ -11,8 +11,8 @@ use crate::{Begin, SagaBegin};
 use medulla_mutation_types::mutation_scope::CommittedVersion;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::{
-    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
-    mutation_batch::MutationBatchEvent, mutation_batch::MutationBatchStatus,
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchEvent,
+    mutation_batch::MutationBatchRecord, mutation_batch::MutationBatchStatus,
     mutation_batch::MUTATION_BATCH_MACHINE,
 };
 use medulla_storage::{

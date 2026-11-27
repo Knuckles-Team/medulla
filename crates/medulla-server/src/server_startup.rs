@@ -986,22 +986,23 @@ fn spawn_archiver(state: SharedState) {
             kind: medulla_observe::registry::tasks::TaskKind::Maintenance,
         },
         async move {
-        // The loop never ends; the unit pattern fixes the task's output type.
-        let () = loop {
-            let persistence = state.read().await.persistence.clone();
-            if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
-                match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
-                    Ok(report) => tracing::debug!(
-                        "archive pass wrote {} segments holding {} records",
-                        report.segments_written,
-                        report.records_archived
-                    ),
-                    Err(error) => tracing::error!("archive pass failed: {error}"),
+            // The loop never ends; the unit pattern fixes the task's output type.
+            let () = loop {
+                let persistence = state.read().await.persistence.clone();
+                if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
+                    match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
+                        Ok(report) => tracing::debug!(
+                            "archive pass wrote {} segments holding {} records",
+                            report.segments_written,
+                            report.records_archived
+                        ),
+                        Err(error) => tracing::error!("archive pass failed: {error}"),
+                    }
+                    expire_archive(&archive, &policy).await;
                 }
-                expire_archive(&archive, &policy).await;
-            }
-            medulla_observe::spawn::idle(std::time::Duration::from_secs(policy.interval_s)).await;
-        };
+                medulla_observe::spawn::idle(std::time::Duration::from_secs(policy.interval_s))
+                    .await;
+            };
         },
     );
 }
@@ -1033,7 +1034,9 @@ async fn expire_archive(
             .await
         {
             Ok(0) => {}
-            Ok(expired) => tracing::debug!("archive retention expired {expired} segments of {scope}"),
+            Ok(expired) => {
+                tracing::debug!("archive retention expired {expired} segments of {scope}")
+            }
             Err(refusal) => {
                 tracing::error!("archive retention failed: {}", refusal.wire_code());
             }
@@ -1241,7 +1244,10 @@ pub async fn retention_cleanup_tick(state: SharedState) {
 pub async fn commons_reconcile_tick(state: SharedState) {
     let removed = crate::commons_reconcile::run_tick(&state).await;
     if removed > 0 {
-        tracing::info!(removed, "Commons reconcile: removed orphan copy(ies) (R023.13.7)");
+        tracing::info!(
+            removed,
+            "Commons reconcile: removed orphan copy(ies) (R023.13.7)"
+        );
     }
 }
 
@@ -1264,7 +1270,10 @@ pub async fn downtime_tick(state: SharedState) {
     let now_ms = medulla_server_api::txn::now_ms() as i64;
     let submitted = crate::downtime::run_tick(&state, now_ms).await;
     if submitted > 0 {
-        tracing::info!(submitted, "Downtime scheduler: submitted leased job(s) (R101.3)");
+        tracing::info!(
+            submitted,
+            "Downtime scheduler: submitted leased job(s) (R101.3)"
+        );
     }
 }
 

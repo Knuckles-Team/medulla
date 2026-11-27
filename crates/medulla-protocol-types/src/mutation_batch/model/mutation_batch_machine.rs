@@ -48,7 +48,10 @@ pub const MUTATION_BATCH_MACHINE: MachineDef<
     MutationBatchGuard,
 > = MachineDef {
     name: "MutationBatchMachine",
-    states: &[MutationBatchStatus::Prepared, MutationBatchStatus::Committed],
+    states: &[
+        MutationBatchStatus::Prepared,
+        MutationBatchStatus::Committed,
+    ],
     initial: MutationBatchStatus::Prepared,
     terminals: &[MutationBatchStatus::Committed],
     events: &[MutationBatchEvent::Commit],
@@ -65,8 +68,7 @@ pub const MUTATION_BATCH_MACHINE: MachineDef<
 impl MutationBatchStatus {
     /// The one transition function: the next status, or the typed refusal.
     pub fn apply(self, event: MutationBatchEvent) -> Result<Self, TransitionRefused> {
-        transition(&MUTATION_BATCH_MACHINE, self, event, |guard| match guard {})
-            .map(|edge| edge.to)
+        transition(&MUTATION_BATCH_MACHINE, self, event, |guard| match guard {}).map(|edge| edge.to)
     }
 
     /// The status of a one-shot commit: the initial status advanced by the commit event,

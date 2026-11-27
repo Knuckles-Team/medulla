@@ -560,8 +560,7 @@ impl LshIndex {
             .into_iter()
             .filter(|id| {
                 self.signatures.get(id).is_some_and(|signature| {
-                    MinHashSketch::from_signature(signature.clone()).jaccard(sketch)
-                        >= min_jaccard
+                    MinHashSketch::from_signature(signature.clone()).jaccard(sketch) >= min_jaccard
                 })
             })
             .collect()
@@ -978,7 +977,10 @@ mod tests {
 
         // Re-inserting an id replaces its signature; a wrong length is refused.
         index
-            .insert("base", &MinHashSketch::from_signature(lsh_signature(2, 100)))
+            .insert(
+                "base",
+                &MinHashSketch::from_signature(lsh_signature(2, 100)),
+            )
             .unwrap();
         assert_eq!(index.len(), 1);
         assert_eq!(index.bucket_entries(), 20);

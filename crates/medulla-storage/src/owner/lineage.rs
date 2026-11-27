@@ -541,7 +541,9 @@ pub(crate) fn frozen_reservation_revision(predecessor: &LayoutPredecessor) -> u3
     let boundary = declared
         .iter()
         .position(|candidate| candidate == &GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL);
-    let at = declared.iter().position(|candidate| candidate == predecessor);
+    let at = declared
+        .iter()
+        .position(|candidate| candidate == predecessor);
     match (at, boundary) {
         (Some(at), Some(boundary)) if at > boundary => 2,
         _ => 1,

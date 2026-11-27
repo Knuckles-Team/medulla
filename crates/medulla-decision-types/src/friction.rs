@@ -33,8 +33,7 @@ pub const FRICTION_SKILL_UNKNOWN: RefusalCode = RefusalCode::new("FRICTION_SKILL
 pub const FRICTION_TRANSITION_ILLEGAL: RefusalCode =
     RefusalCode::new("FRICTION_TRANSITION_ILLEGAL");
 /// `FRICTION_EVIDENCE_REQUIRED`: a move without its `evidence_ref`.
-pub const FRICTION_EVIDENCE_REQUIRED: RefusalCode =
-    RefusalCode::new("FRICTION_EVIDENCE_REQUIRED");
+pub const FRICTION_EVIDENCE_REQUIRED: RefusalCode = RefusalCode::new("FRICTION_EVIDENCE_REQUIRED");
 /// `FRICTION_APPROVAL_ROLE_REQUIRED`: `Approved` without scope `knowledge:approve`.
 pub const FRICTION_APPROVAL_ROLE_REQUIRED: RefusalCode =
     RefusalCode::new("FRICTION_APPROVAL_ROLE_REQUIRED");
@@ -217,24 +216,84 @@ pub static FRICTION_MACHINE: MachineDef<FrictionState, FrictionEvent, &'static s
     ],
     guards: &[],
     edges: &[
-        edge("FR01", FrictionState::Reported, FrictionEvent::Triage, FrictionState::Triaged),
-        edge("FR02", FrictionState::Triaged, FrictionEvent::RootCause, FrictionState::RootCaused),
-        edge("FR03", FrictionState::RootCaused, FrictionEvent::Fix, FrictionState::Fixed),
-        edge("FR04", FrictionState::Fixed, FrictionEvent::Evaluate, FrictionState::Evaluated),
-        edge("FR05", FrictionState::Evaluated, FrictionEvent::Approve, FrictionState::Approved),
-        edge("FR06", FrictionState::Approved, FrictionEvent::Measure, FrictionState::Measured),
+        edge(
+            "FR01",
+            FrictionState::Reported,
+            FrictionEvent::Triage,
+            FrictionState::Triaged,
+        ),
+        edge(
+            "FR02",
+            FrictionState::Triaged,
+            FrictionEvent::RootCause,
+            FrictionState::RootCaused,
+        ),
+        edge(
+            "FR03",
+            FrictionState::RootCaused,
+            FrictionEvent::Fix,
+            FrictionState::Fixed,
+        ),
+        edge(
+            "FR04",
+            FrictionState::Fixed,
+            FrictionEvent::Evaluate,
+            FrictionState::Evaluated,
+        ),
+        edge(
+            "FR05",
+            FrictionState::Evaluated,
+            FrictionEvent::Approve,
+            FrictionState::Approved,
+        ),
+        edge(
+            "FR06",
+            FrictionState::Approved,
+            FrictionEvent::Measure,
+            FrictionState::Measured,
+        ),
         edge(
             "FR07",
             FrictionState::Measured,
             FrictionEvent::CheckRegression,
             FrictionState::RegressionChecked,
         ),
-        edge("FR08", FrictionState::RegressionChecked, FrictionEvent::Close, FrictionState::Closed),
-        edge("FR09", FrictionState::Reported, FrictionEvent::Reject, FrictionState::Rejected),
-        edge("FR10", FrictionState::Triaged, FrictionEvent::Reject, FrictionState::Rejected),
-        edge("FR11", FrictionState::RootCaused, FrictionEvent::Reject, FrictionState::Rejected),
-        edge("FR12", FrictionState::Fixed, FrictionEvent::Reject, FrictionState::Rejected),
-        edge("FR13", FrictionState::Evaluated, FrictionEvent::Reject, FrictionState::Rejected),
+        edge(
+            "FR08",
+            FrictionState::RegressionChecked,
+            FrictionEvent::Close,
+            FrictionState::Closed,
+        ),
+        edge(
+            "FR09",
+            FrictionState::Reported,
+            FrictionEvent::Reject,
+            FrictionState::Rejected,
+        ),
+        edge(
+            "FR10",
+            FrictionState::Triaged,
+            FrictionEvent::Reject,
+            FrictionState::Rejected,
+        ),
+        edge(
+            "FR11",
+            FrictionState::RootCaused,
+            FrictionEvent::Reject,
+            FrictionState::Rejected,
+        ),
+        edge(
+            "FR12",
+            FrictionState::Fixed,
+            FrictionEvent::Reject,
+            FrictionState::Rejected,
+        ),
+        edge(
+            "FR13",
+            FrictionState::Evaluated,
+            FrictionEvent::Reject,
+            FrictionState::Rejected,
+        ),
     ],
 };
 
@@ -537,7 +596,9 @@ mod tests {
         ];
         for from in FrictionState::ALL {
             for to in FrictionState::ALL {
-                let moved = from.event_to(to).is_some_and(|event| from.apply(event).is_ok());
+                let moved = from
+                    .event_to(to)
+                    .is_some_and(|event| from.apply(event).is_ok());
                 assert_eq!(moved, legal.contains(&(from, to)), "{from:?} -> {to:?}");
             }
         }

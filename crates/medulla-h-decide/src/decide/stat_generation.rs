@@ -30,12 +30,12 @@ use medulla_decision_types::{
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
 use super::stat_pointer::Qualified;
-use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_retrieval::{judged_outcomes, Scope};
 use super::stat_support::{invalid_parameter as invalid, refusal};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::read_pointer;
 
 const Q16: f64 = 65_536.0;
 /// Bins of the top-1 score PSI.

@@ -776,7 +776,10 @@ async fn view_delta_feed_matches_result_difference() {
                 std::iter::repeat_n(row_id.clone(), *count as usize)
             })
             .collect();
-        assert_eq!(multiset, served, "change {step}: the feed folds to the view");
+        assert_eq!(
+            multiset, served,
+            "change {step}: the feed folds to the view"
+        );
     }
 
     let dropped = Method::PlanMatViewDrop {
@@ -840,7 +843,11 @@ async fn corrupted_state_is_caught_and_demoted() {
         .run_shadow_tick(&state)
         .await
         .expect("the shadow tick runs");
-    assert_eq!(demoted, vec![VIEW.to_string()], "the tick demoted exactly the corrupted view");
+    assert_eq!(
+        demoted,
+        vec![VIEW.to_string()],
+        "the tick demoted exactly the corrupted view"
+    );
     assert_eq!(manager().mode(VIEW), Some(Mode::Recompute));
     assert_eq!(
         manager().fallback_reason(VIEW).as_deref(),
@@ -851,5 +858,10 @@ async fn corrupted_state_is_caught_and_demoted() {
         recomputed_rows(&state).await,
         "a demoted view still answers what a recompute answers"
     );
-    send(&state, 10_000, Method::PlanMatViewDrop { name: VIEW.into() }).await;
+    send(
+        &state,
+        10_000,
+        Method::PlanMatViewDrop { name: VIEW.into() },
+    )
+    .await;
 }

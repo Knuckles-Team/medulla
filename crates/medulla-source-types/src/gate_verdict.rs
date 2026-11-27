@@ -83,7 +83,9 @@ pub fn gate_verdict_seal(record: &GateVerdictRecord) -> String {
 
 /// The digest of the canonical tree listing of a changeset: one line per file in path order,
 /// `path`, `blob digest` and the octal `mode`, tab separated.
-pub fn tree_listing_digest<'a>(entries: impl IntoIterator<Item = (&'a str, &'a str, u32)>) -> String {
+pub fn tree_listing_digest<'a>(
+    entries: impl IntoIterator<Item = (&'a str, &'a str, u32)>,
+) -> String {
     let mut listing = String::new();
     for (path, blob_digest, mode) in entries {
         listing.push_str(&format!("{path}\t{blob_digest}\t{mode:o}\n"));
@@ -92,7 +94,10 @@ pub fn tree_listing_digest<'a>(entries: impl IntoIterator<Item = (&'a str, &'a s
 }
 
 fn is_digest(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 impl GateVerdictRecord {
@@ -100,7 +105,9 @@ impl GateVerdictRecord {
     /// `[A-Za-z0-9._/-]`.
     pub fn validate(&self) -> Result<(), LifecycleRefusal> {
         let bad = |field: &str| {
-            Err(LifecycleRefusal::InvalidArgument(format!("{field} is out of bounds")))
+            Err(LifecycleRefusal::InvalidArgument(format!(
+                "{field} is out of bounds"
+            )))
         };
         if !is_digest(&self.changeset) {
             return bad("changeset");
@@ -210,7 +217,12 @@ pub fn handle_landing_policy_put(
     if request.policy.repo.trim().is_empty() || request.policy.branch.trim().is_empty() {
         return invalid("a landing policy names its repo and branch");
     }
-    if !request.policy.required_gates.iter().all(|gate| valid_gate_id(gate)) {
+    if !request
+        .policy
+        .required_gates
+        .iter()
+        .all(|gate| valid_gate_id(gate))
+    {
         return invalid("a required gate id is out of bounds");
     }
     request.policy.required_gates.sort();

@@ -83,11 +83,7 @@ async fn seed_workflows(h: &Harness, workflows: &[(&str, u32, CanonicalWorkflow)
     core.mark_dirty();
 }
 
-fn plan_request(
-    schema: &ComponentDependency,
-    workflow_id: &str,
-    version: u32,
-) -> DecideRequest {
+fn plan_request(schema: &ComponentDependency, workflow_id: &str, version: u32) -> DecideRequest {
     let mut request = kernel_request(
         schema,
         QuestionKind::ProcessPlan,
@@ -124,16 +120,26 @@ async fn decide_routes_process_plan() {
         .await
         .unwrap();
     let record = &batch.records.as_slice()[0];
-    let plan = record.task_plan().expect("the sealed record holds the plan");
+    let plan = record
+        .task_plan()
+        .expect("the sealed record holds the plan");
     let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
     assert_eq!(ids, ["s2", "s3"], "start and end add no task");
     assert_eq!(plan.output_task_id, "s3");
     assert_eq!(
-        plan.tasks.as_slice()[0].approval.as_ref().unwrap().approver_role,
+        plan.tasks.as_slice()[0]
+            .approval
+            .as_ref()
+            .unwrap()
+            .approver_role,
         "clerk"
     );
     assert_eq!(
-        plan.tasks.as_slice()[1].decision.as_ref().unwrap().decision_iri,
+        plan.tasks.as_slice()[1]
+            .decision
+            .as_ref()
+            .unwrap()
+            .decision_iri,
         "dmn:risk"
     );
 
@@ -237,7 +243,9 @@ async fn process_plan_refusals_name_the_step() {
         ("process:large", "PROCESS_PLAN_TOO_LARGE"),
         ("process:missing", "WORKFLOW_UNKNOWN"),
     ] {
-        let batch = decide(&h, plan_request(&pins.0, workflow_id, 1)).await.unwrap();
+        let batch = decide(&h, plan_request(&pins.0, workflow_id, 1))
+            .await
+            .unwrap();
         let record = &batch.records.as_slice()[0];
         let outcome = format!("{:?}", record.outcome);
         assert!(outcome.contains(expected), "{workflow_id}: {outcome}");

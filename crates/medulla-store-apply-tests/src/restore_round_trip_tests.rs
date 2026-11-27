@@ -12,7 +12,9 @@ use medulla_store::redb_store::shard::{DrainCommit, Shard, ShardWrite};
 use medulla_store::redb_store::store_read::{read_mutation_graph_version, write_graph_meta};
 use medulla_store::redb_store::DurableCrypto;
 use medulla_store_apply::redb_store::checkpoint::restore_graph_rows;
-use medulla_store_apply::redb_store::dump::{read_graph_dump_page, read_graph_table_rows, PageCursorRef};
+use medulla_store_apply::redb_store::dump::{
+    read_graph_dump_page, read_graph_table_rows, PageCursorRef,
+};
 use medulla_store_apply::redb_store::store_control::commit_ops;
 
 const GRAPH: &str = "restore-graph";
@@ -20,10 +22,7 @@ const GRAPH: &str = "restore-graph";
 /// Writes the least row the graph can own into every graph-scoped table but
 /// `nodes` and `edges`, so each table of the registry holds a row to carry.
 struct SeedFloorRows<'m, 'g> {
-    member: &'m medulla_transaction::AdmittedOwnerWrite<
-        'g,
-        medulla_storage::GraphShardOwner,
-    >,
+    member: &'m medulla_transaction::AdmittedOwnerWrite<'g, medulla_storage::GraphShardOwner>,
 }
 
 impl GraphTableVisitor for SeedFloorRows<'_, '_> {
@@ -110,8 +109,10 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
             Method::AddEdge {
                 source_id: "a".to_string(),
                 target_id: "b".to_string(),
-                properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"relationship": "links"}))
-                    .unwrap(),
+                properties_msgpack: rmp_serde::to_vec_named(
+                    &serde_json::json!({"relationship": "links"}),
+                )
+                .unwrap(),
             },
         ),
     ];
@@ -131,7 +132,9 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
 
     // One row in every other graph-scoped table, in one maintenance write.
     let members = source.graph_members(&[GRAPH]).unwrap();
-    let (group, batches) = source.admit_maintenance(&members, "restore-seed-tables").unwrap();
+    let (group, batches) = source
+        .admit_maintenance(&members, "restore-seed-tables")
+        .unwrap();
     let write = ShardWrite::open(&source, &group, &members, &batches).unwrap();
     let seeded = (|| {
         let member = write.graph(GRAPH)?;
@@ -159,14 +162,17 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
             "graph-scoped table {name} holds no row of the graph before the round trip"
         );
     }
-    assert_eq!(before.len(), registry.len(), "{:?}", before.keys().collect::<Vec<_>>());
+    assert_eq!(
+        before.len(),
+        registry.len(),
+        "{:?}",
+        before.keys().collect::<Vec<_>>()
+    );
 
     // Restore into an empty store from exactly what the snapshot carries.
     let version = read_mutation_graph_version(&source, GRAPH).unwrap();
-    let tables = export_graph_table_rows(
-        &source.read(&source.graph(GRAPH).unwrap()).unwrap(),
-    )
-    .unwrap();
+    let tables =
+        export_graph_table_rows(&source.read(&source.graph(GRAPH).unwrap()).unwrap()).unwrap();
     let page = read_graph_dump_page(
         &source,
         GRAPH,
@@ -195,7 +201,10 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
     )
     .unwrap();
 
-    assert_eq!(read_mutation_graph_version(&target, GRAPH).unwrap(), version);
+    assert_eq!(
+        read_mutation_graph_version(&target, GRAPH).unwrap(),
+        version
+    );
     let after = graph_rows(&target);
     for name in &registry {
         assert_eq!(

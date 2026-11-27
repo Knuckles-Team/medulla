@@ -53,7 +53,9 @@ pub mod list;
 
 pub use crate::agent_component::ComponentDependency;
 pub use lifecycle::{refuse_withdrawn, AgentLibraryLifecycle};
-pub use list::{unsupported_kind_refusal, AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage};
+pub use list::{
+    unsupported_kind_refusal, AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage,
+};
 
 /// Whether the system prompt is fixed at publish time or resolved per run.
 ///

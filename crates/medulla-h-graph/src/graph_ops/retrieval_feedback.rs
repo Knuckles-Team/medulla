@@ -19,7 +19,10 @@ use medulla_retrieval::feedback_boost::{document_boost, DocumentBoost, DEFAULT_H
 use medulla_server_ops::api::ingest::graph::commit_gateway;
 
 fn refuse(ctx: &MutationCtx<'_>, detail: &str) -> Option<Response> {
-    Some(Response::err(ctx.req_id, format!("INVALID_ARGUMENT: {detail}")))
+    Some(Response::err(
+        ctx.req_id,
+        format!("INVALID_ARGUMENT: {detail}"),
+    ))
 }
 
 /// The `Route::RetrievalFeedback` entry: validate, stamp, then commit the one node.
@@ -38,10 +41,7 @@ pub(super) async fn handle_record(
         return None;
     };
     if !kind.is_explicit() {
-        return refuse(
-            ctx,
-            "implicit feedback kinds are derived, never recorded",
-        );
+        return refuse(ctx, "implicit feedback kinds are derived, never recorded");
     }
     if !weight.is_finite() || !(-1.0..=1.0).contains(weight) {
         return refuse(ctx, "weight must be finite and in [-1.0, 1.0]");
@@ -170,9 +170,11 @@ pub(crate) async fn load_implicit_events(
     let Some(store) = state.read().await.agent_library() else {
         return Vec::new();
     };
-    let Ok(rows) =
-        store.decision_artifacts_with_prefix(tenant, RETRIEVAL_OUTCOME_PREFIX, knobs.implicit_outcomes)
-    else {
+    let Ok(rows) = store.decision_artifacts_with_prefix(
+        tenant,
+        RETRIEVAL_OUTCOME_PREFIX,
+        knobs.implicit_outcomes,
+    ) else {
         return Vec::new();
     };
     let mut events = Vec::new();
@@ -334,7 +336,12 @@ mod tests {
             idempotency_key: String::new(),
         }];
         let boosts = load_feedback(&core, "t1", &candidates, 100, &knobs, &implicit);
-        let value = |id: &str| boosts.iter().find(|b| b.document_ref == id).map(|b| b.value);
+        let value = |id: &str| {
+            boosts
+                .iter()
+                .find(|b| b.document_ref == id)
+                .map(|b| b.value)
+        };
         assert_eq!(value("a"), Some(0.2));
         assert_eq!(value("c"), Some(0.05));
         assert_eq!(value("b"), None);

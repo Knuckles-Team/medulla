@@ -129,8 +129,8 @@ use medulla_protocol_types::protocol::Request;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
-mod seam;
 pub mod activity;
+mod seam;
 pub use seam::WireSeam;
 mod copy_out;
 mod matview;
@@ -5295,7 +5295,8 @@ impl WireSession {
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
         // The query time is the engine clock's reading for this request, handed to the parser
         // so `VALID AS OF <n> <unit>` is a function of the text and that reading.
-        let now_secs = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as f64 / 1_000.0;
+        let now_secs =
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as f64 / 1_000.0;
         let plan = medulla_uql::parse_at(text, now_secs).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
         let tsdb_scope =

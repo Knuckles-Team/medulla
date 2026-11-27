@@ -21,7 +21,7 @@
 //! ranking) are Q7/Q11 scope, not this lane's.
 
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, ProgramMetadata, QuantumProgram, IR_VERSION,
 };
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -303,7 +303,10 @@ mod tests {
         );
         assert!(program.instructions.iter().all(|i| match i {
             Instruction::Gate(g) =>
-                g.params.is_empty() && g.controls.iter().all(|c| c.polarity == ControlPolarity::One),
+                g.params.is_empty()
+                    && g.controls
+                        .iter()
+                        .all(|c| c.polarity == ControlPolarity::One),
             _ => true,
         }));
         let measured: Vec<(u32, String, u32)> = program

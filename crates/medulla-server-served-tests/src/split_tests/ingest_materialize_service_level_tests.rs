@@ -25,10 +25,17 @@ async fn ingest_materialize_stays_within_the_batch_budget() {
     let served = Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "Document")]).await;
     let mut samples = Vec::with_capacity(BATCHES);
     for batch in 0..BATCHES {
-        let ids: Vec<String> = (0..RECORDS).map(|index| format!("r-{batch}-{index}")).collect();
+        let ids: Vec<String> = (0..RECORDS)
+            .map(|index| format!("r-{batch}-{index}"))
+            .collect();
         let records: Vec<(&str, serde_json::Value)> = ids
             .iter()
-            .map(|id| (id.as_str(), json!({"id": id, "title": format!("record {id}")})))
+            .map(|id| {
+                (
+                    id.as_str(),
+                    json!({"id": id, "title": format!("record {id}")}),
+                )
+            })
             .collect();
         let began = Instant::now();
         let receipt = served.ingest(STREAM, &records).await;

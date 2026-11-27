@@ -595,7 +595,10 @@ mod tests {
             },
         };
         let text = serde_json::to_string(&result).expect("encode result");
-        assert_eq!(serde_json::from_str::<SkillEvalResult>(&text).unwrap(), result);
+        assert_eq!(
+            serde_json::from_str::<SkillEvalResult>(&text).unwrap(),
+            result
+        );
         let report = SuiteReport {
             golden_ppm: 50_000,
             real_ppm: 800_000,
@@ -617,22 +620,33 @@ mod tests {
         let run = AblationRun {
             skill_ref: "skill:triage@3".into(),
             prompt_digest: "p1".into(),
-            arm: AblationArm::WithoutPart { part: "intro".into() },
+            arm: AblationArm::WithoutPart {
+                part: "intro".into(),
+            },
             blind_id: "b-17".into(),
             outcome_score_ppm: 700_000,
             seed: 4,
         };
         let wire = serde_json::to_string(&run).expect("encodes");
-        assert_eq!(serde_json::from_str::<AblationRun>(&wire).expect("decodes"), run);
+        assert_eq!(
+            serde_json::from_str::<AblationRun>(&wire).expect("decodes"),
+            run
+        );
         for arm in [AblationArm::With, AblationArm::Without] {
             let text = serde_json::to_string(&arm).expect("encodes");
-            assert_eq!(serde_json::from_str::<AblationArm>(&text).expect("decodes"), arm);
+            assert_eq!(
+                serde_json::from_str::<AblationArm>(&text).expect("decodes"),
+                arm
+            );
         }
         // A judge reads the blind id and the digests; no field or text of its input names the arm.
         let input = serde_json::to_string(&run.judge_input("out-1")).expect("encodes");
         assert!(input.contains("b-17") && input.contains("p1") && input.contains("out-1"));
         assert!(!input.contains("arm") && !input.contains("without") && !input.contains("intro"));
-        for verdict in [AblationVerdict::Effect { delta_ppm: -5 }, AblationVerdict::WithinNoise] {
+        for verdict in [
+            AblationVerdict::Effect { delta_ppm: -5 },
+            AblationVerdict::WithinNoise,
+        ] {
             let text = serde_json::to_string(&verdict).expect("encodes");
             assert_eq!(
                 serde_json::from_str::<AblationVerdict>(&text).expect("decodes"),
@@ -647,6 +661,9 @@ mod tests {
         };
         let text = serde_json::to_string(&compile).expect("encodes");
         assert!(text.contains("\"stale\""));
-        assert_eq!(serde_json::from_str::<ModelCompile>(&text).expect("decodes"), compile);
+        assert_eq!(
+            serde_json::from_str::<ModelCompile>(&text).expect("decodes"),
+            compile
+        );
     }
 }

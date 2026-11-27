@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::change_envelope::ChangeEnvelopeCommit;
 use medulla_mutation_types::{
-    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxAcked, mutation_outbox::OutboxDeadLetterPage,
-    mutation_outbox::OutboxPulled,
+    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxAcked,
+    mutation_outbox::OutboxDeadLetterPage, mutation_outbox::OutboxPulled,
     mutation_outbox::OutboxRewindReceipt,
 };
 

@@ -41,7 +41,10 @@ impl FailableBlob {
 }
 
 /// Install a failable CAS opened on `dir` as the blob substrate of `state`.
-pub async fn attach(state: &super::test_support::SharedState, dir: &std::path::Path) -> Arc<FailableBlob> {
+pub async fn attach(
+    state: &super::test_support::SharedState,
+    dir: &std::path::Path,
+) -> Arc<FailableBlob> {
     let inner = RedbChunkStore::open(&dir.to_string_lossy()).expect("open the chunk store");
     let blob = Arc::new(FailableBlob {
         inner,
@@ -49,10 +52,9 @@ pub async fn attach(state: &super::test_support::SharedState, dir: &std::path::P
         fail_holder: AtomicBool::new(false),
     });
     let store: Arc<dyn ChunkStore> = Arc::clone(&blob) as Arc<dyn ChunkStore>;
-    state
-        .write()
-        .await
-        .set_blob_cursors(Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(store))));
+    state.write().await.set_blob_cursors(Some(Arc::new(
+        medulla_server_blob::blob::BlobCursors::new(store),
+    )));
     blob
 }
 
@@ -150,7 +152,8 @@ impl ChunkStore for FailableBlob {
         batch: &MutationBatch,
         committed_at_ms: u64,
     ) -> Result<String, String> {
-        self.inner.commit_upload_batch(cursor, batch, committed_at_ms)
+        self.inner
+            .commit_upload_batch(cursor, batch, committed_at_ms)
     }
 
     fn upload_cursor_high_water(&self) -> Result<u64, String> {
@@ -185,7 +188,8 @@ impl ChunkStore for FailableBlob {
         bodies: &[EngineBody],
         committed_at_ms: u64,
     ) -> Result<Vec<StoredEngineBody>, String> {
-        self.inner.put_engine_bodies(tenant_id, bodies, committed_at_ms)
+        self.inner
+            .put_engine_bodies(tenant_id, bodies, committed_at_ms)
     }
 
     fn put_repository_bodies(

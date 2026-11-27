@@ -36,9 +36,9 @@ pub fn allows(grants: &[PathGrant], path: &str, access: PathAccess) -> bool {
 /// answer still drops every entry its own grant denies.
 pub fn any_allowed_at_or_below(grants: &[PathGrant], prefix: &str, access: PathAccess) -> bool {
     allows(grants, prefix, access)
-        || grants.iter().any(|grant| {
-            grant.allows(access) && in_prefix(&grant.prefix, prefix)
-        })
+        || grants
+            .iter()
+            .any(|grant| grant.allows(access) && in_prefix(&grant.prefix, prefix))
 }
 
 #[cfg(test)]
@@ -59,7 +59,10 @@ mod tests {
     #[test]
     fn check_refuses_on_the_first_denied_path() {
         let grants = vec![grant("src", true, true), grant("src/secret", false, false)];
-        assert_eq!(check(&grants, &["src/a", "src/b"], PathAccess::Write), Ok(()));
+        assert_eq!(
+            check(&grants, &["src/a", "src/b"], PathAccess::Write),
+            Ok(())
+        );
         assert_eq!(
             check(&grants, &["src/a", "src/secret/x"], PathAccess::Read),
             Err(PathGrantRefusal::ReadDenied)
@@ -72,6 +75,10 @@ mod tests {
         assert!(!any_allowed_at_or_below(&grants, "docs", PathAccess::Read));
         // The grant that governs the prefix itself counts: `src/a` reads under `src`.
         assert!(any_allowed_at_or_below(&grants, "src/a", PathAccess::Read));
-        assert!(!any_allowed_at_or_below(&grants, "src/secret", PathAccess::Read));
+        assert!(!any_allowed_at_or_below(
+            &grants,
+            "src/secret",
+            PathAccess::Read
+        ));
     }
 }

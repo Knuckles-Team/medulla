@@ -129,6 +129,9 @@ mod tests {
             node_id: String::new(),
             revision: None,
         };
-        assert!(request.validate().unwrap_err().starts_with("INVALID_ARGUMENT"));
+        assert!(request
+            .validate()
+            .unwrap_err()
+            .starts_with("INVALID_ARGUMENT"));
     }
 }

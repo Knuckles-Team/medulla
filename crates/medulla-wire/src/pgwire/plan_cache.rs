@@ -56,7 +56,11 @@ mod tests {
         let first = prepare_kind(&mut cache, template, 7);
         assert_eq!(plan_cache_hits(), before, "the first execution is a miss");
         let second = prepare_kind(&mut cache, template, 7);
-        assert_eq!(plan_cache_hits(), before + 1, "the second execution is a hit");
+        assert_eq!(
+            plan_cache_hits(),
+            before + 1,
+            "the second execution is a hit"
+        );
         assert_eq!(first, second);
         assert_eq!(cache.len(), 1);
 

@@ -34,7 +34,9 @@ use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 use crate::decide::stat_log::visible_entries;
 use crate::decide::SharedState;
 
@@ -123,22 +125,28 @@ fn refuse(kind: QuestionKind, error: DmnError) -> Result<Executed, String> {
         ),
         DmnError::AnyConflict { rule_ids } => (
             DMN_ANY_CONFLICT,
-            format!("rules with different outputs matched: {}", rule_ids.join(",")),
+            format!(
+                "rules with different outputs matched: {}",
+                rule_ids.join(",")
+            ),
         ),
         DmnError::ExpressionUnsupported { entry } => (
             DMN_EXPRESSION_UNSUPPORTED,
             format!("`{entry}` is outside the supported subset"),
         ),
-        DmnError::InputMissing { name } => {
-            (DMN_INPUT_MISSING, format!("input `{name}` was not supplied"))
-        }
+        DmnError::InputMissing { name } => (
+            DMN_INPUT_MISSING,
+            format!("input `{name}` was not supplied"),
+        ),
         DmnError::MalformedTable { rule_id } => {
             return Err(invalid(format!(
                 "the stored rule `{rule_id}` does not match its table's clauses"
             )))
         }
         DmnError::Overflow => {
-            return Err(invalid("a COLLECT aggregation overflows 64-bit fixed point"))
+            return Err(invalid(
+                "a COLLECT aggregation overflows 64-bit fixed point",
+            ))
         }
     };
     Ok(abstained(kind, &Abstention(code, detail)))
@@ -264,10 +272,7 @@ fn input_premises(inputs: &BTreeMap<String, DmnValue>) -> Vec<FamilyPremise> {
         .collect()
 }
 
-fn table_answer(
-    view: Option<&GraphView>,
-    request: &DecideRequest,
-) -> Result<Executed, String> {
+fn table_answer(view: Option<&GraphView>, request: &DecideRequest) -> Result<Executed, String> {
     let ask: DecisionTableRequest = json_param(request, PARAM_REQUEST)?;
     let kind = QuestionKind::DecisionTableEval;
     let view = view.ok_or_else(|| invalid("the decision graph was not read"))?;
@@ -459,7 +464,10 @@ mod control_schema_tests {
         let encoded =
             medulla_decision_types::decision::statistical::body::encode_body(&body).unwrap();
         let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
-        assert_eq!(json["features"][0]["kind"]["feature"], "declared_cost_micros");
+        assert_eq!(
+            json["features"][0]["kind"]["feature"],
+            "declared_cost_micros"
+        );
         assert_eq!(json["features"][0]["missing"]["missing"], "impute");
         assert_eq!(PROCESS_CONTROL_QUESTION_IDS.len(), 2);
     }

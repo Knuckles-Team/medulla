@@ -21,8 +21,8 @@ mod served {
     use medulla_mutation_types::branch::BranchRef;
     use medulla_persistence::branch_registry_store::BranchRegistry;
     use medulla_server_auth::access::path_grant;
-    use medulla_source_types::source_path_grant::PathAccess;
     use medulla_source_types::source_changeset::{Changeset, ReadPathHistoryReceipt};
+    use medulla_source_types::source_path_grant::PathAccess;
 
     /// The history index rows of one branch as a read sees them.
     pub(in crate::dispatch::router) struct RegistryHistory<'a> {
@@ -80,19 +80,29 @@ mod served {
             Err(error) => return ops::target_error_response(req.id, error),
         };
         // MEDULLA-SCM-R007: `read` on the path, from grants read inside the same snapshot.
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let answered = target
             .read_blocking(move |registry, branch| {
                 let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
-                if let Err(refusal) = path_grant::check(&grants, &[request.path.as_str()], PathAccess::Read) {
-                    return Ok(Err(format!("{}: no read grant covers the path", refusal.code())));
+                if let Err(refusal) =
+                    path_grant::check(&grants, &[request.path.as_str()], PathAccess::Read)
+                {
+                    return Ok(Err(format!(
+                        "{}: no read grant covers the path",
+                        refusal.code()
+                    )));
                 }
                 let head = match registry.get(branch)? {
                     Some(row) => row.head_commit,
                     None => return Err("the resolved branch has no registry row".to_string()),
                 };
-                Ok(read_path_history(&RegistryHistory { registry, branch }, &head, &request)?
-                    .map_err(|refusal| refusal.message()))
+                Ok(
+                    read_path_history(&RegistryHistory { registry, branch }, &head, &request)?
+                        .map_err(|refusal| refusal.message()),
+                )
             })
             .await;
         match answered {

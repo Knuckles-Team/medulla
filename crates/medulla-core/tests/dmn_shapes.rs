@@ -37,15 +37,19 @@ ex:d2 a eg:DmnDecision .
 #[test]
 fn dmn_shapes_refuse_planted_faults() {
     let clean = report(CLEAN);
-    assert!(clean.conforms, "a clean model conforms: {:?}", clean.results);
+    assert!(
+        clean.conforms,
+        "a clean model conforms: {:?}",
+        clean.results
+    );
 
     // A table with no hit policy.
     let no_policy = report("ex:t a eg:DmnDecisionTable .");
     assert!(!no_policy.conforms, "a table needs its hit policy");
-    assert!(no_policy
-        .results
-        .iter()
-        .any(|result| result.path.as_deref().is_some_and(|p| p.contains("dmnHitPolicy"))));
+    assert!(no_policy.results.iter().any(|result| result
+        .path
+        .as_deref()
+        .is_some_and(|p| p.contains("dmnHitPolicy"))));
 
     // An aggregation under a hit policy other than COLLECT.
     let aggregated = report(
@@ -67,8 +71,8 @@ ex:d2 a eg:DmnDecision ; eg:dmnRequiresDecision ex:d1 ."#,
     // A rule with no table.
     let orphan = report("ex:r a eg:DmnRule ; eg:dmnRuleIndex 0 .");
     assert!(!orphan.conforms, "a rule names its table");
-    assert!(orphan
-        .results
-        .iter()
-        .any(|result| result.path.as_deref().is_some_and(|p| p.contains("dmnTable"))));
+    assert!(orphan.results.iter().any(|result| result
+        .path
+        .as_deref()
+        .is_some_and(|p| p.contains("dmnTable"))));
 }

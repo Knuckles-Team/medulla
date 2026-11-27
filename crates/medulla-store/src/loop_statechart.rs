@@ -115,9 +115,8 @@ fn from_each_active<'a>(
     target: &'a str,
     guard: Guard,
 ) -> impl Iterator<Item = Transition> + 'a {
-    active_states().map(move |from| {
-        Transition::new(from.stored(), event, target).with_guard(guard.clone())
-    })
+    active_states()
+        .map(move |from| Transition::new(from.stored(), event, target).with_guard(guard.clone()))
 }
 
 /// A logged human-interrupt row: `<from> --pretick[guard]--> target`, logging `message`.
@@ -516,7 +515,10 @@ mod tests {
         let d = def();
         let chart: Vec<&str> = d.states.iter().map(|state| state.id.as_str()).collect();
         let variants: Vec<&str> = LoopState::ALL.iter().map(|state| state.stored()).collect();
-        assert_eq!(chart, variants, "the chart states are LoopState::ALL, in order");
+        assert_eq!(
+            chart, variants,
+            "the chart states are LoopState::ALL, in order"
+        );
         let finals: Vec<&str> = d.finals.iter().map(String::as_str).collect();
         let expected: Vec<&str> = LoopState::ALL
             .iter()

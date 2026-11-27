@@ -110,11 +110,19 @@ mod tests {
         assert_eq!(defaulted.resolution_micros, 1_000_000);
         assert!(defaulted.validate().is_ok());
         for micros in [99_999, 10_000_001, 0] {
-            let query = SpecReportQuery { resolution_micros: micros, seed: 0 };
+            let query = SpecReportQuery {
+                resolution_micros: micros,
+                seed: 0,
+            };
             let refusal = query.validate().unwrap_err();
             assert!(refusal.starts_with(SPEC_REPORT_INVALID), "{refusal}");
         }
-        assert!(SpecReportQuery { resolution_micros: 100_000, seed: 9 }.validate().is_ok());
+        assert!(SpecReportQuery {
+            resolution_micros: 100_000,
+            seed: 9
+        }
+        .validate()
+        .is_ok());
         assert!(serde_json::from_str::<SpecReportQuery>(r#"{"seed":1,"extra":2}"#).is_err());
     }
 }

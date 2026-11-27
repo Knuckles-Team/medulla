@@ -8,14 +8,14 @@ use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::outbox::{OutboxHeader, OutboxIntent};
-use medulla_types::contract::{
-    AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, ReplayOutcome,
-    ScopeKind, VerificationStatus,
-};
 use medulla_identity_types::authority::{
     AuthorityContext, AuthorityScope, NonceReplayKey, OperationReplayIdentity, ReplayReceipt,
     SignedAuthorityEnvelopeEvidence, VerifiedAuthority, AUTHORITY_CONTEXT_SCHEMA_V1,
     AUTHORITY_PROTOCOL_V1,
+};
+use medulla_types::contract::{
+    AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, ReplayOutcome,
+    ScopeKind, VerificationStatus,
 };
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,

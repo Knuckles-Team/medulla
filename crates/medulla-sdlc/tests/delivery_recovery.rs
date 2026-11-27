@@ -6,9 +6,7 @@ use medulla_sdlc::lifecycle::delivery::recovery::{
     expired_by_lane_leases, lane_work_item_id, recover_assignments, LaneLease, RecordedEffect,
     HOST_RESTARTED,
 };
-use medulla_source_types::delivery::{
-    decode_delivery, AssignmentState, ReceiptState,
-};
+use medulla_source_types::delivery::{decode_delivery, AssignmentState, ReceiptState};
 use serde_json::json;
 
 #[test]
@@ -62,13 +60,21 @@ fn expired_assignment_restarts_with_note_and_unread_inputs_once() {
     assert_eq!(old.state, AssignmentState::Ended);
     assert_eq!(old.ended_reason.as_deref(), Some(HOST_RESTARTED));
     assert_eq!(old.ended_at, Some(77));
-    assert_eq!(recovered.assignments[1].state, AssignmentState::Running, "lease held");
+    assert_eq!(
+        recovered.assignments[1].state,
+        AssignmentState::Running,
+        "lease held"
+    );
     let fresh = &recovered.assignments[2];
     assert_eq!(fresh.state, AssignmentState::Pending);
     assert_eq!(fresh.run_trace_id, "run-for-a1");
     let note = fresh.recovery.as_ref().expect("a recovery note");
     assert_eq!(note.replaces, "a1");
-    assert_eq!(note.moved_inputs, [2, 3], "the first input was read at report seq 1");
+    assert_eq!(
+        note.moved_inputs,
+        [2, 3],
+        "the first input was read at report seq 1"
+    );
     let receipts: Vec<ReceiptState> = note.effects.iter().map(|e| e.receipt).collect();
     assert_eq!(receipts, [ReceiptState::Confirmed, ReceiptState::Uncertain]);
     // A second recovery pass moves nothing again.
@@ -104,15 +110,26 @@ fn a_lapsed_lane_lease_names_its_running_assignment_by_delivery_id() {
         expires_at_ms,
         active,
     };
-    assert_eq!(lane_work_item_id(&delivery, &delivery.assignments[0]), "d1/r1");
+    assert_eq!(
+        lane_work_item_id(&delivery, &delivery.assignments[0]),
+        "d1/r1"
+    );
     let leases = vec![
-        lease(0, 50, true),   // passed its expiry
-        lease(1, 500, true),  // still live
-        lease(3, 10, false),  // lapsed, but its assignment is already ended
-        LaneLease { work_item_id: "other/r9".into(), expires_at_ms: 1, active: false },
+        lease(0, 50, true),  // passed its expiry
+        lease(1, 500, true), // still live
+        lease(3, 10, false), // lapsed, but its assignment is already ended
+        LaneLease {
+            work_item_id: "other/r9".into(),
+            expires_at_ms: 1,
+            active: false,
+        },
     ];
     let expired = expired_by_lane_leases(&[delivery.clone()], &leases, 100);
-    assert_eq!(expired, BTreeSet::from(["a1".to_string()]), "a3 holds no lane lease");
+    assert_eq!(
+        expired,
+        BTreeSet::from(["a1".to_string()]),
+        "a3 holds no lane lease"
+    );
     // A hold that is no longer active lapses whatever its expiry says.
     let released = vec![lease(1, 500, false)];
     assert_eq!(

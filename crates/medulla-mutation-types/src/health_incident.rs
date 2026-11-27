@@ -5,9 +5,7 @@
 //! move strictly `open -> acknowledged -> resolved -> closed`. Served operations
 //! and durable storage are MEDULLA-DURABLE-KERNEL-R852.3 and later children.
 
-use medulla_types::transition_refused::{
-    MachineState, TransitionRefusalReason, TransitionRefused,
-};
+use medulla_types::transition_refused::{MachineState, TransitionRefusalReason, TransitionRefused};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

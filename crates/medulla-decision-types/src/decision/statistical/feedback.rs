@@ -112,7 +112,9 @@ impl FeedbackEvent {
             .iter()
             .find(|digest| !is_sha256_hex(digest))
         {
-            return Err(format!("evidence digest {bad:?} is not 64 lowercase hex characters"));
+            return Err(format!(
+                "evidence digest {bad:?} is not 64 lowercase hex characters"
+            ));
         }
         Ok(())
     }
@@ -178,6 +180,9 @@ mod tests {
         let mut revision = event.clone();
         revision.source_revision = 0;
         assert!(revision.check(MAX_FEEDBACK_EVIDENCE).is_err());
-        assert!(event.check(1).is_err(), "the knob bounds the evidence lists");
+        assert!(
+            event.check(1).is_err(),
+            "the knob bounds the evidence lists"
+        );
     }
 }

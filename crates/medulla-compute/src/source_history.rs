@@ -334,8 +334,12 @@ pub trait HistoryIndex {
     fn row(&self, key: &str) -> Result<Option<Vec<u8>>, String>;
     /// At most `limit` rows whose key starts with `prefix` and is at or below
     /// `upper`, newest key first.
-    fn scan_rev(&self, prefix: &str, upper: &str, limit: usize)
-        -> Result<Vec<(String, Vec<u8>)>, String>;
+    fn scan_rev(
+        &self,
+        prefix: &str,
+        upper: &str,
+        limit: usize,
+    ) -> Result<Vec<(String, Vec<u8>)>, String>;
     /// The changeset the branch commit `commit_id` carries.
     fn changeset_at(&self, commit_id: &str) -> Result<Option<Changeset>, String>;
 }
@@ -361,8 +365,16 @@ fn refused(refusal: ChangesetRefusal, detail: &str) -> HistoryError {
 
 /// The head row, checked against the branch head: absent, of another version
 /// or naming another commit refuses `HISTORY_INDEX_STALE`.
-pub fn current_head(index: &dyn HistoryIndex, branch_head: &str) -> Result<HistoryHead, HistoryError> {
-    let stale = || refused(ChangesetRefusal::HistoryIndexStale, "the history index is stale");
+pub fn current_head(
+    index: &dyn HistoryIndex,
+    branch_head: &str,
+) -> Result<HistoryHead, HistoryError> {
+    let stale = || {
+        refused(
+            ChangesetRefusal::HistoryIndexStale,
+            "the history index is stale",
+        )
+    };
     let Some(bytes) = index.row(&head_key())? else {
         return Err(stale());
     };
@@ -394,7 +406,11 @@ pub fn path_history(
     let limit = request.validate().map_err(HistoryError::Refused)?;
     current_head(index, branch_head)?;
     let seq = seq_of(index, &request.rev)?;
-    let rows = index.scan_rev(&path_prefix(&request.path), &path_key(&request.path, seq), limit)?;
+    let rows = index.scan_rev(
+        &path_prefix(&request.path),
+        &path_key(&request.path, seq),
+        limit,
+    )?;
     let mut entries = Vec::with_capacity(rows.len());
     for (key, _) in rows {
         let hex = key
@@ -440,8 +456,17 @@ pub fn blame(
     request.validate().map_err(HistoryError::Refused)?;
     current_head(index, branch_head)?;
     let seq = seq_of(index, &request.rev)?;
-    let rows = index.scan_rev(&blame_prefix(&request.path), &blame_key(&request.path, seq), 1)?;
-    let absent = || refused(ChangesetRefusal::BlamePathAbsent, "the path has no blame at the revision");
+    let rows = index.scan_rev(
+        &blame_prefix(&request.path),
+        &blame_key(&request.path, seq),
+        1,
+    )?;
+    let absent = || {
+        refused(
+            ChangesetRefusal::BlamePathAbsent,
+            "the path has no blame at the revision",
+        )
+    };
     let Some((_, bytes)) = rows.into_iter().next() else {
         return Err(absent());
     };
@@ -620,7 +645,10 @@ mod tests {
 
     fn mem_of(chain: &[(String, Changeset)], blobs: &Blobs) -> Mem {
         Mem {
-            rows: rebuild(chain, &blob_reader(blobs)).unwrap().into_iter().collect(),
+            rows: rebuild(chain, &blob_reader(blobs))
+                .unwrap()
+                .into_iter()
+                .collect(),
             changesets: chain.iter().cloned().collect(),
         }
     }

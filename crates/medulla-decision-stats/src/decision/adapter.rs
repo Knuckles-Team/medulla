@@ -11,6 +11,7 @@
 //! gets gain zero. Everything is serial over the caller's item order with
 //! correctly rounded IEEE arithmetic only, so a fit replays bit-identically.
 
+use medulla_decision_types::decision::statistical::feedback::{FeedbackEvent, FeedbackOutcome};
 use medulla_decision_types::{
     decision::statistical::retrieval_adapter::AdapterDirection,
     decision::statistical::retrieval_adapter::AdapterScope,
@@ -19,7 +20,6 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
     decision::statistical::retrieval_adapter::UNIT_SCALE_BITS,
 };
-use medulla_decision_types::decision::statistical::feedback::{FeedbackEvent, FeedbackOutcome};
 use medulla_types::contract::BoundedVec;
 use std::collections::BTreeMap;
 
@@ -62,8 +62,8 @@ pub fn feedback_labels(events: &[FeedbackEvent]) -> BTreeMap<(String, String), F
                 .entry(key)
                 .and_modify(|held| {
                     let newer = candidate.0 > held.0;
-                    let tie_to_negative = candidate.0 == held.0
-                        && candidate.1 == FeedbackLabel::HardNegative;
+                    let tie_to_negative =
+                        candidate.0 == held.0 && candidate.1 == FeedbackLabel::HardNegative;
                     if newer || tie_to_negative {
                         *held = candidate;
                     }
@@ -924,7 +924,10 @@ mod tests {
             vec![early_bad.clone(), late_good.clone()],
             vec![late_good.clone(), early_bad.clone()],
         ] {
-            assert_eq!(feedback_labels(&events)[&key("u1")], FeedbackLabel::Positive);
+            assert_eq!(
+                feedback_labels(&events)[&key("u1")],
+                FeedbackLabel::Positive
+            );
         }
 
         // A tie goes to the hard-negative label, in either input order.

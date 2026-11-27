@@ -22,7 +22,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{SourceIngestionRequest, SourceJson};
 use medulla_source_types::source_transcript::{
     TranscriptIngestError, TranscriptItem, TranscriptMessage, TranscriptReadRequest,
-    TranscriptReadView, TranscriptReceipt, TranscriptThread, SEGMENT_CLOCKS, TRANSCRIPT_READ_ACTION,
+    TranscriptReadView, TranscriptReceipt, TranscriptThread, SEGMENT_CLOCKS,
+    TRANSCRIPT_READ_ACTION,
 };
 use medulla_types::contract::Digest256;
 
@@ -137,7 +138,10 @@ pub(super) fn decode_transcript_items(items: &[SourceJson]) -> Result<DecodedTra
 
 /// An identifier the memory record id alphabet accepts: the source's own spelling when it is
 /// valid, else the SHA-256 identity of it under `domain`.
-fn memory_identifier(raw: &str, domain: &[u8]) -> Result<medulla_types::contract::ResourceId, String> {
+fn memory_identifier(
+    raw: &str,
+    domain: &[u8],
+) -> Result<medulla_types::contract::ResourceId, String> {
     if let Ok(id) = medulla_types::contract::ResourceId::new(raw) {
         return Ok(id);
     }
@@ -155,17 +159,22 @@ pub fn conversation_of(
     use medulla_source_types::source_ingestion::batch_kind::SourceBatchExtension;
     use medulla_source_types::source_transcript::TranscriptRole;
     use medulla_work_types::memory::{ConversationMessage, ConversationRecord, MessageRole};
-    let Some(SourceBatchExtension::Transcripts(items)) = request.as_batch().extension.as_ref() else {
+    let Some(SourceBatchExtension::Transcripts(items)) = request.as_batch().extension.as_ref()
+    else {
         return Ok(None);
     };
     let decoded = decode_transcript_items(items.as_slice())?;
-    let conversation = memory_identifier(&decoded.thread.session_id, b"eg/transcript-conversation")?;
+    let conversation =
+        memory_identifier(&decoded.thread.session_id, b"eg/transcript-conversation")?;
     let messages = decoded
         .messages
         .iter()
         .map(|message| {
             Ok(ConversationMessage {
-                message_id: memory_identifier(&message.message_id, b"eg/transcript-memory-message")?,
+                message_id: memory_identifier(
+                    &message.message_id,
+                    b"eg/transcript-memory-message",
+                )?,
                 role: match message.role {
                     TranscriptRole::System => MessageRole::System,
                     TranscriptRole::User => MessageRole::User,
@@ -182,7 +191,8 @@ pub fn conversation_of(
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    let mut record = ConversationRecord::new(tenant, conversation.as_str(), messages).map_err(invalid)?;
+    let mut record =
+        ConversationRecord::new(tenant, conversation.as_str(), messages).map_err(invalid)?;
     // The memberships of the speakers hang off the thread node this batch commits, in the
     // workspace its connector names (MEDULLA-DECISION-ENGINE-R617.8).
     let thread_id = thread_identity(
@@ -365,8 +375,8 @@ pub fn read_transcript(
     request: &TranscriptReadRequest,
 ) -> Result<TranscriptReadView, String> {
     use medulla_source_types::source_transcript::{
-        TranscriptReadMessage, TranscriptThreadRead,
-        TRANSCRIPT_READ_DEFAULT_LIMIT, TRANSCRIPT_READ_MAX_LIMIT,
+        TranscriptReadMessage, TranscriptThreadRead, TRANSCRIPT_READ_DEFAULT_LIMIT,
+        TRANSCRIPT_READ_MAX_LIMIT,
     };
     if !verified.allows_action(TRANSCRIPT_READ_ACTION) {
         return Err(format!(
@@ -410,10 +420,16 @@ pub fn read_transcript(
         let Some(properties) = visible_properties(core, visible, &node_id) else {
             continue;
         };
-        let Some(sequence) = properties.get("sequence").and_then(serde_json::Value::as_u64) else {
+        let Some(sequence) = properties
+            .get("sequence")
+            .and_then(serde_json::Value::as_u64)
+        else {
             continue;
         };
-        if request.after_sequence.is_some_and(|after| sequence <= after) {
+        if request
+            .after_sequence
+            .is_some_and(|after| sequence <= after)
+        {
             continue;
         }
         rows.push((sequence, message_id.to_string(), properties));
@@ -582,7 +598,12 @@ mod tests {
         medulla_source_types::source_ingestion::fixtures::request()
     }
 
-    fn message(request: &SourceIngestionRequest, id: &str, event: i64, storage: i64) -> TranscriptMessage {
+    fn message(
+        request: &SourceIngestionRequest,
+        id: &str,
+        event: i64,
+        storage: i64,
+    ) -> TranscriptMessage {
         let batch = request.as_batch();
         TranscriptMessage {
             connector: batch.connector.clone(),
@@ -642,7 +663,10 @@ mod tests {
         );
         // Identities are derived, 64 hex characters, and distinct per message.
         assert_eq!(validated.thread_id.len(), 64);
-        assert_ne!(validated.messages[0].message_id, validated.messages[1].message_id);
+        assert_ne!(
+            validated.messages[0].message_id,
+            validated.messages[1].message_id
+        );
         assert_eq!(
             validated.messages[0].message_id,
             message_identity(&validated.thread_id, "m1").unwrap()
@@ -678,17 +702,17 @@ mod tests {
     }
 
     /// The graph a transcripts batch of three messages wrote, with the concept it names.
-    fn stored_thread(tenant: &str) -> (medulla_graph_core::graph::GraphCore, SourceIngestionRequest) {
+    fn stored_thread(
+        tenant: &str,
+    ) -> (medulla_graph_core::graph::GraphCore, SourceIngestionRequest) {
         let request = request();
-        let decoded = decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
-        let validated = validate_transcript(
-            tenant,
-            &request,
-            &decoded.thread,
-            &decoded.messages,
-            |id| id == "concept-a",
-        )
-        .unwrap();
+        let decoded =
+            decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
+        let validated =
+            validate_transcript(tenant, &request, &decoded.thread, &decoded.messages, |id| {
+                id == "concept-a"
+            })
+            .unwrap();
         let admission = transcript_methods(&decoded, &validated).unwrap();
         let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
@@ -705,7 +729,9 @@ mod tests {
                     source_id,
                     target_id,
                     properties_msgpack,
-                } => core.add_edge(source_id, target_id, properties_msgpack).unwrap(),
+                } => core
+                    .add_edge(source_id, target_id, properties_msgpack)
+                    .unwrap(),
                 other => panic!("a transcript write-set holds no {other:?}"),
             }
         }
@@ -752,7 +778,10 @@ mod tests {
         assert_eq!(sequences, [0, 1, 2]);
         assert_eq!(thread.messages[0].text, "text of m1");
         assert_eq!(thread.messages[0].source_record_id, "record-m1");
-        assert_eq!(thread.messages[0].concept_refs, vec!["concept-a".to_string()]);
+        assert_eq!(
+            thread.messages[0].concept_refs,
+            vec!["concept-a".to_string()]
+        );
         assert!(thread.messages[0].event_time_ms.is_some());
         assert!(thread.next_after_sequence.is_none());
 
@@ -763,17 +792,26 @@ mod tests {
         assert_eq!(page.next_after_sequence, Some(1));
         let rest = read_transcript(&holder, &core, &all, &read(Some(2), Some(1))).unwrap();
         let rest = rest.thread.expect("the second page");
-        assert_eq!(rest.messages.iter().map(|m| m.sequence).collect::<Vec<_>>(), [2]);
+        assert_eq!(
+            rest.messages.iter().map(|m| m.sequence).collect::<Vec<_>>(),
+            [2]
+        );
 
         // Rows the caller's row authority hides, and another tenant, read as absent.
         let none = |_: &str| false;
-        assert!(read_transcript(&holder, &core, &none, &read(None, None)).unwrap().thread.is_none());
+        assert!(read_transcript(&holder, &core, &none, &read(None, None))
+            .unwrap()
+            .thread
+            .is_none());
         let foreign = VerifiedRequestContext::verified_for_test_with_scopes(
             "agent:reader",
             "t2",
             &["kg:read", "source:transcript:read"],
         );
-        assert!(read_transcript(&foreign, &core, &all, &read(None, None)).unwrap().thread.is_none());
+        assert!(read_transcript(&foreign, &core, &all, &read(None, None))
+            .unwrap()
+            .thread
+            .is_none());
         // A limit outside 1..=1000 is refused.
         let refused = read_transcript(&holder, &core, &all, &read(Some(0), None)).unwrap_err();
         assert!(refused.starts_with("INVALID_ARGUMENT:"), "{refused}");
@@ -783,15 +821,13 @@ mod tests {
     #[test]
     fn receipt_preserves_message_provenance() {
         let request = request();
-        let decoded = decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
-        let validated = validate_transcript(
-            "t1",
-            &request,
-            &decoded.thread,
-            &decoded.messages,
-            |id| id == "concept-a",
-        )
-        .unwrap();
+        let decoded =
+            decode_transcript_items(&items(&request, "claude", &["m1", "m2", "m3"])).unwrap();
+        let validated =
+            validate_transcript("t1", &request, &decoded.thread, &decoded.messages, |id| {
+                id == "concept-a"
+            })
+            .unwrap();
         let admission = transcript_methods(&decoded, &validated).unwrap();
         let source = Digest256::sha256(b"batch");
         let checkpoint = Digest256::sha256(b"checkpoint");
@@ -852,14 +888,20 @@ mod tests {
         ];
         // A concept the caller cannot see refuses the whole thread.
         let foreign = validate_transcript("t1", &request, &thread, &sent, |_| false).unwrap_err();
-        assert!(foreign.starts_with("TRANSCRIPT_FOREIGN_CONCEPT:"), "{foreign}");
+        assert!(
+            foreign.starts_with("TRANSCRIPT_FOREIGN_CONCEPT:"),
+            "{foreign}"
+        );
 
         // An event time of zero or below is missing.
         for event in [0, -5] {
             let mut bad = sent.clone();
             bad[1].event_time_ms = event;
             let refused = validate_transcript("t1", &request, &thread, &bad, |_| true).unwrap_err();
-            assert!(refused.starts_with("TRANSCRIPT_MISSING_EVENT_TIME:"), "{refused}");
+            assert!(
+                refused.starts_with("TRANSCRIPT_MISSING_EVENT_TIME:"),
+                "{refused}"
+            );
         }
 
         // A message id sent again with the same content is an idempotent no-op ...
@@ -876,7 +918,8 @@ mod tests {
         let mut other = sent[0].clone();
         other.text = "different text".into();
         changed.push(other);
-        let conflict = validate_transcript("t1", &request, &thread, &changed, |_| true).unwrap_err();
+        let conflict =
+            validate_transcript("t1", &request, &thread, &changed, |_| true).unwrap_err();
         assert!(
             conflict.starts_with("TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT:"),
             "{conflict}"
@@ -896,9 +939,7 @@ mod tests {
             if index == 0 {
                 sent.narrative_time_ms = Some(7);
             }
-            items.push(
-                SourceJson::new(serde_json::json!({ "message": sent })).unwrap(),
-            );
+            items.push(SourceJson::new(serde_json::json!({ "message": sent })).unwrap());
         }
         items
     }
@@ -918,14 +959,11 @@ mod tests {
                 decoded.concept_ids(),
                 BTreeSet::from(["concept-a".to_string()])
             );
-            let validated = validate_transcript(
-                "t1",
-                &request,
-                &decoded.thread,
-                &decoded.messages,
-                |id| id == "concept-a",
-            )
-            .unwrap();
+            let validated =
+                validate_transcript("t1", &request, &decoded.thread, &decoded.messages, |id| {
+                    id == "concept-a"
+                })
+                .unwrap();
             let admission = transcript_methods(&decoded, &validated).unwrap();
             // One thread node, three message nodes, then three transcriptOf, two precedes
             // and three mentionsConcept edges.
@@ -952,7 +990,8 @@ mod tests {
                 })
                 .collect();
             assert_eq!(relationships.len(), 8);
-            for (relationship, count) in [("transcriptOf", 3), ("precedes", 2), ("mentionsConcept", 3)]
+            for (relationship, count) in
+                [("transcriptOf", 3), ("precedes", 2), ("mentionsConcept", 3)]
             {
                 assert_eq!(
                     relationships.iter().filter(|r| *r == relationship).count(),
@@ -990,7 +1029,10 @@ mod tests {
 
         // An unknown format and an item 0 that is a message are refused.
         let unknown = decode_transcript_items(&items(&request, "plain-text", &["m1"])).unwrap_err();
-        assert!(unknown.starts_with("TRANSCRIPT_UNKNOWN_FORMAT:"), "{unknown}");
+        assert!(
+            unknown.starts_with("TRANSCRIPT_UNKNOWN_FORMAT:"),
+            "{unknown}"
+        );
         let mut misplaced = items(&request, "claude", &["m1", "m2"]);
         misplaced.swap(0, 1);
         let refused = decode_transcript_items(&misplaced).unwrap_err();

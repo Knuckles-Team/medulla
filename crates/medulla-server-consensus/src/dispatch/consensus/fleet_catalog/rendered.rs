@@ -57,7 +57,10 @@ impl std::fmt::Display for RenderRefusal {
         let code = self.code().as_str();
         match self {
             Self::BodyMissing { component_id } => {
-                write!(f, "{code}: the graph holds no body for skill {component_id}")
+                write!(
+                    f,
+                    "{code}: the graph holds no body for skill {component_id}"
+                )
             }
             Self::DanglingOntologyRef { component_id, term } => write!(
                 f,

@@ -515,11 +515,17 @@ mod tests {
         let mut holder = caller("a", "acme");
         holder.held_markings.insert("pii".to_owned());
         let held = scope_view(view.clone(), &holder, &vars).unwrap();
-        assert_eq!(held.view.node_row_object("marked").unwrap()["type"], "Column");
+        assert_eq!(
+            held.view.node_row_object("marked").unwrap()["type"],
+            "Column"
+        );
         let denied = scope_view(view, &caller("b", "acme"), &vars).unwrap();
         let redacted = denied.view.node_row_object("marked").unwrap();
         assert_eq!(redacted.len(), 1);
         assert_eq!(redacted[REDACTED_KEY], true);
-        assert_eq!(denied.view.node_row_object("plain").unwrap()["type"], "Column");
+        assert_eq!(
+            denied.view.node_row_object("plain").unwrap()["type"],
+            "Column"
+        );
     }
 }

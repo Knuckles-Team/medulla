@@ -92,7 +92,10 @@ mod served {
                 }
             }
         };
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         // The pack lands under the caller's blob owner scope, the scope the caller's own
         // blob read of `pack_ref` uses.
         let owner = match medulla_server_api::carrier::CarrierAuthority::from_verified(verified) {
@@ -131,8 +134,10 @@ mod served {
                 }
                 // A have the chain does not know is not held by the chain; git
                 // ignores such a have.
-                let resolved_haves: Vec<String> =
-                    resolve_revs(&chain, &request.haves).into_iter().flatten().collect();
+                let resolved_haves: Vec<String> = resolve_revs(&chain, &request.haves)
+                    .into_iter()
+                    .flatten()
+                    .collect();
                 // MEDULLA-SCM-R007: read access on every path the export carries.
                 let mut paths: Vec<&str> = chain
                     .iter()
@@ -148,11 +153,15 @@ mod served {
                     )));
                 }
                 let blobs = ChunkStoreBlobs(store.as_ref(), &owner);
-                let (object_format, pack) =
-                    match export_pack_with_format(&tree, &blobs, &resolved_wants, &resolved_haves) {
-                        Ok(exported) => exported,
-                        Err(refusal) => return Ok(Err(refusal.message())),
-                    };
+                let (object_format, pack) = match export_pack_with_format(
+                    &tree,
+                    &blobs,
+                    &resolved_wants,
+                    &resolved_haves,
+                ) {
+                    Ok(exported) => exported,
+                    Err(refusal) => return Ok(Err(refusal.message())),
+                };
                 Ok(pack_receipt(store.as_ref(), &owner, object_format, &pack))
             })
             .await;

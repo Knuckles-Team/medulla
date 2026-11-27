@@ -25,6 +25,7 @@ use medulla_decision_types::{
 };
 
 use super::drift_registry::registry;
+use super::policy_activation::{guard_activation, record_review};
 use super::stat_adapter::{
     adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
     scoped_adapter_pointer,
@@ -40,9 +41,6 @@ use super::stat_generation_cycle::{
 };
 use super::stat_log::{store_once, LogReader};
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
-use medulla_persistence_records::decision_jobs::read_pointer;
-use super::policy_activation::{guard_activation, record_review};
-use medulla_decision_types::decision::held_out::RevisionSubject;
 use super::stat_promotion::{qualified_champion, record_rollouts};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
@@ -50,17 +48,19 @@ use super::stat_support::{invalid_parameter, refusal};
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_decision_stats::decision::drift::DriftThresholds;
+use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::retrieval_drift::{
-    DRIFT_REFRESH_RECEIPT_NODE_TYPE,
-    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftKind, DriftPolicyNode, DriftRefreshed,
-    DriftSignal, FiringShard, RefreshPlan, RefreshPriority, ScheduledRefresh,
-    ShardGenerationNode, ShardSwap, RETRIEVAL_DRIFT_SCHEMA_VERSION, SHARD_GENERATION_NODE_TYPE,
+    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftKind,
+    DriftPolicyNode, DriftRefreshed, DriftSignal, FiringShard, RefreshPlan, RefreshPriority,
+    ScheduledRefresh, ShardGenerationNode, ShardSwap, DRIFT_REFRESH_RECEIPT_NODE_TYPE,
+    RETRIEVAL_DRIFT_SCHEMA_VERSION, SHARD_GENERATION_NODE_TYPE,
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::decision_jobs::read_pointer;
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_protocol_types::protocol::Method;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -89,7 +89,8 @@ pub(super) struct LearningInputs {
     refresh_graph: Option<GraphVectors>,
     /// The graph nodes a refresh staged; the served `DecisionLog` commits them through the
     /// durable mutation path once the blocking half returned.
-    pub(super) refresh_link: std::sync::Arc<std::sync::Mutex<Option<super::run_record::StagedLink>>>,
+    pub(super) refresh_link:
+        std::sync::Arc<std::sync::Mutex<Option<super::run_record::StagedLink>>>,
     /// What a drift refresh applies in memory (the shard swap and the monitors' new reference)
     /// once its generation pointers committed; dropped when the commit fails.
     pub(super) refresh_apply: std::sync::Arc<std::sync::Mutex<Option<RefreshApply>>>,
@@ -210,15 +211,19 @@ impl Serving<'_> {
         logical: &str,
         region_budget: u32,
     ) -> Result<LearningRecorded, String> {
-        let node = DriftPolicyNode::new(logical.to_string(), region_budget)
-            .map_err(invalid_parameter)?;
+        let node =
+            DriftPolicyNode::new(logical.to_string(), region_budget).map_err(invalid_parameter)?;
         let key = format!("drift-policy:{logical}");
         let bytes = encode_artifact(&node)?;
         let tenant = self.ctx.tenant_id;
         if self.ctx.store.decision_artifact(tenant, &key)?.is_some() {
-            self.ctx.store.replace_decision_artifact(tenant, &key, bytes)?;
+            self.ctx
+                .store
+                .replace_decision_artifact(tenant, &key, bytes)?;
         } else {
-            self.ctx.store.put_decision_artifacts(tenant, &[(key, bytes)])?;
+            self.ctx
+                .store
+                .put_decision_artifacts(tenant, &[(key, bytes)])?;
         }
         Ok(LearningRecorded::DriftPolicy(Box::new(node)))
     }
@@ -265,7 +270,10 @@ impl Serving<'_> {
                         value_q16: q16_round(*value),
                         threshold_q16: q16_round(threshold),
                         window: reading.window,
-                        reference_generation: format!("{logical}/{}@{}", reading.shard, reading.generation),
+                        reference_generation: format!(
+                            "{logical}/{}@{}",
+                            reading.shard, reading.generation
+                        ),
                         observed_at: self.ctx.now_ms,
                     }
                     .checked()
@@ -349,9 +357,12 @@ impl Serving<'_> {
         let graph = self.graph(0)?;
         // The receipt is a graph node committed in the batch of the shard pointers
         // (MEDULLA-DECISION-ENGINE-R174.8.4), so a recorded receipt is read from the graph.
-        if let Some(blob) = graph.core().get_node_properties(&drift_refresh_receipt_node_id(plan_digest)) {
-            let mut value: serde_json::Value =
-                rmp_serde::from_slice(&blob).map_err(|error| format!("drift refresh receipt: {error}"))?;
+        if let Some(blob) = graph
+            .core()
+            .get_node_properties(&drift_refresh_receipt_node_id(plan_digest))
+        {
+            let mut value: serde_json::Value = rmp_serde::from_slice(&blob)
+                .map_err(|error| format!("drift refresh receipt: {error}"))?;
             if let Some(object) = value.as_object_mut() {
                 object.remove("type");
             }
@@ -370,7 +381,9 @@ impl Serving<'_> {
             .ok_or_else(|| invalid_parameter("no scheduled refresh plan has that digest"))?;
         let scheduled: ScheduledRefresh = decode_artifact(&bytes, "drift refresh plan")?;
         if scheduled.plan.logical_graph != logical {
-            return Err(invalid_parameter("the plan belongs to another logical graph"));
+            return Err(invalid_parameter(
+                "the plan belongs to another logical graph",
+            ));
         }
         let embedder = self
             .inputs
@@ -388,12 +401,18 @@ impl Serving<'_> {
             )
         };
         registry()
-            .verify_generations(self.tenant(), logical, &scheduled.shard_generations, &durable)
+            .verify_generations(
+                self.tenant(),
+                logical,
+                &scheduled.shard_generations,
+                &durable,
+            )
             .map_err(conflict)?;
 
         // Re-embed each distinct node whose type a region names.
         let regions = scheduled.plan.regions.as_slice();
-        let region_of = |node_type: &str| regions.iter().find(|region| region.node_type == node_type);
+        let region_of =
+            |node_type: &str| regions.iter().find(|region| region.node_type == node_type);
         let mut nodes: Vec<(String, u32)> = Vec::new();
         for id in graph.node_ids() {
             let node_type = graph
@@ -403,7 +422,8 @@ impl Serving<'_> {
                 nodes.push((id, region.shard_id));
             }
         }
-        let batch = (medulla_server_api::knob_config::knobs().generation_batch_nodes as usize).max(1);
+        let batch =
+            (medulla_server_api::knob_config::knobs().generation_batch_nodes as usize).max(1);
         for chunk in nodes.chunks(batch) {
             let texts: Vec<String> = chunk.iter().map(|(id, _)| graph.node_text(id)).collect();
             let vectors = embedder.embed(&texts)?;
@@ -420,7 +440,12 @@ impl Serving<'_> {
         // The generation pointers commit durably first; the in-memory swap and the monitors'
         // new reference follow the commit, so memory is never ahead of the store.
         let swapped = registry()
-            .planned_swaps(self.tenant(), logical, &scheduled.shard_generations, &durable)
+            .planned_swaps(
+                self.tenant(),
+                logical,
+                &scheduled.shard_generations,
+                &durable,
+            )
             .map_err(conflict)?;
         let observations: Vec<RefreshObservation> = nodes
             .iter()
@@ -473,14 +498,17 @@ impl Serving<'_> {
             props["type"] = serde_json::json!(SHARD_GENERATION_NODE_TYPE);
             methods.push(medulla_protocol_types::protocol::Method::AddNode {
                 node_id: shard_generation_node_id(logical, swap.shard_id),
-                properties_msgpack: rmp_serde::to_vec_named(&props).map_err(|error| error.to_string())?,
+                properties_msgpack: rmp_serde::to_vec_named(&props)
+                    .map_err(|error| error.to_string())?,
             });
         }
-        let mut receipt_props = serde_json::to_value(&receipt).map_err(|error| error.to_string())?;
+        let mut receipt_props =
+            serde_json::to_value(&receipt).map_err(|error| error.to_string())?;
         receipt_props["type"] = serde_json::json!(DRIFT_REFRESH_RECEIPT_NODE_TYPE);
         methods.push(medulla_protocol_types::protocol::Method::AddNode {
             node_id: drift_refresh_receipt_node_id(plan_digest),
-            properties_msgpack: rmp_serde::to_vec_named(&receipt_props).map_err(|error| error.to_string())?,
+            properties_msgpack: rmp_serde::to_vec_named(&receipt_props)
+                .map_err(|error| error.to_string())?,
         });
         let apply = {
             let tenant = self.tenant().to_string();
@@ -492,16 +520,18 @@ impl Serving<'_> {
                 // path uses, so the refreshed shards' new reference collects them.
                 if let Some(signals) = medulla_retrieval::discover_signals::discover_signals() {
                     for seen in &observations {
-                        signals.observe_write(&medulla_retrieval::discover_signals::WrittenVector {
-                            tenant: &tenant,
-                            graph: &logical,
-                            shard: seen.shard,
-                            node_id: &seen.node_id,
-                            node_type: &seen.node_type,
-                            vector: &seen.vector,
-                            tokens: &seen.tokens,
-                            version,
-                        });
+                        signals.observe_write(
+                            &medulla_retrieval::discover_signals::WrittenVector {
+                                tenant: &tenant,
+                                graph: &logical,
+                                shard: seen.shard,
+                                node_id: &seen.node_id,
+                                node_type: &seen.node_type,
+                                vector: &seen.vector,
+                                tokens: &seen.tokens,
+                                version,
+                            },
+                        );
                     }
                 }
             }
@@ -510,7 +540,8 @@ impl Serving<'_> {
             .inputs
             .refresh_apply
             .lock()
-            .map_err(|_| "the staged refresh slot is poisoned".to_string())? = Some(Box::new(apply));
+            .map_err(|_| "the staged refresh slot is poisoned".to_string())? =
+            Some(Box::new(apply));
         if !methods.is_empty() {
             *self
                 .inputs

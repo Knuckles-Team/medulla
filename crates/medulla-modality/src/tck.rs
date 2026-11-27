@@ -536,7 +536,10 @@ pub fn tck_report<T: ConformanceTestable>() -> TckReport {
                 Some(reason) => TckVerdict::NotApplicable(reason),
                 None => auto,
             };
-            results.push(TckPointResult { point, verdict: status });
+            results.push(TckPointResult {
+                point,
+                verdict: status,
+            });
         };
 
         // (1) Stable versioned schema/ids: the only "schema stability" signal the

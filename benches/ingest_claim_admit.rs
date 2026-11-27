@@ -113,7 +113,11 @@ fn main() {
                 not_before_ms: 0,
             },
         );
-        assert!(enqueued.error.is_none(), "enqueue {task}: {:?}", enqueued.error);
+        assert!(
+            enqueued.error.is_none(),
+            "enqueue {task}: {:?}",
+            enqueued.error
+        );
     }
 
     let mut samples = Vec::with_capacity(claims);

@@ -6,16 +6,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-/// The audit record of one shape-policy evaluation, shared by every query language
-/// (MEDULLA-FEDERATED-QUERY-R706.11, R706.12).
-#[cfg(all(feature = "security", feature = "redb"))]
-pub mod policy_audit;
 /// The served cross-source competency questions (MEDULLA-CQ-XSRC-R008.4).
 #[cfg(feature = "rdf")]
 pub mod cross_source_question;
-/// The served supply-chain impact report (MEDULLA-CQ-XSRC-R011).
-#[cfg(all(feature = "rdf", feature = "federation"))]
-pub mod supply_chain_impact;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "federation-search")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -24,6 +17,10 @@ pub mod federation;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod foreign_source_handlers;
+/// The audit record of one shape-policy evaluation, shared by every query language
+/// (MEDULLA-FEDERATED-QUERY-R706.11, R706.12).
+#[cfg(all(feature = "security", feature = "redb"))]
+pub mod policy_audit;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "rdf")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -32,6 +29,9 @@ pub mod rdf;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 #[cfg(feature = "sparql-fuseki")]
 pub mod sparql_service;
+/// The served supply-chain impact report (MEDULLA-CQ-XSRC-R011).
+#[cfg(all(feature = "rdf", feature = "federation"))]
+pub mod supply_chain_impact;
 
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
 #[cfg(test)]

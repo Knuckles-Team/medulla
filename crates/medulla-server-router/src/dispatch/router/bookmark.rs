@@ -46,9 +46,13 @@ pub(super) async fn handle_bookmark_search(
             let authorization_revision = current.isolation.policy_revision();
             #[cfg(not(feature = "security"))]
             let authorization_revision = 0;
-            let persist_dir = current.persist_dir.as_deref().map(std::path::PathBuf::from).ok_or_else(
-                || "ENGINE_UNAVAILABLE: semantic index storage is unavailable".to_string(),
-            )?;
+            let persist_dir = current
+                .persist_dir
+                .as_deref()
+                .map(std::path::PathBuf::from)
+                .ok_or_else(|| {
+                    "ENGINE_UNAVAILABLE: semantic index storage is unavailable".to_string()
+                })?;
             (core, read, authorization_revision, persist_dir)
         };
         let service = medulla_h_retrieve::semantic_index_runtime::open_semantic_service(

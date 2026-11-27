@@ -20,7 +20,9 @@ use super::rule_spec::{
     InputRef, RuleKind, RuleRefusal, RuleSpec, RuleTrace, ASOF_REQUIRED, RULE_INPUT_INVALID,
     RULE_PARAMETERS_INVALID,
 };
-use super::threshold::{self, Aggregate, Applicability, Applies, Comparison, DataPoint, Expr, MetricDef};
+use super::threshold::{
+    self, Aggregate, Applicability, Applies, Comparison, DataPoint, Expr, MetricDef,
+};
 
 /// Milliseconds in one day.
 const DAY_MS: i64 = 86_400_000;
@@ -221,7 +223,10 @@ fn recurrence_json(result: &NextDue) -> Json {
         .collect();
     Json::object([
         ("zone", Json::text(result.zone.clone())),
-        ("calendar_revision", Json::text(result.calendar_revision.clone())),
+        (
+            "calendar_revision",
+            Json::text(result.calendar_revision.clone()),
+        ),
         ("dates", Json::List(dates)),
     ])
 }
@@ -243,7 +248,10 @@ fn threshold_json(result: &Applicability) -> Json {
             ])
         })
         .collect();
-    Json::object([("applies", Json::text(applies)), ("metrics", Json::List(metrics))])
+    Json::object([
+        ("applies", Json::text(applies)),
+        ("metrics", Json::List(metrics)),
+    ])
 }
 
 fn match_kind(kind: reconcile::MatchKind) -> &'static str {
@@ -334,7 +342,10 @@ fn phrase_json(result: &PhraseVerdict) -> Json {
         ("verdict", Json::text(result.verdict.as_str())),
         ("forbidden", Json::List(forbidden)),
         ("unmatched", Json::strings(&result.unmatched)),
-        ("policy_revision", Json::text(result.policy_revision.clone())),
+        (
+            "policy_revision",
+            Json::text(result.policy_revision.clone()),
+        ),
     ])
 }
 
@@ -345,7 +356,10 @@ fn invalid_parameters(detail: impl Into<String>) -> RuleRefusal {
 fn wrong_inputs(kind: RuleKind) -> RuleRefusal {
     RuleRefusal::new(
         RULE_INPUT_INVALID,
-        format!("the gathered rows are not the inputs of a `{}` rule", kind.as_str()),
+        format!(
+            "the gathered rows are not the inputs of a `{}` rule",
+            kind.as_str()
+        ),
     )
 }
 
@@ -517,9 +531,8 @@ fn fold_left(
 /// `expr := conj { " or " conj }`, `conj := atom { " and " atom }`, folded left.
 fn parse_expression(text: &str) -> Result<Expr, RuleRefusal> {
     fold_left(
-        text.split(" or ").map(|conj| {
-            fold_left(conj.split(" and ").map(parse_atom), Expr::And)
-        }),
+        text.split(" or ")
+            .map(|conj| fold_left(conj.split(" and ").map(parse_atom), Expr::And)),
         Expr::Or,
     )
 }
@@ -594,13 +607,24 @@ pub fn evaluate_rule(
     let parameters = &spec.parameters;
     match spec.kind {
         RuleKind::Recurrence => {
-            let RuleInputs::Recurrence { calendar, calendar_node, count } = inputs else {
+            let RuleInputs::Recurrence {
+                calendar,
+                calendar_node,
+                count,
+            } = inputs
+            else {
                 return Err(wrong_inputs(spec.kind));
             };
             let rule = recurrence_rule(parameters)?;
             let trace = RuleTrace::new(spec, calendar_node.into_iter().collect());
-            recurrence::next_due(&rule, &calendar, Date::from_epoch_days(as_of_day), count, trace)
-                .map(RuleResult::Recurrence)
+            recurrence::next_due(
+                &rule,
+                &calendar,
+                Date::from_epoch_days(as_of_day),
+                count,
+                trace,
+            )
+            .map(RuleResult::Recurrence)
         }
         RuleKind::Threshold => {
             let RuleInputs::Threshold { points } = inputs else {
@@ -622,7 +646,12 @@ pub fn evaluate_rule(
             reconcile::match_sets(&sets, &params, trace).map(RuleResult::Reconcile)
         }
         RuleKind::Reorder => {
-            let RuleInputs::Reorder { sales, stock, open_lines } = inputs else {
+            let RuleInputs::Reorder {
+                sales,
+                stock,
+                open_lines,
+            } = inputs
+            else {
                 return Err(wrong_inputs(spec.kind));
             };
             let policy = reorder_policy(parameters)?;
@@ -631,17 +660,25 @@ pub fn evaluate_rule(
                 .map(RuleResult::Reorder)
         }
         RuleKind::PhrasePolicy => {
-            let RuleInputs::PhrasePolicy { text, locale, policy, policy_node } = inputs else {
+            let RuleInputs::PhrasePolicy {
+                text,
+                locale,
+                policy,
+                policy_node,
+            } = inputs
+            else {
                 return Err(wrong_inputs(spec.kind));
             };
             let trace = RuleTrace::new(spec, vec![policy_node]);
-            phrase_policy::check_text(&text, &locale, &policy, trace)
-                .map(RuleResult::PhrasePolicy)
+            phrase_policy::check_text(&text, &locale, &policy, trace).map(RuleResult::PhrasePolicy)
         }
     }
 }
 
 /// The refusal for an evaluation with no as-of time.
 pub fn asof_required() -> RuleRefusal {
-    RuleRefusal::new(ASOF_REQUIRED, "EVALUATE RULE takes an explicit ASOF in epoch milliseconds")
+    RuleRefusal::new(
+        ASOF_REQUIRED,
+        "EVALUATE RULE takes an explicit ASOF in epoch milliseconds",
+    )
 }

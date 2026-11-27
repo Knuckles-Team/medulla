@@ -26,7 +26,10 @@ fn arm_needs_owner_approval_on_head_and_passing_gates() {
         edit(&mut f);
         arming_verdict(&f)
     };
-    assert_eq!(hold(|f| f.delivery_opened_proposal = false), Ok(ArmingVerdict::Hold));
+    assert_eq!(
+        hold(|f| f.delivery_opened_proposal = false),
+        Ok(ArmingVerdict::Hold)
+    );
     assert_eq!(hold(|f| f.gates_passed = false), Ok(ArmingVerdict::Hold));
     assert_eq!(hold(|f| f.check_passed = false), Ok(ArmingVerdict::Hold));
     assert_eq!(hold(|f| f.changed_lines = 401), Ok(ArmingVerdict::Hold));

@@ -22,13 +22,13 @@ use medulla_decision_types::decision::program_store::{
     },
     program_key, program_node_id,
     replay::{replay_key, StoredReplay},
-    run_trace_key, CompiledProgram, ProgramError, ProgramKnobs,
+    run_trace_key,
     semantic::{
         build_match_index, match_key, phrasing_node_id, ProgramMatchIndex, ProgramPhrasing,
         PHRASING_NODE_CLASS, PHRASING_OF,
     },
-    RunRecord, RunRecordStored, StoredRun, StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS,
-    RUN_TRACE_FIELD,
+    CompiledProgram, ProgramError, ProgramKnobs, RunRecord, RunRecordStored, StoredRun,
+    StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS, RUN_TRACE_FIELD,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
@@ -236,9 +236,7 @@ fn phrasing_embedding_text(text: &str) -> String {
         plain.push_str(&rest[..open]);
         let tail = &rest[open + 1..];
         match tail.find('}') {
-            Some(close)
-                if tail[1..close].bytes().all(|b| b.is_ascii_digit()) && close > 1 =>
-            {
+            Some(close) if tail[1..close].bytes().all(|b| b.is_ascii_digit()) && close > 1 => {
                 plain.push(' ');
                 rest = &tail[close + 1..];
             }
@@ -421,7 +419,11 @@ fn commit(
                     .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
                 index.space_digest = Some(embedder.space.digest.clone());
                 let texts: Vec<String> = std::iter::once(program.task_signature.clone())
-                    .chain(trimmed.iter().map(|phrasing| phrasing_embedding_text(&phrasing.text)))
+                    .chain(
+                        trimmed
+                            .iter()
+                            .map(|phrasing| phrasing_embedding_text(&phrasing.text)),
+                    )
                     .collect();
                 let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
                 let (mut embedded, _calls) = super::program_embedding::embed_texts(

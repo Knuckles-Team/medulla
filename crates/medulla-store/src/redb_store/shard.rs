@@ -260,7 +260,10 @@ impl Shard {
 
     /// Attach the publisher every commit of this shard passes before it is final.
     /// A second attach refuses.
-    pub fn attach_commit_publisher(&self, publisher: Arc<dyn CommitPublisher>) -> Result<(), String> {
+    pub fn attach_commit_publisher(
+        &self,
+        publisher: Arc<dyn CommitPublisher>,
+    ) -> Result<(), String> {
         self.commit_publisher
             .set(publisher)
             .map_err(|_| "a commit publisher is already attached to this shard".to_string())

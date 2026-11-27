@@ -92,7 +92,11 @@ impl std::fmt::Display for DashboardRefusal {
             Self::BodyInvalid(detail) | Self::Invalid(detail) => {
                 write!(f, "{}: {detail}", self.code())
             }
-            Self::Purged => write!(f, "{}: the body was purged after its retention", self.code()),
+            Self::Purged => write!(
+                f,
+                "{}: the body was purged after its retention",
+                self.code()
+            ),
         }
     }
 }
@@ -163,7 +167,11 @@ pub struct SavePlan {
 }
 
 fn check_body(body: &DashboardBody) -> Result<(), DashboardRefusal> {
-    if body.panels.iter().any(|panel| panel.query.trim().is_empty()) {
+    if body
+        .panels
+        .iter()
+        .any(|panel| panel.query.trim().is_empty())
+    {
         return Err(DashboardRefusal::BodyInvalid(
             "a panel names no query".to_string(),
         ));
@@ -269,7 +277,8 @@ pub fn share(
     }
     let mut seen = BTreeSet::new();
     for grant in &grants {
-        if grant.principal_or_group.trim().is_empty() || !seen.insert(grant.principal_or_group.as_str())
+        if grant.principal_or_group.trim().is_empty()
+            || !seen.insert(grant.principal_or_group.as_str())
         {
             return Err(DashboardRefusal::Invalid(
                 "a grant needs a principal or group, once".to_string(),
@@ -370,9 +379,7 @@ pub fn delete(
 /// purged dashboard is never due.
 pub fn purge_due(state: &DashboardState, now_ms: u64, retention_days: u64) -> bool {
     match state.removed_at_ms {
-        Some(removed) if !state.purged => {
-            now_ms >= retention_ends_ms(removed, retention_days)
-        }
+        Some(removed) if !state.purged => now_ms >= retention_ends_ms(removed, retention_days),
         _ => false,
     }
 }
@@ -440,7 +447,10 @@ pub fn node_properties(
     // A deleted dashboard leaves search: its ranking text is emptied, so no query scores it.
     let label = if live { state.asset.id.as_str() } else { "" };
     let mut props = serde_json::Map::new();
-    props.insert("type".into(), medulla_types::dashboard::DASHBOARD_ASSET_LABEL.into());
+    props.insert(
+        "type".into(),
+        medulla_types::dashboard::DASHBOARD_ASSET_LABEL.into(),
+    );
     props.insert("tenant_id".into(), tenant.into());
     props.insert("dashboard_id".into(), state.asset.id.clone().into());
     props.insert("name".into(), label.into());
@@ -448,8 +458,14 @@ pub fn node_properties(
         "http://www.w3.org/2004/02/skos/core#prefLabel".into(),
         label.into(),
     );
-    props.insert("term_labels".into(), json!(terms.into_iter().collect::<Vec<_>>()));
-    props.insert("concepts".into(), json!(concepts.into_iter().collect::<Vec<_>>()));
+    props.insert(
+        "term_labels".into(),
+        json!(terms.into_iter().collect::<Vec<_>>()),
+    );
+    props.insert(
+        "concepts".into(),
+        json!(concepts.into_iter().collect::<Vec<_>>()),
+    );
     props.insert("revision".into(), state.asset.revision.into());
     props.insert(
         "body".into(),

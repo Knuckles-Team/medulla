@@ -90,7 +90,10 @@ impl EmbedderConfig {
     /// the query text is not a vector in that modality's space.
     pub fn from_env_for_modality(modality: &str) -> Option<Self> {
         let name = |suffix: &str| {
-            format!("MEDULLA_EMBEDDING_{}_{suffix}", modality.to_ascii_uppercase())
+            format!(
+                "MEDULLA_EMBEDDING_{}_{suffix}",
+                modality.to_ascii_uppercase()
+            )
         };
         let endpoint = non_empty(&name("URL")).map(|url| endpoint(&url))?;
         Some(Self {

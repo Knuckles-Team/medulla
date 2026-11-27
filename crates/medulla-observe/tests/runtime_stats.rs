@@ -46,6 +46,9 @@ async fn an_idle_runtime_reports_no_spinning_worker() {
         tokio::time::sleep(Duration::from_millis(60)).await;
         let snapshot = sampler.snapshot(&handle);
         assert!(snapshot.workers.iter().all(|worker| !worker.spinning));
-        assert!(snapshot.workers.iter().all(|worker| (0.0..=1.0).contains(&worker.busy_ratio)));
+        assert!(snapshot
+            .workers
+            .iter()
+            .all(|worker| (0.0..=1.0).contains(&worker.busy_ratio)));
     }
 }

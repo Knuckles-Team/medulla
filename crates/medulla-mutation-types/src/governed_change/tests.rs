@@ -403,6 +403,9 @@ fn reads_are_scoped_to_the_proposing_tenant() {
     assert!(ledger.get("c1", "tenant-a", NOW).is_some());
     assert_eq!(ledger.list("tenant-a", NOW).len(), 1);
     // A foreign tenant sees exactly what an unknown id shows.
-    assert_eq!(ledger.get("c1", "tenant-b", NOW), ledger.get("nope", "tenant-b", NOW));
+    assert_eq!(
+        ledger.get("c1", "tenant-b", NOW),
+        ledger.get("nope", "tenant-b", NOW)
+    );
     assert!(ledger.list("tenant-b", NOW).is_empty());
 }

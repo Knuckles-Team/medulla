@@ -20,8 +20,8 @@ use std::collections::BTreeMap;
 
 use medulla_finance_market::market::digest;
 use medulla_finance_types::finance_order::{
-    EvidenceRef, FinanceOrder, GateReceipt, OrderLimitCheckResult, OrderProposalSnapshot,
-    OrderPromoteRequest, OrderPromoteResult, OrderStageResult, TradingPolicy,
+    EvidenceRef, FinanceOrder, GateReceipt, OrderLimitCheckResult, OrderPromoteRequest,
+    OrderPromoteResult, OrderProposalSnapshot, OrderStageResult, TradingPolicy,
     ORDER_PAYLOAD_SCHEMA_ID, ORDER_PAYLOAD_SCHEMA_REVISION,
 };
 use medulla_finance_types::wire_finance::{
@@ -180,9 +180,18 @@ impl Served {
     async fn put_policy(&mut self) {
         let fields: BTreeMap<String, String> = [
             ("tradingPolicyRevision", turtle("3")),
-            ("tradingPolicyLeverageLimits", turtle(&leverage_limits().to_string())),
-            ("tradingPolicyRiskLimits", turtle(&risk_limits().to_string())),
-            ("tradingPolicyApprovers", turtle(&json!(["alice"]).to_string())),
+            (
+                "tradingPolicyLeverageLimits",
+                turtle(&leverage_limits().to_string()),
+            ),
+            (
+                "tradingPolicyRiskLimits",
+                turtle(&risk_limits().to_string()),
+            ),
+            (
+                "tradingPolicyApprovers",
+                turtle(&json!(["alice"]).to_string()),
+            ),
         ]
         .into_iter()
         .map(|(name, value)| (name.to_string(), value))
@@ -253,7 +262,10 @@ fn body<T: serde::de::DeserializeOwned>(response: &Response) -> T {
     let value = match response.result.as_ref() {
         Some(ResultPayload::Json(value)) => value.clone(),
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).expect("msgpack result"),
-        other => panic!("expected a body, got {other:?} / {:?}", response.error_detail),
+        other => panic!(
+            "expected a body, got {other:?} / {:?}",
+            response.error_detail
+        ),
     };
     serde_json::from_value(value).expect("typed body")
 }
@@ -263,7 +275,11 @@ fn manifest_digest(ids: &[&str]) -> String {
     digest::of_json("finance.gate_manifest.v1", &ids)
 }
 
-fn promote_request(revision: u64, snapshot_digest: &str, expected: Option<u64>) -> OrderPromoteRequest {
+fn promote_request(
+    revision: u64,
+    snapshot_digest: &str,
+    expected: Option<u64>,
+) -> OrderPromoteRequest {
     OrderPromoteRequest {
         tenant_id: TENANT.to_string(),
         proposal_id: "prop1".to_string(),
@@ -305,26 +321,62 @@ async fn stage_revision_chain_and_refusals() {
         .await;
     assert!(read.error.is_none() && !format!("{:?}", read.result).contains("Null"));
 
-    let second = snapshot(&served.decision, 2, Some(&seal(&first)), &order(120, 24_000));
-    let staged = served.stage(second.clone(), Some(1), Some(&seal(&first))).await;
+    let second = snapshot(
+        &served.decision,
+        2,
+        Some(&seal(&first)),
+        &order(120, 24_000),
+    );
+    let staged = served
+        .stage(second.clone(), Some(1), Some(&seal(&first)))
+        .await;
     assert!(staged.error.is_none(), "{:?}", staged.error_detail);
-    assert_eq!(body::<OrderStageResult>(&staged).predecessor_digest, Some(seal(&first)));
+    assert_eq!(
+        body::<OrderStageResult>(&staged).predecessor_digest,
+        Some(seal(&first))
+    );
 
     let count = served.nodes().await;
-    let retry = served.stage(second.clone(), Some(1), Some(&seal(&first))).await;
+    let retry = served
+        .stage(second.clone(), Some(1), Some(&seal(&first)))
+        .await;
     assert!(retry.error.is_none(), "{:?}", retry.error_detail);
-    assert_eq!(served.nodes().await, count, "an equal retry writes nothing new");
+    assert_eq!(
+        served.nodes().await,
+        count,
+        "an equal retry writes nothing new"
+    );
 
-    let other_bytes = snapshot(&served.decision, 2, Some(&seal(&first)), &order(121, 24_100));
-    let response = served.stage(other_bytes, Some(1), Some(&seal(&first))).await;
-    served.refused(response, "PROPOSAL_REVISION_CONFLICT", &count).await;
-    let third = snapshot(&served.decision, 3, Some(&seal(&second)), &order(130, 26_000));
-    let response = served.stage(third.clone(), Some(1), Some(&seal(&first))).await;
-    served.refused(response, "PROPOSAL_HEAD_STALE", &count).await;
+    let other_bytes = snapshot(
+        &served.decision,
+        2,
+        Some(&seal(&first)),
+        &order(121, 24_100),
+    );
+    let response = served
+        .stage(other_bytes, Some(1), Some(&seal(&first)))
+        .await;
+    served
+        .refused(response, "PROPOSAL_REVISION_CONFLICT", &count)
+        .await;
+    let third = snapshot(
+        &served.decision,
+        3,
+        Some(&seal(&second)),
+        &order(130, 26_000),
+    );
+    let response = served
+        .stage(third.clone(), Some(1), Some(&seal(&first)))
+        .await;
+    served
+        .refused(response, "PROPOSAL_HEAD_STALE", &count)
+        .await;
     let mut tampered = third.clone();
     tampered.payload_sha256 = "sha256:00".to_string();
     let response = served.stage(tampered, Some(2), Some(&seal(&second))).await;
-    served.refused(response, "PROPOSAL_HASH_MISMATCH", &count).await;
+    served
+        .refused(response, "PROPOSAL_HASH_MISMATCH", &count)
+        .await;
     let mut noncanonical = third.clone();
     noncanonical.canonical_payload_bytes =
         b"{ \"instrument_id\":\"AAPL\", \"signed_quantity\":130, \"notional\":26000 }".to_vec();
@@ -332,12 +384,20 @@ async fn stage_revision_chain_and_refusals() {
         "sha256:{}",
         hex::encode(Sha256::digest(&noncanonical.canonical_payload_bytes))
     );
-    let response = served.stage(noncanonical, Some(2), Some(&seal(&second))).await;
-    served.refused(response, "PROPOSAL_HASH_MISMATCH", &count).await;
+    let response = served
+        .stage(noncanonical, Some(2), Some(&seal(&second)))
+        .await;
+    served
+        .refused(response, "PROPOSAL_HASH_MISMATCH", &count)
+        .await;
     let mut no_evidence = third.clone();
     no_evidence.evidence_refs[0].record_id = "finance:Nothing:x".to_string();
-    let response = served.stage(no_evidence, Some(2), Some(&seal(&second))).await;
-    served.refused(response, "PROPOSAL_EVIDENCE_MISSING", &count).await;
+    let response = served
+        .stage(no_evidence, Some(2), Some(&seal(&second)))
+        .await;
+    served
+        .refused(response, "PROPOSAL_EVIDENCE_MISSING", &count)
+        .await;
     let mut foreign = third;
     foreign.tenant_id = "another-tenant".to_string();
     let response = served.stage(foreign, Some(2), Some(&seal(&second))).await;
@@ -364,7 +424,9 @@ async fn breaching_order_abstains_and_stage_writes_nothing() {
     assert_eq!(rules, [("qty", 1500, 1000), ("notional", 900_000, 500_000)]);
     let before = served.nodes().await;
     let response = served.stage(breaching, None, None).await;
-    served.refused(response, "ORDER_LIMIT_BREACH", &before).await;
+    served
+        .refused(response, "ORDER_LIMIT_BREACH", &before)
+        .await;
     let probe = snapshot(&served.decision, 1, None, &order(10, 2_000));
     let passing = served
         .call(Method::FinanceOrderLimitCheck {
@@ -386,31 +448,49 @@ async fn promote_refuses_each_case_without_writes() {
     let mut vetoed = promote_request(1, &digest_1, None);
     vetoed.veto_reason = Some("hook veto".to_string());
     let response = served.promote(vetoed).await;
-    served.refused(response, "ORDER_PROMOTION_VETOED", &before).await;
-    let response = served.promote(promote_request(1, "sha256:other", None)).await;
-    served.refused(response, "PROMOTE_EVIDENCE_MISMATCH", &before).await;
+    served
+        .refused(response, "ORDER_PROMOTION_VETOED", &before)
+        .await;
+    let response = served
+        .promote(promote_request(1, "sha256:other", None))
+        .await;
+    served
+        .refused(response, "PROMOTE_EVIDENCE_MISMATCH", &before)
+        .await;
     let response = served.promote(promote_request(1, &digest_1, Some(4))).await;
-    served.refused(response, "PROMOTE_HEAD_STALE", &before).await;
+    served
+        .refused(response, "PROMOTE_HEAD_STALE", &before)
+        .await;
     let mut no_manifest = promote_request(1, &digest_1, None);
     no_manifest.manifest_gate_ids.clear();
     let response = served.promote(no_manifest).await;
-    served.refused(response, "PROMOTE_GATE_UNAVAILABLE", &before).await;
+    served
+        .refused(response, "PROMOTE_GATE_UNAVAILABLE", &before)
+        .await;
     let mut missing_receipt = promote_request(1, &digest_1, None);
     missing_receipt.gate_receipts.pop();
     let response = served.promote(missing_receipt).await;
-    served.refused(response, "PROMOTE_GATE_UNAVAILABLE", &before).await;
+    served
+        .refused(response, "PROMOTE_GATE_UNAVAILABLE", &before)
+        .await;
     let mut incomplete = promote_request(1, &digest_1, None);
     incomplete.gate_receipts[0].candidate_digest = "sha256:elsewhere".to_string();
     let response = served.promote(incomplete).await;
-    served.refused(response, "PROMOTE_RECEIPT_INCOMPLETE", &before).await;
+    served
+        .refused(response, "PROMOTE_RECEIPT_INCOMPLETE", &before)
+        .await;
     let mut failing = promote_request(1, &digest_1, None);
     failing.gate_receipts[1].pass_fail = false;
     let response = served.promote(failing).await;
-    served.refused(response, "PROMOTE_GATE_FAILED", &before).await;
+    served
+        .refused(response, "PROMOTE_GATE_FAILED", &before)
+        .await;
     let mut stranger = promote_request(1, &digest_1, None);
     stranger.approver = Some("mallory".to_string());
     let response = served.promote(stranger).await;
-    served.refused(response, "ORDER_PROMOTION_VETOED", &before).await;
+    served
+        .refused(response, "ORDER_PROMOTION_VETOED", &before)
+        .await;
 
     let promoted = served.promote(promote_request(1, &digest_1, None)).await;
     assert!(promoted.error.is_none(), "{:?}", promoted.error_detail);
@@ -443,9 +523,16 @@ async fn admission_receipt_is_atomic_and_effect_free() {
                 node_id: node.to_string(),
             })
             .await;
-        assert!(read.error.is_none() && !format!("{:?}", read.result).contains("Null"), "{node}");
+        assert!(
+            read.error.is_none() && !format!("{:?}", read.result).contains("Null"),
+            "{node}"
+        );
     }
-    assert_eq!(served.orders().await, before, "admission creates no order record");
+    assert_eq!(
+        served.orders().await,
+        before,
+        "admission creates no order record"
+    );
     // A sealed receipt is read-only: re-creating it with other content is refused.
     let overwrite = served
         .call(Method::AddNode {
@@ -467,9 +554,11 @@ async fn promoted_receipt_reads_back_and_an_unpromoted_proposal_is_not_found() {
     let digest_1 = seal(&first);
     assert!(served.stage(first, None, None).await.error.is_none());
     let read_request = |proposal_id: &str| Method::FinanceOrderReceiptGet {
-        request: Box::new(medulla_finance_types::finance_order::OrderReceiptGetRequest {
-            proposal_id: proposal_id.to_string(),
-        }),
+        request: Box::new(
+            medulla_finance_types::finance_order::OrderReceiptGetRequest {
+                proposal_id: proposal_id.to_string(),
+            },
+        ),
     };
     let before_promotion = served.call(read_request("prop1")).await;
     assert!(

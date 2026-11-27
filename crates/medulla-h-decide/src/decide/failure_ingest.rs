@@ -297,7 +297,9 @@ mod served {
 
     /// The typed edges of the view: for each relationship the caller reads, the
     /// targets of each source in sorted order.
-    fn edges_by_relationship(view: &GraphView) -> BTreeMap<&'static str, BTreeMap<String, BTreeSet<String>>> {
+    fn edges_by_relationship(
+        view: &GraphView,
+    ) -> BTreeMap<&'static str, BTreeMap<String, BTreeSet<String>>> {
         let mut out: BTreeMap<&'static str, BTreeMap<String, BTreeSet<String>>> = BTreeMap::new();
         for ((source, target), blobs) in &view.edge_properties {
             for blob in blobs {

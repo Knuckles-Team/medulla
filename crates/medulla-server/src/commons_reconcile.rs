@@ -76,11 +76,8 @@ pub(crate) fn service_context(
     if anonymous {
         return Ok(VerifiedRequestContext::anonymous_local(Some(key)));
     }
-    let service = VerifiedRequestContext::authenticated_fixed_service_actor(
-        server,
-        actor,
-        &["kg:admin"],
-    )?;
+    let service =
+        VerifiedRequestContext::authenticated_fixed_service_actor(server, actor, &["kg:admin"])?;
     Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
         service.claims().clone(),
         key,
@@ -221,21 +218,27 @@ pub async fn run_tick_at(state: &Arc<RwLock<ServerState>>, now_ms: u64) -> u64 {
             skipped += 1;
             continue;
         };
-        if !resident.contains(source_graph) || created.saturating_add(RECONCILE_GRACE_MS) > now_ms
-        {
+        if !resident.contains(source_graph) || created.saturating_add(RECONCILE_GRACE_MS) > now_ms {
             skipped += 1;
             continue;
         }
-        let source =
-            match source_properties(state, anonymous, &server, source_graph, node_id, now_ms).await
-            {
-                Ok(source) => source,
-                Err(error) => {
-                    tracing::warn!(%copy_id, %error, "commons reconcile: source read refused; copy kept");
-                    skipped += 1;
-                    continue;
-                }
-            };
+        let source = match source_properties(
+            state,
+            anonymous,
+            &server,
+            source_graph,
+            node_id,
+            now_ms,
+        )
+        .await
+        {
+            Ok(source) => source,
+            Err(error) => {
+                tracing::warn!(%copy_id, %error, "commons reconcile: source read refused; copy kept");
+                skipped += 1;
+                continue;
+            }
+        };
         if !orphaned(&copy_id, source.as_ref()) {
             continue;
         }

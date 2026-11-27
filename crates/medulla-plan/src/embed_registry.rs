@@ -88,7 +88,9 @@ impl ModalityEncoderRegistry {
         let entry = entries
             .get(encoder_id)
             .ok_or_else(|| unavailable("is not registered"))?;
-        if entry.space_id != space_id || entry.dimensions != dimensions || entry.revision != revision
+        if entry.space_id != space_id
+            || entry.dimensions != dimensions
+            || entry.revision != revision
         {
             return Err(unavailable("is registered for a different space tuple"));
         }
@@ -160,7 +162,9 @@ impl ModalityEncoderRegistry {
             .read()
             .map_err(|_| unavailable("has an unreadable encoder registry"))?;
         let matches = |entry: &Entry| {
-            entry.space_id == space_id && entry.dimensions == dimensions && entry.revision == revision
+            entry.space_id == space_id
+                && entry.dimensions == dimensions
+                && entry.revision == revision
         };
         entries
             .get(space_id)
@@ -254,7 +258,10 @@ fn invalid_file(file: &str, reason: impl std::fmt::Display) -> String {
 }
 
 /// Read and validate one pinned encoder file.
-fn read_pinned(path: &std::path::Path, file: &str) -> Result<(LoadedEncoder, PinnedEncoder), String> {
+fn read_pinned(
+    path: &std::path::Path,
+    file: &str,
+) -> Result<(LoadedEncoder, PinnedEncoder), String> {
     let size = std::fs::metadata(path)
         .map_err(|error| invalid_file(file, error))?
         .len();
@@ -268,15 +275,24 @@ fn read_pinned(path: &std::path::Path, file: &str) -> Result<(LoadedEncoder, Pin
     let parsed: PinnedEncoderFile =
         serde_json::from_slice(&bytes).map_err(|error| invalid_file(file, error))?;
     if parsed.format != ENCODER_FILE_FORMAT {
-        return Err(invalid_file(file, format!("format {} is not {ENCODER_FILE_FORMAT}", parsed.format)));
+        return Err(invalid_file(
+            file,
+            format!("format {} is not {ENCODER_FILE_FORMAT}", parsed.format),
+        ));
     }
     if parsed.id.is_empty() || parsed.id.chars().count() > 128 {
         return Err(invalid_file(file, "id must be 1 to 128 characters"));
     }
-    if !matches!(parsed.modality.as_str(), "text" | "image" | "audio" | "video") {
+    if !matches!(
+        parsed.modality.as_str(),
+        "text" | "image" | "audio" | "video"
+    ) {
         return Err(invalid_file(
             file,
-            format!("modality `{}` is not text, image, audio or video", parsed.modality),
+            format!(
+                "modality `{}` is not text, image, audio or video",
+                parsed.modality
+            ),
         ));
     }
     let dimensions = parsed.space.dimensions;
@@ -341,7 +357,10 @@ impl ModalityEncoderRegistry {
         for name in &names {
             let (loaded, encoder) = read_pinned(&dir.join(name), name)?;
             if !seen.insert(loaded.id.clone()) {
-                return Err(invalid_file(name, format!("id `{}` is repeated in the directory", loaded.id)));
+                return Err(invalid_file(
+                    name,
+                    format!("id `{}` is repeated in the directory", loaded.id),
+                ));
             }
             let registered = self
                 .entries
@@ -388,10 +407,22 @@ mod tests {
     fn lookup_finds_only_the_exact_space_tuple() {
         let registry = ModalityEncoderRegistry::new();
         registry
-            .register("enc-text", "space-a", 8, "r1", Box::new(HashEmbedder::new(8)))
+            .register(
+                "enc-text",
+                "space-a",
+                8,
+                "r1",
+                Box::new(HashEmbedder::new(8)),
+            )
             .unwrap();
         assert!(registry
-            .register("enc-text", "space-a", 8, "r1", Box::new(HashEmbedder::new(8)))
+            .register(
+                "enc-text",
+                "space-a",
+                8,
+                "r1",
+                Box::new(HashEmbedder::new(8))
+            )
             .is_err());
         let encoder = registry.lookup("enc-text", "space-a", 8, "r1").unwrap();
         assert_eq!(encoder.embed("x").unwrap().len(), 8);
@@ -422,8 +453,15 @@ mod tests {
                 .len(),
             8
         );
-        for (space, dim, revision) in [("space-b", 8, "r1"), ("space-a", 4, "r1"), ("space-a", 8, "r2")] {
-            let error = registry.lookup_by_space(space, dim, revision).err().unwrap();
+        for (space, dim, revision) in [
+            ("space-b", 8, "r1"),
+            ("space-a", 4, "r1"),
+            ("space-a", 8, "r2"),
+        ] {
+            let error = registry
+                .lookup_by_space(space, dim, revision)
+                .err()
+                .unwrap();
             assert!(error.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{error}");
         }
     }
@@ -446,11 +484,17 @@ mod tests {
         let registry = ModalityEncoderRegistry::new();
         let loaded = registry.load_dir(&dir).unwrap();
         assert_eq!(
-            loaded.iter().map(|l| (l.id.as_str(), l.file.as_str())).collect::<Vec<_>>(),
+            loaded
+                .iter()
+                .map(|l| (l.id.as_str(), l.file.as_str()))
+                .collect::<Vec<_>>(),
             vec![("enc-a", "a.encoder.json"), ("enc-b", "b.encoder.json")]
         );
         let encoder = registry.lookup("enc-a", "s", 2, "1").unwrap();
-        assert_eq!(encoder.embed("alpha alpha unknown").unwrap(), vec![1.0, 0.0]);
+        assert_eq!(
+            encoder.embed("alpha alpha unknown").unwrap(),
+            vec![1.0, 0.0]
+        );
         let error = encoder.embed("beta").unwrap_err();
         assert!(error.starts_with("EMBEDDING_UNAVAILABLE"), "{error}");
         std::fs::remove_dir_all(&dir).unwrap();
@@ -465,13 +509,22 @@ mod tests {
         write_encoder(&dir, "b.encoder.json", "enc-a", "beta", "[0.0, 1.0]");
         let registry = ModalityEncoderRegistry::new();
         let error = registry.load_dir(&dir).unwrap_err();
-        assert!(error.starts_with("ENCODER_FILE_INVALID: b.encoder.json"), "{error}");
+        assert!(
+            error.starts_with("ENCODER_FILE_INVALID: b.encoder.json"),
+            "{error}"
+        );
         assert!(registry.lookup("enc-a", "s", 2, "1").is_err());
         // A wrong-width token and an unknown key each refuse.
         write_encoder(&dir, "b.encoder.json", "enc-b", "beta", "[0.0]");
-        assert!(registry.load_dir(&dir).unwrap_err().contains("b.encoder.json"));
+        assert!(registry
+            .load_dir(&dir)
+            .unwrap_err()
+            .contains("b.encoder.json"));
         std::fs::write(dir.join("b.encoder.json"), r#"{"format":1,"extra":1}"#).unwrap();
-        assert!(registry.load_dir(&dir).unwrap_err().contains("b.encoder.json"));
+        assert!(registry
+            .load_dir(&dir)
+            .unwrap_err()
+            .contains("b.encoder.json"));
         std::fs::remove_dir_all(&dir).unwrap();
         let missing = registry.load_dir(&dir).unwrap_err();
         assert!(missing.starts_with("ENCODER_FILE_INVALID"), "{missing}");

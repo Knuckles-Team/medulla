@@ -18,11 +18,11 @@ use std::future::Future;
 use std::pin::Pin;
 
 use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
+use medulla_catalog_types::metadata_acceleration::{MetadataContract, SourceCategory};
 use medulla_lake::metastore::scan::{list_all_tables, ScanLimits};
 use medulla_lake::metastore::{MetastoreClient, MetastoreError};
-use medulla_types::contract::ServerErrorCode;
-use medulla_catalog_types::metadata_acceleration::{MetadataContract, SourceCategory};
 use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_types::contract::ServerErrorCode;
 use sha2::{Digest, Sha256};
 
 /// Discovery could not produce a contract; the registration is refused.
@@ -394,8 +394,14 @@ fn declared_shape(spec: &ForeignSourceSpec) -> Vec<String> {
             "event_stream".into(),
             format!("server={server}"),
             format!("tool={tool}"),
-            format!("from_ms={}", from_ms.map(|ms| ms.to_string()).unwrap_or_default()),
-            format!("to_ms={}", to_ms.map(|ms| ms.to_string()).unwrap_or_default()),
+            format!(
+                "from_ms={}",
+                from_ms.map(|ms| ms.to_string()).unwrap_or_default()
+            ),
+            format!(
+                "to_ms={}",
+                to_ms.map(|ms| ms.to_string()).unwrap_or_default()
+            ),
             format!("capabilities={capabilities:?}"),
         ],
         ForeignSourceSpec::A2a {

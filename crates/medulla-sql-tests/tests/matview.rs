@@ -73,7 +73,7 @@ fn build(
         owner: "tester".to_string(),
         refreshed_seq: seq,
         stale: false,
-            program: None,
+        program: None,
     };
     let schema = matview_result_schema("mv", &read.columns);
     let col_order = read.columns.iter().map(|c| c.name.clone()).collect();

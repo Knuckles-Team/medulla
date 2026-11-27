@@ -158,7 +158,11 @@ fn q32(value: f64) -> i64 {
 }
 
 fn cosine(a: &[f32], b: &[f32]) -> f64 {
-    let dot: f64 = a.iter().zip(b).map(|(x, y)| f64::from(*x) * f64::from(*y)).sum();
+    let dot: f64 = a
+        .iter()
+        .zip(b)
+        .map(|(x, y)| f64::from(*x) * f64::from(*y))
+        .sum();
     let norm = |v: &[f32]| v.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt();
     let (na, nb) = (norm(a), norm(b));
     if na == 0.0 || nb == 0.0 {
@@ -290,8 +294,8 @@ mod tests {
                 SEMANTIC_KEY
             ]
         );
-        let encoded = medulla_decision_types::decision::statistical::body::encode_body(&body)
-            .unwrap();
+        let encoded =
+            medulla_decision_types::decision::statistical::body::encode_body(&body).unwrap();
         let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
         assert_eq!(json["features"][4]["missing"]["missing"], "impute");
         assert_eq!(json["features"][4]["missing"]["value"]["value"], 0);
@@ -330,7 +334,12 @@ mod tests {
             option("c", "third_tool", "unrelated text"),
             option("d", "fourth_tool", "media things"),
         ];
-        let out = capability_features("list requests in seerr", &options, None, RankWeights::default());
+        let out = capability_features(
+            "list requests in seerr",
+            &options,
+            None,
+            RankWeights::default(),
+        );
         let weighted = |i: usize| value(&out[i], TERM_RARITY_KEY).unwrap();
         // A name match outweighs the same match in the description.
         assert!(weighted(0) > weighted(1));
@@ -359,14 +368,24 @@ mod tests {
     fn semantic_absent_when_embedding_model_not_ready() {
         let options = vec![option("a", "seerr_list_requests", "lists requests")];
         let not_ready = |_: &[String]| -> Option<Vec<Vec<f32>>> { None };
-        let absent = capability_features("list requests", &options, Some(&not_ready as Embed<'_>), RankWeights::default());
+        let absent = capability_features(
+            "list requests",
+            &options,
+            Some(&not_ready as Embed<'_>),
+            RankWeights::default(),
+        );
         assert_eq!(value(&absent[0], SEMANTIC_KEY), None);
         let without = capability_features("list requests", &options, None, RankWeights::default());
         assert_eq!(absent, without);
         let ready = |texts: &[String]| -> Option<Vec<Vec<f32>>> {
             Some(texts.iter().map(|_| vec![1.0_f32, 0.0]).collect())
         };
-        let present = capability_features("list requests", &options, Some(&ready as Embed<'_>), RankWeights::default());
+        let present = capability_features(
+            "list requests",
+            &options,
+            Some(&ready as Embed<'_>),
+            RankWeights::default(),
+        );
         assert_eq!(value(&present[0], SEMANTIC_KEY), Some(q32(1.0)));
         // The lexical order is unchanged by the semantic feature.
         assert_eq!(

@@ -8,12 +8,9 @@
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::reasoning_paradigm::{
-    legal_paradigms, NoParadigmAdmissible, COST_KEY, EXPECTED_VALUE_KEY, PARADIGMS,
-    PARAM_TASK_TAGS,
+    legal_paradigms, NoParadigmAdmissible, COST_KEY, EXPECTED_VALUE_KEY, PARADIGMS, PARAM_TASK_TAGS,
 };
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind,
-};
+use medulla_decision_types::decision::statistical::{CandidateSource, DecideRequest, QuestionKind};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 
@@ -106,7 +103,8 @@ impl DecisionFamily for ReasoningParadigmFamily {
     ) -> Result<(), String> {
         let exact = options.len() == PARADIGMS.len()
             && options.iter().zip(PARADIGMS).all(|(option, (id, tag))| {
-                option.option_id == id && option.classification.as_slice().first().map(String::as_str) == Some(tag)
+                option.option_id == id
+                    && option.classification.as_slice().first().map(String::as_str) == Some(tag)
             });
         if exact {
             Ok(())

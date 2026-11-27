@@ -82,8 +82,7 @@ type FormatGenerator = (&'static str, fn(usize) -> String);
 // spec: MEDULLA-INGEST-WORKER-R700.2
 #[test]
 fn time_and_memory_scale_linearly() {
-    let formats: [FormatGenerator; 3] =
-        [("text/csv", csv), ("text/vtt", vtt), ("text/html", html)];
+    let formats: [FormatGenerator; 3] = [("text/csv", csv), ("text/vtt", vtt), ("text/html", html)];
     for (media_type, make) in formats {
         let mut runs = Vec::new();
         for units in SIZES {

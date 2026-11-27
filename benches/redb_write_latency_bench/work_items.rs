@@ -181,15 +181,9 @@ pub fn run_owner_recovery(samples: usize) -> GroupResult {
         // A fixed stride visits the whole store deterministically.
         let run = run_id((sample * 7_919) % WORK_ITEMS);
         let started = Instant::now();
-        let view = run_owner::read_admission(
-            shard,
-            GRAPH,
-            "tenant",
-            &run,
-            "owner",
-            DurableCrypto::none(),
-        )
-        .expect("read admission");
+        let view =
+            run_owner::read_admission(shard, GRAPH, "tenant", &run, "owner", DurableCrypto::none())
+                .expect("read admission");
         measured.push(started.elapsed().as_secs_f64());
         assert!(view.is_some(), "the owner recovers {run}");
     }
@@ -268,7 +262,11 @@ pub fn current_plan_publication_readback(samples: usize) -> GroupResult {
         .expect("read the current plan");
         measured.push(started.elapsed().as_secs_f64());
         transient = transient.max(memory_since(baseline));
-        assert_eq!(read, Some(request.snapshot), "readback matches revision {revision}");
+        assert_eq!(
+            read,
+            Some(request.snapshot),
+            "readback matches revision {revision}"
+        );
     }
     result(
         "current_plan_publication_readback",
@@ -423,9 +421,7 @@ fn paired_sample(sample: usize) -> f64 {
     let payload = test_shard::apply(
         shard,
         &format!("bench-consume-{sample}"),
-        Method::TransitionControlLease {
-            request: consume,
-        },
+        Method::TransitionControlLease { request: consume },
         2_000,
     )
     .expect("consume the pending pair");

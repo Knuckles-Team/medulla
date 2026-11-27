@@ -35,7 +35,14 @@ fn reader_only() -> VerifiedRequestContext {
 }
 
 async fn core(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
-    h.state.read().await.registry.get(GRAPH).expect("graph exists").core.clone()
+    h.state
+        .read()
+        .await
+        .registry
+        .get(GRAPH)
+        .expect("graph exists")
+        .core
+        .clone()
 }
 
 fn put(core: &medulla_graph_core::graph::GraphCore, id: &str, props: Value) {
@@ -90,7 +97,10 @@ fn event(id: &str, skill: &str, user: &str, day: u64, run_id: &str, error: bool)
 }
 
 fn window() -> Window {
-    Window { start_ms: 0, end_ms: 30 * DAY }
+    Window {
+        start_ms: 0,
+        end_ms: 30 * DAY,
+    }
 }
 
 async fn seed(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
@@ -109,7 +119,10 @@ async fn seed(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCor
 }
 
 fn ingest_op(events: Vec<Value>) -> SkillTelemetryOp {
-    SkillTelemetryOp::Ingest { graph: GRAPH.into(), events }
+    SkillTelemetryOp::Ingest {
+        graph: GRAPH.into(),
+        events,
+    }
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R713.3
@@ -125,15 +138,32 @@ async fn ingest_then_measures_round_trip() {
         event("i4", SKILL, "u3", 20, "run-c", false),
         event("i5", SKILL, "u3", 29, "run-c", false),
     ];
-    let write = run(&h, &caller, ingest_op(events.clone())).await.expect("ingests");
+    let write = run(&h, &caller, ingest_op(events.clone()))
+        .await
+        .expect("ingests");
     let receipt: IngestReceipt = reply(&write);
-    assert_eq!(receipt, IngestReceipt { stored: 5, repeated: 0 });
+    assert_eq!(
+        receipt,
+        IngestReceipt {
+            stored: 5,
+            repeated: 0
+        }
+    );
     // Each stored invocation links to its run trace.
-    assert!(write.operations.iter().any(|op| op["op"] == "upsert_edge" && op["target"] == "trace-run-a"));
+    assert!(write
+        .operations
+        .iter()
+        .any(|op| op["op"] == "upsert_edge" && op["target"] == "trace-run-a"));
     commit(&core, &write);
     // A repeat of the same ids stores nothing.
     let again = run(&h, &caller, ingest_op(events)).await.expect("repeats");
-    assert_eq!(reply::<IngestReceipt>(&again), IngestReceipt { stored: 0, repeated: 5 });
+    assert_eq!(
+        reply::<IngestReceipt>(&again),
+        IngestReceipt {
+            stored: 0,
+            repeated: 5
+        }
+    );
     assert!(again.operations.is_empty());
 
     // The suite report of R711 feeds the eval measures.
@@ -147,13 +177,23 @@ async fn ingest_then_measures_round_trip() {
         case_count: 40,
     };
     store
-        .put_decision_artifacts(TENANT, &[(format!("skill-eval-report:{SKILL}"), encode_artifact(&report).unwrap())])
+        .put_decision_artifacts(
+            TENANT,
+            &[(
+                format!("skill-eval-report:{SKILL}"),
+                encode_artifact(&report).unwrap(),
+            )],
+        )
         .unwrap();
     let measured: SkillMeasures = reply(
         &run(
             &h,
             &reader_only(),
-            SkillTelemetryOp::Measures { graph: GRAPH.into(), skill_ref: SKILL.into(), window: window() },
+            SkillTelemetryOp::Measures {
+                graph: GRAPH.into(),
+                skill_ref: SKILL.into(),
+                window: window(),
+            },
         )
         .await
         .expect("reads"),
@@ -167,19 +207,33 @@ async fn ingest_then_measures_round_trip() {
     assert_eq!(measured.latency_p50_ms, Some(120));
 
     // Another tenant sees none of it, and a reader cannot ingest.
-    let other = VerifiedRequestContext::verified_for_test_with_scopes("agent-7", "tenant-b", &["telemetry:read"]);
+    let other = VerifiedRequestContext::verified_for_test_with_scopes(
+        "agent-7",
+        "tenant-b",
+        &["telemetry:read"],
+    );
     let none: SkillMeasures = reply(
         &run(
             &h,
             &other,
-            SkillTelemetryOp::Measures { graph: GRAPH.into(), skill_ref: SKILL.into(), window: window() },
+            SkillTelemetryOp::Measures {
+                graph: GRAPH.into(),
+                skill_ref: SKILL.into(),
+                window: window(),
+            },
         )
         .await
         .unwrap(),
     );
     assert_eq!(none.invocations, 0);
-    let refused = run(&h, &reader_only(), ingest_op(vec![])).await.err().expect("refuses");
-    assert!(refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()), "{refused}");
+    let refused = run(&h, &reader_only(), ingest_op(vec![]))
+        .await
+        .err()
+        .expect("refuses");
+    assert!(
+        refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()),
+        "{refused}"
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R713.8
@@ -198,13 +252,18 @@ async fn ingest_files_each_invocation_under_the_read_index_keys() {
 
     // The three keys of the read index are stored on the rows the ingest batch wrote.
     let by = |key: &str, value: &str| {
-        let mut ids = core.nodes_by_property(key, value).expect("the key is indexed");
+        let mut ids = core
+            .nodes_by_property(key, value)
+            .expect("the key is indexed");
         ids.sort();
         ids
     };
     let node = |id: &str| invocation_node_id(TENANT, id);
     assert_eq!(by("skill_ref", SKILL), [node("i1"), node("i2")]);
-    assert_eq!(by("principal_pseudonym", &principal_pseudonym(TENANT, "u1", 1)).len(), 2);
+    assert_eq!(
+        by("principal_pseudonym", &principal_pseudonym(TENANT, "u1", 1)).len(),
+        2
+    );
     assert_eq!(by("started_day", "1"), [node("i1"), node("i2")]);
     assert_eq!(by("started_day", "5"), [node("i3")]);
 
@@ -214,18 +273,58 @@ async fn ingest_files_each_invocation_under_the_read_index_keys() {
         let (h, caller) = (&h, reader_only());
         async move {
             reply::<SkillMeasures>(
-                &run(h, &caller, SkillTelemetryOp::Measures { graph: GRAPH.into(), skill_ref: SKILL.into(), window })
-                    .await
-                    .expect("reads"),
+                &run(
+                    h,
+                    &caller,
+                    SkillTelemetryOp::Measures {
+                        graph: GRAPH.into(),
+                        skill_ref: SKILL.into(),
+                        window,
+                    },
+                )
+                .await
+                .expect("reads"),
             )
         }
     };
-    assert_eq!(measures(Window { start_ms: 0, end_ms: 2 * DAY }).await.invocations, 2);
-    assert_eq!(measures(Window { start_ms: 5 * DAY, end_ms: 6 * DAY }).await.invocations, 0);
+    assert_eq!(
+        measures(Window {
+            start_ms: 0,
+            end_ms: 2 * DAY
+        })
+        .await
+        .invocations,
+        2
+    );
+    assert_eq!(
+        measures(Window {
+            start_ms: 5 * DAY,
+            end_ms: 6 * DAY
+        })
+        .await
+        .invocations,
+        0
+    );
     // A window that ends inside a day still reads that day's rows it contains.
-    assert_eq!(measures(Window { start_ms: DAY, end_ms: DAY + 1 }).await.invocations, 2);
+    assert_eq!(
+        measures(Window {
+            start_ms: DAY,
+            end_ms: DAY + 1
+        })
+        .await
+        .invocations,
+        2
+    );
     // A window longer than the index looks up by day reads by skill alone, with the same answer.
-    assert_eq!(measures(Window { start_ms: 0, end_ms: 400 * DAY }).await.invocations, 2);
+    assert_eq!(
+        measures(Window {
+            start_ms: 0,
+            end_ms: 400 * DAY
+        })
+        .await
+        .invocations,
+        2
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R713.4
@@ -240,20 +339,34 @@ async fn bad_event_refuses_whole_batch() {
     let mut extra = event("b1", SKILL, "u1", 1, "run-a", false);
     extra["prompt"] = "please summarise my notes".into();
     let error = refuse(run(&h, &caller, ingest_op(vec![good.clone(), extra])).await);
-    assert!(error.starts_with(TELEMETRY_FIELD_UNKNOWN.as_str()), "{error}");
+    assert!(
+        error.starts_with(TELEMETRY_FIELD_UNKNOWN.as_str()),
+        "{error}"
+    );
 
     let unknown = event("b2", "skill:nowhere@1", "u1", 1, "run-a", false);
     let error = refuse(run(&h, &caller, ingest_op(vec![good.clone(), unknown])).await);
-    assert!(error.starts_with(TELEMETRY_SKILL_UNKNOWN.as_str()), "{error}");
+    assert!(
+        error.starts_with(TELEMETRY_SKILL_UNKNOWN.as_str()),
+        "{error}"
+    );
 
     let mut backwards = event("b3", SKILL, "u1", 5, "run-a", false);
     backwards["ended_ms"] = 1.into();
     let error = refuse(run(&h, &caller, ingest_op(vec![good.clone(), backwards])).await);
-    assert!(error.starts_with(TELEMETRY_CLOCK_INVALID.as_str()), "{error}");
+    assert!(
+        error.starts_with(TELEMETRY_CLOCK_INVALID.as_str()),
+        "{error}"
+    );
 
-    let many: Vec<Value> = (0..501).map(|n| event(&format!("m{n}"), SKILL, "u1", 1, "run-a", false)).collect();
+    let many: Vec<Value> = (0..501)
+        .map(|n| event(&format!("m{n}"), SKILL, "u1", 1, "run-a", false))
+        .collect();
     let error = refuse(run(&h, &caller, ingest_op(many)).await);
-    assert!(error.starts_with(TELEMETRY_BATCH_TOO_LARGE.as_str()), "{error}");
+    assert!(
+        error.starts_with(TELEMETRY_BATCH_TOO_LARGE.as_str()),
+        "{error}"
+    );
 
     // Nothing was stored: the good event is still new.
     let write = run(&h, &caller, ingest_op(vec![good])).await.unwrap();
@@ -284,21 +397,43 @@ async fn quality_orders_by_evals_then_runs() {
             case_count: cases,
         };
         store
-            .put_decision_artifacts(TENANT, &[(format!("skill-eval-report:{skill}"), encode_artifact(&report).unwrap())])
+            .put_decision_artifacts(
+                TENANT,
+                &[(
+                    format!("skill-eval-report:{skill}"),
+                    encode_artifact(&report).unwrap(),
+                )],
+            )
             .unwrap();
     }
     let ranked: RankAnswer = reply(
         &run(
             &h,
             &caller,
-            SkillTelemetryOp::Rank { graph: GRAPH.into(), skill_refs: Vec::new(), window: window(), limit: None },
+            SkillTelemetryOp::Rank {
+                graph: GRAPH.into(),
+                skill_refs: Vec::new(),
+                window: window(),
+                limit: None,
+            },
         )
         .await
         .unwrap(),
     );
-    let order: Vec<(&str, u64)> = ranked.skills.iter().map(|s| (s.skill_ref.as_str(), s.quality_ppm)).collect();
+    let order: Vec<(&str, u64)> = ranked
+        .skills
+        .iter()
+        .map(|s| (s.skill_ref.as_str(), s.quality_ppm))
+        .collect();
     // 80 of 100 weighted runs, then 20 of 40, then the skill with no evaluation last.
-    assert_eq!(order, [(SKILL, 800_000), ("skill:other@1", 500_000), ("skill:fresh@1", 0)]);
+    assert_eq!(
+        order,
+        [
+            (SKILL, 800_000),
+            ("skill:other@1", 500_000),
+            ("skill:fresh@1", 0)
+        ]
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R713.6
@@ -311,20 +446,44 @@ async fn peers_never_named_and_small_cohort_refused() {
         let mut events = vec![event("m1", SKILL, "ignored", 1, "run-a", false)];
         events[0]["principal_pseudonym"] = me.clone().into();
         for n in 1..=count {
-            events.push(event(&format!("s{n}"), SKILL, &format!("peer-{n}"), 2, "run-a", false));
-            events.push(event(&format!("o{n}"), "skill:other@1", &format!("peer-{n}"), 2, "run-a", false));
+            events.push(event(
+                &format!("s{n}"),
+                SKILL,
+                &format!("peer-{n}"),
+                2,
+                "run-a",
+                false,
+            ));
+            events.push(event(
+                &format!("o{n}"),
+                "skill:other@1",
+                &format!("peer-{n}"),
+                2,
+                "run-a",
+                false,
+            ));
         }
         events
     };
 
     let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
     let core = seed(&h).await;
-    commit(&core, &run(&h, &caller, ingest_op(ingest_for(5))).await.unwrap());
+    commit(
+        &core,
+        &run(&h, &caller, ingest_op(ingest_for(5))).await.unwrap(),
+    );
     // The caller names no cohort: the engine computes it from the telemetry of the same class.
     let answer: PeersAnswer = reply(
-        &run(&h, &caller, SkillTelemetryOp::Peers { graph: GRAPH.into(), window: window() })
-            .await
-            .unwrap(),
+        &run(
+            &h,
+            &caller,
+            SkillTelemetryOp::Peers {
+                graph: GRAPH.into(),
+                window: window(),
+            },
+        )
+        .await
+        .unwrap(),
     );
     assert_eq!(answer.skills.len(), 1);
     assert_eq!(answer.skills[0].skill_ref, "skill:other@1");
@@ -337,11 +496,23 @@ async fn peers_never_named_and_small_cohort_refused() {
     // A class with four other principals is under the floor of five.
     let small = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
     let small_core = seed(&small).await;
-    commit(&small_core, &run(&small, &caller, ingest_op(ingest_for(4))).await.unwrap());
-    let error = run(&small, &caller, SkillTelemetryOp::Peers { graph: GRAPH.into(), window: window() })
-        .await
-        .err()
-        .expect("refuses");
+    commit(
+        &small_core,
+        &run(&small, &caller, ingest_op(ingest_for(4)))
+            .await
+            .unwrap(),
+    );
+    let error = run(
+        &small,
+        &caller,
+        SkillTelemetryOp::Peers {
+            graph: GRAPH.into(),
+            window: window(),
+        },
+    )
+    .await
+    .err()
+    .expect("refuses");
     assert!(error.starts_with(PEER_COHORT_TOO_SMALL.as_str()), "{error}");
 }
 
@@ -358,8 +529,16 @@ async fn traces_by_eval_uses_the_edge_index() {
     ];
     commit(&core, &run(&h, &caller, ingest_op(events)).await.unwrap());
     // run-a passed, run-b failed, run-c has no score.
-    put(&core, "score-a", json!({"node_type": "Score", "value": 0.9, "range_min": 0.0, "range_max": 1.0}));
-    put(&core, "score-b", json!({"node_type": "Score", "value": 0.1, "range_min": 0.0, "range_max": 1.0}));
+    put(
+        &core,
+        "score-a",
+        json!({"node_type": "Score", "value": 0.9, "range_min": 0.0, "range_max": 1.0}),
+    );
+    put(
+        &core,
+        "score-b",
+        json!({"node_type": "Score", "value": 0.1, "range_min": 0.0, "range_max": 1.0}),
+    );
     for (trace, score) in [("trace-run-a", "score-a"), ("trace-run-b", "score-b")] {
         core.add_edge(
             trace.to_string(),
@@ -384,7 +563,11 @@ async fn traces_by_eval_uses_the_edge_index() {
         assert_eq!(answer.trace_ids, expected);
     }
     // Pages follow the cursor, newest end first.
-    put(&core, "score-c", json!({"node_type": "Score", "passed": true}));
+    put(
+        &core,
+        "score-c",
+        json!({"node_type": "Score", "passed": true}),
+    );
     core.add_edge(
         "trace-run-c".to_string(),
         "score-c".to_string(),
@@ -412,7 +595,11 @@ async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently()
     const FOREIGN_SKILL: &str = "skill:foreign@1";
     let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
     let core = seed(&h).await;
-    put(&core, FOREIGN_SKILL, json!({"type": "Skill", "tenant_id": FOREIGN}));
+    put(
+        &core,
+        FOREIGN_SKILL,
+        json!({"type": "Skill", "tenant_id": FOREIGN}),
+    );
     let owner = who();
     let foreign = VerifiedRequestContext::verified_for_test_with_scopes(
         "agent-7",
@@ -421,22 +608,45 @@ async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently()
     );
 
     // The owner stores invocation `i1`.
-    let mine = run(&h, &owner, ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]))
-        .await
-        .expect("ingests");
-    assert_eq!(reply::<IngestReceipt>(&mine), IngestReceipt { stored: 1, repeated: 0 });
+    let mine = run(
+        &h,
+        &owner,
+        ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]),
+    )
+    .await
+    .expect("ingests");
+    assert_eq!(
+        reply::<IngestReceipt>(&mine),
+        IngestReceipt {
+            stored: 1,
+            repeated: 0
+        }
+    );
     commit(&core, &mine);
 
     // Another tenant ingests the same invocation id. It answers exactly as it would on an empty
     // graph (stored, not repeated), so the id tells it nothing about the owner's rows.
-    let theirs = run(&h, &foreign, ingest_op(vec![event("i1", FOREIGN_SKILL, "u9", 1, "run-z", false)]))
-        .await
-        .expect("ingests");
-    assert_eq!(reply::<IngestReceipt>(&theirs), IngestReceipt { stored: 1, repeated: 0 });
+    let theirs = run(
+        &h,
+        &foreign,
+        ingest_op(vec![event("i1", FOREIGN_SKILL, "u9", 1, "run-z", false)]),
+    )
+    .await
+    .expect("ingests");
+    assert_eq!(
+        reply::<IngestReceipt>(&theirs),
+        IngestReceipt {
+            stored: 1,
+            repeated: 0
+        }
+    );
     commit(&core, &theirs);
 
     // The two rows are two nodes, each stamped with its own tenant.
-    let (own_node, foreign_node) = (invocation_node_id(TENANT, "i1"), invocation_node_id(FOREIGN, "i1"));
+    let (own_node, foreign_node) = (
+        invocation_node_id(TENANT, "i1"),
+        invocation_node_id(FOREIGN, "i1"),
+    );
     assert_ne!(own_node, foreign_node);
     let tenant_of = |id: &str| {
         let blob = core.get_node_properties(id).expect("the node exists");
@@ -446,10 +656,20 @@ async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently()
     assert_eq!(tenant_of(&foreign_node), json!(FOREIGN));
 
     // A repeat is still found, but only inside the tenant that stored it.
-    let again = run(&h, &owner, ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]))
-        .await
-        .expect("repeats");
-    assert_eq!(reply::<IngestReceipt>(&again), IngestReceipt { stored: 0, repeated: 1 });
+    let again = run(
+        &h,
+        &owner,
+        ingest_op(vec![event("i1", SKILL, "u1", 1, "run-a", false)]),
+    )
+    .await
+    .expect("repeats");
+    assert_eq!(
+        reply::<IngestReceipt>(&again),
+        IngestReceipt {
+            stored: 0,
+            repeated: 1
+        }
+    );
 
     // Neither tenant's measures count the other's invocation.
     let measured = |caller: &VerifiedRequestContext, skill: &str| {
@@ -487,7 +707,10 @@ fn person(name: &str, tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
     )
 }
 
-async fn person_harness() -> (Harness, std::sync::Arc<medulla_graph_core::graph::GraphCore>) {
+async fn person_harness() -> (
+    Harness,
+    std::sync::Arc<medulla_graph_core::graph::GraphCore>,
+) {
     let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
     for name in ["alice", "bob"] {
         isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
@@ -499,9 +722,21 @@ async fn person_harness() -> (Harness, std::sync::Arc<medulla_graph_core::graph:
     }
     let h = Harness::with_isolation(isolation).await;
     let core = core(&h).await;
-    put(&core, SKILL, json!({"type": "Skill", "tenant_id": TENANT, "_owner": "alice", "_visibility": "public"}));
-    put(&core, "trace-alice", json!({"node_type": "RunTrace", "run_id": "run-alice", "tenant": TENANT, "_owner": "alice"}));
-    put(&core, "trace-bob", json!({"node_type": "RunTrace", "run_id": "run-bob", "tenant": TENANT, "_owner": "bob", "_visibility": "public"}));
+    put(
+        &core,
+        SKILL,
+        json!({"type": "Skill", "tenant_id": TENANT, "_owner": "alice", "_visibility": "public"}),
+    );
+    put(
+        &core,
+        "trace-alice",
+        json!({"node_type": "RunTrace", "run_id": "run-alice", "tenant": TENANT, "_owner": "alice"}),
+    );
+    put(
+        &core,
+        "trace-bob",
+        json!({"node_type": "RunTrace", "run_id": "run-bob", "tenant": TENANT, "_owner": "bob", "_visibility": "public"}),
+    );
     (h, core)
 }
 
@@ -512,10 +747,20 @@ async fn a_person_ingests_spans_of_its_own_sessions_attributed_to_the_verified_p
     let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
     // The event claims another principal's pseudonym; the engine overwrites it.
     let claimed = event("p1", SKILL, "someone-else", 1, "run-alice", false);
-    let write = run(&h, &alice, ingest_op(vec![claimed])).await.expect("a person ingests its own session");
-    assert_eq!(reply::<IngestReceipt>(&write), IngestReceipt { stored: 1, repeated: 0 });
+    let write = run(&h, &alice, ingest_op(vec![claimed]))
+        .await
+        .expect("a person ingests its own session");
+    assert_eq!(
+        reply::<IngestReceipt>(&write),
+        IngestReceipt {
+            stored: 1,
+            repeated: 0
+        }
+    );
     commit(&core, &write);
-    let blob = core.get_node_properties(&invocation_node_id(TENANT, "p1")).expect("stored");
+    let blob = core
+        .get_node_properties(&invocation_node_id(TENANT, "p1"))
+        .expect("stored");
     let row = medulla_types::msgpack::decode_property_value(&blob).unwrap();
     let verified = principal_pseudonym(
         TENANT,
@@ -532,13 +777,24 @@ async fn spans_of_another_principals_session_answer_exactly_like_an_absent_sessi
     let (h, _core) = person_harness().await;
     let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
     // `run-bob` belongs to another principal and is visible to alice; `run-missing` does not exist.
-    let foreign = run(&h, &alice, ingest_op(vec![event("p2", SKILL, "u", 1, "run-bob", false)]))
-        .await
-        .expect_err("another principal's session is refused");
-    let absent = run(&h, &alice, ingest_op(vec![event("p2", SKILL, "u", 1, "run-missing", false)]))
-        .await
-        .expect_err("an absent session is refused");
-    assert!(foreign.starts_with(TELEMETRY_SESSION_UNKNOWN.as_str()), "{foreign}");
+    let foreign = run(
+        &h,
+        &alice,
+        ingest_op(vec![event("p2", SKILL, "u", 1, "run-bob", false)]),
+    )
+    .await
+    .expect_err("another principal's session is refused");
+    let absent = run(
+        &h,
+        &alice,
+        ingest_op(vec![event("p2", SKILL, "u", 1, "run-missing", false)]),
+    )
+    .await
+    .expect_err("an absent session is refused");
+    assert!(
+        foreign.starts_with(TELEMETRY_SESSION_UNKNOWN.as_str()),
+        "{foreign}"
+    );
     assert_eq!(
         foreign.replace("run-bob", "<run>"),
         absent.replace("run-missing", "<run>"),
@@ -551,16 +807,26 @@ async fn spans_of_another_principals_session_answer_exactly_like_an_absent_sessi
 async fn a_person_without_the_write_scope_is_refused() {
     let (h, _core) = person_harness().await;
     let reader = person("alice", TENANT, &["telemetry:read"]);
-    let refused = run(&h, &reader, ingest_op(vec![event("p3", SKILL, "u", 1, "run-alice", false)]))
-        .await
-        .expect_err("the write scope is required");
-    assert!(refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()), "{refused}");
+    let refused = run(
+        &h,
+        &reader,
+        ingest_op(vec![event("p3", SKILL, "u", 1, "run-alice", false)]),
+    )
+    .await
+    .expect_err("the write scope is required");
+    assert!(
+        refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()),
+        "{refused}"
+    );
 }
 
 /// An event as a person sends it: the field `principal_pseudonym` is absent.
 fn event_without_pseudonym(id: &str, run_id: &str) -> Value {
     let mut event = event(id, SKILL, "ignored", 1, run_id, false);
-    event.as_object_mut().expect("an object").remove("principal_pseudonym");
+    event
+        .as_object_mut()
+        .expect("an object")
+        .remove("principal_pseudonym");
     event
 }
 
@@ -569,12 +835,24 @@ fn event_without_pseudonym(id: &str, run_id: &str) -> Value {
 async fn a_person_event_without_a_pseudonym_is_stored_under_the_derived_one() {
     let (h, core) = person_harness().await;
     let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
-    let write = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q1", "run-alice")]))
-        .await
-        .expect("a person ingests an event with no pseudonym");
-    assert_eq!(reply::<IngestReceipt>(&write), IngestReceipt { stored: 1, repeated: 0 });
+    let write = run(
+        &h,
+        &alice,
+        ingest_op(vec![event_without_pseudonym("q1", "run-alice")]),
+    )
+    .await
+    .expect("a person ingests an event with no pseudonym");
+    assert_eq!(
+        reply::<IngestReceipt>(&write),
+        IngestReceipt {
+            stored: 1,
+            repeated: 0
+        }
+    );
     commit(&core, &write);
-    let blob = core.get_node_properties(&invocation_node_id(TENANT, "q1")).expect("stored");
+    let blob = core
+        .get_node_properties(&invocation_node_id(TENANT, "q1"))
+        .expect("stored");
     let row = medulla_types::msgpack::decode_property_value(&blob).unwrap();
     let derived = principal_pseudonym(
         TENANT,
@@ -590,19 +868,31 @@ async fn a_service_event_without_a_pseudonym_is_refused_and_a_foreign_run_still_
     let (h, _core) = person_harness().await;
     // A service keeps the pseudonym duty of R713.3: an absent field is an invalid parameter.
     let service = who();
-    let refused = run(&h, &service, ingest_op(vec![event_without_pseudonym("q2", "run-alice")]))
-        .await
-        .expect_err("a service sends its pseudonym");
+    let refused = run(
+        &h,
+        &service,
+        ingest_op(vec![event_without_pseudonym("q2", "run-alice")]),
+    )
+    .await
+    .expect_err("a service sends its pseudonym");
     assert!(refused.contains("PARAMETER_INVALID"), "{refused}");
     // The person path still refuses a run it does not own exactly as an absent run, with the field
     // absent, so leaving the field out opens no existence oracle.
     let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
-    let foreign = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q3", "run-bob")]))
-        .await
-        .expect_err("another principal's session is refused");
-    let absent = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q3", "run-missing")]))
-        .await
-        .expect_err("an absent session is refused");
+    let foreign = run(
+        &h,
+        &alice,
+        ingest_op(vec![event_without_pseudonym("q3", "run-bob")]),
+    )
+    .await
+    .expect_err("another principal's session is refused");
+    let absent = run(
+        &h,
+        &alice,
+        ingest_op(vec![event_without_pseudonym("q3", "run-missing")]),
+    )
+    .await
+    .expect_err("an absent session is refused");
     assert_eq!(
         foreign.replace("run-bob", "<run>"),
         absent.replace("run-missing", "<run>")

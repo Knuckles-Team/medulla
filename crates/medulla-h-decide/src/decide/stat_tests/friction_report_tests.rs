@@ -11,10 +11,9 @@ use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
 use medulla_decision_types::friction::{
     FrictionFiled, FrictionGroupView, FrictionGroups, FrictionMoved, FrictionOp, FrictionReport,
-    FrictionState, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED,
-    FRICTION_EVIDENCE_REQUIRED, FRICTION_EVIDENCE_UNKNOWN, FRICTION_SELF_APPROVED,
-    FRICTION_SKILL_UNKNOWN, FRICTION_TEXT_TOO_LARGE,
-    FRICTION_TRANSITION_ILLEGAL,
+    FrictionState, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED, FRICTION_EVIDENCE_REQUIRED,
+    FRICTION_EVIDENCE_UNKNOWN, FRICTION_SELF_APPROVED, FRICTION_SKILL_UNKNOWN,
+    FRICTION_TEXT_TOO_LARGE, FRICTION_TRANSITION_ILLEGAL,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key, record_key};
@@ -167,8 +166,14 @@ async fn file_three(
     who: &VerifiedRequestContext,
 ) -> FrictionFiled {
     let mut last = None;
-    for (id, run_id, at) in [("r1", "run-a", 10), ("r2", "run-a", 20), ("r3", "run-b", 30)] {
-        let write = run(h, who, file(report(id, run_id, at))).await.expect("files");
+    for (id, run_id, at) in [
+        ("r1", "run-a", 10),
+        ("r2", "run-a", 20),
+        ("r3", "run-b", 30),
+    ] {
+        let write = run(h, who, file(report(id, run_id, at)))
+            .await
+            .expect("files");
         commit(core, &write);
         last = Some(reply::<FrictionFiled>(&write));
     }
@@ -187,7 +192,9 @@ async fn report_feeds_failure_patterns() {
     assert_eq!(filed.group.state, FrictionState::Reported);
 
     // A repeat of one report id is not counted twice.
-    let again = run(&h, &who, file(report("r1", "run-a", 10))).await.expect("repeats");
+    let again = run(&h, &who, file(report("r1", "run-a", 10)))
+        .await
+        .expect("repeats");
     assert!(again.operations.is_empty());
     assert!(!reply::<FrictionFiled>(&again).counted);
 
@@ -225,34 +232,77 @@ async fn refusals_write_nothing() {
     let mut unknown = report("r9", "run-a", 5);
     unknown.skill_ref = "skill:nowhere@1".into();
     let error = code(run(&h, &who, file(unknown)).await);
-    assert!(error.starts_with(FRICTION_SKILL_UNKNOWN.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_SKILL_UNKNOWN.as_str()),
+        "{error}"
+    );
     let mut big = report("r9", "run-a", 5);
     big.tried = "x".repeat(2 * 1024 + 1);
     let error = code(run(&h, &who, file(big)).await);
-    assert!(error.starts_with(FRICTION_TEXT_TOO_LARGE.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_TEXT_TOO_LARGE.as_str()),
+        "{error}"
+    );
 
     // A move outside the machine, and a move without its evidence.
-    let error = code(run(&h, &who, move_op(&group_ref, FrictionState::Fixed, Some("rev:1"), 40)).await);
-    assert!(error.starts_with(FRICTION_TRANSITION_ILLEGAL.as_str()), "{error}");
-    let triage = run(&h, &who, move_op(&group_ref, FrictionState::Triaged, None, 40))
-        .await
-        .expect("triage needs no evidence");
+    let error = code(
+        run(
+            &h,
+            &who,
+            move_op(&group_ref, FrictionState::Fixed, Some("rev:1"), 40),
+        )
+        .await,
+    );
+    assert!(
+        error.starts_with(FRICTION_TRANSITION_ILLEGAL.as_str()),
+        "{error}"
+    );
+    let triage = run(
+        &h,
+        &who,
+        move_op(&group_ref, FrictionState::Triaged, None, 40),
+    )
+    .await
+    .expect("triage needs no evidence");
     commit(&core, &triage);
     let error = code(
-        run(&h, &who, move_op(&group_ref, FrictionState::RootCaused, None, 41)).await,
+        run(
+            &h,
+            &who,
+            move_op(&group_ref, FrictionState::RootCaused, None, 41),
+        )
+        .await,
     );
-    assert!(error.starts_with(FRICTION_EVIDENCE_REQUIRED.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_EVIDENCE_REQUIRED.as_str()),
+        "{error}"
+    );
     let error = code(
-        run(&h, &who, move_op(&group_ref, FrictionState::RootCaused, Some("gap:none"), 41)).await,
+        run(
+            &h,
+            &who,
+            move_op(&group_ref, FrictionState::RootCaused, Some("gap:none"), 41),
+        )
+        .await,
     );
-    assert!(error.starts_with(FRICTION_EVIDENCE_REQUIRED.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_EVIDENCE_REQUIRED.as_str()),
+        "{error}"
+    );
 
     // Approval needs its own scope.
     let error = code(
-        run(&h, &without_approve(), move_op(&group_ref, FrictionState::Approved, Some("x"), 42))
-            .await,
+        run(
+            &h,
+            &without_approve(),
+            move_op(&group_ref, FrictionState::Approved, Some("x"), 42),
+        )
+        .await,
     );
-    assert!(error.starts_with(FRICTION_APPROVAL_ROLE_REQUIRED.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_APPROVAL_ROLE_REQUIRED.as_str()),
+        "{error}"
+    );
 
     // Nothing moved: the group is still triaged.
     let got: FrictionGroupView = reply(
@@ -276,7 +326,11 @@ async fn refusals_write_nothing() {
 async fn steps_record_actor_and_evidence() {
     let h = two_callers().await;
     let core = seed(&h).await;
-    put(&core, "gap:g1", json!({"type": "FailureGap", "tenant_id": TENANT}));
+    put(
+        &core,
+        "gap:g1",
+        json!({"type": "FailureGap", "tenant_id": TENANT}),
+    );
     let store = h.state.write().await.ensure_agent_library().unwrap();
     let revision = RevisionRow {
         id: "rev:1".into(),
@@ -314,10 +368,18 @@ async fn steps_record_actor_and_evidence() {
         (FrictionState::Closed, None),
     ];
     for (index, (to, evidence)) in walk.iter().enumerate() {
-        let caller = if *to == FrictionState::Approved { &second } else { &who };
-        let write = run(&h, caller, move_op(&group_ref, *to, evidence.as_deref(), 100 + index as u64))
-            .await
-            .unwrap_or_else(|error| panic!("{to:?}: {error}"));
+        let caller = if *to == FrictionState::Approved {
+            &second
+        } else {
+            &who
+        };
+        let write = run(
+            &h,
+            caller,
+            move_op(&group_ref, *to, evidence.as_deref(), 100 + index as u64),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{to:?}: {error}"));
         let moved: FrictionMoved = reply(&write);
         assert_eq!(moved.group.state, *to);
         assert_eq!(moved.step.actor, caller.principal_persistence_id());
@@ -342,7 +404,9 @@ async fn steps_record_actor_and_evidence() {
     assert_eq!(got.report_ids, ["r1", "r2", "r3"]);
 
     // A report on the closed group opens the next generation.
-    let next = run(&h, &who, file(report("r4", "run-b", 200))).await.expect("files");
+    let next = run(&h, &who, file(report("r4", "run-b", 200)))
+        .await
+        .expect("files");
     let opened: FrictionFiled = reply(&next);
     assert_eq!(opened.group.report_count, 1);
     assert_ne!(opened.group.group_ref, group_ref);
@@ -360,7 +424,11 @@ async fn steps_record_actor_and_evidence() {
 async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
     let h = two_callers().await;
     let core = seed(&h).await;
-    put(&core, "gap:g1", json!({"type": "FailureGap", "tenant_id": TENANT}));
+    put(
+        &core,
+        "gap:g1",
+        json!({"type": "FailureGap", "tenant_id": TENANT}),
+    );
     let store = h.state.write().await.ensure_agent_library().unwrap();
     let revision = RevisionRow {
         id: "rev:1".into(),
@@ -372,7 +440,10 @@ async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
         created_ms: 1,
     };
     store
-        .put_decision_artifacts(TENANT, &[(revision.key(), encode_artifact(&revision).unwrap())])
+        .put_decision_artifacts(
+            TENANT,
+            &[(revision.key(), encode_artifact(&revision).unwrap())],
+        )
         .unwrap();
     // A receipt and a verdict that belong to another tenant.
     store
@@ -395,36 +466,79 @@ async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
     .into_iter()
     .enumerate()
     {
-        let write = run(&h, &who, move_op(&group_ref, to, evidence, 100 + index as u64))
-            .await
-            .expect("moves");
+        let write = run(
+            &h,
+            &who,
+            move_op(&group_ref, to, evidence, 100 + index as u64),
+        )
+        .await
+        .expect("moves");
         commit(&core, &write);
     }
     let refuse = |result: Result<PlannedWrite, String>| result.err().expect("must refuse");
 
     // A missing receipt and another tenant's receipt refuse alike: no existence oracle.
     let missing = refuse(
-        run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("sha256:none"), 110)).await,
+        run(
+            &h,
+            &who,
+            move_op(
+                &group_ref,
+                FrictionState::Evaluated,
+                Some("sha256:none"),
+                110,
+            ),
+        )
+        .await,
     );
     let foreign = refuse(
-        run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("sha256:foreign"), 110)).await,
+        run(
+            &h,
+            &who,
+            move_op(
+                &group_ref,
+                FrictionState::Evaluated,
+                Some("sha256:foreign"),
+                110,
+            ),
+        )
+        .await,
     );
-    assert!(missing.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()), "{missing}");
+    assert!(
+        missing.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()),
+        "{missing}"
+    );
     assert_eq!(
         missing.replace("sha256:none", ""),
         foreign.replace("sha256:foreign", ""),
         "a missing and a foreign receipt answer alike"
     );
     // A non-empty string is no longer enough, for the verdict either.
-    let fixed = run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("x"), 110)).await;
-    assert!(fixed.err().unwrap().starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()));
+    let fixed = run(
+        &h,
+        &who,
+        move_op(&group_ref, FrictionState::Evaluated, Some("x"), 110),
+    )
+    .await;
+    assert!(fixed
+        .err()
+        .unwrap()
+        .starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()));
     store
-        .put_decision_artifacts(TENANT, &[(receipt_key("sha256:held-out"), b"receipt".to_vec())])
+        .put_decision_artifacts(
+            TENANT,
+            &[(receipt_key("sha256:held-out"), b"receipt".to_vec())],
+        )
         .unwrap();
     let evaluated = run(
         &h,
         &who,
-        move_op(&group_ref, FrictionState::Evaluated, Some("sha256:held-out"), 111),
+        move_op(
+            &group_ref,
+            FrictionState::Evaluated,
+            Some("sha256:held-out"),
+            111,
+        ),
     )
     .await
     .expect("a stored receipt resolves");
@@ -433,25 +547,54 @@ async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
     // The reporter and the earlier mover cannot approve; a second person can.
     let own = who.principal_persistence_id();
     let error = refuse(
-        run(&h, &who, move_op(&group_ref, FrictionState::Approved, Some(&own), 112)).await,
+        run(
+            &h,
+            &who,
+            move_op(&group_ref, FrictionState::Approved, Some(&own), 112),
+        )
+        .await,
     );
-    assert!(error.starts_with(FRICTION_SELF_APPROVED.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_SELF_APPROVED.as_str()),
+        "{error}"
+    );
     let other = second.principal_persistence_id();
-    let approved = run(&h, &second, move_op(&group_ref, FrictionState::Approved, Some(&other), 113))
-        .await
-        .expect("a second principal approves");
+    let approved = run(
+        &h,
+        &second,
+        move_op(&group_ref, FrictionState::Approved, Some(&other), 113),
+    )
+    .await
+    .expect("a second principal approves");
     commit(&core, &approved);
     let measured = run(
         &h,
         &who,
-        move_op(&group_ref, FrictionState::Measured, Some("window:1,window:2"), 114),
+        move_op(
+            &group_ref,
+            FrictionState::Measured,
+            Some("window:1,window:2"),
+            114,
+        ),
     )
     .await
     .expect("measures");
     commit(&core, &measured);
     let error = refuse(
-        run(&h, &who, move_op(&group_ref, FrictionState::RegressionChecked, Some("verdict:foreign"), 115))
-            .await,
+        run(
+            &h,
+            &who,
+            move_op(
+                &group_ref,
+                FrictionState::RegressionChecked,
+                Some("verdict:foreign"),
+                115,
+            ),
+        )
+        .await,
     );
-    assert!(error.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()), "{error}");
+    assert!(
+        error.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()),
+        "{error}"
+    );
 }

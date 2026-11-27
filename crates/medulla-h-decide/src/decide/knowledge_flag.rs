@@ -45,10 +45,10 @@ pub(crate) mod served {
         raise, resolve, FlagKnobs, FlagRefusal,
     };
     use medulla_decision_types::knowledge_flag::{
-        evidence_digest, flag_id_of, flag_key, FlagKind, FlagResolution, FlagState,
-        KnowledgeFlag, KnowledgeFlagList, KnowledgeFlagOp, KnowledgeFlagReceipt, KnowledgeFlagView,
-        RaiseOutcome, EVIDENCE_AGENT_ASSERTED, FLAG_LIST_MAX, FLAG_NOT_FOUND,
-        FLAG_RESOLVE_ROLE_REQUIRED, FLAG_RUN_UNKNOWN, FLAG_TARGET_UNKNOWN, KNOWLEDGE_FLAG_CLASS,
+        evidence_digest, flag_id_of, flag_key, FlagKind, FlagResolution, FlagState, KnowledgeFlag,
+        KnowledgeFlagList, KnowledgeFlagOp, KnowledgeFlagReceipt, KnowledgeFlagView, RaiseOutcome,
+        EVIDENCE_AGENT_ASSERTED, FLAG_LIST_MAX, FLAG_NOT_FOUND, FLAG_RESOLVE_ROLE_REQUIRED,
+        FLAG_RUN_UNKNOWN, FLAG_TARGET_UNKNOWN, KNOWLEDGE_FLAG_CLASS,
     };
     use medulla_graph_core::graph::GraphView;
     use medulla_protocol_types::protocol::ResultPayload;
@@ -141,7 +141,8 @@ pub(crate) mod served {
                     reopened: false,
                 };
                 let known_run = run_trace_of(&view, verified.tenant(), &candidate.run_id);
-                if known_run.is_none() && !open_run(state, verified, &graph, &candidate.run_id).await
+                if known_run.is_none()
+                    && !open_run(state, verified, &graph, &candidate.run_id).await
                 {
                     return Err(format!(
                         "{}: run {} is not an open or recorded run of the caller",
@@ -174,7 +175,9 @@ pub(crate) mod served {
                     reply: ResultPayload::of::<KnowledgeFlagGet>(view_of(&view, flag))?,
                 })
             }
-            KnowledgeFlagOp::List { state: only, limit, .. } => {
+            KnowledgeFlagOp::List {
+                state: only, limit, ..
+            } => {
                 let mut flags = all_flags(&view, verified.tenant());
                 flags.retain(|flag| only.is_none_or(|wanted| flag.state == wanted));
                 flags.sort_by(|a, b| {
@@ -228,7 +231,11 @@ pub(crate) mod served {
     }
 
     /// The id of the `RunTrace` node recording `run_id` in `tenant`, when the view holds one.
-    pub(in crate::decide) fn run_trace_of(view: &GraphView, tenant: &str, run_id: &str) -> Option<String> {
+    pub(in crate::decide) fn run_trace_of(
+        view: &GraphView,
+        tenant: &str,
+        run_id: &str,
+    ) -> Option<String> {
         let mut ids: Vec<&String> = view.node_properties.keys().collect();
         ids.sort();
         ids.into_iter().find_map(|id| {
@@ -248,11 +255,7 @@ pub(crate) mod served {
     fn target_node(view: &GraphView, target_ref: &str) -> Option<String> {
         let rest = medulla_decision_types::knowledge_flag::target_form(target_ref)
             .map(|(_, rest)| rest.to_string())?;
-        let candidates = [
-            target_ref.to_string(),
-            rest.clone(),
-            format!("gap:{rest}"),
-        ];
+        let candidates = [target_ref.to_string(), rest.clone(), format!("gap:{rest}")];
         candidates
             .into_iter()
             .find(|id| view.node_properties.contains_key(id))
@@ -301,7 +304,12 @@ pub(crate) mod served {
                                    "tenant_id": flag.tenant_id},
                 }));
             }
-            operations.push(edge_operation(&flag.flag_id, &principal, RAISED_BY, &receipt_id));
+            operations.push(edge_operation(
+                &flag.flag_id,
+                &principal,
+                RAISED_BY,
+                &receipt_id,
+            ));
             if let Some(target) = target {
                 operations.push(edge_operation(&flag.flag_id, &target, FLAGS, &receipt_id));
             }
@@ -311,7 +319,12 @@ pub(crate) mod served {
                 .filter(|node| view.node_properties.contains_key(node))
                 .or(run_trace);
             if let Some(trace) = trace {
-                operations.push(edge_operation(&flag.flag_id, &trace, OBSERVED_IN, &receipt_id));
+                operations.push(edge_operation(
+                    &flag.flag_id,
+                    &trace,
+                    OBSERVED_IN,
+                    &receipt_id,
+                ));
             }
         }
         Ok(PlannedWrite {
@@ -339,10 +352,18 @@ pub(crate) mod served {
         let receipt_id = receipt_id_of(&flag);
         let mut operations = resolution_operations(view, &flag, &receipt_id, resolution);
         if let Some(correction_id) = correction_id {
-            let node = correction_node(view, verified.tenant(), correction_id).ok_or_else(|| {
-                invalid_parameter(format!("correction {correction_id} is not in the caller's graph"))
-            })?;
-            operations.push(edge_operation(&flag.flag_id, &node, RESOLVED_BY, &receipt_id));
+            let node =
+                correction_node(view, verified.tenant(), correction_id).ok_or_else(|| {
+                    invalid_parameter(format!(
+                        "correction {correction_id} is not in the caller's graph"
+                    ))
+                })?;
+            operations.push(edge_operation(
+                &flag.flag_id,
+                &node,
+                RESOLVED_BY,
+                &receipt_id,
+            ));
         }
         if let Some(revision) = fixed_by {
             if !view.node_properties.contains_key(revision) {
@@ -350,7 +371,12 @@ pub(crate) mod served {
                     "revision {revision} is not in the caller's graph"
                 )));
             }
-            operations.push(edge_operation(&flag.flag_id, revision, FIXED_BY, &receipt_id));
+            operations.push(edge_operation(
+                &flag.flag_id,
+                revision,
+                FIXED_BY,
+                &receipt_id,
+            ));
         }
         Ok(PlannedWrite {
             graph,
@@ -400,9 +426,13 @@ pub(crate) mod served {
         let current = flag_by_id(view, tenant, flag_id)?;
         let flag = resolve(&current, FlagResolution::Adopt).map_err(refused)?;
         let receipt_id = receipt_id_of(&flag);
-        let mut operations =
-            resolution_operations(view, &flag, &receipt_id, FlagResolution::Adopt);
-        operations.push(edge_operation(&flag.flag_id, fixed_by, FIXED_BY, &receipt_id));
+        let mut operations = resolution_operations(view, &flag, &receipt_id, FlagResolution::Adopt);
+        operations.push(edge_operation(
+            &flag.flag_id,
+            fixed_by,
+            FIXED_BY,
+            &receipt_id,
+        ));
         Ok(operations)
     }
 
@@ -474,7 +504,12 @@ pub(crate) mod served {
         json!({"op": "upsert_node", "id": flag.flag_id, "properties": properties})
     }
 
-    pub(in crate::decide) fn edge_operation(source: &str, target: &str, relationship: &str, receipt_id: &str) -> Value {
+    pub(in crate::decide) fn edge_operation(
+        source: &str,
+        target: &str,
+        relationship: &str,
+        receipt_id: &str,
+    ) -> Value {
         json!({
             "op": "upsert_edge",
             "source": source,
@@ -485,7 +520,11 @@ pub(crate) mod served {
 
     /// The flag stored under `flag_id`, as the caller sees it. A flag of another tenant, or one
     /// the caller's view hides, is not found.
-    pub(in crate::decide) fn flag_by_id(view: &GraphView, tenant: &str, flag_id: &str) -> Result<KnowledgeFlag, String> {
+    pub(in crate::decide) fn flag_by_id(
+        view: &GraphView,
+        tenant: &str,
+        flag_id: &str,
+    ) -> Result<KnowledgeFlag, String> {
         view.node_row_object(flag_id)
             .and_then(|row| flag_of_row(&row))
             .filter(|flag| flag.tenant_id == tenant)

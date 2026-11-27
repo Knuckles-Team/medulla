@@ -258,19 +258,22 @@ async fn canonical_task_plan_schema_publishes_once_and_routes() {
         draft.content_digest = encoded.content_digest.clone();
         draft.attributes = encoded.attributes.clone();
         h.store
-            .publish_component(AgentComponentPublishRequest {
-                context: mutation_context(
-                    &h.store,
-                    TENANT,
-                    &key,
-                    nonce,
-                    0,
-                    "agent-component:publish",
-                ),
-                component: draft,
-                evaluation_receipt_digest: None,
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: mutation_context(
+                        &h.store,
+                        TENANT,
+                        &key,
+                        nonce,
+                        0,
+                        "agent-component:publish",
+                    ),
+                    component: draft,
+                    evaluation_receipt_digest: None,
+                    body: None,
+                },
+                None,
+            )
             .unwrap()
             .result
             .component
@@ -376,7 +379,10 @@ async fn premises_name_calls_and_bindings() {
 
 /// A task-plan request over a proposal given as JSON, with the declared
 /// candidates the handler requires (the sorted task ids).
-pub(super) fn request_with(pin: &ComponentDependency, proposal: serde_json::Value) -> DecideRequest {
+pub(super) fn request_with(
+    pin: &ComponentDependency,
+    proposal: serde_json::Value,
+) -> DecideRequest {
     let proposal: TaskPlanProposal = serde_json::from_value(proposal).unwrap();
     let mut request = task_request(pin);
     let mut ids: Vec<String> = proposal.tasks.iter().map(|t| t.task_id.clone()).collect();
@@ -680,19 +686,22 @@ fn publish_skill_with_parent(
         draft.attributes.insert("parent".into(), parent.into());
     }
     h.store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                &h.store,
-                tenant,
-                &format!("seed:{id}"),
-                nonce,
-                0,
-                "agent-component:publish",
-            ),
-            component: draft,
-            evaluation_receipt_digest: None,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    &h.store,
+                    tenant,
+                    &format!("seed:{id}"),
+                    nonce,
+                    0,
+                    "agent-component:publish",
+                ),
+                component: draft,
+                evaluation_receipt_digest: None,
+                body: None,
+            },
+            None,
+        )
         .unwrap();
 }
 
@@ -1752,7 +1761,10 @@ async fn decide_routes_task_plan_with_foreach() {
     let record = &batch.records.as_slice()[0];
     let plan = record.task_plan().unwrap();
     let join = plan.tasks.iter().find(|t| t.task_id == "join").unwrap();
-    let foreach = join.foreach.as_ref().expect("the typed plan carries the foreach step");
+    let foreach = join
+        .foreach
+        .as_ref()
+        .expect("the typed plan carries the foreach step");
     assert_eq!(foreach.source.reference, "steps.c.output.items");
     assert_eq!(foreach.max_items, 5);
     assert_eq!(

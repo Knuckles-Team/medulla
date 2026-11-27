@@ -537,11 +537,7 @@ fn response_cost(resp: &Resp, total: &mut usize, items: &mut usize) -> bool {
                 response_cost(key, total, items) && response_cost(value, total, items)
             });
         }
-        Resp::Int(_)
-        | Resp::Bulk(None)
-        | Resp::Array(None)
-        | Resp::Bool(_)
-        | Resp::Null => 0,
+        Resp::Int(_) | Resp::Bulk(None) | Resp::Array(None) | Resp::Bool(_) | Resp::Null => 0,
     };
     *total = match (*total).checked_add(payload_bytes) {
         Some(value) if value <= MAX_REDIS_RESPONSE_BYTES => value,

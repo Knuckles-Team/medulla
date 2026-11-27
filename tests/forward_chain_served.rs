@@ -158,20 +158,110 @@ async fn chain_covers_model_order_origin_refusal_restart_and_trace() {
         node(&state, 10 + id as u64, name).await;
     }
     // Matching pair: [0,10) and [5,20) overlap on [5,10).
-    edge(&state, 40, "s1", "x1", "present", (0, 10), Some(("sentence", "sent:1"))).await;
-    edge(&state, 41, "s1", "x2", "assigned", (5, 20), Some(("axiom", "ax:1"))).await;
+    edge(
+        &state,
+        40,
+        "s1",
+        "x1",
+        "present",
+        (0, 10),
+        Some(("sentence", "sent:1")),
+    )
+    .await;
+    edge(
+        &state,
+        41,
+        "s1",
+        "x2",
+        "assigned",
+        (5, 20),
+        Some(("axiom", "ax:1")),
+    )
+    .await;
     // Nonmatching pair: closed-open [0,5) and [5,20) share no instant.
-    edge(&state, 42, "s2", "x3", "present", (0, 5), Some(("sentence", "sent:2"))).await;
-    edge(&state, 43, "s2", "x4", "assigned", (5, 20), Some(("axiom", "ax:2"))).await;
+    edge(
+        &state,
+        42,
+        "s2",
+        "x3",
+        "present",
+        (0, 5),
+        Some(("sentence", "sent:2")),
+    )
+    .await;
+    edge(
+        &state,
+        43,
+        "s2",
+        "x4",
+        "assigned",
+        (5, 20),
+        Some(("axiom", "ax:2")),
+    )
+    .await;
     // Chain: active [0,10) with grants [0,6) and [4,10).
-    edge(&state, 44, "s3", "a0", "active", (0, 10), Some(("sentence", "sent:3"))).await;
-    edge(&state, 45, "s3", "g1", "grant", (0, 6), Some(("sentence", "sent:4"))).await;
-    edge(&state, 46, "s3", "g2", "grant", (4, 10), Some(("axiom", "ax:3"))).await;
+    edge(
+        &state,
+        44,
+        "s3",
+        "a0",
+        "active",
+        (0, 10),
+        Some(("sentence", "sent:3")),
+    )
+    .await;
+    edge(
+        &state,
+        45,
+        "s3",
+        "g1",
+        "grant",
+        (0, 6),
+        Some(("sentence", "sent:4")),
+    )
+    .await;
+    edge(
+        &state,
+        46,
+        "s3",
+        "g2",
+        "grant",
+        (4, 10),
+        Some(("axiom", "ax:3")),
+    )
+    .await;
     // Refusal fixtures: no origin, an empty window, two windows on one edge id.
     edge(&state, 47, "s4", "m1", "noorigin", (0, 10), None).await;
-    edge(&state, 48, "s4", "b1", "badbound", (10, 10), Some(("sentence", "sent:5"))).await;
-    edge(&state, 49, "s4", "d1", "dup", (0, 10), Some(("sentence", "sent:6"))).await;
-    edge(&state, 50, "s4", "d1", "dup", (0, 11), Some(("sentence", "sent:6"))).await;
+    edge(
+        &state,
+        48,
+        "s4",
+        "b1",
+        "badbound",
+        (10, 10),
+        Some(("sentence", "sent:5")),
+    )
+    .await;
+    edge(
+        &state,
+        49,
+        "s4",
+        "d1",
+        "dup",
+        (0, 10),
+        Some(("sentence", "sent:6")),
+    )
+    .await;
+    edge(
+        &state,
+        50,
+        "s4",
+        "d1",
+        "dup",
+        (0, 11),
+        Some(("sentence", "sent:6")),
+    )
+    .await;
 
     // Matching intervals derive one fact with its origin; nonmatching derive none.
     let generation = version(&state);
@@ -216,7 +306,11 @@ async fn chain_covers_model_order_origin_refusal_restart_and_trace() {
     assert_eq!(windows, [(0, 6), (4, 6), (4, 10)]);
     assert_eq!(chain.trace.iter().map(|step| step.round).max(), Some(2));
     assert_eq!(
-        chain.trace.iter().map(|step| step.order).collect::<Vec<_>>(),
+        chain
+            .trace
+            .iter()
+            .map(|step| step.order)
+            .collect::<Vec<_>>(),
         [0, 1, 2]
     );
 
@@ -236,10 +330,26 @@ async fn chain_covers_model_order_origin_refusal_restart_and_trace() {
 
     // Every refusal names its code and leaves the graph version unchanged.
     for (id, text, code) in [
-        (70, "RULE temporal-rules-v2 h <- present", "RULE_VERSION_UNSUPPORTED"),
-        (71, "RULE temporal-rules-v1 h <- noorigin", "DERIVED_ORIGIN_MISSING"),
-        (72, "RULE temporal-rules-v1 h <- badbound", "DERIVED_BOUND_MALFORMED"),
-        (73, "RULE temporal-rules-v1 h <- dup", "DERIVED_WINDOW_CONFLICT"),
+        (
+            70,
+            "RULE temporal-rules-v2 h <- present",
+            "RULE_VERSION_UNSUPPORTED",
+        ),
+        (
+            71,
+            "RULE temporal-rules-v1 h <- noorigin",
+            "DERIVED_ORIGIN_MISSING",
+        ),
+        (
+            72,
+            "RULE temporal-rules-v1 h <- badbound",
+            "DERIVED_BOUND_MALFORMED",
+        ),
+        (
+            73,
+            "RULE temporal-rules-v1 h <- dup",
+            "DERIVED_WINDOW_CONFLICT",
+        ),
     ] {
         let before = version(&state);
         let refused = send(&state, id, rules(text)).await;
@@ -282,7 +392,10 @@ async fn chain_covers_model_order_origin_refusal_restart_and_trace() {
         .await
         .expect("reload durable graphs");
     let props = stored_props(&restarted, 80, &fact_node).await;
-    assert_eq!(props.get("type").and_then(|v| v.as_str()), Some("DerivedFact"));
+    assert_eq!(
+        props.get("type").and_then(|v| v.as_str()),
+        Some("DerivedFact")
+    );
     assert_eq!(
         props.get("fact_id").and_then(|v| v.as_str()),
         Some(fact.fact.fact_id.as_str())
@@ -295,8 +408,14 @@ async fn chain_covers_model_order_origin_refusal_restart_and_trace() {
         props.get("graph_generation").and_then(|v| v.as_u64()),
         Some(generation)
     );
-    assert_eq!(props.get("origin_kind").and_then(|v| v.as_str()), Some("sentence"));
-    assert_eq!(props.get("origin_ref").and_then(|v| v.as_str()), Some("sent:1"));
+    assert_eq!(
+        props.get("origin_kind").and_then(|v| v.as_str()),
+        Some("sentence")
+    );
+    assert_eq!(
+        props.get("origin_ref").and_then(|v| v.as_str()),
+        Some("sent:1")
+    );
     assert_eq!(props.get("valid_from").and_then(|v| v.as_i64()), Some(5));
     assert_eq!(props.get("valid_to").and_then(|v| v.as_i64()), Some(10));
 }

@@ -135,7 +135,12 @@ pub struct TermConflict {
 impl TermConflict {
     /// The one node id of this pair, so recording it twice is one fact.
     pub fn node_id(&self) -> String {
-        format!("term-conflict:{}:{}:{}", norm(&self.term), self.left_id, self.right_id)
+        format!(
+            "term-conflict:{}:{}:{}",
+            norm(&self.term),
+            self.left_id,
+            self.right_id
+        )
     }
 
     /// The properties of the conflict fact node, status `open`.
@@ -152,9 +157,7 @@ impl TermConflict {
     }
 }
 
-fn node_props(
-    blob: &[u8],
-) -> Option<serde_json::Map<String, serde_json::Value>> {
+fn node_props(blob: &[u8]) -> Option<serde_json::Map<String, serde_json::Value>> {
     match medulla_types::msgpack::decode_property_value(blob) {
         Ok(serde_json::Value::Object(props)) => Some(props),
         _ => None,
@@ -170,9 +173,8 @@ fn prop_text(props: &serde_json::Map<String, serde_json::Value>, key: &str) -> S
 }
 
 fn same_meaning(a: &str, b: &str) -> bool {
-    let words = |text: &str| -> Vec<String> {
-        text.split_whitespace().map(str::to_lowercase).collect()
-    };
+    let words =
+        |text: &str| -> Vec<String> { text.split_whitespace().map(str::to_lowercase).collect() };
     words(a) == words(b)
 }
 
@@ -219,7 +221,10 @@ pub fn reconcile_term_definitions(view: &GraphView) -> Vec<TermConflict> {
                     left_definition: left.3.clone(),
                     right_definition: right.3.clone(),
                 };
-                if !view.node_properties.contains_key(conflict.node_id().as_str()) {
+                if !view
+                    .node_properties
+                    .contains_key(conflict.node_id().as_str())
+                {
                     found.push(conflict);
                 }
             }

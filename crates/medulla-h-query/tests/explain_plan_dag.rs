@@ -5,8 +5,8 @@
 use medulla_exec::exec::PlanCtx;
 use medulla_graph_core::graph::GraphCore;
 use medulla_plan::uql::serve::run_statement;
-use medulla_semantic_index::semantic::SemanticStore;
 use medulla_query_types::wire::UqlResult;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_uql::{parse_statement, Params};
 
 fn explain(src: &str) -> (u32, u32, usize) {

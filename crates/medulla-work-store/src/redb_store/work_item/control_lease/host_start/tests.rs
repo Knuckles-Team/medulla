@@ -16,7 +16,16 @@ fn request() -> IssueHostStartGrantRequest {
 fn native_writer_requires_issuer_and_stamps_immutable_top_level_provenance() {
     let temp = open("host-start-native");
     with_node_rows(&temp.shard, "host-issuer", |nodes, transitions| {
-        assert!(issue(GRAPH, &request(), None, nodes, transitions, DurableCrypto::none(), 1_000).is_err());
+        assert!(issue(
+            GRAPH,
+            &request(),
+            None,
+            nodes,
+            transitions,
+            DurableCrypto::none(),
+            1_000
+        )
+        .is_err());
         assert!(load_row(nodes, GRAPH, "host-grant", DurableCrypto::none())?.is_none());
         let result = issue(
             GRAPH,

@@ -44,7 +44,9 @@ pub(super) fn plan_labels(plan: &medulla_query_types::wire::Plan) -> Vec<String>
             // A pack source read counts as a read of its catalog asset
             // (MEDULLA-FEDERATED-QUERY-R722.5).
             #[cfg(feature = "federation")]
-            medulla_query_types::wire::Op::ForeignScan { source, .. } => foreign_source_name(source),
+            medulla_query_types::wire::Op::ForeignScan { source, .. } => {
+                foreign_source_name(source)
+            }
             _ => None,
         })
         .collect();

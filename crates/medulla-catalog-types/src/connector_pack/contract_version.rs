@@ -7,8 +7,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::contract::Digest256;
 use crate::stewardship::ChangeRequest;
+use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 
 /// Longest connector name, version, IRI, reason or owner a record may carry.
@@ -243,7 +243,11 @@ pub struct StagedPack {
 impl PendingPackRelease {
     pub fn validate(&self) -> Result<(), PackContractError> {
         self.release.validate()?;
-        if self.staged.as_ref().is_some_and(|staged| staged.parts.is_empty()) {
+        if self
+            .staged
+            .as_ref()
+            .is_some_and(|staged| staged.parts.is_empty())
+        {
             return Err(invalid("staged"));
         }
         for found in &self.breaks {

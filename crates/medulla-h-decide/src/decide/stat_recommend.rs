@@ -11,14 +11,14 @@
 
 use sha2::{Digest, Sha256};
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
 use medulla_decision_stats::decision::recommend::{fit_codebooks, CatalogItem, RecommendError};
 use medulla_decision_types::decision::item_recommendation::{
     encoder_key, CatalogEncoderFitted, DIMENSION_MISMATCH, EMPTY_CATALOG,
 };
 use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
-use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 
 use super::family::json_param;
@@ -131,7 +131,10 @@ pub(super) fn fit_catalog_encoder(
     let digest = catalog.digest_hex();
     ctx.store.put_decision_artifacts(
         ctx.tenant_id,
-        &[(encoder_key(catalog_ref, &digest), encode_artifact(&encoder)?)],
+        &[(
+            encoder_key(catalog_ref, &digest),
+            encode_artifact(&encoder)?,
+        )],
     )?;
     Ok(CatalogEncoderFitted {
         catalog_ref: catalog_ref.to_string(),

@@ -48,7 +48,10 @@ pub fn edge_weight(core: &GraphCore, a: &str, b: &str) -> f64 {
 pub fn edge_weight_in_view(view: &super::GraphView, a: &str, b: &str) -> f64 {
     let mut best: Option<f64> = None;
     for (src, tgt) in [(a, b), (b, a)] {
-        let Some(blobs) = view.edge_properties.get(&(src.to_string(), tgt.to_string())) else {
+        let Some(blobs) = view
+            .edge_properties
+            .get(&(src.to_string(), tgt.to_string()))
+        else {
             continue;
         };
         for blob in blobs {
@@ -114,8 +117,8 @@ impl HopScope<'_> {
                 .iter()
                 .flat_map(|(src, tgt)| core.get_edge_properties(src, tgt))
                 .any(|blob| {
-                    let object = medulla_types::msgpack::decode_property_object(&blob)
-                        .unwrap_or_default();
+                    let object =
+                        medulla_types::msgpack::decode_property_object(&blob).unwrap_or_default();
                     property_str(&object, &["relationship", "type", "edge_type"])
                         .is_some_and(|label| filter.edge_labels.iter().any(|l| l == label))
                 });
@@ -123,9 +126,8 @@ impl HopScope<'_> {
                 return false;
             }
         }
-        let needs_node = !filter.node_labels.is_empty()
-            || filter.graph.is_some()
-            || filter.language.is_some();
+        let needs_node =
+            !filter.node_labels.is_empty() || filter.graph.is_some() || filter.language.is_some();
         if !needs_node {
             return true;
         }
@@ -314,8 +316,14 @@ mod tests {
         assert_eq!(z.path, vec!["s", "a", "z"]);
 
         // hops == 0 returns the seeds only; k truncates.
-        assert_eq!(expand_hops(&core, &seeds, 0, 2, 0.5, 10, &HopScope::unrestricted()).len(), 1);
-        assert_eq!(expand_hops(&core, &seeds, 2, 32, 0.5, 2, &HopScope::unrestricted()).len(), 2);
+        assert_eq!(
+            expand_hops(&core, &seeds, 0, 2, 0.5, 10, &HopScope::unrestricted()).len(),
+            1
+        );
+        assert_eq!(
+            expand_hops(&core, &seeds, 2, 32, 0.5, 2, &HopScope::unrestricted()).len(),
+            2
+        );
 
         // A node reachable twice appears once with the better score.
         let dup = expand_hops(

@@ -57,7 +57,10 @@ fn a_refused_transition_leaves_the_phase_and_the_registry_bounded() {
     let extra = enter(&registry, 2, "bob");
     assert_eq!(registry.len(), 1);
     assert_eq!(registry.dropped_total(), 1);
-    assert_eq!(extra.apply(RequestEvent::Admit).unwrap(), RequestState::Admitted);
+    assert_eq!(
+        extra.apply(RequestEvent::Admit).unwrap(),
+        RequestState::Admitted
+    );
 }
 
 // spec: MEDULLA-OBSERVE-R006.2
@@ -65,7 +68,11 @@ fn a_refused_transition_leaves_the_phase_and_the_registry_bounded() {
 async fn a_waiting_request_names_its_lock_and_returns_to_handling() {
     let registry = RequestRegistry::new(8);
     let guard = enter(&registry, 1, "alice");
-    for event in [RequestEvent::Admit, RequestEvent::Authorize, RequestEvent::Handle] {
+    for event in [
+        RequestEvent::Admit,
+        RequestEvent::Authorize,
+        RequestEvent::Handle,
+    ] {
         guard.apply(event).unwrap();
     }
     requests::scope(guard.handle(), async {

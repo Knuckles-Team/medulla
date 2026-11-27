@@ -15,16 +15,16 @@ use medulla_decision_types::decision::capability_designation::{
     DesignationWeights, EntityKind, PackOrigin, QueryVector,
     DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, MAX_DESIGNATIONS, Q32_ONE,
 };
-use medulla_decision_types::decision::promotion_tier::{
-    TieredSkill, ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED, PERSONA_UNKNOWN,
-    PREMISE_ALWAYS_ON, PREMISE_PERSONA, TIER_REVIEW_MISSING,
-};
 use medulla_decision_types::decision::load_set::{
     LoadSetAnswer, LoadSetQuestion, LOAD_SET_NO_DESIGNATED_COMPONENT, LOAD_SET_STALE_PACK_REVISION,
 };
 use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
 use medulla_decision_types::decision::load_set_knobs::KNOBS as LOAD_SET_KNOBS;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
+use medulla_decision_types::decision::promotion_tier::{
+    TieredSkill, ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED, PERSONA_UNKNOWN,
+    PREMISE_ALWAYS_ON, PREMISE_PERSONA, TIER_REVIEW_MISSING,
+};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
@@ -275,7 +275,10 @@ fn tiered_skills(
     };
     if let Some(persona) = &question.persona {
         let included = read.personas.get(persona).ok_or_else(|| {
-            coded(PERSONA_UNKNOWN, format!("the graph holds no persona {persona}"))
+            coded(
+                PERSONA_UNKNOWN,
+                format!("the graph holds no persona {persona}"),
+            )
         })?;
         for skill_ref in included {
             let Some(tier) = tiers.get(skill_ref).copied() else {

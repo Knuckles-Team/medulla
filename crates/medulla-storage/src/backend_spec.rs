@@ -205,11 +205,11 @@ impl StorageBackendSpec {
     pub fn from_setting(setting: Option<&str>) -> Result<Self, BackendSpecRefusal> {
         match setting.map(str::trim) {
             None | Some("") | Some("local") => Ok(Self::default()),
-            Some(json) => serde_json::from_str::<Self>(json).map_err(|e| {
-                BackendSpecRefusal::UnknownVariant {
+            Some(json) => {
+                serde_json::from_str::<Self>(json).map_err(|e| BackendSpecRefusal::UnknownVariant {
                     variant: e.to_string(),
-                }
-            }),
+                })
+            }
         }
     }
 

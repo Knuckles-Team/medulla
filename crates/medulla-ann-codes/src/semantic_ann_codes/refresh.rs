@@ -8,14 +8,11 @@
 //! writes the replacement binding, its fresh progress, the superseded old
 //! progress and the moved head.
 
-use medulla_index_types::semantic_index::{SemanticSourceKind, SemanticSourceRevision};
 use super::batch::{
     binding_subject, mutation_row, operation_batch_id, require_attribution, MetadataMutation,
 };
 use super::persist::{put_bytes_once, replace_bytes};
-use super::reconciliation::{
-    compare_source_revision, validate_sql_source_revision,
-};
+use super::reconciliation::{compare_source_revision, validate_sql_source_revision};
 use super::record::{decode, encode, encode_valid, row};
 use super::stage::{
     completion_coordinates, fresh_source_progress, retained_completion, stage_intent_outbox,
@@ -26,6 +23,7 @@ use super::{
     OperationAttribution, SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt,
     SEMANTIC_BINDING_CREATED_TOPIC,
 };
+use medulla_index_types::semantic_index::{SemanticSourceKind, SemanticSourceRevision};
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
     semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation,

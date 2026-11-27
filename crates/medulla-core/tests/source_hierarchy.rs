@@ -134,7 +134,9 @@ fn source_path_joins_ids_from_the_root() {
     let core = GraphCore::new();
     upsert_containers(&core, "t1", &tree(), 1_234).unwrap();
     let read = |id: &str| -> Value {
-        let bytes = core.get_node_properties(&node(id)).expect("the node exists");
+        let bytes = core
+            .get_node_properties(&node(id))
+            .expect("the node exists");
         rmp_serde::from_slice(&bytes).unwrap()
     };
     assert_eq!(read("root")["source_path"], "root");
@@ -157,7 +159,7 @@ fn source_path_joins_ids_from_the_root() {
         }))
         .unwrap(),
     );
-    let refused = upsert_containers(&core, "t1", &[container("child", Some("legacy"))], 3_000)
-        .unwrap_err();
+    let refused =
+        upsert_containers(&core, "t1", &[container("child", Some("legacy"))], 3_000).unwrap_err();
     assert_eq!(refused.code, "CONTAINER_PARENT_UNKNOWN");
 }

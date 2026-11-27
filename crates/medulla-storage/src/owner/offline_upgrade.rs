@@ -15,10 +15,12 @@ use super::agent_library_upgrade::{
     inspect_semantic_index_promotion_upgrade, upgrade_agent_library_capability_reward,
     upgrade_agent_library_concept_lineage, upgrade_agent_library_mcp_catalog,
     upgrade_agent_library_retry_allowances, upgrade_graph_shard, upgrade_kv_cold_tier,
-    upgrade_rbac, upgrade_semantic_index_promotion, GraphShardSource, RbacSource,
-    OwnerLayoutUpgradeReport,
+    upgrade_rbac, upgrade_semantic_index_promotion, GraphShardSource, OwnerLayoutUpgradeReport,
+    RbacSource,
 };
+use super::agent_library_upgrade::{upgrade_jobs, JobsSource};
 use super::identity::PhysicalStoreIdentity;
+use super::jobs_upgrade::inspect_jobs_upgrade;
 use super::layout::OwnerLayout;
 use super::lineage::{
     layout_predecessors, AGENT_LIBRARY_BEFORE_CAPABILITY_REWARD,
@@ -28,19 +30,18 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
     GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS, GRAPH_SHARD_BEFORE_WRITE_LEDGER,
+    JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTER, JOBS_BEFORE_TASK_QUEUE,
     KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS,
-    JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTER, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
-    SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
+    SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_MATVIEWS,
+    SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
-use super::agent_library_upgrade::{upgrade_jobs, JobsSource};
-use super::jobs_upgrade::inspect_jobs_upgrade;
 use super::persisted_layout::{read_persisted_manifest, LayoutPredecessor};
 use super::sql_checkpoint_upgrade::{
-    inspect_sql_ann_generation_upgrade, inspect_sql_named_sequence_upgrade,
-    inspect_sql_matview_upgrade, inspect_sql_source_checkpoint_upgrade,
+    inspect_sql_ann_generation_upgrade, inspect_sql_matview_upgrade,
+    inspect_sql_named_sequence_upgrade, inspect_sql_source_checkpoint_upgrade,
     inspect_sql_trigger_reaction_upgrade, upgrade_sql_ann_generations, upgrade_sql_matviews,
-    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints, upgrade_sql_trigger_reactions, SqlSourceCheckpointInspectionOptions,
-    SqlSourceCheckpointUpgradeReport,
+    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints, upgrade_sql_trigger_reactions,
+    SqlSourceCheckpointInspectionOptions, SqlSourceCheckpointUpgradeReport,
 };
 use crate::physical::integrity::PrivatePayloadIntegrity;
 use crate::physical::manifest::OwnerManifest;

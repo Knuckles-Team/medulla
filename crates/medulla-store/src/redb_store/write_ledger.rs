@@ -150,7 +150,9 @@ pub fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), Strin
 pub fn retire_graph_rows(
     write: &medulla_storage::PhysicalWriteCapability<'_, medulla_storage::GraphShardOwner>,
 ) -> Result<(), String> {
-    write.scoped_owner_table_mut(WRITE_DAYS)?.purge_scope_rows()?;
+    write
+        .scoped_owner_table_mut(WRITE_DAYS)?
+        .purge_scope_rows()?;
     write
         .scoped_owner_table_mut(GRAPH_CREATOR)?
         .purge_scope_rows()

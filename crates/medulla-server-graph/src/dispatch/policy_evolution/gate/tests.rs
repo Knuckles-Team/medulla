@@ -305,7 +305,11 @@ fn held_out_list_is_bounded_at_4096() {
     .is_err());
 }
 
-fn knob_evaluation(policy_id: &str, revision: &str, champion: Option<&str>) -> PolicyEvolutionRecord {
+fn knob_evaluation(
+    policy_id: &str,
+    revision: &str,
+    champion: Option<&str>,
+) -> PolicyEvolutionRecord {
     let record = typed(json!({
         "subject": {"kind": "knob_set", "policy_id": policy_id},
         "revision_ref": revision, "champion_revision_ref": champion,
@@ -342,7 +346,10 @@ fn knob_set_evaluation_names_its_policy_revision() {
         Err(PolicyRefusal::RecordMissing(absent.clone()))
     );
     assert_eq!(
-        admit(&knob_evaluation("policy:decide", &new, Some(&absent)), &graph),
+        admit(
+            &knob_evaluation("policy:decide", &new, Some(&absent)),
+            &graph
+        ),
         Err(PolicyRefusal::RecordMissing(absent))
     );
     // A policy that was never published has no revision at all.
@@ -378,7 +385,10 @@ fn champion_that_trained_on_the_held_out_set_refuses_as_split_overlap() {
         refusal,
         Err(PolicyRefusal::SplitOverlap("trajectory:0001".into()))
     );
-    assert_eq!(PolicyRefusal::SplitOverlap("t".into()).code(), "POLICY_SPLIT_OVERLAP");
+    assert_eq!(
+        PolicyRefusal::SplitOverlap("t".into()).code(),
+        "POLICY_SPLIT_OVERLAP"
+    );
     // A held-out set the champion never read is admitted.
     assert_eq!(
         admit(&record(&base_id, &trained_id, &["trajectory:0002"]), &graph),
@@ -391,7 +401,10 @@ fn champion_that_trained_on_the_held_out_set_refuses_as_split_overlap() {
 fn decision_head_and_program_subjects_refuse_as_unsupported() {
     let graph = Graph::default();
     for (subject, kind) in [
-        (json!({"kind": "decision_head", "component_id": "c"}), "decision_head"),
+        (
+            json!({"kind": "decision_head", "component_id": "c"}),
+            "decision_head",
+        ),
         (json!({"kind": "program", "program_ref": "p"}), "program"),
     ] {
         let record = PolicyEvolutionRecord::PolicyEvaluation {

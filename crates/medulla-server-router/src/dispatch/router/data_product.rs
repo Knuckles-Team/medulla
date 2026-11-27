@@ -250,7 +250,9 @@ async fn open(
     require_tenant(verified, tenant)?;
     request.validate().map_err(record_refusal)?;
     if request.state != AccessRequestState::Pending || request.grant_ref.is_some() {
-        return Err(invalid("a new access request is pending and holds no grant"));
+        return Err(invalid(
+            "a new access request is pending and holds no grant",
+        ));
     }
     // A request is the caller's own; nobody opens one for another principal.
     if request.principal != verified.agent_id() {
@@ -544,16 +546,26 @@ async fn decide(
     } else {
         AccessRequestEvent::Reject
     };
-    let next_state = request.state.apply(event).map_err(|refusal| refusal.to_string())?;
+    let next_state = request
+        .state
+        .apply(event)
+        .map_err(|refusal| refusal.to_string())?;
     if approve {
         // Every dataset's share is decided before the first one is written, so a refused
         // dataset leaves every node as it was. A share a retry finds already written is
         // skipped, which makes an approval that failed at the store write repeatable.
         let mut planned = Vec::with_capacity(product.datasets.len());
         for dataset in &product.datasets {
-            if let Some(share) =
-                plan_dataset_share(state, req, verified, &product.id, dataset, principal, &delegation)
-                .await?
+            if let Some(share) = plan_dataset_share(
+                state,
+                req,
+                verified,
+                &product.id,
+                dataset,
+                principal,
+                &delegation,
+            )
+            .await?
             {
                 planned.push(share);
             }

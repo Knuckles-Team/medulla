@@ -556,14 +556,18 @@ pub(super) fn check_program_request(request: &OptimizationRequest) -> Result<(),
     }
     match medulla_program::check_held_out_split(&request.corpus.examples) {
         Ok(()) => {}
-        Err(medulla_program::HeldOutRefusal::Missing) => return Err(format!(
-            "{}: the corpus has no test-split example",
-            PROGRAM_HELDOUT_MISSING.as_str()
-        )),
-        Err(medulla_program::HeldOutRefusal::NotIndependent) => return Err(format!(
-            "{}: no test-split example is graded by a kind that decides promotion",
-            EVAL_SET_NOT_INDEPENDENT.as_str()
-        )),
+        Err(medulla_program::HeldOutRefusal::Missing) => {
+            return Err(format!(
+                "{}: the corpus has no test-split example",
+                PROGRAM_HELDOUT_MISSING.as_str()
+            ))
+        }
+        Err(medulla_program::HeldOutRefusal::NotIndependent) => {
+            return Err(format!(
+                "{}: no test-split example is graded by a kind that decides promotion",
+                EVAL_SET_NOT_INDEPENDENT.as_str()
+            ))
+        }
     }
     // MEDULLA-DECISION-ENGINE-R800.4: a reflective job's front inputs.
     let min_eval_examples =

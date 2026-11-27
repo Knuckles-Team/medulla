@@ -201,7 +201,13 @@ fn inspection_rejects_document_count_and_bytes_before_parsing() {
         .contains(&format!("maximum of {bytes} bytes")));
     let boundary = " ".repeat(bytes);
     assert_eq!(inline(&[&boundary]).unwrap().triple_count, 0);
-    assert!(inspect(&GraphCore::new(), TEST_GRAPH, &documents[..MAX_INSPECT_DOCUMENTS], &[]).is_ok());
+    assert!(inspect(
+        &GraphCore::new(),
+        TEST_GRAPH,
+        &documents[..MAX_INSPECT_DOCUMENTS],
+        &[]
+    )
+    .is_ok());
 }
 
 #[test]
@@ -394,7 +400,10 @@ fn inspection_reports_pack_revision_coverage() {
     assert_eq!(served.tenant_id, "tenant-a");
     assert_eq!(served.graph, TEST_GRAPH);
     assert_eq!(served.pack_record_id, "record-1");
-    assert_eq!(served.target_vocabulary_revisions, vec!["target-rev".to_string()]);
+    assert_eq!(
+        served.target_vocabulary_revisions,
+        vec!["target-rev".to_string()]
+    );
     assert_eq!(served.schema_digest, "ab".repeat(32));
 
     // A coverage bound to another graph is not reported on this one.

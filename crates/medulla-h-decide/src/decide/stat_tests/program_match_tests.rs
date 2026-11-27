@@ -13,13 +13,13 @@ use medulla_decision_types::decision::program_store::{
     program_node_id, RunRecord, RunRecordStored, StoredRun,
 };
 use medulla_decision_types::decision::run_governance::RunOutcome;
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_decision_types::decision::ResolutionKind;
 use medulla_decision_types::decision::StatisticalOutcome;
 use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_types::evidence_class::EvidenceClass;
 
-use medulla_decision_types::decision::program_store::TraceSource;
 use super::program_store_tests::{commit_op, lookup_request, trace, Fixture, GRAPH};
+use medulla_decision_types::decision::program_store::TraceSource;
 
 fn replay(outcome: ReplayOutcome) -> ProgramReplay {
     ProgramReplay {
@@ -54,14 +54,19 @@ async fn commit(h: &Harness, who: &str, replay: ProgramReplay) -> Result<RunReco
 #[tokio::test]
 async fn replay_row_is_stored_once() {
     let h = Harness::new().await;
-    let first = commit(&h, "decider", replay(ReplayOutcome::Hit)).await.unwrap();
+    let first = commit(&h, "decider", replay(ReplayOutcome::Hit))
+        .await
+        .unwrap();
     assert_eq!(first.key, replay_key("summarize-report", "run-7"));
     assert!(!first.replayed);
     let StoredRun::ProgramReplay { replay: stored } = &first.stored else {
         panic!("a replay row, got {:?}", first.stored);
     };
     assert_eq!(stored.replay, replay(ReplayOutcome::Hit));
-    assert!(stored.recorded_at_ms > 0, "the engine time, not the caller's");
+    assert!(
+        stored.recorded_at_ms > 0,
+        "the engine time, not the caller's"
+    );
     assert_eq!(
         stored.principal,
         VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT)
@@ -71,7 +76,9 @@ async fn replay_row_is_stored_once() {
     assert!(bytes.is_some(), "one decision artifact");
 
     // A retry with equal content answers the stored row.
-    let again = commit(&h, "decider", replay(ReplayOutcome::Hit)).await.unwrap();
+    let again = commit(&h, "decider", replay(ReplayOutcome::Hit))
+        .await
+        .unwrap();
     assert!(again.replayed);
     assert_eq!(again.stored, first.stored);
 
@@ -146,19 +153,22 @@ async fn commit_writes_vectors_and_lookup_reads_them() {
     .unwrap();
 
     // The stored index, the phrasing node, its `phrasing_of` edge and one vector per node.
-    let bytes = f
-        .h
-        .store
-        .decision_artifact(TENANT, &match_key("summarize-report"))
-        .unwrap()
-        .expect("every commit stores an index");
+    let bytes =
+        f.h.store
+            .decision_artifact(TENANT, &match_key("summarize-report"))
+            .unwrap()
+            .expect("every commit stores an index");
     let index: ProgramMatchIndex = decode_artifact(&bytes, "program match index").unwrap();
     assert_eq!(index.slots.as_slice(), ["p0"]);
     assert!(index.space_digest.is_some());
     let program_node = program_node_id("summarize-report");
     let phrasing_node = phrasing_node_id("summarize-report", 0);
     assert!(f.core.get_node_properties(&phrasing_node).is_some());
-    assert!(f.core.get_successors(&phrasing_node).unwrap().contains(&program_node));
+    assert!(f
+        .core
+        .get_successors(&phrasing_node)
+        .unwrap()
+        .contains(&program_node));
     let store = f.core.semantic_store.read();
     assert!(store.get_embedding(&program_node).is_some());
     assert!(store.get_embedding(&phrasing_node).is_some());
@@ -175,7 +185,10 @@ async fn commit_writes_vectors_and_lookup_reads_them() {
     );
     let batch = decide(&f.h, request).await.unwrap();
     let StatisticalOutcome::Advisory { scores, .. } = &batch.records.as_slice()[0].outcome else {
-        panic!("a semantic match, got {:?}", batch.records.as_slice()[0].outcome);
+        panic!(
+            "a semantic match, got {:?}",
+            batch.records.as_slice()[0].outcome
+        );
     };
     let body = scores.as_slice()[0]
         .option_id
@@ -184,7 +197,10 @@ async fn commit_writes_vectors_and_lookup_reads_them() {
     let matched: ProgramMatch = serde_json::from_str(body).unwrap();
     assert_eq!(matched.task_signature, "summarize-report");
     assert_eq!(matched.match_kind, MatchKind::Semantic);
-    assert_eq!(matched.matched_node.as_deref(), Some(phrasing_node.as_str()));
+    assert_eq!(
+        matched.matched_node.as_deref(),
+        Some(phrasing_node.as_str())
+    );
     assert_eq!(run_rows(&f.h), 2, "Decide wrote nothing");
 
     // An exact hit records no hits and makes zero embedding calls.
@@ -273,8 +289,11 @@ fn abstain_codes(batch: &DecisionBatch) -> Vec<String> {
 #[tokio::test]
 async fn each_match_refusal_names_its_code() {
     let f = Fixture::new().await;
-    f.add_trace_node(&trace("run-r", RunOutcome::Succeeded, 3, "weekly"), "recorder")
-        .await;
+    f.add_trace_node(
+        &trace("run-r", RunOutcome::Succeeded, 3, "weekly"),
+        "recorder",
+    )
+    .await;
 
     // Commit refusals lead with their code, store no row and write no graph node.
     for (phrasings, threshold, code) in [
@@ -282,36 +301,64 @@ async fn each_match_refusal_names_its_code() {
         (vec!["order {p9}"], None, "PHRASING_SLOT_UNKNOWN"),
         (vec!["{p0} {p1}"], None, "PHRASING_SLOTS_ADJACENT"),
         (vec!["a {p0}", "b {p1}"], None, "PHRASING_SLOTS_DIFFER"),
-        (vec!["a {p0}"], Some(499_999), "MATCH_THRESHOLD_OUT_OF_RANGE"),
+        (
+            vec!["a {p0}"],
+            Some(499_999),
+            "MATCH_THRESHOLD_OUT_OF_RANGE",
+        ),
     ] {
         let refused = commit_phrased(&f, "run-r", &phrasings, threshold)
             .await
             .unwrap_err();
         assert!(refused.starts_with("PARAMETER_INVALID: "), "{refused}");
-        assert!(refused["PARAMETER_INVALID: ".len()..].starts_with(code), "{refused}");
+        assert!(
+            refused["PARAMETER_INVALID: ".len()..].starts_with(code),
+            "{refused}"
+        );
         assert_eq!(run_rows(&f.h), 0, "{code} stores nothing");
-        assert!(f.core.get_node_properties(&program_node_id("summarize-report")).is_none());
+        assert!(f
+            .core
+            .get_node_properties(&program_node_id("summarize-report"))
+            .is_none());
     }
     f.core
         .semantic_store
         .write()
         .declare_space(
-            medulla_index_types::embedding::EmbeddingSpaceRef::pinned("other", "1", "aa", "bb", 8, true)
-                .unwrap(),
+            medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
+                "other", "1", "aa", "bb", 8, true,
+            )
+            .unwrap(),
         )
         .unwrap();
-    let refused = commit_phrased(&f, "run-r", &["a {p0}"], None).await.unwrap_err();
-    assert!(refused.contains("PROGRAM_EMBEDDING_SPACE_MISMATCH"), "{refused}");
+    let refused = commit_phrased(&f, "run-r", &["a {p0}"], None)
+        .await
+        .unwrap_err();
+    assert!(
+        refused.contains("PROGRAM_EMBEDDING_SPACE_MISMATCH"),
+        "{refused}"
+    );
     assert_eq!(run_rows(&f.h), 0);
-    assert!(f.core.get_node_properties(&program_node_id("summarize-report")).is_none());
+    assert!(f
+        .core
+        .get_node_properties(&program_node_id("summarize-report"))
+        .is_none());
 
     // Lookup refusals.
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
     let lookup = |request: DecideRequest| {
-        super::super::family::with_program_candidates(&f.h.state, f.h.store.as_ref(), &verified, request)
+        super::super::family::with_program_candidates(
+            &f.h.state,
+            f.h.store.as_ref(),
+            &verified,
+            request,
+        )
     };
     let long = with_text(lookup_request(&f.h, None), "x", &"a".repeat(4097));
-    assert!(lookup(long).await.unwrap_err().contains("REQUEST_TEXT_TOO_LONG"));
+    assert!(lookup(long)
+        .await
+        .unwrap_err()
+        .contains("REQUEST_TEXT_TOO_LONG"));
     let mut no_graph = with_text(lookup_request(&f.h, None), "x", "text");
     no_graph.params = BoundedVec::new(
         no_graph
@@ -323,7 +370,10 @@ async fn each_match_refusal_names_its_code() {
             .collect(),
     )
     .unwrap();
-    assert!(lookup(no_graph).await.unwrap_err().contains("PROGRAM_GRAPH_REQUIRED"));
+    assert!(lookup(no_graph)
+        .await
+        .unwrap_err()
+        .contains("PROGRAM_GRAPH_REQUIRED"));
     let mut reserved = with_text(lookup_request(&f.h, None), "x", "text");
     let mut params = reserved.params.as_slice().to_vec();
     params.push(TypedParam {
@@ -331,28 +381,57 @@ async fn each_match_refusal_names_its_code() {
         value: TypedValue::Text("{}".to_string()),
     });
     reserved.params = BoundedVec::new(params).unwrap();
-    assert!(lookup(reserved).await.unwrap_err().contains("PROGRAM_CANDIDATES_RESERVED"));
+    assert!(lookup(reserved)
+        .await
+        .unwrap_err()
+        .contains("PROGRAM_CANDIDATES_RESERVED"));
 
     // The graph declares another space, so the lookup abstains with the cause; an unknown
     // signature with no hit abstains NO_PROGRAM on a fresh graph.
-    let unavailable = decide(&f.h, with_text(lookup_request(&f.h, None), "x", "summarize")).await.unwrap();
-    assert_eq!(abstain_codes(&unavailable), ["PROGRAM_EMBEDDING_UNAVAILABLE"]);
+    let unavailable = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "x", "summarize"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        abstain_codes(&unavailable),
+        ["PROGRAM_EMBEDDING_UNAVAILABLE"]
+    );
 
     let g = Fixture::new().await;
-    g.add_trace_node(&trace("run-r", RunOutcome::Succeeded, 3, "weekly"), "recorder")
-        .await;
-    let none = decide(&g.h, with_text(lookup_request(&g.h, None), "x", "summarize")).await.unwrap();
+    g.add_trace_node(
+        &trace("run-r", RunOutcome::Succeeded, 3, "weekly"),
+        "recorder",
+    )
+    .await;
+    let none = decide(
+        &g.h,
+        with_text(lookup_request(&g.h, None), "x", "summarize"),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_codes(&none), ["NO_PROGRAM"]);
     commit_phrased(&g, "run-r", &["summarize the {p0} report"], Some(1_000_000))
         .await
         .unwrap();
-    let below = decide(&g.h, with_text(lookup_request(&g.h, None), "x", "completely unrelated words here"))
-        .await
-        .unwrap();
+    let below = decide(
+        &g.h,
+        with_text(
+            lookup_request(&g.h, None),
+            "x",
+            "completely unrelated words here",
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_codes(&below), ["PROGRAM_BELOW_THRESHOLD"]);
-    let unbound = decide(&g.h, with_text(lookup_request(&g.h, None), "summarize-report", "unrelated"))
-        .await
-        .unwrap();
+    let unbound = decide(
+        &g.h,
+        with_text(lookup_request(&g.h, None), "summarize-report", "unrelated"),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_codes(&unbound), ["PROGRAM_SLOTS_UNBOUND"]);
 }
 
@@ -360,8 +439,11 @@ async fn each_match_refusal_names_its_code() {
 #[tokio::test]
 async fn match_record_lists_score_threshold_and_bindings() {
     let f = Fixture::new().await;
-    f.add_trace_node(&trace("run-e", RunOutcome::Succeeded, 3, "weekly"), "recorder")
-        .await;
+    f.add_trace_node(
+        &trace("run-e", RunOutcome::Succeeded, 3, "weekly"),
+        "recorder",
+    )
+    .await;
     commit_phrased(&f, "run-e", &["summarize the {p0} report"], Some(500_000))
         .await
         .unwrap();
@@ -371,7 +453,11 @@ async fn match_record_lists_score_threshold_and_bindings() {
 
     let semantic = decide(
         &f.h,
-        with_text(lookup_request(&f.h, None), "another-task", "summarize the weekly report"),
+        with_text(
+            lookup_request(&f.h, None),
+            "another-task",
+            "summarize the weekly report",
+        ),
     )
     .await
     .unwrap();
@@ -385,9 +471,14 @@ async fn match_record_lists_score_threshold_and_bindings() {
     ] {
         assert!(fact(record, expected), "premise {expected} is missing");
     }
-    assert!(record.premises.iter().any(|p| p.fact.starts_with("program.match_score_micros=")
-        && !p.fact.ends_with("none")));
-    assert!(record.premises.iter().any(|p| p.fact.starts_with("program.matched_node=program:")));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("program.match_score_micros=") && !p.fact.ends_with("none")));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("program.matched_node=program:")));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(
@@ -397,7 +488,11 @@ async fn match_record_lists_score_threshold_and_bindings() {
 
     let exact = decide(
         &f.h,
-        with_text(lookup_request(&f.h, None), "summarize-report", "summarize the weekly report"),
+        with_text(
+            lookup_request(&f.h, None),
+            "summarize-report",
+            "summarize the weekly report",
+        ),
     )
     .await
     .unwrap();
@@ -472,7 +567,9 @@ async fn replay_fallbacks_demote_the_program() {
 
     // Below the minimum count nothing is demoted, even with every replay a fallback.
     report_replays(&f.h, "flaky-task", &flaky, ReplayOutcome::Fallback, 4).await;
-    let before = decide(&f.h, plain_lookup(&f.h, "flaky-task")).await.unwrap();
+    let before = decide(&f.h, plain_lookup(&f.h, "flaky-task"))
+        .await
+        .unwrap();
     assert!(matches!(
         before.records.as_slice()[0].outcome,
         StatisticalOutcome::Advisory { .. }
@@ -480,11 +577,19 @@ async fn replay_fallbacks_demote_the_program() {
 
     // The fifth fallback reaches the minimum count at a rate of one: the program is demoted.
     report_replays(&f.h, "flaky-task", &flaky, ReplayOutcome::Fallback, 5).await;
-    let demoted = decide(&f.h, plain_lookup(&f.h, "flaky-task")).await.unwrap();
+    let demoted = decide(&f.h, plain_lookup(&f.h, "flaky-task"))
+        .await
+        .unwrap();
     assert_eq!(abstain_codes(&demoted), ["PROGRAM_DEMOTED"]);
     let record = &demoted.records.as_slice()[0];
-    assert!(record.premises.iter().any(|p| p.fact == "program.replays=5"));
-    assert!(record.premises.iter().any(|p| p.fact == "program.replay_fallbacks=5"));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == "program.replays=5"));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == "program.replay_fallbacks=5"));
     assert!(
         record
             .premises
@@ -495,16 +600,31 @@ async fn replay_fallbacks_demote_the_program() {
 
     // A second program with five hits still answers, and states its counts.
     report_replays(&f.h, "steady-task", &steady, ReplayOutcome::Hit, 5).await;
-    let steady_answer = decide(&f.h, plain_lookup(&f.h, "steady-task")).await.unwrap();
+    let steady_answer = decide(&f.h, plain_lookup(&f.h, "steady-task"))
+        .await
+        .unwrap();
     let record = &steady_answer.records.as_slice()[0];
-    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
-    assert!(record.premises.iter().any(|p| p.fact == "program.replays=5"));
-    assert!(record.premises.iter().any(|p| p.fact == "program.replay_fallbacks=0"));
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == "program.replays=5"));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact == "program.replay_fallbacks=0"));
 
     // The rule applies to a lookup with request text too.
     let text = decide(
         &f.h,
-        with_text(plain_lookup(&f.h, "flaky-task"), "flaky-task", "anything at all"),
+        with_text(
+            plain_lookup(&f.h, "flaky-task"),
+            "flaky-task",
+            "anything at all",
+        ),
     )
     .await
     .unwrap();
@@ -515,8 +635,11 @@ async fn replay_fallbacks_demote_the_program() {
 #[tokio::test]
 async fn request_text_finds_the_nearest_program_and_binds_it() {
     let f = Fixture::new().await;
-    f.add_trace_node(&trace("run-p", RunOutcome::Succeeded, 3, "weekly"), "recorder")
-        .await;
+    f.add_trace_node(
+        &trace("run-p", RunOutcome::Succeeded, 3, "weekly"),
+        "recorder",
+    )
+    .await;
     commit_phrased(&f, "run-p", &["summarize the {p0} report"], Some(500_000))
         .await
         .unwrap();
@@ -535,7 +658,11 @@ async fn request_text_finds_the_nearest_program_and_binds_it() {
     // A paraphrase under another signature finds the nearest program by meaning and binds p0.
     let semantic = decide(
         &f.h,
-        with_text(lookup_request(&f.h, None), "another-task", "summarize the weekly report"),
+        with_text(
+            lookup_request(&f.h, None),
+            "another-task",
+            "summarize the weekly report",
+        ),
     )
     .await
     .unwrap();
@@ -548,7 +675,11 @@ async fn request_text_finds_the_nearest_program_and_binds_it() {
     // The committed signature answers exactly and binds p0 from the new text.
     let exact = decide(
         &f.h,
-        with_text(lookup_request(&f.h, None), "summarize-report", "summarize the monthly report"),
+        with_text(
+            lookup_request(&f.h, None),
+            "summarize-report",
+            "summarize the monthly report",
+        ),
     )
     .await
     .unwrap();
@@ -566,7 +697,11 @@ async fn request_text_finds_the_nearest_program_and_binds_it() {
     // Text no phrasing fits leaves the slots unbound.
     let unbound = decide(
         &f.h,
-        with_text(lookup_request(&f.h, None), "summarize-report", "what is my report"),
+        with_text(
+            lookup_request(&f.h, None),
+            "summarize-report",
+            "what is my report",
+        ),
     )
     .await
     .unwrap();
@@ -574,14 +709,21 @@ async fn request_text_finds_the_nearest_program_and_binds_it() {
 
     // Unrelated text under another signature, against a program with a strict threshold, abstains.
     let g = Fixture::new().await;
-    g.add_trace_node(&trace("run-q", RunOutcome::Succeeded, 3, "weekly"), "recorder")
-        .await;
+    g.add_trace_node(
+        &trace("run-q", RunOutcome::Succeeded, 3, "weekly"),
+        "recorder",
+    )
+    .await;
     commit_phrased(&g, "run-q", &["summarize the {p0} report"], Some(1_000_000))
         .await
         .unwrap();
     let below = decide(
         &g.h,
-        with_text(lookup_request(&g.h, None), "other", "cancel my subscription"),
+        with_text(
+            lookup_request(&g.h, None),
+            "other",
+            "cancel my subscription",
+        ),
     )
     .await
     .unwrap();

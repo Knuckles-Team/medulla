@@ -191,10 +191,17 @@ async fn catalog_serves_the_four_rank_points_and_unknown_id_abstains() {
         .unwrap();
         let record = &batch.records.as_slice()[0];
         let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
-            panic!("{}: advisory expected, got {:?}", entry.question_id, record.outcome);
+            panic!(
+                "{}: advisory expected, got {:?}",
+                entry.question_id, record.outcome
+            );
         };
         let mut ids: Vec<&str> = scores.iter().map(|s| s.option_id.as_str()).collect();
-        assert_eq!(ids[0], "opt-a", "{}: the matching name ranks first", entry.question_id);
+        assert_eq!(
+            ids[0], "opt-a",
+            "{}: the matching name ranks first",
+            entry.question_id
+        );
         ids.sort_unstable();
         assert_eq!(ids, ["opt-a", "opt-b", "opt-c"]);
 
@@ -293,7 +300,13 @@ async fn rank_catalog_accepts_two_thousand_and_refuses_one_more() {
     };
     let batch = decide(
         &h,
-        catalog_request(id, &schema, &head, policy.clone(), source(MAX_RANK_CATALOG_CANDIDATES)),
+        catalog_request(
+            id,
+            &schema,
+            &head,
+            policy.clone(),
+            source(MAX_RANK_CATALOG_CANDIDATES),
+        ),
     )
     .await
     .unwrap();
@@ -309,7 +322,11 @@ async fn rank_catalog_accepts_two_thousand_and_refuses_one_more() {
     assert_eq!(scores.as_slice().len(), 64);
     assert_eq!(*ranked_total, MAX_RANK_CATALOG_CANDIDATES as u32);
 
-    let before = h.store.decision_artifacts_with_prefix(TENANT, "", 100_000).unwrap().len();
+    let before = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "", 100_000)
+        .unwrap()
+        .len();
     let too_large = decide(
         &h,
         catalog_request(
@@ -322,8 +339,15 @@ async fn rank_catalog_accepts_two_thousand_and_refuses_one_more() {
     )
     .await
     .unwrap_err();
-    assert!(too_large.starts_with("CANDIDATE_SET_TOO_LARGE"), "{too_large}");
-    let after = h.store.decision_artifacts_with_prefix(TENANT, "", 100_000).unwrap().len();
+    assert!(
+        too_large.starts_with("CANDIDATE_SET_TOO_LARGE"),
+        "{too_large}"
+    );
+    let after = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "", 100_000)
+        .unwrap()
+        .len();
     assert_eq!(before, after, "a refusal logs no record");
 
     // A catalog question id over a declared source is refused.

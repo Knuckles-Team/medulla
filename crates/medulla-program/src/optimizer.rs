@@ -10,8 +10,8 @@ use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 
 use medulla_decision_outcome_types::decision::promotion::{RevisionEvent, RevisionStage};
-use medulla_types::transition_refused::TransitionRefused;
 use medulla_modality::{OpaqueRef, PolicyEnvelope};
+use medulla_types::transition_refused::TransitionRefused;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -327,7 +327,9 @@ impl TrainingCorpus {
             .filter(|example| example.split == crate::ExampleSplit::Validation)
             .map(|example| (example.score.clamp(0.0, 1.0) * 1_000_000.0).round() as i64)
             .collect();
-        let count = i64::try_from(scores.len()).ok().filter(|count| *count > 0)?;
+        let count = i64::try_from(scores.len())
+            .ok()
+            .filter(|count| *count > 0)?;
         Some(scores.iter().sum::<i64>() / count)
     }
 }

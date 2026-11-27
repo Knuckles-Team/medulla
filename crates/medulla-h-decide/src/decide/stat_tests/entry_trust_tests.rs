@@ -6,10 +6,10 @@
 
 use super::consumer_tests::{declared, declared_request, score_schema};
 use super::*;
+use medulla_decision_types::decision::entry_types::POISONED_ENTRY;
 use medulla_decision_types::decision::entry_types::{
     EntryCheck, EntryTrust, RefusedEntry, RetrievedEntry, TrustTier,
 };
-use medulla_decision_types::decision::entry_types::POISONED_ENTRY;
 use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 
 const SOURCE: &str = "sha256:known-source";
@@ -42,7 +42,10 @@ async fn unverified_entry_cannot_override_a_verified_fact() {
         )
         .unwrap();
     let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
-    policy.entry_trust.known_source_digests.insert(SOURCE.to_string());
+    policy
+        .entry_trust
+        .known_source_digests
+        .insert(SOURCE.to_string());
     let pinned = DecisionPolicyRef::Pinned {
         component: h.publish_policy("policy-entry-trust", &policy),
     };
@@ -150,7 +153,10 @@ async fn poisoned_only_required_fact_abstains() {
         )
         .unwrap();
     let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
-    policy.entry_trust.known_source_digests.insert(SOURCE.to_string());
+    policy
+        .entry_trust
+        .known_source_digests
+        .insert(SOURCE.to_string());
     let pinned = DecisionPolicyRef::Pinned {
         component: h.publish_policy("policy-entry-poison", &policy),
     };
@@ -178,10 +184,15 @@ async fn poisoned_only_required_fact_abstains() {
     poisoned.trust.source_digest = "sha256:unknown-source".to_string();
 
     // The only entry of the required fact has an unknown source: abstain.
-    let batch = decide(&h, ask(vec![poisoned.clone()], required())).await.unwrap();
+    let batch = decide(&h, ask(vec![poisoned.clone()], required()))
+        .await
+        .unwrap();
     let record = &batch.records.as_slice()[0];
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
-        panic!("a poisoned required fact abstains, got {:?}", record.outcome);
+        panic!(
+            "a poisoned required fact abstains, got {:?}",
+            record.outcome
+        );
     };
     match &reasons.as_slice()[0] {
         AbstainReason::Family { code, detail, .. } => {
@@ -196,7 +207,10 @@ async fn poisoned_only_required_fact_abstains() {
     let batch = decide(
         &h,
         ask(
-            vec![poisoned.clone(), entry("e-verified", TrustTier::Verified, "8")],
+            vec![
+                poisoned.clone(),
+                entry("e-verified", TrustTier::Verified, "8"),
+            ],
             required(),
         ),
     )
@@ -210,7 +224,10 @@ async fn poisoned_only_required_fact_abstains() {
     // A required fact with no entry at all: nothing was refused.
     let batch = decide(
         &h,
-        ask(vec![poisoned], vec!["urn:agent:planner#other_key".to_string()]),
+        ask(
+            vec![poisoned],
+            vec!["urn:agent:planner#other_key".to_string()],
+        ),
     )
     .await
     .unwrap();
@@ -246,7 +263,10 @@ async fn refused_entries_are_recorded_and_replay() {
         )
         .unwrap();
     let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
-    policy.entry_trust.known_source_digests.insert(SOURCE.to_string());
+    policy
+        .entry_trust
+        .known_source_digests
+        .insert(SOURCE.to_string());
     let mut request = declared_request(
         &schema,
         vec![declared("plan-a", 1 << 31), declared("plan-b", 1 << 32)],
@@ -292,7 +312,10 @@ async fn refused_entries_are_recorded_and_replay() {
         record
             .premises
             .iter()
-            .filter(|premise| !matches!(premise.provenance, PremiseProvenance::RetrievedEntry { .. }))
+            .filter(|premise| !matches!(
+                premise.provenance,
+                PremiseProvenance::RetrievedEntry { .. }
+            ))
             .all(|premise| premise.trust_tier.is_none()),
         "only an admitted entry carries a tier"
     );

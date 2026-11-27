@@ -418,7 +418,11 @@ impl EvolutionTraceAnswer {
         for row in rows {
             match property(row, "kind")?.as_str() {
                 "trace" => {
-                    let id = row.id.strip_prefix("trace:").ok_or("trace row id")?.to_owned();
+                    let id = row
+                        .id
+                        .strip_prefix("trace:")
+                        .ok_or("trace row id")?
+                        .to_owned();
                     match property(row, "state")?.as_str() {
                         "found" => trace_refs.push(id),
                         "missing" => missing_ids.push(id),
@@ -571,10 +575,7 @@ mod tests {
         );
         let rows = answer.to_rows();
         assert_eq!(rows.last().unwrap().id, "answer");
-        assert_eq!(
-            EvolutionTraceAnswer::from_rows(&rows).unwrap(),
-            answer
-        );
+        assert_eq!(EvolutionTraceAnswer::from_rows(&rows).unwrap(), answer);
         // The window digest is the framed digest of the fields in their stated order.
         let prompt_digest = Digest256::parse(PROMPT_DIGEST_HEX).unwrap();
         let expected = Digest256::framed(

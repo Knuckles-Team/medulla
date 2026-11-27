@@ -115,7 +115,10 @@ pub fn check(run: &Value, baseline: &Value) -> Result<Vec<String>, String> {
         let budget = &baseline["group_budgets"][group.as_str()];
         designation_findings(group, &groups[group], budget, &mut findings)?;
     }
-    for group in groups.keys().filter(|n| groups[*n].get("scaling").is_some()) {
+    for group in groups
+        .keys()
+        .filter(|n| groups[*n].get("scaling").is_some())
+    {
         scaling_findings(
             group,
             &groups[group]["scaling"],

@@ -24,8 +24,8 @@ use medulla_core::process_exchange::dmn_write::{dmn_model_digest, write_dmn};
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_core::process_import::{admit_canonical, compile_process, export_canonical};
-use medulla_types::contract::Digest256;
 use medulla_source_types::source_sync::{OutboundDraft, SyncReport};
+use medulla_types::contract::Digest256;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::process_exchange::{
     ProcessDocumentExported, PROCESS_MODEL_CLASS_IRI, PROCESS_SYNC_SOURCE_NOT_SECONDARY,
@@ -151,10 +151,9 @@ fn workflow_of(record: &Value) -> Result<CanonicalWorkflow, String> {
     match text(record, "system") {
         BPMN => compile_bpmn(text(record, "document")),
         EPC => {
-            let canonical: CanonicalWorkflow = serde_json::from_value(
-                record.get("canonical").cloned().unwrap_or(Value::Null),
-            )
-            .map_err(|_| "PROCESS_IMPORT_NOT_CANONICAL".to_string())?;
+            let canonical: CanonicalWorkflow =
+                serde_json::from_value(record.get("canonical").cloned().unwrap_or(Value::Null))
+                    .map_err(|_| "PROCESS_IMPORT_NOT_CANONICAL".to_string())?;
             admit_canonical(&canonical).map_err(|error| error.code().to_string())
         }
         _ => Err("PROCESS_SYNC_UNKNOWN_SYSTEM".to_string()),
@@ -252,7 +251,9 @@ impl SyncAdapter for ProcessSyncAdapter {
         );
         model.insert(
             "canonicalModelDigest".into(),
-            json!(medulla_core::process_exchange::canonical_model_digest(&writes, &scope)),
+            json!(medulla_core::process_exchange::canonical_model_digest(
+                &writes, &scope
+            )),
         );
         model.insert(
             "sourceDocumentDigest".into(),

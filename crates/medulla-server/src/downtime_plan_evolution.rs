@@ -148,21 +148,22 @@ fn evolve_one(
         // All measurements are zero when nothing replayed (`authority_expired`).
         let none: &[ReplayMeasure] = &[];
         let (baseline, candidate) = measured.unwrap_or((none, none));
-        let evidence = plan_evolution::evidence_of(&work.candidate.baseline_digest, baseline, candidate);
+        let evidence =
+            plan_evolution::evidence_of(&work.candidate.baseline_digest, baseline, candidate);
         PlanEvolutionReceipt {
-        tenant: tenant.to_string(),
-        shape_digest: shape.clone(),
-        baseline_digest: work.candidate.baseline_digest.clone(),
-        candidate_digest: work.candidate.plan_digest.clone(),
-        outcome: outcome.to_string(),
-        job_id: job_id.to_string(),
-        refusal: refusal.map(|refusal| refusal.code().to_string()),
-        baseline_replays: u32::try_from(baseline.len()).unwrap_or(u32::MAX),
-        candidate_replays: evidence.replays,
-        p50_before_us: evidence.p50_before_us,
-        p50_after_us: evidence.p50_after_us,
-        bytes_before: evidence.bytes_before,
-        bytes_after: evidence.bytes_after,
+            tenant: tenant.to_string(),
+            shape_digest: shape.clone(),
+            baseline_digest: work.candidate.baseline_digest.clone(),
+            candidate_digest: work.candidate.plan_digest.clone(),
+            outcome: outcome.to_string(),
+            job_id: job_id.to_string(),
+            refusal: refusal.map(|refusal| refusal.code().to_string()),
+            baseline_replays: u32::try_from(baseline.len()).unwrap_or(u32::MAX),
+            candidate_replays: evidence.replays,
+            p50_before_us: evidence.p50_before_us,
+            p50_after_us: evidence.p50_after_us,
+            bytes_before: evidence.bytes_before,
+            bytes_after: evidence.bytes_after,
         }
     };
     // Both plans replay the same recorded input, so their results are comparable.
@@ -171,7 +172,11 @@ fn evolve_one(
         registry.and_then(|registry| plan_evolution::resolve_replay(&input.source, registry))
     else {
         plan_evolution::clear(tenant, shape);
-        return receipt("authority_expired", Some(PlanEvolutionRefusal::AuthorityExpired), None);
+        return receipt(
+            "authority_expired",
+            Some(PlanEvolutionRefusal::AuthorityExpired),
+            None,
+        );
     };
     let replays = |observation: &PlanObservation| -> Vec<ReplayMeasure> {
         let plan = forced(observation, job_id);
@@ -282,7 +287,10 @@ pub fn run_planner_evolution(
             outcome: "challenger_set".into(),
             challenger_digest: Some(revision.digest.clone()),
         });
-        if best.as_ref().map_or(true, |(held, _, _)| records.len() > *held) {
+        if best
+            .as_ref()
+            .map_or(true, |(held, _, _)| records.len() > *held)
+        {
             best = Some((records.len(), revision, receipts.len() - 1));
         }
     }
@@ -309,19 +317,20 @@ impl PlannerEvolutionBody {
 
 impl DowntimeBody for PlannerEvolutionBody {
     fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
-        let min = usize::try_from(
-            medulla_server_api::knob_config::knobs().query_planner_min_records,
-        )
-        .unwrap_or(usize::MAX);
+        let min =
+            usize::try_from(medulla_server_api::knob_config::knobs().query_planner_min_records)
+                .unwrap_or(usize::MAX);
         let store = medulla_exec::learned_cost::PlanRecordStore::global();
         let receipts = run_planner_evolution(store, min);
         // The worker runs a step on a blocking thread, so waiting here never stalls the
         // runtime's own workers.
-        let promotion = self.runtime.block_on(crate::planner_promotion::promote_on_shadow_evidence(
-            &self.state,
-            store,
-            min,
-        ))?;
+        let promotion =
+            self.runtime
+                .block_on(crate::planner_promotion::promote_on_shadow_evidence(
+                    &self.state,
+                    store,
+                    min,
+                ))?;
         let output = serde_json::json!({ "receipts": receipts, "promotion": promotion });
         let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
         Ok(DowntimeStep::Done {
@@ -362,11 +371,19 @@ mod tests {
             store.record(record("few"));
         }
         let receipts = run_planner_evolution(&store, 64);
-        let challenger = store.challenger().expect("a tenant with 64 records sets one");
+        let challenger = store
+            .challenger()
+            .expect("a tenant with 64 records sets one");
         // A constant 2x measured/estimated ratio is a correction of 2.0.
         assert!((challenger.correct("Scan", 10.0) / 10.0 - 2.0).abs() < 1e-9);
-        assert_eq!(receipts.iter().find(|r| r.tenant == "few").unwrap().outcome, "too_few_records");
-        assert!(store.published_champion().is_none(), "the champion is never touched");
+        assert_eq!(
+            receipts.iter().find(|r| r.tenant == "few").unwrap().outcome,
+            "too_few_records"
+        );
+        assert!(
+            store.published_champion().is_none(),
+            "the champion is never touched"
+        );
 
         let fewer = PlanRecordStore::new(4_096);
         for _ in 0..63 {

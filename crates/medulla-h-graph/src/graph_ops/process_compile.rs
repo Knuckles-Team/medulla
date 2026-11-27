@@ -18,11 +18,11 @@
 //! is a tenant-bound graph read of one stored version: the canonical form, the deployable BPMN
 //! document for `bpmn20`, or the canonical form with the losses of the target.
 
+use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_core::process_compile::{
     compile_process_view, CompiledProcess, ProcessCompilationError, ViewEdge, ViewNode,
 };
-use super::terminal::GraphOpsContext;
 use medulla_core::process_exchange::bpmn_lower::bpmn_kind_annotations;
 use medulla_core::process_exchange::bpmn_write::write_bpmn;
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
@@ -33,8 +33,7 @@ use medulla_protocol_types::result_contract::coordination::{
 use medulla_server_api::knob_config::knobs;
 use medulla_types::process_import::{
     CanonicalWorkflow, ImportError, ProcessCompiled, ProcessModelExported, ProcessModelImported,
-    ProcessSourceSystem, PROCESS_EXPORT_NOT_DEPLOYABLE,
-    WORKFLOW_VERSION_CONFLICT,
+    ProcessSourceSystem, PROCESS_EXPORT_NOT_DEPLOYABLE, WORKFLOW_VERSION_CONFLICT,
 };
 
 /// The id of the compiler recorded on every `compiledFromProcess` edge.
@@ -299,11 +298,9 @@ pub(super) fn admit_import(
     preconditions: &[medulla_work_types::orchestration::definitions::PatternPrecondition],
 ) -> Result<Admitted<ProcessModelImported>, String> {
     let preconditions = preconditions_text(preconditions)?;
-    let admitted = admit_canonical_with_limit(
-        workflow,
-        knobs().scheduler_process_import_max_elements,
-    )
-    .map_err(|error: ImportError| refuse(error.code(), error))?;
+    let admitted =
+        admit_canonical_with_limit(workflow, knobs().scheduler_process_import_max_elements)
+            .map_err(|error: ImportError| refuse(error.code(), error))?;
     let stored = check_version(core, workflow_id, expected_version)?;
     let version = stored + 1;
     let annex = serde_json::to_string(&admitted.annex).map_err(|error| {
@@ -391,8 +388,7 @@ pub(super) async fn commit_version<A>(
                 ),
             ));
         }
-        medulla_graph_algos::algorithms::batch_update(core, &operations)
-            .and_then(|_| seal(answer))
+        medulla_graph_algos::algorithms::batch_update(core, &operations).and_then(|_| seal(answer))
     })
     .await
 }
@@ -429,9 +425,13 @@ pub(super) async fn handle_process_compile(
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     Some(
-        commit_version(ctx, admitted, process_iri.clone(), stored_version, |answer| {
-            ResultPayload::of::<ProcessCompile>(answer)
-        })
+        commit_version(
+            ctx,
+            admitted,
+            process_iri.clone(),
+            stored_version,
+            |answer| ResultPayload::of::<ProcessCompile>(answer),
+        )
         .await,
     )
 }
@@ -470,9 +470,13 @@ pub(super) async fn handle_process_model_import(
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     Some(
-        commit_version(ctx, admitted, workflow_id.clone(), stored_version, |answer| {
-            ResultPayload::of::<ProcessModelImport>(answer)
-        })
+        commit_version(
+            ctx,
+            admitted,
+            workflow_id.clone(),
+            stored_version,
+            |answer| ResultPayload::of::<ProcessModelImport>(answer),
+        )
         .await,
     )
 }

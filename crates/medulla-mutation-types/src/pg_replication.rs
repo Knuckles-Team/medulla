@@ -74,7 +74,10 @@ mod tests {
             confirmed_cursor: Some("cursor-1".to_string()),
         };
         let json = serde_json::to_string(&row).unwrap();
-        assert_eq!(serde_json::from_str::<ReplicationSlotRow>(&json).unwrap(), row);
+        assert_eq!(
+            serde_json::from_str::<ReplicationSlotRow>(&json).unwrap(),
+            row
+        );
         let packed = rmp_serde::to_vec_named(&row).unwrap();
         assert_eq!(
             rmp_serde::from_slice::<ReplicationSlotRow>(&packed).unwrap(),
@@ -85,18 +88,34 @@ mod tests {
             ..row
         };
         let json = serde_json::to_string(&fresh).unwrap();
-        assert_eq!(serde_json::from_str::<ReplicationSlotRow>(&json).unwrap(), fresh);
+        assert_eq!(
+            serde_json::from_str::<ReplicationSlotRow>(&json).unwrap(),
+            fresh
+        );
         assert!(serde_json::from_str::<ReplicationSlotRow>(
             r#"{"name":"a","tenant":"t","plugin":"pgoutput","confirmed_cursor":null,"extra":1}"#
         )
         .is_err());
 
-        assert_eq!(slot_key("tenant-a", "orders_feed").unwrap(), "tenant-a/orders_feed");
+        assert_eq!(
+            slot_key("tenant-a", "orders_feed").unwrap(),
+            "tenant-a/orders_feed"
+        );
         assert_eq!(slot_key("t", "a").unwrap(), "t/a");
         assert!(slot_key("t", &"a".repeat(63)).is_ok());
-        for bad in ["", "Upper", "has-dash", "has space", "slash/name", "dot.name"] {
+        for bad in [
+            "",
+            "Upper",
+            "has-dash",
+            "has space",
+            "slash/name",
+            "dot.name",
+        ] {
             let refusal = slot_key("t", bad).unwrap_err();
-            assert!(refusal.starts_with(REPLICATION_SLOT_NAME_INVALID), "{bad}: {refusal}");
+            assert!(
+                refusal.starts_with(REPLICATION_SLOT_NAME_INVALID),
+                "{bad}: {refusal}"
+            );
         }
         assert!(slot_key("t", &"a".repeat(64))
             .unwrap_err()

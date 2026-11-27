@@ -68,7 +68,11 @@ fn top_classes_with_connected_properties_and_bypass() {
     let unit = "A paragraph about tokenmarker000 and tokenmarker017.";
     let slice = slice_for_unit(&large, &request(unit, 5), None).unwrap();
     assert!(!slice.bypassed);
-    let iris: Vec<&str> = slice.classes.iter().map(|class| class.iri.as_str()).collect();
+    let iris: Vec<&str> = slice
+        .classes
+        .iter()
+        .map(|class| class.iri.as_str())
+        .collect();
     assert!(iris.contains(&format!("{NS}C000").as_str()));
     assert!(iris.contains(&format!("{NS}C017").as_str()));
     assert!(iris.len() <= 5);
@@ -84,7 +88,10 @@ fn top_classes_with_connected_properties_and_bypass() {
     // A property of a class that was not returned does not.
     assert!(!properties.contains(&format!("{NS}rel040").as_str()));
     // The same input gives the same slice.
-    assert_eq!(slice, slice_for_unit(&large, &request(unit, 5), None).unwrap());
+    assert_eq!(
+        slice,
+        slice_for_unit(&large, &request(unit, 5), None).unwrap()
+    );
 
     // 62 classes (60 and Root, and nothing more) fit under a cap of 256: the slice is all of it.
     let whole = slice_for_unit(&large, &request(unit, 256), None).unwrap();
@@ -102,13 +109,21 @@ fn an_embedding_ranks_a_class_the_text_does_not_name() {
     // the unit vector below sits next to class 033 and no other.
     let embed = |text: &str| -> Result<Vec<f32>, String> {
         let mut vector = vec![0.0f32; 4];
-        vector[if text.contains("tokenmarker033") { 0 } else { 1 }] = 1.0;
+        vector[if text.contains("tokenmarker033") {
+            0
+        } else {
+            1
+        }] = 1.0;
         Ok(vector)
     };
     let mut asked = request("a paragraph with no marker word", 5);
     asked.unit_embedding = Some(vec![1.0, 0.0, 0.0, 0.0]);
     let slice = slice_for_unit(&large, &asked, Some(&embed)).unwrap();
-    let iris: Vec<&str> = slice.classes.iter().map(|class| class.iri.as_str()).collect();
+    let iris: Vec<&str> = slice
+        .classes
+        .iter()
+        .map(|class| class.iri.as_str())
+        .collect();
     assert_eq!(iris, vec![format!("{NS}C033").as_str()]);
     // An embedding with no bound embedder, and one of the wrong width, refuse.
     assert_eq!(
@@ -117,7 +132,9 @@ fn an_embedding_ranks_a_class_the_text_does_not_name() {
     );
     asked.unit_embedding = Some(vec![1.0, 0.0]);
     assert_eq!(
-        slice_for_unit(&large, &asked, Some(&embed)).unwrap_err().code,
+        slice_for_unit(&large, &asked, Some(&embed))
+            .unwrap_err()
+            .code,
         "INVALID_ARGUMENT"
     );
 }
@@ -128,9 +145,8 @@ fn an_embedding_ranks_a_class_the_text_does_not_name() {
 #[test]
 fn each_refusal_names_its_code() {
     let held = sources(&ontology(10));
-    let invalid = |request: OntologySliceRequest| {
-        slice_for_unit(&held, &request, None).unwrap_err().code
-    };
+    let invalid =
+        |request: OntologySliceRequest| slice_for_unit(&held, &request, None).unwrap_err().code;
     assert_eq!(invalid(request("   ", 8)), "INVALID_ARGUMENT");
     assert_eq!(invalid(request(&"x".repeat(65_537), 8)), "INVALID_ARGUMENT");
     assert_eq!(invalid(request("tokenmarker001", 0)), "INVALID_ARGUMENT");

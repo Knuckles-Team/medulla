@@ -73,8 +73,7 @@ fn load_history(view: &GraphView, spec: &RiskHistorySpec) -> Result<History, Str
         ) {
             continue;
         }
-        if props.get("dataset").and_then(serde_json::Value::as_str) != Some(spec.dataset.as_str())
-        {
+        if props.get("dataset").and_then(serde_json::Value::as_str) != Some(spec.dataset.as_str()) {
             continue;
         }
         let Some(at) = props
@@ -336,7 +335,11 @@ fn risk_report(
             .iter()
             .map(|l| l.weight.to_bits().to_be_bytes())
             .collect();
-        let mut fields: Vec<&[u8]> = vec![seed.as_bytes(), &hop_bytes, history.dataset_digest.as_bytes()];
+        let mut fields: Vec<&[u8]> = vec![
+            seed.as_bytes(),
+            &hop_bytes,
+            history.dataset_digest.as_bytes(),
+        ];
         for (layer, weight) in spec.layers.iter().zip(&weights) {
             fields.push(layer.layer.as_bytes());
             fields.push(weight);
@@ -423,7 +426,9 @@ pub(crate) fn history_channel(risks: &[HistoricalRisk]) -> Vec<(String, f32)> {
             }
         }
     }
-    best.into_iter().map(|(id, v)| (id.to_string(), v as f32)).collect()
+    best.into_iter()
+        .map(|(id, v)| (id.to_string(), v as f32))
+        .collect()
 }
 
 #[cfg(test)]
@@ -443,8 +448,14 @@ mod tests {
             from_ms: 0,
             to_ms: 1_000,
             layers: vec![
-                LayerWeight { layer: "service".into(), weight: 1.0 },
-                LayerWeight { layer: "os".into(), weight: 0.5 },
+                LayerWeight {
+                    layer: "service".into(),
+                    weight: 1.0,
+                },
+                LayerWeight {
+                    layer: "os".into(),
+                    weight: 0.5,
+                },
             ],
         }
     }
@@ -537,7 +548,11 @@ mod tests {
             4,
         )
         .unwrap();
-        let c = risks[0].downstream.iter().find(|n| n.node_id == "c").unwrap();
+        let c = risks[0]
+            .downstream
+            .iter()
+            .find(|n| n.node_id == "c")
+            .unwrap();
         assert_eq!(c.coverage, Coverage::Unknown);
         assert_eq!(c.path_risk, None);
         assert!(risks[0].partial);
@@ -545,8 +560,16 @@ mod tests {
 
         let mut missing = spec();
         missing.dataset = "nope".into();
-        let error = historical_risk(&view, &["a".to_string()], &missing, None, EdgeDir::Out, &[], 4)
-            .unwrap_err();
+        let error = historical_risk(
+            &view,
+            &["a".to_string()],
+            &missing,
+            None,
+            EdgeDir::Out,
+            &[],
+            4,
+        )
+        .unwrap_err();
         assert!(error.starts_with("HISTORY_DATASET_UNAVAILABLE"), "{error}");
     }
 }

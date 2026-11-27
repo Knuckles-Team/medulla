@@ -678,10 +678,7 @@ pub fn handle_project_mode_get(
 
 /// The answer of `ProjectModeGet` from the stored `ProjectMode` node properties
 /// (`None` when no record of the verified tenant is visible).
-pub fn project_mode_record(
-    project: &str,
-    stored: Option<&serde_json::Value>,
-) -> ProjectModeRecord {
+pub fn project_mode_record(project: &str, stored: Option<&serde_json::Value>) -> ProjectModeRecord {
     let node_id = project_mode_node_id(project);
     let Some(node) = stored else {
         return ProjectModeRecord {
@@ -1242,7 +1239,10 @@ pub fn pull_request_outcome(
             }),
         Err((code, message)) => Err(PullRequestError {
             code,
-            message: message.chars().take(PULL_REQUEST_MESSAGE_MAX_CHARS).collect(),
+            message: message
+                .chars()
+                .take(PULL_REQUEST_MESSAGE_MAX_CHARS)
+                .collect(),
         }),
     }
 }
@@ -1416,9 +1416,13 @@ impl DefectWrite {
     /// no JSON decode. `culprit_changeset` is not written here (a bisect writes it, MEDULLA-SCM-R009).
     pub fn node_properties(&self) -> Result<serde_json::Map<String, serde_json::Value>, String> {
         let defect = &self.defect;
-        let body = serde_json::to_string(defect).map_err(|_| "defect record encoding failed".to_string())?;
+        let body = serde_json::to_string(defect)
+            .map_err(|_| "defect record encoding failed".to_string())?;
         let enum_name = |value: Result<serde_json::Value, serde_json::Error>| {
-            value.ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default()
+            value
+                .ok()
+                .and_then(|v| v.as_str().map(str::to_owned))
+                .unwrap_or_default()
         };
         let mut properties = serde_json::Map::new();
         properties.insert("type".into(), DEFECT_TYPE.into());
@@ -1426,11 +1430,26 @@ impl DefectWrite {
         properties.insert("repo".into(), defect.repo.clone().into());
         properties.insert("defect_id".into(), defect.id.clone().into());
         properties.insert("title".into(), defect.title.clone().into());
-        properties.insert("signature_digest".into(), defect.signature_digest.clone().into());
-        properties.insert("status".into(), enum_name(serde_json::to_value(defect.status)).into());
-        properties.insert("severity".into(), enum_name(serde_json::to_value(defect.severity)).into());
-        properties.insert("intake".into(), enum_name(serde_json::to_value(defect.intake)).into());
-        properties.insert("symptom_count".into(), (defect.symptoms.len() as u64).into());
+        properties.insert(
+            "signature_digest".into(),
+            defect.signature_digest.clone().into(),
+        );
+        properties.insert(
+            "status".into(),
+            enum_name(serde_json::to_value(defect.status)).into(),
+        );
+        properties.insert(
+            "severity".into(),
+            enum_name(serde_json::to_value(defect.severity)).into(),
+        );
+        properties.insert(
+            "intake".into(),
+            enum_name(serde_json::to_value(defect.intake)).into(),
+        );
+        properties.insert(
+            "symptom_count".into(),
+            (defect.symptoms.len() as u64).into(),
+        );
         properties.insert("created_at".into(), defect.created_at.into());
         Ok(properties)
     }
@@ -1450,7 +1469,11 @@ impl DefectWrite {
 /// The stored defect of one decoded `Defect` node, when it belongs to `tenant`. A node of
 /// another owner, or without the canonical record, is not read.
 pub fn defect_from_node(node: &serde_json::Value, tenant: &str) -> Option<Defect> {
-    if node.get("tenant_id").and_then(serde_json::Value::as_str).is_some_and(|owner| owner != tenant) {
+    if node
+        .get("tenant_id")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|owner| owner != tenant)
+    {
         return None;
     }
     serde_json::from_str::<Defect>(node.get(DEFECT_RECORD_PROPERTY)?.as_str()?).ok()
@@ -1560,7 +1583,8 @@ pub fn handle_transition_defect(
     verdict_passed: bool,
 ) -> Result<DefectMove, LifecycleRefusal> {
     use crate::defect_machine::{DefectEvent, DefectFacts, DEFECT_MACHINE};
-    let filled = |value: &Option<String>| value.as_deref().is_some_and(|text| !text.trim().is_empty());
+    let filled =
+        |value: &Option<String>| value.as_deref().is_some_and(|text| !text.trim().is_empty());
     let from = defect.status;
     let edge = DEFECT_MACHINE
         .edges
@@ -1601,9 +1625,15 @@ pub fn handle_transition_defect(
 
 /// Check one filing's bounds; the served `FileDefect` and every in-process caller go through
 /// this one check before the defect book sees the symptom.
-pub fn handle_file_defect(request: FileDefectRequest) -> Result<FileDefectRequest, LifecycleRefusal> {
+pub fn handle_file_defect(
+    request: FileDefectRequest,
+) -> Result<FileDefectRequest, LifecycleRefusal> {
     let blank = |value: &str| value.trim().is_empty();
-    if blank(&request.repo) || blank(&request.title) || blank(&request.source_record_id) || blank(&request.text) {
+    if blank(&request.repo)
+        || blank(&request.title)
+        || blank(&request.source_record_id)
+        || blank(&request.text)
+    {
         return Err(LifecycleRefusal::InvalidArgument(
             "a defect filing names its repo, title, source record and symptom text".to_owned(),
         ));
@@ -1662,7 +1692,9 @@ pub struct SpecStatusRequest {
 
 /// Check one `SpecStatus` request's bounds before the handler reads the graph; the served
 /// method and every in-process caller go through this one check.
-pub fn handle_spec_status(request: SpecStatusRequest) -> Result<SpecStatusRequest, LifecycleRefusal> {
+pub fn handle_spec_status(
+    request: SpecStatusRequest,
+) -> Result<SpecStatusRequest, LifecycleRefusal> {
     let blank = |value: &str| value.trim().is_empty();
     let over = |value: &str| value.len() > MAX_SPEC_STATUS_FIELD_BYTES;
     if blank(&request.repo) || blank(&request.rev) {
@@ -1672,7 +1704,10 @@ pub fn handle_spec_status(request: SpecStatusRequest) -> Result<SpecStatusReques
     }
     if over(&request.repo)
         || over(&request.rev)
-        || request.spec_id.as_deref().is_some_and(|id| blank(id) || over(id))
+        || request
+            .spec_id
+            .as_deref()
+            .is_some_and(|id| blank(id) || over(id))
     {
         return Err(LifecycleRefusal::InvalidArgument(
             "a status request field is blank or over its bound".to_owned(),
@@ -1857,7 +1892,10 @@ impl ChangesetNodeWrite {
     /// The node's properties as the string values the repository index writes.
     pub fn properties(&self) -> std::collections::BTreeMap<String, String> {
         let mut properties = std::collections::BTreeMap::from([
-            ("type".to_owned(), crate::source_changeset::COMMIT_TYPE.to_owned()),
+            (
+                "type".to_owned(),
+                crate::source_changeset::COMMIT_TYPE.to_owned(),
+            ),
             ("changeset_id".to_owned(), self.changeset_id.clone()),
             ("seq".to_owned(), self.seq.to_string()),
         ]);
@@ -2047,12 +2085,26 @@ mod defect_transition_tests {
     // spec: MEDULLA-SDLC-R003.4
     #[test]
     fn a_skipped_state_refuses_illegal_and_a_failed_verification_refuses_unverified() {
-        let skipped = handle_transition_defect(&request(DefectStatus::Verified), &defect(DefectStatus::New), None, true);
+        let skipped = handle_transition_defect(
+            &request(DefectStatus::Verified),
+            &defect(DefectStatus::New),
+            None,
+            true,
+        );
         assert_eq!(skipped.unwrap_err().code(), "DEFECT_TRANSITION_ILLEGAL");
-        let unverified =
-            handle_transition_defect(&request(DefectStatus::Verified), &defect(DefectStatus::Fixed), Some("c1"), false);
+        let unverified = handle_transition_defect(
+            &request(DefectStatus::Verified),
+            &defect(DefectStatus::Fixed),
+            Some("c1"),
+            false,
+        );
         assert_eq!(unverified.unwrap_err().code(), "DEFECT_UNVERIFIED");
-        let unfixed = handle_transition_defect(&request(DefectStatus::Fixed), &defect(DefectStatus::Fixing), None, false);
+        let unfixed = handle_transition_defect(
+            &request(DefectStatus::Fixed),
+            &defect(DefectStatus::Fixing),
+            None,
+            false,
+        );
         assert_eq!(unfixed.unwrap_err().code(), "DEFECT_TRANSITION_ILLEGAL");
     }
 
@@ -2061,11 +2113,20 @@ mod defect_transition_tests {
     fn a_legal_move_changes_only_the_status_and_keeps_the_fix_reference() {
         let mut fix = request(DefectStatus::Fixed);
         fix.fix_changeset = Some("c1".into());
-        let fixed = handle_transition_defect(&fix, &defect(DefectStatus::Fixing), None, false).expect("fixed");
-        assert_eq!((fixed.from, fixed.defect.status), (DefectStatus::Fixing, DefectStatus::Fixed));
+        let fixed = handle_transition_defect(&fix, &defect(DefectStatus::Fixing), None, false)
+            .expect("fixed");
+        assert_eq!(
+            (fixed.from, fixed.defect.status),
+            (DefectStatus::Fixing, DefectStatus::Fixed)
+        );
         assert_eq!(fixed.fix_changeset.as_deref(), Some("c1"));
-        let verified =
-            handle_transition_defect(&request(DefectStatus::Verified), &fixed.defect, Some("c1"), true).expect("verified");
+        let verified = handle_transition_defect(
+            &request(DefectStatus::Verified),
+            &fixed.defect,
+            Some("c1"),
+            true,
+        )
+        .expect("verified");
         assert_eq!(verified.defect.status, DefectStatus::Verified);
         assert_eq!(verified.fix_changeset.as_deref(), Some("c1"));
         assert_eq!(verified.defect.symptoms, fixed.defect.symptoms);

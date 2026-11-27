@@ -109,9 +109,10 @@ pub(super) fn handle_worker_claim(
         Err(error) => return Response::err(req_id, error),
     };
     // A worker cannot assert a heavy capability: it comes from its host's declaration.
-    if capabilities.iter().any(|value| {
-        super::host_capabilities::HEAVY_CAPABILITY_NAMES.contains(&value.as_str())
-    }) {
+    if capabilities
+        .iter()
+        .any(|value| super::host_capabilities::HEAVY_CAPABILITY_NAMES.contains(&value.as_str()))
+    {
         return Response::err(
             req_id,
             "INVALID_ARGUMENT: heavy capabilities come from the host declaration",
@@ -202,8 +203,8 @@ pub(super) fn handle_worker_checkpoint(
         Ok(value) => value,
         Err(error) => return Response::err(req_id, error),
     };
-    let valid_label =
-        label.len() <= medulla_jobs::store::MAX_JOB_STRING_BYTES && !label.chars().any(char::is_control);
+    let valid_label = label.len() <= medulla_jobs::store::MAX_JOB_STRING_BYTES
+        && !label.chars().any(char::is_control);
     let valid_state = state_ref
         .as_ref()
         .is_none_or(|value| is_opaque_result_ref(value));

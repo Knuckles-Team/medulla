@@ -280,15 +280,42 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R833
     #[test]
     fn each_fault_refuses_with_its_own_code_in_check_order() {
-        let cases: Vec<(ScaleRefusalCode, Box<dyn Fn(&mut ScaleIntentRecord, &mut ScaleObservation)>)> = vec![
-            (ScaleRefusalCode::AuthorityMissing, Box::new(|_, o| o.authority_revisions = 2)),
-            (ScaleRefusalCode::UnitUnknown, Box::new(|_, o| o.unit = None)),
-            (ScaleRefusalCode::UnitRevisionStale, Box::new(|i, _| i.expected_unit_revision = 2)),
-            (ScaleRefusalCode::BoundsInvalid, Box::new(|i, _| i.max_replicas = 11)),
-            (ScaleRefusalCode::DesiredOutOfBounds, Box::new(|i, _| i.desired_replicas = 9)),
-            (ScaleRefusalCode::WriterMismatch, Box::new(|i, _| i.replica_writer_id = "w2".into())),
-            (ScaleRefusalCode::ControllerUnregistered, Box::new(|_, o| o.registration_fence = None)),
-            (ScaleRefusalCode::FenceMismatch, Box::new(|i, _| i.fence.fence_token = 8)),
+        let cases: Vec<(
+            ScaleRefusalCode,
+            Box<dyn Fn(&mut ScaleIntentRecord, &mut ScaleObservation)>,
+        )> = vec![
+            (
+                ScaleRefusalCode::AuthorityMissing,
+                Box::new(|_, o| o.authority_revisions = 2),
+            ),
+            (
+                ScaleRefusalCode::UnitUnknown,
+                Box::new(|_, o| o.unit = None),
+            ),
+            (
+                ScaleRefusalCode::UnitRevisionStale,
+                Box::new(|i, _| i.expected_unit_revision = 2),
+            ),
+            (
+                ScaleRefusalCode::BoundsInvalid,
+                Box::new(|i, _| i.max_replicas = 11),
+            ),
+            (
+                ScaleRefusalCode::DesiredOutOfBounds,
+                Box::new(|i, _| i.desired_replicas = 9),
+            ),
+            (
+                ScaleRefusalCode::WriterMismatch,
+                Box::new(|i, _| i.replica_writer_id = "w2".into()),
+            ),
+            (
+                ScaleRefusalCode::ControllerUnregistered,
+                Box::new(|_, o| o.registration_fence = None),
+            ),
+            (
+                ScaleRefusalCode::FenceMismatch,
+                Box::new(|i, _| i.fence.fence_token = 8),
+            ),
             (
                 ScaleRefusalCode::FailureDomainUnhealthy,
                 Box::new(|_, o| o.failure_domain_status = Some("degraded".into())),

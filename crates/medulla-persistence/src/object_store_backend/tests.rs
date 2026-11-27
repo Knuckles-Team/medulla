@@ -441,8 +441,14 @@ async fn two_nodes_read_identical_state() {
     let head_b = reader_b.head(TENANT, GRAPH).await.unwrap();
     assert_eq!(head_a, head_b);
     assert_eq!(head_a.version, 2);
-    let state_a = reader_a.materialize(TENANT, GRAPH, head_a.version).await.unwrap();
-    let state_b = reader_b.materialize(TENANT, GRAPH, head_b.version).await.unwrap();
+    let state_a = reader_a
+        .materialize(TENANT, GRAPH, head_a.version)
+        .await
+        .unwrap();
+    let state_b = reader_b
+        .materialize(TENANT, GRAPH, head_b.version)
+        .await
+        .unwrap();
     assert_eq!(state_a, state_b);
     assert_eq!(state_a.batches.len(), 2);
     assert_eq!(state_a.batches[0].bytes, batch_one);
@@ -460,7 +466,10 @@ async fn two_nodes_read_identical_state() {
     );
     let head_a = reader_a.head(TENANT, GRAPH).await.unwrap();
     assert_eq!(head_a.version, 3);
-    let state_a = reader_a.materialize(TENANT, GRAPH, head_a.version).await.unwrap();
+    let state_a = reader_a
+        .materialize(TENANT, GRAPH, head_a.version)
+        .await
+        .unwrap();
     let state_b = reader_b.materialize(TENANT, GRAPH, 3).await.unwrap();
     assert_eq!(state_a, state_b);
     assert_eq!(state_a.batches.len(), 3);
@@ -500,7 +509,9 @@ fn client_resolves_secret_refs_from_the_environment() {
 
     set("UNSET", "http://127.0.0.1:9000");
     std::env::remove_var("R2_2_UNSET_BUCKET");
-    let err = resolve_object_store_client(&spec("UNSET", true)).err().unwrap();
+    let err = resolve_object_store_client(&spec("UNSET", true))
+        .err()
+        .unwrap();
     assert_eq!(err.wire_code(), "OBJECT_STORE_SECRET_UNRESOLVED");
     assert_eq!(
         err,
@@ -508,15 +519,21 @@ fn client_resolves_secret_refs_from_the_environment() {
     );
 
     set("PLAIN", "http://s3.example.invalid:9000");
-    let err = resolve_object_store_client(&spec("PLAIN", true)).err().unwrap();
+    let err = resolve_object_store_client(&spec("PLAIN", true))
+        .err()
+        .unwrap();
     assert_eq!(err.wire_code(), "OBJECT_STORE_PLAIN_HTTP_REFUSED");
 
     set("PG", "postgres://db.example.invalid/x");
-    let err = resolve_object_store_client(&spec("PG", true)).err().unwrap();
+    let err = resolve_object_store_client(&spec("PG", true))
+        .err()
+        .unwrap();
     assert_eq!(err.wire_code(), "EXTERNAL_PLACEMENT_FORBIDDEN");
 
     set("NOROOT", "http://127.0.0.1:9000");
-    let err = resolve_object_store_client(&spec("NOROOT", false)).err().unwrap();
+    let err = resolve_object_store_client(&spec("NOROOT", false))
+        .err()
+        .unwrap();
     assert_eq!(err.wire_code(), "OBJECT_STORE_SECRET_UNRESOLVED");
 }
 
@@ -773,10 +790,16 @@ async fn restore_materializes_head_into_an_empty_local_store() {
         assert!(record.is_some(), "batch b{index} is in the restored ledger");
     }
     let (name, graph_type, version) = target.graph_identity(GRAPH_FNAME).unwrap().unwrap();
-    assert_eq!((name.as_str(), graph_type, version), ("restore-graph", GraphType::Commons, 3));
+    assert_eq!(
+        (name.as_str(), graph_type, version),
+        ("restore-graph", GraphType::Commons, 3)
+    );
 
     // A restore that finds the graph already at the head applies nothing.
-    assert_eq!(backend(store.clone()).restore_into(&target).await.unwrap(), 0);
+    assert_eq!(
+        backend(store.clone()).restore_into(&target).await.unwrap(),
+        0
+    );
 
     // A corrupted segment refuses the restore by digest, and the root is never written.
     let segments: Vec<_> = store
@@ -793,9 +816,11 @@ async fn restore_materializes_head_into_an_empty_local_store() {
         .await
         .unwrap();
     let damaged_dir = tempfile::tempdir().unwrap();
-    let damaged =
-        crate::redb_backend::RedbBackend::open(damaged_dir.path().to_string_lossy().to_string(), 64)
-            .unwrap();
+    let damaged = crate::redb_backend::RedbBackend::open(
+        damaged_dir.path().to_string_lossy().to_string(),
+        64,
+    )
+    .unwrap();
     let refusal = backend(store).restore_into(&damaged).await.unwrap_err();
     assert!(
         refusal.starts_with("OBJECT_SEGMENT_DIGEST_MISMATCH"),
@@ -880,7 +905,10 @@ fn open_from_env_refuses_before_the_listener() {
     assert!(open_from_env().unwrap().is_none(), "unset opens nothing");
     for local in ["", "local", "  local  "] {
         std::env::set_var(STORAGE_BACKEND_ENV, local);
-        assert!(open_from_env().unwrap().is_none(), "{local:?} opens nothing");
+        assert!(
+            open_from_env().unwrap().is_none(),
+            "{local:?} opens nothing"
+        );
     }
 
     // The bucket variable is unset: the secret reference does not resolve.
@@ -896,7 +924,10 @@ fn open_from_env_refuses_before_the_listener() {
     };
     std::env::set_var(STORAGE_BACKEND_ENV, serde_json::to_string(&spec).unwrap());
     let error = open_from_env().err().expect("the unset secret refuses");
-    assert!(error.starts_with("OBJECT_STORE_SECRET_UNRESOLVED:"), "{error}");
+    assert!(
+        error.starts_with("OBJECT_STORE_SECRET_UNRESOLVED:"),
+        "{error}"
+    );
 
     // An unknown variant is not a backend.
     std::env::set_var(STORAGE_BACKEND_ENV, r#"{"variant":"tape"}"#);
@@ -927,7 +958,10 @@ async fn first_commit_bootstraps_head_and_later_commits_publish() {
     assert_eq!(ack.version, 1);
     assert_eq!(head(&crashy.inner).await.version, 1);
     let zero = fetcher.materialize(TENANT, GRAPH, 0).await.unwrap();
-    assert!(zero.batches.is_empty(), "version zero holds the snapshot only");
+    assert!(
+        zero.batches.is_empty(),
+        "version zero holds the snapshot only"
+    );
     let one = fetcher.materialize(TENANT, GRAPH, 1).await.unwrap();
     assert_eq!(one.snapshot.bytes, zero.snapshot.bytes);
     assert_eq!(one.batches.len(), 1);

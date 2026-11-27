@@ -40,8 +40,17 @@ pub(super) async fn serve_bundle_export(
     }
     #[cfg(not(all(feature = "rdf", feature = "blob", feature = "redb")))]
     {
-        let _ = (state, verified, graphs, include_embeddings, include_documents);
-        Response::err(req_id, "BundleExport requires the `rdf`, `blob` and `redb` features")
+        let _ = (
+            state,
+            verified,
+            graphs,
+            include_embeddings,
+            include_documents,
+        );
+        Response::err(
+            req_id,
+            "BundleExport requires the `rdf`, `blob` and `redb` features",
+        )
     }
 }
 
@@ -100,8 +109,12 @@ pub(super) async fn serve_bundle_import(
             let operation = record.node_operation(agent);
             let target = &target;
             async move {
-                medulla_server_graph::dispatch::graph_client::write_batch(state, target, &[operation])
-                    .await
+                medulla_server_graph::dispatch::graph_client::write_batch(
+                    state,
+                    target,
+                    &[operation],
+                )
+                .await
             }
         };
         // The importing record is durable before any graph exists.
@@ -174,8 +187,18 @@ pub(super) async fn serve_bundle_import(
     }
     #[cfg(not(all(feature = "rdf", feature = "blob", feature = "redb")))]
     {
-        let _ = (state, verified, state_machine_authorized, bundle_ref, target_graph_prefix, on_conflict);
-        Response::err(req.id, "BundleImport requires the `rdf`, `blob` and `redb` features")
+        let _ = (
+            state,
+            verified,
+            state_machine_authorized,
+            bundle_ref,
+            target_graph_prefix,
+            on_conflict,
+        );
+        Response::err(
+            req.id,
+            "BundleImport requires the `rdf`, `blob` and `redb` features",
+        )
     }
 }
 
@@ -232,8 +255,9 @@ async fn commit_plan(
         created.push(graph.target.clone());
         if let Some(space) = &graph.space {
             let method = Method::DeclareEmbeddingSpace {
-                space: serde_json::from_value(space.clone())
-                    .map_err(|error| format!("PARAMETER_INVALID: the embedding space is malformed: {error}"))?,
+                space: serde_json::from_value(space.clone()).map_err(|error| {
+                    format!("PARAMETER_INVALID: the embedding space is malformed: {error}")
+                })?,
             };
             let response = dispatch_boxed(dispatch_graph_op(
                 state,
@@ -267,8 +291,10 @@ async fn commit_plan(
             }
         }
         if !graph.operations.is_empty() {
-            let operations_msgpack = rmp_serde::to_vec_named(&graph.operations)
-                .map_err(|error| format!("PARAMETER_INVALID: the import batch is not encodable: {error}"))?;
+            let operations_msgpack =
+                rmp_serde::to_vec_named(&graph.operations).map_err(|error| {
+                    format!("PARAMETER_INVALID: the import batch is not encodable: {error}")
+                })?;
             let response = dispatch_boxed(dispatch_graph_op(
                 state,
                 &graph.target,

@@ -19,9 +19,9 @@ mod backend;
 mod backend;
 
 pub use backend::SemanticStore;
-use medulla_index_types::embedding::EmbeddingSpaceRef;
 #[cfg(feature = "ann")]
 pub use backend::{build_off_lock, BuildHooks, BuildOutcome};
+use medulla_index_types::embedding::EmbeddingSpaceRef;
 
 /// The content stamp of one [`SemanticStore`] (CONCEPT:MEDULLA-KG.coordination.dependency-scoped-cache-invalidation,
 /// EH-393 — the `EmbeddingGeneration` dependency dimension). Every constructor, content mutation

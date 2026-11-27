@@ -158,7 +158,12 @@ impl SyncHarness {
         assert!(created.error.is_none(), "{created:?}");
         {
             let state = served.state.read().await;
-            let core = state.registry.get(spec.graph).expect("resident").core.clone();
+            let core = state
+                .registry
+                .get(spec.graph)
+                .expect("resident")
+                .core
+                .clone();
             let mut sources = GraphSchemaSources::with_dynamic(BTreeMap::new()).unwrap();
             let source = GraphSchemaSource::new(
                 SchemaSourceOrigin::Operator,

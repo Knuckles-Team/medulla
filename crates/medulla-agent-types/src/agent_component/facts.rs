@@ -528,7 +528,9 @@ fn validate_model_identity(provider: &str, model_identity: &str) -> Result<(), S
 
 fn validate_window(context_window_tokens: u32, max_output_tokens: u32) -> Result<(), String> {
     if context_window_tokens == 0 {
-        return Err("INVALID_ARGUMENT: agent component context_window_tokens must be non-zero".into());
+        return Err(
+            "INVALID_ARGUMENT: agent component context_window_tokens must be non-zero".into(),
+        );
     }
     if max_output_tokens == 0 {
         return Err("INVALID_ARGUMENT: agent component max_output_tokens must be non-zero".into());

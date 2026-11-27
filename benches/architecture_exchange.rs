@@ -36,7 +36,11 @@ fn high_water_mib() -> f64 {
 
 fn main() {
     let types = ArchimateTypeMap {
-        classes: [("ApplicationComponent".to_string(), "ApplicationComponent".to_string())].into(),
+        classes: [(
+            "ApplicationComponent".to_string(),
+            "ApplicationComponent".to_string(),
+        )]
+        .into(),
         edges: Default::default(),
         parents: Default::default(),
     };

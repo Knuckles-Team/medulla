@@ -133,14 +133,20 @@ mod tests {
     #[test]
     fn a_layer_decodes_only_for_its_tenant_kind_and_scope() {
         let company = node("t", "company", "");
-        let record = config_layer_record("t", ConfigLayerKind::Company, "", &company).expect("a layer");
+        let record =
+            config_layer_record("t", ConfigLayerKind::Company, "", &company).expect("a layer");
         assert_eq!(record.revision, 3);
-        assert_eq!(record.node_id, config_layer_node_id("t", ConfigLayerKind::Company, ""));
+        assert_eq!(
+            record.node_id,
+            config_layer_node_id("t", ConfigLayerKind::Company, "")
+        );
         assert_eq!(record.settings, json!({"skills": ["a"]}));
         // Another tenant, another kind and another scope all read as absent.
         assert!(config_layer_record("u", ConfigLayerKind::Company, "", &company).is_none());
         assert!(config_layer_record("t", ConfigLayerKind::Team, "", &company).is_none());
-        assert!(config_layer_record("t", ConfigLayerKind::Team, "x", &node("t", "team", "y")).is_none());
+        assert!(
+            config_layer_record("t", ConfigLayerKind::Team, "x", &node("t", "team", "y")).is_none()
+        );
         // Settings that are not an object are not a layer; an object in text form is.
         let mut bad = node("t", "user", "p");
         bad["settings"] = json!([1]);
@@ -156,6 +162,9 @@ mod tests {
         let one = config_layer_node_id("a:1", ConfigLayerKind::Team, "x");
         let two = config_layer_node_id("a", ConfigLayerKind::Team, "1:team:x");
         assert_ne!(one, two);
-        assert!(ConfigLayerKind::Company < ConfigLayerKind::Team && ConfigLayerKind::Team < ConfigLayerKind::User);
+        assert!(
+            ConfigLayerKind::Company < ConfigLayerKind::Team
+                && ConfigLayerKind::Team < ConfigLayerKind::User
+        );
     }
 }

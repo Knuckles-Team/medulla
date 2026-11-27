@@ -182,7 +182,13 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<(medulla_ingestion_types::ingestion_wire::IndexResult, AcceptFollow), Response> {
+) -> Result<
+    (
+        medulla_ingestion_types::ingestion_wire::IndexResult,
+        AcceptFollow,
+    ),
+    Response,
+> {
     use super::super::request_boundary::preflight::{ast_input_limits, decode_ast_sources};
     let req_id = ctx.req_id;
     // Entries are content-keyed: one path may name several blobs (EH-280).
@@ -223,15 +229,19 @@ async fn index_scoped(
     #[cfg(not(all(feature = "redb", feature = "blob")))]
     let follow = {
         let _ = &seqs;
-        AcceptFollow { branch: branch_name.clone() }
+        AcceptFollow {
+            branch: branch_name.clone(),
+        }
     };
     // MEDULLA-SCM-R006: the generation this full index leaves; the next changeset chains
     // from the branch head.
     let generation = ctx
         .core
-        .get_node_properties(&medulla_h_ingest::repository_index::changeset::generation_node_id(
-            &scope.repository_id,
-        ))
+        .get_node_properties(
+            &medulla_h_ingest::repository_index::changeset::generation_node_id(
+                &scope.repository_id,
+            ),
+        )
         .and_then(|blob| medulla_h_ingest::repository_index::changeset::read_generation(&blob));
     // MEDULLA-ORCH-VOCAB-R012.7.2: the commit a policy candidate cites is the revision of
     // the indexed branch's ref (its first ref when no ref carries the branch name).
@@ -315,7 +325,13 @@ async fn index_scoped(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,
-) -> Result<(medulla_ingestion_types::ingestion_wire::IndexResult, AcceptFollow), Response> {
+) -> Result<
+    (
+        medulla_ingestion_types::ingestion_wire::IndexResult,
+        AcceptFollow,
+    ),
+    Response,
+> {
     let req_id = ctx.req_id;
     let _ = (files_msgpack, scope);
     Err(Response::err(req_id, "AST feature not enabled".to_string()))
@@ -530,11 +546,10 @@ async fn accept_followers(
         .blob_cursors()
         .map(|cursors| std::sync::Arc::clone(&cursors.store));
     if let (Some(source), Some(store)) = (follow.source, store) {
-        let owner = medulla_server_api::carrier::CarrierAuthority::from_verified(
-            ctx.verified_context,
-        )?
-        .owner_scope()
-        .to_string();
+        let owner =
+            medulla_server_api::carrier::CarrierAuthority::from_verified(ctx.verified_context)?
+                .owner_scope()
+                .to_string();
         for (changeset, seq) in &follow.delta {
             Box::pin(accept_edges(
                 ctx.state,

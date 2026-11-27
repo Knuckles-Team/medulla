@@ -206,8 +206,7 @@ fn first_exceeded(
     (0..3)
         .find(|&d| {
             hosts.iter().enumerate().all(|(h, host)| {
-                !capable(host, &services[s])
-                    || need[d] > budget(host)[d].saturating_sub(used[h][d])
+                !capable(host, &services[s]) || need[d] > budget(host)[d].saturating_sub(used[h][d])
             })
         })
         .map_or("capacity", |d| DIMENSIONS[d])

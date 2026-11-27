@@ -75,12 +75,7 @@ impl AuthorizedSqlSourceReadPort {
         self
     }
 
-    fn graph_cursor_mac(
-        &self,
-        authority: SemanticDigest,
-        epoch: u64,
-        offset: u64,
-    ) -> [u8; 32] {
+    fn graph_cursor_mac(&self, authority: SemanticDigest, epoch: u64, offset: u64) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(CURSOR_DOMAIN);
         hasher.update(self.cursor_auth_secret);

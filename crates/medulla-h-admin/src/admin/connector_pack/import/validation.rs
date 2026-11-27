@@ -726,7 +726,10 @@ pub(crate) fn shape_triple_to_rdf(
         ShapeTerm::Literal {
             lexical,
             datatype: Some(datatype),
-        } => Term::from(Literal::new_typed_literal(lexical.clone(), named(datatype)?)),
+        } => Term::from(Literal::new_typed_literal(
+            lexical.clone(),
+            named(datatype)?,
+        )),
         ShapeTerm::Literal {
             lexical,
             datatype: None,
@@ -796,7 +799,10 @@ fn flag_object_model(validator: &mut IndexValidator<'_>) -> Option<String> {
             PackViolationCode::InterfaceUnimplemented,
             Some(&gap.class),
             &class_list_detail(
-                &format!("interface {} requires a member the class lacks: ", gap.interface),
+                &format!(
+                    "interface {} requires a member the class lacks: ",
+                    gap.interface
+                ),
                 &[gap.member],
             ),
         );

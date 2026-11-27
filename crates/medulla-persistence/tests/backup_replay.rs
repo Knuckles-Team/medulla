@@ -1,10 +1,6 @@
 //! Point-in-time restore from archive segments (`MEDULLA-ENGINE-PARITY-R016.2`
 //! and `MEDULLA-ENGINE-PARITY-R016.3`).
-#![cfg(all(
-    feature = "redb",
-    feature = "object-store",
-    feature = "test-support"
-))]
+#![cfg(all(feature = "redb", feature = "object-store", feature = "test-support"))]
 
 use medulla_persistence::backup::restore_bundle;
 use medulla_persistence::backup_replay::{archive_bounds, replay_archive};
@@ -36,11 +32,17 @@ async fn replay_applies_segments_to_the_target_and_refuses_past_the_end() {
         retain_s: 3_600,
         interval_s: 10,
     };
-    let pass = source.archive_pass(&archive, TENANT, &policy).await.unwrap();
+    let pass = source
+        .archive_pass(&archive, TENANT, &policy)
+        .await
+        .unwrap();
     assert_eq!(pass.records_archived, 30);
     drop(source);
 
-    assert_eq!(archive.list_scopes(TENANT).await.unwrap(), vec![scope.clone()]);
+    assert_eq!(
+        archive.list_scopes(TENANT).await.unwrap(),
+        vec![scope.clone()]
+    );
 
     // A target past the archive end refuses and the destination stays untouched.
     let bounds = archive_bounds(&archive, TENANT).await.unwrap();
@@ -63,21 +65,26 @@ async fn replay_applies_segments_to_the_target_and_refuses_past_the_end() {
     assert_eq!(report.final_sequence.get(&scope), Some(&15));
     assert!(report.segments_replayed >= 1);
 
-    let reopened = RedbBackend::open_with_shards(restored.to_string_lossy().into_owned(), 64, 1)
-        .unwrap();
+    let reopened =
+        RedbBackend::open_with_shards(restored.to_string_lossy().into_owned(), 64, 1).unwrap();
     for index in 0..15 {
-        let record = PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
-            .await
-            .unwrap();
+        let record =
+            PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
+                .await
+                .unwrap();
         assert!(record.is_some(), "batch b{index} is in the restored ledger");
     }
     for index in 15..30 {
-        let record = PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
-            .await
-            .unwrap();
+        let record =
+            PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
+                .await
+                .unwrap();
         assert!(record.is_none(), "batch b{index} is past the target");
     }
-    assert_eq!(reopened.last_committed_sequences().unwrap().get(&scope), Some(&15));
+    assert_eq!(
+        reopened.last_committed_sequences().unwrap().get(&scope),
+        Some(&15)
+    );
 }
 
 // spec: MEDULLA-ENGINE-PARITY-R016.3
@@ -99,7 +106,10 @@ async fn restore_drill_has_no_lost_sequences() {
         retain_s: 3_600,
         interval_s: 10,
     };
-    let pass = source.archive_pass(&archive, TENANT, &policy).await.unwrap();
+    let pass = source
+        .archive_pass(&archive, TENANT, &policy)
+        .await
+        .unwrap();
     assert_eq!(pass.records_archived, 100_000);
     drop(source);
 
@@ -112,12 +122,13 @@ async fn restore_drill_has_no_lost_sequences() {
     assert_eq!(report.final_sequence.get(&scope), Some(&50_000));
     assert_eq!(report.records_applied, 50_000);
 
-    let reopened = RedbBackend::open_with_shards(restored.to_string_lossy().into_owned(), 1024, 1)
-        .unwrap();
+    let reopened =
+        RedbBackend::open_with_shards(restored.to_string_lossy().into_owned(), 1024, 1).unwrap();
     for index in 0..50_000u64 {
-        let record = PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
-            .await
-            .unwrap();
+        let record =
+            PersistenceBackend::read_mutation_batch(&reopened, GRAPH, &format!("b{index}"))
+                .await
+                .unwrap();
         assert!(record.is_some(), "sequence {} is missing", index + 1);
     }
     let after = PersistenceBackend::read_mutation_batch(&reopened, GRAPH, "b50000")

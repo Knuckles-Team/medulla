@@ -114,11 +114,7 @@ impl Served {
             method,
             trace_id: None,
         };
-        let verified = VerifiedRequestContext::verified_for_test_with_scopes(
-            ADMIN,
-            tenant,
-            scopes,
-        );
+        let verified = VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, scopes);
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
                 &self.state,

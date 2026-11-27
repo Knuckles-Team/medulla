@@ -56,7 +56,10 @@ pub(crate) fn text_search_columns(plan: &LogicalPlan) -> Vec<(String, String)> {
     let _ = plan.apply_with_subqueries(|node| {
         match node {
             LogicalPlan::TableScan(scan) => {
-                tables.insert(scan.table_name.to_string(), scan.table_name.table().to_string());
+                tables.insert(
+                    scan.table_name.to_string(),
+                    scan.table_name.table().to_string(),
+                );
             }
             LogicalPlan::SubqueryAlias(alias) => {
                 if let LogicalPlan::TableScan(scan) = alias.input.as_ref() {

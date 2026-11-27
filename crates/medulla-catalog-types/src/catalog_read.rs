@@ -313,7 +313,10 @@ mod governance_tests {
             }],
         };
         let bytes = serde_json::to_vec(&answer).unwrap();
-        assert_eq!(serde_json::from_slice::<CatalogReadAnswer>(&bytes).unwrap(), answer);
+        assert_eq!(
+            serde_json::from_slice::<CatalogReadAnswer>(&bytes).unwrap(),
+            answer
+        );
         // A browse answer keeps its bytes: the new fields are absent when empty.
         let browse = serde_json::to_value(CatalogReadAnswer {
             governance: None,
@@ -343,7 +346,13 @@ mod governance_tests {
                 principal: "p".into(),
             })
         );
-        assert_eq!(StewardshipAssignment::from_properties(&properties("table", "owner")), None);
-        assert_eq!(StewardshipAssignment::from_properties(&properties("asset", "boss")), None);
+        assert_eq!(
+            StewardshipAssignment::from_properties(&properties("table", "owner")),
+            None
+        );
+        assert_eq!(
+            StewardshipAssignment::from_properties(&properties("asset", "boss")),
+            None
+        );
     }
 }

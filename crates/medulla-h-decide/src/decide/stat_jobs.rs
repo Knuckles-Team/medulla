@@ -42,7 +42,7 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::DecisionEvalOp, decision::DecisionEvalReceipt, decision::DecisionEvalRequest,
     decision::DecisionFitOp, decision::DecisionFitRequest, decision::DecisionJobKind,
-    decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobOutcome,
+    decision::DecisionJobOutcome, decision::DecisionJobOutput, decision::DecisionJobRecord,
     decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
 };
 use medulla_query_types::solve_scalar::digest_text;
@@ -744,8 +744,8 @@ async fn serve_eval(
     op: DecisionEvalOp,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
-        result_contract::coordination::DecisionEvalDelegationQuality,
         result_contract::coordination::DecisionEvalCertifyLocalSkill,
+        result_contract::coordination::DecisionEvalDelegationQuality,
         result_contract::coordination::DecisionEvalGroundedAnswerSubmit,
         result_contract::coordination::DecisionEvalRetrievalRankingSubmit,
         result_contract::coordination::DecisionEvalStatus,
@@ -888,7 +888,9 @@ async fn serve_eval(
         DecisionEvalOp::SkillEval { .. }
         | DecisionEvalOp::SkillEvalCaseAdd { .. }
         | DecisionEvalOp::HeldItemCritique { .. } => {
-            return Err("INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string())
+            return Err(
+                "INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string(),
+            )
         }
         DecisionEvalOp::SkillEvalReport { request } => {
             super::stat_skill_eval::require_scope(
@@ -1168,18 +1170,13 @@ pub(super) async fn plan_skill_eval(
     async {
         let (store, now_ms) = store_and_now(state).await?;
         let job_request = request.clone();
-        let outcome = medulla_server_api::api::dispatch_support::blocking_task(
-            BLOCKING_TASK,
-            move || super::stat_skill_eval::run(&store, &job_request),
-        )
-        .await?;
+        let outcome =
+            medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                super::stat_skill_eval::run(&store, &job_request)
+            })
+            .await?;
         let operations = super::stat_skill_eval::report_operations(
-            state,
-            verified,
-            graph,
-            &request,
-            &outcome,
-            now_ms,
+            state, verified, graph, &request, &outcome, now_ms,
         )
         .await?;
         Ok(super::planned_write::PlannedWrite {

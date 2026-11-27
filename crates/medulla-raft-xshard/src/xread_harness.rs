@@ -22,6 +22,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::harness::cluster::fixture;
+use medulla_direct_state::direct_state::GroupId;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
@@ -29,7 +30,6 @@ use medulla_raft::raft::xread::{
     CompletionPolicy, CrossGraphReadErrorCode, CrossGraphReadRequest, CrossShardReader,
     ReadLegOutcome, ReadPageErrorCode,
 };
-use medulla_direct_state::direct_state::GroupId;
 use medulla_raft::raft::RaftRequest;
 
 const GROUP_A: GroupId = 500;
@@ -53,7 +53,11 @@ async fn bring_up(
         backend,
         medulla_isolation::isolation::IsolationLayer::new(),
         "xread-test",
-        &[GROUP_A, GROUP_B, medulla_direct_state::direct_state::DEFAULT_GROUP],
+        &[
+            GROUP_A,
+            GROUP_B,
+            medulla_direct_state::direct_state::DEFAULT_GROUP,
+        ],
     )
     .await
 }

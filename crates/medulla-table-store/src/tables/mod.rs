@@ -48,17 +48,16 @@ pub use column_advice::{
 };
 pub use embedding_binding::{
     catalog_key as embedding_binding_catalog_key, decode_binding, default_target_column,
-    encode_binding, is_embeddable, model_digest, prepare_catalog_write,
-    validate_binding, BindingRequest, BindingState, EmbeddingBinding, Maintenance, ModelRef,
-    AdviceEligibility, AdviceReceipt, ColumnVectorAdvice, SourceSelector, StampedVector, TargetVector,
+    encode_binding, is_embeddable, model_digest, prepare_catalog_write, validate_binding,
+    AdviceEligibility, AdviceReceipt, BindingRequest, BindingState, ColumnVectorAdvice,
+    EmbeddingBinding, Maintenance, ModelRef, SourceSelector, StampedVector, TargetVector,
     EMBEDDING_BINDING_SCHEMA_VERSION, EMBEDDING_TARGET_SUFFIX, MAX_EMBEDDING_BINDINGS_PER_TABLE,
     MAX_EMBEDDING_DIM,
 };
 pub use index_plan::{IndexColumnPlan, IndexPlan};
 pub use matview::{
-    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, refresh_matview_txn,
-    join_key_indexed, MatViewSpec, MATVIEW_EXISTS,
-    MATVIEW_UNKNOWN,
+    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, join_key_indexed,
+    refresh_matview_txn, MatViewSpec, MATVIEW_EXISTS, MATVIEW_UNKNOWN,
 };
 pub use property_graph::{
     decode_property_graph, decode_property_graph_catalog_record, AlterElementAction,

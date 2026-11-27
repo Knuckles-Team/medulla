@@ -1051,7 +1051,9 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     // The promotion publishes a revision and writes no champion pointer node
     // (MEDULLA-DECISION-ENGINE-R805.8).
     assert_eq!(
-        revision_value.get("stage").and_then(serde_json::Value::as_str),
+        revision_value
+            .get("stage")
+            .and_then(serde_json::Value::as_str),
         Some("published")
     );
     let resolved =

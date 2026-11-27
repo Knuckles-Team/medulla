@@ -21,8 +21,8 @@ use medulla_protocol_types::result_contract::coordination::{
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_work_types::action_spec::{
-    ActionList, ActionRefusal, ActionRun, ActionSpec, ActionStatus, EffectDisposition, EffectKind, ParamValue,
-    ResolvedEffect,
+    ActionList, ActionRefusal, ActionRun, ActionSpec, ActionStatus, EffectDisposition, EffectKind,
+    ParamValue, ResolvedEffect,
 };
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};

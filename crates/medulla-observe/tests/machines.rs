@@ -1,10 +1,8 @@
 //! The explicit state machines of the runtime registries.
 
-use medulla_observe::machine::readiness::{
-    ReadinessEvent, ReadinessState, READINESS_MACHINE,
-};
-use medulla_observe::machine::request::{RequestEvent, RequestState, REQUEST_MACHINE};
 use medulla_observe::events::{EventRing, TransitionEvent, MAX_SUBJECT_BYTES};
+use medulla_observe::machine::readiness::{ReadinessEvent, ReadinessState, READINESS_MACHINE};
+use medulla_observe::machine::request::{RequestEvent, RequestState, REQUEST_MACHINE};
 use medulla_observe::machine::task::{TaskEvent, TaskState, TASK_MACHINE};
 use medulla_observe::registry::readiness::ReadinessRegistry;
 use medulla_observe::registry::tasks::{Outcome, ProgressCursor, TaskKind, TaskRegistry, TaskSpec};
@@ -74,7 +72,10 @@ fn every_other_pair_of_state_and_event_is_refused() {
                 .expect_err("a pair no edge lists must be refused");
             assert_eq!(refused.machine, "TaskMachine");
             assert_eq!(refused.from, from.stored());
-            assert_eq!(refused.event, medulla_types::transition_refused::MachineEvent::name(event));
+            assert_eq!(
+                refused.event,
+                medulla_types::transition_refused::MachineEvent::name(event)
+            );
             let reason = if from.is_terminal() {
                 TransitionRefusalReason::TerminalState
             } else {
@@ -91,19 +92,84 @@ fn every_other_pair_of_state_and_event_is_refused() {
 }
 
 const REQUEST_EDGES: [(&str, RequestState, RequestEvent, RequestState); 13] = [
-    ("Q01", RequestState::Received, RequestEvent::Admit, RequestState::Admitted),
-    ("Q02", RequestState::Received, RequestEvent::Refuse, RequestState::Refused),
-    ("Q03", RequestState::Admitted, RequestEvent::Authorize, RequestState::Authorized),
-    ("Q04", RequestState::Admitted, RequestEvent::Refuse, RequestState::Refused),
-    ("Q05", RequestState::Authorized, RequestEvent::Handle, RequestState::Handling),
-    ("Q06", RequestState::Authorized, RequestEvent::Refuse, RequestState::Refused),
-    ("Q07", RequestState::Handling, RequestEvent::WaitLock, RequestState::WaitingLock),
-    ("Q08", RequestState::WaitingLock, RequestEvent::Acquire, RequestState::Handling),
-    ("Q09", RequestState::Handling, RequestEvent::Respond, RequestState::Responding),
-    ("Q10", RequestState::Handling, RequestEvent::Refuse, RequestState::Refused),
-    ("Q11", RequestState::WaitingLock, RequestEvent::Refuse, RequestState::Refused),
-    ("Q12", RequestState::Responding, RequestEvent::Complete, RequestState::Done),
-    ("Q13", RequestState::Responding, RequestEvent::Refuse, RequestState::Refused),
+    (
+        "Q01",
+        RequestState::Received,
+        RequestEvent::Admit,
+        RequestState::Admitted,
+    ),
+    (
+        "Q02",
+        RequestState::Received,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
+    (
+        "Q03",
+        RequestState::Admitted,
+        RequestEvent::Authorize,
+        RequestState::Authorized,
+    ),
+    (
+        "Q04",
+        RequestState::Admitted,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
+    (
+        "Q05",
+        RequestState::Authorized,
+        RequestEvent::Handle,
+        RequestState::Handling,
+    ),
+    (
+        "Q06",
+        RequestState::Authorized,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
+    (
+        "Q07",
+        RequestState::Handling,
+        RequestEvent::WaitLock,
+        RequestState::WaitingLock,
+    ),
+    (
+        "Q08",
+        RequestState::WaitingLock,
+        RequestEvent::Acquire,
+        RequestState::Handling,
+    ),
+    (
+        "Q09",
+        RequestState::Handling,
+        RequestEvent::Respond,
+        RequestState::Responding,
+    ),
+    (
+        "Q10",
+        RequestState::Handling,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
+    (
+        "Q11",
+        RequestState::WaitingLock,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
+    (
+        "Q12",
+        RequestState::Responding,
+        RequestEvent::Complete,
+        RequestState::Done,
+    ),
+    (
+        "Q13",
+        RequestState::Responding,
+        RequestEvent::Refuse,
+        RequestState::Refused,
+    ),
 ];
 
 const REQUEST_EVENTS: [RequestEvent; 8] = [
@@ -134,11 +200,19 @@ fn request_machine_edges_q01_to_q13() {
         assert_eq!(from.apply(event), Ok(to), "{id}");
     }
     // Handling and WaitingLock alternate while a lock is held or waited for.
-    let waiting = RequestState::Handling.apply(RequestEvent::WaitLock).unwrap();
-    assert_eq!(waiting.apply(RequestEvent::Acquire), Ok(RequestState::Handling));
+    let waiting = RequestState::Handling
+        .apply(RequestEvent::WaitLock)
+        .unwrap();
+    assert_eq!(
+        waiting.apply(RequestEvent::Acquire),
+        Ok(RequestState::Handling)
+    );
     for from in RequestState::ALL {
         for event in REQUEST_EVENTS {
-            if REQUEST_EDGES.iter().any(|edge| edge.1 == from && edge.2 == event) {
+            if REQUEST_EDGES
+                .iter()
+                .any(|edge| edge.1 == from && edge.2 == event)
+            {
                 continue;
             }
             let refused = from.apply(event).expect_err("an unlisted pair is refused");
@@ -159,18 +233,78 @@ fn request_machine_edges_q01_to_q13() {
 }
 
 const READINESS_EDGES: [(&str, ReadinessState, ReadinessEvent, ReadinessState); 12] = [
-    ("D01", ReadinessState::Opening, ReadinessEvent::BeginMigrate, ReadinessState::Migrating),
-    ("D02", ReadinessState::Opening, ReadinessEvent::BeginMaterialize, ReadinessState::Materializing),
-    ("D03", ReadinessState::Opening, ReadinessEvent::Materialized, ReadinessState::Ready),
-    ("D04", ReadinessState::Migrating, ReadinessEvent::BeginMaterialize, ReadinessState::Materializing),
-    ("D05", ReadinessState::Materializing, ReadinessEvent::Materialized, ReadinessState::Ready),
-    ("D06", ReadinessState::Opening, ReadinessEvent::Degrade, ReadinessState::Degraded),
-    ("D07", ReadinessState::Migrating, ReadinessEvent::Degrade, ReadinessState::Degraded),
-    ("D08", ReadinessState::Materializing, ReadinessEvent::Degrade, ReadinessState::Degraded),
-    ("D09", ReadinessState::Ready, ReadinessEvent::Degrade, ReadinessState::Degraded),
-    ("D10", ReadinessState::Degraded, ReadinessEvent::Reopen, ReadinessState::Opening),
-    ("D11", ReadinessState::Ready, ReadinessEvent::Reopen, ReadinessState::Opening),
-    ("D12", ReadinessState::Degraded, ReadinessEvent::Degrade, ReadinessState::Degraded),
+    (
+        "D01",
+        ReadinessState::Opening,
+        ReadinessEvent::BeginMigrate,
+        ReadinessState::Migrating,
+    ),
+    (
+        "D02",
+        ReadinessState::Opening,
+        ReadinessEvent::BeginMaterialize,
+        ReadinessState::Materializing,
+    ),
+    (
+        "D03",
+        ReadinessState::Opening,
+        ReadinessEvent::Materialized,
+        ReadinessState::Ready,
+    ),
+    (
+        "D04",
+        ReadinessState::Migrating,
+        ReadinessEvent::BeginMaterialize,
+        ReadinessState::Materializing,
+    ),
+    (
+        "D05",
+        ReadinessState::Materializing,
+        ReadinessEvent::Materialized,
+        ReadinessState::Ready,
+    ),
+    (
+        "D06",
+        ReadinessState::Opening,
+        ReadinessEvent::Degrade,
+        ReadinessState::Degraded,
+    ),
+    (
+        "D07",
+        ReadinessState::Migrating,
+        ReadinessEvent::Degrade,
+        ReadinessState::Degraded,
+    ),
+    (
+        "D08",
+        ReadinessState::Materializing,
+        ReadinessEvent::Degrade,
+        ReadinessState::Degraded,
+    ),
+    (
+        "D09",
+        ReadinessState::Ready,
+        ReadinessEvent::Degrade,
+        ReadinessState::Degraded,
+    ),
+    (
+        "D10",
+        ReadinessState::Degraded,
+        ReadinessEvent::Reopen,
+        ReadinessState::Opening,
+    ),
+    (
+        "D11",
+        ReadinessState::Ready,
+        ReadinessEvent::Reopen,
+        ReadinessState::Opening,
+    ),
+    (
+        "D12",
+        ReadinessState::Degraded,
+        ReadinessEvent::Degrade,
+        ReadinessState::Degraded,
+    ),
 ];
 
 const READINESS_EVENTS: [ReadinessEvent; 5] = [
@@ -322,9 +456,8 @@ fn machine_user_sources() -> Vec<(std::path::PathBuf, String)> {
         })
         .filter_map(|path| {
             let source = std::fs::read_to_string(&path).ok()?;
-            let observe_own = path.starts_with(
-                std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
-            );
+            let observe_own =
+                path.starts_with(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
             (observe_own || source.contains("medulla_observe")).then_some((path, source))
         })
         .collect()
@@ -407,7 +540,9 @@ fn accepted_and_refused_transitions_are_recorded() {
     // fields of the refusal, and is counted; it is not an accepted event.
     let readiness = ReadinessRegistry::new();
     let graph = "events-test:graph";
-    readiness.apply(graph, ReadinessEvent::Materialized, None).unwrap();
+    readiness
+        .apply(graph, ReadinessEvent::Materialized, None)
+        .unwrap();
     let refused_before = medulla_observe::events().refused_total();
     let refused = readiness
         .apply(graph, ReadinessEvent::BeginMigrate, None)
@@ -415,7 +550,10 @@ fn accepted_and_refused_transitions_are_recorded() {
     assert_eq!(refused.machine, "ReadinessMachine");
     assert_eq!(refused.from, "ready");
     assert_eq!(readiness.get(graph).unwrap().state, ReadinessState::Ready);
-    assert_eq!(medulla_observe::events().refused_total(), refused_before + 1);
+    assert_eq!(
+        medulla_observe::events().refused_total(),
+        refused_before + 1
+    );
     let kept = medulla_observe::events()
         .refused()
         .into_iter()
@@ -443,8 +581,13 @@ fn accepted_and_refused_transitions_are_recorded() {
     assert_eq!(ring.len(), 3);
     assert_eq!(ring.sequence(), 5);
     let held = ring.snapshot();
-    assert_eq!(held.iter().map(|(seq, _)| *seq).collect::<Vec<_>>(), vec![3, 4, 5]);
-    assert!(held.iter().all(|(_, event)| event.subject.len() == MAX_SUBJECT_BYTES));
+    assert_eq!(
+        held.iter().map(|(seq, _)| *seq).collect::<Vec<_>>(),
+        vec![3, 4, 5]
+    );
+    assert!(held
+        .iter()
+        .all(|(_, event)| event.subject.len() == MAX_SUBJECT_BYTES));
     assert_eq!(ring.last(2).len(), 2);
     assert_eq!(ring.last(2)[0].0, 4);
 }

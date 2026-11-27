@@ -264,7 +264,13 @@ async fn external_reader_loads_v2_manifests() {
 
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let output = tokio::process::Command::new("python3")
-        .args(["-m", "pytest", "tests/lake/test_pyiceberg_reader.py", "--noconftest", "-q"])
+        .args([
+            "-m",
+            "pytest",
+            "tests/lake/test_pyiceberg_reader.py",
+            "--noconftest",
+            "-q",
+        ])
         .current_dir(root)
         .env("LAKE_REST_URI", format!("http://{address}"))
         .env("LAKE_TABLE", series)

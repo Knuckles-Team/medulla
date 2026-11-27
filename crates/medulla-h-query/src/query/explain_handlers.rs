@@ -374,8 +374,7 @@ pub(crate) async fn handle_recompute_materialization(
             id: medulla_epistemic::projection_identity(&derived_id),
             depends_on: Vec::new(),
             generating_activity: None,
-            status: medulla_protocol_types::protocol::RECOMPUTE_QUEUED_STATUS
-                .to_string(),
+            status: medulla_protocol_types::protocol::RECOMPUTE_QUEUED_STATUS.to_string(),
             source_graph_version: target_graph_version,
             fence_epoch: 0,
             projection_pending: true,

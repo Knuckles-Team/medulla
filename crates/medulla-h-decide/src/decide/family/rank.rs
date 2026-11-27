@@ -8,11 +8,10 @@
 //! by the caller's item-level score.
 
 use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_types::decision::codes::QUESTION_UNPUBLISHED;
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_types::refusal_code::RefusalCode;
 use medulla_decision_stats::decision::quant::unit_wire;
+use medulla_decision_types::decision::codes::QUESTION_UNPUBLISHED;
 use medulla_decision_types::decision::codes::UNCALIBRATED_CANDIDATE;
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
@@ -24,6 +23,7 @@ use medulla_epistemic::{
     rank_calibrated, CalibratedRankRules, CalibratedRanking, RankedCandidate, TieBreakPolicy,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, Pinned};
 

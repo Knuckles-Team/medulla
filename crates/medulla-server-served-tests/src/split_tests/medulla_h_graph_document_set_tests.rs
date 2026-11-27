@@ -1,7 +1,13 @@
 // MEDULLA-DECISION-ENGINE-R656.3: a named document set narrows `MemoryRecall` and `Discover`,
 // the ACL still applies to every set and result, and another tenant's set is not found.
 
-#[cfg(all(unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+#[cfg(all(
+    unix,
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
 mod served {
     use medulla_identity_types::acl::{GrantEffect, RbacAction};
     use medulla_identity_types::assistant_profile::{
@@ -67,7 +73,8 @@ mod served {
     impl Served {
         async fn ds_as_tenant(&self, tenant: &str, method: Method) -> Response {
             if tenant == TENANT {
-                self.call_on(GRAPH, &format!("document-set:{}", next_id()), method).await
+                self.call_on(GRAPH, &format!("document-set:{}", next_id()), method)
+                    .await
             } else {
                 self.verified(tenant, &["*"], method).await
             }
@@ -82,7 +89,10 @@ mod served {
                     },
                 )
                 .await;
-            assert!(response.error.is_none(), "PutDocumentSet refused: {response:?}");
+            assert!(
+                response.error.is_none(),
+                "PutDocumentSet refused: {response:?}"
+            );
         }
 
         async fn ds_recall(&self, tenant: &str, document_set_ids: &[&str]) -> Response {
@@ -150,7 +160,8 @@ mod served {
     // spec: MEDULLA-DECISION-ENGINE-R656.3
     #[tokio::test]
     async fn document_set_narrows_retrieval_and_acl_still_applies() {
-        let served = Served::provisioned(GRAPH, "document-set-source", &[("doc", "Document")]).await;
+        let served =
+            Served::provisioned(GRAPH, "document-set-source", &[("doc", "Document")]).await;
         for document in ["doc-a", "doc-b"] {
             let response = served
                 .ds_as_tenant(
@@ -177,15 +188,26 @@ mod served {
                     },
                 )
                 .await;
-            assert!(response.error.is_none(), "MemoryRemember refused: {response:?}");
+            assert!(
+                response.error.is_none(),
+                "MemoryRemember refused: {response:?}"
+            );
         }
         served.ds_put_set(set("only-a", &["doc-a"])).await;
-        served.ds_put_set(set("a-and-ghost", &["doc-a", "doc-ghost"])).await;
+        served
+            .ds_put_set(set("a-and-ghost", &["doc-a", "doc-ghost"]))
+            .await;
         served.ds_put_set(set("empty", &[])).await;
 
         // No set: every record. One set: only its documents; the union of sets adds.
-        assert_eq!(recalled(served.ds_recall(TENANT, &[]).await), vec!["m-doc-a", "m-doc-b"]);
-        assert_eq!(recalled(served.ds_recall(TENANT, &["only-a"]).await), vec!["m-doc-a"]);
+        assert_eq!(
+            recalled(served.ds_recall(TENANT, &[]).await),
+            vec!["m-doc-a", "m-doc-b"]
+        );
+        assert_eq!(
+            recalled(served.ds_recall(TENANT, &["only-a"]).await),
+            vec!["m-doc-a"]
+        );
         // A member that is not visible narrows nothing in; it is dropped, not an error.
         assert_eq!(
             recalled(served.ds_recall(TENANT, &["a-and-ghost"]).await),
@@ -195,7 +217,8 @@ mod served {
         assert!(recalled(served.ds_recall(TENANT, &["empty"]).await).is_empty());
 
         // Discover narrows the same way.
-        let found: serde_json::Value = ok("Discover", served.ds_discover(TENANT, &["only-a"]).await);
+        let found: serde_json::Value =
+            ok("Discover", served.ds_discover(TENANT, &["only-a"]).await);
         let ids: Vec<&str> = found["hits"]
             .as_array()
             .unwrap()

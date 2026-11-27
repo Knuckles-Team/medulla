@@ -145,13 +145,17 @@ mod ooxml {
                 )
                 .expect("start");
             let paragraph = "<w:p><w:r><w:t>aaaaaaaaaaaaaaaa</w:t></w:r></w:p>";
-            let body = format!("<w:document><w:body>{}</w:body></w:document>", paragraph.repeat(200));
+            let body = format!(
+                "<w:document><w:body>{}</w:body></w:document>",
+                paragraph.repeat(200)
+            );
             writer.write_all(body.as_bytes()).expect("write");
             writer.finish().expect("finish");
         }
         let bytes = buffer.into_inner();
         assert!(bytes.len() < 1024, "the archive stays under the limit");
-        let registry = text_registry(ReaderLimits::new(1024, 1).expect("limits")).expect("registry");
+        let registry =
+            text_registry(ReaderLimits::new(1024, 1).expect("limits")).expect("registry");
         let error = registry.read(DOCX, &bytes).unwrap_err();
         assert_eq!(error.code, READER_TOO_LARGE);
     }
@@ -175,7 +179,10 @@ mod spreadsheet {
                 ("checked", 35, 42, None)
             ]
         );
-        let paths: Vec<&[String]> = fragments.iter().map(|f| f.span.heading_path.as_slice()).collect();
+        let paths: Vec<&[String]> = fragments
+            .iter()
+            .map(|f| f.span.heading_path.as_slice())
+            .collect();
         assert_eq!(paths[0], ["Revenue".to_string(), "A1:B1".to_string()]);
         assert_eq!(paths[2], ["Revenue".to_string(), "A3:B3".to_string()]);
         assert_eq!(paths[3], ["Notes".to_string(), "A1:A1".to_string()]);

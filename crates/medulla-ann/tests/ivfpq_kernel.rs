@@ -1,8 +1,8 @@
 //! IVF-PQ trained on the shared clustering kernel (MEDULLA-CLUSTER-R003.3, R008.1, R010).
 
 use medulla_ann::ivfpq::{IvfPq, IvfPqParams, SearchParams};
-use medulla_numeric::cluster::ClusterConfig;
 use medulla_numeric::cluster::sq_dist;
+use medulla_numeric::cluster::ClusterConfig;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 

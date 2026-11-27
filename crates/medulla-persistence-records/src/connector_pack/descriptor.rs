@@ -334,7 +334,6 @@ pub fn triples_of(descriptor: &CapabilityDescriptor) -> Result<Vec<Triple>, Stri
     Ok(out)
 }
 
-
 /// Every `cp:Capability` node of `triples` as its descriptor, keyed by
 /// capability IRI. Reliability is 0: it is never stored, so a reader derives it
 /// from the learned reward (MEDULLA-DECISION-ENGINE-R650.3).

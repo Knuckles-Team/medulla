@@ -222,18 +222,14 @@ async fn try_handle_sparql(
                             &core.analysis_snapshot(),
                         ) {
                             Ok(set) => set,
-                            Err(error) => {
-                                return Some(Response::err(req_id, error.to_string()))
-                            }
+                            Err(error) => return Some(Response::err(req_id, error.to_string())),
                         };
                         #[cfg(feature = "security")]
                         let principal = medulla_exec::policy_mask::PrincipalRef::from(caller);
                         #[cfg(not(feature = "security"))]
                         let principal = medulla_exec::policy_mask::PrincipalRef::from("");
                         let query = match medulla_exec::policy_mask::sparql_read_rewrite(
-                            query,
-                            &policies,
-                            &principal,
+                            query, &policies, &principal,
                         ) {
                             Ok((rewritten, _applied)) => rewritten,
                             Err(refusal) => return Some(Response::err(req_id, refusal)),
@@ -257,11 +253,15 @@ async fn try_handle_sparql(
                         let shape_principal = caller.to_string();
                         #[cfg(not(feature = "security"))]
                         let shape_principal = String::new();
-                        let gate = policies.has_shapes().then(|| super::sparql::SparqlShapeGate {
-                            policies: policies.clone(),
-                            principal: shape_principal,
-                            log: Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default()),
-                        });
+                        let gate = policies
+                            .has_shapes()
+                            .then(|| super::sparql::SparqlShapeGate {
+                                policies: policies.clone(),
+                                principal: shape_principal,
+                                log: Arc::new(
+                                    medulla_exec::policy_mask::PolicyEvaluationLog::default(),
+                                ),
+                            });
                         let evaluations = gate.as_ref().map(|gate| Arc::clone(&gate.log));
                         let response = super::sparql::handle_sparql(
                             req_id,

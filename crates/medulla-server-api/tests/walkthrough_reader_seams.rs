@@ -78,7 +78,10 @@ fn walkthrough() -> CodeWalkthrough {
 #[test]
 fn validation_reads_snapshot_and_blobs_only_through_the_seams() {
     let readers = WalkthroughReaders::new(Arc::new(Index), Arc::new(Blobs));
-    assert_eq!(readers.resolve("tenant-a", "owner-a", &walkthrough()), Ok(()));
+    assert_eq!(
+        readers.resolve("tenant-a", "owner-a", &walkthrough()),
+        Ok(())
+    );
 
     let mut stale = walkthrough();
     stale.repository_revision = "rev-1".to_string();

@@ -62,9 +62,10 @@ fn dirty_scope_matches_selector(
                 ..
             },
         ) => true,
-        (SemanticSourceSelector::GraphTextPropertyRef(selector), MutationScope::Graph { graph }) => {
-            graph.as_str() == selector.graph_id
-        }
+        (
+            SemanticSourceSelector::GraphTextPropertyRef(selector),
+            MutationScope::Graph { graph },
+        ) => graph.as_str() == selector.graph_id,
         _ => false,
     }
 }

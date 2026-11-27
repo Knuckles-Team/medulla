@@ -4,8 +4,8 @@ use medulla_work_store::redb_store::work_item::run_owner::*;
 use medulla_work_store::redb_store::work_item::test_shard::run_request as request;
 use medulla_work_store::{
     redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open,
-    redb_store::work_item::test_shard::with_node_rows, redb_store::work_item::test_shard::with_write,
-    redb_store::work_item::test_shard::GRAPH,
+    redb_store::work_item::test_shard::with_node_rows,
+    redb_store::work_item::test_shard::with_write, redb_store::work_item::test_shard::GRAPH,
 };
 use medulla_work_types::native_control::SubmitWorkItemRequest;
 use medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;

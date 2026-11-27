@@ -151,7 +151,10 @@ pub fn render_columnar_select(
         .map(|column| quote_identifier(column, SqlDialect::ColumnarAnalytic))
         .collect::<Result<Vec<_>, String>>()?
         .join(", ");
-    let mut sql = format!("SELECT {projection} FROM {}", quote_identifier(table, SqlDialect::ColumnarAnalytic)?);
+    let mut sql = format!(
+        "SELECT {projection} FROM {}",
+        quote_identifier(table, SqlDialect::ColumnarAnalytic)?
+    );
     let mut params = Vec::new();
     let mut predicates = Vec::new();
     for (index, filter) in filters.iter().enumerate() {
@@ -171,7 +174,10 @@ pub fn render_columnar_select(
             filter.op,
             filter.kind.type_name()
         ));
-        params.push((format!("{CLICKHOUSE_PARAM_PREFIX}{name}"), filter.value.clone()));
+        params.push((
+            format!("{CLICKHOUSE_PARAM_PREFIX}{name}"),
+            filter.value.clone(),
+        ));
     }
     if !predicates.is_empty() {
         sql.push_str(" WHERE ");
@@ -268,7 +274,10 @@ mod tests {
             statement.sql,
             "SELECT `id`, `name` FROM `events` WHERE `id` >= {p0:Int64}"
         );
-        assert_eq!(statement.params, vec![("param_p0".to_string(), "7".to_string())]);
+        assert_eq!(
+            statement.params,
+            vec![("param_p0".to_string(), "7".to_string())]
+        );
         assert!(render_columnar_select("t; DROP", &["id".to_string()], &[]).is_err());
         assert!(render_columnar_select(
             "t",

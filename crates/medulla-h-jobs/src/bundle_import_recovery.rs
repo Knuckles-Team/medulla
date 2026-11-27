@@ -143,7 +143,9 @@ pub async fn recover_bundle_imports(
             Ok::<(), String>(())
         })
         .await?;
-        let operation = record.with_state(ImportState::Aborted).node_operation(SERVICE);
+        let operation = record
+            .with_state(ImportState::Aborted)
+            .node_operation(SERVICE);
         let operations_msgpack = rmp_serde::to_vec_named(&vec![operation])
             .map_err(|error| format!("import record encoding failed: {error}"))?;
         dispatch(

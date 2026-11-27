@@ -101,7 +101,13 @@ mod tests {
     #[test]
     fn a_digest_must_be_sha256_lowercase_hex() {
         assert!(receipt().validate().is_ok());
-        for bad in ["", "ABCDEF", &"A".repeat(64), &"b".repeat(63), &"g".repeat(64)] {
+        for bad in [
+            "",
+            "ABCDEF",
+            &"A".repeat(64),
+            &"b".repeat(63),
+            &"g".repeat(64),
+        ] {
             let mut bad_receipt = receipt();
             bad_receipt.receipt_digest = bad.to_string();
             let error = bad_receipt.validate().unwrap_err();

@@ -135,13 +135,7 @@ pub fn stored_fingerprint(value: &serde_json::Value) -> Option<StructuralFingerp
 mod tests {
     use super::*;
 
-    fn symbol(
-        id: &str,
-        path: &str,
-        name: &str,
-        ast_hash: &str,
-        span: (u32, u32),
-    ) -> Row {
+    fn symbol(id: &str, path: &str, name: &str, ast_hash: &str, span: (u32, u32)) -> Row {
         let properties = [
             ("type", "SYMBOL"),
             ("file_path", path),

@@ -406,7 +406,12 @@ mod readyz_tests {
         assert_eq!(blocker.reason_code, "OPENING");
         // The body is the report and nothing else: no token, no payload.
         let value: serde_json::Value = serde_json::from_str(&body).unwrap();
-        let mut keys: Vec<&str> = value.as_object().unwrap().keys().map(String::as_str).collect();
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
         keys.sort_unstable();
         assert_eq!(keys, ["blockers", "graphs", "ready"]);
 
@@ -423,7 +428,10 @@ mod readyz_tests {
         let report: ReadinessReport = serde_json::from_str(&body).unwrap();
         assert!(report.ready);
         assert!(report.blockers.is_empty());
-        assert!(report.graphs.iter().any(|row| row.graph == graph && row.state == "ready"));
+        assert!(report
+            .graphs
+            .iter()
+            .any(|row| row.graph == graph && row.state == "ready"));
         medulla_observe::readiness().remove(graph);
     }
 }

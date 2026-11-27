@@ -260,7 +260,10 @@ fn selected_candidate_carries_held_out_evidence() {
     use medulla_decision_types::decision::held_out::ReceiptKind;
     let mut request = request(OptimizerKind::LabeledFewShot);
     let proposal = NativeCompiler::compile(&request).expect("compile proposal");
-    assert_eq!(proposal.held_out, None, "no evaluated candidate, no evidence");
+    assert_eq!(
+        proposal.held_out, None,
+        "no evaluated candidate, no evidence"
+    );
     request.candidate_evaluations.push(EvaluationSummary {
         benchmark_score: None,
         cost_micro_usd: 0,
@@ -273,7 +276,10 @@ fn selected_candidate_carries_held_out_evidence() {
         evidence_refs: vec![opaque("evaluation", "candidate-evidence")],
     });
     let promoted = NativeCompiler::compile(&request).expect("compile evaluated candidate");
-    let evidence = promoted.held_out.clone().expect("evidence of the selected candidate");
+    let evidence = promoted
+        .held_out
+        .clone()
+        .expect("evidence of the selected candidate");
     assert_eq!(evidence.receipt_kind, ReceiptKind::ProgramEvaluation);
     assert_eq!(evidence.challenger_score_ppm, 800_000);
     assert_eq!(
@@ -762,12 +768,24 @@ fn reflective_compile_builds_front_and_next_parent() {
         });
     }
     let evaluated = NativeCompiler::compile(&request).expect("evaluated reflective job");
-    let front = evaluated.front.as_ref().expect("a reflective job reports its front");
+    let front = evaluated
+        .front
+        .as_ref()
+        .expect("a reflective job reports its front");
     assert_eq!(front.digest.len(), 64);
-    assert!(front.digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+    assert!(front
+        .digest
+        .bytes()
+        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
     assert!(!front.scoreboard.is_empty() && front.scoreboard.len() <= count);
-    let parent = front.next_parent_ref.as_ref().expect("a non-empty front names a parent");
-    assert!(front.scoreboard.iter().any(|row| &row.candidate_ref == parent));
+    let parent = front
+        .next_parent_ref
+        .as_ref()
+        .expect("a non-empty front names a parent");
+    assert!(front
+        .scoreboard
+        .iter()
+        .any(|row| &row.candidate_ref == parent));
 
     // One seed over one request reproduces the digest and the parent.
     let again = NativeCompiler::compile(&request).expect("rerun");
@@ -787,5 +805,8 @@ fn reflective_compile_builds_front_and_next_parent() {
             .collect(),
         evidence_refs: vec![opaque("evaluation", "few-shot-evidence")],
     });
-    assert!(NativeCompiler::compile(&few_shot).expect("few shot").front.is_none());
+    assert!(NativeCompiler::compile(&few_shot)
+        .expect("few shot")
+        .front
+        .is_none());
 }

@@ -19,12 +19,14 @@ pub async fn check_derivation_count(
     payload_ref: &str,
     claims_written: u32,
 ) -> Result<(), String> {
-    use medulla_decision_stats::decision::participant_derive::{conclusion_claim_prefix, DeriveKey};
+    use medulla_decision_stats::decision::participant_derive::{
+        conclusion_claim_prefix, DeriveKey,
+    };
     use medulla_h_graph::graph_ops::participant_derive::derive_input;
     let tenant = verified.tenant();
-    let core = super::claims::participants_of(state, graph).await.ok_or_else(|| {
-        format!("DERIVE_PAYLOAD_NOT_FOUND: no derive payload {payload_ref}")
-    })?;
+    let core = super::claims::participants_of(state, graph)
+        .await
+        .ok_or_else(|| format!("DERIVE_PAYLOAD_NOT_FOUND: no derive payload {payload_ref}"))?;
     let input = derive_input(&core, tenant, payload_ref)?;
     if claims_written > input.max_conclusions {
         return Err(format!(
@@ -37,8 +39,11 @@ pub async fn check_derivation_count(
         subject: input.subject.clone(),
         observer: input.observer.clone(),
     };
-    let turn_ids: std::collections::BTreeSet<&str> =
-        input.turns.iter().map(|turn| turn.turn_id.as_str()).collect();
+    let turn_ids: std::collections::BTreeSet<&str> = input
+        .turns
+        .iter()
+        .map(|turn| turn.turn_id.as_str())
+        .collect();
     let persist_dir = { state.read().await.persist_dir.clone() };
     let held = super::claims::served::ClaimStore::open(
         persist_dir.as_deref(),

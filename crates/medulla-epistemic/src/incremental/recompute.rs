@@ -37,9 +37,10 @@ impl IncrementalReasoningIndex {
     }
 
     pub fn status_of(&self, node_id: &str) -> Option<MaterializationStatus> {
-        self.materializations.get(&opaque_identity(node_id)).copied()
+        self.materializations
+            .get(&opaque_identity(node_id))
+            .copied()
     }
-
 
     pub fn materialization(&self, node_id: &str) -> Option<ProjectedMaterialization> {
         let materialization_ref = opaque_identity(node_id);

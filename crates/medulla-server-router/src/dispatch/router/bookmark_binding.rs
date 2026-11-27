@@ -28,8 +28,8 @@ pub(super) async fn author_on_pack_activation(
     verified: &VerifiedRequestContext,
     connector: &str,
 ) -> Result<(), String> {
-    let connector = medulla_types::contract::ResourceId::new(connector)
-        .map_err(|error| error.to_string())?;
+    let connector =
+        medulla_types::contract::ResourceId::new(connector).map_err(|error| error.to_string())?;
     let store = medulla_persistence_records::agent_library::shared_agent_library(state).await?;
     let declares = store.connector_declares_class(
         medulla_persistence_records::connector_pack::pack_tenant_key(verified),
@@ -43,9 +43,11 @@ pub(super) async fn author_on_pack_activation(
     // be authored. The import itself stays valid; the next activation of the pack authors it,
     // and a search before then refuses `BOOKMARK_INDEX_STALE` (no binding).
     let state_embedder = state.read().await.text_embedder_override.clone();
-    let Some(identity) = medulla_server_ops::api::query_txn::query_support::state_text_encoder_identity(
-        state_embedder.as_ref(),
-    ) else {
+    let Some(identity) =
+        medulla_server_ops::api::query_txn::query_support::state_text_encoder_identity(
+            state_embedder.as_ref(),
+        )
+    else {
         tracing::warn!(
             "the pack declares Bookmark but no text embedder is bound; the bookmark index binding was not authored"
         );
@@ -66,5 +68,7 @@ pub(super) async fn author_on_pack_activation(
         policy_revision,
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };
-    author_bookmark_binding(state, &authority, &inputs).await.map(|_| ())
+    author_bookmark_binding(state, &authority, &inputs)
+        .await
+        .map(|_| ())
 }

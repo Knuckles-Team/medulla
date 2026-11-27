@@ -295,7 +295,8 @@ pub(super) fn placement_outcome(
             probability: None,
         })
         .collect();
-    let outcome = StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false);
+    let outcome =
+        StatisticalOutcome::advisory(BoundedVec::new(scores).map_err(invalid_parameter)?, false);
     // The why-not of every target that was not chosen (R001.9): the caller
     // seals it as the record's family answer.
     let answer = PlacementAnswer {

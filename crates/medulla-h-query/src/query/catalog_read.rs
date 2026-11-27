@@ -98,7 +98,9 @@ fn plain(cell: &Value) -> Option<String> {
 }
 
 fn cell(row: &Value, column: &str) -> Option<String> {
-    row.get(column).and_then(plain).filter(|text| !text.is_empty())
+    row.get(column)
+        .and_then(plain)
+        .filter(|text| !text.is_empty())
 }
 
 /// Run one registered stored query and return its rows. A graph that has taken no catalog

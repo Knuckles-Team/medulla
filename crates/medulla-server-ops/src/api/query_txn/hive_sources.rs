@@ -13,8 +13,8 @@ use medulla_lake::metastore::orc::LocalFileBytes;
 use medulla_lake::metastore::scan::ScanLimits;
 use medulla_lake::metastore::thrift::HmsClient;
 use medulla_lake::metastore::MetastoreError;
-use medulla_sql::sql::metastore_federation::{HiveSource, HiveSources};
 use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_sql::sql::metastore_federation::{HiveSource, HiveSources};
 
 /// The metastore client of one registered source, timeout from `metastore.timeout_ms`.
 pub fn hms_client(label: &str, endpoint: &str, database_filter: Option<String>) -> HmsClient {

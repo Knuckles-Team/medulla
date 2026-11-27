@@ -66,12 +66,10 @@ fn matview_txn(
                 owner: owner.to_string(),
                 refreshed_seq: seq,
                 stale: false,
-            program: None,
+                program: None,
             };
-            let schema = medulla_sql_lang::sql::typed_result::matview_result_schema(
-                &name,
-                &read.columns,
-            );
+            let schema =
+                medulla_sql_lang::sql::typed_result::matview_result_schema(&name, &read.columns);
             let col_order = read.columns.iter().map(|c| c.name.clone()).collect();
             Ok(Some((
                 create_matview_txn(spec, schema, col_order, read.rows),
@@ -87,10 +85,8 @@ fn matview_txn(
                 medulla_sql::sql::exec_sql_typed_with_tables(snap, read_store, &spec.select_sql)?;
             spec.refreshed_seq = seq;
             spec.stale = false;
-            let schema = medulla_sql_lang::sql::typed_result::matview_result_schema(
-                &name,
-                &read.columns,
-            );
+            let schema =
+                medulla_sql_lang::sql::typed_result::matview_result_schema(&name, &read.columns);
             let col_order = read.columns.iter().map(|c| c.name.clone()).collect();
             Ok(Some((
                 refresh_matview_txn(spec, schema, col_order, read.rows),

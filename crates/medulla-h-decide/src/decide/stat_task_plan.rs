@@ -490,7 +490,9 @@ fn check_skill_binding(
         return Err(skill_binding_stale_error(&format!("{name} differs")));
     }
     let plan_digest = Digest256::sha256(plan.plan_digest.as_bytes());
-    if stored.get("plan_digest").and_then(serde_json::Value::as_str)
+    if stored
+        .get("plan_digest")
+        .and_then(serde_json::Value::as_str)
         != Some(plan_digest.to_hex().as_str())
     {
         return Err(skill_binding_stale_error("plan_digest differs"));
@@ -510,14 +512,13 @@ pub(super) fn task_plan(
     policy: &DecisionPolicy,
 ) -> Result<Option<Planned>, String> {
     if request.question.kind != QuestionKind::TaskPlan {
-        if request
-            .params
-            .iter()
-            .any(|p| {
-                is_plan_param(&p.value)
-                    || matches!(p.value, TypedValue::Trajectory(_) | TypedValue::SkillBinding(_))
-            })
-        {
+        if request.params.iter().any(|p| {
+            is_plan_param(&p.value)
+                || matches!(
+                    p.value,
+                    TypedValue::Trajectory(_) | TypedValue::SkillBinding(_)
+                )
+        }) {
             return Err(invalid_parameter(
                 "task_plan parameter requires task_plan question",
             ));

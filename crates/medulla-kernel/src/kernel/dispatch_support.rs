@@ -30,7 +30,10 @@ tokio::task_local! {
 /// reads a note's age without sleeping. Only the scoped task sees the offset; it exists only
 /// in test builds.
 #[cfg(any(test, feature = "test-support"))]
-pub async fn with_engine_clock_offset<F: std::future::Future>(offset_ms: u64, future: F) -> F::Output {
+pub async fn with_engine_clock_offset<F: std::future::Future>(
+    offset_ms: u64,
+    future: F,
+) -> F::Output {
     ENGINE_CLOCK_OFFSET_MS.scope(offset_ms, future).await
 }
 
@@ -42,7 +45,9 @@ pub fn authoritative_now_ms() -> u64 {
         return value;
     }
     #[cfg(any(test, feature = "test-support"))]
-    let offset_ms = ENGINE_CLOCK_OFFSET_MS.try_with(|offset| *offset).unwrap_or(0);
+    let offset_ms = ENGINE_CLOCK_OFFSET_MS
+        .try_with(|offset| *offset)
+        .unwrap_or(0);
     #[cfg(not(any(test, feature = "test-support")))]
     let offset_ms = 0;
     std::time::SystemTime::now()

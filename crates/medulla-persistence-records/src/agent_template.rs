@@ -221,7 +221,7 @@ impl AgentLibraryStore {
         let mut last_consumed: Option<String> = None;
         let mut truncated = false;
         for row in heads
-            .range((tenant_id, resume_after.as_deref().unwrap_or("")) ..)
+            .range((tenant_id, resume_after.as_deref().unwrap_or(""))..)
             .map_err(|error| error.to_string())?
         {
             let (key, head_revision) = row.map_err(|error| error.to_string())?;

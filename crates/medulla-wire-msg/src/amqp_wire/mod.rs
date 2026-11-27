@@ -758,10 +758,7 @@ async fn pump_consumers(
                 break;
             };
             let tag = next_delivery_tag(delivery_tag)?;
-            unacked.insert(
-                tag,
-                (cons.queue.clone(), node_id, cons.consumer_id.clone()),
-            );
+            unacked.insert(tag, (cons.queue.clone(), node_id, cons.consumer_id.clone()));
             let mut p = method_header(C_BASIC, 60); // basic.deliver
             put_shortstr(&mut p, cons.tag.as_bytes());
             put_u64(&mut p, tag);

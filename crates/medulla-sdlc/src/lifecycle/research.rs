@@ -59,10 +59,22 @@ pub fn unknown_frontier(unknown_id: &str, text: &str) -> DeclaredOption {
     let _ = text;
     let q32 = |micro: i64| micro << 32;
     let numbers = vec![
-        DeclaredNumber { key: "cost".to_owned(), q32: q32(UNKNOWN_COST_MICRO) },
-        DeclaredNumber { key: "depth".to_owned(), q32: 0 },
-        DeclaredNumber { key: "gain".to_owned(), q32: q32(UNKNOWN_GAIN_MICRO) },
-        DeclaredNumber { key: "p_useful".to_owned(), q32: 1 << 32 },
+        DeclaredNumber {
+            key: "cost".to_owned(),
+            q32: q32(UNKNOWN_COST_MICRO),
+        },
+        DeclaredNumber {
+            key: "depth".to_owned(),
+            q32: 0,
+        },
+        DeclaredNumber {
+            key: "gain".to_owned(),
+            q32: q32(UNKNOWN_GAIN_MICRO),
+        },
+        DeclaredNumber {
+            key: "p_useful".to_owned(),
+            q32: 1 << 32,
+        },
     ];
     DeclaredOption {
         option_id: unknown_id.to_owned(),
@@ -79,7 +91,10 @@ pub fn unknown_frontier(unknown_id: &str, text: &str) -> DeclaredOption {
 /// The idempotency key of the `research_web` work item of one unknown. A re-ingest of the same
 /// unknown text submits the same key, so nothing new is submitted.
 pub fn research_item_key(unknown_id: &str, text: &str) -> String {
-    format!("research-unknown:{unknown_id}:{}", sha256_hex(text.as_bytes()))
+    format!(
+        "research-unknown:{unknown_id}:{}",
+        sha256_hex(text.as_bytes())
+    )
 }
 
 /// Whether `proposal` is a research entry: an `edit_plan_section` proposal that targets
@@ -191,8 +206,14 @@ mod tests {
     #[test]
     fn the_loop_calls_only_tools_its_contracts_name() {
         let known = vec![
-            ResearchTool { connector: "searxng".into(), tool: "web_search".into() },
-            ResearchTool { connector: "scholarx".into(), tool: "search_papers".into() },
+            ResearchTool {
+                connector: "searxng".into(),
+                tool: "web_search".into(),
+            },
+            ResearchTool {
+                connector: "scholarx".into(),
+                tool: "search_papers".into(),
+            },
         ];
         assert_eq!(check_research_tool(&known, "web_search"), Ok(()));
         let refused = check_research_tool(&known, "list_snapshots").unwrap_err();
@@ -208,8 +229,11 @@ mod tests {
     fn an_unknown_is_one_frontier_option_and_one_stable_item_key() {
         let option = unknown_frontier("planunknown:demo:plan.md#L4", "Which parser?");
         assert_eq!(option.option_id, "planunknown:demo:plan.md#L4");
-        let numbers: Vec<(&str, i64)> =
-            option.numbers.iter().map(|n| (n.key.as_str(), n.q32)).collect();
+        let numbers: Vec<(&str, i64)> = option
+            .numbers
+            .iter()
+            .map(|n| (n.key.as_str(), n.q32))
+            .collect();
         assert_eq!(
             numbers,
             [
@@ -219,12 +243,21 @@ mod tests {
                 ("p_useful", 1 << 32)
             ]
         );
-        let texts: Vec<(&str, &str)> =
-            option.texts.iter().map(|t| (t.key.as_str(), t.text.as_str())).collect();
+        let texts: Vec<(&str, &str)> = option
+            .texts
+            .iter()
+            .map(|t| (t.key.as_str(), t.text.as_str()))
+            .collect();
         assert_eq!(texts, [("subtask", "planunknown:demo:plan.md#L4")]);
         let key = research_item_key("planunknown:demo:plan.md#L4", "Which parser?");
-        assert_eq!(key, research_item_key("planunknown:demo:plan.md#L4", "Which parser?"));
-        assert_ne!(key, research_item_key("planunknown:demo:plan.md#L4", "Which lexer?"));
+        assert_eq!(
+            key,
+            research_item_key("planunknown:demo:plan.md#L4", "Which parser?")
+        );
+        assert_ne!(
+            key,
+            research_item_key("planunknown:demo:plan.md#L4", "Which lexer?")
+        );
         assert!(key.starts_with("research-unknown:planunknown:demo:plan.md#L4:"));
     }
 }

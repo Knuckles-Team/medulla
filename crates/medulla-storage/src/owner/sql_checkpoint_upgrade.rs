@@ -9,13 +9,13 @@ use super::domain::SqlOwner;
 use super::identity::PhysicalStoreIdentity;
 use super::layout::OwnerLayout;
 use super::lineage::{
-    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
-    SQL_BEFORE_MATVIEWS, SQL_BEFORE_TRIGGER_REACTIONS,
+    SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_MATVIEWS, SQL_BEFORE_NAMED_SEQUENCES,
+    SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use super::manifest_io::read_manifest_slot;
 use super::registry::{
-    sql_predecessor_evidence, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS, SQL_EDGE_INDEXES, SQL_SEQUENCES,
-    SQL_MATVIEWS, SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS,
+    sql_predecessor_evidence, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS, SQL_EDGE_INDEXES, SQL_MATVIEWS,
+    SQL_SEQUENCES, SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS,
 };
 use super::validate_declared_tables_write;
 use crate::codec::encode_bounded;

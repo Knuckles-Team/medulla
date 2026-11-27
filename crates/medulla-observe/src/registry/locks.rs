@@ -280,13 +280,17 @@ pub struct Held<T> {
 impl<T> Deref for Held<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        self.inner.as_ref().expect("a held lock owns its guard until it drops")
+        self.inner
+            .as_ref()
+            .expect("a held lock owns its guard until it drops")
     }
 }
 
 impl<T> DerefMut for Held<T> {
     fn deref_mut(&mut self) -> &mut T {
-        self.inner.as_mut().expect("a held lock owns its guard until it drops")
+        self.inner
+            .as_mut()
+            .expect("a held lock owns its guard until it drops")
     }
 }
 

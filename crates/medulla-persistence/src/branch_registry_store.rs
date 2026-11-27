@@ -13,8 +13,8 @@ use std::sync::Arc;
 use medulla_mutation_types::branch::{
     branch_commit_id, Branch, BranchCommit, BranchMutationRefusal, BranchRef,
 };
-use medulla_types::contract::ServerErrorCode;
 use medulla_source_types::source_path_grant::PathGrant;
+use medulla_types::contract::ServerErrorCode;
 use redb::{ReadableTable, ReadableTableMetadata};
 
 /// The owner file name under the persist dir.
@@ -497,9 +497,7 @@ impl BranchRegistry {
             let source_row = rows.pop().ok_or("source row missing")?;
             let mut target_row = rows.pop().ok_or("target row missing")?;
             let batch_key = match &write.head_move {
-                MergeHeadMove::Merge { replay_key, .. } => {
-                    Some(batch_row_key(target, replay_key))
-                }
+                MergeHeadMove::Merge { replay_key, .. } => Some(batch_row_key(target, replay_key)),
                 MergeHeadMove::FastForward => None,
             };
             let prior = match &batch_key {
@@ -1163,13 +1161,14 @@ mod tests {
     fn path_grants_are_scoped_to_tenant_repo_and_principal_and_a_dead_grant_is_an_explicit_deny() {
         let dir = tempfile::tempdir().unwrap();
         let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
-        let grant = |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
-            repo: repo.into(),
-            principal: principal.into(),
-            prefix: prefix.into(),
-            read,
-            write,
-        };
+        let grant =
+            |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
+                repo: repo.into(),
+                principal: principal.into(),
+                prefix: prefix.into(),
+                read,
+                write,
+            };
         registry
             .set_path_grant("t", &grant("r", "alice", "src", true, true))
             .unwrap();
@@ -1187,7 +1186,9 @@ mod tests {
             .unwrap();
         let alice = registry.path_grants("t", "r", "alice").unwrap();
         assert_eq!(alice.len(), 2);
-        assert!(alice.iter().all(|g| g.principal == "alice" && g.repo == "r"));
+        assert!(alice
+            .iter()
+            .all(|g| g.principal == "alice" && g.repo == "r"));
         assert_eq!(registry.path_grants("t", "r", "bob").unwrap().len(), 1);
         assert!(registry.path_grants("t", "r", "carol").unwrap().is_empty());
         // A grant with both bits false replaces the row as an explicit deny; it is not deleted.
@@ -1208,13 +1209,14 @@ mod tests {
     fn principal_path_grants_span_repositories_inside_one_tenant_only() {
         let dir = tempfile::tempdir().unwrap();
         let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
-        let grant = |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
-            repo: repo.into(),
-            principal: principal.into(),
-            prefix: prefix.into(),
-            read,
-            write,
-        };
+        let grant =
+            |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
+                repo: repo.into(),
+                principal: principal.into(),
+                prefix: prefix.into(),
+                read,
+                write,
+            };
         for (tenant, row) in [
             ("t", grant("r", "alice", "src", true, true)),
             ("t", grant("other", "alice", "", true, false)),

@@ -7,9 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_source_types::delivery::{
-    Delivery, DeliveryInput, FeedbackKind, InputSource,
-};
+use medulla_source_types::delivery::{Delivery, DeliveryInput, FeedbackKind, InputSource};
 
 /// One changeset of the delivery branch: its id and the content digest of every path it
 /// changed.

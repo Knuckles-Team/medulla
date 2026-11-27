@@ -77,8 +77,12 @@ pub fn candidate_from(version: &EntityVersion) -> Result<ConflictCandidate, Stri
         None => None,
     };
     let evidence_refs = match version.properties.get(keys.evidence_refs) {
-        Some(text) => serde_json::from_str::<Vec<String>>(text)
-            .map_err(|error| format!("`{}` is not a JSON array of strings: {error}", keys.evidence_refs))?,
+        Some(text) => serde_json::from_str::<Vec<String>>(text).map_err(|error| {
+            format!(
+                "`{}` is not a JSON array of strings: {error}",
+                keys.evidence_refs
+            )
+        })?,
         None => Vec::new(),
     };
     Ok(ConflictCandidate {
@@ -112,7 +116,10 @@ fn open(code: &str) -> ConflictOutcome {
 /// The resolution a decision outcome carries: the winner of an advisory, or
 /// the abstention's registered code. Any other outcome is not a conflict
 /// answer and refuses the whole merge.
-pub fn outcome_of(outcome: &StatisticalOutcome, decision_id: &str) -> Result<ConflictOutcome, String> {
+pub fn outcome_of(
+    outcome: &StatisticalOutcome,
+    decision_id: &str,
+) -> Result<ConflictOutcome, String> {
     match outcome {
         StatisticalOutcome::Advisory { scores, .. } => {
             let winner = match scores.as_slice().first().map(|s| s.option_id.as_str()) {
@@ -127,9 +134,13 @@ pub fn outcome_of(outcome: &StatisticalOutcome, decision_id: &str) -> Result<Con
         }
         StatisticalOutcome::Abstained { reasons } => match reasons.as_slice().first() {
             Some(AbstainReason::Family { code, .. }) => Ok(open(code.as_str())),
-            other => Err(format!("the conflict decision abstained without a family code: {other:?}")),
+            other => Err(format!(
+                "the conflict decision abstained without a family code: {other:?}"
+            )),
         },
-        other => Err(format!("a conflict decision answers with a winner or an abstention, not {other:?}")),
+        other => Err(format!(
+            "a conflict decision answers with a winner or an abstention, not {other:?}"
+        )),
     }
 }
 
@@ -208,7 +219,9 @@ pub async fn merge_conflicts(
         let candidates = match (a.map(candidate_from), b.map(candidate_from)) {
             (Some(Ok(a)), Some(Ok(b))) => (a, b),
             _ => {
-                records.push(record(open(ServerErrorCode::ConflictEvidenceMissing.as_str())));
+                records.push(record(open(
+                    ServerErrorCode::ConflictEvidenceMissing.as_str(),
+                )));
                 continue;
             }
         };
@@ -350,7 +363,11 @@ mod tests {
         let broken: EntitySnapshot = [(id.clone(), evidence("0.9", "oops"))].into();
         // No decider is installed: any decide call would be an Err, so an Ok
         // result proves no decision ran for these conflicts.
-        for (source, target) in [(&absent, &present), (&present, &absent), (&broken, &present)] {
+        for (source, target) in [
+            (&absent, &present),
+            (&present, &absent),
+            (&broken, &present),
+        ] {
             let records = merge_conflicts(
                 &state,
                 &verified,
@@ -382,6 +399,8 @@ mod tests {
             &schema,
         )
         .await;
-        assert!(refused.unwrap_err().contains("conflict decider is not installed"));
+        assert!(refused
+            .unwrap_err()
+            .contains("conflict decider is not installed"));
     }
 }

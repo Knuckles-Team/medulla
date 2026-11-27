@@ -129,7 +129,12 @@ pub(super) fn map_bookmark(
         let values = strings(payload, key)?;
         properties.insert(key.into(), json_text(&values)?.into());
         for value in &values {
-            entity(&mut entities, &mut edges, &node_id, (class, prefix, value, None))?;
+            entity(
+                &mut entities,
+                &mut edges,
+                &node_id,
+                (class, prefix, value, None),
+            )?;
         }
     }
     let urls = strings(payload, "urls")?;

@@ -293,8 +293,10 @@ async fn conflicting_sources_record_one_conflict() {
     let core = medulla_graph_core::graph::GraphCore::new();
     let blob = |value: &serde_json::Value| rmp_serde::to_vec_named(value).unwrap();
     core.add_node("churn-a".into(), blob(&first));
-    assert!(medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
-        .is_empty());
+    assert!(
+        medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
+            .is_empty()
+    );
 
     // A second source defines it differently: exactly one conflict fact links both.
     add_node(&state, 31, "churn-b", second.clone()).await;
@@ -303,19 +305,33 @@ async fn conflicting_sources_record_one_conflict() {
         medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot());
     assert_eq!(conflicts.len(), 1, "{conflicts:?}");
     let conflict = &conflicts[0];
-    assert_eq!((conflict.left_id.as_str(), conflict.right_id.as_str()), ("churn-a", "churn-b"));
+    assert_eq!(
+        (conflict.left_id.as_str(), conflict.right_id.as_str()),
+        ("churn-a", "churn-b")
+    );
     assert_ne!(conflict.left_definition, conflict.right_definition);
 
     // Before the fact is recorded the term is still certified.
     let before = explained(&explain(&state, 32, "what is the churn rate of orders").await);
-    assert_eq!(before.certified_terms.len(), 1, "{:?}", before.certified_terms);
+    assert_eq!(
+        before.certified_terms.len(),
+        1,
+        "{:?}",
+        before.certified_terms
+    );
 
     // Recording it makes the term uncertified for planning; recording the pair again is
     // the same node, and the reconcile no longer reports it.
     add_node(&state, 33, &conflict.node_id(), conflict.properties()).await;
     let after = explained(&explain(&state, 34, "what is the churn rate of orders").await);
-    assert!(after.certified_terms.is_empty(), "{:?}", after.certified_terms);
+    assert!(
+        after.certified_terms.is_empty(),
+        "{:?}",
+        after.certified_terms
+    );
     core.add_node(conflict.node_id(), blob(&conflict.properties()));
-    assert!(medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
-        .is_empty());
+    assert!(
+        medulla_nlq::nl::certified::reconcile_term_definitions(&core.analysis_snapshot())
+            .is_empty()
+    );
 }

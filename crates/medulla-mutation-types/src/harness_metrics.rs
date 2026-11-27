@@ -966,7 +966,10 @@ pub fn task_class_closure(
 ) -> std::collections::BTreeSet<String> {
     let mut children: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
     for (child, parent) in parent_edges {
-        children.entry(parent.as_str()).or_default().push(child.as_str());
+        children
+            .entry(parent.as_str())
+            .or_default()
+            .push(child.as_str());
     }
     let mut seen = std::collections::BTreeSet::from([root.to_string()]);
     let mut pending = vec![root];
@@ -1259,7 +1262,10 @@ mod tests {
                 |name| (name == "min_traces").then_some(min).flatten(),
             )
         };
-        assert_eq!(params("m", None).unwrap().min_traces, DEFAULT_MIN_TRACES_PER_CONFIG);
+        assert_eq!(
+            params("m", None).unwrap().min_traces,
+            DEFAULT_MIN_TRACES_PER_CONFIG
+        );
         assert_eq!(params("m", Some(5.0)).unwrap().min_traces, 5);
         assert_eq!(
             params("  ", None).unwrap_err(),
@@ -1291,11 +1297,12 @@ mod tests {
         );
         // The closure of a leaf is the leaf itself.
         assert_eq!(
-            task_class_closure("tc:sibling", &edges).into_iter().collect::<Vec<_>>(),
+            task_class_closure("tc:sibling", &edges)
+                .into_iter()
+                .collect::<Vec<_>>(),
             ["tc:sibling"]
         );
         // A parent is not in the closure of its child.
         assert!(!task_class_closure("tc:child", &edges).contains("tc:other"));
     }
-
 }

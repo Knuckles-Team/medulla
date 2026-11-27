@@ -202,7 +202,9 @@ pub(super) fn placement_request(
 }
 
 fn ranked(batch: &DecisionBatch) -> Vec<String> {
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &batch.records.as_slice()[0].outcome
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &batch.records.as_slice()[0].outcome
     else {
         panic!(
             "expected an Advisory outcome: {:?}",
@@ -607,10 +609,16 @@ async fn deployment_template_key_assembles_the_pinned_revision() {
             .map(|node| node.node_id.clone())
             .collect()
     };
-    assert_eq!(steps(&by_key), ["render-artifact", "apply", "verify", "done"]);
+    assert_eq!(
+        steps(&by_key),
+        ["render-artifact", "apply", "verify", "done"]
+    );
     assert_eq!(steps(&by_key), steps(&by_pin));
     let recorded = &by_key.record.inputs.request;
-    assert_eq!(recorded.template_key, None, "the sealed request holds no key");
+    assert_eq!(
+        recorded.template_key, None,
+        "the sealed request holds no key"
+    );
     assert_eq!(
         recorded.templates.as_slice(),
         &[pinned][..],
@@ -715,7 +723,11 @@ async fn capacity_proposal_reuses_placement_headroom() {
     // The headroom the ledger holds for the cell at the proposal's priority.
     let backend = h.state.read().await.persistence.clone().unwrap();
     let rows = backend
-        .read_capacity_headroom(GRAPH, std::slice::from_ref(&cell_id), LeasePriority::Orchestration)
+        .read_capacity_headroom(
+            GRAPH,
+            std::slice::from_ref(&cell_id),
+            LeasePriority::Orchestration,
+        )
         .await
         .unwrap();
     let row = rows.iter().find(|row| row.cell_id == cell_id).unwrap();
@@ -756,13 +768,17 @@ async fn capacity_proposal_reuses_placement_headroom() {
         }
         other => panic!("unexpected outcome {other:?}"),
     }
-    assert!(premise_facts(&batch).contains(&format!("headroom:{cell_id}:{available}:epoch={epoch}")));
+    assert!(
+        premise_facts(&batch).contains(&format!("headroom:{cell_id}:{available}:epoch={epoch}"))
+    );
 
     // A placement decision at the same priority reads the same number from the same
     // ledger: there is one headroom premise, not a second controller.
     let mut placement = body(false, 2);
     placement.constraints.priority = LeasePriority::Orchestration;
-    let batch = decide(&h, placement_request(&schema, placement)).await.unwrap();
+    let batch = decide(&h, placement_request(&schema, placement))
+        .await
+        .unwrap();
     assert!(premise_facts(&batch).contains(&format!("lease:{cell_id}:cpu={available}")));
 }
 
@@ -801,10 +817,7 @@ async fn assemble_abstains_on_uncovered_component() {
         .await
         .expect("an uncovered template is an abstention, not a refusal");
     let DecisionOutcome::Abstained { reasons } = &result.record.outcome else {
-        panic!(
-            "expected an abstention, got {:?}",
-            result.record.outcome
-        );
+        panic!("expected an abstention, got {:?}", result.record.outcome);
     };
     match reasons.as_slice().first() {
         Some(AbstainReason::UncoveredCapability { capability }) => assert!(!capability.is_empty()),
@@ -835,8 +848,9 @@ async fn placement_decide_then_assemble_journey() {
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     let chosen = ranked(&batch).remove(0);
     assert_eq!(chosen, "placement:compose");
-    assert!(premise_facts(&batch)
-        .contains(&format!("lease:placement:compose:cpu:cpu={CPU_HEADROOM}")));
+    assert!(
+        premise_facts(&batch).contains(&format!("lease:placement:compose:cpu:cpu={CPU_HEADROOM}"))
+    );
 
     // A verified caller of another tenant is refused before any read.
     let stranger = VerifiedRequestContext::verified_for_test_in_tenant("decider", "tenant-other");
@@ -885,7 +899,10 @@ async fn placement_decide_then_assemble_journey() {
         result.record.outcome,
         DecisionOutcome::Solved { .. }
     ));
-    let graph = result.graph.as_ref().expect("a solved record answers its graph");
+    let graph = result
+        .graph
+        .as_ref()
+        .expect("a solved record answers its graph");
     let steps: Vec<&str> = graph
         .shape
         .nodes

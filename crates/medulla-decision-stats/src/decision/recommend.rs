@@ -136,7 +136,10 @@ fn kmeans(
             if sizes[code] == 0 {
                 continue;
             }
-            let mean: Vec<f64> = sums[code].iter().map(|sum| sum / sizes[code] as f64).collect();
+            let mean: Vec<f64> = sums[code]
+                .iter()
+                .map(|sum| sum / sizes[code] as f64)
+                .collect();
             if mean != centroids[code] {
                 moved = true;
                 centroids[code] = mean;
@@ -166,7 +169,12 @@ pub fn fit_codebooks(
     let mut residuals: Vec<Vec<f64>> = items.iter().map(|item| widen(&item.vector)).collect();
     let mut codebooks = Vec::with_capacity(knobs.levels);
     for _ in 0..knobs.levels {
-        let centroids = kmeans(&mut rng, &residuals, knobs.codes_per_level, knobs.kmeans_iters);
+        let centroids = kmeans(
+            &mut rng,
+            &residuals,
+            knobs.codes_per_level,
+            knobs.kmeans_iters,
+        );
         for residual in &mut residuals {
             let code = nearest(&centroids, residual);
             for (value, centre) in residual.iter_mut().zip(&centroids[code]) {
@@ -221,7 +229,8 @@ pub fn encode_catalog(
 
 fn cosine(a: &[f64], b: &[f64]) -> f64 {
     let dot: f64 = a.iter().zip(b).map(|(x, y)| x * y).sum();
-    let norm = a.iter().map(|x| x * x).sum::<f64>().sqrt() * b.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let norm =
+        a.iter().map(|x| x * x).sum::<f64>().sqrt() * b.iter().map(|x| x * x).sum::<f64>().sqrt();
     if norm == 0.0 {
         0.0
     } else {
@@ -251,7 +260,9 @@ pub fn refine_and_rank(
         return Err(RecommendError::EmptyCatalog);
     }
     if query.len() != encoder.dimension
-        || catalog.iter().any(|item| item.vector.len() != encoder.dimension)
+        || catalog
+            .iter()
+            .any(|item| item.vector.len() != encoder.dimension)
         || pause_steps > MAX_PAUSE_STEPS
     {
         return Err(RecommendError::DimensionMismatch);
@@ -405,7 +416,8 @@ mod tests {
                 item.semantic_id.codes[1] = item.semantic_id.codes[1].wrapping_add(1);
             }
         }
-        let ranked = refine_and_rank(&encoder, &catalog, &query, &[], 0, 3, &knobs()).expect("rank");
+        let ranked =
+            refine_and_rank(&encoder, &catalog, &query, &[], 0, 3, &knobs()).expect("rank");
         assert!(!ranked.is_empty());
         assert!(ranked
             .iter()

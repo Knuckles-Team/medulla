@@ -53,9 +53,17 @@ impl MachineEvent for ContradictionEvent {
 }
 
 /// `ContradictionMachine`: the closed edge table. Every other pair is refused.
-pub static CONTRADICTION_MACHINE: MachineDef<ContradictionStatusKind, ContradictionEvent, &'static str> = MachineDef {
+pub static CONTRADICTION_MACHINE: MachineDef<
+    ContradictionStatusKind,
+    ContradictionEvent,
+    &'static str,
+> = MachineDef {
     name: "ContradictionMachine",
-    states: &[ContradictionStatusKind::Open, ContradictionStatusKind::Proposed, ContradictionStatusKind::Resolved],
+    states: &[
+        ContradictionStatusKind::Open,
+        ContradictionStatusKind::Proposed,
+        ContradictionStatusKind::Resolved,
+    ],
     initial: ContradictionStatusKind::Open,
     terminals: &[ContradictionStatusKind::Resolved],
     events: &[ContradictionEvent::Propose, ContradictionEvent::Resolve],
@@ -80,7 +88,11 @@ pub static CONTRADICTION_MACHINE: MachineDef<ContradictionStatusKind, Contradict
 
 impl ContradictionStatusKind {
     /// Every state, in declaration order.
-    pub const ALL: [ContradictionStatusKind; 3] = [ContradictionStatusKind::Open, ContradictionStatusKind::Proposed, ContradictionStatusKind::Resolved];
+    pub const ALL: [ContradictionStatusKind; 3] = [
+        ContradictionStatusKind::Open,
+        ContradictionStatusKind::Proposed,
+        ContradictionStatusKind::Resolved,
+    ];
 
     /// The state a new record takes.
     pub const fn initial() -> Self {
@@ -134,7 +146,10 @@ mod tests {
             assert_eq!(edge.from.apply(edge.event), Ok(edge.to), "{}", edge.id);
             assert_eq!(edge.from.event_to(edge.to), Some(edge.event));
         }
-        assert_eq!(ContradictionStatusKind::initial(), CONTRADICTION_MACHINE.initial);
+        assert_eq!(
+            ContradictionStatusKind::initial(),
+            CONTRADICTION_MACHINE.initial
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R738.5
@@ -143,7 +158,11 @@ mod tests {
         let machine = &CONTRADICTION_MACHINE;
         for &state in machine.states {
             for &event in machine.events {
-                if machine.edges.iter().any(|e| e.from == state && e.event == event) {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
                     continue;
                 }
                 let refused = state.apply(event).unwrap_err();
@@ -159,7 +178,10 @@ mod tests {
             }
         }
         for state in ContradictionStatusKind::ALL {
-            assert_eq!(ContradictionStatusKind::from_stored(state.stored()), Some(state));
+            assert_eq!(
+                ContradictionStatusKind::from_stored(state.stored()),
+                Some(state)
+            );
         }
         assert_eq!(ContradictionStatusKind::from_stored("weather"), None);
     }
@@ -168,7 +190,13 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let source = include_str!("../../medulla-h-decide/src/decide/belief_revise.rs");
-        assert!(source.contains("move_to"), "the writer routes through the machine");
-        assert!(!source.contains("record.status = to;"), "a writer sets the status outside apply: record.status = to;");
+        assert!(
+            source.contains("move_to"),
+            "the writer routes through the machine"
+        );
+        assert!(
+            !source.contains("record.status = to;"),
+            "a writer sets the status outside apply: record.status = to;"
+        );
     }
 }

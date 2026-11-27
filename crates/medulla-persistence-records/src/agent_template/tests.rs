@@ -704,7 +704,10 @@ fn the_tenant_listing_pages_heads_in_id_order_and_never_crosses_tenants() {
     use medulla_agent_types::agent_template::AgentTemplateListRequest;
 
     let (_dir, store) = open_store();
-    for (index, id) in ["template:a", "template:b", "template:c"].iter().enumerate() {
+    for (index, id) in ["template:a", "template:b", "template:c"]
+        .iter()
+        .enumerate()
+    {
         publish(
             &store,
             &format!("list-{index}"),

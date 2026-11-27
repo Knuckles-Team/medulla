@@ -301,7 +301,11 @@ async fn unknown_policy_refuses_and_failed_verdict_keeps_rows() {
     let strict = envelope_under(&state, 603, Some("policy-strict")).await;
     assert_eq!(strict["verdict"]["gate_passed"], false, "{strict}");
     assert!(!hit_ids(&strict).is_empty());
-    assert_eq!(hit_ids(&strict), hit_ids(&default), "rows and order unchanged");
+    assert_eq!(
+        hit_ids(&strict),
+        hit_ids(&default),
+        "rows and order unchanged"
+    );
     assert_eq!(strict["hits"], default["hits"], "row content unchanged");
 }
 
@@ -339,7 +343,9 @@ async fn verdict_carries_revision_generation_and_thresholds() {
         before["thresholds"]["min_population_ratio_q16"],
         (0.75_f64 * 65_535.0).round()
     );
-    let generation = before["index_generation"].as_u64().expect("index_generation");
+    let generation = before["index_generation"]
+        .as_u64()
+        .expect("index_generation");
 
     // Discover is a read: asking again leaves the generation and the verdict unchanged.
     let again = verdict_under(&state, 601, Some("policy-evidence")).await;
@@ -351,7 +357,10 @@ async fn verdict_carries_revision_generation_and_thresholds() {
     write(&state, 10, "known term").await;
     let after = verdict_under(&state, 602, Some("policy-evidence")).await;
     assert!(
-        after["index_generation"].as_u64().expect("index_generation") > generation,
+        after["index_generation"]
+            .as_u64()
+            .expect("index_generation")
+            > generation,
         "{before} -> {after}"
     );
 }
@@ -390,8 +399,13 @@ async fn sparse_index_fails_closed() {
     }
     let sparse_verdict = verdict(&sparse, 900).await;
     assert_eq!(sparse_verdict["gate_passed"], false, "{sparse_verdict}");
-    assert!(modes(&sparse_verdict).contains(&"sparse_index".to_string()), "{sparse_verdict}");
-    let ratio = sparse_verdict["index_population_ratio_q16"].as_u64().expect("ratio");
+    assert!(
+        modes(&sparse_verdict).contains(&"sparse_index".to_string()),
+        "{sparse_verdict}"
+    );
+    let ratio = sparse_verdict["index_population_ratio_q16"]
+        .as_u64()
+        .expect("ratio");
     assert!(ratio <= 6_554, "a tenth embedded: {ratio}");
 
     let full = quality_state();
@@ -399,6 +413,9 @@ async fn sparse_index_fails_closed() {
         write(&full, n, "known term").await;
     }
     let full_verdict = verdict(&full, 900).await;
-    assert!(!modes(&full_verdict).contains(&"sparse_index".to_string()), "{full_verdict}");
+    assert!(
+        !modes(&full_verdict).contains(&"sparse_index".to_string()),
+        "{full_verdict}"
+    );
     assert_eq!(full_verdict["index_population_ratio_q16"], 65_535);
 }

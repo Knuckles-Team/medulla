@@ -60,7 +60,9 @@ fn main() {
         let id = format!("doc-{document}");
         let started = Instant::now();
         let candidates = index.query(&sketch, THRESHOLD);
-        index.insert(&id, &sketch).expect("signature length matches");
+        index
+            .insert(&id, &sketch)
+            .expect("signature length matches");
         samples.push(started.elapsed());
         assert!(candidates.is_empty(), "distinct documents never collide");
     }

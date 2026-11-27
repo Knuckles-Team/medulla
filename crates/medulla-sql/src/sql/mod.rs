@@ -106,6 +106,7 @@ pub use ann_pushdown::{user_ann_decision, UserAnnDecision, UserAnnPushdown};
 // the engine's existing `medulla_plan::TextEmbedder` through (`medulla-query` cannot name that
 // trait directly: `medulla-plan` depends on `medulla-query`, so the reverse edge is a package
 // cycle — see `embed_udf`'s module doc).
+pub use catalog::{refuse_catalog_view_write, PgStatActivityRow};
 pub use embed_udf::{bind_text_embedder, medulla_embed_udf, medulla_embed_udf_with, EmbedFn};
 pub use exec::{
     exec_graph_table_typed_with_tables, exec_graph_table_typed_with_tables_cancellable, exec_sql,
@@ -116,7 +117,6 @@ pub use exec::{
     exec_sql_typed_with_tables_in_graph_hive, exec_sql_typed_with_tables_in_graph_sessions,
     SqlContextCache,
 };
-pub use catalog::{refuse_catalog_view_write, PgStatActivityRow};
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.
 pub use providers::SqlCache;

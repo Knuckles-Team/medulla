@@ -9,9 +9,7 @@ use medulla_source_types::delivery::{
     AssignmentState, Delivery, DeliveryAssignment, DeliveryMandate, MandateStrength,
     DELIVERY_SCHEMA_VERSION,
 };
-use medulla_source_types::lifecycle::{
-    sha256_hex, LifecycleRefusal, ProjectMode, ProposalOrigin,
-};
+use medulla_source_types::lifecycle::{sha256_hex, LifecycleRefusal, ProjectMode, ProposalOrigin};
 
 /// The inputs of one delivery open.
 pub struct OpenDelivery<'a> {
@@ -93,7 +91,10 @@ pub fn open_delivery(
     scope_rows.dedup();
     let assignment = DeliveryAssignment {
         schema_version: DELIVERY_SCHEMA_VERSION,
-        id: format!("assignment:{}", hash(&format!("{id}\n{}", input.run_trace_id))),
+        id: format!(
+            "assignment:{}",
+            hash(&format!("{id}\n{}", input.run_trace_id))
+        ),
         run_trace_id: input.run_trace_id.to_owned(),
         state: AssignmentState::Pending,
         report: None,

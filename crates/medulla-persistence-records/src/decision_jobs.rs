@@ -371,10 +371,11 @@ pub fn read_pointer(
     String,
 > {
     let Some(bytes) = store.decision_artifact(tenant, &pointer_artifact_key(key))? else {
-        let state = medulla_decision_types::decision::statistical::retrieval_pointer::PointerState {
-            key: key.to_string(),
-            ..Default::default()
-        };
+        let state =
+            medulla_decision_types::decision::statistical::retrieval_pointer::PointerState {
+                key: key.to_string(),
+                ..Default::default()
+            };
         return Ok((None, state));
     };
     let state = decode_artifact(&bytes, "pointer state")?;

@@ -113,7 +113,9 @@ async fn dispatch_graph_op_boxed(
     #[cfg(feature = "redb")]
     let counts_as_write = medulla_server_auth::access::requires_write(&method);
     #[cfg(feature = "jobs")]
-    let remembered = memory_derive::fresh_memory_ids(state, graph_name, verified_context.tenant(), &method).await;
+    let remembered =
+        memory_derive::fresh_memory_ids(state, graph_name, verified_context.tenant(), &method)
+            .await;
     let inner = dispatch_graph_op_inner(
         state,
         GraphOpContext {

@@ -61,7 +61,9 @@ fn stored_properties(
 }
 
 /// The status the stored literal names, or why it names none.
-fn status_of(properties: &serde_json::Map<String, serde_json::Value>) -> Result<EditStatus, String> {
+fn status_of(
+    properties: &serde_json::Map<String, serde_json::Value>,
+) -> Result<EditStatus, String> {
     let word = properties
         .get("editStatus")
         .and_then(serde_json::Value::as_str)

@@ -33,14 +33,16 @@ fn parents_of(class: &str) -> Vec<String> {
     parse_turtle(&ontology)
         .expect("the core foundation ontology parses")
         .into_iter()
-        .filter_map(|triple| match (&triple.subject, triple.predicate.as_str(), &triple.object) {
-            (NamedOrBlankNode::NamedNode(subject), RDFS_SUBCLASS_OF, Term::NamedNode(parent))
-                if subject.as_str() == class =>
-            {
-                Some(parent.as_str().to_string())
-            }
-            _ => None,
-        })
+        .filter_map(
+            |triple| match (&triple.subject, triple.predicate.as_str(), &triple.object) {
+                (
+                    NamedOrBlankNode::NamedNode(subject),
+                    RDFS_SUBCLASS_OF,
+                    Term::NamedNode(parent),
+                ) if subject.as_str() == class => Some(parent.as_str().to_string()),
+                _ => None,
+            },
+        )
         .collect()
 }
 
@@ -77,7 +79,16 @@ fn person_without_represents_fails_shape() {
     assert!(conforms(&data("person", Some(node))));
     assert!(conforms(&data("agent", Some("urn:medulla:agent:planner"))));
     assert!(conforms(&data("object", None)));
-    assert!(!conforms(&data("person", None)), "a person must represent a node");
-    assert!(!conforms(&data("agent", None)), "an agent must represent a node");
-    assert!(!conforms(&data("robot", Some(node))), "the kind is one of three values");
+    assert!(
+        !conforms(&data("person", None)),
+        "a person must represent a node"
+    );
+    assert!(
+        !conforms(&data("agent", None)),
+        "an agent must represent a node"
+    );
+    assert!(
+        !conforms(&data("robot", Some(node))),
+        "the kind is one of three values"
+    );
 }

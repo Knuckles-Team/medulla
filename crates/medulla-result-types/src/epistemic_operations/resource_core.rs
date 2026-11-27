@@ -396,10 +396,20 @@ mod tests {
         let machine = &RESOURCE_RESERVATION_MACHINE;
         assert!(!machine.edges.is_empty());
         for edge in machine.edges {
-            assert_eq!(edge.from.apply(edge.event, |_| true), Ok(edge.to), "{}", edge.id);
+            assert_eq!(
+                edge.from.apply(edge.event, |_| true),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
             if edge.guard.is_some() {
                 let refused = edge.from.apply(edge.event, |_| false).unwrap_err();
-                assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed, "{}", edge.id);
+                assert_eq!(
+                    refused.reason,
+                    TransitionRefusalReason::GuardFailed,
+                    "{}",
+                    edge.id
+                );
             }
         }
     }

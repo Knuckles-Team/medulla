@@ -266,7 +266,12 @@ pub async fn poll_source(
             role_prefix: POLL_SERVICE,
             unbootstrapped: "ATTACHED_POLL_POLICY_UNBOOTSTRAPPED",
         }
-        .ensure(&mut medulla_server_api::state::timed_write(state).await.isolation, CAPTURE_GRAPH)?;
+        .ensure(
+            &mut medulla_server_api::state::timed_write(state)
+                .await
+                .isolation,
+            CAPTURE_GRAPH,
+        )?;
     }
     medulla_server_api::api::reentry::ensure_internal_global_graph(
         state,

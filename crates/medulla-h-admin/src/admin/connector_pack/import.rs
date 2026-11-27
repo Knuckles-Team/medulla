@@ -101,7 +101,9 @@ fn run_import(
     // The release contract check runs before any body is copied or row written
     // (MEDULLA-TYPED-PACKS-R107.3): a breaking or in-use release stops here.
     let release = match interruptible(cancel, || {
-        release::judge(store, chunks, &request, archive, &prepared, &prior, usage, approval)
+        release::judge(
+            store, chunks, &request, archive, &prepared, &prior, usage, approval,
+        )
     })?? {
         Verdict::Refused(result) => return Ok(result),
         Verdict::Apply(applied) => applied,

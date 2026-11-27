@@ -21,11 +21,11 @@ use medulla_decision_types::decision::memory_rewrite::{
     MemoryRewriteEvaluation, MemoryRewriteKnobs, MemoryRewriteProposal, RewriteVerdict,
     MEMORY_REVISION_STALE,
 };
-use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionJobOutput;
 use medulla_mutation_types::memory_sync::DocId;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::refusal_code::RefusalCode;
 
@@ -310,7 +310,10 @@ fn check_receipts(
         ));
     };
     if benchmark.verdict != BenchmarkVerdictKind::Admit {
-        return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the benchmark receipt discards the change"));
+        return Err(coded(
+            MEMORY_RECEIPT_NOT_ADMIT,
+            "the benchmark receipt discards the change",
+        ));
     }
     if hex_digest(&benchmark.candidate.digest) != hex_digest(&candidate.candidate_digest)
         || benchmark.baseline.revision != candidate.head_revision
@@ -329,9 +332,13 @@ fn check_receipts(
             ));
         };
         if evaluation.verdict != RewriteVerdict::Admit {
-            return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the rewrite receipt discards the change"));
+            return Err(coded(
+                MEMORY_RECEIPT_NOT_ADMIT,
+                "the rewrite receipt discards the change",
+            ));
         }
-        if hex_digest(&evaluation.proposal.candidate.digest) != hex_digest(&candidate.candidate_digest)
+        if hex_digest(&evaluation.proposal.candidate.digest)
+            != hex_digest(&candidate.candidate_digest)
             || evaluation.proposal.active.revision != candidate.head_revision
         {
             return Err(coded(

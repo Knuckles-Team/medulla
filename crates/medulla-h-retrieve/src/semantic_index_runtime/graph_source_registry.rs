@@ -48,7 +48,8 @@ mod tests {
     use medulla_index_types::semantic_index::bound_graph_sources;
 
     fn state_over(dir: &tempfile::TempDir) -> ServerState {
-        let mut state = ServerState::new_for_test("registry-secret", ServerState::test_isolation("admin"));
+        let mut state =
+            ServerState::new_for_test("registry-secret", ServerState::test_isolation("admin"));
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         state
     }

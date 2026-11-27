@@ -129,9 +129,9 @@ pub(super) fn diff_ontology(
         DiffTarget::Candidate { turtle } => {
             candidate_iri_matches(turtle, ontology_iri)?;
             SchemaSide {
-            revision: "candidate".to_string(),
-            ontology_ttl: turtle.clone(),
-            shapes_ttl: from.shapes_ttl.clone(),
+                revision: "candidate".to_string(),
+                ontology_ttl: turtle.clone(),
+                shapes_ttl: from.shapes_ttl.clone(),
             }
         }
     };

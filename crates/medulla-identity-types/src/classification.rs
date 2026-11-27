@@ -106,8 +106,7 @@ impl ClassificationClaim {
                     provenance.scanned_at_ms,
                 ) else {
                     return Err(
-                        "INVALID_ARGUMENT: a detector claim sets every detector field"
-                            .to_string(),
+                        "INVALID_ARGUMENT: a detector claim sets every detector field".to_string(),
                     );
                 };
                 if id.trim().is_empty() || !(0.0..=1.0).contains(&ratio) {
@@ -119,8 +118,7 @@ impl ClassificationClaim {
             }
             ClaimKind::Propagated | ClaimKind::Manual if has_detector_fields => {
                 return Err(
-                    "INVALID_ARGUMENT: detector fields belong to a detector claim only"
-                        .to_string(),
+                    "INVALID_ARGUMENT: detector fields belong to a detector claim only".to_string(),
                 );
             }
             ClaimKind::Propagated | ClaimKind::Manual => {}

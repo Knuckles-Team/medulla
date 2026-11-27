@@ -346,7 +346,8 @@ async fn flapping_service_proposes_without_acting() {
     // The write step is only named, with the governed route and the typed
     // reason that the engine evaluates and never acts.
     assert!(record.premises.iter().any(|p| {
-        p.fact.starts_with("step:playbook:flap:s2:writes=true:route=connector_write_back")
+        p.fact
+            .starts_with("step:playbook:flap:s2:writes=true:route=connector_write_back")
             && p.fact.contains(":reason=EvaluateOnly:")
     }));
     assert!(record
@@ -354,10 +355,13 @@ async fn flapping_service_proposes_without_acting() {
         .iter()
         .any(|p| p.fact.starts_with("trigger:service_flapping:service=svc-a")));
     for id in ["e1", "e2", "e3"] {
-        assert!(record
-            .premises
-            .iter()
-            .any(|p| p.class == PremiseClass::Claim && p.fact.starts_with(&format!("event:{id}:"))));
+        assert!(
+            record
+                .premises
+                .iter()
+                .any(|p| p.class == PremiseClass::Claim
+                    && p.fact.starts_with(&format!("event:{id}:")))
+        );
     }
 
     // A request to execute is refused and nothing is sealed.

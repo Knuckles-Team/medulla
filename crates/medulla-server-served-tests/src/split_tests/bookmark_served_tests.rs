@@ -275,7 +275,10 @@ fn relations_request(
 
 /// The refusal a response carries, `CODE: reason`.
 fn refusal_of(label: &str, response: Response) -> String {
-    assert!(response.result.is_none(), "{label} must not answer: {response:?}");
+    assert!(
+        response.result.is_none(),
+        "{label} must not answer: {response:?}"
+    );
     response
         .error_detail
         .unwrap_or_else(|| panic!("{label} was accepted but must be refused"))
@@ -308,7 +311,11 @@ fn expected_edges() -> BTreeSet<(String, String, String)> {
     ]
     .into_iter()
     .map(|(source, target, relationship)| {
-        (source.to_string(), target.to_string(), relationship.to_string())
+        (
+            source.to_string(),
+            target.to_string(),
+            relationship.to_string(),
+        )
     })
     .collect()
 }
@@ -327,27 +334,48 @@ async fn search_pages_with_bound_cursor_and_unknown_metadata() {
     assert_eq!(first.hits.len(), 1);
     let alpha = &first.hits[0];
     assert_eq!(alpha.id, "bookmark:alpha");
-    assert!(alpha.score > 0.99, "the query is the entity's own vector: {}", alpha.score);
+    assert!(
+        alpha.score > 0.99,
+        "the query is the entity's own vector: {}",
+        alpha.score
+    );
     assert_eq!(alpha.unknown_keys, vec!["mentions".to_string()]);
     assert_eq!(alpha.provenance["hashtags"], r#"["rust"]"#);
     assert!(alpha.provenance.contains_key("file_sha256"));
-    assert_eq!(alpha.provenance["source_revision"], alpha.provenance["file_sha256"]);
-    assert!(!alpha.provenance.contains_key("mentions"), "no key is defaulted");
-    let cursor = alpha.cursor.clone().expect("a truncated page carries a cursor");
+    assert_eq!(
+        alpha.provenance["source_revision"],
+        alpha.provenance["file_sha256"]
+    );
+    assert!(
+        !alpha.provenance.contains_key("mentions"),
+        "no key is defaulted"
+    );
+    let cursor = alpha
+        .cursor
+        .clone()
+        .expect("a truncated page carries a cursor");
     assert_eq!(first.binding.index_revision, journey.live_generation);
     assert_eq!(first.binding.source_ids.len(), 1);
     assert!(!first.binding.ingestion_receipt_id.is_empty());
 
     // The cursor opens the second page of the same query.
     let second = journey
-        .search(search_request(journey.query_for(0), 1, Some(cursor.clone())))
+        .search(search_request(
+            journey.query_for(0),
+            1,
+            Some(cursor.clone()),
+        ))
         .await;
     assert_eq!(second.hits.len(), 1);
     let beta = &second.hits[0];
     assert_eq!(beta.id, "bookmark:beta");
     assert_eq!(
         beta.unknown_keys,
-        vec!["domains".to_string(), "tools".to_string(), "urls".to_string()],
+        vec![
+            "domains".to_string(),
+            "tools".to_string(),
+            "urls".to_string()
+        ],
         "an absent, empty or unlabelled key is unknown, sorted"
     );
     assert!(beta.cursor.is_none(), "the last page carries no cursor");
@@ -382,9 +410,7 @@ async fn search_pages_with_bound_cursor_and_unknown_metadata() {
             search_request(journey.query_for(0), 1, Some(cursor)),
         )
         .await;
-    assert!(
-        refusal_of("a cursor of an older snapshot", changed).contains("BOOKMARK_INDEX_STALE")
-    );
+    assert!(refusal_of("a cursor of an older snapshot", changed).contains("BOOKMARK_INDEX_STALE"));
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R001.102.3
@@ -399,8 +425,15 @@ async fn relations_hide_denied_edges_and_counts() {
         .relations(relations_request(node_ids.clone(), 100, None))
         .await;
     assert_eq!(edge_set(&all.edges), expected_edges());
-    assert_eq!(all.edges.len(), expected_edges().len(), "no edge is repeated");
-    assert!(all.edges.iter().all(|edge| edge.provenance.is_none() && edge.cursor.is_none()));
+    assert_eq!(
+        all.edges.len(),
+        expected_edges().len(),
+        "no edge is repeated"
+    );
+    assert!(all
+        .edges
+        .iter()
+        .all(|edge| edge.provenance.is_none() && edge.cursor.is_none()));
     assert_eq!(all.binding.index_revision, journey.live_generation);
 
     // A page of three holds exactly three edges, and the cursors walk the same set.
@@ -424,7 +457,10 @@ async fn relations_hide_denied_edges_and_counts() {
     let denied = journey
         .relations_as(TENANT, &[], relations_request(node_ids.clone(), 100, None))
         .await;
-    assert!(denied.error.is_some() && denied.result.is_none(), "{denied:?}");
+    assert!(
+        denied.error.is_some() && denied.result.is_none(),
+        "{denied:?}"
+    );
 
     // Another tenant reads none of this tenant's bookmarks.
     let foreign = journey
@@ -434,7 +470,10 @@ async fn relations_hide_denied_edges_and_counts() {
             relations_request(node_ids.clone(), 100, None),
         )
         .await;
-    assert!(foreign.error.is_some() && foreign.result.is_none(), "{foreign:?}");
+    assert!(
+        foreign.error.is_some() && foreign.result.is_none(),
+        "{foreign:?}"
+    );
 
     // Equal scope, equal result: the administrator and the reader see the same edges.
     let as_admin: BookmarkRelationsResult = ok(
@@ -473,13 +512,20 @@ async fn relations_hide_denied_edges_and_counts() {
         .relations_for(READER, relations_request(node_ids.clone(), 100, None))
         .await;
     assert_eq!(edge_set(&after.edges), visible);
-    assert_eq!(after.edges.len(), visible.len(), "a denied edge is not counted");
+    assert_eq!(
+        after.edges.len(),
+        visible.len(),
+        "a denied edge is not counted"
+    );
     // Pages of two hold the same visible edges, with no gap where the denied edge was.
     let mut paged = Vec::new();
     let mut cursor = None;
     loop {
         let page = journey
-            .relations_for(READER, relations_request(node_ids.clone(), 2, cursor.take()))
+            .relations_for(
+                READER,
+                relations_request(node_ids.clone(), 2, cursor.take()),
+            )
             .await;
         cursor = page.edges.last().and_then(|edge| edge.cursor.clone());
         paged.extend(page.edges);
@@ -502,13 +548,14 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     // The read window is a knob read once per process, so it is lowered before the first call;
     // this test runs in its own process. Eight edges fit a window; the journey's reads are
     // pages of at most eight.
-    let loaded = knob_config::load_knobs(
-        &[format!("bookmark.relations_window={WINDOW}")],
-        |_| None,
-    )
-    .expect("the window knob loads");
+    let loaded =
+        knob_config::load_knobs(&[format!("bookmark.relations_window={WINDOW}")], |_| None)
+            .expect("the window knob loads");
     knob_config::install(loaded);
-    assert_eq!(knob_config::knobs().bookmark_relations_window, WINDOW as u64);
+    assert_eq!(
+        knob_config::knobs().bookmark_relations_window,
+        WINDOW as u64
+    );
 
     let bookmarks = two_bookmarks();
     let journey = Journey::live("bookmark-proof-snapshot", &bookmarks).await;
@@ -529,18 +576,26 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     let (search, relations) = (&found.binding, &related.binding);
     assert_eq!(search.index_revision, journey.live_generation);
     assert_eq!(search.index_revision, relations.index_revision);
-    assert_eq!(search.graph_snapshot_revision, relations.graph_snapshot_revision);
-    assert_eq!(search.authorization_revision, relations.authorization_revision);
+    assert_eq!(
+        search.graph_snapshot_revision,
+        relations.graph_snapshot_revision
+    );
+    assert_eq!(
+        search.authorization_revision,
+        relations.authorization_revision
+    );
     assert_eq!(search.source_ids, relations.source_ids);
     assert_eq!(search.ingestion_receipt_id, relations.ingestion_receipt_id);
-    assert_eq!(search.ingestion_receipt_digest, relations.ingestion_receipt_digest);
+    assert_eq!(
+        search.ingestion_receipt_digest,
+        relations.ingestion_receipt_digest
+    );
     assert_eq!(search.source_revision, relations.source_revision);
     assert!(!search.ingestion_receipt_id.is_empty());
     assert!(!journey.ingest_receipt_id.is_empty());
     assert!(!search.source_ids.is_empty());
     assert_eq!(
-        search.source_revision,
-        found.hits[0].provenance["file_sha256"],
+        search.source_revision, found.hits[0].provenance["file_sha256"],
         "the receipt of the newest node by source offset is reported"
     );
 
@@ -577,9 +632,7 @@ async fn ingest_search_and_relations_share_one_snapshot() {
     oversized.limit_policy.max_hits = 1;
     let refused = refusal_of(
         "more node ids than max_hits",
-        journey
-            .relations_as(TENANT, &["kg:read"], oversized)
-            .await,
+        journey.relations_as(TENANT, &["kg:read"], oversized).await,
     );
     assert!(refused.contains("BOOKMARK_LIMIT_EXCEEDED"), "{refused}");
 
@@ -623,7 +676,10 @@ async fn ingest_search_and_relations_share_one_snapshot() {
             search_request(journey.query_for(0), 2, None),
         )
         .await;
-    assert!(foreign.error.is_some() && foreign.result.is_none(), "{foreign:?}");
+    assert!(
+        foreign.error.is_some() && foreign.result.is_none(),
+        "{foreign:?}"
+    );
 
     // The read window: a page that lies beyond it refuses, and so does an answer above it,
     // never a truncated success. Two more bookmarks bring the edges to eleven, over the eight.

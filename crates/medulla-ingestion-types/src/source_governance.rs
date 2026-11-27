@@ -308,7 +308,9 @@ mod tests {
         assert!(container("docs", Some("root")).validate().is_ok());
         assert_eq!(
             container("a/b", None).validate(),
-            Err(SourceGovernanceError::SlashInContainerId { field: "container_id" })
+            Err(SourceGovernanceError::SlashInContainerId {
+                field: "container_id"
+            })
         );
         assert_eq!(
             container("b", Some("a/c")).validate(),

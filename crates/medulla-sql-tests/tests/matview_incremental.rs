@@ -75,7 +75,12 @@ fn insert(store: &TableStore, table: &str, cols: &[&str], row: Vec<Value>) {
 }
 
 fn insert_order(store: &TableStore, id: i64, region: Value, qty: Value) {
-    insert(store, "orders", &["id", "region", "qty"], vec![json!(id), region, qty]);
+    insert(
+        store,
+        "orders",
+        &["id", "region", "qty"],
+        vec![json!(id), region, qty],
+    );
 }
 
 fn sql(store: &TableStore, text: &str) -> Vec<Vec<Value>> {
@@ -86,7 +91,12 @@ fn sql(store: &TableStore, text: &str) -> Vec<Vec<Value>> {
 fn as_multiset(rows: Vec<Vec<Value>>) -> Vec<String> {
     let mut texts: Vec<String> = rows
         .into_iter()
-        .map(|row| row.iter().map(|v| v.to_string()).collect::<Vec<_>>().join("|"))
+        .map(|row| {
+            row.iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join("|")
+        })
         .collect();
     texts.sort();
     texts
@@ -120,9 +130,11 @@ fn create_view(store: &TableStore, select_sql: &str) {
         "mv",
         select_sql,
         &column_type(store),
-        &|table: &str, column: &str| medulla_table_store::tables::join_key_indexed(store, table, column),
+        &|table: &str, column: &str| {
+            medulla_table_store::tables::join_key_indexed(store, table, column)
+        },
     )
-        .unwrap_or_else(|refusal| panic!("{select_sql}: {refusal}"));
+    .unwrap_or_else(|refusal| panic!("{select_sql}: {refusal}"));
     create_view_from(store, select_sql, program);
 }
 
@@ -147,7 +159,10 @@ fn assert_fresh(store: &TableStore, select_sql: &str, columns: &str) {
         as_multiset(sql(store, select_sql)),
         "{select_sql}"
     );
-    assert!(!store.get_matview("mv").unwrap().unwrap().stale, "an incremental view is never stale");
+    assert!(
+        !store.get_matview("mv").unwrap().unwrap().stale,
+        "an incremental view is never stale"
+    );
 }
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R009.3
@@ -164,34 +179,43 @@ fn rows_view_tracks_insert_update_delete() {
     insert_order(&store, 4, json!("eu"), Value::Null);
     assert_fresh(&store, select, "id, twice");
     // An update that leaves the filter, one that enters it, and a key change.
-    run(&store, vec![TxnOp::Update {
-        table: "orders".into(),
-        set: serde_json::from_value(json!({"qty": 0})).unwrap(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "id".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(1),
-        },
-    }]);
+    run(
+        &store,
+        vec![TxnOp::Update {
+            table: "orders".into(),
+            set: serde_json::from_value(json!({"qty": 0})).unwrap(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "id".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(1),
+            },
+        }],
+    );
     assert_fresh(&store, select, "id, twice");
-    run(&store, vec![TxnOp::Update {
-        table: "orders".into(),
-        set: serde_json::from_value(json!({"id": 30})).unwrap(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "id".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(3),
-        },
-    }]);
+    run(
+        &store,
+        vec![TxnOp::Update {
+            table: "orders".into(),
+            set: serde_json::from_value(json!({"id": 30})).unwrap(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "id".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(3),
+            },
+        }],
+    );
     assert_fresh(&store, select, "id, twice");
-    run(&store, vec![TxnOp::Delete {
-        table: "orders".into(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "id".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(30),
-        },
-    }]);
+    run(
+        &store,
+        vec![TxnOp::Delete {
+            table: "orders".into(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "id".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(30),
+            },
+        }],
+    );
     assert_fresh(&store, select, "id, twice");
 }
 
@@ -210,14 +234,17 @@ fn groups_count_sum_avg_and_empty_group_leaves() {
     insert_order(&store, 5, Value::Null, json!(9));
     assert_fresh(&store, select, "region, n, total, mean");
     // The last row of a group leaves: the group's row is deleted.
-    run(&store, vec![TxnOp::Delete {
-        table: "orders".into(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "id".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(3),
-        },
-    }]);
+    run(
+        &store,
+        vec![TxnOp::Delete {
+            table: "orders".into(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "id".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(3),
+            },
+        }],
+    );
     assert_fresh(&store, select, "region, n, total, mean");
     assert!(sql(&store, "SELECT region FROM mv WHERE region = 'us'").is_empty());
 }
@@ -246,7 +273,16 @@ fn retracting_the_minimum_recomputes_only_that_group() {
     run(&store, vec![delete(4)]);
     assert_fresh(&store, select, "region, lo, hi");
     let distinct = "SELECT DISTINCT region FROM orders";
-    run(&store, vec![TxnOp::DropMatView { name: "mv".into() }, TxnOp::DropTable { name: "mv".into(), if_exists: false }]);
+    run(
+        &store,
+        vec![
+            TxnOp::DropMatView { name: "mv".into() },
+            TxnOp::DropTable {
+                name: "mv".into(),
+                if_exists: false,
+            },
+        ],
+    );
     create_view(&store, distinct);
     insert_order(&store, 9, json!("eu"), json!(1));
     assert_fresh(&store, distinct, "region");
@@ -276,7 +312,8 @@ fn join_delta_equals_rejoin_for_both_sides() {
             Column::new("amount", ColumnType::BigInt, true, false),
         ],
     );
-    let select = "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid";
+    let select =
+        "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid";
     let program = IncrementalViewProgram {
         view: "mv".into(),
         table: "sales".into(),
@@ -292,35 +329,61 @@ fn join_delta_equals_rejoin_for_both_sides() {
             ("amount".into(), RowExpr::Column("amount".into())),
         ]),
     };
-    insert(&store, "customers", &["cid", "area"], vec![json!(1), json!("north")]);
-    insert(&store, "sales", &["sid", "customer_id", "amount"], vec![json!(10), json!(1), json!(5)]);
+    insert(
+        &store,
+        "customers",
+        &["cid", "area"],
+        vec![json!(1), json!("north")],
+    );
+    insert(
+        &store,
+        "sales",
+        &["sid", "customer_id", "amount"],
+        vec![json!(10), json!(1), json!(5)],
+    );
     create_view_from(&store, select, program);
     assert_fresh(&store, select, "sid, area, amount");
     // A new sale, a new customer that matches an existing sale, and both in one transaction.
-    insert(&store, "sales", &["sid", "customer_id", "amount"], vec![json!(11), json!(2), json!(7)]);
-    insert(&store, "customers", &["cid", "area"], vec![json!(2), json!("south")]);
+    insert(
+        &store,
+        "sales",
+        &["sid", "customer_id", "amount"],
+        vec![json!(11), json!(2), json!(7)],
+    );
+    insert(
+        &store,
+        "customers",
+        &["cid", "area"],
+        vec![json!(2), json!("south")],
+    );
     assert_fresh(&store, select, "sid, area, amount");
-    run(&store, vec![
-        TxnOp::Insert {
+    run(
+        &store,
+        vec![
+            TxnOp::Insert {
+                table: "customers".into(),
+                col_order: vec!["cid".into(), "area".into()],
+                rows: vec![vec![json!(3), json!("east")]],
+            },
+            TxnOp::Insert {
+                table: "sales".into(),
+                col_order: vec!["sid".into(), "customer_id".into(), "amount".into()],
+                rows: vec![vec![json!(12), json!(3), json!(9)]],
+            },
+        ],
+    );
+    assert_fresh(&store, select, "sid, area, amount");
+    run(
+        &store,
+        vec![TxnOp::Delete {
             table: "customers".into(),
-            col_order: vec!["cid".into(), "area".into()],
-            rows: vec![vec![json!(3), json!("east")]],
-        },
-        TxnOp::Insert {
-            table: "sales".into(),
-            col_order: vec!["sid".into(), "customer_id".into(), "amount".into()],
-            rows: vec![vec![json!(12), json!(3), json!(9)]],
-        },
-    ]);
-    assert_fresh(&store, select, "sid, area, amount");
-    run(&store, vec![TxnOp::Delete {
-        table: "customers".into(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "cid".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(1),
-        },
-    }]);
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "cid".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(1),
+            },
+        }],
+    );
     assert_fresh(&store, select, "sid, area, amount");
 }
 
@@ -376,14 +439,27 @@ fn maintain_views_reports_view_row_changes() {
         rmp_serde::from_slice(seen[0].1.changes[0].before.as_ref().unwrap()).unwrap();
     let new: serde_json::Map<String, Value> =
         rmp_serde::from_slice(seen[0].1.changes[1].after.as_ref().unwrap()).unwrap();
-    assert_eq!((old["region"].clone(), old["n"].clone()), (json!("eu"), json!(1)));
-    assert_eq!((new["region"].clone(), new["n"].clone()), (json!("eu"), json!(2)));
-    assert!(old.keys().chain(new.keys()).all(|name| !name.starts_with("__mv_")));
+    assert_eq!(
+        (old["region"].clone(), old["n"].clone()),
+        (json!("eu"), json!(1))
+    );
+    assert_eq!(
+        (new["region"].clone(), new["n"].clone()),
+        (json!("eu"), json!(2))
+    );
+    assert!(old
+        .keys()
+        .chain(new.keys())
+        .all(|name| !name.starts_with("__mv_")));
     drop(seen);
 
     // A commit that touches no view publishes nothing.
     sink.views.lock().unwrap().clear();
-    create_table(&store, "unrelated", vec![Column::new("id", ColumnType::BigInt, false, true)]);
+    create_table(
+        &store,
+        "unrelated",
+        vec![Column::new("id", ColumnType::BigInt, false, true)],
+    );
     assert!(sink.views.lock().unwrap().is_empty());
 }
 
@@ -424,7 +500,8 @@ fn join_probe_through_secondary_indexes_equals_rejoin() {
             .unwrap();
         assert!(store.create_secondary_index(&spec, false).unwrap());
     }
-    let select = "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid";
+    let select =
+        "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid";
     let program = IncrementalViewProgram {
         view: "mv".into(),
         table: "sales".into(),
@@ -440,45 +517,67 @@ fn join_probe_through_secondary_indexes_equals_rejoin() {
             ("amount".into(), RowExpr::Column("amount".into())),
         ]),
     };
-    insert(&store, "customers", &["cid", "area"], vec![json!(1), json!("north")]);
-    insert(&store, "sales", &["sid", "customer_id", "amount"], vec![json!(10), json!(1), json!(5)]);
+    insert(
+        &store,
+        "customers",
+        &["cid", "area"],
+        vec![json!(1), json!("north")],
+    );
+    insert(
+        &store,
+        "sales",
+        &["sid", "customer_id", "amount"],
+        vec![json!(10), json!(1), json!(5)],
+    );
     create_view_from(&store, select, program);
     assert_fresh(&store, select, "sid, area, amount");
     // Both sides in one transaction, a key change on the indexed column, and a delete.
-    run(&store, vec![
-        TxnOp::Insert {
-            table: "customers".into(),
-            col_order: vec!["cid".into(), "area".into()],
-            rows: vec![vec![json!(2), json!("south")], vec![json!(3), json!("east")]],
-        },
-        TxnOp::Insert {
+    run(
+        &store,
+        vec![
+            TxnOp::Insert {
+                table: "customers".into(),
+                col_order: vec!["cid".into(), "area".into()],
+                rows: vec![
+                    vec![json!(2), json!("south")],
+                    vec![json!(3), json!("east")],
+                ],
+            },
+            TxnOp::Insert {
+                table: "sales".into(),
+                col_order: vec!["sid".into(), "customer_id".into(), "amount".into()],
+                rows: vec![
+                    vec![json!(11), json!(2), json!(7)],
+                    vec![json!(12), json!(3), json!(9)],
+                    vec![json!(13), json!(2), json!(1)],
+                ],
+            },
+        ],
+    );
+    assert_fresh(&store, select, "sid, area, amount");
+    run(
+        &store,
+        vec![TxnOp::Update {
             table: "sales".into(),
-            col_order: vec!["sid".into(), "customer_id".into(), "amount".into()],
-            rows: vec![
-                vec![json!(11), json!(2), json!(7)],
-                vec![json!(12), json!(3), json!(9)],
-                vec![json!(13), json!(2), json!(1)],
-            ],
-        },
-    ]);
+            set: serde_json::from_value(json!({"customer_id": 3})).unwrap(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "sid".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(11),
+            },
+        }],
+    );
     assert_fresh(&store, select, "sid, area, amount");
-    run(&store, vec![TxnOp::Update {
-        table: "sales".into(),
-        set: serde_json::from_value(json!({"customer_id": 3})).unwrap(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "sid".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(11),
-        },
-    }]);
-    assert_fresh(&store, select, "sid, area, amount");
-    run(&store, vec![TxnOp::Delete {
-        table: "customers".into(),
-        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
-            col: "cid".into(),
-            op: medulla_result_types::row_predicate::CmpOp::Eq,
-            value: json!(2),
-        },
-    }]);
+    run(
+        &store,
+        vec![TxnOp::Delete {
+            table: "customers".into(),
+            selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+                col: "cid".into(),
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
+                value: json!(2),
+            },
+        }],
+    );
     assert_fresh(&store, select, "sid, area, amount");
 }

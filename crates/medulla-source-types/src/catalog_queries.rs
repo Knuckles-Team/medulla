@@ -115,11 +115,7 @@ SELECT ?facet ?value ?extra ?at ?who WHERE {{\n\
     )
 }
 
-fn sparql_query(
-    name: &str,
-    text: String,
-    params: &[(&str, StoredParamType)],
-) -> StoredQuery {
+fn sparql_query(name: &str, text: String, params: &[(&str, StoredParamType)]) -> StoredQuery {
     StoredQuery {
         name: name.to_string(),
         version: 1,

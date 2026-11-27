@@ -99,7 +99,10 @@ async fn downtime_selections(
     let (core, persist_dir) = {
         let current = state.read().await;
         (
-            current.registry.get(COMMONS).map(|entry| entry.core.clone()),
+            current
+                .registry
+                .get(COMMONS)
+                .map(|entry| entry.core.clone()),
             current.persist_dir.clone(),
         )
     };
@@ -126,8 +129,8 @@ pub fn selection_page(
     limit: usize,
 ) -> medulla_work_types::downtime::DowntimeSelections {
     use medulla_work_types::downtime::{
-        DowntimeSelected, DowntimeSelectionRecord, DowntimeSkipReason, DowntimeSkipped,
-        DowntimeSelections,
+        DowntimeSelected, DowntimeSelectionRecord, DowntimeSelections, DowntimeSkipReason,
+        DowntimeSkipped,
     };
     let mut rows = core.get_nodes_by_label_page("dw:Selection", after, limit + 1);
     let more = rows.len() > limit;
@@ -162,8 +165,7 @@ pub fn selection_page(
                         job_id: text("dw:jobId"),
                         job: None,
                     });
-                } else if let Some(reason) = DowntimeSkipReason::from_name(&text("dw:skipReason"))
-                {
+                } else if let Some(reason) = DowntimeSkipReason::from_name(&text("dw:skipReason")) {
                     record.skipped.push(DowntimeSkipped {
                         iri: text("dw:jobType"),
                         reason,
@@ -189,7 +191,10 @@ pub async fn try_handle(
     let method = match method {
         // MEDULLA-DURABLE-KERNEL-R101.5: the recorded downtime selections, newest first.
         Method::DowntimeSelections { after, limit } => {
-            return Ok(answer(req_id, downtime_selections(state, after, limit).await));
+            return Ok(answer(
+                req_id,
+                downtime_selections(state, after, limit).await,
+            ));
         }
         other => other,
     };

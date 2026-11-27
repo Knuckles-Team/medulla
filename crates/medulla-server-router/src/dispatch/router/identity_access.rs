@@ -294,9 +294,13 @@ async fn dispatch_check_resource_access(
     let req_id = ctx.req.id;
     let now_ms = medulla_server_api::txn::now_ms();
     let s = timed_read(ctx.state).await;
-    let decision =
-        s.isolation
-            .resource_access_decision(&agent_id, &resource_ref, protocol, &operation, now_ms);
+    let decision = s.isolation.resource_access_decision(
+        &agent_id,
+        &resource_ref,
+        protocol,
+        &operation,
+        now_ms,
+    );
     drop(s);
     Response::ok(
         req_id,
@@ -378,8 +382,9 @@ async fn dispatch_identity_and_access_methods_arm_2(
     } = ctx;
     match method {
         Method::RbacAdmin {
-            op: op @ (medulla_identity_types::acl::RbacAdminOp::ShareGrant(_)
-            | medulla_identity_types::acl::RbacAdminOp::ShareRevoke(_)),
+            op:
+                op @ (medulla_identity_types::acl::RbacAdminOp::ShareGrant(_)
+                | medulla_identity_types::acl::RbacAdminOp::ShareRevoke(_)),
         } => {
             // A share commits through the graph gateway of the request's graph
             // (MEDULLA-IDENTITY-R023.13.3), not through the RBAC image.

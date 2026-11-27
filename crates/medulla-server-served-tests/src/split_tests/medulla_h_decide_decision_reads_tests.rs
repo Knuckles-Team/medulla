@@ -136,7 +136,12 @@ async fn list_pages_filters_and_isolates_tenants() {
         .records
         .iter()
         .chain(&second.records)
-        .map(|item| (std::cmp::Reverse(item.decided_at_ms), item.record_id.as_str()))
+        .map(|item| {
+            (
+                std::cmp::Reverse(item.decided_at_ms),
+                item.record_id.as_str(),
+            )
+        })
         .collect();
     assert!(keys.windows(2).all(|pair| pair[0] <= pair[1]), "{keys:?}");
     seen.sort();
@@ -217,7 +222,10 @@ async fn provenance_keeps_used_revision_and_hides_other_tenants() {
     assert_eq!(found.approver, None);
     // An unknown id and another tenant's id refuse with the same body.
     let unknown = read(TENANT, "decision:missing".into()).await.error.unwrap();
-    let foreign = read(OTHER_TENANT, record.record_id.clone()).await.error.unwrap();
+    let foreign = read(OTHER_TENANT, record.record_id.clone())
+        .await
+        .error
+        .unwrap();
     assert!(unknown.contains("DECISION_NOT_FOUND"), "{unknown}");
     assert_eq!(unknown, foreign);
 }
@@ -230,7 +238,12 @@ fn commit_assembly(h: &Harness) -> medulla_decision_types::decision::DecisionRec
     let record = v1::decided(&h.store, v1::TENANT).record;
     let digest = record.inputs.catalog_digest.clone();
     h.store
-        .commit_decision_record(v1::commit_context(&h.store, v1::TENANT, "why-not", 1), &record, &digest, None)
+        .commit_decision_record(
+            v1::commit_context(&h.store, v1::TENANT, "why-not", 1),
+            &record,
+            &digest,
+            None,
+        )
         .expect("commits");
     record
 }
@@ -265,7 +278,10 @@ async fn why_not_is_bounded_read_only_and_refuses_retired_inputs() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let record = commit_assembly(&h);
     let tenant: &'static str = medulla_persistence_records::decision_record::tests::TENANT;
-    let before = h.store.decision_record_body(tenant, &record.record_id).unwrap();
+    let before = h
+        .store
+        .decision_record_body(tenant, &record.record_id)
+        .unwrap();
     let medulla_decision_types::decision::DecisionOutcome::Solved { slots, .. } = &record.outcome
     else {
         panic!("the fixture is solved")
@@ -275,10 +291,9 @@ async fn why_not_is_bounded_read_only_and_refuses_retired_inputs() {
         .map(|slot| slot.component.component_id.clone())
         .collect();
     for candidate in record.inputs.candidates.as_slice() {
-        let answer: DecisionWhyNot = decode(
-            why_not(&h, tenant, &record.record_id, &candidate.component_id, None).await,
-        )
-        .expect("a committed assembly re-solves");
+        let answer: DecisionWhyNot =
+            decode(why_not(&h, tenant, &record.record_id, &candidate.component_id, None).await)
+                .expect("a committed assembly re-solves");
         assert_eq!(answer.record_id, record.record_id);
         assert_eq!(answer.option_id, candidate.component_id);
         // The budget is the knob's, never more.
@@ -303,7 +318,9 @@ async fn why_not_is_bounded_read_only_and_refuses_retired_inputs() {
     assert_eq!(unknown, foreign.error.unwrap());
     // The call never changes the record.
     assert_eq!(
-        h.store.decision_record_body(tenant, &record.record_id).unwrap(),
+        h.store
+            .decision_record_body(tenant, &record.record_id)
+            .unwrap(),
         before
     );
 }
@@ -351,15 +368,21 @@ async fn decision_reads_end_to_end() {
     else {
         panic!("the fixture is solved")
     };
-    let excluded = assembly
-        .inputs
-        .candidates
-        .as_slice()
-        .iter()
-        .find(|c| !slots.iter().any(|s| s.component.component_id == c.component_id));
+    let excluded = assembly.inputs.candidates.as_slice().iter().find(|c| {
+        !slots
+            .iter()
+            .any(|s| s.component.component_id == c.component_id)
+    });
     if let Some(excluded) = excluded {
         let answer: DecisionWhyNot = decode(
-            why_not(&h, tenant, &assembly.record_id, &excluded.component_id, None).await,
+            why_not(
+                &h,
+                tenant,
+                &assembly.record_id,
+                &excluded.component_id,
+                None,
+            )
+            .await,
         )
         .unwrap();
         assert!(!answer.reasons.is_empty(), "{answer:?}");

@@ -14,7 +14,10 @@ use super::connector_pack_harness::{ok, Served, TENANT};
 async fn a_range_without_a_valuation_is_a_null_card_with_no_valuation() {
     let served = Served::provisioned("finance-source", &[]).await;
     let mut fields = BTreeMap::new();
-    fields.insert("accountBindingState".to_string(), "\"verified\"".to_string());
+    fields.insert(
+        "accountBindingState".to_string(),
+        "\"verified\"".to_string(),
+    );
     let put = served
         .verified(
             TENANT,
@@ -49,7 +52,10 @@ async fn a_range_without_a_valuation_is_a_null_card_with_no_valuation() {
         )
         .await;
     let card: FinancePerformanceCard = ok("FinancePerformance", response);
-    assert_eq!(card.value_ticks, None, "an unavailable figure is null, never zero");
+    assert_eq!(
+        card.value_ticks, None,
+        "an unavailable figure is null, never zero"
+    );
     assert_eq!(card.value, None);
     assert_eq!(card.reason.as_deref(), Some("NO_VALUATION"));
     assert!(card.benchmark.is_none());

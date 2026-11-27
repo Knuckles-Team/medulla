@@ -38,9 +38,7 @@ mod live;
 mod trust;
 
 #[cfg(feature = "rdf")]
-pub use live::{
-    connected_sources_from_turtle, fixture_from_schema_sources, sync_authorities,
-};
+pub use live::{connected_sources_from_turtle, fixture_from_schema_sources, sync_authorities};
 pub use trust::{
     change_trust_mark, mark_for_origin, ContentOrigin, DefaultTrustMarkPolicy, StoredTrustMark,
     TrustMark, TrustMarkPolicy, TrustMarkRefusal, CONTENT_ORIGIN_UNKNOWN,

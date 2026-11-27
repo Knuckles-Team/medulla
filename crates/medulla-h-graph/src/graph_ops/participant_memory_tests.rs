@@ -336,7 +336,9 @@ mod participant_surface_proofs {
     use medulla_server_auth::access::requires_write;
     use medulla_server_mutation::mutation::{apply_coalescable_write, GATEWAY_ROUTED};
     use medulla_types::contract::{ResourceId, TenantId};
-    use medulla_work_types::memory::{ConversationMessage, ConversationRecord, MessageRole, ThreadAnchor};
+    use medulla_work_types::memory::{
+        ConversationMessage, ConversationRecord, MessageRole, ThreadAnchor,
+    };
     use medulla_work_types::memory_scope::{MemoryScope, ObservationConfig};
     use medulla_work_types::participant::{
         participant_iri, Participant, ParticipantId, ParticipantKind, ParticipantOp,
@@ -440,22 +442,41 @@ mod participant_surface_proofs {
         };
         assert!(committed);
         assert_eq!(updated.display_name, "Ada L.");
-        assert_eq!(updated.acts_as, vec!["alice".to_string(), "bob".to_string()]);
+        assert_eq!(
+            updated.acts_as,
+            vec!["alice".to_string(), "bob".to_string()]
+        );
 
         // The kind and represents are immutable.
         let mut other_kind = participant("ada-1", "urn:person:ada", &["alice"], "Ada");
         other_kind.kind = ParticipantKind::Agent;
-        let refused = serve(&core, SCOPE_A, "alice", ParticipantOp::Put { participant: other_kind })
-            .err()
-            .unwrap();
-        assert!(refused.starts_with("PARTICIPANT_KIND_INVALID: "), "{refused}");
+        let refused = serve(
+            &core,
+            SCOPE_A,
+            "alice",
+            ParticipantOp::Put {
+                participant: other_kind,
+            },
+        )
+        .err()
+        .unwrap();
+        assert!(
+            refused.starts_with("PARTICIPANT_KIND_INVALID: "),
+            "{refused}"
+        );
 
         // Cross-tenant negative: another tenant neither updates it nor overwrites its node, and
         // the refusal is the non-disclosing envelope; so is a principal that does not act as it.
         let foreign = put("Hijack", &["mallory"], "mallory", SCOPE_B).unwrap_err();
-        assert!(foreign.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{foreign}");
+        assert!(
+            foreign.starts_with("PARTICIPANT_NOT_VISIBLE: "),
+            "{foreign}"
+        );
         let not_acting = put("Hijack", &["mallory"], "mallory", SCOPE_A).unwrap_err();
-        assert!(not_acting.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{not_acting}");
+        assert!(
+            not_acting.starts_with("PARTICIPANT_NOT_VISIBLE: "),
+            "{not_acting}"
+        );
 
         // AddMember: needs a session with a thread; idempotent on the pair.
         let join = |session: &str, scope: &str, agent: &str| {
@@ -470,7 +491,10 @@ mod participant_surface_proofs {
             )
         };
         let unknown = join("chat-9", SCOPE_A, "alice").unwrap_err();
-        assert!(unknown.starts_with("MEMBERSHIP_SESSION_UNKNOWN: "), "{unknown}");
+        assert!(
+            unknown.starts_with("MEMBERSHIP_SESSION_UNKNOWN: "),
+            "{unknown}"
+        );
         let thread_id = thread(&core, "chat-9", "ws-main");
         let iri = participant_iri(
             &ResourceId::new("ws-main").unwrap(),
@@ -483,7 +507,10 @@ mod participant_surface_proofs {
         assert!(!committed);
         // The other tenant cannot add the participant.
         let other_tenant = join("chat-9", SCOPE_B, "alice").unwrap_err();
-        assert!(other_tenant.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{other_tenant}");
+        assert!(
+            other_tenant.starts_with("PARTICIPANT_NOT_VISIBLE: "),
+            "{other_tenant}"
+        );
 
         // PutScope: the owner saves; another principal cannot change it; the session limit comes
         // from the knob.
@@ -491,7 +518,9 @@ mod participant_surface_proofs {
             &core,
             SCOPE_A,
             "alice",
-            ParticipantOp::PutScope { scope: scope_of("sc-1", "alice", &["chat-9"]) },
+            ParticipantOp::PutScope {
+                scope: scope_of("sc-1", "alice", &["chat-9"]),
+            },
         )
         .unwrap();
         let Out::Scope(saved) = out else {
@@ -502,18 +531,24 @@ mod participant_surface_proofs {
             &core,
             SCOPE_A,
             "bob",
-            ParticipantOp::PutScope { scope: scope_of("sc-1", "bob", &["chat-9"]) },
+            ParticipantOp::PutScope {
+                scope: scope_of("sc-1", "bob", &["chat-9"]),
+            },
         )
         .err()
         .unwrap();
         assert!(not_owner.starts_with("SCOPE_NOT_VISIBLE: "), "{not_owner}");
-        let too_many: Vec<String> = (0..=scope_max_sessions()).map(|n| format!("s{n}")).collect();
+        let too_many: Vec<String> = (0..=scope_max_sessions())
+            .map(|n| format!("s{n}"))
+            .collect();
         let refs: Vec<&str> = too_many.iter().map(String::as_str).collect();
         let limit = serve(
             &core,
             SCOPE_A,
             "alice",
-            ParticipantOp::PutScope { scope: scope_of("sc-2", "alice", &refs) },
+            ParticipantOp::PutScope {
+                scope: scope_of("sc-2", "alice", &refs),
+            },
         )
         .err()
         .unwrap();
@@ -532,12 +567,17 @@ mod participant_surface_proofs {
                 &core,
                 SCOPE_A,
                 agent,
-                ParticipantOp::SetObservation { config: config.clone() },
+                ParticipantOp::SetObservation {
+                    config: config.clone(),
+                },
             )
         };
         assert!(set("bob").is_ok());
         let stranger = set("carol").unwrap_err();
-        assert!(stranger.starts_with("OBSERVER_NOT_PERMITTED: "), "{stranger}");
+        assert!(
+            stranger.starts_with("OBSERVER_NOT_PERMITTED: "),
+            "{stranger}"
+        );
         let (_, committed) = set("alice").unwrap();
         assert!(!committed);
     }
@@ -554,7 +594,11 @@ mod participant_surface_proofs {
         let mut conversation = ConversationRecord::new(
             tenant,
             "chat-9",
-            vec![turn("m1", "ada-1", 10), turn("m2", "bo-2", 20), turn("m3", "ada-1", 30)],
+            vec![
+                turn("m1", "ada-1", 10),
+                turn("m2", "bo-2", 20),
+                turn("m3", "ada-1", 30),
+            ],
         )
         .unwrap();
         conversation.thread_anchor = Some(ThreadAnchor {
@@ -583,7 +627,9 @@ mod participant_surface_proofs {
         let conversation = two_speaker_thread(SCOPE_A);
         let anchor = conversation.thread_anchor.clone().unwrap();
         // Two distinct speakers write two edges in one batch.
-        let (write, _) = plan_memberships(&core, SCOPE_A, &anchor, &conversation).unwrap().unwrap();
+        let (write, _) = plan_memberships(&core, SCOPE_A, &anchor, &conversation)
+            .unwrap()
+            .unwrap();
         let Method::BatchUpdate { operations_msgpack } = &write else {
             panic!("memberships are one batch")
         };
@@ -593,11 +639,15 @@ mod participant_surface_proofs {
             assert!(core.has_edge(&thread_id, &iri), "{slug}");
         }
         // A replay writes nothing: every speaker is already a member.
-        assert!(plan_memberships(&core, SCOPE_A, &anchor, &conversation).unwrap().is_none());
+        assert!(plan_memberships(&core, SCOPE_A, &anchor, &conversation)
+            .unwrap()
+            .is_none());
 
         // Each record carries its speaker.
         let embeddings = vec![vec![0.0f32]; conversation.messages.len()];
-        let requests = super::super::memory_ingest::thread_requests(&conversation, embeddings, 30 * 60_000).unwrap();
+        let requests =
+            super::super::memory_ingest::thread_requests(&conversation, embeddings, 30 * 60_000)
+                .unwrap();
         let speakers: Vec<Option<&str>> = requests
             .iter()
             .map(|request| request.record.speaker.as_ref().map(ParticipantId::as_str))
@@ -608,7 +658,10 @@ mod participant_surface_proofs {
         // and the refusal is the one an absent speaker gets.
         let other = two_speaker_thread(SCOPE_B);
         let refused = plan_memberships(&GraphCore::new(), SCOPE_B, &anchor, &other).unwrap_err();
-        assert!(refused.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{refused}");
+        assert!(
+            refused.starts_with("PARTICIPANT_NOT_VISIBLE: "),
+            "{refused}"
+        );
         let foreign = plan_memberships(&core, SCOPE_B, &anchor, &other).unwrap_err();
         assert_eq!(foreign, refused);
     }
@@ -620,7 +673,7 @@ mod participant_surface_proofs {
 mod scoped_recall_proofs {
     use super::super::memory_surface::{recall, Narrowing};
     use super::super::memory_surface_tests::{
-        episode_recall, ids, record, recall_request, seal, store, NOW,
+        episode_recall, ids, recall_request, record, seal, store, NOW,
     };
     use super::super::participant_surface::{admit, resolve_scope_ref};
     use super::{SCOPE_A, SCOPE_B};
@@ -650,18 +703,27 @@ mod scoped_recall_proofs {
     }
 
     fn reference(id: &str) -> medulla_work_types::memory_scope::ScopeRef {
-        medulla_work_types::memory_scope::ScopeRef { scope_id: id.into() }
+        medulla_work_types::memory_scope::ScopeRef {
+            scope_id: id.into(),
+        }
     }
 
     /// The sessions the caller's own view holds.
     fn visible(_core: &GraphCore, _tenant: &str) -> BTreeSet<String> {
-        ["s1", "s2", "s3"].iter().map(|session| session.to_string()).collect()
+        ["s1", "s2", "s3"]
+            .iter()
+            .map(|session| session.to_string())
+            .collect()
     }
 
     fn in_session(tenant: &str, id: &str, session: &str) -> MemoryRememberRequest {
         let mut item = record(tenant, id, MemoryTier::Episodic, "note of the session");
         item.session_id = Some(ResourceId::new(session).unwrap());
-        MemoryRememberRequest { record: item, embedding: vec![], episode: None }
+        MemoryRememberRequest {
+            record: item,
+            embedding: vec![],
+            episode: None,
+        }
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R651.9
@@ -672,35 +734,80 @@ mod scoped_recall_proofs {
             store(&core, SCOPE_A, &in_session(SCOPE_A, id, session));
         }
         store(&core, SCOPE_B, &in_session(SCOPE_B, "foreign", "s1"));
-        put_scope(&core, SCOPE_A, "alice", scope("work", "alice", &["s1", "s3", "s9"]));
+        put_scope(
+            &core,
+            SCOPE_A,
+            "alice",
+            scope("work", "alice", &["s1", "s3", "s9"]),
+        );
 
         let search = |tenant: &str, sessions: BTreeSet<String>| {
-            let narrowing = Narrowing { documents: None, sessions: Some(sessions) };
-            recall(&core, tenant, NOW, &recall_request(vec![], &["note"], 1_000), Some(&narrowing)).unwrap()
+            let narrowing = Narrowing {
+                documents: None,
+                sessions: Some(sessions),
+            };
+            recall(
+                &core,
+                tenant,
+                NOW,
+                &recall_request(vec![], &["note"], 1_000),
+                Some(&narrowing),
+            )
+            .unwrap()
         };
         // The scope intersects what the caller sees: s9 is named but not visible, s2 is visible
         // but not named.
-        let allowed = resolve_scope_ref(&core, SCOPE_A, "alice", &reference("work"), &visible(&core, SCOPE_A))
-            .unwrap();
+        let allowed = resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "alice",
+            &reference("work"),
+            &visible(&core, SCOPE_A),
+        )
+        .unwrap();
         assert_eq!(allowed.iter().cloned().collect::<Vec<_>>(), ["s1", "s3"]);
-        let mut held = ids(&search(SCOPE_A, allowed.clone()).hits).into_iter().map(String::from).collect::<Vec<_>>();
+        let mut held = ids(&search(SCOPE_A, allowed.clone()).hits)
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
         held.sort();
         assert_eq!(held, ["m1", "m3"]);
         // A scope that names nothing the caller sees returns an empty answer and never widens.
         put_scope(&core, SCOPE_A, "alice", scope("nowhere", "alice", &["s9"]));
-        let nothing = resolve_scope_ref(&core, SCOPE_A, "alice", &reference("nowhere"), &visible(&core, SCOPE_A)).unwrap();
+        let nothing = resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "alice",
+            &reference("nowhere"),
+            &visible(&core, SCOPE_A),
+        )
+        .unwrap();
         assert!(nothing.is_empty());
         assert!(search(SCOPE_A, nothing).hits.is_empty());
         // The tenant filter still applies: the other tenant's record in s1 is never returned.
-        assert!(ids(&search(SCOPE_A, allowed).hits).iter().all(|id| *id != "foreign"));
+        assert!(ids(&search(SCOPE_A, allowed).hits)
+            .iter()
+            .all(|id| *id != "foreign"));
 
         // The three scope refusals.
         let code = |result: Result<BTreeSet<String>, String>| result.unwrap_err();
         let visible_now = visible(&core, SCOPE_A);
-        assert!(code(resolve_scope_ref(&core, SCOPE_A, "alice", &reference("absent"), &visible_now))
-            .starts_with("SCOPE_NOT_FOUND: "));
-        assert!(code(resolve_scope_ref(&core, SCOPE_A, "bob", &reference("work"), &visible_now))
-            .starts_with("SCOPE_NOT_VISIBLE: "));
+        assert!(code(resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "alice",
+            &reference("absent"),
+            &visible_now
+        ))
+        .starts_with("SCOPE_NOT_FOUND: "));
+        assert!(code(resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "bob",
+            &reference("work"),
+            &visible_now
+        ))
+        .starts_with("SCOPE_NOT_VISIBLE: "));
         // A stored scope above the knob limit refuses on read.
         let over: Vec<String> = (0..=super::super::participant_surface::scope_max_sessions())
             .map(|n| format!("x{n}"))
@@ -717,12 +824,24 @@ mod scoped_recall_proofs {
             }))
             .unwrap(),
         );
-        assert!(code(resolve_scope_ref(&core, SCOPE_A, "alice", &reference("huge"), &visible_now))
-            .starts_with("SCOPE_SESSION_LIMIT: "));
+        assert!(code(resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "alice",
+            &reference("huge"),
+            &visible_now
+        ))
+        .starts_with("SCOPE_SESSION_LIMIT: "));
         // Cross-tenant negative: the same scope id under another tenant is a different node, so
         // the first tenant's scope is absent to it.
-        assert!(code(resolve_scope_ref(&core, SCOPE_B, "alice", &reference("work"), &visible_now))
-            .starts_with("SCOPE_NOT_FOUND: "));
+        assert!(code(resolve_scope_ref(
+            &core,
+            SCOPE_B,
+            "alice",
+            &reference("work"),
+            &visible_now
+        ))
+        .starts_with("SCOPE_NOT_FOUND: "));
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R155.7
@@ -733,24 +852,48 @@ mod scoped_recall_proofs {
         seal(&core, SCOPE_A, "ep:2", "s2", &[("f1", 300), ("f2", 400)]);
         seal(&core, SCOPE_A, "ep:3", "s3", &[("g1", 500), ("g2", 600)]);
         seal(&core, SCOPE_B, "ep:b", "s1", &[("h1", 150), ("h2", 250)]);
-        put_scope(&core, SCOPE_A, "alice", scope("two", "alice", &["s1", "s3"]));
-        let allowed =
-            resolve_scope_ref(&core, SCOPE_A, "alice", &reference("two"), &visible(&core, SCOPE_A)).unwrap();
+        put_scope(
+            &core,
+            SCOPE_A,
+            "alice",
+            scope("two", "alice", &["s1", "s3"]),
+        );
+        let allowed = resolve_scope_ref(
+            &core,
+            SCOPE_A,
+            "alice",
+            &reference("two"),
+            &visible(&core, SCOPE_A),
+        )
+        .unwrap();
         let mut request = episode_recall(EpisodeScope::Episodes, 10_000);
         request.memory_scope = Some(reference("two"));
-        let narrowing = Narrowing { documents: None, sessions: Some(allowed) };
+        let narrowing = Narrowing {
+            documents: None,
+            sessions: Some(allowed),
+        };
         let result = recall(&core, SCOPE_A, 20_000, &request, Some(&narrowing)).unwrap();
-        let mut episodes: Vec<&str> = result.episodes.iter().map(|e| e.episode_id.as_str()).collect();
+        let mut episodes: Vec<&str> = result
+            .episodes
+            .iter()
+            .map(|e| e.episode_id.as_str())
+            .collect();
         episodes.sort();
         assert_eq!(episodes, ["ep:1", "ep:3"]);
-        let mut held = ids(&result.hits).into_iter().map(String::from).collect::<Vec<_>>();
+        let mut held = ids(&result.hits)
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>();
         held.sort();
         assert_eq!(held, ["e1", "e2", "g1", "g2"]);
         // The result lists the scope id and the session count after narrowing.
         assert_eq!(result.memory_scope.as_deref(), Some("two"));
         assert_eq!(result.scope_session_count, Some(2));
         // Cross-tenant negative: another tenant's episode of s1 never appears for tenant A.
-        assert!(result.episodes.iter().all(|e| e.episode_id.as_str() != "ep:b"));
+        assert!(result
+            .episodes
+            .iter()
+            .all(|e| e.episode_id.as_str() != "ep:b"));
     }
 }
 
@@ -759,7 +902,9 @@ mod scoped_recall_proofs {
 mod observation_flag_proofs {
     use super::super::participant_surface::{admit, observation_of};
     use super::SCOPE_A;
-    use medulla_decision_stats::decision::participant_derive::{derivation_targets, DerivationInput};
+    use medulla_decision_stats::decision::participant_derive::{
+        derivation_targets, DerivationInput,
+    };
     use medulla_graph_core::graph::GraphCore;
     use medulla_server_mutation::mutation::apply_coalescable_write;
     use medulla_types::contract::{ResourceId, TenantId};
@@ -810,8 +955,10 @@ mod observation_flag_proofs {
             );
         }
         let count = |core: &GraphCore| {
-            let configs: Vec<ObservationConfig> =
-                members.iter().map(|member| observation_of(core, SCOPE_A, "chat-9", member)).collect();
+            let configs: Vec<ObservationConfig> = members
+                .iter()
+                .map(|member| observation_of(core, SCOPE_A, "chat-9", member))
+                .collect();
             derivation_targets(&DerivationInput {
                 scope_id: "",
                 session_id: "chat-9",
@@ -854,7 +1001,10 @@ mod observation_flag_proofs {
 #[test]
 fn profile_refusals_change_no_state() {
     // The six codes are registered once, in the participant table.
-    let registered: Vec<&str> = medulla_types::participant::REFUSALS.iter().map(|code| code.as_str()).collect();
+    let registered: Vec<&str> = medulla_types::participant::REFUSALS
+        .iter()
+        .map(|code| code.as_str())
+        .collect();
     for code in [
         "PROFILE_NOT_FOUND",
         "PROFILE_NOT_VISIBLE",
@@ -863,7 +1013,11 @@ fn profile_refusals_change_no_state() {
         "DOCUMENT_SET_NOT_FOUND",
         "DOCUMENT_SET_QUERY_NOT_READ_ONLY",
     ] {
-        assert_eq!(registered.iter().filter(|held| **held == code).count(), 1, "{code}");
+        assert_eq!(
+            registered.iter().filter(|held| **held == code).count(),
+            1,
+            "{code}"
+        );
     }
 
     let core = GraphCore::new();
@@ -889,7 +1043,10 @@ fn profile_refusals_change_no_state() {
     assert!(not_found.starts_with("PROFILE_NOT_FOUND: "), "{not_found}");
     // PROFILE_REVISION_CONFLICT: a save derived from a stale revision.
     let conflict = save(&core, &iso, SCOPE_A, "alice", profile(7, vec![])).unwrap_err();
-    assert!(conflict.starts_with("PROFILE_REVISION_CONFLICT: "), "{conflict}");
+    assert!(
+        conflict.starts_with("PROFILE_REVISION_CONFLICT: "),
+        "{conflict}"
+    );
     // PROFILE_NOT_VISIBLE: a profile nobody shared with the caller, and another tenant's.
     let hidden = get(&core, &iso, SCOPE_A, "bob", "p-1").unwrap_err();
     assert!(hidden.starts_with("PROFILE_NOT_VISIBLE: "), "{hidden}");
@@ -901,15 +1058,33 @@ fn profile_refusals_change_no_state() {
         &iso,
         SCOPE_A,
         "alice",
-        &ProfileOp::PutDocumentSet { set: set(DocumentSetKind::SavedQuery("INSERT INTO x VALUES (1)".into())) },
+        &ProfileOp::PutDocumentSet {
+            set: set(DocumentSetKind::SavedQuery(
+                "INSERT INTO x VALUES (1)".into(),
+            )),
+        },
     )
     .map(|_| ())
     .unwrap_err();
-    assert!(not_read_only.starts_with("DOCUMENT_SET_QUERY_NOT_READ_ONLY: "), "{not_read_only}");
-    let absent_set = read_op(&core, &iso, SCOPE_A, "alice", &ProfileOp::GetDocumentSet { set_id: "set-ghost".into() })
-        .map(|_| ())
-        .unwrap_err();
-    assert!(absent_set.starts_with("DOCUMENT_SET_NOT_FOUND: "), "{absent_set}");
+    assert!(
+        not_read_only.starts_with("DOCUMENT_SET_QUERY_NOT_READ_ONLY: "),
+        "{not_read_only}"
+    );
+    let absent_set = read_op(
+        &core,
+        &iso,
+        SCOPE_A,
+        "alice",
+        &ProfileOp::GetDocumentSet {
+            set_id: "set-ghost".into(),
+        },
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert!(
+        absent_set.starts_with("DOCUMENT_SET_NOT_FOUND: "),
+        "{absent_set}"
+    );
 
     // None of the refusals wrote anything.
     assert_eq!(snapshot(&core), before);
@@ -936,12 +1111,23 @@ mod derive_worker_proofs {
 
     /// Four turns of session `s1`: ada, bo, ada, ada.
     fn seed(core: &GraphCore, tenant: &str) {
-        for (n, (turn, speaker)) in [("t0", "ada"), ("t1", "bo"), ("t2", "ada"), ("t3", "ada")].iter().enumerate() {
+        for (n, (turn, speaker)) in [("t0", "ada"), ("t1", "bo"), ("t2", "ada"), ("t3", "ada")]
+            .iter()
+            .enumerate()
+        {
             let mut item = record(tenant, turn, MemoryTier::Episodic, &format!("said {turn}"));
             item.session_id = Some(ResourceId::new("s1").unwrap());
             item.speaker = Some(id(speaker));
             item.timestamp_ms = 100 + n as i64;
-            store(core, tenant, &MemoryRememberRequest { record: item, embedding: vec![], episode: None });
+            store(
+                core,
+                tenant,
+                &MemoryRememberRequest {
+                    record: item,
+                    embedding: vec![],
+                    episode: None,
+                },
+            );
         }
     }
 
@@ -991,7 +1177,11 @@ mod derive_worker_proofs {
         let input = derive_input(&core, SCOPE_A, &node).unwrap();
         assert_eq!(input.subject, id("ada"));
         assert_eq!(input.observer, ObserverRef::System);
-        let ids: Vec<&str> = input.turns.iter().map(|turn| turn.turn_id.as_str()).collect();
+        let ids: Vec<&str> = input
+            .turns
+            .iter()
+            .map(|turn| turn.turn_id.as_str())
+            .collect();
         assert_eq!(ids, ["t0", "t2"]);
         assert!(input.max_conclusions >= 1);
 
@@ -1000,7 +1190,10 @@ mod derive_worker_proofs {
         assert_eq!(completed.claims_written, 2);
         assert_eq!(completed.last_turn_id, "t2");
         apply(&core, write.as_ref().expect("a new range writes"));
-        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t2");
+        assert_eq!(
+            read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id,
+            "t2"
+        );
         let events: Vec<String> = core
             .node_ids()
             .into_iter()
@@ -1008,17 +1201,26 @@ mod derive_worker_proofs {
             .collect();
         assert_eq!(events.len(), 1);
         // Completing the same range again writes nothing.
-        assert!(advance_checkpoint(&core, SCOPE_A, &node, 2, 600).unwrap().0.is_none());
+        assert!(advance_checkpoint(&core, SCOPE_A, &node, 2, 600)
+            .unwrap()
+            .0
+            .is_none());
         // More conclusions than the knob allows is refused and changes nothing.
         let (_, next) = payload("t3", "t3", 1);
         let next_node = put_payload(&core, SCOPE_A, &next);
         let over = advance_checkpoint(&core, SCOPE_A, &next_node, u32::MAX, 700).unwrap_err();
         assert!(over.starts_with("DERIVE_CONCLUSION_LIMIT: "), "{over}");
-        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t2");
+        assert_eq!(
+            read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id,
+            "t2"
+        );
 
         // Another tenant reads the payload as absent, on both operations.
         let foreign = derive_input(&core, SCOPE_B, &node).unwrap_err();
-        assert!(foreign.starts_with("DERIVE_PAYLOAD_NOT_FOUND: "), "{foreign}");
+        assert!(
+            foreign.starts_with("DERIVE_PAYLOAD_NOT_FOUND: "),
+            "{foreign}"
+        );
         assert!(advance_checkpoint(&core, SCOPE_B, &node, 1, 1).is_err());
     }
 
@@ -1041,6 +1243,9 @@ mod derive_worker_proofs {
         let held = advance_checkpoint(&core, SCOPE_A, &node, 1, 20).unwrap_err();
         assert!(held.starts_with("DERIVE_ORDER_HELD: "), "{held}");
         assert_eq!(core.node_ids().len(), before.len());
-        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t0");
+        assert_eq!(
+            read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id,
+            "t0"
+        );
     }
 }

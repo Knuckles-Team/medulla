@@ -125,7 +125,10 @@ pub fn check_wheel(path: &Path, options: Options) -> Result<Vec<String>, String>
     failures.extend(check_engine_kernel(&names, options.require_engine_kernel));
     failures.extend(check_console_scripts(&names));
     failures.extend(check_server_binary(&members, options.require_server_binary));
-    failures.extend(check_library_member(&members, options.require_server_binary));
+    failures.extend(check_library_member(
+        &members,
+        options.require_server_binary,
+    ));
     failures.extend(check_python_surface(&names));
     failures.extend(check_base_dependencies(&requirements));
     failures.extend(check_forbidden_dependencies(&requirements));
@@ -654,7 +657,10 @@ mod tests {
         members.push((SERVER.into(), b"\x7fELF-server".to_vec()));
         members.push((LIBRARY.into(), b"\x7fELF-library".to_vec()));
         let executable = build(&dir, "exec.whl", &members, &[SERVER, LIBRARY], false, None);
-        assert!(has(&failures(&executable, required), "has an executable bit"));
+        assert!(has(
+            &failures(&executable, required),
+            "has an executable bit"
+        ));
         members.push(("medulla/_bin/libduckdb.dylib".into(), b"mach-o".to_vec()));
         let two = build(&dir, "two.whl", &members, &[SERVER], false, None);
         assert!(has(&failures(&two, required), "found 2"));

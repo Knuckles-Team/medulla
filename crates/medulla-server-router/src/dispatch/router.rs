@@ -40,52 +40,52 @@ use medulla_server_graph::{
 };
 use std::sync::OnceLock;
 
-#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
-mod changeset_index;
-mod branch_merge;
-mod branch_write;
-mod catalog_emit;
-mod channels;
-mod control_plane;
-mod data_plane;
-mod data_plane_arms;
-mod decision_plane;
-mod graph_lifecycle;
-mod knowledge_bundle;
-mod identity_access;
-mod memory_change;
-mod memory_events;
-mod incident;
-mod lifecycle;
-#[cfg(feature = "security")]
-mod data_product;
-mod quality;
-mod resource_cost;
 #[cfg(all(feature = "ann-redb", feature = "query"))]
 mod bookmark;
 #[cfg(all(feature = "ann-redb", feature = "query"))]
 mod bookmark_binding;
+mod branch_merge;
+mod branch_write;
+mod catalog_emit;
+#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
+mod changeset_index;
+mod channels;
+mod control_plane;
+mod data_plane;
+mod data_plane_arms;
+#[cfg(feature = "security")]
+mod data_product;
+mod decision_plane;
+mod graph_lifecycle;
 #[cfg(all(feature = "ann-redb", feature = "query"))]
 mod graph_source;
+mod identity_access;
+mod incident;
+mod knowledge_bundle;
+mod lifecycle;
+mod memory_change;
+mod memory_events;
+mod quality;
+mod resource_cost;
 mod schema_drift;
 mod sdlc;
 pub use sdlc::recover_deliveries_at_boot;
-pub mod service_control;
-#[cfg(feature = "security")]
-pub(crate) mod share;
-mod source_ingest;
 mod git_export_pack;
 mod git_refs_list;
 mod import_git_history;
 mod list_path_grants;
 mod read_blame;
-mod source_bisect;
-mod revert_changeset;
-mod submit_symbol_edit;
 mod read_path_history;
 mod read_tree;
+mod revert_changeset;
+pub mod service_control;
 mod set_path_grant;
+#[cfg(feature = "security")]
+pub(crate) mod share;
+mod source_bisect;
+mod source_ingest;
 mod submit_changeset;
+mod submit_symbol_edit;
 mod telemetry;
 
 use channels::dispatch_channel_methods;
@@ -109,9 +109,9 @@ use identity_access::dispatch_identity_and_access_methods;
 use incident::dispatch_incident_methods;
 #[cfg(feature = "security")]
 use lifecycle::apply_rbac_admin;
-pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
 #[cfg(feature = "redb")]
 pub(in crate::dispatch) use lifecycle::mark_graph_ready;
+pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
 use lifecycle::{delete_graph, dispatch_get_identity, index_kind_label, index_validity_label};
 use quality::dispatch_quality_methods;
 use resource_cost::dispatch_resource_cost_methods;

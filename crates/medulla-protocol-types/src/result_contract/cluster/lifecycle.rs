@@ -132,7 +132,10 @@ mod tests {
         };
         let value = serde_json::to_value(&report).unwrap();
         assert!(value.get("status").is_none(), "{value}");
-        assert!(value.get("readiness").is_none(), "an absent readiness is omitted: {value}");
+        assert!(
+            value.get("readiness").is_none(),
+            "an absent readiness is omitted: {value}"
+        );
         assert!(value.get("version").is_some());
     }
 }

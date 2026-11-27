@@ -57,13 +57,13 @@ use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
 // Long-running Tokio server that holds the GraphRegistry in memory
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
+/// The production search source port of the freshness refresh (MEDULLA-DECISION-ENGINE-R174.9.3.1).
+#[cfg(all(feature = "decide", feature = "federation"))]
+pub mod freshness_search_port;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod issuer_trust;
 #[cfg(feature = "plan-modalities")]
 pub mod plan_modalities;
-/// The production search source port of the freshness refresh (MEDULLA-DECISION-ENGINE-R174.9.3.1).
-#[cfg(all(feature = "decide", feature = "federation"))]
-pub mod freshness_search_port;
 #[cfg(feature = "query")]
 pub mod query_encoders;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

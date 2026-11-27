@@ -113,9 +113,9 @@ pub use relations::{SqlRelation, SqlType};
 pub use requests::{
     ApiKeyIssue, ApiKeyUse, AssertionRegister, AuthenticateRequest, CreateUserRequest,
     ExternalLogin, InitializeRequest, LinkRequest, LoginStateConsume, LoginStateRegister,
-    MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue,
-    PasswordChange, PasswordResetIssue, PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem,
-    UserStatusChange, UserUpdate, WebauthnCredential, WebauthnUse,
+    MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue, PasswordChange, PasswordResetIssue,
+    PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem, UserStatusChange, UserUpdate,
+    WebauthnCredential, WebauthnUse,
 };
 pub use requests_admin::{
     BindingChange, GroupMembershipChange, GroupUpsert, ListQuery, ObjectRef, PolicyUpdate,
@@ -141,8 +141,8 @@ pub use text::{
     validate_principal_id, MIN_RECOVERY_CODE_CHARS, REPLICATION_SLOT_AGENT, RESERVED_AGENT_IDS,
 };
 pub use views::{
-    AuthenticateOutcome, AuthenticateResult, IdentityReply, LoginStateReleased, MfaProvisioning, ResetDelivery,
-    SessionLiveness, SessionView, UserView, WebauthnCredentialView,
+    AuthenticateOutcome, AuthenticateResult, IdentityReply, LoginStateReleased, MfaProvisioning,
+    ResetDelivery, SessionLiveness, SessionView, UserView, WebauthnCredentialView,
 };
 pub use wire_login::{
     default_wire_login_scopes, sha256_verifier, verifier_is_well_formed, WireLoginError,

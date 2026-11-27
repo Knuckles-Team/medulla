@@ -45,17 +45,16 @@ mod served {
     use medulla_decision_stats::decision::skill_telemetry::{
         cohort_of, measures, peer_skills, rank_skills, RankInput,
     };
+    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
     use medulla_decision_types::skill_telemetry::{
         principal_pseudonym, started_day, window_days, ChosenBy, EvalOutcome, IngestReceipt,
         InvocationOutcome, PeersAnswer, RankAnswer, SkillInvocation, SkillMeasures,
         SkillTelemetryOp, TracesAnswer, Window, INDEX_KEY_DAY, INDEX_KEY_PRINCIPAL,
         INDEX_KEY_SKILL, INGEST_BATCH_MAX, PEER_COHORT_TOO_SMALL, SCOPE_READ, SCOPE_WRITE,
-        TELEMETRY_SESSION_UNKNOWN,
         SKILL_INVOCATION_CLASS, TELEMETRY_BATCH_TOO_LARGE, TELEMETRY_CLOCK_INVALID,
         TELEMETRY_CODE_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
-        TELEMETRY_SKILL_UNKNOWN, TRACES_PAGE_MAX,
+        TELEMETRY_SESSION_UNKNOWN, TELEMETRY_SKILL_UNKNOWN, TRACES_PAGE_MAX,
     };
-    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
     use medulla_graph_core::graph::{GraphCore, GraphView};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;
@@ -100,7 +99,11 @@ mod served {
         verified: &VerifiedRequestContext,
         op: SkillTelemetryOp,
     ) -> Result<PlannedWrite, String> {
-        let scope = if op.is_mutation() { SCOPE_WRITE } else { SCOPE_READ };
+        let scope = if op.is_mutation() {
+            SCOPE_WRITE
+        } else {
+            SCOPE_READ
+        };
         if !verified.allows_action(scope) {
             return Err(refuse(
                 TELEMETRY_SCOPE_REQUIRED,
@@ -217,7 +220,9 @@ mod served {
                     &tenant,
                     &skill_ref,
                     outcome,
-                    limit.map_or(DEFAULT_TRACES_LIMIT, |n| n as usize).min(TRACES_PAGE_MAX),
+                    limit
+                        .map_or(DEFAULT_TRACES_LIMIT, |n| n as usize)
+                        .min(TRACES_PAGE_MAX),
                     cursor.as_deref(),
                 )?;
                 Ok(read_only(
@@ -257,7 +262,10 @@ mod served {
         put("skill_ref", row.skill_ref.clone().into());
         put("skill_version", row.skill_version.clone().into());
         put("chosen_by", row.chosen_by.stored().into());
-        put("principal_pseudonym", row.principal_pseudonym.clone().into());
+        put(
+            "principal_pseudonym",
+            row.principal_pseudonym.clone().into(),
+        );
         put("run_id", row.run_id.clone().into());
         put("started_ms", row.started_ms.into());
         put(INDEX_KEY_DAY, started_day(row.started_ms).into());
@@ -417,7 +425,12 @@ mod served {
             self.run_trace_where(tenant, run_id, Some(owner))
         }
 
-        fn run_trace_where(&self, tenant: &str, run_id: &str, owner: Option<&str>) -> Option<String> {
+        fn run_trace_where(
+            &self,
+            tenant: &str,
+            run_id: &str,
+            owner: Option<&str>,
+        ) -> Option<String> {
             self.ids_where("run_id", run_id).into_iter().find(|id| {
                 self.visible_row(id).is_some_and(|row| {
                     let same_tenant = ["tenant", "tenant_id"]
@@ -458,7 +471,10 @@ mod served {
         if events.len() > INGEST_BATCH_MAX {
             return Err(refuse(
                 TELEMETRY_BATCH_TOO_LARGE,
-                format!("{} events are more than the {INGEST_BATCH_MAX} one batch holds", events.len()),
+                format!(
+                    "{} events are more than the {INGEST_BATCH_MAX} one batch holds",
+                    events.len()
+                ),
             ));
         }
         // The whole batch is checked before any event is planned.
@@ -483,14 +499,20 @@ mod served {
             if !row.outcome.code_valid() {
                 return Err(refuse(
                     TELEMETRY_CODE_INVALID,
-                    format!("{} carries an error code outside the closed form", row.invocation_id),
+                    format!(
+                        "{} carries an error code outside the closed form",
+                        row.invocation_id
+                    ),
                 ));
             }
             // A person's pseudonym is derived below and never read from the event, so only a
             // service caller has to send a well-formed one.
             let pseudonym_ok = person.is_some()
                 || (row.principal_pseudonym.len() == 64
-                    && row.principal_pseudonym.bytes().all(|byte| byte.is_ascii_hexdigit()));
+                    && row
+                        .principal_pseudonym
+                        .bytes()
+                        .all(|byte| byte.is_ascii_hexdigit()));
             if row.invocation_id.is_empty() || row.run_id.is_empty() || !pseudonym_ok {
                 return Err(invalid_parameter(
                     "an invocation names its id, its run and, from a service, a 64-hex principal pseudonym",
@@ -529,7 +551,10 @@ mod served {
             }
             accepted.push(row);
         }
-        let ids: Vec<&[u8]> = accepted.iter().map(|row| row.invocation_id.as_bytes()).collect();
+        let ids: Vec<&[u8]> = accepted
+            .iter()
+            .map(|row| row.invocation_id.as_bytes())
+            .collect();
         let receipt = Digest256::framed(b"medulla.skill_telemetry.receipt.v1", &ids)
             .map_err(invalid_parameter)?
             .to_hex();
@@ -619,7 +644,9 @@ mod served {
         }
         let more = rows.len() > limit;
         rows.truncate(limit);
-        let next_cursor = more.then(|| rows.last().map(|(end, id)| format!("{end}:{id}"))).flatten();
+        let next_cursor = more
+            .then(|| rows.last().map(|(end, id)| format!("{end}:{id}")))
+            .flatten();
         Ok(TracesAnswer {
             trace_ids: rows.into_iter().map(|(_, id)| id).collect(),
             next_cursor,

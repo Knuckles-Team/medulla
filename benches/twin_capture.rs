@@ -46,13 +46,16 @@ fn percentile(sorted: &[u128], numerator: usize, denominator: usize) -> u128 {
 
 fn main() {
     // The revision each node of the agent graph is pinned at.
-    let revisions: Vec<String> = (0..NODES).map(|node| format!("node:{node:04}@rev-{node}")).collect();
+    let revisions: Vec<String> = (0..NODES)
+        .map(|node| format!("node:{node:04}@rev-{node}"))
+        .collect();
     let mut latencies_ns = Vec::with_capacity(CAPTURES);
     let mut worst_alloc = 0_u64;
     for _ in 0..CAPTURES {
         let before = ALLOCATED.load(Ordering::Relaxed);
         let started = Instant::now();
-        let twin = AgentTwin::new("agent:bench", revisions.clone()).expect("the twin pins revisions");
+        let twin =
+            AgentTwin::new("agent:bench", revisions.clone()).expect("the twin pins revisions");
         let encoded = serde_json::to_vec(&twin).expect("the twin encodes");
         latencies_ns.push(started.elapsed().as_nanos());
         worst_alloc = worst_alloc.max(ALLOCATED.load(Ordering::Relaxed) - before);
@@ -66,8 +69,14 @@ fn main() {
         "decide/twin: {CAPTURES} captures of {NODES} nodes, p50 {p50} ns, p99 {p99} ns, \
          worst allocation {worst_alloc} bytes"
     );
-    assert!(p50 < BUDGET_P50_NS, "p50 {p50} ns is over {BUDGET_P50_NS} ns");
-    assert!(p99 < BUDGET_P99_NS, "p99 {p99} ns is over {BUDGET_P99_NS} ns");
+    assert!(
+        p50 < BUDGET_P50_NS,
+        "p50 {p50} ns is over {BUDGET_P50_NS} ns"
+    );
+    assert!(
+        p99 < BUDGET_P99_NS,
+        "p99 {p99} ns is over {BUDGET_P99_NS} ns"
+    );
     assert!(
         worst_alloc < BUDGET_ALLOC_BYTES,
         "a capture allocated {worst_alloc} bytes, over {BUDGET_ALLOC_BYTES}"

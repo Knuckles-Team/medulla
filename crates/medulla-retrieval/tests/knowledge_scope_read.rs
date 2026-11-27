@@ -26,8 +26,12 @@ fn record(core: &GraphCore, id: &str, props: Value, container: Option<&str>) {
     core.add_node(id.to_string(), blob(&props));
     if let Some(container) = container {
         let target = container_node_id("t1", "drive", container).unwrap();
-        core.add_edge(id.to_string(), target, blob(&json!({"relationship": "inContainer"})))
-            .unwrap();
+        core.add_edge(
+            id.to_string(),
+            target,
+            blob(&json!({"relationship": "inContainer"})),
+        )
+        .unwrap();
     }
 }
 
@@ -38,15 +42,44 @@ fn an_agent_scope_narrows_by_container_subtree_and_source_kind() {
     upsert_containers(
         &core,
         "t1",
-        &[container("space", None), container("folder", Some("space")), container("other", None)],
+        &[
+            container("space", None),
+            container("folder", Some("space")),
+            container("other", None),
+        ],
         0,
     )
     .unwrap();
-    record(&core, "doc-top", json!({"source_kind": "confluence"}), Some("space"));
-    record(&core, "doc-deep", json!({"source_kind": "confluence"}), Some("folder"));
-    record(&core, "doc-wrong-kind", json!({"source_kind": "slack"}), Some("folder"));
-    record(&core, "doc-elsewhere", json!({"source_kind": "confluence"}), Some("other"));
-    record(&core, "doc-loose", json!({"source_kind": "confluence"}), None);
+    record(
+        &core,
+        "doc-top",
+        json!({"source_kind": "confluence"}),
+        Some("space"),
+    );
+    record(
+        &core,
+        "doc-deep",
+        json!({"source_kind": "confluence"}),
+        Some("folder"),
+    );
+    record(
+        &core,
+        "doc-wrong-kind",
+        json!({"source_kind": "slack"}),
+        Some("folder"),
+    );
+    record(
+        &core,
+        "doc-elsewhere",
+        json!({"source_kind": "confluence"}),
+        Some("other"),
+    );
+    record(
+        &core,
+        "doc-loose",
+        json!({"source_kind": "confluence"}),
+        None,
+    );
 
     let space = container_node_id("t1", "drive", "space").unwrap();
     core.add_node(
@@ -56,9 +89,14 @@ fn an_agent_scope_narrows_by_container_subtree_and_source_kind() {
             "knowledgeScope": {"container_refs": [space], "source_kinds": ["confluence"]},
         })),
     );
-    core.add_node("agent:open".into(), blob(&json!({"type": "AgentDefinition"})));
+    core.add_node(
+        "agent:open".into(),
+        blob(&json!({"type": "AgentDefinition"})),
+    );
 
-    let scope = agent_scope(&core, "agent:support").unwrap().expect("a scope");
+    let scope = agent_scope(&core, "agent:support")
+        .unwrap()
+        .expect("a scope");
     let resolved = ResolvedScope::resolve(&core, &scope);
     let inside: std::collections::BTreeSet<String> = core
         .node_ids()
@@ -99,8 +137,14 @@ fn a_scope_refuses_an_unknown_agent_and_a_foreign_set() {
         blob(&json!({"knowledgeScope": {"knowledge_sets": ["ks:theirs"]}})),
     );
     assert!(agent_scope(&core, "agent:ok").unwrap().is_some());
-    assert_eq!(agent_scope(&core, "agent:missing").unwrap_err().code, "SCOPE_AGENT_UNKNOWN");
-    assert_eq!(agent_scope(&core, "agent:foreign").unwrap_err().code, "SCOPE_SET_UNKNOWN");
+    assert_eq!(
+        agent_scope(&core, "agent:missing").unwrap_err().code,
+        "SCOPE_AGENT_UNKNOWN"
+    );
+    assert_eq!(
+        agent_scope(&core, "agent:foreign").unwrap_err().code,
+        "SCOPE_SET_UNKNOWN"
+    );
     // A foreign set and an absent one answer byte-identically but for the name asked about.
     core.add_node(
         "agent:absent".into(),

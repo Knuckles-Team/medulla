@@ -8,8 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::ontology_inspection::{
     OntologyClassView, OntologyCoverageView, OntologyCrosswalkView, OntologyExternalCoverageView,
-    OntologyInspection,
-    OntologyPropertyView, OntologyUnmappedClassView, MAX_INSPECT_DOCUMENTS,
+    OntologyInspection, OntologyPropertyView, OntologyUnmappedClassView, MAX_INSPECT_DOCUMENTS,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::Digest256;

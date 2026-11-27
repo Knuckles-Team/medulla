@@ -95,10 +95,11 @@ fn read_ontology(sources: &GraphSchemaSources) -> Result<TenantOntology, SliceRe
         let Some(document) = source.ontology_ttl.as_deref() else {
             continue;
         };
-        let triples = medulla_rdf::mapping::parse_turtle(document).map_err(|error| SliceRefusal {
-            code: ServerErrorCode::Internal.as_str().to_string(),
-            detail: error,
-        })?;
+        let triples =
+            medulla_rdf::mapping::parse_turtle(document).map_err(|error| SliceRefusal {
+                code: ServerErrorCode::Internal.as_str().to_string(),
+                detail: error,
+            })?;
         for triple in triples {
             let NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
                 continue;
@@ -149,7 +150,9 @@ fn read_ontology(sources: &GraphSchemaSources) -> Result<TenantOntology, SliceRe
             .cloned()
             .unwrap_or_else(|| local_name(&iri).to_string());
         let description = comments.get(&iri).cloned().unwrap_or_default();
-        ontology.classes.insert(iri, ClassEntry { label, description });
+        ontology
+            .classes
+            .insert(iri, ClassEntry { label, description });
     }
     for (iri, property) in &mut ontology.properties {
         property.label = labels
@@ -312,11 +315,14 @@ fn select_classes<'a>(
     let mut fused: Vec<(&String, f64)> = iris
         .iter()
         .map(|iri| {
-            let score: f64 = [lexical.get(*iri), semantic.as_ref().and_then(|r| r.get(*iri))]
-                .into_iter()
-                .flatten()
-                .map(|rank| 1.0 / (RRF_K + f64::from(*rank)))
-                .sum();
+            let score: f64 = [
+                lexical.get(*iri),
+                semantic.as_ref().and_then(|r| r.get(*iri)),
+            ]
+            .into_iter()
+            .flatten()
+            .map(|rank| 1.0 / (RRF_K + f64::from(*rank)))
+            .sum();
             (*iri, score)
         })
         .filter(|(_, score)| *score > 0.0)

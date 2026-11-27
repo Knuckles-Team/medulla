@@ -50,7 +50,8 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
         "g",
         &core,
         medulla_server_ops::api::admin::schema_read::ProvenanceView::Full,
-    ).unwrap();
+    )
+    .unwrap();
     let core_ids: std::collections::BTreeSet<_> = initial
         .core_sources
         .iter()
@@ -131,7 +132,8 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
         "g",
         &core,
         medulla_server_ops::api::admin::schema_read::ProvenanceView::Full,
-    ).unwrap();
+    )
+    .unwrap();
     assert!(listed
         .dynamic_sources
         .iter()
@@ -819,7 +821,10 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     assert_eq!(bound.binding.graph, "pack__coverage-pack");
     assert_eq!(bound.binding.pack_record_id, "record-1");
     assert_eq!(bound.binding.target_vocabulary_revisions.len(), 1);
-    assert_eq!(bound.binding.schema_digest, sources.composed_digest().to_hex());
+    assert_eq!(
+        bound.binding.schema_digest,
+        sources.composed_digest().to_hex()
+    );
     let coverage = &bound.coverage;
     let person = "https://knuckles-team.github.io/ontology/core#Person".to_string();
     assert_eq!(coverage.mapped, vec![person.clone()]);
@@ -946,7 +951,11 @@ fn activation_stores_external_coverage_for_inspection() {
 
     let sources = core.schema_sources();
     let stored = sources.dynamic.get("pack:external-pack").unwrap();
-    assert_eq!(stored.external_coverage.len(), 1, "one coverage per external schema");
+    assert_eq!(
+        stored.external_coverage.len(),
+        1,
+        "one coverage per external schema"
+    );
     let coverage = &stored.external_coverage[0];
     assert_eq!(coverage.pack_revision, "record-1");
     assert_eq!(
@@ -967,7 +976,10 @@ fn activation_stores_external_coverage_for_inspection() {
             )
         })
         .count();
-    assert_eq!(mapped, 1, "the declared mapping is adopted; the other term is not");
+    assert_eq!(
+        mapped, 1,
+        "the declared mapping is adopted; the other term is not"
+    );
 
     // The same head activated again changes nothing.
     let again = apply_pack_source(

@@ -58,8 +58,8 @@ pub(crate) fn convert_job_rows(write: &WriteTransaction) -> Result<(), String> {
         for row in old.iter().map_err(|error| error.to_string())? {
             let (key, value) = row.map_err(|error| error.to_string())?;
             let job_id = key.value().to_string();
-            let decoded = rmp_serde::from_slice::<Value>(value.value())
-                .map_err(|_| unmappable(&job_id))?;
+            let decoded =
+                rmp_serde::from_slice::<Value>(value.value()).map_err(|_| unmappable(&job_id))?;
             let record = convert_job_record(&decoded)?;
             let bytes = rmp_serde::to_vec_named(&record).map_err(|_| unmappable(&job_id))?;
             converted.push((job_id, bytes));
@@ -168,9 +168,9 @@ fn convert_state(
         "Running" | "Publishing" => {
             let checkpoint = body.get("checkpoint").filter(|value| value.is_object())?;
             match (cancel_requested, lease) {
-                (true, Some(lease)) => Some(
-                    json!({ "CancelRequested": { "lease": lease, "checkpoint": checkpoint } }),
-                ),
+                (true, Some(lease)) => {
+                    Some(json!({ "CancelRequested": { "lease": lease, "checkpoint": checkpoint } }))
+                }
                 (true, None) => Some(json!({ "Cancelled": { "checkpoint": checkpoint } })),
                 (false, Some(lease)) => {
                     let mut body = body.clone();
@@ -203,7 +203,13 @@ mod tests {
         json!({ "progress": 0.5, "label": "half", "state_blob": null, "updated_at_ms": 15 })
     }
 
-    fn record(state: Value, cancel_requested: bool, lease: Option<Value>, not_before: i64, attempts: u64) -> Value {
+    fn record(
+        state: Value,
+        cancel_requested: bool,
+        lease: Option<Value>,
+        not_before: i64,
+        attempts: u64,
+    ) -> Value {
         json!({
             "job_id": "job-0000000000000001",
             "retry": { "max_attempts": 3, "backoff_ms": 10, "attempts_made": attempts },
@@ -292,10 +298,7 @@ mod tests {
                 json!({ "Cancelled": { "checkpoint": labeled() } }),
             ),
         ] {
-            assert_eq!(
-                converted_state(record(state, true, None, 0, 1)),
-                expected
-            );
+            assert_eq!(converted_state(record(state, true, None, 0, 1)), expected);
         }
     }
 
@@ -326,12 +329,23 @@ mod tests {
         let write = database.begin_write().unwrap();
         {
             let mut table = write.open_table(ANALYTICS_JOBS_BEFORE_JOB_MACHINE).unwrap();
-            let good = rmp_serde::to_vec_named(&record(json!("Submitted"), false, None, 0, 0)).unwrap();
-            table.insert("job-0000000000000001", good.as_slice()).unwrap();
-            let mut bad = record(json!({ "Running": { "checkpoint": "not a checkpoint" } }), false, None, 0, 1);
+            let good =
+                rmp_serde::to_vec_named(&record(json!("Submitted"), false, None, 0, 0)).unwrap();
+            table
+                .insert("job-0000000000000001", good.as_slice())
+                .unwrap();
+            let mut bad = record(
+                json!({ "Running": { "checkpoint": "not a checkpoint" } }),
+                false,
+                None,
+                0,
+                1,
+            );
             bad["job_id"] = json!("job-0000000000000002");
             let bad = rmp_serde::to_vec_named(&bad).unwrap();
-            table.insert("job-0000000000000002", bad.as_slice()).unwrap();
+            table
+                .insert("job-0000000000000002", bad.as_slice())
+                .unwrap();
         }
         assert_eq!(
             convert_job_rows(&write).unwrap_err(),
@@ -357,7 +371,10 @@ mod tests {
                 1,
             );
             table
-                .insert("job-0000000000000001", rmp_serde::to_vec_named(&live).unwrap().as_slice())
+                .insert(
+                    "job-0000000000000001",
+                    rmp_serde::to_vec_named(&live).unwrap().as_slice(),
+                )
                 .unwrap();
         }
         convert_job_rows(&write).unwrap();
@@ -375,7 +392,10 @@ mod tests {
             .unwrap()
             .map(|table| redb::TableHandle::name(&table).to_string())
             .collect();
-        assert!(!remaining.iter().any(|name| name == "analytics_jobs"), "{remaining:?}");
+        assert!(
+            !remaining.iter().any(|name| name == "analytics_jobs"),
+            "{remaining:?}"
+        );
         assert!(remaining.iter().any(|name| name == "analytics_job_records"));
     }
 }

@@ -48,7 +48,10 @@ pub(super) fn next_id() -> u64 {
 
 /// The decoded result of a successful response.
 pub(super) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
-    assert!(response.error.is_none(), "{label} was refused: {response:?}");
+    assert!(
+        response.error.is_none(),
+        "{label} was refused: {response:?}"
+    );
     let value = match response.result {
         Some(ResultPayload::Raw(bytes)) => {
             return rmp_serde::from_slice(&bytes)
@@ -228,7 +231,10 @@ impl Served {
             .expect("open the served graph backend"),
         ));
         if state.registry.get(COMMONS).is_none() {
-            state.registry.create_graph(COMMONS, GraphType::Team, None).unwrap();
+            state
+                .registry
+                .create_graph(COMMONS, GraphType::Team, None)
+                .unwrap();
         }
         let served = Self {
             _dir: dir,
@@ -316,12 +322,7 @@ impl Served {
 
     /// One request as `tenant`'s verified context with `scopes`, through the chokepoint, as the
     /// harness administrator (a System identity: no row rule narrows its reads).
-    pub(super) async fn verified(
-        &self,
-        tenant: &str,
-        scopes: &[&str],
-        method: Method,
-    ) -> Response {
+    pub(super) async fn verified(&self, tenant: &str, scopes: &[&str], method: Method) -> Response {
         self.verified_as(ADMIN, tenant, scopes, method).await
     }
 
@@ -342,7 +343,8 @@ impl Served {
             method,
             trace_id: None,
         };
-        let context = VerifiedRequestContext::verified_for_test_with_scopes(principal, tenant, scopes);
+        let context =
+            VerifiedRequestContext::verified_for_test_with_scopes(principal, tenant, scopes);
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
                 &self.state,
@@ -356,16 +358,14 @@ impl Served {
     /// Register `agent_id` as a regular (non-System) identity with no team and no role, so the
     /// row rules decide what its reads return.
     pub(super) async fn register_reader(&self, agent_id: &str) {
-        self.state
-            .write()
-            .await
-            .isolation
-            .register_agent(medulla_identity_types::acl::AgentIdentity {
+        self.state.write().await.isolation.register_agent(
+            medulla_identity_types::acl::AgentIdentity {
                 agent_id: agent_id.to_string(),
                 role: medulla_identity_types::acl::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: Vec::new(),
-            });
+            },
+        );
     }
 
     /// Make the row `node_id` of the ingest graph private to `owner`: no other non-System
@@ -392,11 +392,21 @@ impl Served {
     /// Upload `bytes` through the blob CAS, hold them under the caller's owner scope and return
     /// the content digest.
     pub(super) async fn upload(&self, bytes: &[u8]) -> String {
-        let tag = format!("upload:{}:{}", hex::encode(Sha256::digest(bytes)), next_id());
+        let tag = format!(
+            "upload:{}:{}",
+            hex::encode(Sha256::digest(bytes)),
+            next_id()
+        );
         let cursor: u64 = ok(
             "BlobBegin",
-            self.call_on(COMMONS, &format!("{tag}:begin"), Method::BlobBegin { chunk_size: 1 << 20 })
-                .await,
+            self.call_on(
+                COMMONS,
+                &format!("{tag}:begin"),
+                Method::BlobBegin {
+                    chunk_size: 1 << 20,
+                },
+            )
+            .await,
         );
         let _: Value = ok(
             "BlobChunkPut",
@@ -412,8 +422,12 @@ impl Served {
         );
         let digest: String = ok(
             "BlobCommit",
-            self.call_on(COMMONS, &format!("{tag}:commit"), Method::BlobCommit { cursor })
-                .await,
+            self.call_on(
+                COMMONS,
+                &format!("{tag}:commit"),
+                Method::BlobCommit { cursor },
+            )
+            .await,
         );
         let _: Value = ok(
             "BlobRef",

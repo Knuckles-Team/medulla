@@ -37,9 +37,9 @@ use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
-use crate::decide::windows_read::select_windows;
 use super::support::{advisory, int_param, invalid, param, text_param};
 use super::DecisionFamily;
+use crate::decide::windows_read::select_windows;
 
 /// The family of the `run_adjustment` question kind.
 pub struct RunAdjustmentFamily;

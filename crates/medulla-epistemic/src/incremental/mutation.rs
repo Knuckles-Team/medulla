@@ -2,9 +2,7 @@ use std::collections::BTreeSet;
 
 use medulla_graph_core::graph::GraphView;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::materialization_status_machine::{
-    MaterializationEvent, MaterializationStatus,
-};
+use medulla_types::materialization_status_machine::{MaterializationEvent, MaterializationStatus};
 
 use super::{
     opaque_identity, refused, IncrementalDelta, IncrementalReasoningIndex,

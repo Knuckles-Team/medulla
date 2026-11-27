@@ -17,7 +17,9 @@ mod served {
     use medulla_h_ingest::source_bisect::{read_window, step};
     use medulla_mutation_types::branch::BranchRef;
     use medulla_server_auth::access::path_grant;
-    use medulla_server_graph::dispatch::shared::{authorized_graph_read, ensure_graph_resident, timed_read};
+    use medulla_server_graph::dispatch::shared::{
+        authorized_graph_read, ensure_graph_resident, timed_read,
+    };
     use medulla_source_types::gate_verdict::{
         gate_verdict_node_id, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY,
     };
@@ -44,7 +46,10 @@ mod served {
             Ok(target) => target,
             Err(error) => return ops::target_error_response(req.id, error),
         };
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let window_request = request.clone();
         let window = target
             .read_blocking(move |registry, branch| {
@@ -56,8 +61,10 @@ mod served {
                         PathAccess::Read.denied().code()
                     )));
                 }
-                Ok(read_window(&RegistryHistory { registry, branch }, &window_request)?
-                    .map_err(|refusal| refusal.to_string()))
+                Ok(
+                    read_window(&RegistryHistory { registry, branch }, &window_request)?
+                        .map_err(|refusal| refusal.to_string()),
+                )
             })
             .await;
         let window = match window {
@@ -81,7 +88,8 @@ mod served {
         };
         let mut verdicts: BTreeMap<String, VerificationVerdict> = BTreeMap::new();
         for link in &window.links {
-            let Some(blob) = core.get_node_properties(&gate_verdict_node_id(&link.changeset, &request.gate_id))
+            let Some(blob) =
+                core.get_node_properties(&gate_verdict_node_id(&link.changeset, &request.gate_id))
             else {
                 continue;
             };
@@ -106,7 +114,9 @@ mod served {
     }
 
     fn typed_response_of(req_id: u64, receipt: BisectStepReceipt) -> Response {
-        match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BisectStep>(receipt) {
+        match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BisectStep>(
+            receipt,
+        ) {
             Ok(payload) => Response::ok(req_id, payload),
             Err(error) => Response::err(req_id, error),
         }

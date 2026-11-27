@@ -108,8 +108,12 @@ fn a_stored_fit_floor_replaces_the_fixed_cut_of_its_topic() {
     assert_eq!(classify(&doc, &[0.9, 0.1], &topics).unwrap(), None);
     // A stored floor below the default cut admits what the default cut refuses.
     topics[0].floor_bp = Some(100);
-    assert!(classify(&doc, &[0.1, 1.0], &[topics[0].clone()]).unwrap().is_none());
-    assert!(classify(&doc, &[0.2, 1.0], &[topics[0].clone()]).unwrap().is_some());
+    assert!(classify(&doc, &[0.1, 1.0], &[topics[0].clone()])
+        .unwrap()
+        .is_none());
+    assert!(classify(&doc, &[0.2, 1.0], &[topics[0].clone()])
+        .unwrap()
+        .is_some());
     // The floor of the other topic does not apply to the winner.
     topics[0].floor_bp = None;
     topics[1].floor_bp = Some(10_000);

@@ -338,19 +338,22 @@ fn republish(h: &Harness, id: &str, summary: &str, expected_revision: u64) -> Co
     draft.classification = vec!["eg:capability/retrieval/web-search".to_string()];
     let committed = h
         .store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                &h.store,
-                TENANT,
-                &format!("republish-{id}"),
-                200,
-                expected_revision,
-                "agent-component:publish",
-            ),
-            component: draft,
-            evaluation_receipt_digest: None,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    &h.store,
+                    TENANT,
+                    &format!("republish-{id}"),
+                    200,
+                    expected_revision,
+                    "agent-component:publish",
+                ),
+                component: draft,
+                evaluation_receipt_digest: None,
+                body: None,
+            },
+            None,
+        )
         .unwrap();
     ComponentDependency {
         component_id: id.to_string(),

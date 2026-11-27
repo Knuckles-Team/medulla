@@ -117,11 +117,17 @@ async fn manifest_entries_carry_the_last_commit_time_and_expiry_keeps_the_newest
         .collect();
     assert_eq!(stamps, vec![100, 200, 300]);
     // A cut-off after every entry expires all but the entry with the largest `last`.
-    assert_eq!(arch.expire_segments("tenant-a", "g1", 1_000).await.unwrap(), 2);
+    assert_eq!(
+        arch.expire_segments("tenant-a", "g1", 1_000).await.unwrap(),
+        2
+    );
     let kept = arch.segments("tenant-a", "g1").await.unwrap();
     assert_eq!(kept.len(), 1);
     assert_eq!((kept[0].first, kept[0].last), (20, 30));
     assert_eq!(arch.archived_end("tenant-a", "g1").await.unwrap(), 30);
     assert!(arch.get_segment("tenant-a", "g1", 0, 10).await.is_err());
-    assert_eq!(arch.expire_segments("tenant-a", "g1", 1_000).await.unwrap(), 0);
+    assert_eq!(
+        arch.expire_segments("tenant-a", "g1", 1_000).await.unwrap(),
+        0
+    );
 }

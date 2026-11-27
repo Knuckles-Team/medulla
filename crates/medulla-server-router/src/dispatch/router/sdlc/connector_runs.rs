@@ -14,8 +14,9 @@ use medulla_protocol_types::result_contract::ingestion::{
     ConnectorRuns as ConnectorRunsResult,
 };
 use medulla_source_types::connector_run::{
-    connector_run_node_id, handle_connector_run_get, handle_connector_run_record, handle_connector_runs, ConnectorRun,
-    ConnectorRunInput, RunState, CONNECTOR_RUN_COUNTS_PROPERTY, CONNECTOR_RUN_TYPE,
+    connector_run_node_id, handle_connector_run_get, handle_connector_run_record,
+    handle_connector_runs, ConnectorRun, ConnectorRunInput, RunState,
+    CONNECTOR_RUN_COUNTS_PROPERTY, CONNECTOR_RUN_TYPE,
 };
 use medulla_types::transition_refused::MachineState;
 

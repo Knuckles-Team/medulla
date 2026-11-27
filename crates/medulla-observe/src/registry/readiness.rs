@@ -12,9 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefused};
 use parking_lot::Mutex;
 
-use crate::machine::readiness::{
-    DegradeReason, ReadinessEvent, ReadinessState, READINESS_MACHINE,
-};
+use crate::machine::readiness::{DegradeReason, ReadinessEvent, ReadinessState, READINESS_MACHINE};
 
 /// One graph's readiness row.
 #[derive(Clone, Debug, PartialEq, Eq)]

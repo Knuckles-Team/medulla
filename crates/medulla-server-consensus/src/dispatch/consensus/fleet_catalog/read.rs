@@ -24,8 +24,8 @@ use super::project::{
     parse_member_id, ConnectorBinding, ProjectionInputs, VisibleDiscovery,
 };
 use super::records::{
-    decode_record, discovery_record_id, enabled_override, skill_type_override, DiscoveryBody, OverrideBody, Viewer,
-    DISCOVERY_NODE_TYPE, OVERRIDE_NODE_TYPE,
+    decode_record, discovery_record_id, enabled_override, skill_type_override, DiscoveryBody,
+    OverrideBody, Viewer, DISCOVERY_NODE_TYPE, OVERRIDE_NODE_TYPE,
 };
 use super::skill_read::SkillGraphRead;
 use super::*;

@@ -96,7 +96,8 @@ pub(super) fn facts(entry: &PackEntry, digest: &Digest256) -> Result<AgentCompon
 
 /// A prompt entry that declares the `system` role (MEDULLA-DECISION-ENGINE-R814.3).
 fn is_system_prompt(entry: &PackEntry) -> bool {
-    entry.kind == PackEntryKind::Prompt && entry.annotations.prompt_role == Some(PackPromptRole::System)
+    entry.kind == PackEntryKind::Prompt
+        && entry.annotations.prompt_role == Some(PackPromptRole::System)
 }
 
 /// The component kind an entry becomes: a system-role prompt is a system prompt, every other

@@ -164,7 +164,10 @@ pub enum CorrectionShapeError {
 /// Whether `text` is `sha256:` plus 64 lowercase hex characters.
 fn is_digest_text(text: &str) -> bool {
     text.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
     })
 }
 
@@ -361,7 +364,11 @@ mod tests {
     }
 
     fn sample_correction() -> Correction {
-        sample_input().resolve("agent:x".into(), "user:y".into(), task_class_of("tool_call"))
+        sample_input().resolve(
+            "agent:x".into(),
+            "user:y".into(),
+            task_class_of("tool_call"),
+        )
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R702.1
@@ -439,7 +446,10 @@ mod tests {
         rejection.source = CorrectionSource::ReviewRejection;
         let json = serde_json::to_string(&rejection).unwrap();
         assert!(json.contains(r#""source":"review_rejection""#));
-        assert_eq!(serde_json::from_str::<Correction>(&json).unwrap(), rejection);
+        assert_eq!(
+            serde_json::from_str::<Correction>(&json).unwrap(),
+            rejection
+        );
         assert!(rejection.validate().is_ok());
         // A review comment holds digests, never text.
         let mut comment = sample_correction();

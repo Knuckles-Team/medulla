@@ -6,14 +6,14 @@
 //! refusal, and both arms of the refresh revision rule (a SQL-sourced live
 //! head and a non-SQL one).
 
-use medulla_index_types::semantic_index::SemanticSourceRevision;
 use medulla_index_types::semantic_index::SemanticDigest;
+use medulla_index_types::semantic_index::SemanticSourceRevision;
 use std::cmp::Ordering;
 
 use super::reconciliation::{
-    compare_source_revision, validate_sql_source_revision,
-    SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationPhase,
-    SEMANTIC_RECONCILIATION_CHECKPOINT_MAGIC, SEMANTIC_RECONCILIATION_MAX_CURSOR_BYTES,
+    compare_source_revision, validate_sql_source_revision, SemanticSourceReconciliationCheckpoint,
+    SemanticSourceReconciliationPhase, SEMANTIC_RECONCILIATION_CHECKPOINT_MAGIC,
+    SEMANTIC_RECONCILIATION_MAX_CURSOR_BYTES,
 };
 use super::reconciliation_codec::{
     decode_reconciliation_checkpoint, encode_reconciliation_checkpoint,
@@ -261,7 +261,10 @@ fn sql_source_revisions_parse_only_the_canonical_shape() {
         revision_with('a', "0"),
         revision_with('a', "one"),
     ] {
-        assert!(SemanticSourceRevision::parse(&invalid).is_none(), "{invalid}");
+        assert!(
+            SemanticSourceRevision::parse(&invalid).is_none(),
+            "{invalid}"
+        );
         assert!(validate_sql_source_revision(&invalid).is_err(), "{invalid}");
     }
     assert!(validate_sql_source_revision(&revision(1)).is_ok());

@@ -3,9 +3,7 @@
 //! replay answers the stored row and every incomplete join refuses with its
 //! code and writes nothing. Another tenant never sees the record.
 
-use super::retrieval_tests::{
-    attest, clone_executed, executed_template, learn, outcome,
-};
+use super::retrieval_tests::{attest, clone_executed, executed_template, learn, outcome};
 use super::*;
 use medulla_decision_types::decision::statistical::feedback::{
     FeedbackEvent, FeedbackOutcome, FEEDBACK_SCHEMA_VERSION,
@@ -59,9 +57,13 @@ async fn feedback_event_joins_once_and_refuses_incomplete_joins() {
         .strip_prefix("sha256:")
         .unwrap_or(&template.record.record_digest)
         .to_string();
-    assert!(learn(&h, "decider", attest(outcome("rec-fb", &["u1", "u2"], &["u1"])))
-        .await
-        .is_ok());
+    assert!(learn(
+        &h,
+        "decider",
+        attest(outcome("rec-fb", &["u1", "u2"], &["u1"]))
+    )
+    .await
+    .is_ok());
 
     // One complete event is stored once, with its three premises.
     let LearningRecorded::Feedback(stored) = send(&h, event(&digest, "rec-fb", 2)).await.unwrap()
@@ -69,10 +71,7 @@ async fn feedback_event_joins_once_and_refuses_incomplete_joins() {
         panic!("a feedback write answers its stored event");
     };
     assert_eq!(rows(&h, TENANT), 1);
-    for premise in [
-        "feedback:event_id=ev-1",
-        "feedback:source_revision=2",
-    ] {
+    for premise in ["feedback:event_id=ev-1", "feedback:source_revision=2"] {
         assert!(stored.premises.iter().any(|p| p == premise), "{premise}");
     }
     assert!(stored
@@ -81,8 +80,7 @@ async fn feedback_event_joins_once_and_refuses_incomplete_joins() {
         .any(|p| p == &format!("feedback:record_digest={digest}")));
 
     // An equal replay answers the stored row and adds none.
-    let LearningRecorded::Feedback(replayed) =
-        send(&h, event(&digest, "rec-fb", 2)).await.unwrap()
+    let LearningRecorded::Feedback(replayed) = send(&h, event(&digest, "rec-fb", 2)).await.unwrap()
     else {
         panic!("a replay answers the stored event");
     };
@@ -221,7 +219,10 @@ async fn feedback_labels_reach_the_adapter_fit() {
     send(&h, ok).await.unwrap();
     send(&h, error).await.unwrap();
     let replayed = fit(&h, &space).await;
-    assert_eq!(after.receipt.training_digest, replayed.receipt.training_digest);
+    assert_eq!(
+        after.receipt.training_digest,
+        replayed.receipt.training_digest
+    );
     assert_eq!(after.receipt.n_training, replayed.receipt.n_training);
 
     // Another tenant's feedback row is never read.
@@ -247,5 +248,8 @@ async fn feedback_labels_reach_the_adapter_fit() {
         )
         .unwrap();
     let unchanged = fit(&h, &space).await;
-    assert_eq!(after.receipt.training_digest, unchanged.receipt.training_digest);
+    assert_eq!(
+        after.receipt.training_digest,
+        unchanged.receipt.training_digest
+    );
 }

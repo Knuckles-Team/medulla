@@ -138,10 +138,19 @@ mod tests {
             "benchmarkScore": "0.75",
         })));
         assert_eq!(
-            (labelled.technique.as_str(), labelled.arm.as_str(), labelled.config_digest.as_str()),
+            (
+                labelled.technique.as_str(),
+                labelled.arm.as_str(),
+                labelled.config_digest.as_str()
+            ),
             ("rerank", "a", "sha256:1")
         );
-        assert_eq!((labelled.latency_ms, labelled.score), (Some(120.0), Some(0.75)));
-        assert!(!is_run_trace(&props(serde_json::json!({"node_type": "Span"}))));
+        assert_eq!(
+            (labelled.latency_ms, labelled.score),
+            (Some(120.0), Some(0.75))
+        );
+        assert!(!is_run_trace(&props(
+            serde_json::json!({"node_type": "Span"})
+        )));
     }
 }

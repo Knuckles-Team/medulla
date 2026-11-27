@@ -9,12 +9,12 @@ use medulla_decision_types::decision::statistical::log::{
     AssemblyOutcomeState, DecisionListItem, DecisionLogList, DecisionProvenance, DecisionWhyNot,
     InputsState, ProvenanceFact, ProvenancePremise, ProvenanceRule, RecordKind,
 };
+use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_decision_types::decision::DecisionRecord;
 use medulla_graph_core::graph::GraphCore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 use serde_json::Value;
 use std::sync::Arc;
-use medulla_decision_types::decision::statistical::QuestionKind;
-use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 use super::stat_log::{visible_entries, visible_entry, LogReader, MAX_LOG_ROWS};
 
@@ -87,8 +87,12 @@ pub(super) fn list(
         items.push(assembly_item(&record));
     }
     items.retain(|item| {
-        filter.question_kind.is_none_or(|k| item.question_kind == Some(k))
-            && filter.resolution_kind.is_none_or(|k| k == item.resolution_kind)
+        filter
+            .question_kind
+            .is_none_or(|k| item.question_kind == Some(k))
+            && filter
+                .resolution_kind
+                .is_none_or(|k| k == item.resolution_kind)
             && filter.from_ms.is_none_or(|from| item.decided_at_ms >= from)
             && filter.to_ms.is_none_or(|to| item.decided_at_ms <= to)
     });
@@ -99,7 +103,8 @@ pub(super) fn list(
     });
     if let Some((at, id)) = &after {
         items.retain(|item| {
-            item.decided_at_ms < *at || (item.decided_at_ms == *at && item.record_id.as_str() > id.as_str())
+            item.decided_at_ms < *at
+                || (item.decided_at_ms == *at && item.record_id.as_str() > id.as_str())
         });
     }
     let limit = filter.limit as usize;
@@ -154,7 +159,11 @@ pub(super) fn provenance(
         .map(|premise| ProvenancePremise {
             kind: serde_json::to_value(&premise.provenance)
                 .ok()
-                .and_then(|value| value.get("provenance").and_then(|t| t.as_str().map(String::from)))
+                .and_then(|value| {
+                    value
+                        .get("provenance")
+                        .and_then(|t| t.as_str().map(String::from))
+                })
                 .unwrap_or_default(),
             reference: premise.subject.clone(),
             class: premise.class,
@@ -229,7 +238,11 @@ fn assembly_provenance(
         .map(|premise| ProvenancePremise {
             kind: serde_json::to_value(&premise.provenance)
                 .ok()
-                .and_then(|value| value.get("provenance").and_then(|t| t.as_str().map(String::from)))
+                .and_then(|value| {
+                    value
+                        .get("provenance")
+                        .and_then(|t| t.as_str().map(String::from))
+                })
                 .unwrap_or_default(),
             reference: premise.subject.clone(),
             class: premise.class,
@@ -259,19 +272,22 @@ fn assembly_provenance(
             _ => None,
         })
         .collect();
-    let approver = store
-        .current_component(&reader.tenant_id, record_id)?
-        .and_then(|component| {
-            component
-                .attributes
-                .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
-                .cloned()
-        })
-        .and_then(|receipt| {
-            serde_json::from_str::<medulla_decision_types::decision::approval::RecommendationApproval>(&receipt)
+    let approver =
+        store
+            .current_component(&reader.tenant_id, record_id)?
+            .and_then(|component| {
+                component
+                    .attributes
+                    .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
+                    .cloned()
+            })
+            .and_then(|receipt| {
+                serde_json::from_str::<
+                    medulla_decision_types::decision::approval::RecommendationApproval,
+                >(&receipt)
                 .ok()
-        })
-        .map(|approval| approval.reviewer_principal);
+            })
+            .map(|approval| approval.reviewer_principal);
     Ok(DecisionProvenance {
         record_id: record.record_id.clone(),
         record_kind: RecordKind::Assembly,
@@ -326,11 +342,15 @@ fn properties_of(core: &GraphCore, node: &str) -> Option<Value> {
 
 /// Whether the edge `source -> target` carries `relationship`.
 fn has_edge(core: &GraphCore, source: &str, target: &str, relationship: &str) -> bool {
-    core.get_edge_properties(source, target).iter().any(|bytes| {
-        rmp_serde::from_slice::<Value>(bytes)
-            .ok()
-            .is_some_and(|edge| edge.get("relationship").and_then(Value::as_str) == Some(relationship))
-    })
+    core.get_edge_properties(source, target)
+        .iter()
+        .any(|bytes| {
+            rmp_serde::from_slice::<Value>(bytes)
+                .ok()
+                .is_some_and(|edge| {
+                    edge.get("relationship").and_then(Value::as_str) == Some(relationship)
+                })
+        })
 }
 
 /// The facts and rules of the `:ActionRecord`s approved by a gate decision among
@@ -349,11 +369,14 @@ fn action_links(
         let is_gate = properties_of(core, &row.node_id)
             .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some("GateDecision"));
         let decides_a_request = is_gate
-            && core.get_successors(&row.node_id).ok().is_some_and(|targets| {
-                targets
-                    .iter()
-                    .any(|target| has_edge(core, &row.node_id, target, "decisionRequest"))
-            });
+            && core
+                .get_successors(&row.node_id)
+                .ok()
+                .is_some_and(|targets| {
+                    targets
+                        .iter()
+                        .any(|target| has_edge(core, &row.node_id, target, "decisionRequest"))
+                });
         if !decides_a_request {
             continue;
         }
@@ -361,8 +384,9 @@ fn action_links(
         actions.sort();
         for action in actions.iter().filter(|action| {
             has_edge(core, action, &row.node_id, "approvedBy")
-                && properties_of(core, action)
-                    .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some("ActionRecord"))
+                && properties_of(core, action).is_some_and(|node| {
+                    node.get("type").and_then(Value::as_str) == Some("ActionRecord")
+                })
         }) {
             found = true;
             let mut used = core.get_successors(action).unwrap_or_default();
@@ -371,7 +395,12 @@ fn action_links(
                 let Some(node) = properties_of(core, &target) else {
                     continue;
                 };
-                let text = |key: &str| node.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
+                let text = |key: &str| {
+                    node.get(key)
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string()
+                };
                 let number = |key: &str| node.get(key).and_then(Value::as_u64).unwrap_or_default();
                 if has_edge(core, action, &target, "usedFact") {
                     facts.push(ProvenanceFact {
@@ -407,8 +436,9 @@ pub(super) fn why_not(
     let body = store
         .decision_record_body(tenant_id, record_id)?
         .ok_or_else(not_found)?;
-    let record: DecisionRecord = serde_json::from_slice(&body)
-        .map_err(|error| format!("DECISION_INPUTS_RETIRED: the stored inputs cannot rebuild the problem: {error}"))?;
+    let record: DecisionRecord = serde_json::from_slice(&body).map_err(|error| {
+        format!("DECISION_INPUTS_RETIRED: the stored inputs cannot rebuild the problem: {error}")
+    })?;
     let replayed = medulla_compute::assemble::assemble(
         record.inputs.clone(),
         medulla_compute::assemble::RecordIdentity::of(&record),
@@ -425,15 +455,20 @@ pub(super) fn why_not(
             medulla_decision_types::decision::DecisionErrorCode::DecisionReplayMismatch.as_str()
         ));
     }
-    let budget = medulla_decision_types::decision::knob_families::decision_reads::why_not_budget_ms(budget_ms);
+    let budget = medulla_decision_types::decision::knob_families::decision_reads::why_not_budget_ms(
+        budget_ms,
+    );
     let clock = || {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |elapsed| elapsed.as_millis() as u64)
     };
-    let explained = medulla_compute::assemble::explain_option(&record.inputs, option_id, budget, &clock)
-        .map_err(|error| error.to_string())?
-        .ok_or_else(|| "OPTION_NOT_VISIBLE: the option is not among the record's candidates".to_string())?;
+    let explained =
+        medulla_compute::assemble::explain_option(&record.inputs, option_id, budget, &clock)
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| {
+                "OPTION_NOT_VISIBLE: the option is not among the record's candidates".to_string()
+            })?;
     Ok(DecisionWhyNot {
         record_id: record.record_id,
         option_id: option_id.to_string(),

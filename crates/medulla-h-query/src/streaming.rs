@@ -381,14 +381,22 @@ impl<'a> StreamingRequest<'a> {
                         format!("INVALID_ARGUMENT: no source '{source}' is registered"),
                     );
                 }
-                wait_for_watermark(&clock, deadline_ms, at_least, catalog.probe_ended(), || async {
-                    Ok(u64::from(matches!(
-                        catalog.probe_state(self.carrier, &source),
-                        Some(
-                            ProbeState::Baselined | ProbeState::Drifted | ProbeState::ProbeFailed
-                        )
-                    )))
-                })
+                wait_for_watermark(
+                    &clock,
+                    deadline_ms,
+                    at_least,
+                    catalog.probe_ended(),
+                    || async {
+                        Ok(u64::from(matches!(
+                            catalog.probe_state(self.carrier, &source),
+                            Some(
+                                ProbeState::Baselined
+                                    | ProbeState::Drifted
+                                    | ProbeState::ProbeFailed
+                            )
+                        )))
+                    },
+                )
                 .await
             }
             WatermarkResource::Projection { consumer, graph } => {
@@ -442,7 +450,10 @@ impl<'a> StreamingRequest<'a> {
                 .clone()
                 .ok_or("UNAVAILABLE: projection cursors need durable persistence")?;
             let cursor = persistence
-                .read_mutation_projection_cursor(&medulla_kernel::persist::sanitize(graph), consumer)
+                .read_mutation_projection_cursor(
+                    &medulla_kernel::persist::sanitize(graph),
+                    consumer,
+                )
                 .await?;
             return Ok(match cursor.map(|cursor| cursor.committed_version) {
                 Some(CommittedVersion::Graph { target, .. })
@@ -450,8 +461,8 @@ impl<'a> StreamingRequest<'a> {
                 Some(CommittedVersion::None) | None => 0,
             });
         }
-        let store = medulla_persistence_records::agent_library::shared_agent_library(self.state)
-            .await?;
+        let store =
+            medulla_persistence_records::agent_library::shared_agent_library(self.state).await?;
         let tenant = self.carrier.log_owner().0.to_string();
         let named = graph.to_string();
         tokio::task::spawn_blocking(move || {
@@ -602,7 +613,9 @@ pub async fn try_handle(
             resource,
             at_least,
             deadline_ms,
-        } => Ok(request.await_watermark(resource, at_least, deadline_ms).await),
+        } => Ok(request
+            .await_watermark(resource, at_least, deadline_ms)
+            .await),
         Method::RegisterTrigger {
             name,
             graph,
@@ -712,8 +725,14 @@ mod await_watermark_tests {
         let read = reader(&mark);
         let waiter_notify = Arc::clone(&notify);
         let waiter = tokio::spawn(async move {
-            wait_for_watermark(&medulla_types::clock::SystemClock, 60_000, 2, &waiter_notify, read)
-                .await
+            wait_for_watermark(
+                &medulla_types::clock::SystemClock,
+                60_000,
+                2,
+                &waiter_notify,
+                read,
+            )
+            .await
         });
         tokio::task::yield_now().await;
         mark.store(2, Ordering::Relaxed);

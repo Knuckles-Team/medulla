@@ -85,7 +85,8 @@ async fn package_validation_routes() {
     // replay answers the stored row.
     let content = b"package one";
     for (key, id) in [("run:a", "run-a"), ("run:b", "run-b")] {
-        let LearningRecorded::PackageRun(stored) = record(&served, key, run(content, id, true)).await
+        let LearningRecorded::PackageRun(stored) =
+            record(&served, key, run(content, id, true)).await
         else {
             panic!("a package run answers its stored row");
         };
@@ -124,7 +125,10 @@ async fn package_validation_routes() {
         .await
         .error
         .expect("a package with no runs is refused");
-    assert!(refused.starts_with("PACKAGE_RUN_HISTORY_MISSING"), "{refused}");
+    assert!(
+        refused.starts_with("PACKAGE_RUN_HISTORY_MISSING"),
+        "{refused}"
+    );
     assert!(store
         .decision_artifact(
             TENANT,
@@ -140,7 +144,10 @@ async fn package_validation_routes() {
         .await
         .error
         .expect("a failing history is refused");
-    assert!(refused.starts_with("PACKAGE_VALIDATION_FAILED"), "{refused}");
+    assert!(
+        refused.starts_with("PACKAGE_VALIDATION_FAILED"),
+        "{refused}"
+    );
 
     // A digest that does not parse refuses first.
     let mut broken = package(content);
@@ -167,7 +174,10 @@ async fn package_validation_routes() {
         .await
         .error
         .expect("another tenant's runs do not count");
-    assert!(refused.starts_with("PACKAGE_RUN_HISTORY_MISSING"), "{refused}");
+    assert!(
+        refused.starts_with("PACKAGE_RUN_HISTORY_MISSING"),
+        "{refused}"
+    );
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R160.5: the stored receipt binds the
@@ -187,7 +197,13 @@ async fn validation_evidence_binds() {
 
     let receipt: PublicationReceipt = ok(
         "publish",
-        publish(&served, "publish:evidence", "package-evidence", package(content)).await,
+        publish(
+            &served,
+            "publish:evidence",
+            "package-evidence",
+            package(content),
+        )
+        .await,
     );
     assert_eq!(receipt.package_id.as_str(), "package-evidence");
     assert_eq!(

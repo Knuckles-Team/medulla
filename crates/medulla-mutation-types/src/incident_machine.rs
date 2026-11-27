@@ -44,47 +44,46 @@ impl MachineEvent for IncidentEvent {
 }
 
 /// `IncidentMachine`: the closed edge table. Every other pair of state and event is refused.
-pub static INCIDENT_MACHINE: MachineDef<IncidentStatus, IncidentEvent, &'static str> =
-    MachineDef {
-        name: "IncidentMachine",
-        states: &[
-            IncidentStatus::Open,
-            IncidentStatus::Acknowledged,
-            IncidentStatus::Resolved,
-            IncidentStatus::Closed,
-        ],
-        initial: IncidentStatus::Open,
-        terminals: &[IncidentStatus::Closed],
-        events: &[
-            IncidentEvent::Acknowledge,
-            IncidentEvent::Resolve,
-            IncidentEvent::Close,
-        ],
-        guards: &[],
-        edges: &[
-            Edge {
-                id: "H01",
-                from: IncidentStatus::Open,
-                event: IncidentEvent::Acknowledge,
-                guard: None,
-                to: IncidentStatus::Acknowledged,
-            },
-            Edge {
-                id: "H02",
-                from: IncidentStatus::Acknowledged,
-                event: IncidentEvent::Resolve,
-                guard: None,
-                to: IncidentStatus::Resolved,
-            },
-            Edge {
-                id: "H03",
-                from: IncidentStatus::Resolved,
-                event: IncidentEvent::Close,
-                guard: None,
-                to: IncidentStatus::Closed,
-            },
-        ],
-    };
+pub static INCIDENT_MACHINE: MachineDef<IncidentStatus, IncidentEvent, &'static str> = MachineDef {
+    name: "IncidentMachine",
+    states: &[
+        IncidentStatus::Open,
+        IncidentStatus::Acknowledged,
+        IncidentStatus::Resolved,
+        IncidentStatus::Closed,
+    ],
+    initial: IncidentStatus::Open,
+    terminals: &[IncidentStatus::Closed],
+    events: &[
+        IncidentEvent::Acknowledge,
+        IncidentEvent::Resolve,
+        IncidentEvent::Close,
+    ],
+    guards: &[],
+    edges: &[
+        Edge {
+            id: "H01",
+            from: IncidentStatus::Open,
+            event: IncidentEvent::Acknowledge,
+            guard: None,
+            to: IncidentStatus::Acknowledged,
+        },
+        Edge {
+            id: "H02",
+            from: IncidentStatus::Acknowledged,
+            event: IncidentEvent::Resolve,
+            guard: None,
+            to: IncidentStatus::Resolved,
+        },
+        Edge {
+            id: "H03",
+            from: IncidentStatus::Resolved,
+            event: IncidentEvent::Close,
+            guard: None,
+            to: IncidentStatus::Closed,
+        },
+    ],
+};
 
 impl IncidentStatus {
     /// The one transition function of `IncidentMachine`.

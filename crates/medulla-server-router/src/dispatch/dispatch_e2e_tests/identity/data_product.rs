@@ -145,7 +145,12 @@ fn decide(id: &str, approve: bool) -> Method {
 async fn request_grants_access_after_steward_approval() {
     let state = durable_state().await;
     // The owner's dataset is private; the steward's dataset is shared with the steward only.
-    add_node(&state, "ds-owned", serde_json::json!({"type": "Dataset", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "ds-owned",
+        serde_json::json!({"type": "Dataset", "_owner_id": OWNER}),
+    )
+    .await;
     add_node(
         &state,
         "ds-stewarded",
@@ -226,7 +231,12 @@ async fn a_steward_approves_over_a_private_node_owned_by_someone_else() {
         serde_json::json!({"type": "Dataset", "_owner_id": "usr:someone-else"}),
     )
     .await;
-    add_node(&state, "ds-other", serde_json::json!({"type": "Dataset", "_owner_id": "usr:someone-else"})).await;
+    add_node(
+        &state,
+        "ds-other",
+        serde_json::json!({"type": "Dataset", "_owner_id": "usr:someone-else"}),
+    )
+    .await;
     register(&state, "ledger", "ds-private").await;
     let assigned = send_method(
         &state,
@@ -247,8 +257,14 @@ async fn a_steward_approves_over_a_private_node_owned_by_someone_else() {
 
     // The product owner does not own the node and holds no stewardship of it: still hidden.
     let owner = send_method(&state, context(OWNER, &["*"]), decide("ledger", true)).await;
-    assert!(owner.error.is_some(), "the owner of the product is no steward of the node");
-    assert_eq!(grants_of(&state, "ds-private").await, serde_json::Value::Null);
+    assert!(
+        owner.error.is_some(),
+        "the owner of the product is no steward of the node"
+    );
+    assert_eq!(
+        grants_of(&state, "ds-private").await,
+        serde_json::Value::Null
+    );
 
     // The steward the store authorized for the node approves: the engine carries the read and
     // the write, and the node names the consumer.
@@ -290,7 +306,12 @@ async fn product_methods_refuse_another_tenant() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_product_version_change_opens_a_change_request_for_the_dataset_stewards() {
     let state = durable_state().await;
-    add_node(&state, "ds-owned", serde_json::json!({"type": "Dataset", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "ds-owned",
+        serde_json::json!({"type": "Dataset", "_owner_id": OWNER}),
+    )
+    .await;
     register(&state, "revenue", "ds-owned").await;
     let assigned = send_method(
         &state,
@@ -347,7 +368,12 @@ fn refusal_of(response: &Response) -> String {
 #[tokio::test(flavor = "multi_thread")]
 async fn product_refusals() {
     let state = durable_state().await;
-    add_node(&state, "ds-owned", serde_json::json!({"type": "Dataset", "_owner_id": OWNER})).await;
+    add_node(
+        &state,
+        "ds-owned",
+        serde_json::json!({"type": "Dataset", "_owner_id": OWNER}),
+    )
+    .await;
     register(&state, "revenue", "ds-owned").await;
 
     // An empty purpose is refused under its own code, and nothing is stored.
@@ -362,9 +388,17 @@ async fn product_refusals() {
         },
     )
     .await;
-    assert!(refusal_of(&refused).contains("ACCESS_PURPOSE_MISSING"), "{:?}", refused.error);
+    assert!(
+        refusal_of(&refused).contains("ACCESS_PURPOSE_MISSING"),
+        "{:?}",
+        refused.error
+    );
     let unstored = send_method(&state, context(OWNER, &["*"]), decide("revenue", true)).await;
-    assert!(refusal_of(&unstored).contains("no access request"), "{:?}", unstored.error);
+    assert!(
+        refusal_of(&unstored).contains("no access request"),
+        "{:?}",
+        unstored.error
+    );
 
     // A caller that is not the product owner cannot register it.
     let (held_product, held_contract) = product("revenue", "ds-owned");
@@ -378,7 +412,11 @@ async fn product_refusals() {
         },
     )
     .await;
-    assert!(refusal_of(&stranger).contains("STEWARD_ROLE_MISSING"), "{:?}", stranger.error);
+    assert!(
+        refusal_of(&stranger).contains("STEWARD_ROLE_MISSING"),
+        "{:?}",
+        stranger.error
+    );
 
     // A new version that changes the contract schema needs a higher major version.
     let broken = |version: &str| {
@@ -392,7 +430,11 @@ async fn product_refusals() {
         }
     };
     let minor = send_method(&state, context(OWNER, &["*"]), broken("1.1.0")).await;
-    assert!(refusal_of(&minor).contains("CONTRACT_SCHEMA_BREAK"), "{:?}", minor.error);
+    assert!(
+        refusal_of(&minor).contains("CONTRACT_SCHEMA_BREAK"),
+        "{:?}",
+        minor.error
+    );
     let major = send_method(&state, context(OWNER, &["*"]), broken("2.0.0")).await;
     assert!(major.error.is_none(), "{:?}", major.error);
 }

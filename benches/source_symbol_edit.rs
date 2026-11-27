@@ -35,12 +35,19 @@ struct Mem(RefCell<BTreeMap<String, Vec<u8>>>);
 
 impl BlobIo for Mem {
     fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
-        self.0.borrow().get(digest).cloned().ok_or_else(|| "absent".to_string())
+        self.0
+            .borrow()
+            .get(digest)
+            .cloned()
+            .ok_or_else(|| "absent".to_string())
     }
     fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
         let digest = sha256_hex(bytes);
         self.0.borrow_mut().insert(digest.clone(), bytes.to_vec());
-        Ok(SubmittedBlobRef { digest, size: bytes.len() as u64 })
+        Ok(SubmittedBlobRef {
+            digest,
+            size: bytes.len() as u64,
+        })
     }
 }
 
@@ -56,7 +63,9 @@ impl SymbolResolver for One {
 fn source() -> String {
     let mut text = String::new();
     for n in 0..FUNCTIONS {
-        text.push_str(&format!("def f{n}(x):\n    y = x + {n}\n    z = y * 2\n    return z\n\n"));
+        text.push_str(&format!(
+            "def f{n}(x):\n    y = x + {n}\n    z = y * 2\n    return z\n\n"
+        ));
     }
     text
 }
@@ -66,7 +75,11 @@ fn edit_one_symbol_in_5000_lines() {
     let source = source();
     assert_eq!(source.lines().count(), 5_000);
     let parsed = parse_file(&source, "big.py", SourceLanguage::Python);
-    let target = parsed.symbols.iter().find(|s| s.name == "f500").expect("f500 parses");
+    let target = parsed
+        .symbols
+        .iter()
+        .find(|s| s.name == "f500")
+        .expect("f500 parses");
     let (start, end) = (target.byte_start as usize, target.byte_end as usize);
     let blobs = Mem::default();
     let stored = blobs.store(source.as_bytes()).expect("seed");
@@ -113,7 +126,9 @@ fn edit_one_symbol_in_5000_lines() {
         std::process::exit(1);
     }
     if growth_mib > BUDGET_PEAK_MIB {
-        println!("  FAIL (budget: peak growth at most {BUDGET_PEAK_MIB} MiB, saw {growth_mib} MiB)");
+        println!(
+            "  FAIL (budget: peak growth at most {BUDGET_PEAK_MIB} MiB, saw {growth_mib} MiB)"
+        );
         std::process::exit(1);
     }
     println!("  PASS (budget: p99 at most {BUDGET_P99_NS} ns)");

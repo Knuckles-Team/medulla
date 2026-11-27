@@ -141,8 +141,14 @@ mod tests {
 
     #[test]
     fn coordinates_are_deterministic_and_selector_bound() {
-        assert_eq!(selector("text").coordinates(), selector("text").coordinates());
-        assert_ne!(selector("text").coordinates(), selector("body").coordinates());
+        assert_eq!(
+            selector("text").coordinates(),
+            selector("text").coordinates()
+        );
+        assert_ne!(
+            selector("text").coordinates(),
+            selector("body").coordinates()
+        );
         let coordinates = selector("text").coordinates();
         assert_ne!(coordinates.schema_digest, coordinates.field_set_digest);
         assert_ne!(coordinates.schema_digest, coordinates.acl_digest);
@@ -153,7 +159,10 @@ mod tests {
     fn authority_is_tenant_and_selector_bound() {
         let text = selector("text");
         assert_ne!(text.authority_digest("a"), text.authority_digest("b"));
-        assert_ne!(text.authority_digest("a"), selector("body").authority_digest("a"));
+        assert_ne!(
+            text.authority_digest("a"),
+            selector("body").authority_digest("a")
+        );
     }
 
     #[test]

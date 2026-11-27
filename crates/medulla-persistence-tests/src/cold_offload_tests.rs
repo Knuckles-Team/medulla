@@ -683,7 +683,10 @@ mod admission_tests {
             );
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         };
-        assert_eq!(row.state, medulla_observe::machine::task::TaskState::Completed);
+        assert_eq!(
+            row.state,
+            medulla_observe::machine::task::TaskState::Completed
+        );
         assert_eq!(row.owner, "registry");
         assert_eq!(
             row.kind,
@@ -745,8 +748,7 @@ mod admission_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn frozen_cursor_ends_with_no_progress_and_marks_manifest_failed() {
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir =
-            std::env::temp_dir().join(format!("medulla-lazy-frozen-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("medulla-lazy-frozen-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;

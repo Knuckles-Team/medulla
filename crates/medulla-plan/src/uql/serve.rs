@@ -18,7 +18,9 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use medulla_query_types::wire::{op_kind, uql_modality, Op, Plan, UqlResult, UqlRow, UqlStageReport};
+use medulla_query_types::wire::{
+    op_kind, uql_modality, Op, Plan, UqlResult, UqlRow, UqlStageReport,
+};
 
 use medulla_uql::{Body, Mode, Statement};
 

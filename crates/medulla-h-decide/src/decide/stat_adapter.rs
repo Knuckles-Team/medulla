@@ -11,8 +11,8 @@
 //! audited event, and rollback returns to the adapter active before.
 
 use medulla_decision_stats::decision::adapter::{
-    evaluate_for, feedback_labels, fit_for, FeedbackLabel, fit_scoped, is_held_out, monitor_adapter_for, wilson_upper,
-    MonitorVerdict, ScopedFitError, ScopedFitParams, ScopedItem,
+    evaluate_for, feedback_labels, fit_for, fit_scoped, is_held_out, monitor_adapter_for,
+    wilson_upper, FeedbackLabel, MonitorVerdict, ScopedFitError, ScopedFitParams, ScopedItem,
 };
 use medulla_decision_stats::{
     decision::adapter::directions_of, decision::adapter::to_body, decision::adapter::to_q16,
@@ -51,11 +51,11 @@ use super::served_adapter::{adapter_key, read_fitted};
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
 use super::stat_pointer::{rollback, PointerMove, Qualified};
-use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_retrieval::{judged_outcomes, Scope};
 use super::stat_support::{invalid_parameter as invalid, refusal};
 use super::stat_vectors::GraphVectors;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::read_pointer;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 
 const TRAINING_DOMAIN: &str = "eg/adapter-training/v1";
@@ -325,8 +325,7 @@ fn scoped_split(
         if !in_scope(outcome, &request.scope) || !(from_retrieval || from_run) {
             continue;
         }
-        let Some(item) =
-            judged_item(outcome, &request.space_digest, vectors, &BTreeMap::new())
+        let Some(item) = judged_item(outcome, &request.space_digest, vectors, &BTreeMap::new())
         else {
             continue;
         };

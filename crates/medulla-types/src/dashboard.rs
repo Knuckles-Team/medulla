@@ -149,7 +149,9 @@ impl DashboardAsset {
     /// Check the identifying fields, the grants and the body size.
     pub fn validate(&self) -> Result<(), String> {
         if self.id.trim().is_empty() || self.owner.trim().is_empty() {
-            return Err(format!("{DASHBOARD_INVALID}: id and owner must not be empty"));
+            return Err(format!(
+                "{DASHBOARD_INVALID}: id and owner must not be empty"
+            ));
         }
         let mut seen = std::collections::BTreeSet::new();
         for grant in &self.grants {

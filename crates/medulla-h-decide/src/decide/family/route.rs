@@ -228,8 +228,11 @@ fn promote(
         .cloned()
         .collect();
     ordered.extend(scores.iter().filter(|s| s.option_id != option_id).cloned());
-    Ok(StatisticalOutcome::advisory(BoundedVec::new(ordered)
-            .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?, calibrated))
+    Ok(StatisticalOutcome::advisory(
+        BoundedVec::new(ordered)
+            .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?,
+        calibrated,
+    ))
 }
 
 /// Honour a caller-preferred option when it is legal, then prefer the
@@ -251,7 +254,10 @@ fn apply_cost_tie(
     if executed.route.is_some() {
         return Ok(executed);
     }
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &executed.ladder.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &executed.ladder.outcome
+    else {
         return Ok(executed);
     };
     let (scores, calibrated) = (scores.as_slice().to_vec(), *calibrated);

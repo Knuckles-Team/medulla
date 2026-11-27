@@ -6,8 +6,8 @@
 
 use medulla_decision_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
 use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierContext, TierKnobs, TierReview, ALWAYS_ON_CAPACITY_REACHED,
-    PLATFORM_TEAM, TIER_DOWNGRADE_NEEDS_REVIEW, TIER_REVIEW_MISSING, TIER_SELF_REVIEW,
+    SkillTier, TierContext, TierKnobs, TierReview, ALWAYS_ON_CAPACITY_REACHED, PLATFORM_TEAM,
+    TIER_DOWNGRADE_NEEDS_REVIEW, TIER_REVIEW_MISSING, TIER_SELF_REVIEW,
 };
 use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
 use medulla_types::refusal_code::RefusalCode;
@@ -139,11 +139,25 @@ mod tests {
     fn domain_needs_a_team_approver() {
         let ok = review(SkillTier::Domain, "support");
         assert_eq!(
-            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &ctx(None, true), &KNOBS),
+            tier_gate(
+                SkillTier::Domain,
+                Some(&ok),
+                None,
+                0,
+                &ctx(None, true),
+                &KNOBS
+            ),
             Ok(())
         );
         assert_eq!(
-            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &ctx(None, false), &KNOBS),
+            tier_gate(
+                SkillTier::Domain,
+                Some(&ok),
+                None,
+                0,
+                &ctx(None, false),
+                &KNOBS
+            ),
             Err(TIER_REVIEW_MISSING)
         );
         assert_eq!(
@@ -153,7 +167,14 @@ mod tests {
         // A review of another tier is no receipt for this one.
         let other = review(SkillTier::Core, "platform");
         assert_eq!(
-            tier_gate(SkillTier::Domain, Some(&other), None, 0, &ctx(None, true), &KNOBS),
+            tier_gate(
+                SkillTier::Domain,
+                Some(&other),
+                None,
+                0,
+                &ctx(None, true),
+                &KNOBS
+            ),
             Err(TIER_REVIEW_MISSING)
         );
     }
@@ -255,7 +276,14 @@ mod tests {
         );
         // Another reviewer passes.
         assert_eq!(
-            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &ctx(None, true), &KNOBS),
+            tier_gate(
+                SkillTier::Domain,
+                Some(&ok),
+                None,
+                0,
+                &ctx(None, true),
+                &KNOBS
+            ),
             Ok(())
         );
     }

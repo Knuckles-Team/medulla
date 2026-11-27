@@ -81,7 +81,13 @@ pub(crate) fn fuse_ranked(
     ctx: &PlanCtx,
     query: &[f32],
     dense: Vec<(String, f32)>,
-) -> Result<(Vec<(String, f32)>, Option<medulla_types::retrieval::TopicReceipt>), String> {
+) -> Result<
+    (
+        Vec<(String, f32)>,
+        Option<medulla_types::retrieval::TopicReceipt>,
+    ),
+    String,
+> {
     let Some(policy) = ctx.topic_policy else {
         return Ok((dense, None));
     };
@@ -123,7 +129,11 @@ pub(crate) fn fuse_ranked(
         }
     }
     let assignments = fusion.backend.assignments(&candidates)?;
-    let kept: Vec<String> = topics.topic_weights.iter().map(|(topic, _)| topic.clone()).collect();
+    let kept: Vec<String> = topics
+        .topic_weights
+        .iter()
+        .map(|(topic, _)| topic.clone())
+        .collect();
     check_assignments(
         &candidates,
         &assignments,
@@ -151,7 +161,10 @@ pub(crate) fn fuse_ranked(
         ctx.semantic.generation(),
     );
     Ok((
-        scored.into_iter().map(|part| (part.id, part.fused)).collect(),
+        scored
+            .into_iter()
+            .map(|part| (part.id, part.fused))
+            .collect(),
         Some(receipt),
     ))
 }
@@ -183,7 +196,10 @@ fn topic_receipt(
             .iter()
             .filter(|a| {
                 a.document_id == part.id
-                    && topics.topic_weights.iter().any(|(topic, _)| *topic == a.topic_id)
+                    && topics
+                        .topic_weights
+                        .iter()
+                        .any(|(topic, _)| *topic == a.topic_id)
             })
             .collect();
         own.sort_by(|a, b| a.topic_id.cmp(&b.topic_id));
@@ -429,7 +445,11 @@ pub fn fuse_topic_dense_scored(
     let spread = high - low;
     let mut fused = Vec::with_capacity(dense.len());
     for (id, score) in dense {
-        let normalized = if spread > 0.0 { (score - low) / spread } else { 0.0 };
+        let normalized = if spread > 0.0 {
+            (score - low) / spread
+        } else {
+            0.0
+        };
         // The checked assignments (R040.2.7): the candidate's responsibility for each kept
         // topic, weighted by the query's responsibility for it.
         let mut topic = 0.0_f32;
@@ -624,7 +644,10 @@ pub(crate) fn check_assignments(
     }
     let mut seen = std::collections::BTreeSet::new();
     for assignment in assignments {
-        if !seen.insert((assignment.document_id.as_str(), assignment.topic_id.as_str())) {
+        if !seen.insert((
+            assignment.document_id.as_str(),
+            assignment.topic_id.as_str(),
+        )) {
             return Err(TopicRefusal::AssignmentDuplicate(format!(
                 "document `{}` has two assignments for topic `{}`",
                 assignment.document_id, assignment.topic_id
@@ -1000,15 +1023,27 @@ mod tests {
                             .zip(centroid)
                             .map(|(x, y)| f64::from(*x) * f64::from(*y))
                             .sum();
-                        let norms = vector.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt()
-                            * centroid.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>().sqrt();
+                        let norms = vector
+                            .iter()
+                            .map(|x| f64::from(*x).powi(2))
+                            .sum::<f64>()
+                            .sqrt()
+                            * centroid
+                                .iter()
+                                .map(|x| f64::from(*x).powi(2))
+                                .sum::<f64>()
+                                .sqrt();
                         (dot / norms).max(0.0)
                     };
                     let total: f64 = fixture().iter().map(|(_, c)| cosine(c)).sum();
                     let mut topic = 0.0_f64;
                     for (kept, responsibility) in &topics.topic_weights {
                         let centroid = fixture().into_iter().find(|(t, _)| t == kept).unwrap().1;
-                        let doc = if total > 0.0 { cosine(&centroid) / total } else { 0.0 };
+                        let doc = if total > 0.0 {
+                            cosine(&centroid) / total
+                        } else {
+                            0.0
+                        };
                         topic += f64::from(*responsibility) * doc;
                     }
                     (id.to_string(), (1.0 - weight) * normalized + weight * topic)
@@ -1026,7 +1061,10 @@ mod tests {
             let want: Vec<&str> = expected.iter().map(|(id, _)| id.as_str()).collect();
             assert_eq!(got, want, "order at w={weight}");
             for ((_, score), (_, want)) in fused.iter().zip(&expected) {
-                assert!((f64::from(*score) - want).abs() < 1e-5, "score at w={weight}");
+                assert!(
+                    (f64::from(*score) - want).abs() < 1e-5,
+                    "score at w={weight}"
+                );
             }
         }
         // w = 0 is the dense order alone, ties by id ascending.
@@ -1038,7 +1076,10 @@ mod tests {
             let refusal =
                 fuse_topic_dense(&dense, &assignments, &topics, bad, &space(), 7).unwrap_err();
             assert_eq!(refusal.code(), ServerErrorCode::TopicWeightInvalid);
-            assert!(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(bad).is_err());
+            assert!(TopicRankingPolicy::new(1, 0.0)
+                .unwrap()
+                .with_weight(bad)
+                .is_err());
         }
         // A candidate with no assignment is refused, never silently unweighted.
         let refusal = fuse_topic_dense(&dense, &[], &topics, 0.5, &space(), 7).unwrap_err();
@@ -1081,20 +1122,32 @@ mod tests {
             let refusal = run(&topics, &other, 7).unwrap_err();
             assert_eq!(refusal.code(), ServerErrorCode::TopicSpaceMismatch);
         }
-        let wider = EmbeddingSpaceRef::pinned("model", "1", "a".repeat(64), "b".repeat(64), 3, true)
-            .unwrap();
+        let wider =
+            EmbeddingSpaceRef::pinned("model", "1", "a".repeat(64), "b".repeat(64), 3, true)
+                .unwrap();
         assert_eq!(
             run(&topics, &wider, 7).unwrap_err().code(),
             ServerErrorCode::TopicSpaceMismatch
         );
         // A candidate vector of another width refuses.
         let narrow = vec![("a".to_string(), vec![1.0_f32])];
-        let kept: Vec<String> = topics.topic_weights.iter().map(|(t, _)| t.clone()).collect();
+        let kept: Vec<String> = topics
+            .topic_weights
+            .iter()
+            .map(|(t, _)| t.clone())
+            .collect();
         let narrow_assignments = memory.assignments(&narrow).unwrap();
         assert_eq!(
-            check_assignments(&narrow, &narrow_assignments, &kept, &space(), "in_memory", 7)
-                .unwrap_err()
-                .code(),
+            check_assignments(
+                &narrow,
+                &narrow_assignments,
+                &kept,
+                &space(),
+                "in_memory",
+                7
+            )
+            .unwrap_err()
+            .code(),
             ServerErrorCode::TopicSpaceMismatch
         );
         // A stale corpus refuses.
@@ -1109,7 +1162,10 @@ mod tests {
             revisions: Default::default(),
         };
         let unavailable = empty.topics(&[1.0, 0.5], &policy).unwrap_err();
-        assert!(unavailable.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{unavailable}");
+        assert!(
+            unavailable.starts_with("TOPIC_BACKEND_UNAVAILABLE"),
+            "{unavailable}"
+        );
         let core = stored(&[]);
         let view = core.analysis_snapshot();
         let stored_backend = StoredCentroidTopicBackend::new(&view, 7, space());
@@ -1135,7 +1191,10 @@ mod tests {
         let dense = vec![("a".to_string(), 0.9_f32), ("b".to_string(), 0.2)];
         let vectors = [("a", vec![1.0_f32, 0.0]), ("b", vec![0.6, 0.8])];
         let memory = InMemoryTopicBackend {
-            centroids: vec![("t1".to_string(), vec![1.0, 0.0]), ("t2".to_string(), vec![0.0, 1.0])],
+            centroids: vec![
+                ("t1".to_string(), vec![1.0, 0.0]),
+                ("t2".to_string(), vec![0.0, 1.0]),
+            ],
             corpus_revision: 7,
             space: space(),
             revisions: Default::default(),
@@ -1148,7 +1207,16 @@ mod tests {
         let weight = 0.5_f32;
         let scored =
             fuse_topic_dense_scored(&dense, &assignments, &topics, weight, &space(), 7).unwrap();
-        let receipt = topic_receipt("stored_centroid", 7, &topics, weight, &space(), &scored, &assignments, 3);
+        let receipt = topic_receipt(
+            "stored_centroid",
+            7,
+            &topics,
+            weight,
+            &space(),
+            &scored,
+            &assignments,
+            3,
+        );
         assert_eq!(receipt.backend_id, "stored_centroid");
         assert_eq!(receipt.centroid_generation, 7);
         assert_eq!(receipt.space_tuple, format!("model|2|1"));
@@ -1161,16 +1229,29 @@ mod tests {
             .map(|a| (a.candidate_id.as_str(), a.topic_id.as_str()))
             .collect();
         assert_eq!(traced.len(), 4);
-        assert!(traced.windows(2).all(|p| p[0].0 != p[1].0 || p[0].1 < p[1].1));
-        let weights: Vec<u32> = receipt.responsibilities.iter().map(|r| r.weight_micros).collect();
+        assert!(traced
+            .windows(2)
+            .all(|p| p[0].0 != p[1].0 || p[0].1 < p[1].1));
+        let weights: Vec<u32> = receipt
+            .responsibilities
+            .iter()
+            .map(|r| r.weight_micros)
+            .collect();
         assert_eq!(weights, [750_000, 250_000]);
         let w = i64::from(receipt.fusion_policy.weight_micros);
         for part in &receipt.component_scores {
             let rebuilt = ((1_000_000 - w) * part.dense_micros + w * part.topic_micros) / 1_000_000;
             assert!((part.final_micros - rebuilt).abs() <= 1, "{part:?}");
         }
-        let finals: Vec<i64> = receipt.component_scores.iter().map(|p| p.final_micros).collect();
-        assert!(finals.windows(2).all(|pair| pair[0] >= pair[1]), "{finals:?}");
+        let finals: Vec<i64> = receipt
+            .component_scores
+            .iter()
+            .map(|p| p.final_micros)
+            .collect();
+        assert!(
+            finals.windows(2).all(|pair| pair[0] >= pair[1]),
+            "{finals:?}"
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R040.2.7
@@ -1197,8 +1278,10 @@ mod tests {
         assert_eq!(keys, sorted);
         assert_eq!(keys.len(), 8);
         for document in ["a", "z"] {
-            let own: Vec<&DocumentTopicAssignment> =
-                assignments.iter().filter(|a| a.document_id == document).collect();
+            let own: Vec<&DocumentTopicAssignment> = assignments
+                .iter()
+                .filter(|a| a.document_id == document)
+                .collect();
             let sum: f32 = own.iter().map(|a| a.responsibility).sum();
             assert!((sum - 1.0).abs() < 1e-5, "{document}: {sum}");
         }

@@ -399,7 +399,9 @@ pub(super) fn service_values_rows(
         let terms: Vec<_> = keys
             .iter()
             .map(|key| match row.get(key)? {
-                Binding::Iri(iri) => Some(GroundTerm::NamedNode(NamedNode::new(iri.as_str()).ok()?)),
+                Binding::Iri(iri) => {
+                    Some(GroundTerm::NamedNode(NamedNode::new(iri.as_str()).ok()?))
+                }
                 Binding::Blank(_) | Binding::Literal(_) | Binding::Triple(_) => None,
             })
             .collect::<Option<_>>()?;

@@ -89,7 +89,11 @@ async fn ingest_files_one_gap_per_topic() {
         },
     )
     .await;
-    assert!(seeded.refusal_text().is_none(), "{:?}", seeded.refusal_text());
+    assert!(
+        seeded.refusal_text().is_none(),
+        "{:?}",
+        seeded.refusal_text()
+    );
 
     let first = ingest(&h).await;
     let signature = Signature("max_steps|search|tool_call".into());

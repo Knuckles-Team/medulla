@@ -86,7 +86,10 @@ fn store_receipt(h: &Harness, tenant: &str, run: &str, success: bool) {
     h.store
         .put_decision_artifacts(
             tenant,
-            &[(run_key(run), encode_artifact(&receipt(run, success)).unwrap())],
+            &[(
+                run_key(run),
+                encode_artifact(&receipt(run, success)).unwrap(),
+            )],
         )
         .unwrap();
 }
@@ -111,9 +114,7 @@ async fn capture_requires_a_successful_run() {
     let graph = graph(&h).await;
     let ctx = ctx(&h, TENANT);
     let reader = reader(TENANT, "decider");
-    let serve = |note: SessionNoteBody| {
-        record_note(&ctx, &reader, TENANT, &graph, &Hashed, note)
-    };
+    let serve = |note: SessionNoteBody| record_note(&ctx, &reader, TENANT, &graph, &Hashed, note);
 
     let (stored, methods) = serve(note("n1", "run-ok", "user-a")).unwrap();
     assert!(stored.stored);
@@ -123,7 +124,10 @@ async fn capture_requires_a_successful_run() {
     // A failed run, an unknown run and another tenant's run all refuse the same way.
     for run in ["run-failed", "run-unknown", "run-foreign"] {
         let refused = serve(note("n2", run, "user-a")).unwrap_err();
-        assert!(refused.starts_with("NOTE_RUN_NOT_SUCCESSFUL"), "{run}: {refused}");
+        assert!(
+            refused.starts_with("NOTE_RUN_NOT_SUCCESSFUL"),
+            "{run}: {refused}"
+        );
     }
 }
 
@@ -137,14 +141,28 @@ async fn unauthorized_refuses() {
     let ctx = ctx(&h, TENANT);
     let reader = reader(TENANT, "decider");
 
-    let refused = record_note(&ctx, &reader, TENANT, &graph, &Hashed, note("n1", "run-ok", " "))
-        .unwrap_err();
+    let refused = record_note(
+        &ctx,
+        &reader,
+        TENANT,
+        &graph,
+        &Hashed,
+        note("n1", "run-ok", " "),
+    )
+    .unwrap_err();
     assert!(refused.starts_with("NOTE_USER_MISSING"), "{refused}");
 
     // A note id held by another user cannot be recorded over; the sidecar row
     // the first recording staged is what the second is judged against.
-    let (_, methods) =
-        record_note(&ctx, &reader, TENANT, &graph, &Hashed, note("n7", "run-ok", "user-a")).unwrap();
+    let (_, methods) = record_note(
+        &ctx,
+        &reader,
+        TENANT,
+        &graph,
+        &Hashed,
+        note("n7", "run-ok", "user-a"),
+    )
+    .unwrap();
     for method in methods {
         if let medulla_protocol_types::protocol::Method::AddNode {
             node_id,
@@ -156,8 +174,15 @@ async fn unauthorized_refuses() {
             }
         }
     }
-    let foreign = record_note(&ctx, &reader, TENANT, &graph, &Hashed, note("n7", "run-ok", "user-b"))
-        .unwrap_err();
+    let foreign = record_note(
+        &ctx,
+        &reader,
+        TENANT,
+        &graph,
+        &Hashed,
+        note("n7", "run-ok", "user-b"),
+    )
+    .unwrap_err();
     assert!(foreign.starts_with("NOTE_UNAUTHORIZED"), "{foreign}");
     // The refusal names no owner, so it is the answer of a note that is not visible.
     assert!(!foreign.contains("user-a"), "{foreign}");

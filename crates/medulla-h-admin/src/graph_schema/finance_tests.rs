@@ -911,12 +911,7 @@ mod shapes {
                     "\"schedule_run\"",
                     "\"cfd\"",
                 ),
-                field(
-                    "receiptState",
-                    "\"due\"",
-                    "\"completed\"",
-                    "\"pending\"",
-                ),
+                field("receiptState", "\"due\"", "\"completed\"", "\"pending\""),
                 field("tenantKey", "\"tenant-1\"", "\"tenant-2\"", "5"),
                 field("idempotencyKey", "\"key-1\"", "\"key-2\"", "\"\""),
                 field("receiptEventId", "\"event-1\"", "\"event-2\"", "\"\""),
@@ -942,7 +937,14 @@ mod shapes {
                 ),
                 (
                     "receiptState",
-                    &["due", "claimed", "delivered", "completed", "missed", "failed"],
+                    &[
+                        "due",
+                        "claimed",
+                        "delivered",
+                        "completed",
+                        "missed",
+                        "failed",
+                    ],
                 ),
             ],
         );

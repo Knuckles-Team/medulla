@@ -72,7 +72,8 @@ pub(crate) async fn handle_uql(
     if let Err(error) = check_foreign_executions(foreign_executions.as_slice(), &query_digest) {
         return Ok(Response::err(req_id, error));
     }
-    let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params, ctx.now_secs) {
+    let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params, ctx.now_secs)
+    {
         Ok(bound) => bound,
         Err(response) => return Ok(response),
     };
@@ -195,7 +196,8 @@ pub(crate) async fn handle_uql(
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
     // MEDULLA-FEDERATED-QUERY-R706.11: the shape-policy evaluation of this request, if any.
-    let evaluations = std::sync::Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default());
+    let evaluations =
+        std::sync::Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default());
     let evaluation_sink = std::sync::Arc::clone(&evaluations);
     let result = run_unified_off_lock_with(
         ctx.state,
@@ -426,10 +428,10 @@ fn uql_cache_key(
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod served_tests {
     use super::super::current_auth_test_support::prelude::*;
-    use medulla_query_types::wire::{UqlParam, UqlResult};
     use super::UqlMetering;
     use medulla_decision_types::decision::indexless_retrieval::{tenant_ceiling, unit_costs};
     use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_query_types::wire::{UqlParam, UqlResult};
 
     const SECRET: &str = "uql-served-test-secret";
 
@@ -634,7 +636,10 @@ mod served_tests {
         let metering = UqlMetering::new(asked(10, 1, 40), &policy);
         let mut result = rows(4);
         metering.charge(&mut result, 7).expect("four rows fit");
-        let UqlResult::Rows { cost: Some(cost), .. } = result else {
+        let UqlResult::Rows {
+            cost: Some(cost), ..
+        } = result
+        else {
             panic!("a cost report")
         };
         assert_eq!(cost.authorization_revision, 7);
@@ -642,8 +647,13 @@ mod served_tests {
         assert_eq!(cost.operation_ids.as_slice(), ["uql:rows".to_string()]);
 
         let mut too_many = rows(11);
-        let error = metering.charge(&mut too_many, 7).expect_err("eleven rows do not fit");
-        assert!(error.starts_with("INDEXLESS_BUDGET_EXHAUSTED: operation uql:rows"), "{error}");
+        let error = metering
+            .charge(&mut too_many, 7)
+            .expect_err("eleven rows do not fit");
+        assert!(
+            error.starts_with("INDEXLESS_BUDGET_EXHAUSTED: operation uql:rows"),
+            "{error}"
+        );
         let UqlResult::Rows { cost, .. } = too_many else {
             panic!("rows")
         };
@@ -873,7 +883,10 @@ mod tests {
         let mismatch =
             check_foreign_executions(&[execution(1, digest), execution(2, other)], &digest)
                 .unwrap_err();
-        assert!(mismatch.starts_with("FOREIGN_READ_QUERY_MISMATCH"), "{mismatch}");
+        assert!(
+            mismatch.starts_with("FOREIGN_READ_QUERY_MISMATCH"),
+            "{mismatch}"
+        );
         let duplicate =
             check_foreign_executions(&[execution(1, digest), execution(1, digest)], &digest)
                 .unwrap_err();

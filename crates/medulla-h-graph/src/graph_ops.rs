@@ -28,33 +28,33 @@ use medulla_server_mutation::{
 mod algorithms;
 pub(crate) mod architecture_exchange;
 mod argument_map;
-mod retrieval_feedback;
-mod run_failure_defect;
 pub mod assistant_profile;
 mod atom_context;
 mod harness_edit;
 mod process_compile;
 mod process_document;
+mod retrieval_feedback;
+mod run_failure_defect;
 // MEDULLA-ORCH-VOCAB-R009.101.1: the harness session index write.
-mod harness_session;
-#[cfg(test)]
-mod harness_edit_tests;
-mod observation_state;
-#[cfg(test)]
-mod memory_surface_tests;
-#[cfg(test)]
-mod memory_snapshot_tests;
 #[cfg(all(test, feature = "query"))]
 mod discover_generation_tests;
 #[cfg(all(test, feature = "query"))]
 mod discover_seed_tests;
 #[cfg(test)]
+mod harness_edit_tests;
+mod harness_session;
+#[cfg(test)]
+mod memory_snapshot_tests;
+#[cfg(test)]
+mod memory_surface_tests;
+mod observation_state;
+#[cfg(test)]
 mod observation_state_tests;
 #[cfg(test)]
 mod participant_memory_tests;
 // MEDULLA-DECISION-ENGINE-R617.9 — served participant writes.
-pub mod participant_derive;
 pub mod participant_card;
+pub mod participant_derive;
 mod participant_read;
 pub mod participant_surface;
 // MEDULLA-BRANCH-MERGE-R001 — served branch registry.
@@ -73,16 +73,16 @@ pub mod domain_pack;
 mod edges;
 #[cfg(feature = "finance")]
 mod finance_accounting;
-#[cfg(feature = "finance")]
-mod finance_performance;
 mod finance_alerts;
 mod finance_factors;
-mod finance_receipts;
+#[cfg(feature = "finance")]
+pub mod finance_forecast_gate;
 #[cfg(feature = "finance")]
 mod finance_order_limit_check;
 mod finance_order_proposal;
 #[cfg(feature = "finance")]
-pub mod finance_forecast_gate;
+mod finance_performance;
+mod finance_receipts;
 mod finance_records;
 #[cfg(feature = "finance")]
 mod finance_regime;
@@ -99,9 +99,9 @@ mod graph_change_feed;
 mod hierarchy;
 mod memory;
 mod memory_cursor;
-pub mod memory_surface;
 pub mod memory_ingest;
 pub mod memory_snapshot;
+pub mod memory_surface;
 mod nl_correction;
 mod nodes;
 // MEDULLA-SRC-AUTH-R801: the reviewed policy source binding.

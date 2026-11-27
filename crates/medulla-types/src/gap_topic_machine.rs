@@ -54,15 +54,13 @@ pub static GAP_TOPIC_MACHINE: MachineDef<GapStatusKind, GapTopicEvent, &'static 
     terminals: &[GapStatusKind::Addressed],
     events: &[GapTopicEvent::Address],
     guards: &[],
-    edges: &[
-        Edge {
-            id: "GT01",
-            from: GapStatusKind::Open,
-            event: GapTopicEvent::Address,
-            guard: None,
-            to: GapStatusKind::Addressed,
-        },
-    ],
+    edges: &[Edge {
+        id: "GT01",
+        from: GapStatusKind::Open,
+        event: GapTopicEvent::Address,
+        guard: None,
+        to: GapStatusKind::Addressed,
+    }],
 };
 
 impl GapStatusKind {
@@ -130,7 +128,11 @@ mod tests {
         let machine = &GAP_TOPIC_MACHINE;
         for &state in machine.states {
             for &event in machine.events {
-                if machine.edges.iter().any(|e| e.from == state && e.event == event) {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
                     continue;
                 }
                 let refused = state.apply(event).unwrap_err();
@@ -155,7 +157,13 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let source = include_str!("../../medulla-decision-types/src/failure_patterns.rs");
-        assert!(source.contains("GapStatus::initial"), "the writer routes through the machine");
-        assert!(!source.contains("status: GapStatus::Open"), "a writer sets the status outside apply: status: GapStatus::Open");
+        assert!(
+            source.contains("GapStatus::initial"),
+            "the writer routes through the machine"
+        );
+        assert!(
+            !source.contains("status: GapStatus::Open"),
+            "a writer sets the status outside apply: status: GapStatus::Open"
+        );
     }
 }

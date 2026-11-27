@@ -228,7 +228,10 @@ mod tests {
             serde_json::to_value(FleetOverride::Enabled { enabled: false }).unwrap(),
             serde_json::json!({"field": "enabled", "enabled": false})
         );
-        assert_eq!(FleetOverride::Enabled { enabled: true }.field().as_str(), "enabled");
+        assert_eq!(
+            FleetOverride::Enabled { enabled: true }.field().as_str(),
+            "enabled"
+        );
     }
 
     #[test]

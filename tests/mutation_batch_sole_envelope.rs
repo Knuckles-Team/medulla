@@ -6,7 +6,13 @@
 //! key under a fresh nonce returns the first request's terminal outcome and writes nothing. The
 //! same holds after the engine restarts on the same directory. Each member is read before and
 //! after the replay: an unchanged read proves nothing was written.
-#![cfg(all(feature = "server", feature = "security", feature = "redb", feature = "kv", feature = "tsdb"))]
+#![cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "redb",
+    feature = "kv",
+    feature = "tsdb"
+))]
 
 mod common;
 #[path = "common/test_support.rs"]
@@ -80,9 +86,28 @@ async fn assert_replay_returns_terminal_outcome(
     id: u64,
 ) {
     let key = format!("sole-envelope-{label}-key");
-    let first = send(state, signed(id, method.clone(), &format!("{label}-nonce-1"), &key)).await;
-    assert!(first.error.is_none(), "{label} first request: {:?}", first.error);
-    let before = outcome(&send(state, signed(id + 1, read.clone(), &format!("{label}-read-1"), &format!("{label}-read-key-1"))).await);
+    let first = send(
+        state,
+        signed(id, method.clone(), &format!("{label}-nonce-1"), &key),
+    )
+    .await;
+    assert!(
+        first.error.is_none(),
+        "{label} first request: {:?}",
+        first.error
+    );
+    let before = outcome(
+        &send(
+            state,
+            signed(
+                id + 1,
+                read.clone(),
+                &format!("{label}-read-1"),
+                &format!("{label}-read-key-1"),
+            ),
+        )
+        .await,
+    );
     let replay = send(state, signed(id, method, &format!("{label}-nonce-2"), &key)).await;
     assert!(replay.error.is_none(), "{label} replay: {:?}", replay.error);
     assert_eq!(
@@ -90,13 +115,27 @@ async fn assert_replay_returns_terminal_outcome(
         outcome(&first),
         "{label}: the fresh-envelope replay returns the first terminal outcome"
     );
-    let after = outcome(&send(state, signed(id + 1, read, &format!("{label}-read-2"), &format!("{label}-read-key-2"))).await);
+    let after = outcome(
+        &send(
+            state,
+            signed(
+                id + 1,
+                read,
+                &format!("{label}-read-2"),
+                &format!("{label}-read-key-2"),
+            ),
+        )
+        .await,
+    );
     assert_eq!(before, after, "{label}: the replay wrote nothing");
 }
 
 fn points() -> Vec<u8> {
-    rmp_serde::to_vec(&vec![(1_000_000_000i64, vec![1.0f64]), (2_000_000_000i64, vec![2.0f64])])
-        .expect("points")
+    rmp_serde::to_vec(&vec![
+        (1_000_000_000i64, vec![1.0f64]),
+        (2_000_000_000i64, vec![2.0f64]),
+    ])
+    .expect("points")
 }
 
 fn members() -> Vec<(&'static str, Method, Method)> {
@@ -238,11 +277,44 @@ async fn every_store_member_replays_its_terminal_outcome_across_restart() {
     for (index, (label, method, read)) in members().into_iter().enumerate() {
         let key = format!("sole-envelope-{label}-live-key");
         let id = 500 + 10 * index as u64;
-        let before = outcome(&send(&state, signed(id + 1, read.clone(), &format!("{label}-r-1"), &format!("{label}-rk-1"))).await);
-        let replay = send(&state, signed(id, method, &format!("{label}-restart-nonce"), &key)).await;
-        assert!(replay.error.is_none(), "{label} replay after restart: {:?}", replay.error);
-        let after = outcome(&send(&state, signed(id + 1, read, &format!("{label}-r-2"), &format!("{label}-rk-2"))).await);
-        assert_eq!(before, after, "{label}: the replay after restart wrote nothing");
+        let before = outcome(
+            &send(
+                &state,
+                signed(
+                    id + 1,
+                    read.clone(),
+                    &format!("{label}-r-1"),
+                    &format!("{label}-rk-1"),
+                ),
+            )
+            .await,
+        );
+        let replay = send(
+            &state,
+            signed(id, method, &format!("{label}-restart-nonce"), &key),
+        )
+        .await;
+        assert!(
+            replay.error.is_none(),
+            "{label} replay after restart: {:?}",
+            replay.error
+        );
+        let after = outcome(
+            &send(
+                &state,
+                signed(
+                    id + 1,
+                    read,
+                    &format!("{label}-r-2"),
+                    &format!("{label}-rk-2"),
+                ),
+            )
+            .await,
+        );
+        assert_eq!(
+            before, after,
+            "{label}: the replay after restart wrote nothing"
+        );
     }
 }
 
@@ -295,25 +367,49 @@ async fn replay_answers_within_the_latency_and_allocation_budget() {
     for (index, (label, method, _read)) in members().into_iter().enumerate() {
         let id = 900 + index as u64;
         let key = format!("budget-{label}-key");
-        let first = send(&state, signed(id, method.clone(), &format!("budget-{label}-first"), &key)).await;
-        assert!(first.error.is_none(), "{label} first request: {:?}", first.error);
+        let first = send(
+            &state,
+            signed(id, method.clone(), &format!("budget-{label}-first"), &key),
+        )
+        .await;
+        assert!(
+            first.error.is_none(),
+            "{label} first request: {:?}",
+            first.error
+        );
 
         let mut latencies = Vec::with_capacity(REPLAYS_PER_MEMBER);
         let mut max_allocated = 0usize;
         for round in 0..REPLAYS_PER_MEMBER {
             // The fresh signed envelope is built outside the measured section.
-            let request = signed(id, method.clone(), &format!("budget-{label}-nonce-{round}"), &key);
+            let request = signed(
+                id,
+                method.clone(),
+                &format!("budget-{label}-nonce-{round}"),
+                &key,
+            );
             let allocated_before = ALLOCATED.with(Cell::get);
             let started = Instant::now();
             let replay = send(&state, request).await;
             latencies.push(started.elapsed());
             max_allocated = max_allocated.max(ALLOCATED.with(Cell::get) - allocated_before);
-            assert!(replay.error.is_none(), "{label} replay {round}: {:?}", replay.error);
-            assert_eq!(outcome(&replay), outcome(&first), "{label}: replay {round} returns the terminal outcome");
+            assert!(
+                replay.error.is_none(),
+                "{label} replay {round}: {:?}",
+                replay.error
+            );
+            assert_eq!(
+                outcome(&replay),
+                outcome(&first),
+                "{label}: replay {round} returns the terminal outcome"
+            );
         }
         latencies.sort();
         let p99 = latencies[(latencies.len() * 99).div_ceil(100) - 1];
-        assert!(p99 < REPLAY_P99_BUDGET, "{label}: replay p99 {p99:?} is over {REPLAY_P99_BUDGET:?}");
+        assert!(
+            p99 < REPLAY_P99_BUDGET,
+            "{label}: replay p99 {p99:?} is over {REPLAY_P99_BUDGET:?}"
+        );
         assert!(
             max_allocated < REPLAY_ALLOC_BUDGET_BYTES,
             "{label}: a replay allocated {max_allocated} bytes, over {REPLAY_ALLOC_BUDGET_BYTES}"

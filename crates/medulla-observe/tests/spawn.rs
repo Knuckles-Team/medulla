@@ -16,7 +16,10 @@ fn spec(name: &str) -> TaskSpec {
 async fn spawn_registers_and_panic_is_recorded_with_location() {
     // A job that reports progress and completes.
     let done = medulla_observe::spawn::spawn(spec("spawn-ok"), async {
-        assert!(medulla_observe::spawn::progress(ProgressCursor::Counter(7), 7));
+        assert!(medulla_observe::spawn::progress(
+            ProgressCursor::Counter(7),
+            7
+        ));
     });
     done.await.unwrap();
     let row = medulla_observe::global().get("spawn-ok").unwrap();
@@ -33,7 +36,10 @@ async fn spawn_registers_and_panic_is_recorded_with_location() {
     refused.await.unwrap();
     let row = medulla_observe::global().get("spawn-refused").unwrap();
     assert_eq!(row.state, TaskState::Failed);
-    assert_eq!(row.failure.as_ref().map(TaskFailure::code), Some("STALE_VERSION"));
+    assert_eq!(
+        row.failure.as_ref().map(TaskFailure::code),
+        Some("STALE_VERSION")
+    );
 
     // A panic finishes with TASK_PANICKED and the panic location; the process continues.
     let panicked = medulla_observe::spawn::spawn(spec("spawn-panics"), async {
@@ -51,5 +57,8 @@ async fn spawn_registers_and_panic_is_recorded_with_location() {
     }
 
     // Outside a job there is no reporter.
-    assert!(!medulla_observe::spawn::progress(ProgressCursor::Counter(1), 1));
+    assert!(!medulla_observe::spawn::progress(
+        ProgressCursor::Counter(1),
+        1
+    ));
 }

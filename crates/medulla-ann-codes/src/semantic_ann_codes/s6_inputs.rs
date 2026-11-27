@@ -33,13 +33,18 @@ pub struct S6Inputs {
 
 impl SemanticCodeStore {
     /// Read the S6 inputs of the generation `intent` activates.
-    pub fn read_s6_inputs(&self, intent: &SemanticStageIntent) -> Result<S6Inputs, SemanticCodeError> {
+    pub fn read_s6_inputs(
+        &self,
+        intent: &SemanticStageIntent,
+    ) -> Result<S6Inputs, SemanticCodeError> {
         let (tenant, binding_id) = (self.tenant.as_str(), self.binding.as_str());
         let read = self.door.serving_read()?;
         let binding = self
             .read_binding_in(&read)?
             .ok_or_else(|| refused("S6 requires a durable semantic binding"))?;
-        let checkpoints = read.open_owner_table(SEMANTIC_CHECKPOINTS).map_err(kernel_error)?;
+        let checkpoints = read
+            .open_owner_table(SEMANTIC_CHECKPOINTS)
+            .map_err(kernel_error)?;
         let heads = read
             .open_owner_table(SEMANTIC_CHECKPOINT_HEADS)
             .map_err(kernel_error)?;
@@ -60,13 +65,17 @@ impl SemanticCodeStore {
             &read
                 .open_owner_table(SEMANTIC_SOURCE_PROGRESS)
                 .map_err(kernel_error)?,
-            &read.open_owner_table(SEMANTIC_STAGES).map_err(kernel_error)?,
+            &read
+                .open_owner_table(SEMANTIC_STAGES)
+                .map_err(kernel_error)?,
             at,
             SemanticStage::AnnIndex,
             SemanticStage::ReconcileAndActivate,
             None,
         )?;
-        let table = read.open_owner_table(SEMANTIC_VECTORS).map_err(kernel_error)?;
+        let table = read
+            .open_owner_table(SEMANTIC_VECTORS)
+            .map_err(kernel_error)?;
         let mut vectors = Vec::new();
         for row in table
             .range((tenant, binding_id, intent.generation, "")..)

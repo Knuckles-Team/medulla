@@ -15,10 +15,14 @@ const DIM: usize = 32;
 const CALLS: usize = 100;
 
 fn vector(i: usize) -> Vec<f32> {
-    let mut seed = (i as u64).wrapping_mul(2862933555777941757).wrapping_add(3037000493);
+    let mut seed = (i as u64)
+        .wrapping_mul(2862933555777941757)
+        .wrapping_add(3037000493);
     (0..DIM)
         .map(|_| {
-            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             ((seed >> 33) as f32 / (1u64 << 31) as f32) - 0.5
         })
         .collect()
@@ -35,7 +39,10 @@ fn result_of(response: &Response) -> DiscoverResult {
     match response.result.as_ref() {
         Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone()).unwrap(),
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
-        other => panic!("expected a discover answer, got {other:?} / {:?}", response.error),
+        other => panic!(
+            "expected a discover answer, got {other:?} / {:?}",
+            response.error
+        ),
     }
 }
 
@@ -113,6 +120,9 @@ fn concurrent_readers_see_one_generation() {
         }
         stop.store(true, Ordering::Release);
     });
-    assert!(succeeded >= 1, "at least one call succeeds ({refused} refused)");
+    assert!(
+        succeeded >= 1,
+        "at least one call succeeds ({refused} refused)"
+    );
     assert_eq!(succeeded + refused, CALLS);
 }

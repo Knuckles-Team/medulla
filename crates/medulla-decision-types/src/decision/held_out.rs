@@ -133,7 +133,9 @@ impl RevisionSubject {
         let (kind, subject) = rest.split_once(':')?;
         let owned = subject.to_owned();
         Some(match kind {
-            "decision_head" => Self::DecisionHead { component_id: owned },
+            "decision_head" => Self::DecisionHead {
+                component_id: owned,
+            },
             "program" => Self::Program { program_ref: owned },
             "knob_set" => Self::KnobSet { policy_id: owned },
             "model_policy" => Self::ModelPolicy { family_ref: owned },
@@ -164,7 +166,9 @@ impl RevisionSubject {
             "rerank_calibration" => Self::RerankCalibration {
                 scorer_version: owned,
             },
-            "retrieval_strategy" => Self::RetrievalStrategy { strategy_ref: owned },
+            "retrieval_strategy" => Self::RetrievalStrategy {
+                strategy_ref: owned,
+            },
             "skill" => Self::Skill {
                 skill_ref: owned,
                 tier: None,

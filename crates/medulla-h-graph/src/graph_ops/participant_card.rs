@@ -18,7 +18,11 @@ pub const CARD_LABEL: &str = "ParticipantCard";
 
 /// The graph node id of the card of `subject` as `observer` sees it.
 pub fn card_node_id(tenant: &str, subject: &ParticipantId, observer: &ObserverRef) -> String {
-    format!("participant_card:{tenant}:{}:{}", subject.as_str(), observer.as_property())
+    format!(
+        "participant_card:{tenant}:{}:{}",
+        subject.as_str(),
+        observer.as_property()
+    )
 }
 
 /// The stored card, when the tenant holds one.
@@ -28,7 +32,12 @@ pub fn read_card(
     subject: &ParticipantId,
     observer: &ObserverRef,
 ) -> Option<ParticipantCard> {
-    read_stored(core, &card_node_id(tenant, subject, observer), CARD_LABEL, tenant)
+    read_stored(
+        core,
+        &card_node_id(tenant, subject, observer),
+        CARD_LABEL,
+        tenant,
+    )
 }
 
 /// The operations that replace the stored card with `card` and announce it: the card node and one
@@ -40,10 +49,13 @@ pub fn refresh_card(
     card: &ParticipantCard,
     at_ms: u64,
 ) -> Result<Option<Vec<serde_json::Value>>, String> {
-    if read_card(core, tenant, &card.subject, &card.observer).is_some_and(|stored| stored.digest == card.digest) {
+    if read_card(core, tenant, &card.subject, &card.observer)
+        .is_some_and(|stored| stored.digest == card.digest)
+    {
         return Ok(None);
     }
-    let json = serde_json::to_string(card).map_err(|error| format!("card encoding failed: {error}"))?;
+    let json =
+        serde_json::to_string(card).map_err(|error| format!("card encoding failed: {error}"))?;
     let event = MemoryEvent::CardUpdated(CardUpdated {
         subject: card.subject.clone(),
         observer: card.observer.clone(),

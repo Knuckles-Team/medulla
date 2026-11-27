@@ -67,10 +67,21 @@ impl MachineEvent for ClaimEvent {
 /// `ClaimMachine`: the closed edge table. Every other pair is refused.
 pub static CLAIM_MACHINE: MachineDef<ClaimStateKind, ClaimEvent, &'static str> = MachineDef {
     name: "ClaimMachine",
-    states: &[ClaimStateKind::Proposed, ClaimStateKind::Supported, ClaimStateKind::Contested, ClaimStateKind::Accepted, ClaimStateKind::Retired],
+    states: &[
+        ClaimStateKind::Proposed,
+        ClaimStateKind::Supported,
+        ClaimStateKind::Contested,
+        ClaimStateKind::Accepted,
+        ClaimStateKind::Retired,
+    ],
     initial: ClaimStateKind::Proposed,
     terminals: &[ClaimStateKind::Retired],
-    events: &[ClaimEvent::Support, ClaimEvent::Contest, ClaimEvent::Accept, ClaimEvent::Retire],
+    events: &[
+        ClaimEvent::Support,
+        ClaimEvent::Contest,
+        ClaimEvent::Accept,
+        ClaimEvent::Retire,
+    ],
     guards: &[],
     edges: &[
         Edge {
@@ -148,7 +159,13 @@ pub static CLAIM_MACHINE: MachineDef<ClaimStateKind, ClaimEvent, &'static str> =
 
 impl ClaimStateKind {
     /// Every state, in declaration order.
-    pub const ALL: [ClaimStateKind; 5] = [ClaimStateKind::Proposed, ClaimStateKind::Supported, ClaimStateKind::Contested, ClaimStateKind::Accepted, ClaimStateKind::Retired];
+    pub const ALL: [ClaimStateKind; 5] = [
+        ClaimStateKind::Proposed,
+        ClaimStateKind::Supported,
+        ClaimStateKind::Contested,
+        ClaimStateKind::Accepted,
+        ClaimStateKind::Retired,
+    ];
 
     /// The state a new record takes.
     pub const fn initial() -> Self {
@@ -211,7 +228,11 @@ mod tests {
         let machine = &CLAIM_MACHINE;
         for &state in machine.states {
             for &event in machine.events {
-                if machine.edges.iter().any(|e| e.from == state && e.event == event) {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
                     continue;
                 }
                 let refused = state.apply(event).unwrap_err();
@@ -236,7 +257,13 @@ mod tests {
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let source = include_str!("../../medulla-epistemic/src/claims.rs");
-        assert!(source.contains("legal_transition"), "the writer routes through the machine");
-        assert!(!source.contains("LEGAL_TRANSITIONS"), "a writer sets the state outside apply: LEGAL_TRANSITIONS");
+        assert!(
+            source.contains("legal_transition"),
+            "the writer routes through the machine"
+        );
+        assert!(
+            !source.contains("LEGAL_TRANSITIONS"),
+            "a writer sets the state outside apply: LEGAL_TRANSITIONS"
+        );
     }
 }

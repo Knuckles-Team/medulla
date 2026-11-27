@@ -20,8 +20,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use medulla_ingestion_types::ingestion_wire::{
-    ExtractedEdge, ExtractedNode, IndexFileOutcome, IndexFileVerdict, IndexRepositoryScope, IndexResult,
-    ParseResult,
+    ExtractedEdge, ExtractedNode, IndexFileOutcome, IndexFileVerdict, IndexRepositoryScope,
+    IndexResult, ParseResult,
 };
 
 use super::branch_projection::project_scope;

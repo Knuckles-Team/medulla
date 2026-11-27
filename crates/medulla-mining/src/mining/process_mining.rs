@@ -142,7 +142,9 @@ impl ReplayCounts {
         }
         let missing = 1.0 - self.missing as f64 / self.consumed as f64;
         let remaining = 1.0 - self.remaining as f64 / self.produced as f64;
-        (1000.0 * (missing + remaining) / 2.0).round().clamp(0.0, 1000.0) as u32
+        (1000.0 * (missing + remaining) / 2.0)
+            .round()
+            .clamp(0.0, 1000.0) as u32
     }
 }
 

@@ -13,12 +13,11 @@ use medulla_source_types::lifecycle::ProjectMode;
 
 /// Check the mandate of an ended delivery against `now`. The first failed fact refuses
 /// `MANDATE_REVOKED` naming it; the delivery stays ended.
-pub fn revalidate_mandate(
-    delivery: &Delivery,
-    now: &MandateFacts,
-) -> Result<(), MandateRevoked> {
+pub fn revalidate_mandate(delivery: &Delivery, now: &MandateFacts) -> Result<(), MandateRevoked> {
     if now.mode == ProjectMode::Reference {
-        return Err(MandateRevoked("the codebase is in mode reference".to_owned()));
+        return Err(MandateRevoked(
+            "the codebase is in mode reference".to_owned(),
+        ));
     }
     if !now.rows_open {
         return Err(MandateRevoked("a scope row is no longer open".to_owned()));

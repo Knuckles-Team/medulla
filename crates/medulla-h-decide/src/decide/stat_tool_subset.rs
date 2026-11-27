@@ -45,7 +45,9 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-use medulla_decision_types::decision::promotion_tier::{ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED};
+use medulla_decision_types::decision::promotion_tier::{
+    ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED,
+};
 
 use super::stat_support::refusal;
 
@@ -384,8 +386,11 @@ fn compute(request: &DecideRequest) -> Result<StatisticalOutcome, String> {
             probability: None,
         })
         .collect();
-    Ok(StatisticalOutcome::advisory(BoundedVec::new(scores)
-            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?, false))
+    Ok(StatisticalOutcome::advisory(
+        BoundedVec::new(scores)
+            .map_err(|detail| refusal(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
+        false,
+    ))
 }
 
 #[cfg(test)]

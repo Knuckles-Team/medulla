@@ -24,21 +24,21 @@ use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_core::architecture_exchange::graph::ExchangeMutation;
 use medulla_core::process_exchange::bpmn_graph::{bpmn_document, bpmn_mutations};
-use medulla_core::process_exchange::bpmn_write::write_bpmn;
-use medulla_core::process_exchange::dmn_graph::dmn_document;
-use medulla_core::process_exchange::dmn_write::write_dmn;
-use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
-use medulla_core::process_exchange::canonical_model_digest;
-use medulla_types::process_exchange::ProcessExchangeError;
 use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
+use medulla_core::process_exchange::bpmn_write::write_bpmn;
+use medulla_core::process_exchange::canonical_model_digest;
+use medulla_core::process_exchange::dmn_graph::dmn_document;
 use medulla_core::process_exchange::dmn_graph::dmn_mutations;
 use medulla_core::process_exchange::dmn_read::parse_dmn;
+use medulla_core::process_exchange::dmn_write::write_dmn;
+use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_protocol_types::result_contract::coordination::{
     ProcessDocumentExport, ProcessDocumentImport, ProcessModelDeploy,
 };
 use medulla_server_api::knob_config::knobs;
 use medulla_types::archimate_exchange::sha256_hex;
+use medulla_types::process_exchange::ProcessExchangeError;
 use medulla_types::process_exchange::{
     ExportSource, ProcessDocument, ProcessDocumentExported, ProcessDocumentFormat,
     ProcessDocumentImported,
@@ -241,9 +241,13 @@ pub(super) async fn handle_process_document_import(
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     Some(
-        commit_version(ctx, admitted, model_iri.clone(), stored_model_version, |answer| {
-            ResultPayload::of::<ProcessDocumentImport>(answer)
-        })
+        commit_version(
+            ctx,
+            admitted,
+            model_iri.clone(),
+            stored_model_version,
+            |answer| ResultPayload::of::<ProcessDocumentImport>(answer),
+        )
         .await,
     )
 }
@@ -459,7 +463,10 @@ fn require_deploy_secondary(
     _core: &GraphCore,
     _connection_iri: &str,
 ) -> Result<Option<String>, String> {
-    Err("METHOD_NOT_YET_SERVED: ProcessModelDeploy needs the rdf and federation features".to_string())
+    Err(
+        "METHOD_NOT_YET_SERVED: ProcessModelDeploy needs the rdf and federation features"
+            .to_string(),
+    )
 }
 
 /// Answer one `ProcessModelDeploy` (MEDULLA-CQ-ORCH-R703.3): export the latest version of the
@@ -481,7 +488,10 @@ pub(super) async fn handle_process_model_deploy(
     if model_iri.is_empty() || connection_iri.is_empty() {
         return Some(Response::err(
             ctx.req_id,
-            refuse("PARAMETER_INVALID", "model_iri and connection_iri are required"),
+            refuse(
+                "PARAMETER_INVALID",
+                "model_iri and connection_iri are required",
+            ),
         ));
     }
     let connector_operation = match require_deploy_secondary(ctx.core, connection_iri) {

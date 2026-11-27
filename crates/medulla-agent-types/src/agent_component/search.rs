@@ -189,7 +189,8 @@ impl AgentComponentSearchRequest {
         }
         if let Some(wanted) = &self.upstream_name {
             match &component.provenance {
-                ComponentProvenance::McpServer { upstream_name, .. } if upstream_name == wanted => {}
+                ComponentProvenance::McpServer { upstream_name, .. } if upstream_name == wanted => {
+                }
                 _ => return false,
             }
         }

@@ -73,7 +73,11 @@ pub fn parity(
         }
         let rows = registry.resolve(&source)?;
         counts.insert(table.clone(), rows.len() as u64);
-        keys.extend(rows.rows().iter().map(|row| (table.clone(), row.id.clone())));
+        keys.extend(
+            rows.rows()
+                .iter()
+                .map(|row| (table.clone(), row.id.clone())),
+        );
     }
     keys.sort();
     keys.dedup();
@@ -115,7 +119,10 @@ mod tests {
     #[test]
     fn a_source_and_its_prior_connector_over_the_same_rows_agree() {
         let attached = registry(&[("crm.accounts", &["b", "a", "c"]), ("crm.deals", &["x"])]);
-        let prior = registry(&[("legacy.accounts", &["c", "a", "b"]), ("legacy.deals", &["x"])]);
+        let prior = registry(&[
+            ("legacy.accounts", &["c", "a", "b"]),
+            ("legacy.deals", &["x"]),
+        ]);
         let requested = table_names(&["accounts", "deals"]);
         let left = parity(&attached, "crm", &requested, 10).expect("attached parity");
         let right = parity(&prior, "legacy", &requested, 10).expect("prior parity");
@@ -130,14 +137,29 @@ mod tests {
     #[test]
     fn a_missing_key_or_a_different_count_changes_the_answer() {
         let requested = table_names(&["accounts"]);
-        let base = parity(&registry(&[("crm.accounts", &["a", "b"])]), "crm", &requested, 10)
-            .expect("base");
-        let missing = parity(&registry(&[("crm.accounts", &["a"])]), "crm", &requested, 10)
-            .expect("missing");
+        let base = parity(
+            &registry(&[("crm.accounts", &["a", "b"])]),
+            "crm",
+            &requested,
+            10,
+        )
+        .expect("base");
+        let missing = parity(
+            &registry(&[("crm.accounts", &["a"])]),
+            "crm",
+            &requested,
+            10,
+        )
+        .expect("missing");
         assert_ne!(base.counts, missing.counts);
         assert_ne!(base.sample_digest, missing.sample_digest);
-        let swapped = parity(&registry(&[("crm.accounts", &["a", "z"])]), "crm", &requested, 10)
-            .expect("swapped");
+        let swapped = parity(
+            &registry(&[("crm.accounts", &["a", "z"])]),
+            "crm",
+            &requested,
+            10,
+        )
+        .expect("swapped");
         assert_eq!(base.counts, swapped.counts);
         assert_ne!(base.sample_digest, swapped.sample_digest);
     }
@@ -146,11 +168,20 @@ mod tests {
     #[test]
     fn the_sample_covers_only_the_first_keys_in_sorted_order() {
         let requested = table_names(&["accounts"]);
-        let small = parity(&registry(&[("crm.accounts", &["a", "b", "c"])]), "crm", &requested, 2)
-            .expect("small");
-        let other_tail =
-            parity(&registry(&[("crm.accounts", &["a", "b", "z"])]), "crm", &requested, 2)
-                .expect("other tail");
+        let small = parity(
+            &registry(&[("crm.accounts", &["a", "b", "c"])]),
+            "crm",
+            &requested,
+            2,
+        )
+        .expect("small");
+        let other_tail = parity(
+            &registry(&[("crm.accounts", &["a", "b", "z"])]),
+            "crm",
+            &requested,
+            2,
+        )
+        .expect("other tail");
         assert_eq!(small.sample_digest, other_tail.sample_digest);
         assert_eq!(small.counts["accounts"], 3);
     }

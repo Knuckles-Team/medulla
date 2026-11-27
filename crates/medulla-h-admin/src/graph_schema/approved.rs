@@ -23,13 +23,13 @@ use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_catalog_types::{
     graph_schema::approval::approved_candidate_digest,
-    graph_schema::approval::verify_schema_approval,
-    graph_schema::approval::SCHEMA_APPROVAL_ACTION, graph_schema::repair::RecordContract,
+    graph_schema::approval::verify_schema_approval, graph_schema::approval::SCHEMA_APPROVAL_ACTION,
+    graph_schema::repair::RecordContract,
 };
+use medulla_graph_core::graph::{GraphCore, GraphSchemaSource, GraphSchemaSources};
 use medulla_mutation_types::governed_change::{
     governed_change_of_ref, APPROVAL_SPENT_NODE_PREFIX, SOURCE_AUTHORITY_KIND,
 };
-use medulla_graph_core::graph::{GraphCore, GraphSchemaSource, GraphSchemaSources};
 use serde::{Deserialize, Serialize};
 
 use medulla_protocol_types::protocol::Method;
@@ -89,11 +89,7 @@ async fn already_committed(ctx: &MutationCtx<'_>) -> bool {
 /// candidate is proven by the approved change in the governed ledger. Neither
 /// reads whether the approval is spent: that is decided inside the commit, after
 /// the batch idempotency replay, so a retried attach replays its receipt.
-async fn admit(
-    tenant_id: &str,
-    ctx: &MutationCtx<'_>,
-    op: &GraphSchemaOp,
-) -> Result<(), String> {
+async fn admit(tenant_id: &str, ctx: &MutationCtx<'_>, op: &GraphSchemaOp) -> Result<(), String> {
     op.validate()?;
     let GraphSchemaOp::AttachApproved {
         source_id,
@@ -432,7 +428,10 @@ impl ShadowIngestReport {
 
 /// The counts of the shadow check `ValidateRepair` stored for `candidate_digest`, or `None`
 /// when no check of that candidate is on the graph.
-pub fn shadow_check_summary(core: &GraphCore, candidate_digest: &str) -> Option<ShadowCheckSummary> {
+pub fn shadow_check_summary(
+    core: &GraphCore,
+    candidate_digest: &str,
+) -> Option<ShadowCheckSummary> {
     core.get_node_properties(&ShadowIngestReport::node_id(candidate_digest))
         .and_then(|bytes| rmp_serde::from_slice::<ShadowIngestReport>(&bytes).ok())
         .filter(|report| report.candidate_digest == candidate_digest)

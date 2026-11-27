@@ -184,7 +184,12 @@ mod tests {
     #[test]
     fn every_legal_transition_applies() {
         for edge in VERIFIER_CASE_MACHINE.edges {
-            assert_eq!(edge.from.apply(edge.event, HELD), Ok(edge.to), "{}", edge.id);
+            assert_eq!(
+                edge.from.apply(edge.event, HELD),
+                Ok(edge.to),
+                "{}",
+                edge.id
+            );
             if edge.guard.is_some() {
                 let refused = edge
                     .from

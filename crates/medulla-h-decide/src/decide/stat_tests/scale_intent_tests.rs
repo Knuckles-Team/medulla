@@ -19,7 +19,11 @@ async fn seed_authority(h: &Harness, domain_status: &str, revisions: usize) {
     let mut guard = h.state.write().await;
     guard
         .registry
-        .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Team, None)
+        .create_graph(
+            GRAPH,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
         .unwrap();
     let core = guard.registry.get(GRAPH).unwrap().core.clone();
     let fence = serde_json::json!({"lease_id": "l1", "lease_epoch": 2, "fence_token": 9});
@@ -65,7 +69,10 @@ async fn seed_authority(h: &Harness, domain_status: &str, revisions: usize) {
     for n in 0..revisions {
         core.add_node(
             format!("rev{n}"),
-            node("ScaleAuthorityRevision", serde_json::json!({"authority_revision": 5})),
+            node(
+                "ScaleAuthorityRevision",
+                serde_json::json!({"authority_revision": 5}),
+            ),
         );
     }
 }
@@ -165,7 +172,10 @@ async fn an_unhealthy_domain_and_a_missing_authority_refuse() {
         .core
         .add_node(
             "rev0".to_string(),
-            node("ScaleAuthorityRevision", serde_json::json!({"authority_revision": 5})),
+            node(
+                "ScaleAuthorityRevision",
+                serde_json::json!({"authority_revision": 5}),
+            ),
         );
     let offline = decide(&h, request(&pins.0, intent(4))).await.unwrap();
     assert_eq!(

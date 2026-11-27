@@ -72,10 +72,18 @@ fn main() {
     let mut rollbacks = Vec::with_capacity(CASES);
     for case in &cases {
         let start = Instant::now();
-        black_box(regression_rollback(&pointer, black_box(&promoted), black_box(case), &policy));
+        black_box(regression_rollback(
+            &pointer,
+            black_box(&promoted),
+            black_box(case),
+            &policy,
+        ));
         rollbacks.push(start.elapsed().as_micros());
     }
-    let (wins_p99, rollback_p99) = (percentile(wins.clone(), 99), percentile(rollbacks.clone(), 99));
+    let (wins_p99, rollback_p99) = (
+        percentile(wins.clone(), 99),
+        percentile(rollbacks.clone(), 99),
+    );
     println!(
         "{{\"bench\":\"decide/promotion\",\"cases\":{CASES},\
          \"challenger_wins_p50_us\":{},\"challenger_wins_p99_us\":{wins_p99},\
@@ -86,7 +94,13 @@ fn main() {
         !cfg!(debug_assertions)
     );
     if !cfg!(debug_assertions) {
-        assert!(wins_p99 <= BUDGET_P99_US, "challenger_wins exceeded its budget");
-        assert!(rollback_p99 <= BUDGET_P99_US, "regression_rollback exceeded its budget");
+        assert!(
+            wins_p99 <= BUDGET_P99_US,
+            "challenger_wins exceeded its budget"
+        );
+        assert!(
+            rollback_p99 <= BUDGET_P99_US,
+            "regression_rollback exceeded its budget"
+        );
     }
 }

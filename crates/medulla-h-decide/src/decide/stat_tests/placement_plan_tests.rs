@@ -116,7 +116,10 @@ async fn plan_request_returns_sealed_plan() {
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.question.kind, QuestionKind::PlacementPlan);
     assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &record.outcome
+    else {
         panic!("expected an Advisory outcome: {:?}", record.outcome)
     };
     assert!(!calibrated, "a plan score is not a probability");
@@ -190,7 +193,12 @@ async fn capability_gap_abstains_and_plan_solves() {
         service("svc:b", 250, None, Some("host:beta")),
         service("svc:c", 250, None, Some("host:gamma")),
         service("svc:d", 250, None, Some("host:alpha")),
-        service("svc:e", 250, Some(HeavyCapability::Backtest), Some("host:alpha")),
+        service(
+            "svc:e",
+            250,
+            Some(HeavyCapability::Backtest),
+            Some("host:alpha"),
+        ),
     ];
 
     // The first request abstains, naming the capability no host declares.
@@ -242,7 +250,9 @@ async fn plan_refusals_by_reason() {
 
     // A capability no host declares abstains with the typed reason.
     let gap = vec![service("svc:a", 250, Some(HeavyCapability::Gpu), None)];
-    let batch = decide(&h, plan_request(&schema_pin, gap, None)).await.unwrap();
+    let batch = decide(&h, plan_request(&schema_pin, gap, None))
+        .await
+        .unwrap();
     let record = &batch.records.as_slice()[0];
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         panic!("a capability gap must abstain: {:?}", record.outcome)
@@ -268,7 +278,9 @@ async fn plan_refusals_by_reason() {
         panic!("{reasons:?}")
     };
     assert!(
-        constraints.iter().any(|constraint| constraint.ends_with("cpu exceeded")),
+        constraints
+            .iter()
+            .any(|constraint| constraint.ends_with("cpu exceeded")),
         "{constraints:?}"
     );
 }
@@ -295,7 +307,10 @@ async fn plan_record_replays_from_inputs() {
     let (plan, again) = (plan_of(&first), plan_of(&second));
     assert_eq!(plan, again, "the same inputs reproduce the same plan");
     plan.check().unwrap();
-    assert!(plan.node_count > 0, "the solver certificate counts its nodes");
+    assert!(
+        plan.node_count > 0,
+        "the solver certificate counts its nodes"
+    );
     assert!(plan.bound.is_some(), "the certificate carries its bound");
     assert_eq!(plan.certificate_digest.len(), 64);
     assert!(plan

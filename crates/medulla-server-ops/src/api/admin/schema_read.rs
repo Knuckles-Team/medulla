@@ -286,7 +286,8 @@ mod get_tests {
     #[test]
     fn get_answers_the_stored_documents_and_the_list_projection_of_one_source() {
         let core = core_with_admin_source();
-        let found = get("g", &core, "admin:alpha", ProvenanceView::Full).expect("the source is attached");
+        let found =
+            get("g", &core, "admin:alpha", ProvenanceView::Full).expect("the source is attached");
         assert_eq!(found.graph, "g");
         assert_eq!(found.source.attached_at_ms, 7);
         assert!(found.ontology_ttl.as_deref().unwrap().contains("owl#Class"));
@@ -346,16 +347,24 @@ mod get_tests {
         let redacted = project_source("approved:ap", &approved, ProvenanceView::Redacted);
         let full = project_source("approved:ap", &approved, ProvenanceView::Full);
         assert!(redacted.provenance_redacted && !full.provenance_redacted);
-        assert!(matches!(&redacted.origin, View::Approved { name, approval_lease_id, shadow_report_digest }
-            if name == "ap" && approval_lease_id.is_empty() && shadow_report_digest.is_none()));
-        assert!(matches!(&full.origin, View::Approved { approval_lease_id, shadow_report_digest: Some(_), .. }
-            if approval_lease_id == "action_approval:lease-1"));
+        assert!(
+            matches!(&redacted.origin, View::Approved { name, approval_lease_id, shadow_report_digest }
+            if name == "ap" && approval_lease_id.is_empty() && shadow_report_digest.is_none())
+        );
+        assert!(
+            matches!(&full.origin, View::Approved { approval_lease_id, shadow_report_digest: Some(_), .. }
+            if approval_lease_id == "action_approval:lease-1")
+        );
         let redacted = project_source("ontology:conn/o", &ontology, ProvenanceView::Redacted);
         let full = project_source("ontology:conn/o", &ontology, ProvenanceView::Full);
-        assert!(matches!(&redacted.origin, View::Ontology { connector, revision: 2, importer, history, .. }
-            if connector == "conn" && importer.is_empty() && history.iter().all(|e| e.importer.is_empty() && e.at == 9)));
-        assert!(matches!(&full.origin, View::Ontology { importer, history, .. }
-            if importer == "principal:importer" && history[0].importer == "principal:importer"));
+        assert!(
+            matches!(&redacted.origin, View::Ontology { connector, revision: 2, importer, history, .. }
+            if connector == "conn" && importer.is_empty() && history.iter().all(|e| e.importer.is_empty() && e.at == 9))
+        );
+        assert!(
+            matches!(&full.origin, View::Ontology { importer, history, .. }
+            if importer == "principal:importer" && history[0].importer == "principal:importer")
+        );
     }
 
     // spec: MEDULLA-TYPED-PACKS-R813.4

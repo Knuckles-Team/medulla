@@ -96,9 +96,11 @@ async fn serve(
 ) -> Result<GlossaryReceipt, String> {
     let tenant = target.verified.tenant();
     if tenant.trim().is_empty() {
-        return Err(medulla_types::contract::ServerErrorCode::TenantScopeRequired
-            .as_str()
-            .to_string());
+        return Err(
+            medulla_types::contract::ServerErrorCode::TenantScopeRequired
+                .as_str()
+                .to_string(),
+        );
     }
     match op {
         GlossaryOp::PutScheme { scheme, terms } => put_scheme(state, target, scheme, terms).await,
@@ -109,7 +111,9 @@ async fn serve(
             change_request,
         } => transition(state, target, iri, *event, change_request.as_deref()).await,
         GlossaryOp::Bind { term, asset } => bind_term(state, target, term, asset).await,
-        GlossaryOp::ProposeDescription { proposal } => propose_description(state, target, proposal).await,
+        GlossaryOp::ProposeDescription { proposal } => {
+            propose_description(state, target, proposal).await
+        }
         GlossaryOp::ReviewDescription { proposal, approve } => {
             review_description(state, target, proposal, *approve).await
         }
@@ -125,7 +129,9 @@ pub(super) async fn stored_term(
     let Some(properties) = read_node(state, target, iri).await? else {
         return Ok(None);
     };
-    if properties.get(TENANT_PROPERTY).and_then(serde_json::Value::as_str)
+    if properties
+        .get(TENANT_PROPERTY)
+        .and_then(serde_json::Value::as_str)
         != Some(target.verified.tenant())
     {
         return Err(invalid(format!("term '{iri}' belongs to another tenant")));
@@ -268,7 +274,9 @@ async fn stored_subject(
         .and_then(serde_json::Value::as_str)
         .is_some_and(|tenant| tenant != target.verified.tenant())
     {
-        return Err(invalid(format!("article '{iri}' belongs to another tenant")));
+        return Err(invalid(format!(
+            "article '{iri}' belongs to another tenant"
+        )));
     }
     let status_key = properties
         .keys()
@@ -279,8 +287,9 @@ async fn stored_subject(
         .get(&status_key)
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default();
-    let status: GlossaryTermStatus = serde_json::from_value(serde_json::Value::String(name.to_string()))
-        .map_err(|_| invalid(format!("article '{iri}' has the unknown status '{name}'")))?;
+    let status: GlossaryTermStatus =
+        serde_json::from_value(serde_json::Value::String(name.to_string()))
+            .map_err(|_| invalid(format!("article '{iri}' has the unknown status '{name}'")))?;
     Ok(Some(Subject::Article {
         status,
         status_key,
@@ -288,11 +297,7 @@ async fn stored_subject(
     }))
 }
 
-fn term_properties(
-    tenant: &str,
-    iri: &str,
-    term: &GlossaryTerm,
-) -> Result<Properties, String> {
+fn term_properties(tenant: &str, iri: &str, term: &GlossaryTerm) -> Result<Properties, String> {
     use serde_json::json;
     let record = serde_json::to_string(term)
         .map_err(|error| invalid(format!("term encoding failed: {error}")))?;
@@ -565,7 +570,10 @@ async fn propose_description(
         return Err(invalid("a proposal names its target and its text"));
     }
     if read_node(state, target, &proposal.target).await?.is_none() {
-        return Err(invalid(format!("target '{}' does not exist", proposal.target)));
+        return Err(invalid(format!(
+            "target '{}' does not exist",
+            proposal.target
+        )));
     }
     let tenant = target.verified.tenant();
     let digest = proposal_digest(&proposal.text);
@@ -602,9 +610,18 @@ async fn propose_description(
     if let Some(samples) = &proposal.inputs.samples_digest {
         properties.insert("samples_digest".into(), samples.clone().into());
     }
-    properties.insert("lineage_refs".into(), serde_json::json!(proposal.inputs.lineage_refs));
-    properties.insert("usage_refs".into(), serde_json::json!(proposal.inputs.usage_refs));
-    properties.insert("similar_refs".into(), serde_json::json!(proposal.inputs.similar_refs));
+    properties.insert(
+        "lineage_refs".into(),
+        serde_json::json!(proposal.inputs.lineage_refs),
+    );
+    properties.insert(
+        "usage_refs".into(),
+        serde_json::json!(proposal.inputs.usage_refs),
+    );
+    properties.insert(
+        "similar_refs".into(),
+        serde_json::json!(proposal.inputs.similar_refs),
+    );
     properties.insert("state".into(), DescriptionState::Proposed.as_str().into());
     properties.insert("proposed_by".into(), target.verified.agent_id().into());
     properties.insert("change_request".into(), request.into());
@@ -684,7 +701,9 @@ async fn review_description(
     )
     .await?;
     if !took_effect(&committed) {
-        return Err(invalid(format!("proposal '{id}' changed since it was read")));
+        return Err(invalid(format!(
+            "proposal '{id}' changed since it was read"
+        )));
     }
     let mut written = 1;
     if approve {

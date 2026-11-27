@@ -344,12 +344,13 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
         chunk_bytes: 512,
         deadline_ms: 10_000,
     };
-    let plan = medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::ForeignScan {
-        source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
-            name: source_name.clone(),
-        }),
-        join: false,
-    }]);
+    let plan =
+        medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::ForeignScan {
+            source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
+                name: source_name.clone(),
+            }),
+            join: false,
+        }]);
     let plan_digest = Digest256::sha256(&rmp_serde::to_vec_named(&plan).unwrap());
     let query_digest = plan_digest;
     let opened: ForeignReadOpenResult = ok(
@@ -1234,18 +1235,31 @@ async fn changed_or_revoked_approval_refuses() {
     // A live approval verifies and the read writes nothing: the lease revision stands.
     let first: SourceQueryApprovalValidity = ok(
         "verify",
-        verify_source_query(&served, &source, "r085-verify:ok-1", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-verify:ok-1",
+            source_query_check(&approved),
+        )
+        .await,
     );
     let again: SourceQueryApprovalValidity = ok(
         "verify again",
-        verify_source_query(&served, &source, "r085-verify:ok-2", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-verify:ok-2",
+            source_query_check(&approved),
+        )
+        .await,
     );
     assert_eq!(first.approval_id, approved.approval_id);
     assert_eq!(first.query_id, approved.query_id);
     assert_eq!(first.query_digest, approved.query_digest);
-    assert_eq!(first.lease_revision, again.lease_revision, "verify writes nothing");
+    assert_eq!(
+        first.lease_revision, again.lease_revision,
+        "verify writes nothing"
+    );
     assert_eq!(
         first.valid_until_ms,
         approved.expires_at_ms.min(approved.hard_expires_at_ms)
@@ -1267,8 +1281,14 @@ async fn changed_or_revoked_approval_refuses() {
             )
             .await,
         );
-        assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{label}: {error}");
-        assert!(!error.contains("SELECT") && !error.contains("Acme"), "{error}");
+        assert!(
+            error.contains("SOURCE_QUERY_UNAUTHORIZED"),
+            "{label}: {error}"
+        );
+        assert!(
+            !error.contains("SELECT") && !error.contains("Acme"),
+            "{error}"
+        );
     }
 
     // A lease that was never issued refuses SOURCE_QUERY_UNAUTHORIZED.
@@ -1277,8 +1297,13 @@ async fn changed_or_revoked_approval_refuses() {
     missing.query_digest = missing.compute_query_digest().unwrap();
     let error = refused(
         "missing lease",
-        verify_source_query(&served, &source, "r085-verify:missing", source_query_check(&missing))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-verify:missing",
+            source_query_check(&missing),
+        )
+        .await,
     );
     assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{error}");
 
@@ -1315,8 +1340,13 @@ async fn changed_or_revoked_approval_refuses() {
     .await;
     let error = refused(
         "revoked",
-        verify_source_query(&served, &source, "r085-verify:revoked", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-verify:revoked",
+            source_query_check(&approved),
+        )
+        .await,
     );
     assert!(error.contains("SOURCE_QUERY_APPROVAL_REVOKED"), "{error}");
 
@@ -1382,8 +1412,13 @@ async fn real_dispatch_issues_and_verifies_approval() {
     let approved = issue_source_query(&served, &source, "r085-dispatch:issue", 60_000).await;
     let validity: SourceQueryApprovalValidity = ok(
         "verify",
-        verify_source_query(&served, &source, "r085-dispatch:verify", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-dispatch:verify",
+            source_query_check(&approved),
+        )
+        .await,
     );
     assert_eq!(validity.approval_id, approved.approval_id);
     assert_eq!(validity.lease_revision, 1, "an issued lease is revision 1");
@@ -1463,11 +1498,19 @@ async fn approval_to_verification_journey() {
     let approved = issue_source_query(&served, &source, "r085-journey:issue", 60_000).await;
     // The approval holds digests that bind the request.
     assert_eq!(approved.query_id, approved.operation_digest);
-    assert_eq!(approved.query_digest, approved.compute_query_digest().unwrap());
+    assert_eq!(
+        approved.query_digest,
+        approved.compute_query_digest().unwrap()
+    );
     let validity: SourceQueryApprovalValidity = ok(
         "verify",
-        verify_source_query(&served, &source, "r085-journey:verify", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-journey:verify",
+            source_query_check(&approved),
+        )
+        .await,
     );
     assert_eq!(validity.query_digest, approved.query_digest);
 
@@ -1497,11 +1540,19 @@ async fn approval_to_verification_journey() {
     .await;
     let error = refused(
         "revoked",
-        verify_source_query(&served, &source, "r085-journey:revoked", source_query_check(&approved))
-            .await,
+        verify_source_query(
+            &served,
+            &source,
+            "r085-journey:revoked",
+            source_query_check(&approved),
+        )
+        .await,
     );
     assert!(error.contains("SOURCE_QUERY_APPROVAL_REVOKED"), "{error}");
-    assert!(!error.contains("SELECT") && !error.contains("Acme"), "{error}");
+    assert!(
+        !error.contains("SELECT") && !error.contains("Acme"),
+        "{error}"
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R722.11
@@ -1543,7 +1594,10 @@ async fn uql_joins_two_approved_sources_in_one_query() {
         .map(|item| item.source_id.clone())
         .collect();
     // One UQL statement names both sources; the join leg follows the first.
-    let text = format!("FOREIGN SCAN '{}' |> FOREIGN SCAN '{}' JOIN", names[0], names[1]);
+    let text = format!(
+        "FOREIGN SCAN '{}' |> FOREIGN SCAN '{}' JOIN",
+        names[0], names[1]
+    );
     let plan = medulla_query_types::wire::Plan::new(
         names
             .iter()

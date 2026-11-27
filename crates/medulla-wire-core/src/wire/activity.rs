@@ -63,7 +63,9 @@ pub struct ActivityGuard {
 fn now_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
+        .map_or(0, |elapsed| {
+            i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
+        })
 }
 
 /// `query` cut to [`MAX_ACTIVITY_QUERY_BYTES`] at a character boundary.
@@ -160,9 +162,15 @@ mod tests {
         let _other = activity.register(3, "t2".into(), "alice".into(), "g".into());
 
         // A plain caller sees only its own principal's rows inside its tenant.
-        assert_eq!(row_pids(&activity.visible_to("t1", "alice", false)), vec![1]);
+        assert_eq!(
+            row_pids(&activity.visible_to("t1", "alice", false)),
+            vec![1]
+        );
         // An admin sees every row of its own tenant and no other tenant's.
-        assert_eq!(row_pids(&activity.visible_to("t1", "alice", true)), vec![1, 2]);
+        assert_eq!(
+            row_pids(&activity.visible_to("t1", "alice", true)),
+            vec![1, 2]
+        );
 
         // A statement is active with its bounded text, then idle, or idle in a transaction.
         let long = "é".repeat(MAX_ACTIVITY_QUERY_BYTES);

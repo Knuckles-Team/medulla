@@ -25,7 +25,11 @@ fn claim(kind: ClaimKind) -> ClassificationClaim {
 // spec: MEDULLA-TYPED-PACKS-R652.1
 #[test]
 fn claim_round_trips_and_rejects_empty_categories() {
-    for kind in [ClaimKind::Detector, ClaimKind::Propagated, ClaimKind::Manual] {
+    for kind in [
+        ClaimKind::Detector,
+        ClaimKind::Propagated,
+        ClaimKind::Manual,
+    ] {
         let original = claim(kind);
         original.validate().expect("a well-formed claim is valid");
         let wire = serde_json::to_string(&original).unwrap();
@@ -39,7 +43,10 @@ fn claim_round_trips_and_rejects_empty_categories() {
 
     let mut empty = claim(ClaimKind::Manual);
     empty.categories.clear();
-    assert!(empty.validate().unwrap_err().starts_with("INVALID_ARGUMENT"));
+    assert!(empty
+        .validate()
+        .unwrap_err()
+        .starts_with("INVALID_ARGUMENT"));
 
     // Detector fields belong to a detector claim only, and a detector claim sets them all.
     let mut stray = claim(ClaimKind::Manual);

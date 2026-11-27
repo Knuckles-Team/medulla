@@ -5,7 +5,7 @@
 
 use medulla_quantum_core::backend::{JobStatus, QuantumBackend, RunOptions};
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, QuantumProgram, IR_VERSION,
 };
 use medulla_quantum_hardware::azure::{

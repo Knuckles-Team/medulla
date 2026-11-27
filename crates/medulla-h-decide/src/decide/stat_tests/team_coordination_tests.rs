@@ -395,7 +395,10 @@ async fn fallback_and_team_record() {
     assert_eq!(abstention_code(&stale), "TEAM_SIGNAL_STALE");
 
     // Cross-tenant negative: another tenant's team and its member are not seen.
-    let foreign = graph_view(Some("tenant-other"), &[("member:a", TEAM, Some("tenant-other"))]);
+    let foreign = graph_view(
+        Some("tenant-other"),
+        &[("member:a", TEAM, Some("tenant-other"))],
+    );
     let record = decide_team(&h, &request(&pin, false, 5), &foreign).unwrap();
     assert_eq!(abstention_code(&record), "TEAM_NO_FALLBACK_AVAILABLE");
 }

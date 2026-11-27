@@ -39,8 +39,11 @@ fn append_correct_finalize_and_conflicts() {
     let first = event(Append, 0, 1, "k1", &["s1"], b"hello");
     let one = apply_revision(&empty, &first).expect("append");
     assert_eq!(one.revision, 1);
-    let two =
-        apply_revision(&one.transcript, &event(Append, 1, 2, "k2", &["s2"], b"world")).expect("append");
+    let two = apply_revision(
+        &one.transcript,
+        &event(Append, 1, 2, "k2", &["s2"], b"world"),
+    )
+    .expect("append");
     let three = apply_revision(
         &two.transcript,
         &event(DeleteSegment, 2, 3, "k3", &["s2"], b"del"),
@@ -57,13 +60,16 @@ fn append_correct_finalize_and_conflicts() {
     // A base mismatch and a reused sequence with a new digest both refuse.
     let base = apply_revision(&three.transcript, &event(Append, 1, 9, "k9", &["s9"], b"x"));
     assert_eq!(base.unwrap_err().code(), "TRANSCRIPT_BASE_CONFLICT");
-    let reused = apply_revision(&three.transcript, &event(Append, 3, 2, "k2", &["s3"], b"other"));
+    let reused = apply_revision(
+        &three.transcript,
+        &event(Append, 3, 2, "k2", &["s3"], b"other"),
+    );
     assert_eq!(reused.unwrap_err(), Conflict::EventConflict);
     assert_eq!(Conflict::EventConflict.code(), "TRANSCRIPT_EVENT_CONFLICT");
 
     // Finalize seals the ordered segments.
-    let sealed =
-        apply_revision(&three.transcript, &event(Finalize, 3, 4, "k4", &[], b"fin")).expect("finalize");
+    let sealed = apply_revision(&three.transcript, &event(Finalize, 3, 4, "k4", &[], b"fin"))
+        .expect("finalize");
     let final_one = get_final(&sealed.transcript).expect("finalized").clone();
     assert_eq!(final_one.ordered_segment_ids, vec!["s1".to_string()]);
 
@@ -83,8 +89,11 @@ fn append_correct_finalize_and_conflicts() {
     );
     // GetFinal still names the latest sealed revision until a new seal.
     assert_eq!(get_final(&corrected.transcript), Some(&final_one));
-    let resealed = apply_revision(&corrected.transcript, &event(Finalize, 5, 6, "k6", &[], b"fin2"))
-        .expect("finalize");
+    let resealed = apply_revision(
+        &corrected.transcript,
+        &event(Finalize, 5, 6, "k6", &[], b"fin2"),
+    )
+    .expect("finalize");
     assert_ne!(
         get_final(&resealed.transcript).unwrap().finalization_digest,
         final_one.finalization_digest

@@ -15,12 +15,12 @@
 //! A rejection and a promotion each store one [`RulePromotionRecord`].
 
 use medulla_agent_types::agent_component::{
-    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest,
-    DraftPublication, DraftSubject,
+    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest, DraftPublication,
+    DraftSubject,
 };
 use medulla_agent_types::agent_guardrail::{
-    check_rule_against_invariants, is_revision_retired, promote_on_consensus, GuardrailRule, RuleLifecycle,
-    RulePromotionVerdict, RuleVersion,
+    check_rule_against_invariants, is_revision_retired, promote_on_consensus, GuardrailRule,
+    RuleLifecycle, RulePromotionVerdict, RuleVersion,
 };
 use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_decision_types::decision::statistical::body::{
@@ -170,7 +170,12 @@ pub(super) fn promote(
     };
     store_once(ctx, record_key, "rule promotion", record, |a, b| a == b)?;
 
-    let definition_digest = publish_active(ctx, reader, &rule, &format!("promotion:{}", resolution_ids.len()))?;
+    let definition_digest = publish_active(
+        ctx,
+        reader,
+        &rule,
+        &format!("promotion:{}", resolution_ids.len()),
+    )?;
     Ok(RulePromotionResult {
         rule_id: rule.rule_id,
         verdict,
@@ -244,17 +249,26 @@ fn publish_revision(
         reader,
         (
             "agent-component:publish",
-            format!("promote-rule:{}:{content_digest}:{source_revision}", rule.rule_id),
+            format!(
+                "promote-rule:{}:{content_digest}:{source_revision}",
+                rule.rule_id
+            ),
         ),
-        (&content_digest, current.as_ref().map_or(0, |entry| entry.entry_revision)),
+        (
+            &content_digest,
+            current.as_ref().map_or(0, |entry| entry.entry_revision),
+        ),
         policy_digest,
     )?;
-    let committed = ctx.store.publish_component(AgentComponentPublishRequest {
-        context,
-        evaluation_receipt_digest: None,
-        component: draft,
-        body: None,
-    }, None)?;
+    let committed = ctx.store.publish_component(
+        AgentComponentPublishRequest {
+            context,
+            evaluation_receipt_digest: None,
+            component: draft,
+            body: None,
+        },
+        None,
+    )?;
     Ok(committed.result.component.definition_digest)
 }
 
@@ -316,7 +330,10 @@ fn transition_key(rule_id: &str, sequence: u64) -> String {
 }
 
 fn is_digest(text: &str) -> bool {
-    text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    text.len() == 64
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 /// Every proposal and transition of `rule_id` the tenant holds, proposals by version and
@@ -335,22 +352,35 @@ fn load_history(
     };
     let proposals = rows(format!("rule-version:{rule_id}:"))?
         .iter()
-        .map(|bytes| medulla_persistence_records::decision_jobs::decode_artifact(bytes, "rule proposal"))
+        .map(|bytes| {
+            medulla_persistence_records::decision_jobs::decode_artifact(bytes, "rule proposal")
+        })
         .collect::<Result<Vec<RuleProposal>, String>>()?;
     let transitions = rows(format!("rule-transition:{rule_id}:"))?
         .iter()
-        .map(|bytes| medulla_persistence_records::decision_jobs::decode_artifact(bytes, "rule transition"))
+        .map(|bytes| {
+            medulla_persistence_records::decision_jobs::decode_artifact(bytes, "rule transition")
+        })
         .collect::<Result<Vec<RuleTransition>, String>>()?;
     // A rule id may hold the colon of another's prefix; keep only this rule's rows.
-    let proposals = proposals.into_iter().filter(|row| row.version.rule_id == rule_id).collect();
-    let transitions = transitions.into_iter().filter(|step| step.rule_id == rule_id).collect();
+    let proposals = proposals
+        .into_iter()
+        .filter(|row| row.version.rule_id == rule_id)
+        .collect();
+    let transitions = transitions
+        .into_iter()
+        .filter(|step| step.rule_id == rule_id)
+        .collect();
     Ok((proposals, transitions))
 }
 
 /// A proposal with its transitions folded in: its state and approvers now.
 fn folded(proposal: &RuleProposal, transitions: &[RuleTransition]) -> RuleVersion {
     let mut version = proposal.version.clone();
-    for step in transitions.iter().filter(|step| step.version == version.version) {
+    for step in transitions
+        .iter()
+        .filter(|step| step.version == version.version)
+    {
         if step.first_approval {
             version.approver = Some(step.actor.clone());
         } else {
@@ -368,7 +398,9 @@ fn find_version(
     transitions: &[RuleTransition],
     version: u64,
 ) -> Option<(RuleProposal, RuleVersion)> {
-    let proposal = proposals.iter().find(|row| row.version.version == version)?;
+    let proposal = proposals
+        .iter()
+        .find(|row| row.version.version == version)?;
     Some((proposal.clone(), folded(proposal, transitions)))
 }
 
@@ -388,7 +420,9 @@ pub(super) fn propose(
         return Err(invalid("a rule version names its scope"));
     }
     if !is_digest(&source_output_digest) {
-        return Err(invalid("source_output_digest is not 64 lowercase hex characters"));
+        return Err(invalid(
+            "source_output_digest is not 64 lowercase hex characters",
+        ));
     }
     GuardrailRule::from_attributes(&rule.rule_id, &rule.to_attributes()).map_err(invalid)?;
     let (proposals, transitions) = load_history(ctx, &rule.rule_id)?;
@@ -398,11 +432,19 @@ pub(super) fn propose(
         if !active {
             return Err(refusal(
                 StatisticalErrorCode::RulePredecessorStale,
-                format!("version {wanted} of {} is not the active version", rule.rule_id),
+                format!(
+                    "version {wanted} of {} is not the active version",
+                    rule.rule_id
+                ),
             ));
         }
     }
-    let next = proposals.iter().map(|row| row.version.version).max().unwrap_or(0) + 1;
+    let next = proposals
+        .iter()
+        .map(|row| row.version.version)
+        .max()
+        .unwrap_or(0)
+        + 1;
     let version = RuleVersion {
         rule_id: rule.rule_id.clone(),
         version: next,
@@ -448,7 +490,9 @@ pub(super) fn approve(
     if current.source_output_digest != source_output_digest {
         return Err(refusal(
             StatisticalErrorCode::RuleOutputMismatch,
-            format!("the approval names another output than version {version} was proposed against"),
+            format!(
+                "the approval names another output than version {version} was proposed against"
+            ),
         ));
     }
     let actor = reader.principal.clone();
@@ -471,7 +515,10 @@ pub(super) fn approve(
                 medulla_persistence_records::decision_jobs::encode_artifact(&transition)?,
             )],
         )?;
-        return Ok(folded(&proposal, &[transitions.as_slice(), &[transition]].concat()));
+        return Ok(folded(
+            &proposal,
+            &[transitions.as_slice(), &[transition]].concat(),
+        ));
     };
     if *first == actor {
         return Err(refusal(
@@ -509,9 +556,17 @@ pub(super) fn approve(
             medulla_persistence_records::decision_jobs::encode_artifact(transition)?,
         ));
     }
-    publish_active(ctx, reader, &proposal.rule, &format!("rule-version:{version}"))?;
+    publish_active(
+        ctx,
+        reader,
+        &proposal.rule,
+        &format!("rule-version:{version}"),
+    )?;
     ctx.store.put_decision_artifacts(ctx.tenant_id, &rows)?;
-    Ok(folded(&proposal, &[transitions.as_slice(), added.as_slice()].concat()))
+    Ok(folded(
+        &proposal,
+        &[transitions.as_slice(), added.as_slice()].concat(),
+    ))
 }
 
 /// Serve one `RevokeRule` op: the named version must be the active one.
@@ -539,7 +594,13 @@ pub(super) fn revoke(
             && entry.lifecycle == AgentLibraryLifecycle::Published
             && !is_revision_retired(&entry.attributes)
         {
-            publish_revision(ctx, reader, &proposal.rule, &format!("rule-revoke:{version}"), true)?;
+            publish_revision(
+                ctx,
+                reader,
+                &proposal.rule,
+                &format!("rule-revoke:{version}"),
+                true,
+            )?;
         }
     }
     let transition = RuleTransition {
@@ -558,5 +619,8 @@ pub(super) fn revoke(
             medulla_persistence_records::decision_jobs::encode_artifact(&transition)?,
         )],
     )?;
-    Ok(folded(&proposal, &[transitions.as_slice(), &[transition]].concat()))
+    Ok(folded(
+        &proposal,
+        &[transitions.as_slice(), &[transition]].concat(),
+    ))
 }

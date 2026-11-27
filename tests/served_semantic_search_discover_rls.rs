@@ -377,7 +377,9 @@ async fn seed_media_tag(
         "mediaRevision": "3",
         "provenanceDigest": "d".repeat(64),
     });
-    let object = properties.as_object_mut().expect("tag properties are an object");
+    let object = properties
+        .as_object_mut()
+        .expect("tag properties are an object");
     match owner {
         Some(owner) => {
             object.insert("_owner".into(), owner.into());
@@ -429,7 +431,9 @@ async fn node_properties(
     .await;
     assert!(r.error.is_none(), "GetNodeProperties failed: {:?}", r.error);
     match &r.result {
-        Some(ResultPayload::Raw(bytes)) => Some(rmp_serde::from_slice(bytes).expect("property map")),
+        Some(ResultPayload::Raw(bytes)) => {
+            Some(rmp_serde::from_slice(bytes).expect("property map"))
+        }
         None => None,
         other => panic!("expected Raw or no result, got {other:?}"),
     }
@@ -485,7 +489,9 @@ async fn served_semantic_search_returns_only_visible_media_tags() {
     ))
     .await;
     assert!(
-        semantic_search_rows(&r).iter().any(|(id, _)| id == "tag-bob"),
+        semantic_search_rows(&r)
+            .iter()
+            .any(|(id, _)| id == "tag-bob"),
         "bob must see his own tag"
     );
 
@@ -494,7 +500,9 @@ async fn served_semantic_search_returns_only_visible_media_tags() {
         .expect("alice reads her own tag");
     assert_eq!(visible["mediaRevision"], "3");
     assert!(
-        node_properties(&state, 43, "alice", "tag-bob").await.is_none(),
+        node_properties(&state, 43, "alice", "tag-bob")
+            .await
+            .is_none(),
         "a denied tag reads as absent"
     );
 }

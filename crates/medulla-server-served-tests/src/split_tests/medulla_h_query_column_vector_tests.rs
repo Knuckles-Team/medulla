@@ -73,7 +73,11 @@ async fn bound_column_nearest_neighbour() {
     assert!(unbound.starts_with("COLUMN_NOT_BOUND"), "{unbound}");
 
     let live = drive_binding_to_live_generation(&state, &draft, &fixture).await;
-    assert_eq!(live.entities.len(), 1, "the committed row is the one entity");
+    assert_eq!(
+        live.entities.len(),
+        1,
+        "the committed row is the one entity"
+    );
     medulla_plan::embed_registry::modality_encoders()
         .register(
             "r077-5-column-encoder",

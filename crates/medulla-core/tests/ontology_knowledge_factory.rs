@@ -80,7 +80,10 @@ fn properties_have_domain_and_range() {
             block.contains("rdfs:domain :"),
             "{property} has a declared domain"
         );
-        assert!(block.contains("rdfs:range "), "{property} has a declared range");
+        assert!(
+            block.contains("rdfs:range "),
+            "{property} has a declared range"
+        );
     }
 }
 
@@ -116,7 +119,10 @@ fn shapes_reject_free_text_on_an_invocation() {
     let untargeted = report(
         "ex:f a eg:KnowledgeFlag ; eg:evidence_class \"agent_asserted\" ; eg:target_ref \"term:x\" ; eg:knowledgeObservedIn ex:t .",
     );
-    assert!(!untargeted.conforms, "a flag with no :flags and no topic: target fails");
+    assert!(
+        !untargeted.conforms,
+        "a flag with no :flags and no topic: target fails"
+    );
     let good_invocation = report(
         "ex:i a eg:SkillInvocation ; eg:invocation_id \"i1\" ; eg:chosen_by \"agent\" ; eg:outcome \"ok\" ; eg:tokens_in 10 .",
     );

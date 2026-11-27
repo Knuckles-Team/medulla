@@ -15,7 +15,9 @@ use serde::Deserialize;
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, StatisticalOutcome};
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, QuestionKind, StatisticalOutcome,
+};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;

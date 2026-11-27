@@ -15,9 +15,9 @@ use medulla_protocol_types::result_contract::ingestion::{
     GoalList as GoalListResult,
 };
 use medulla_source_types::agent_goal::{
-    goal_node_id, handle_goal_control, handle_goal_iterations, handle_goal_list,
-    iteration_node_id, validate_goal_id, AgentGoal, GoalControlOp, GoalIteration, StoredGoal,
-    AGENT_GOAL_TYPE, GOAL_ITERATIONS_PROPERTY, GOAL_ITERATION_TYPE,
+    goal_node_id, handle_goal_control, handle_goal_iterations, handle_goal_list, iteration_node_id,
+    validate_goal_id, AgentGoal, GoalControlOp, GoalIteration, StoredGoal, AGENT_GOAL_TYPE,
+    GOAL_ITERATIONS_PROPERTY, GOAL_ITERATION_TYPE,
 };
 use medulla_types::transition_refused::MachineState;
 

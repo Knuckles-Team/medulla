@@ -37,7 +37,8 @@ pub(super) fn persist_descriptors(
     for subject in &subjects {
         descriptors.push(descriptor_of(&tenant, &index, subject, &mut consumed)?);
     }
-    let replaced: HashSet<&NamedOrBlankNode> = subjects.iter().copied().chain(consumed.iter()).collect();
+    let replaced: HashSet<&NamedOrBlankNode> =
+        subjects.iter().copied().chain(consumed.iter()).collect();
     let mut out: Vec<Triple> = individuals
         .iter()
         .filter(|t| !replaced.contains(&t.subject))

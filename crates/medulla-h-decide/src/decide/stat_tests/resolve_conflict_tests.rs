@@ -13,7 +13,12 @@ use medulla_decision_types::decision::AbstainReason;
 use medulla_server_api::api::conflict_decider::ConflictDecider;
 use medulla_types::contract::BoundedVec;
 
-fn side(reliability: f64, confidence: f64, valid_from: u64, valid_until: Option<u64>) -> ConflictCandidate {
+fn side(
+    reliability: f64,
+    confidence: f64,
+    valid_from: u64,
+    valid_until: Option<u64>,
+) -> ConflictCandidate {
     ConflictCandidate {
         source_reliability: reliability,
         confidence,
@@ -121,7 +126,11 @@ async fn winner_by_margin_tie_and_abstain_codes() {
     let clear = pair(side(0.9, 0.9, 10, None), side(0.5, 0.5, 20, None));
     let record = ask(&h, request(&schema, strict.clone(), clear.clone())).await;
     assert_eq!(winner(&record), "candidate_a");
-    for premise in ["conflict:score_a=", "conflict:score_b=", "knob:conflict.min_margin="] {
+    for premise in [
+        "conflict:score_a=",
+        "conflict:score_b=",
+        "knob:conflict.min_margin=",
+    ] {
         assert!(has_premise(&record, premise), "missing premise {premise}");
     }
     let flipped = pair(clear.candidate_b.clone(), clear.candidate_a.clone());
@@ -148,7 +157,13 @@ async fn winner_by_margin_tie_and_abstain_codes() {
 
     // No pinned policy, and a nonfinite score.
     assert_eq!(
-        abstained_code(&ask(&h, request(&schema, DecisionPolicyRef::Default, clear.clone())).await),
+        abstained_code(
+            &ask(
+                &h,
+                request(&schema, DecisionPolicyRef::Default, clear.clone())
+            )
+            .await
+        ),
         "CONFLICT_POLICY_MISSING"
     );
     let nonfinite = pair(side(f64::NAN, 0.9, 10, None), side(0.5, 0.5, 20, None));
@@ -159,7 +174,11 @@ async fn winner_by_margin_tie_and_abstain_codes() {
 
     // The seam the BranchMerge handler calls answers with the same decision.
     let seamed = super::super::stat_decide::ConflictDeciderSeam
-        .decide_conflict(&h.state, &verified(), request(&schema, strict.clone(), clear.clone()))
+        .decide_conflict(
+            &h.state,
+            &verified(),
+            request(&schema, strict.clone(), clear.clone()),
+        )
         .await
         .unwrap();
     assert_eq!(winner(&seamed), "candidate_a");

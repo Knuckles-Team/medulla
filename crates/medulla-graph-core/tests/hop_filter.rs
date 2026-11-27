@@ -19,8 +19,16 @@ fn fixture() -> GraphCore {
     let core = GraphCore::new();
     core.add_node("s".into(), props(serde_json::json!({"type": "Seed"})));
     let neighbours = [
-        ("doc-en", serde_json::json!({"type": "Doc", "lang": "en"}), "CITES"),
-        ("doc-de", serde_json::json!({"type": "Doc", "lang": "de"}), "CITES"),
+        (
+            "doc-en",
+            serde_json::json!({"type": "Doc", "lang": "en"}),
+            "CITES",
+        ),
+        (
+            "doc-de",
+            serde_json::json!({"type": "Doc", "lang": "de"}),
+            "CITES",
+        ),
         ("person", serde_json::json!({"type": "Person"}), "KNOWS"),
         (
             "other-graph",

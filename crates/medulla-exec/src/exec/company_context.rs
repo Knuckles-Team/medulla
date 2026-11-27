@@ -146,7 +146,10 @@ pub(super) fn company_context_scan(
             continue;
         };
         let clearance = node_clearance(&props);
-        if !clearance.iter().all(|label| allowed.contains(label.as_str())) {
+        if !clearance
+            .iter()
+            .all(|label| allowed.contains(label.as_str()))
+        {
             continue;
         }
         let source_id = props
@@ -171,7 +174,9 @@ pub(super) fn company_context_scan(
             texts.insert(id.clone(), provenance(node_cat));
         }
         if node_cat == CompanyCategory::DataAsset && wants(CompanyCategory::TimeSeries) {
-            if let Some(series_id) = props.get(SERIES_PROPERTY).and_then(serde_json::Value::as_str)
+            if let Some(series_id) = props
+                .get(SERIES_PROPERTY)
+                .and_then(serde_json::Value::as_str)
             {
                 if let Some((timestamp_ms, row_id)) = latest_point_row(ctx, series_id)? {
                     let mut row = provenance(CompanyCategory::TimeSeries);
@@ -227,7 +232,10 @@ fn latest_point_row(ctx: &PlanCtx, series_id: &str) -> Result<Option<(i64, Strin
         return Ok(None);
     };
     let timestamp_ms = ts_ns / NS_PER_MS;
-    Ok(Some((timestamp_ms, format!("ts:{series_id}:{timestamp_ms}"))))
+    Ok(Some((
+        timestamp_ms,
+        format!("ts:{series_id}:{timestamp_ms}"),
+    )))
 }
 
 /// Without the `timeseries` feature there is no store to read: no time-series rows.
@@ -263,7 +271,10 @@ mod tests {
             "ambiguous".into(),
             blob(serde_json::json!({ "type": "Organization", "label": "Role" })),
         );
-        core.add_node("role-1".into(), blob(serde_json::json!({ "node_type": "Role" })));
+        core.add_node(
+            "role-1".into(),
+            blob(serde_json::json!({ "node_type": "Role" })),
+        );
         core.add_node(
             "asset-1".into(),
             blob(serde_json::json!({ "label": "DataAsset", "source": "warehouse", "clearance": "internal" })),
@@ -299,10 +310,7 @@ mod tests {
         let core = graph();
         let rows = run(&core, &["internal"], None).expect("scan");
         // asset-2 needs `finance` too, so it is dropped; `other` is in no category.
-        assert_eq!(
-            rows.ids(),
-            vec!["ambiguous", "asset-1", "perm-1", "role-1"]
-        );
+        assert_eq!(rows.ids(), vec!["ambiguous", "asset-1", "perm-1", "role-1"]);
         assert_eq!(rows.text("ambiguous", "category"), Some("organization"));
         assert_eq!(rows.text("role-1", "category"), Some("role"));
         assert_eq!(rows.text("asset-1", "source_id"), Some("warehouse"));
@@ -311,8 +319,12 @@ mod tests {
         assert_eq!(rows.text("role-1", "source_id"), Some("native"));
         assert_eq!(rows.text("role-1", "clearance"), Some(""));
 
-        let both = run(&core, &["internal", "finance"], Some(CompanyCategory::DataAsset))
-            .expect("scan");
+        let both = run(
+            &core,
+            &["internal", "finance"],
+            Some(CompanyCategory::DataAsset),
+        )
+        .expect("scan");
         assert_eq!(both.ids(), vec!["asset-1", "asset-2"]);
         assert_eq!(both.text("asset-2", "source_revision"), Some("7"));
         assert_eq!(both.text("asset-2", "clearance"), Some("internal,finance"));
@@ -378,8 +390,14 @@ mod tests {
         core_sources.core.clear();
         assert!(!class_declared(&core_sources, "Role"));
         assert!(class_declared(&GraphSchemaSources::default(), "Role"));
-        assert!(class_declared(&GraphSchemaSources::default(), "SecurityClearance"));
+        assert!(class_declared(
+            &GraphSchemaSources::default(),
+            "SecurityClearance"
+        ));
         assert!(class_declared(&GraphSchemaSources::default(), "DataAsset"));
-        assert!(class_declared(&GraphSchemaSources::default(), "Organization"));
+        assert!(class_declared(
+            &GraphSchemaSources::default(),
+            "Organization"
+        ));
     }
 }

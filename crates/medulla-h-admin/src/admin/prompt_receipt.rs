@@ -6,8 +6,8 @@
 //! head and the verified scope. It writes nothing.
 
 use medulla_agent_types::agent_component::{
-    receipt_digest, AgentComponentEntry, PromptBlueprintIdentity, PromptReceiptVerdict, PromptRenderReceipt,
-    PROMPT_RECEIPT_INVALID,
+    receipt_digest, AgentComponentEntry, PromptBlueprintIdentity, PromptReceiptVerdict,
+    PromptRenderReceipt, PROMPT_RECEIPT_INVALID,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
@@ -38,7 +38,9 @@ fn check_head(
 ) -> Result<(), String> {
     let head = head.ok_or_else(|| invalid("the component has no published revision"))?;
     if PromptBlueprintIdentity::of_entry(&head).as_ref() != Some(identity) {
-        return Err(invalid("the live head is not the revision the receipt names"));
+        return Err(invalid(
+            "the live head is not the revision the receipt names",
+        ));
     }
     Ok(())
 }

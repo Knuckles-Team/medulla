@@ -49,7 +49,10 @@ fn extract_reads_declared_value_link_and_interface_terms() {
     let model = extract(DECLARATIONS).expect("well-formed declarations extract");
 
     let names: Vec<&str> = model.value_types.iter().map(|v| v.name.as_str()).collect();
-    assert_eq!(names, ["https://example.org/Qty", "https://example.org/Sku"]);
+    assert_eq!(
+        names,
+        ["https://example.org/Qty", "https://example.org/Sku"]
+    );
     let sku = &model.value_types[1];
     assert_eq!(sku.base, "http://www.w3.org/2001/XMLSchema#string");
     assert_eq!(sku.pattern.as_deref(), Some("^[A-Z]{3}-[0-9]+$"));
@@ -79,7 +82,10 @@ fn extract_reads_declared_value_link_and_interface_terms() {
         .unwrap();
     assert_eq!(owns.from_class, "https://example.org/Person");
     assert_eq!(owns.to_class, "https://example.org/Asset");
-    assert_eq!((owns.min_card, owns.max_card.map(|m| m.get())), (1, Some(3)));
+    assert_eq!(
+        (owns.min_card, owns.max_card.map(|m| m.get())),
+        (1, Some(3))
+    );
     assert_eq!(owns.junction, None);
     let shares = model
         .link_types
@@ -87,7 +93,10 @@ fn extract_reads_declared_value_link_and_interface_terms() {
         .find(|l| l.name == "https://example.org/shares")
         .unwrap();
     assert_eq!((shares.min_card, shares.max_card), (0, None));
-    assert_eq!(shares.junction.as_deref(), Some("https://example.org/shares"));
+    assert_eq!(
+        shares.junction.as_deref(),
+        Some("https://example.org/shares")
+    );
 
     // A member that is a declared link goes to required_links; the rest to properties.
     assert_eq!(model.interfaces.len(), 1);
@@ -95,7 +104,10 @@ fn extract_reads_declared_value_link_and_interface_terms() {
         model.interfaces[0].required_properties,
         ["https://example.org/name"]
     );
-    assert_eq!(model.interfaces[0].required_links, ["https://example.org/owns"]);
+    assert_eq!(
+        model.interfaces[0].required_links,
+        ["https://example.org/owns"]
+    );
     assert_eq!(model.implementations.len(), 1);
     assert_eq!(model.implementations[0].class, "https://example.org/Person");
 
@@ -114,13 +126,22 @@ fn each_malformed_declaration_is_one_named_reason() {
     assert_eq!(base_missing.subject(), "https://example.org/V");
     let two_bases =
         extract("ex:V a :ValueType ; sh:datatype xsd:string , xsd:integer .").unwrap_err();
-    assert!(matches!(two_bases, ObjectModelError::ValueTypeBaseMissing { .. }));
+    assert!(matches!(
+        two_bases,
+        ObjectModelError::ValueTypeBaseMissing { .. }
+    ));
 
     let no_range = extract("ex:L a :LinkType ; rdfs:domain ex:A .").unwrap_err();
-    assert!(matches!(no_range, ObjectModelError::LinkEndpointMissing { .. }));
+    assert!(matches!(
+        no_range,
+        ObjectModelError::LinkEndpointMissing { .. }
+    ));
     let two_domains =
         extract("ex:L a :LinkType ; rdfs:domain ex:A , ex:B ; rdfs:range ex:C .").unwrap_err();
-    assert!(matches!(two_domains, ObjectModelError::LinkEndpointMissing { .. }));
+    assert!(matches!(
+        two_domains,
+        ObjectModelError::LinkEndpointMissing { .. }
+    ));
 
     for count in [
         "sh:maxCount 0",
@@ -137,9 +158,8 @@ fn each_malformed_declaration_is_one_named_reason() {
         );
     }
 
-    let facet =
-        extract("ex:V a :ValueType ; sh:datatype xsd:integer ; sh:minInclusive \"low\" .")
-            .unwrap_err();
+    let facet = extract("ex:V a :ValueType ; sh:datatype xsd:integer ; sh:minInclusive \"low\" .")
+        .unwrap_err();
     assert!(matches!(facet, ObjectModelError::FacetInvalid { .. }));
 
     let unknown = extract("ex:C :implementsInterface ex:Missing .").unwrap_err();

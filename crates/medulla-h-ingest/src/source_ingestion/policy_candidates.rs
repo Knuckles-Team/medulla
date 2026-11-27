@@ -147,7 +147,10 @@ mod tests {
     fn index_yields_inactive_candidates_with_spans() {
         let document = "# Constitution\n\n- MUST NOT commit secrets {scope=https://example.invalid/class/Repo}\n- SHOULD review changes\n- a prose item\n";
         let files = vec![
-            (".specify/memory/constitution.md".to_owned(), document.as_bytes().to_vec()),
+            (
+                ".specify/memory/constitution.md".to_owned(),
+                document.as_bytes().to_vec(),
+            ),
             ("bad.md".to_owned(), vec![0xff, 0xfe]),
         ];
         let paths = vec![
@@ -157,13 +160,18 @@ mod tests {
         ];
         let ops = synthesize_policy_candidates("demo", "c0ffee", &files, &paths);
         assert_eq!(ops.len(), 2);
-        assert!(ops.iter().all(|op| op["properties"]["type"] == "PolicyCandidate"));
+        assert!(ops
+            .iter()
+            .all(|op| op["properties"]["type"] == "PolicyCandidate"));
         let proposed = &ops[0]["properties"];
         assert_eq!(proposed["status"], "proposed");
         assert_eq!(proposed["start_line"], 3);
         assert_eq!(proposed["severity"], "block");
         assert_eq!(proposed["grammar_revision"], 1);
-        assert!(ops[0]["id"].as_str().unwrap().starts_with("policycandidate:demo:policy-"));
+        assert!(ops[0]["id"]
+            .as_str()
+            .unwrap()
+            .starts_with("policycandidate:demo:policy-"));
         let inactive = &ops[1]["properties"];
         assert_eq!(inactive["status"], "inactive");
         assert_eq!(inactive["reason"], "CLAUSE_UNPARSED");

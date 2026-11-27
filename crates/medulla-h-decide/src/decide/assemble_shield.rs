@@ -61,7 +61,10 @@ pub(crate) fn schema_digest(schema: &serde_json::Value) -> String {
 /// The dotted paths of the leaf fields a schema declares, in sorted order. A schema with no
 /// `properties` is itself the one leaf (the empty path is refused by the caller).
 fn declared_paths(schema: &serde_json::Value, prefix: &str, out: &mut BTreeSet<String>) {
-    match schema.get("properties").and_then(serde_json::Value::as_object) {
+    match schema
+        .get("properties")
+        .and_then(serde_json::Value::as_object)
+    {
         Some(properties) if !properties.is_empty() => {
             for (name, child) in properties {
                 let path = if prefix.is_empty() {
@@ -114,7 +117,10 @@ pub(crate) fn shield_step_schema(contracts: &[StepContract]) -> Result<Vec<StepS
     let mut shields = Vec::with_capacity(contracts.len());
     for contract in contracts {
         if !seen.insert(contract.step_id.as_str()) {
-            return Err(invalid(format!("step {} is declared twice", contract.step_id)));
+            return Err(invalid(format!(
+                "step {} is declared twice",
+                contract.step_id
+            )));
         }
         let digest = schema_digest(&contract.input_schema);
         if digest != contract.source_schema_digest {
@@ -150,7 +156,10 @@ pub(crate) fn shield_step_schema(contracts: &[StepContract]) -> Result<Vec<StepS
                 )));
             }
         }
-        if let Some(missing) = declared.iter().find(|path| !slots.contains_key(path.as_str())) {
+        if let Some(missing) = declared
+            .iter()
+            .find(|path| !slots.contains_key(path.as_str()))
+        {
             return Err(invalid(format!(
                 "step {} field {missing} has no source slot",
                 contract.step_id

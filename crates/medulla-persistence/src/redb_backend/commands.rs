@@ -177,9 +177,7 @@ pub enum Cmd {
     /// snapshot or a graph copy.
     ReadGraphTableRows {
         graph: String,
-        reply: std::sync::mpsc::SyncSender<
-            Result<Vec<medulla_storage::TableRows>, String>,
-        >,
+        reply: std::sync::mpsc::SyncSender<Result<Vec<medulla_storage::TableRows>, String>>,
     },
     /// Read ONE BOUNDED page of one graph's durable rows (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38
     /// "paged adjacency") — the memory-bounded sibling of `ReadGraphDump` a paged

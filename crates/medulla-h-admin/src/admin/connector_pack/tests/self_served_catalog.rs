@@ -4,10 +4,11 @@
 
 use medulla_catalog_types::{
     connector_pack::ConnectorPackIndex, connector_pack::ConnectorPackOp,
-    connector_pack::McpCatalogAuthorityStatusRequest, connector_pack::McpCatalogReconciliationReceipt,
-    connector_pack::McpCatalogReconciliationReceiptRequest, connector_pack::McpCatalogSnapshotBinding,
-    connector_pack::McpSelfServedCatalogAttestRequest, connector_pack::PackImportResult,
-    connector_pack::PackViolationCode,
+    connector_pack::McpCatalogAuthorityStatusRequest,
+    connector_pack::McpCatalogReconciliationReceipt,
+    connector_pack::McpCatalogReconciliationReceiptRequest,
+    connector_pack::McpCatalogSnapshotBinding, connector_pack::McpSelfServedCatalogAttestRequest,
+    connector_pack::PackImportResult, connector_pack::PackViolationCode,
 };
 use medulla_protocol_types::{
     result_contract::cluster::RegisteredServerListPage,
@@ -329,7 +330,10 @@ async fn the_tenant_receipt_follows_accepted_reconciles_and_never_reveals_anothe
         .expect("an accepted reconcile issues a receipt");
     assert_eq!(receipt.tenant_id, TENANT);
     assert_eq!(receipt.catalog_generation, binding.catalog_generation);
-    assert!(receipt.issued_at_ms > 0, "the engine clock stamps the receipt");
+    assert!(
+        receipt.issued_at_ms > 0,
+        "the engine clock stamps the receipt"
+    );
     assert_eq!(
         receipt.acknowledged_families,
         ["tools", "prompts", "resources", "resource_templates"]
@@ -340,7 +344,9 @@ async fn the_tenant_receipt_follows_accepted_reconciles_and_never_reveals_anothe
     again.expected_catalog_generation = Some(binding.catalog_generation);
     again.four_family_digest = Digest256::from_bytes([6; 32]);
     attest(&served, "attest:receipt2", &again).await;
-    let next = tenant_receipt(&served, "receipt:two", TENANT).await.unwrap();
+    let next = tenant_receipt(&served, "receipt:two", TENANT)
+        .await
+        .unwrap();
     assert_eq!(next.catalog_generation, receipt.catalog_generation + 1);
     assert_ne!(next.snapshot_digest, receipt.snapshot_digest);
     assert!(next.issued_at_ms >= receipt.issued_at_ms);

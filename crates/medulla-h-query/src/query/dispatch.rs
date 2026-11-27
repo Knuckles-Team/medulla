@@ -105,9 +105,7 @@ async fn dispatch_query_family(
             schema,
             object,
             intent,
-        } => {
-            return Ok(handle_schema_context(hctx, source_id, schema, object, intent).await)
-        }
+        } => return Ok(handle_schema_context(hctx, source_id, schema, object, intent).await),
         // MEDULLA-UNIFIED-DATA-PLANE-R701.3: scores the caller tenant's standard and asset nodes.
         Method::StandardsDrift { scope, standard } => {
             return Ok(handle_standards_drift(hctx, scope, standard))
@@ -122,7 +120,9 @@ async fn dispatch_query_family(
         }
         // MEDULLA-ORCH-VOCAB-R009.100: one page of the records correlated to a root run.
         Method::RunTraceExport { request } => {
-            return Ok(super::run_trace_export::handle_run_trace_export(hctx, *request))
+            return Ok(super::run_trace_export::handle_run_trace_export(
+                hctx, *request,
+            ))
         }
         other => other,
     };

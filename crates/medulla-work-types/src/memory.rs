@@ -44,7 +44,8 @@ pub const MEMORY_ENTRY_TOO_LARGE: RefusalCode = RefusalCode::new("MEMORY_ENTRY_T
 
 /// A `MemoryRemember` that would take the tenant's stored memory above
 /// `knob memory.tenant_max_bytes` (MEDULLA-DECISION-ENGINE-R154.1).
-pub const MEMORY_TENANT_QUOTA_EXCEEDED: RefusalCode = RefusalCode::new("MEMORY_TENANT_QUOTA_EXCEEDED");
+pub const MEMORY_TENANT_QUOTA_EXCEEDED: RefusalCode =
+    RefusalCode::new("MEMORY_TENANT_QUOTA_EXCEEDED");
 
 /// A search-state body missing `search_run_id` or one of its four arrays
 /// (MEDULLA-DECISION-ENGINE-R149.4).
@@ -163,7 +164,10 @@ pub enum MemoryError {
     ParticipantInvalid(String),
 }
 
-pub(crate) fn identifier<T: Into<String>>(value: T, field: &str) -> Result<ResourceId, MemoryError> {
+pub(crate) fn identifier<T: Into<String>>(
+    value: T,
+    field: &str,
+) -> Result<ResourceId, MemoryError> {
     ResourceId::new(value)
         .map_err(|detail| MemoryError::InvalidIdentifier(format!("{field}: {detail}")))
 }
@@ -268,14 +272,20 @@ impl ConversationRecord {
             .map(|message| {
                 Ok(MemoryRecord {
                     memory_id: identifier(
-                        format!("{}:{}", self.conversation_id.as_str(), message.message_id.as_str()),
+                        format!(
+                            "{}:{}",
+                            self.conversation_id.as_str(),
+                            message.message_id.as_str()
+                        ),
                         "memory_id",
                     )?,
                     tenant: self.tenant.clone(),
                     kind: MemoryKind::ConversationTurn,
                     tier: match message.role {
                         MessageRole::Tool => MemoryTier::Procedural,
-                        MessageRole::User | MessageRole::Assistant | MessageRole::System => MemoryTier::Episodic,
+                        MessageRole::User | MessageRole::Assistant | MessageRole::System => {
+                            MemoryTier::Episodic
+                        }
                     },
                     text: message.text.clone(),
                     provenance_key: Some(message.provenance_key.clone()),
@@ -291,7 +301,8 @@ impl ConversationRecord {
                     legal_hold: false,
                     expires_at_ms: None,
                     support_count: 0,
-                    token_estimate: u32::try_from(message.text.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+                    token_estimate: u32::try_from(message.text.len().div_ceil(4).max(1))
+                        .unwrap_or(u32::MAX),
                     attachments: Vec::new(),
                     speaker: message.speaker.clone(),
                     schema_version: MEMORY_RECORD_SCHEMA_VERSION,
@@ -354,7 +365,10 @@ impl ProjectRules {
             .into_values()
             .map(|fact| {
                 Ok(MemoryRecord {
-                    memory_id: identifier(format!("{}:{}", fact.scope.as_str(), fact.fact_id.as_str()), "memory_id")?,
+                    memory_id: identifier(
+                        format!("{}:{}", fact.scope.as_str(), fact.fact_id.as_str()),
+                        "memory_id",
+                    )?,
                     tenant: self.tenant.clone(),
                     kind: MemoryKind::Rule,
                     tier: MemoryTier::Semantic,
@@ -372,7 +386,8 @@ impl ProjectRules {
                     legal_hold: false,
                     expires_at_ms: None,
                     support_count: 0,
-                    token_estimate: u32::try_from(fact.rule.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+                    token_estimate: u32::try_from(fact.rule.len().div_ceil(4).max(1))
+                        .unwrap_or(u32::MAX),
                     attachments: Vec::new(),
                     speaker: None,
                     schema_version: MEMORY_RECORD_SCHEMA_VERSION,
@@ -1094,7 +1109,8 @@ impl SessionNoteBody {
             legal_hold: false,
             expires_at_ms: None,
             support_count: 0,
-            token_estimate: u32::try_from(self.content.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+            token_estimate: u32::try_from(self.content.len().div_ceil(4).max(1))
+                .unwrap_or(u32::MAX),
             attachments: Vec::new(),
             speaker: None,
             schema_version: MEMORY_RECORD_SCHEMA_VERSION,
@@ -1375,9 +1391,18 @@ mod tests {
             tenant: TenantId::new("tenant-a").unwrap(),
             project_id: ResourceId::new("project:1").unwrap(),
             layers: vec![
-                layer("user", vec![fact("style", "repo", "tabs"), fact("lint", "repo", "off")]),
+                layer(
+                    "user",
+                    vec![fact("style", "repo", "tabs"), fact("lint", "repo", "off")],
+                ),
                 layer("project", vec![fact("style", "repo", "spaces")]),
-                layer("directory", vec![fact("style", "repo", "two spaces"), fact("style", "docs", "prose")]),
+                layer(
+                    "directory",
+                    vec![
+                        fact("style", "repo", "two spaces"),
+                        fact("style", "docs", "prose"),
+                    ],
+                ),
             ],
         };
         let effective = rules.effective_facts(7).unwrap();
@@ -1388,7 +1413,11 @@ mod tests {
             .collect();
         assert_eq!(
             texts,
-            [("docs:style", "prose"), ("repo:lint", "off"), ("repo:style", "two spaces")]
+            [
+                ("docs:style", "prose"),
+                ("repo:lint", "off"),
+                ("repo:style", "two spaces")
+            ]
         );
         for record in &effective {
             assert_eq!(record.tier, MemoryTier::Semantic);
@@ -1777,18 +1806,31 @@ mod tests {
         first.role = MessageRole::User;
         let mut last = message("m3");
         last.timestamp_ms += 9;
-        let conversation = ConversationRecord::new("tenant-a", "conv:1", vec![first, tool, last]).unwrap();
+        let conversation =
+            ConversationRecord::new("tenant-a", "conv:1", vec![first, tool, last]).unwrap();
         let records = conversation.to_memory_records().unwrap();
-        let ids: Vec<&str> = records.iter().map(|record| record.memory_id.as_str()).collect();
+        let ids: Vec<&str> = records
+            .iter()
+            .map(|record| record.memory_id.as_str())
+            .collect();
         assert_eq!(ids, ["conv:1:m1", "conv:1:m2", "conv:1:m3"], "source order");
         for record in &records {
             assert_eq!(record.session_id.as_ref().unwrap().as_str(), "conv:1");
             assert_eq!(record.tenant.as_str(), "tenant-a");
             assert_eq!(record.kind, MemoryKind::ConversationTurn);
-            assert!(record.provenance_key.as_ref().unwrap().as_str().starts_with("prov:m"));
+            assert!(record
+                .provenance_key
+                .as_ref()
+                .unwrap()
+                .as_str()
+                .starts_with("prov:m"));
         }
         assert_eq!(records[0].tier, MemoryTier::Episodic);
-        assert_eq!(records[1].tier, MemoryTier::Procedural, "a tool turn is procedural");
+        assert_eq!(
+            records[1].tier,
+            MemoryTier::Procedural,
+            "a tool turn is procedural"
+        );
         assert_eq!(records[2].timestamp_ms, 1_700_000_000_009);
     }
 

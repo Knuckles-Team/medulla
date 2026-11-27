@@ -41,9 +41,8 @@ fn limits_clamp_to_tenant_ceiling() {
     for knob in &SOURCE_QUERY_KNOBS {
         let (lo, hi) = knob.range;
         for (value, accepted) in [(lo, true), (hi, true), (lo - 1, false), (hi + 1, false)] {
-            let read = SourceQueryKnobs::from_lookup(|key| {
-                (key == knob.env).then(|| value.to_string())
-            });
+            let read =
+                SourceQueryKnobs::from_lookup(|key| (key == knob.env).then(|| value.to_string()));
             assert_eq!(read.is_ok(), accepted, "{} = {value}", knob.knob);
             if !accepted {
                 assert_eq!(read.unwrap_err().knob, knob.knob);
@@ -52,7 +51,10 @@ fn limits_clamp_to_tenant_ceiling() {
     }
 
     // A value above its ceiling is clamped to it.
-    assert_eq!(asked(u64::MAX >> 30).clamp_to_ceiling(&ceiling), Ok(ceiling.clone()));
+    assert_eq!(
+        asked(u64::MAX >> 30).clamp_to_ceiling(&ceiling),
+        Ok(ceiling.clone())
+    );
 
     // A value under its ceiling is kept as asked.
     let small = SourceQueryLimits {

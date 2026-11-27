@@ -236,7 +236,8 @@ fn removed_chunks_supersede_their_facts_and_leave_no_dangling_grounding() {
     let mut plan = plan_for(&held, &spans, prior);
     plan.fact_supersession = methods.clone();
     let (write_set, _) = lower(plan).unwrap();
-    assert!(write_set.methods().iter().any(
-        |m| matches!(m, Method::RemoveNode { node_id } if node_id == "claim:only-old")
-    ));
+    assert!(write_set
+        .methods()
+        .iter()
+        .any(|m| matches!(m, Method::RemoveNode { node_id } if node_id == "claim:only-old")));
 }

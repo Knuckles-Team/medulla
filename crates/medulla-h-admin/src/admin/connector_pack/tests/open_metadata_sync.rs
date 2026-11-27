@@ -123,7 +123,11 @@ async fn concurrent_term_edit_is_a_conflict_and_catalog_wins() {
             },
         )
         .await;
-    assert!(edited.refusal_text().is_none(), "{:?}", edited.refusal_text());
+    assert!(
+        edited.refusal_text().is_none(),
+        "{:?}",
+        edited.refusal_text()
+    );
 
     // The source keeps term-1's properties and raises its version from 3 to 4.
     let mut raised = records.clone();
@@ -254,13 +258,7 @@ async fn unmapped_types_are_listed_and_skipped() {
     let listed: Vec<(&str, &str, u64)> = report
         .skipped
         .iter()
-        .map(|skip| {
-            (
-                skip.type_name.as_str(),
-                skip.first_key.as_str(),
-                skip.count,
-            )
-        })
+        .map(|skip| (skip.type_name.as_str(), skip.first_key.as_str(), skip.count))
         .collect();
     assert_eq!(
         listed,

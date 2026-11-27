@@ -211,9 +211,9 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
     store.install_deferred_fk_pending_max(
         medulla_server_api::knob_config::knobs().tables_deferred_fk_pending_max as usize,
     );
-    store
-        .column_usage()
-        .configure(column_advice_settings(medulla_server_api::knob_config::knobs()));
+    store.column_usage().configure(column_advice_settings(
+        medulla_server_api::knob_config::knobs(),
+    ));
     medulla_table_store::tables::install_trigger_depth_max(
         medulla_server_api::knob_config::knobs().tables_trigger_depth_max,
     );
@@ -408,7 +408,8 @@ mod tests {
                 &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "pgwire",
-                "actor-a", &medulla_identity_types::identity::default_wire_login_scopes()
+                "actor-a",
+                &medulla_identity_types::identity::default_wire_login_scopes(),
             )
             .unwrap(),
         )
@@ -418,7 +419,8 @@ mod tests {
                 &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "mysql-wire",
-                "actor-a", &medulla_identity_types::identity::default_wire_login_scopes()
+                "actor-a",
+                &medulla_identity_types::identity::default_wire_login_scopes(),
             )
             .unwrap(),
         )

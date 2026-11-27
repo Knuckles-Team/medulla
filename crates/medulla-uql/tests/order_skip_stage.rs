@@ -69,7 +69,10 @@ fn order_is_stable_with_row_id_tiebreak() {
     let all = run(&core, "MATCH () |> ORDER BY size DESC").unwrap();
     assert_eq!(all.ids(), vec!["p1", "d2", "d3", "d4", "d1", "n0"]);
     // The same query twice gives the same order, and the page is a slice of it.
-    assert_eq!(run(&core, "MATCH () |> ORDER BY size DESC").unwrap().ids(), all.ids());
+    assert_eq!(
+        run(&core, "MATCH () |> ORDER BY size DESC").unwrap().ids(),
+        all.ids()
+    );
     assert_eq!(run(&core, text).unwrap().ids(), vec!["d2", "d3", "d4"]);
     // Ascending puts the missing value last as well.
     let ascending = run(&core, "MATCH () |> ORDER BY size").unwrap();
@@ -83,7 +86,11 @@ fn order_is_stable_with_row_id_tiebreak() {
 #[test]
 fn skip_past_the_cap_is_refused() {
     let core = core();
-    let page = run(&core, "MATCH () |> ORDER BY size DESC |> SKIP 100000 |> LIMIT 10").unwrap();
+    let page = run(
+        &core,
+        "MATCH () |> ORDER BY size DESC |> SKIP 100000 |> LIMIT 10",
+    )
+    .unwrap();
     assert!(page.is_empty(), "skipping past the end is an empty page");
     let refused = run(&core, "MATCH () |> SKIP 100001").unwrap_err();
     assert!(refused.starts_with("UQL_SKIP_LIMIT"), "{refused}");

@@ -123,11 +123,15 @@ pub struct AccessRequest {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ContractPromise {
     Schema,
-    Quality { rule: String },
+    Quality {
+        rule: String,
+    },
     Freshness,
     /// A promise that cannot be checked: `of` names it (`schema` or `freshness`) and the
     /// observation it needs is missing (no ingested schema digest, no capture cursor).
-    Unverifiable { of: String },
+    Unverifiable {
+        of: String,
+    },
 }
 
 /// A broken promise observed against live state.

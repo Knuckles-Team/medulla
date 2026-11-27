@@ -71,7 +71,9 @@ pub fn encode_template_list_cursor(tenant_id: &str, template_id: &str) -> String
 
 /// Recover the resume template id from an opaque cursor, or refuse it by name.
 pub fn decode_template_list_cursor(tenant_id: &str, cursor: &str) -> Result<String, String> {
-    LIST_CURSOR.decode(tenant_id, cursor, |id| validate_text("cursor template_id", id).is_ok())
+    LIST_CURSOR.decode(tenant_id, cursor, |id| {
+        validate_text("cursor template_id", id).is_ok()
+    })
 }
 
 /// Read the tenant's current templates, one page at a time.
@@ -1115,7 +1117,9 @@ mod tests {
         };
         assert!(list(None, None).validate().is_ok());
         assert!(list(Some(0), None).validate().is_err());
-        assert!(list(Some(MAX_TEMPLATE_LIST_LIMIT + 1), None).validate().is_err());
+        assert!(list(Some(MAX_TEMPLATE_LIST_LIMIT + 1), None)
+            .validate()
+            .is_err());
         assert!(list(None, Some("")).validate().is_err());
         assert_eq!(list(Some(5), None).page_limit(), 5);
     }

@@ -43,13 +43,13 @@ use medulla_server_api::state::ServerState;
 use medulla_server_ops::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
 use medulla_server_ops::api::query_txn::query_support::bind_sql_text_embedder;
-use medulla_server_ops::api::query_txn::query_support::{execute_ranked, execute_rows};
 use medulla_server_ops::api::query_txn::query_support::overlay_write_set;
 #[cfg(all(feature = "query", feature = "tsdb"))]
 use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;
 use medulla_server_ops::api::query_txn::query_support::uql_text_embedder;
 #[cfg(feature = "tsdb")]
 use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
+use medulla_server_ops::api::query_txn::query_support::{execute_ranked, execute_rows};
 
 #[cfg(feature = "query")]
 use medulla_protocol_types::result_contract::EncodeRef;
@@ -161,14 +161,11 @@ mod spec_intelligence;
 mod sql_read;
 pub(crate) use sql_read::*;
 #[cfg(feature = "query")]
-mod sql_nearest;
-pub mod state_machine_next;
-#[cfg(feature = "query")]
 mod access_port;
 #[cfg(feature = "query")]
-pub mod connector_tool;
-#[cfg(feature = "query")]
 mod asset_usage;
+#[cfg(all(feature = "query", feature = "ann-redb"))]
+mod bookmark_relations;
 #[cfg(feature = "query")]
 mod catalog_glossary;
 #[cfg(feature = "query")]
@@ -178,11 +175,11 @@ mod catalog_read;
 #[cfg(feature = "query")]
 mod catalog_search;
 #[cfg(feature = "query")]
+mod code_context;
+#[cfg(feature = "query")]
 mod column_lineage;
 #[cfg(feature = "query")]
-mod code_context;
-#[cfg(all(feature = "query", feature = "ann-redb"))]
-mod bookmark_relations;
+pub mod connector_tool;
 #[cfg(feature = "query")]
 mod context_compile;
 #[cfg(feature = "query")]
@@ -192,27 +189,30 @@ mod corpus_retrieve;
 #[cfg(feature = "query")]
 mod indexless;
 #[cfg(feature = "query")]
-mod schema_projections;
-#[cfg(feature = "query")]
-mod schema_context;
+mod node_body;
 #[cfg(feature = "query")]
 mod run_metrics;
 #[cfg(feature = "query")]
-mod node_body;
-#[cfg(feature = "query")]
 mod run_trace_export;
 #[cfg(feature = "query")]
-mod standards;
+mod schema_context;
+#[cfg(feature = "query")]
+mod schema_projections;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
 mod source_coverage;
-#[cfg(all(feature = "query", feature = "federation-sql"))]
-pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
-pub(crate) use column_lineage::handle_column_lineage;
+mod sql_nearest;
+#[cfg(feature = "query")]
+mod standards;
+pub mod state_machine_next;
 #[cfg(feature = "query")]
 pub(crate) use code_context::{
     handle_code_context, handle_code_health_sweep, handle_code_navigation, handle_diagnose,
 };
+#[cfg(all(feature = "query", feature = "federation-sql"))]
+pub use column_lineage::derive_lineage;
+#[cfg(feature = "query")]
+pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]
 pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]
@@ -238,17 +238,17 @@ pub(crate) use indexless::handle_indexless_retrieve;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
-pub(crate) use schema_projections::handle_schema_projections;
+pub(crate) use run_trace_export::handle_run_trace_export;
 #[cfg(feature = "query")]
 pub(crate) use schema_context::handle_schema_context;
 #[cfg(feature = "query")]
-pub(crate) use run_trace_export::handle_run_trace_export;
-#[cfg(feature = "query")]
-pub(crate) use standards::handle_standards_drift;
+pub(crate) use schema_projections::handle_schema_projections;
 #[cfg(feature = "query")]
 pub(crate) use search_task::handle_synthesize;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
 pub(crate) use source_coverage::handle_source_coverage;
+#[cfg(feature = "query")]
+pub(crate) use standards::handle_standards_drift;
 mod explain_handlers;
 pub(crate) use explain_handlers::*;
 mod nl;
@@ -310,9 +310,7 @@ mod live_artifact;
 #[cfg(feature = "query")]
 mod stored_query;
 #[cfg(feature = "query")]
-pub use stored_query::{
-    catalog_query_head_nodes, catalog_query_seed_nodes, seed_catalog_queries,
-};
+pub use stored_query::{catalog_query_head_nodes, catalog_query_seed_nodes, seed_catalog_queries};
 #[cfg(feature = "query")]
 mod uql_statement;
 

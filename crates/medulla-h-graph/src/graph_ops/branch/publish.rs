@@ -17,8 +17,8 @@ use std::sync::Arc;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_catalog_types::graph_schema::shadow_branch::SchemaRepairActivation;
 use medulla_mutation_types::branch::{
-    merge_replay_key, BranchCommit, BranchMergeReceipt, BranchRef, ConflictOutcome,
-    ConflictRecord, ConflictSide, MergeChange, MergeOutcome, MergePublication,
+    merge_replay_key, BranchCommit, BranchMergeReceipt, BranchRef, ConflictOutcome, ConflictRecord,
+    ConflictSide, MergeChange, MergeOutcome, MergePublication,
 };
 use medulla_persistence::branch_registry_store::{
     AppendedCommit, BranchCommitInput, HeadMoveError, MergeHeadMove, MergeWrite,
@@ -86,7 +86,10 @@ fn now_ms() -> u64 {
 /// on a branch chain was admitted through the batch compile validators of its
 /// write, so the four steps of the R102.1 gate stand recorded in order; the
 /// candidate digest names the version.
-fn recorded_gate(identity: &EntityIdentity, version: Option<&EntityVersion>) -> SchemaRepairActivation {
+fn recorded_gate(
+    identity: &EntityIdentity,
+    version: Option<&EntityVersion>,
+) -> SchemaRepairActivation {
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(identity.describe().as_bytes());
@@ -246,7 +249,9 @@ pub async fn chain_for_replay(
     verified: &VerifiedRequestContext,
     reference: BranchRef,
 ) -> Result<Vec<ChainEntry>, PublishError> {
-    chain_of(state, verified, reference).await.map(|(_, chain)| chain)
+    chain_of(state, verified, reference)
+        .await
+        .map(|(_, chain)| chain)
 }
 
 /// The registry half of a merge: the branch that takes the head move, the head the merge read and
@@ -329,7 +334,12 @@ pub trait MergeEffects {
         tenant: &str,
     ) -> Result<AppendedCommit, HeadMoveError> {
         step.target
-            .publish_merge(source, tenant, &step.expected_target_head, step.write.clone())
+            .publish_merge(
+                source,
+                tenant,
+                &step.expected_target_head,
+                step.write.clone(),
+            )
             .await
     }
 }
@@ -358,7 +368,11 @@ impl MergeApplyPlan {
         }
         if !self.operations.is_empty() {
             effects
-                .apply_graph(&self.target_graph, &self.operations, self.registry.is_some())
+                .apply_graph(
+                    &self.target_graph,
+                    &self.operations,
+                    self.registry.is_some(),
+                )
                 .await
                 .map_err(MergeCommitError::Graph)?;
         }
@@ -371,7 +385,9 @@ impl MergeApplyPlan {
             ),
             None => None,
         };
-        self.finish(appended).await.map_err(MergeCommitError::Finish)
+        self.finish(appended)
+            .await
+            .map_err(MergeCommitError::Finish)
     }
 
     /// The receipt once the registry transaction committed `appended` (`None` for a merge into
@@ -405,7 +421,9 @@ impl MergeApplyPlan {
         };
         if appended.replayed {
             // The original publication is the answer: read its record back.
-            let chain = load_chain(&step.target).await.map_err(PublishError::Failed)?;
+            let chain = load_chain(&step.target)
+                .await
+                .map_err(PublishError::Failed)?;
             let found = chain
                 .iter()
                 .find(|(commit, _)| commit.id == appended.commit.id)
@@ -518,8 +536,12 @@ pub async fn publish_merge(
     let base_state = base_state_of(&source_chain, &target_chain, &classified.merge_base)?;
     let (base, source_entities, target_entities) = (
         base_state.entities(&tenant).map_err(PublishError::Failed)?,
-        source_state.entities(&tenant).map_err(PublishError::Failed)?,
-        target_state.entities(&tenant).map_err(PublishError::Failed)?,
+        source_state
+            .entities(&tenant)
+            .map_err(PublishError::Failed)?,
+        target_state
+            .entities(&tenant)
+            .map_err(PublishError::Failed)?,
     );
     let mut gates = ValidationGates::new();
     for snapshot in [&base, &source_entities, &target_entities] {
@@ -584,7 +606,9 @@ pub async fn publish_merge(
     // the payload fold.
     let mut next = target_state.clone();
     next.apply_merge(&publication, &classified.target_head);
-    let operations = target_state.operations_to(&next).map_err(PublishError::Failed)?;
+    let operations = target_state
+        .operations_to(&next)
+        .map_err(PublishError::Failed)?;
     let payload = rmp_serde::to_vec_named(&publication)
         .map_err(|error| PublishError::Failed(error.to_string()))?;
     let engine_version = [&source_chain, &target_chain]
@@ -712,8 +736,11 @@ fn trunk_batch(
         EntityIdentity::Node { key, .. } => Some(key.clone()),
         EntityIdentity::Edge { .. } => None,
     };
-    let mut allowed: std::collections::BTreeSet<String> =
-        plan.adopted_from_source.keys().filter_map(node_key).collect();
+    let mut allowed: std::collections::BTreeSet<String> = plan
+        .adopted_from_source
+        .keys()
+        .filter_map(node_key)
+        .collect();
     for (identity, record) in plan.conflicts.iter().zip(conflicts) {
         if matches!(
             record.outcome,
@@ -792,7 +819,9 @@ pub async fn plan_trunk_merge(
         source_head: head.clone(),
         target_head: head.clone(),
     };
-    let mut operations = source_state.trunk_operations().map_err(PublishError::Failed)?;
+    let mut operations = source_state
+        .trunk_operations()
+        .map_err(PublishError::Failed)?;
     let touched = source_state.touched_nodes();
     let mut conflicts = Vec::new();
     if !touched.is_empty() {
@@ -872,17 +901,17 @@ mod tests {
     fn a_trunk_merge_detects_a_node_both_sides_changed_and_keeps_the_main_version() {
         let nodes: BTreeMap<String, Vec<u8>> = [
             ("both".to_string(), row(&[("type", "T"), ("v", "branch")])),
-            ("branch-only".to_string(), row(&[("type", "T"), ("v", "branch")])),
+            (
+                "branch-only".to_string(),
+                row(&[("type", "T"), ("v", "branch")]),
+            ),
         ]
         .into();
         let source = VersionState::from_node_rows(nodes);
         let base: BTreeMap<String, Vec<u8>> =
             [("both".to_string(), row(&[("type", "T"), ("v", "base")]))].into();
-        let main: BTreeMap<String, Vec<u8>> = [(
-            "both".to_string(),
-            row(&[("type", "T"), ("v", "main")]),
-        )]
-        .into();
+        let main: BTreeMap<String, Vec<u8>> =
+            [("both".to_string(), row(&[("type", "T"), ("v", "main")]))].into();
         let (plan, _, _) = trunk_three_way(TENANT, &source, base, main).unwrap();
         assert_eq!(plan.conflicts.len(), 1);
         assert_eq!(plan.adopted_from_source.len(), 1);
@@ -934,7 +963,12 @@ mod tests {
                 return Err(HeadMoveError::Store("registry write failed".to_string()));
             }
             step.target
-                .publish_merge(source, tenant, &step.expected_target_head, step.write.clone())
+                .publish_merge(
+                    source,
+                    tenant,
+                    &step.expected_target_head,
+                    step.write.clone(),
+                )
                 .await
         }
     }
@@ -977,7 +1011,8 @@ mod tests {
         let registry = Arc::new(BranchRegistry::open(dir.to_str().unwrap()).unwrap());
         let source = branch(&registry, "feature/source");
         let target_ref = branch(&registry, "feature/target");
-        let heads = |reference: &BranchRef| registry.merge_view(reference, TENANT).unwrap().unwrap();
+        let heads =
+            |reference: &BranchRef| registry.merge_view(reference, TENANT).unwrap().unwrap();
         let (source_head, target_head) = (heads(&source).head, heads(&target_ref).head);
         let replay_key = merge_replay_key(&source_head, &target_head, "g@1");
         let publication = MergePublication {
@@ -1013,10 +1048,7 @@ mod tests {
                 target: target.clone(),
                 expected_target_head: target_head.clone(),
                 write: MergeWrite {
-                    head_move: MergeHeadMove::Merge {
-                        replay_key,
-                        input,
-                    },
+                    head_move: MergeHeadMove::Merge { replay_key, input },
                     history_rows: Vec::new(),
                 },
             }),
@@ -1059,7 +1091,12 @@ mod tests {
         // A merge whose registry write committed answers its original commit and writes nothing.
         let step = plan.registry.as_ref().unwrap();
         let replayed = target
-            .publish_merge(&source, TENANT, &step.expected_target_head, step.write.clone())
+            .publish_merge(
+                &source,
+                TENANT,
+                &step.expected_target_head,
+                step.write.clone(),
+            )
             .await
             .unwrap();
         assert!(replayed.replayed);

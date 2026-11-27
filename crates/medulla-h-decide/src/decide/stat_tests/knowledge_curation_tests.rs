@@ -12,9 +12,9 @@ use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::knowledge_curation::{
     CurationAdmitted, CurationEdit, CurationEditOp, CurationInputs, CurationOp, CurationProposal,
-    CurationStatus, LoopMetrics, CURATION_EDIT_TOO_LARGE,
-    CURATION_FLAG_UNKNOWN, CURATION_LEASE_REQUIRED, CURATION_NOT_DUE, CURATION_ROLE_REQUIRED,
-    REFERENCE_UNRESOLVED, UPDATE_BASE_STALE,
+    CurationStatus, LoopMetrics, CURATION_EDIT_TOO_LARGE, CURATION_FLAG_UNKNOWN,
+    CURATION_LEASE_REQUIRED, CURATION_NOT_DUE, CURATION_ROLE_REQUIRED, REFERENCE_UNRESOLVED,
+    UPDATE_BASE_STALE,
 };
 use medulla_decision_types::knowledge_flag::{
     FlagKind, FlagState, KnowledgeFlagList, KnowledgeFlagOp, KnowledgeKind,
@@ -112,9 +112,17 @@ async fn seed(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCor
         TRACE,
         json!({"node_type": "RunTrace", "run_id": RUN, "tenant": TENANT}),
     );
-    put(&core, SOURCE, json!({"type": "DataSource", "tenant_id": TENANT}));
+    put(
+        &core,
+        SOURCE,
+        json!({"type": "DataSource", "tenant_id": TENANT}),
+    );
     put(&core, SKILL, json!({"type": "Skill", "tenant_id": TENANT}));
-    put(&core, "orders.amount", json!({"type": "Column", "tenant_id": TENANT}));
+    put(
+        &core,
+        "orders.amount",
+        json!({"type": "Column", "tenant_id": TENANT}),
+    );
     core
 }
 
@@ -147,7 +155,13 @@ async fn raise(
     receipt.flag.flag_id
 }
 
-fn proposal(id: &str, flags: &[&str], before: Option<&str>, after: &str, body: &str) -> CurationProposal {
+fn proposal(
+    id: &str,
+    flags: &[&str],
+    before: Option<&str>,
+    after: &str,
+    body: &str,
+) -> CurationProposal {
     CurationProposal {
         proposal_id: id.into(),
         flag_ids: flags.iter().map(|flag| flag.to_string()).collect(),
@@ -289,7 +303,12 @@ async fn refusals_leave_flags_open() {
 
     // No lease, no curation; no scope, no curation.
     refused(
-        run(&h, &who, propose_op(1, proposal("p0", &[&flag], None, "v2", body), body)).await,
+        run(
+            &h,
+            &who,
+            propose_op(1, proposal("p0", &[&flag], None, "v2", body), body),
+        )
+        .await,
         CURATION_LEASE_REQUIRED.as_str(),
     );
     refused(
@@ -298,18 +317,37 @@ async fn refusals_leave_flags_open() {
     );
     let epoch = claim(&h, &who).await;
     refused(
-        run(&h, &who, propose_op(epoch + 1, proposal("p0", &[&flag], None, "v2", body), body)).await,
+        run(
+            &h,
+            &who,
+            propose_op(epoch + 1, proposal("p0", &[&flag], None, "v2", body), body),
+        )
+        .await,
         CURATION_LEASE_REQUIRED.as_str(),
     );
 
     // An unknown flag, a body over 64 KiB, an unresolved reference and a stale base.
     refused(
-        run(&h, &who, propose_op(epoch, proposal("p0", &["flag:none"], None, "v2", body), body)).await,
+        run(
+            &h,
+            &who,
+            propose_op(
+                epoch,
+                proposal("p0", &["flag:none"], None, "v2", body),
+                body,
+            ),
+        )
+        .await,
         CURATION_FLAG_UNKNOWN.as_str(),
     );
     let big = "x".repeat(64 * 1024 + 1);
     refused(
-        run(&h, &who, propose_op(epoch, proposal("p0", &[&flag], None, "v2", &big), &big)).await,
+        run(
+            &h,
+            &who,
+            propose_op(epoch, proposal("p0", &[&flag], None, "v2", &big), &big),
+        )
+        .await,
         CURATION_EDIT_TOO_LARGE.as_str(),
     );
     let mut dangling = proposal("p0", &[&flag], None, "v2", body);
@@ -319,7 +357,16 @@ async fn refusals_leave_flags_open() {
         REFERENCE_UNRESOLVED.as_str(),
     );
     refused(
-        run(&h, &who, propose_op(epoch, proposal("p0", &[&flag], Some("v0"), "v2", body), body)).await,
+        run(
+            &h,
+            &who,
+            propose_op(
+                epoch,
+                proposal("p0", &[&flag], Some("v0"), "v2", body),
+                body,
+            ),
+        )
+        .await,
         UPDATE_BASE_STALE.as_str(),
     );
 
@@ -332,7 +379,10 @@ async fn refusals_leave_flags_open() {
     .await
     .expect("admitted");
     commit(&core, &admitted);
-    refused(run(&h, &who, inputs(epoch, false)).await, CURATION_NOT_DUE.as_str());
+    refused(
+        run(&h, &who, inputs(epoch, false)).await,
+        CURATION_NOT_DUE.as_str(),
+    );
     assert!(run(&h, &who, inputs(epoch, true)).await.is_ok());
     // No refusal changed a flag.
     assert_eq!(open_flags(&h).await, 1);
@@ -351,7 +401,11 @@ async fn adoption_closes_the_addressed_flags() {
     let admitted = run(
         &h,
         &who,
-        propose_op(epoch, proposal("p1", &[&first, &second], None, "v2", body), body),
+        propose_op(
+            epoch,
+            proposal("p1", &[&first, &second], None, "v2", body),
+            body,
+        ),
     )
     .await
     .expect("admitted");
@@ -420,7 +474,10 @@ async fn adoption_closes_the_addressed_flags() {
     commit(&core, &closing);
     assert_eq!(open_flags(&h).await, 0);
     // Both flags are `Curated`; a second status closes nothing.
-    assert!(state.flags.iter().all(|row| row.state == FlagState::Curated));
+    assert!(state
+        .flags
+        .iter()
+        .all(|row| row.state == FlagState::Curated));
     let again = run(&h, &who, status("p1")).await.expect("status");
     assert!(again.operations.is_empty());
 }
@@ -432,22 +489,35 @@ async fn metrics_report_recurrence_and_latency() {
     let core = seed(&h).await;
     let who = curator();
     // Three stored flags: two curated (one came back) and one dismissed.
-    let row = |id: &str, state: &str, raised: u64, resolved: Option<u64>, times: u64, reopened: bool| {
-        let mut props = json!({
-            "type": "KnowledgeFlag", "node_type": "KnowledgeFlag", "flag_id": id,
-            "tenant_id": TENANT, "knowledge_kind": "domain", "flag_kind": "missing",
-            "target_ref": format!("topic:{id}"), "what_observed": "x", "raised_by": "a",
-            "run_id": RUN, "raised_at_ms": raised, "state": state, "raise_count": 1,
-            "reopened": reopened, "curated_times": times,
-        });
-        if let Some(resolved) = resolved {
-            props["resolved_at_ms"] = resolved.into();
-        }
-        props
-    };
-    put(&core, "flag:m1", row("flag:m1", "curated", 100, Some(300), 1, false));
-    put(&core, "flag:m2", row("flag:m2", "curated", 200, Some(800), 1, false));
-    put(&core, "flag:m3", row("flag:m3", "dismissed", 300, Some(350), 0, false));
+    let row =
+        |id: &str, state: &str, raised: u64, resolved: Option<u64>, times: u64, reopened: bool| {
+            let mut props = json!({
+                "type": "KnowledgeFlag", "node_type": "KnowledgeFlag", "flag_id": id,
+                "tenant_id": TENANT, "knowledge_kind": "domain", "flag_kind": "missing",
+                "target_ref": format!("topic:{id}"), "what_observed": "x", "raised_by": "a",
+                "run_id": RUN, "raised_at_ms": raised, "state": state, "raise_count": 1,
+                "reopened": reopened, "curated_times": times,
+            });
+            if let Some(resolved) = resolved {
+                props["resolved_at_ms"] = resolved.into();
+            }
+            props
+        };
+    put(
+        &core,
+        "flag:m1",
+        row("flag:m1", "curated", 100, Some(300), 1, false),
+    );
+    put(
+        &core,
+        "flag:m2",
+        row("flag:m2", "curated", 200, Some(800), 1, false),
+    );
+    put(
+        &core,
+        "flag:m3",
+        row("flag:m3", "dismissed", 300, Some(350), 0, false),
+    );
     put(&core, "flag:m4", row("flag:m4", "open", 400, None, 1, true));
     let write = run(
         &h,

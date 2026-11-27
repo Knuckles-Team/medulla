@@ -23,19 +23,22 @@ pub(super) fn publish_invariant(h: &Harness, tenant: &str, nonce: u8, invariant:
     draft.kind = AgentComponentKind::RuleInvariant;
     draft.attributes = invariant.to_attributes();
     h.store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                &h.store,
-                tenant,
-                &format!("invariant-{}", invariant.invariant_iri),
-                nonce,
-                0,
-                "agent-component:publish",
-            ),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    &h.store,
+                    tenant,
+                    &format!("invariant-{}", invariant.invariant_iri),
+                    nonce,
+                    0,
+                    "agent-component:publish",
+                ),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .expect("invariant publishes");
 }
 
@@ -369,10 +372,16 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
     publish_invariant(&h, TENANT, 1, &invariant("inv:no-skip", "rule:skip"));
 
     // A proposal stays Proposed, bound to its run output.
-    let v1 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None)).await.unwrap();
+    let v1 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None))
+        .await
+        .unwrap();
     assert_eq!((v1.version, v1.state), (1, RuleLifecycle::Proposed));
     assert_eq!(v1.source_output_digest, OUTPUT_A);
-    assert!(h.store.published_guardrail_rules(TENANT).unwrap().is_empty());
+    assert!(h
+        .store
+        .published_guardrail_rules(TENANT)
+        .unwrap()
+        .is_empty());
 
     // An approval over another output is refused.
     let mismatch = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_B)).await;
@@ -380,12 +389,16 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
 
     // The first approval records its approver and leaves the version Proposed; the same
     // approver twice is refused; a second distinct approver activates it.
-    let first = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_A)).await.unwrap();
+    let first = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_A))
+        .await
+        .unwrap();
     assert_eq!(first.state, RuleLifecycle::Proposed);
     assert!(first.approver.is_some() && first.approver_second.is_none());
     let twice = rule_op(&h, "governor", approve_op("rule:tier", 1, OUTPUT_A)).await;
     assert!(twice.unwrap_err().starts_with("RULE_APPROVER_NOT_DISTINCT"));
-    let active = rule_op(&h, "governor-2", approve_op("rule:tier", 1, OUTPUT_A)).await.unwrap();
+    let active = rule_op(&h, "governor-2", approve_op("rule:tier", 1, OUTPUT_A))
+        .await
+        .unwrap();
     assert_eq!(active.state, RuleLifecycle::Active);
     assert_ne!(active.approver, active.approver_second);
     assert_eq!(h.store.published_guardrail_rules(TENANT).unwrap().len(), 1);
@@ -393,24 +406,45 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
     // A predecessor that is not active is refused; the active one is superseded on activation.
     let stale = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_B, Some(7))).await;
     assert!(stale.unwrap_err().starts_with("RULE_PREDECESSOR_STALE"));
-    let v2 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_B, Some(1))).await.unwrap();
+    let v2 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_B, Some(1)))
+        .await
+        .unwrap();
     assert_eq!((v2.version, v2.predecessor), (2, Some(1)));
-    rule_op(&h, "governor", approve_op("rule:tier", 2, OUTPUT_B)).await.unwrap();
-    let v2 = rule_op(&h, "governor-2", approve_op("rule:tier", 2, OUTPUT_B)).await.unwrap();
+    rule_op(&h, "governor", approve_op("rule:tier", 2, OUTPUT_B))
+        .await
+        .unwrap();
+    let v2 = rule_op(&h, "governor-2", approve_op("rule:tier", 2, OUTPUT_B))
+        .await
+        .unwrap();
     assert_eq!(v2.state, RuleLifecycle::Active);
     let superseded = rule_op(&h, "governor", revoke_op("rule:tier", 1)).await;
     assert!(superseded.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
 
     // Revocation names the active version and keeps the history.
-    let revoked = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await.unwrap();
+    let revoked = rule_op(&h, "governor", revoke_op("rule:tier", 2))
+        .await
+        .unwrap();
     assert_eq!(revoked.state, RuleLifecycle::Revoked);
     // The revoke takes effect: that version's revision is retired in the same write and the rule
     // is no longer in the set `GuardrailEntailment` reasons over. The retirement is per revision:
     // the component stays published and takes a later version.
-    assert!(h.store.published_guardrail_rules(TENANT).unwrap().is_empty());
-    let retired = h.store.current_component(TENANT, "rule:tier").unwrap().unwrap();
-    assert!(medulla_agent_types::agent_guardrail::is_revision_retired(&retired.attributes));
-    assert_eq!(retired.lifecycle, medulla_agent_types::agent_library::AgentLibraryLifecycle::Published);
+    assert!(h
+        .store
+        .published_guardrail_rules(TENANT)
+        .unwrap()
+        .is_empty());
+    let retired = h
+        .store
+        .current_component(TENANT, "rule:tier")
+        .unwrap()
+        .unwrap();
+    assert!(medulla_agent_types::agent_guardrail::is_revision_retired(
+        &retired.attributes
+    ));
+    assert_eq!(
+        retired.lifecycle,
+        medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
+    );
     let again = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await;
     assert!(again.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
     let transitions = h
@@ -421,23 +455,41 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
 
     // Revoke v1 then approve v2 publishes a new revision under the same component id: the later
     // version is entailed again, and the retired revision stays out of every lookup.
-    let v3 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None)).await.unwrap();
+    let v3 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None))
+        .await
+        .unwrap();
     assert_eq!(v3.version, 3);
-    rule_op(&h, "governor", approve_op("rule:tier", 3, OUTPUT_A)).await.unwrap();
-    let v3 = rule_op(&h, "governor-2", approve_op("rule:tier", 3, OUTPUT_A)).await.unwrap();
+    rule_op(&h, "governor", approve_op("rule:tier", 3, OUTPUT_A))
+        .await
+        .unwrap();
+    let v3 = rule_op(&h, "governor-2", approve_op("rule:tier", 3, OUTPUT_A))
+        .await
+        .unwrap();
     assert_eq!(v3.state, RuleLifecycle::Active);
     let entailed = h.store.published_guardrail_rules(TENANT).unwrap();
     assert_eq!(entailed.len(), 1, "the later version is entailed");
     assert_eq!(entailed[0].rule_id, "rule:tier");
-    let head = h.store.current_component(TENANT, "rule:tier").unwrap().unwrap();
-    assert!(!medulla_agent_types::agent_guardrail::is_revision_retired(&head.attributes));
+    let head = h
+        .store
+        .current_component(TENANT, "rule:tier")
+        .unwrap()
+        .unwrap();
+    assert!(!medulla_agent_types::agent_guardrail::is_revision_retired(
+        &head.attributes
+    ));
     assert!(head.entry_revision > retired.entry_revision);
 
     // The invariant gate is not replaced by approval.
-    rule_op(&h, "governor", propose_op("rule:skip", OUTPUT_A, None)).await.unwrap();
-    rule_op(&h, "governor", approve_op("rule:skip", 1, OUTPUT_A)).await.unwrap();
+    rule_op(&h, "governor", propose_op("rule:skip", OUTPUT_A, None))
+        .await
+        .unwrap();
+    rule_op(&h, "governor", approve_op("rule:skip", 1, OUTPUT_A))
+        .await
+        .unwrap();
     let blocked = rule_op(&h, "governor-2", approve_op("rule:skip", 1, OUTPUT_A)).await;
-    assert!(blocked.unwrap_err().starts_with("RULE_CONTRADICTS_INVARIANT"));
+    assert!(blocked
+        .unwrap_err()
+        .starts_with("RULE_CONTRADICTS_INVARIANT"));
 
     // A caller of another tenant cannot act on this tenant's versions.
     let foreign = VerifiedRequestContext::verified_for_test_in_tenant("governor", FOREIGN);
@@ -448,7 +500,9 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
         approve_op("rule:tier", 2, OUTPUT_B),
     )
     .await;
-    assert!(decode::<medulla_agent_types::agent_guardrail::RuleVersion>(crossed)
-        .unwrap_err()
-        .starts_with("ACCESS_DENIED"));
+    assert!(
+        decode::<medulla_agent_types::agent_guardrail::RuleVersion>(crossed)
+            .unwrap_err()
+            .starts_with("ACCESS_DENIED")
+    );
 }

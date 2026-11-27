@@ -34,9 +34,7 @@ pub fn compare_features(
                 .find(|container| container.name == feature.container)
             {
                 None => MissingKind::Edge,
-                Some(container)
-                    if container.support.contains(&feature.attach_point.file) =>
-                {
+                Some(container) if container.support.contains(&feature.attach_point.file) => {
                     return None;
                 }
                 Some(_) => MissingKind::AttachPoint,

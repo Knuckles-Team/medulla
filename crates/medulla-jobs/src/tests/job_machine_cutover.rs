@@ -20,7 +20,10 @@ fn writer_source(text: &str) -> &str {
 fn no_site_sets_state_outside_step() {
     for (name, text) in [
         ("store.rs", include_str!("../store.rs")),
-        ("store/task_queue.rs", include_str!("../store/task_queue.rs")),
+        (
+            "store/task_queue.rs",
+            include_str!("../store/task_queue.rs"),
+        ),
         ("claim.rs", include_str!("../claim.rs")),
         ("model.rs", include_str!("../model.rs")),
         ("intent.rs", include_str!("../intent.rs")),
@@ -30,7 +33,12 @@ fn no_site_sets_state_outside_step() {
             !writer.contains(".state ="),
             "{name} assigns the job state outside AnalyticsJob::transition"
         );
-        for field in [".cancel_requested =", "cancel_requested:", ".not_before_ms =", "job.lease ="] {
+        for field in [
+            ".cancel_requested =",
+            "cancel_requested:",
+            ".not_before_ms =",
+            "job.lease =",
+        ] {
             assert!(
                 !writer.contains(field),
                 "{name} still writes the deleted field {field}"

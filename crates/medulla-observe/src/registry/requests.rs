@@ -113,7 +113,9 @@ impl RequestRegistry {
 
     /// Set the bound: the server's `max_in_flight`.
     pub fn set_capacity(&self, capacity: usize) {
-        self.shared.capacity.store(capacity.max(1), Ordering::Relaxed);
+        self.shared
+            .capacity
+            .store(capacity.max(1), Ordering::Relaxed);
     }
 
     /// Register a request. The returned guard removes the row when dropped. A request that

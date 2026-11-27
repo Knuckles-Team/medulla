@@ -25,8 +25,8 @@ use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 
-use super::support::{abstained, advisory, invalid, json_param, single_option, text_param};
 use super::support::unsigned_param;
+use super::support::{abstained, advisory, invalid, json_param, single_option, text_param};
 use super::DecisionFamily;
 
 /// The family of the `council_coordination` question kind.

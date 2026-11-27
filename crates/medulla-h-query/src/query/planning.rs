@@ -348,7 +348,10 @@ pub fn run_unified_with<T>(
     served: ServedIndexes<'_>,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
-    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+    finish: impl FnOnce(
+        &medulla_query_types::wire::Plan,
+        &medulla_exec::exec::PlanCtx,
+    ) -> Result<T, String>,
 ) -> Result<T, String> {
     #[cfg(feature = "tsdb")]
     let TsdbLegBind {
@@ -386,12 +389,14 @@ pub fn run_unified_with<T>(
         });
         // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a source without its own quota runs under the
         // resolved `foreign.default_quota.*` knobs.
-        session.set_default_quota(medulla_catalog_types::consolidation_isolation::SourceQuota {
-            max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
-                .unwrap_or(u32::MAX),
-            max_rows: knobs.foreign_default_quota_max_rows,
-            max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
-        });
+        session.set_default_quota(
+            medulla_catalog_types::consolidation_isolation::SourceQuota {
+                max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
+                    .unwrap_or(u32::MAX),
+                max_rows: knobs.foreign_default_quota_max_rows,
+                max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
+            },
+        );
         // MEDULLA-FEDERATED-QUERY-R729: the price of a KiB a raw-access source scans.
         session.set_raw_scan_cost_per_kib(knobs.federated_raw_scan_cost_per_kib);
         // MEDULLA-UNIFIED-DATA-PLANE-R038.2.2: the copy route's row bound and watermark ttl.
@@ -418,33 +423,36 @@ pub fn run_unified_with<T>(
     // The GROUP stage's key-group bound is the registry knob `uql.group.max_groups`
     // (MEDULLA-FEDERATED-QUERY-R733); the integrity-shape node budget is the registry
     // knob `validate_shape.node_budget` (MEDULLA-FEDERATED-QUERY-R005.700).
-    let ctx = PlanCtx::new(view, semantic).with_budget(medulla_exec::budget::Budget {
-        max_groups: usize::try_from(medulla_server_api::knob_config::knobs().uql_group_max_groups)
+    let ctx = PlanCtx::new(view, semantic)
+        .with_budget(medulla_exec::budget::Budget {
+            max_groups: usize::try_from(
+                medulla_server_api::knob_config::knobs().uql_group_max_groups,
+            )
             .unwrap_or(usize::MAX),
-        max_shape_nodes: usize::try_from(
-            medulla_server_api::knob_config::knobs().validate_shape_node_budget,
-        )
-        .unwrap_or(usize::MAX),
-        ..medulla_exec::budget::Budget::default()
-    })
-    // MEDULLA-FEDERATED-QUERY-R039: the replenishment rounds and first oversample window
-    // are the registry knobs `retrieval.replenish_max_rounds` / `retrieval.oversample_factor`.
-    .with_replenish(medulla_exec::exec::vector_rank::ReplenishPolicy {
-        max_rounds: usize::try_from(
-            medulla_server_api::knob_config::knobs().retrieval_replenish_max_rounds,
-        )
-        .unwrap_or(usize::MAX),
-        oversample: usize::try_from(
-            medulla_server_api::knob_config::knobs().retrieval_oversample_factor,
-        )
-        .unwrap_or(usize::MAX),
-    })
-    // MEDULLA-CQ-XSRC-R009.3: a `DECAY HALF_LIFE` stage measures age against the engine
-    // clock, never the process wall clock, so a replica and a test clock offset agree.
-    .with_now_ms(
-        i64::try_from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())
-            .unwrap_or(i64::MAX),
-    );
+            max_shape_nodes: usize::try_from(
+                medulla_server_api::knob_config::knobs().validate_shape_node_budget,
+            )
+            .unwrap_or(usize::MAX),
+            ..medulla_exec::budget::Budget::default()
+        })
+        // MEDULLA-FEDERATED-QUERY-R039: the replenishment rounds and first oversample window
+        // are the registry knobs `retrieval.replenish_max_rounds` / `retrieval.oversample_factor`.
+        .with_replenish(medulla_exec::exec::vector_rank::ReplenishPolicy {
+            max_rounds: usize::try_from(
+                medulla_server_api::knob_config::knobs().retrieval_replenish_max_rounds,
+            )
+            .unwrap_or(usize::MAX),
+            oversample: usize::try_from(
+                medulla_server_api::knob_config::knobs().retrieval_oversample_factor,
+            )
+            .unwrap_or(usize::MAX),
+        })
+        // MEDULLA-CQ-XSRC-R009.3: a `DECAY HALF_LIFE` stage measures age against the engine
+        // clock, never the process wall clock, so a replica and a test clock offset agree.
+        .with_now_ms(
+            i64::try_from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())
+                .unwrap_or(i64::MAX),
+        );
     #[cfg(feature = "text")]
     let need_text = plan_needs_text(&ops);
     #[cfg(feature = "text")]
@@ -696,7 +704,9 @@ pub(crate) fn run_unified_bind_retrieval<'a>(
         // carries only the cut bounds (MEDULLA-FEDERATED-QUERY-R040.2.2).
         let policy =
             medulla_exec::exec::topic::TopicRankingPolicy::new(top_topics, topic.min_weight)?
-                .with_weight(medulla_server_api::knob_config::knobs().retrieval_topic_weight as f32)?;
+                .with_weight(
+                    medulla_server_api::knob_config::knobs().retrieval_topic_weight as f32,
+                )?;
         ctx = ctx.with_topic_policy(policy);
         // MEDULLA-FEDERATED-QUERY-R040.2.3: the one served backend reads the centroid nodes of
         // the read snapshot; no request field selects another. The centroids carry the
@@ -1005,7 +1015,10 @@ pub(crate) async fn served_reputation_source(
 /// Parse UQL `text` into the `wire::Plan` every UQL front-end runs; a parse error is
 /// the caret-annotated refusal response.
 #[cfg(feature = "query")]
-pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_query_types::wire::Plan, Response> {
+pub(crate) fn parse_uql(
+    req_id: u64,
+    text: &str,
+) -> Result<medulla_query_types::wire::Plan, Response> {
     medulla_uql::parse(text)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(text))))
 }
@@ -1251,8 +1264,12 @@ pub(crate) async fn bound_tsdb_leg(
 #[cfg(feature = "query")]
 fn with_usage_log<T>(
     log: Option<Arc<dyn medulla_exec::exec::UsageSource>>,
-    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
-) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
+    finish: impl FnOnce(
+        &medulla_query_types::wire::Plan,
+        &medulla_exec::exec::PlanCtx,
+    ) -> Result<T, String>,
+) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
+{
     move |plan, ctx| match log.as_deref() {
         Some(log) => finish(plan, &ctx.clone().with_usage(log)),
         None => finish(plan, ctx),
@@ -1263,8 +1280,12 @@ fn with_usage_log<T>(
 #[cfg(all(feature = "query", feature = "decide"))]
 fn with_decision_log<T>(
     log: Option<Arc<dyn medulla_exec::exec::DecisionSource>>,
-    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
-) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
+    finish: impl FnOnce(
+        &medulla_query_types::wire::Plan,
+        &medulla_exec::exec::PlanCtx,
+    ) -> Result<T, String>,
+) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
+{
     move |plan, ctx| match log.as_deref() {
         Some(log) => finish(plan, &ctx.clone().with_decisions(log)),
         None => finish(plan, ctx),
@@ -1410,10 +1431,10 @@ mod tensor_served_round_trip_tests {
 mod tenant_scope_served_tests {
     use super::{run_unified_off_lock_with, ServedPlanLegs, UnifiedRead};
     use crate::query::segment_filter::ReadScope;
-    use medulla_query_types::wire::{Op, Plan};
     use medulla_graph_core::graph::{GraphCore, GraphView};
     use medulla_identity_types::identity::UnitPrincipal;
     use medulla_identity_types::tenancy::TenantId;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_server_api::read_scope::{bound_variables, ReadCaller};
     use medulla_server_api::state::ServerState;
     use medulla_server_ops::api::query_txn::query_support::execute_rows;
@@ -1710,7 +1731,10 @@ mod tests {
         Option<ModalityPair>,
     );
 
-    fn bound_by(view: &medulla_graph_core::graph::GraphView, retrieval: Option<&RetrievalRequest>) -> Bound {
+    fn bound_by(
+        view: &medulla_graph_core::graph::GraphView,
+        retrieval: Option<&RetrievalRequest>,
+    ) -> Bound {
         let semantic = SemanticStore::new();
         run_unified_with(
             medulla_query_types::wire::Plan::new(Vec::new()),
@@ -1801,10 +1825,16 @@ mod tests {
         // No registry entry: the request refuses before any rank.
         let ctx = medulla_exec::exec::PlanCtx::new(&view, &store);
         let refusal = bind_modality_encoders(ctx, &embed, &pair).err().unwrap();
-        assert!(refusal.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{refusal}");
+        assert!(
+            refusal.starts_with("QUERY_ENCODER_UNAVAILABLE"),
+            "{refusal}"
+        );
         // A plan that embeds no text needs no encoder.
         let ctx = medulla_exec::exec::PlanCtx::new(&view, &store);
-        assert!(bind_modality_encoders(ctx, &[], &pair).unwrap().embedder.is_none());
+        assert!(bind_modality_encoders(ctx, &[], &pair)
+            .unwrap()
+            .embedder
+            .is_none());
         // The registered encoder for the exact space tuple is the one bound.
         medulla_plan::embed_registry::modality_encoders()
             .register(

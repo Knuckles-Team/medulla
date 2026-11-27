@@ -22,10 +22,8 @@ use medulla_query_types::quantum::{
 };
 use medulla_query_types::telemetry_derive::TelemetryDeriveReceipt;
 use medulla_query_types::wire::DiscoverResult;
-use medulla_source_types::{
-    source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
-};
 use medulla_source_types::source_document::SourceIngestionOutcome;
+use medulla_source_types::source_ingestion::SourceIngestStatus as SourceIngestStatusBody;
 #[cfg(feature = "modality-serving")]
 mod modality;
 mod semantic;

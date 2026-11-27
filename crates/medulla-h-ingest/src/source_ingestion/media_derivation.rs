@@ -7,11 +7,9 @@
 use medulla_modality::media_memory::{
     plan_media_write, DerivationInput, DerivationKind, MediaBlobRef, MediaRefusal,
 };
-use medulla_protocol_types::protocol::Method;
-use medulla_source_types::source_ingestion::{
-    SourceIngestionBatch, MEDIA_DERIVATION_FEATURE_KIND,
-};
 use medulla_protocol_types::change_envelope::BlobReference;
+use medulla_protocol_types::protocol::Method;
+use medulla_source_types::source_ingestion::{SourceIngestionBatch, MEDIA_DERIVATION_FEATURE_KIND};
 use medulla_types::media_derivation::MediaDerivationValue;
 
 use super::{policy, AdmittedRecords, PrepareContext};
@@ -52,16 +50,17 @@ fn plan_feature(
         text: value.text,
         embedding: value.embedding,
     };
-    let plan = plan_media_write(&item, true, std::slice::from_ref(&input)).map_err(|refusal| {
-        match refusal {
-            MediaRefusal::DerivationTextEmpty => {
-                format!("{DERIVATION_EMPTY}: feature {}", feature.feature_id)
-            }
-            MediaRefusal::DigestMalformed => {
-                format!("PARAMETER_INVALID: feature {}", feature.feature_id)
-            }
-        }
-    })?;
+    let plan =
+        plan_media_write(&item, true, std::slice::from_ref(&input)).map_err(
+            |refusal| match refusal {
+                MediaRefusal::DerivationTextEmpty => {
+                    format!("{DERIVATION_EMPTY}: feature {}", feature.feature_id)
+                }
+                MediaRefusal::DigestMalformed => {
+                    format!("PARAMETER_INVALID: feature {}", feature.feature_id)
+                }
+            },
+        )?;
     let mut planned = plan
         .derivations
         .into_iter()
@@ -83,12 +82,15 @@ pub(super) fn materialize_media_derivations(
         .iter()
         .filter(|feature| feature.kind == MEDIA_DERIVATION_FEATURE_KIND)
     {
-        let blob = admitted.record_blobs.get(&feature.object_id).ok_or_else(|| {
-            format!(
-                "PARAMETER_INVALID: feature {} names {}, which is not a record of this batch",
-                feature.feature_id, feature.object_id
-            )
-        })?;
+        let blob = admitted
+            .record_blobs
+            .get(&feature.object_id)
+            .ok_or_else(|| {
+                format!(
+                    "PARAMETER_INVALID: feature {} names {}, which is not a record of this batch",
+                    feature.feature_id, feature.object_id
+                )
+            })?;
         let planned = plan_feature(feature, blob)?;
         let node_id = planned.id.clone();
         admitted.methods.push(Method::AddNode {
@@ -156,16 +158,24 @@ mod tests {
     // spec: MEDULLA-MEDIA-VOCAB-R650.3
     #[test]
     fn derivation_feature_materializes() {
-        let first = plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
-        let again = plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
+        let first =
+            plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
+        let again =
+            plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
         assert_eq!(first.id, again.id);
         assert_eq!(first.derived_from, "source:item");
         assert_eq!(first.embedding, vec![1.0, 0.0]);
-        let other = plan_feature(&feature("a red bicycle", "transcript"), &blob(&"a".repeat(64))).unwrap();
+        let other = plan_feature(
+            &feature("a red bicycle", "transcript"),
+            &blob(&"a".repeat(64)),
+        )
+        .unwrap();
         assert_ne!(first.id, other.id);
-        assert!(plan_feature(&feature("", "caption"), &blob(&"a".repeat(64)))
-            .unwrap_err()
-            .starts_with(DERIVATION_EMPTY));
+        assert!(
+            plan_feature(&feature("", "caption"), &blob(&"a".repeat(64)))
+                .unwrap_err()
+                .starts_with(DERIVATION_EMPTY)
+        );
         assert!(plan_feature(&feature("x", "poem"), &blob(&"a".repeat(64)))
             .unwrap_err()
             .starts_with(DERIVATION_KIND_INVALID));

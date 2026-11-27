@@ -1,6 +1,6 @@
 //! The runtime registries.
 
-pub mod tasks;
-pub mod readiness;
 pub mod locks;
+pub mod readiness;
 pub mod requests;
+pub mod tasks;

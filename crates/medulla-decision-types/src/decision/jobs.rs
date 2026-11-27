@@ -868,19 +868,17 @@ mod tests {
         let wire = serde_json::to_value(&record).unwrap();
         assert_eq!(wire["state"]["state"], "failed");
         // `succeeded` is still a known tag: it is refused for its missing output, not its name.
-        let error = serde_json::from_value::<DecisionJobOutcome>(
-            serde_json::json!({"state": "succeeded"}),
-        )
-        .unwrap_err()
-        .to_string();
+        let error =
+            serde_json::from_value::<DecisionJobOutcome>(serde_json::json!({"state": "succeeded"}))
+                .unwrap_err()
+                .to_string();
         assert!(error.contains("output"), "{error}");
         // The unwritten variants are gone.
         for word in ["queued", "running", "cancelled"] {
-            let error = serde_json::from_value::<DecisionJobOutcome>(
-                serde_json::json!({ "state": word }),
-            )
-            .unwrap_err()
-            .to_string();
+            let error =
+                serde_json::from_value::<DecisionJobOutcome>(serde_json::json!({ "state": word }))
+                    .unwrap_err()
+                    .to_string();
             assert!(error.contains("unknown variant"), "{word}: {error}");
         }
         let source = include_str!("jobs.rs");

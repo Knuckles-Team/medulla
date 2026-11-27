@@ -56,12 +56,10 @@ async fn seed_action(h: &Harness, id: &str, tenant: &str, actor: &str) {
         "_owner": "decider",
     });
     let guard = h.state.read().await;
-    guard
-        .registry
-        .get(GRAPH)
-        .unwrap()
-        .core
-        .add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
+    guard.registry.get(GRAPH).unwrap().core.add_node(
+        id.to_string(),
+        rmp_serde::to_vec_named(&properties).unwrap(),
+    );
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R702.6: record, nearest and a self-reported
@@ -78,7 +76,13 @@ async fn correction_commits_three_effects_atomically() {
     seed_action(&h, "action:own", TENANT, "decider").await;
 
     let recorded: CorrectionRecorded = decode(
-        dispatch(&h, TENANT, &["corrector"], record(correction("c1", "right"))).await,
+        dispatch(
+            &h,
+            TENANT,
+            &["corrector"],
+            record(correction("c1", "right")),
+        )
+        .await,
     )
     .unwrap();
     let receipt = recorded.receipt_id.clone();
@@ -87,7 +91,8 @@ async fn correction_commits_three_effects_atomically() {
         let core = &guard.registry.get(GRAPH).unwrap().core;
         for prefix in ["correction", "rule", "outcome", "case"] {
             assert!(
-                core.get_node_properties(&format!("{prefix}:{receipt}")).is_some(),
+                core.get_node_properties(&format!("{prefix}:{receipt}"))
+                    .is_some(),
                 "{prefix} node is committed"
             );
         }
@@ -104,7 +109,13 @@ async fn correction_commits_three_effects_atomically() {
     let mut foreign_input = correction("c2", "other");
     foreign_input.target = "action:other".into();
     let _: CorrectionRecorded = decode(
-        dispatch(&h, "tenant-other", &["corrector"], record(foreign_input.clone())).await,
+        dispatch(
+            &h,
+            "tenant-other",
+            &["corrector"],
+            record(foreign_input.clone()),
+        )
+        .await,
     )
     .unwrap();
     let hidden = dispatch(&h, TENANT, &["corrector"], record(foreign_input)).await;
@@ -113,14 +124,19 @@ async fn correction_commits_three_effects_atomically() {
         missing.target = "action:none".into();
         dispatch(&h, TENANT, &["corrector"], record(missing)).await
     };
-    assert!(hidden.refusal_text().unwrap().starts_with("CORRECTION_NOT_FOUND"));
+    assert!(hidden
+        .refusal_text()
+        .unwrap()
+        .starts_with("CORRECTION_NOT_FOUND"));
     assert_eq!(hidden.refusal_text(), absent.refusal_text());
     let nearest: CorrectionNearest = decode(
         dispatch(
             &h,
             TENANT,
             &["corrector"],
-            CorrectionOp::Nearest { target: "action:7".into() },
+            CorrectionOp::Nearest {
+                target: "action:7".into(),
+            },
         )
         .await,
     )
@@ -133,7 +149,9 @@ async fn correction_commits_three_effects_atomically() {
             &h,
             TENANT,
             &["test"],
-            CorrectionOp::Get { receipt_id: receipt.clone() },
+            CorrectionOp::Get {
+                receipt_id: receipt.clone(),
+            },
         )
         .await,
     )
@@ -150,9 +168,11 @@ async fn correction_commits_three_effects_atomically() {
     let mut own = correction("c3", "right");
     own.target = "action:own".into();
     let refused = dispatch(&h, TENANT, &["corrector"], record(own)).await;
-    assert!(refused.refusal_text().unwrap().starts_with("OUTCOME_SELF_REPORTED"));
-    let unprivileged =
-        dispatch(&h, TENANT, &["test"], record(correction("c4", "right"))).await;
+    assert!(refused
+        .refusal_text()
+        .unwrap()
+        .starts_with("OUTCOME_SELF_REPORTED"));
+    let unprivileged = dispatch(&h, TENANT, &["test"], record(correction("c4", "right"))).await;
     assert!(unprivileged
         .refusal_text()
         .unwrap()
@@ -163,8 +183,13 @@ async fn correction_commits_three_effects_atomically() {
         &h,
         "tenant-other",
         &["corrector"],
-        CorrectionOp::Get { receipt_id: receipt },
+        CorrectionOp::Get {
+            receipt_id: receipt,
+        },
     )
     .await;
-    assert!(foreign.refusal_text().unwrap().starts_with("CORRECTION_NOT_FOUND"));
+    assert!(foreign
+        .refusal_text()
+        .unwrap()
+        .starts_with("CORRECTION_NOT_FOUND"));
 }

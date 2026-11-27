@@ -11,7 +11,7 @@
 
 use medulla_quantum_core::{
     BackendCapabilities, BackendDescriptor, BackendFamily, BackendId, ClassicalBitRef,
-    ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind, Instruction,
+    ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind, Instruction,
     ParamValue, QuantumProgram, IR_VERSION,
 };
 

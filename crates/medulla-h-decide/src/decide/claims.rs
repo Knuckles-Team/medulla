@@ -38,7 +38,9 @@ pub async fn handle_claims(
     verified: &VerifiedRequestContext,
     op: ClaimOp,
 ) -> Response {
-    handle_claims_planned(state, req_id, graph, verified, op).await.response
+    handle_claims_planned(state, req_id, graph, verified, op)
+        .await
+        .response
 }
 
 /// Serve one claim operation and return the memory events it committed.
@@ -49,34 +51,48 @@ pub async fn handle_claims_planned(
     verified: &VerifiedRequestContext,
     op: ClaimOp,
 ) -> ClaimsServed {
-    let refused = |error: String| ClaimsServed { response: Response::err(req_id, error), events: Vec::new() };
+    let refused = |error: String| ClaimsServed {
+        response: Response::err(req_id, error),
+        events: Vec::new(),
+    };
     #[cfg(feature = "statechart")]
     {
         let persist_dir = { state.read().await.persist_dir.clone() };
         // A perspective names participants of the request graph; a read is judged in the view the
         // verified principal holds there (MEDULLA-DECISION-ENGINE-R652.9).
         let graph_view = match &op {
-            ClaimOp::Propose { perspective: Some(_), .. }
-            | ClaimOp::Get { claim_id: Some(_), .. }
+            ClaimOp::Propose {
+                perspective: Some(_),
+                ..
+            }
+            | ClaimOp::Get {
+                claim_id: Some(_), ..
+            }
             | ClaimOp::ProvenClaims { .. } => participants_of(state, graph).await,
             _ => None,
         };
         let checked = match (&op, graph_view.as_ref()) {
-            (ClaimOp::Propose { perspective: Some(perspective), .. }, view) => {
-                check_perspective(view, verified.tenant(), perspective)
-            }
+            (
+                ClaimOp::Propose {
+                    perspective: Some(perspective),
+                    ..
+                },
+                view,
+            ) => check_perspective(view, verified.tenant(), perspective),
             _ => Ok(()),
         };
         if let Err(error) = checked {
             return refused(error);
         }
         let reader = match &op {
-            ClaimOp::Get { claim_id: Some(_), as_observer, .. } => {
-                match reader_view(graph_view.as_ref(), verified, as_observer.as_ref()) {
-                    Ok(view) => Some(view),
-                    Err(error) => return refused(error),
-                }
-            }
+            ClaimOp::Get {
+                claim_id: Some(_),
+                as_observer,
+                ..
+            } => match reader_view(graph_view.as_ref(), verified, as_observer.as_ref()) {
+                Ok(view) => Some(view),
+                Err(error) => return refused(error),
+            },
             // A list is read in the view the verified principal holds, like a `Get`; the claims
             // it may not see are omitted (MEDULLA-DECISION-ENGINE-R652.13).
             ClaimOp::ProvenClaims { .. } => {
@@ -98,7 +114,10 @@ pub async fn handle_claims_planned(
             Ok((payload, claims.take_events()))
         });
         match served {
-            Ok((payload, events)) => ClaimsServed { response: Response::ok(req_id, payload), events },
+            Ok((payload, events)) => ClaimsServed {
+                response: Response::ok(req_id, payload),
+                events,
+            },
             Err(error) => refused(error),
         }
     }
@@ -116,7 +135,12 @@ pub(super) async fn participants_of(
     state: &SharedState,
     graph: &str,
 ) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphCore>> {
-    state.read().await.registry.get(graph).map(|entry| entry.core.clone())
+    state
+        .read()
+        .await
+        .registry
+        .get(graph)
+        .map(|entry| entry.core.clone())
 }
 
 /// Refuse a perspective that names a participant outside the caller's tenant
@@ -128,7 +152,9 @@ fn check_perspective(
     perspective: &medulla_decision_types::claims::ClaimPerspective,
 ) -> Result<(), String> {
     use medulla_decision_types::claims::ObserverRef;
-    use medulla_h_graph::graph_ops::participant_surface::{participant_exists, participant_unavailable};
+    use medulla_h_graph::graph_ops::participant_surface::{
+        participant_exists, participant_unavailable,
+    };
     let named = std::iter::once(&perspective.subject).chain(match &perspective.observer {
         ObserverRef::Participant(observer) => Some(observer),
         ObserverRef::System => None,
@@ -160,7 +186,10 @@ fn reader_view(
         }
     };
     let view = principal_view(core, verified.tenant(), verified.agent_id(), requested)?;
-    Ok(medulla_epistemic::claims::ReaderView::of(view.observer, view.sessions))
+    Ok(medulla_epistemic::claims::ReaderView::of(
+        view.observer,
+        view.sessions,
+    ))
 }
 
 #[cfg(feature = "statechart")]
@@ -176,10 +205,12 @@ pub(super) mod served {
         ProvenClaimsResult, ResearchArtifact, Stance, PROVEN_CLAIMS_DEFAULT_LIMIT,
         PROVEN_CLAIMS_MAX_LIMIT, WEIGHT_PPM_MAX,
     };
+    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef};
+    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
     use medulla_epistemic::claims::{
         check_transition, claim_visible_to, combine_evidence, compile_artifact,
-        contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, proven_rows, verify_seal,
-        ClaimKnobs, ReaderView,
+        contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, proven_rows,
+        verify_seal, ClaimKnobs, ReaderView,
     };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
@@ -192,9 +223,7 @@ pub(super) mod served {
     };
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
     use medulla_types::contract::ServerErrorCode;
-    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef};
     use medulla_work_types::participant::ParticipantId;
-    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
 
     /// Domain of the instance keys.
     const KEY_DOMAIN: &str = "medulla-claims/v1";
@@ -294,7 +323,9 @@ pub(super) mod served {
             (Some(subject), Some(observer)) => Ok(Some(ClaimPerspective {
                 subject: ParticipantId::new(subject).map_err(|error| error.to_string())?,
                 observer: ObserverRef::from_property(&observer).ok_or_else(|| {
-                    format!("claim record observer {observer:?} is neither system nor a participant")
+                    format!(
+                        "claim record observer {observer:?} is neither system nor a participant"
+                    )
                 })?,
                 statement,
             })),
@@ -359,7 +390,12 @@ pub(super) mod served {
         pub(in crate::decide) fn take_events(
             &self,
         ) -> Vec<medulla_decision_types::memory_events::MemoryEvent> {
-            std::mem::take(&mut *self.events.lock().unwrap_or_else(|poisoned| poisoned.into_inner()))
+            std::mem::take(
+                &mut *self
+                    .events
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()),
+            )
         }
 
         /// Run one operation to its typed result.
@@ -369,9 +405,10 @@ pub(super) mod served {
             reader: Option<&ReaderView>,
         ) -> Result<ResultPayload, String> {
             match op {
-                ClaimOp::Propose { claim_id, perspective } => {
-                    payload_of::<ClaimsPropose>(self.propose(&claim_id, perspective.as_ref())?)
-                }
+                ClaimOp::Propose {
+                    claim_id,
+                    perspective,
+                } => payload_of::<ClaimsPropose>(self.propose(&claim_id, perspective.as_ref())?),
                 ClaimOp::Advance { claim_id, to } => {
                     payload_of::<ClaimsAdvance>(self.advance(&claim_id, to)?)
                 }
@@ -417,9 +454,15 @@ pub(super) mod served {
                 ClaimOp::ProvenClaims { axiom, limit } => payload_of::<ClaimsProvenClaims>(
                     self.proven_claims(axiom.as_deref(), limit, reader)?,
                 ),
-                ClaimOp::Get { claim_id, artifact_id, as_observer: _ } => payload_of::<ClaimsGet>(
-                    self.get(claim_id.as_deref(), artifact_id.as_deref(), reader)?,
-                ),
+                ClaimOp::Get {
+                    claim_id,
+                    artifact_id,
+                    as_observer: _,
+                } => payload_of::<ClaimsGet>(self.get(
+                    claim_id.as_deref(),
+                    artifact_id.as_deref(),
+                    reader,
+                )?),
             }
         }
 
@@ -512,9 +555,12 @@ pub(super) mod served {
             }
             if let Some(statement) = perspective.and_then(|p| p.statement.as_deref()) {
                 if statement.trim().is_empty()
-                    || statement.chars().count() > medulla_decision_types::claims::CLAIM_STATEMENT_MAX_CHARS
+                    || statement.chars().count()
+                        > medulla_decision_types::claims::CLAIM_STATEMENT_MAX_CHARS
                 {
-                    return Err(invalid("a claim statement is empty or over its character limit"));
+                    return Err(invalid(
+                        "a claim statement is empty or over its character limit",
+                    ));
                 }
             }
             if let Some(existing) = self.find("claim", claim_id)? {
@@ -591,7 +637,10 @@ pub(super) mod served {
             };
             let advanced = record_of(&self.send_with_outbox(&instance, event, &intents)?)?;
             if let Some(changed) = changed {
-                self.events.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).push(changed);
+                self.events
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .push(changed);
             }
             Ok(advanced)
         }
@@ -799,14 +848,24 @@ pub(super) mod served {
                     continue;
                 }
                 rows.extend(
-                    proven_rows(&record)
-                        .into_iter()
-                        .filter(|row| axiom.is_none_or(|name| row.axioms.iter().any(|a| a == name))),
+                    proven_rows(&record).into_iter().filter(|row| {
+                        axiom.is_none_or(|name| row.axioms.iter().any(|a| a == name))
+                    }),
                 );
             }
             rows.sort_by(|a, b| {
-                (&a.claim_id, &a.declaration, &a.artifact_digest, &a.checker_id)
-                    .cmp(&(&b.claim_id, &b.declaration, &b.artifact_digest, &b.checker_id))
+                (
+                    &a.claim_id,
+                    &a.declaration,
+                    &a.artifact_digest,
+                    &a.checker_id,
+                )
+                    .cmp(&(
+                        &b.claim_id,
+                        &b.declaration,
+                        &b.artifact_digest,
+                        &b.checker_id,
+                    ))
             });
             rows.truncate(limit as usize);
             Ok(ProvenClaimsResult { claims: rows })
@@ -837,7 +896,8 @@ pub(super) mod served {
                 let about = record.perspective.as_ref().is_some_and(|p| {
                     &p.subject == subject && &p.observer == observer && p.statement.is_some()
                 });
-                if about && record.state != ClaimState::Retired && claim_visible_to(&record, reader) {
+                if about && record.state != ClaimState::Retired && claim_visible_to(&record, reader)
+                {
                     rows.push((record, instance.updated_at_ms));
                 }
             }
@@ -867,10 +927,9 @@ pub(super) mod served {
                     Err(error) => return Err(error.to_string()),
                 };
                 let record = record_of(&instance)?;
-                let cites = record
-                    .evidence
-                    .iter()
-                    .any(|e| cited_turn(&e.source_digest).is_some_and(|turn| turn_ids.contains(turn)));
+                let cites = record.evidence.iter().any(|e| {
+                    cited_turn(&e.source_digest).is_some_and(|turn| turn_ids.contains(turn))
+                });
                 if record.claim_id.starts_with(prefix) && cites {
                     count = count.saturating_add(1);
                 }
@@ -895,7 +954,10 @@ pub(super) mod served {
                             "PARTICIPANT_NOT_VISIBLE: claim {claim_id} is outside the reader's view"
                         ));
                     }
-                    Ok(ClaimGetResult { claim: Some(record), artifact: None })
+                    Ok(ClaimGetResult {
+                        claim: Some(record),
+                        artifact: None,
+                    })
                 }
                 (None, Some(artifact_id)) => {
                     let artifact = artifact_of(&self.require("artifact", artifact_id)?)?;

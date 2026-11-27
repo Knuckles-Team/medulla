@@ -22,15 +22,26 @@ fn bin() -> PathBuf {
 fn build_id_flag_matches_the_artifact_reader() {
     let binary = bin();
     let flag = Command::new(&binary).arg("--build-id").output().unwrap();
-    assert!(flag.status.success(), "{}", String::from_utf8_lossy(&flag.stderr));
+    assert!(
+        flag.status.success(),
+        "{}",
+        String::from_utf8_lossy(&flag.stderr)
+    );
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("scripts/read_build_id.py");
     let reader = Command::new("python3")
         .arg(&script)
         .arg(&binary)
         .output()
         .unwrap();
-    assert!(reader.status.success(), "{}", String::from_utf8_lossy(&reader.stderr));
-    assert_eq!(flag.stdout, reader.stdout, "the two readers return one identity");
+    assert!(
+        reader.status.success(),
+        "{}",
+        String::from_utf8_lossy(&reader.stderr)
+    );
+    assert_eq!(
+        flag.stdout, reader.stdout,
+        "the two readers return one identity"
+    );
     let printed = String::from_utf8(flag.stdout).unwrap();
     let id = printed.strip_suffix('\n').expect("one trailing newline");
     assert!(!id.is_empty() && id.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')));

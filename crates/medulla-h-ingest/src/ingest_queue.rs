@@ -9,13 +9,13 @@
 use std::fmt;
 use std::sync::Arc;
 
+use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_server_ops::api::ingest::{IngestTaskWrite, JobsApi};
 use medulla_source_types::ingest_job::{
     partition_key, target_embeds_credentials, task_id, IngestEnqueueReceipt, IngestJobEnvelope,
     IngestJobError, IngestQueueDepthReport, IngestQueueDepthRow, IngestRetryPolicy,
     INGEST_TASK_PAYLOAD_MAX_BYTES,
 };
-use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_types::contract::ServerErrorCode;
 
 /// One refusal of a served `IngestEnqueue`. Every refusal changes no state.
@@ -70,14 +70,7 @@ pub fn enqueue_ingest_job(
     current_depth: u64,
     max_depth: u64,
 ) -> Result<IngestEnqueueReceipt, IngestEnqueueError> {
-    let outcome = enqueue_unrecorded(
-        jobs,
-        caller,
-        envelope,
-        policy,
-        current_depth,
-        max_depth,
-    );
+    let outcome = enqueue_unrecorded(jobs, caller, envelope, policy, current_depth, max_depth);
     let queue = envelope.lane().queue_name();
     let counted = match &outcome {
         Ok(receipt) if receipt.deduplicated => IngestJobOutcome::Deduplicated,
@@ -176,14 +169,16 @@ pub fn queue_depth_report(
     IngestQueueDepthReport {
         queues: loads
             .iter()
-            .map(|(queue, (queued, running, oldest, dead))| IngestQueueDepthRow {
-                queue: (*queue).to_string(),
-                depth: queued.saturating_add(*running),
-                oldest_age_ms: oldest
-                    .map(|enqueued| u64::try_from(now_ms.saturating_sub(enqueued)).unwrap_or(0))
-                    .unwrap_or(0),
-                dead_letters: *dead,
-            })
+            .map(
+                |(queue, (queued, running, oldest, dead))| IngestQueueDepthRow {
+                    queue: (*queue).to_string(),
+                    depth: queued.saturating_add(*running),
+                    oldest_age_ms: oldest
+                        .map(|enqueued| u64::try_from(now_ms.saturating_sub(enqueued)).unwrap_or(0))
+                        .unwrap_or(0),
+                    dead_letters: *dead,
+                },
+            )
             .collect(),
     }
 }
@@ -292,7 +287,8 @@ mod tests {
         let expected = task_id(&e);
         let jobs = recording_jobs(None);
         let receipt =
-            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 3, 10_000).unwrap();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 3, 10_000)
+                .unwrap();
         assert_eq!(receipt.task_id, expected);
         assert_eq!(receipt.queue, "ingest");
         assert_eq!(receipt.partition, "t1/repo-a/document");
@@ -310,12 +306,20 @@ mod tests {
     #[test]
     fn duplicate_task_id_returns_the_first_receipt_with_deduplicated_true() {
         let e = env();
-        let first =
-            enqueue_ingest_job(Some(recording_jobs(None)), &caller("t1"), &e, &policy(), 0, 10_000).unwrap();
+        let first = enqueue_ingest_job(
+            Some(recording_jobs(None)),
+            &caller("t1"),
+            &e,
+            &policy(),
+            0,
+            10_000,
+        )
+        .unwrap();
         assert!(!first.deduplicated);
         let jobs = recording_jobs(Some(first.task_id.clone()));
         let second =
-            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 1, 10_000).unwrap();
+            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 1, 10_000)
+                .unwrap();
         assert_eq!(second.task_id, first.task_id);
         assert_eq!(second.queue, first.queue);
         assert_eq!(second.partition, first.partition);
@@ -328,8 +332,8 @@ mod tests {
         let e = env();
         // A forged tenant is refused before any queue write.
         let jobs = recording_jobs(None);
-        let err =
-            enqueue_ingest_job(Some(jobs.clone()), &caller("t2"), &e, &policy(), 0, 10_000).unwrap_err();
+        let err = enqueue_ingest_job(Some(jobs.clone()), &caller("t2"), &e, &policy(), 0, 10_000)
+            .unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestTenantMismatch);
         assert!(err.detail.contains("t2"));
         assert!(jobs.calls.lock().unwrap().is_empty());
@@ -339,8 +343,15 @@ mod tests {
             ..e.clone()
         };
         let jobs = recording_jobs(None);
-        let err =
-            enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &cred, &policy(), 0, 10_000).unwrap_err();
+        let err = enqueue_ingest_job(
+            Some(jobs.clone()),
+            &caller("t1"),
+            &cred,
+            &policy(),
+            0,
+            10_000,
+        )
+        .unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestJobInvalid);
         assert_eq!(err.detail, IngestJobError::TargetHasCredential.to_string());
         assert!(jobs.calls.lock().unwrap().is_empty());
@@ -362,8 +373,15 @@ mod tests {
         assert!(err.detail.contains("attempt"));
         // A full queue refuses before the write.
         let jobs = recording_jobs(None);
-        let err = enqueue_ingest_job(Some(jobs.clone()), &caller("t1"), &e, &policy(), 10_000, 10_000)
-            .unwrap_err();
+        let err = enqueue_ingest_job(
+            Some(jobs.clone()),
+            &caller("t1"),
+            &e,
+            &policy(),
+            10_000,
+            10_000,
+        )
+        .unwrap_err();
         assert_eq!(err.code, ServerErrorCode::IngestQueueFull);
         assert!(err.detail.contains("ingest"));
         assert!(jobs.calls.lock().unwrap().is_empty());

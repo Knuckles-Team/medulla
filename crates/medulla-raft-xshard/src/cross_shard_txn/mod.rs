@@ -202,13 +202,13 @@ mod commit;
 mod prepare_record;
 use prepare_record::{decode_prepared_slices, encode_prepared_slices};
 
+use medulla_direct_state::direct_state::GroupId;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::multi::MultiRaft;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use medulla_raft::raft::NodeId;
-use medulla_direct_state::direct_state::GroupId;
 use medulla_raft::raft::RaftRequest;
 use medulla_server_api::api::persistence::PersistenceBackend;
 

@@ -272,9 +272,9 @@ impl EngineStartupHandler {
                 }
                 let generator: Arc<dyn PidSecretKeyGenerator> = pid_secret_key_generator();
                 let handler = SASLAuthStartupHandler::new(Arc::new(startup_parameters()))
-                .with_scram(scram)
-                .with_pid_secret_key_generator(generator)
-                .with_connection_manager(connections.clone());
+                    .with_scram(scram)
+                    .with_pid_secret_key_generator(generator)
+                    .with_connection_manager(connections.clone());
                 Self {
                     scram: Box::new(handler),
                     logins,

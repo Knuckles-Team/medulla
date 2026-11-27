@@ -26,7 +26,7 @@ use medulla_quantum_core::backend::{
     BackendCapabilities, BackendError, BackendFamily, BackendId, RunOptions,
 };
 use medulla_quantum_core::ir::{
-    CliffordGenerator, ControlQubit, ControlPolarity, Instruction, QuantumProgram,
+    CliffordGenerator, ControlPolarity, ControlQubit, Instruction, QuantumProgram,
 };
 use medulla_quantum_core::result::{Formalism, QuantumResult};
 use std::collections::BTreeMap;
@@ -338,9 +338,10 @@ fn apply_clifford_gate(
     }
     match g.controls.as_slice() {
         [] => apply_uncontrolled_clifford(tab, g),
-        [ControlQubit { qubit: ctrl, polarity: state }] => {
-            apply_single_controlled_clifford(tab, *ctrl, *state, g)
-        }
+        [ControlQubit {
+            qubit: ctrl,
+            polarity: state,
+        }] => apply_single_controlled_clifford(tab, *ctrl, *state, g),
         // is_clifford() already rejected two or more controls; unreachable in
         // practice, but fail loudly rather than silently no-op.
         [_, _, ..] => Err(not_clifford(g)),
@@ -648,7 +649,10 @@ mod apply_gate_tests {
             qubits: qubits.to_vec(),
             controls: controls
                 .iter()
-                .map(|&(qubit, state)| ControlQubit { qubit, polarity: state })
+                .map(|&(qubit, state)| ControlQubit {
+                    qubit,
+                    polarity: state,
+                })
                 .collect(),
             params,
         }
@@ -716,7 +720,8 @@ mod apply_gate_tests {
 
     #[test]
     fn single_controlled_paulis_dispatch_with_control_polarity() {
-        let positive = |gate: GateKind| instruction(gate, &[2], &[(0, ControlPolarity::One)], vec![]);
+        let positive =
+            |gate: GateKind| instruction(gate, &[2], &[(0, ControlPolarity::One)], vec![]);
         assert_same(
             "cx",
             &via_dispatch(&positive(GateKind::X)),
@@ -750,7 +755,12 @@ mod apply_gate_tests {
             instruction(GateKind::X, &[0], &[], vec![ParamValue::Literal(0.5)]),
             instruction(GateKind::Custom("u".to_string()), &[0], &[], vec![]),
             instruction(GateKind::H, &[2], &[(0, ControlPolarity::One)], vec![]),
-            instruction(GateKind::Swap, &[1, 2], &[(0, ControlPolarity::One)], vec![]),
+            instruction(
+                GateKind::Swap,
+                &[1, 2],
+                &[(0, ControlPolarity::One)],
+                vec![],
+            ),
             instruction(
                 GateKind::X,
                 &[2],

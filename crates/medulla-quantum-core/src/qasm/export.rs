@@ -1,6 +1,8 @@
 //! OpenQASM 2.0 export for the bounded quantum IR.
 
-use crate::ir::{ControlPolarity, GateInstruction, GateKind, Instruction, ParamValue, QuantumProgram};
+use crate::ir::{
+    ControlPolarity, GateInstruction, GateKind, Instruction, ParamValue, QuantumProgram,
+};
 
 use super::QasmError;
 

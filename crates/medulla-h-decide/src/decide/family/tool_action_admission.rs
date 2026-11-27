@@ -8,10 +8,10 @@
 //! The verdict is advisory: it never grants a human approval, and `Decide`
 //! writes nothing.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
 use medulla_decision_types::decision::tool_action::{
     ActionClass, ToolActionAnswer, ToolActionAnswerVerdict, ToolActionRefusal, ToolActionVerdict,
 };

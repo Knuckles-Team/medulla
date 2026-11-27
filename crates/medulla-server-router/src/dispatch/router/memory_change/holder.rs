@@ -78,7 +78,10 @@ pub(super) async fn stage_content(
         }
     };
     let (digest, _was_new) = store.put_chunk(content.as_bytes()).map_err(|error| {
-        format!("{}: {error}", MemorySyncRefusal::StorageUnavailable.as_str())
+        format!(
+            "{}: {error}",
+            MemorySyncRefusal::StorageUnavailable.as_str()
+        )
     })?;
     Ok(Some(StagedContent { digest, slot }))
 }
@@ -116,7 +119,10 @@ pub(super) async fn hold_staged(
     let holder = HolderChange::acquire(
         &staged.digest,
         HolderId::new(&staged.slot.holder_id(&request.doc_id))?,
-        &medulla_server_api::carrier::memory_snapshot_owner_scope(verified.tenant(), request.doc_id.as_str()),
+        &medulla_server_api::carrier::memory_snapshot_owner_scope(
+            verified.tenant(),
+            request.doc_id.as_str(),
+        ),
     )?;
     let method = medulla_protocol_types::protocol::Method::BlobRef {
         digest: staged.digest.clone(),

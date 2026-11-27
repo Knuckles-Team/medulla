@@ -162,9 +162,8 @@ pub fn parse_policy_document(
             };
             let (rule, status) = match clause.outcome {
                 Ok((scope, severity, id)) => {
-                    let rule_id = id.unwrap_or_else(|| {
-                        format!("policy-{}", &clause.clause_digest[..16])
-                    });
+                    let rule_id =
+                        id.unwrap_or_else(|| format!("policy-{}", &clause.clause_digest[..16]));
                     (
                         Some(PolicyRule {
                             rule_id,
@@ -335,10 +334,9 @@ fn rule_set_clauses(text: &str) -> Vec<Clause> {
         let number = (index + 1) as u32;
         let parsed = parse_rule_line(trimmed);
         let (clause_text, outcome) = match parsed {
-            Some((id, severity, scope, clause_text)) => (
-                clause_text,
-                Ok((scope, severity, Some(id))),
-            ),
+            Some((id, severity, scope, clause_text)) => {
+                (clause_text, Ok((scope, severity, Some(id))))
+            }
             None => (collapse(trimmed), Err(PolicyInactiveReason::ClauseUnparsed)),
         };
         clauses.push(Clause {
@@ -420,16 +418,21 @@ mod tests {
             }
         );
         assert_eq!(
-            (candidates[2].source_ref.start_line, candidates[2].source_ref.end_line),
+            (
+                candidates[2].source_ref.start_line,
+                candidates[2].source_ref.end_line
+            ),
             (8, 9)
         );
-        assert!(candidates
-            .iter()
-            .all(|c| c.candidate_set_digest == candidates[0].candidate_set_digest
-                && c.grammar_revision == POLICY_GRAMMAR_REVISION));
+        assert!(candidates.iter().all(|c| c.candidate_set_digest
+            == candidates[0].candidate_set_digest
+            && c.grammar_revision == POLICY_GRAMMAR_REVISION));
         for candidate in &candidates {
             let wire = serde_json::to_string(candidate).unwrap();
-            assert_eq!(serde_json::from_str::<PolicyCandidate>(&wire).unwrap(), *candidate);
+            assert_eq!(
+                serde_json::from_str::<PolicyCandidate>(&wire).unwrap(),
+                *candidate
+            );
         }
         let wire = serde_json::to_value(&candidates[1].status).unwrap();
         assert_eq!(wire["inactive"]["reason"], "CLAUSE_UNPARSED");
@@ -446,16 +449,23 @@ mod tests {
         let rule_set = format!(
             "# bundled\n\nrule no-secrets block {SCOPE}: commit secrets\nnot a rule line\n"
         );
-        let a = parse_policy_document(constitution.as_bytes(), PolicyProfile::Constitution, &source())
-            .unwrap();
-        let b = parse_policy_document(rule_set.as_bytes(), PolicyProfile::RuleSet, &source())
-            .unwrap();
+        let a = parse_policy_document(
+            constitution.as_bytes(),
+            PolicyProfile::Constitution,
+            &source(),
+        )
+        .unwrap();
+        let b =
+            parse_policy_document(rule_set.as_bytes(), PolicyProfile::RuleSet, &source()).unwrap();
         let (ra, rb) = (a[0].rule.clone().unwrap(), b[0].rule.clone().unwrap());
         assert_eq!((ra.severity, &ra.scope), (rb.severity, &rb.scope));
         assert_eq!(ra.clause_digest, rb.clause_digest);
         assert_eq!(rb.rule_id, "no-secrets");
         assert_ne!(ra.rule_id, rb.rule_id);
-        assert_eq!((b[0].source_ref.start_line, b[0].source_ref.end_line), (3, 3));
+        assert_eq!(
+            (b[0].source_ref.start_line, b[0].source_ref.end_line),
+            (3, 3)
+        );
         assert_eq!(
             b[1].status,
             PolicyCandidateStatus::Inactive {

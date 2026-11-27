@@ -8,7 +8,9 @@ use super::log_tests::log_op;
 use super::path_preference_tests::{pins, OTHER};
 use super::*;
 use medulla_decision_types::decision::program_store::{program_key, CompiledProgram};
-use medulla_decision_types::decision::skill_workflow::{DraftStep, SkillWorkflowDraft, StepEdge, TypeRef};
+use medulla_decision_types::decision::skill_workflow::{
+    DraftStep, SkillWorkflowDraft, StepEdge, TypeRef,
+};
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::TypedValue;
@@ -23,7 +25,10 @@ fn step(id: &str, action: &str, next: &[&str], on_error: Option<&str>) -> DraftS
         output_types: BoundedVec::new(vec![TypeRef::Json]).unwrap(),
         next: BoundedVec::new(
             next.iter()
-                .map(|target| StepEdge { step_id: (*target).into(), label: None })
+                .map(|target| StepEdge {
+                    step_id: (*target).into(),
+                    label: None,
+                })
                 .collect(),
         )
         .unwrap(),
@@ -115,28 +120,45 @@ async fn served_compile_then_lookup_by_skill_digest() {
     let signature = format!("skill:{}", draft.skill_document_digest.to_hex());
 
     // Decide compiles and writes nothing.
-    let batch = decide(&h, skill_request(&schema, draft.clone())).await.unwrap();
+    let batch = decide(&h, skill_request(&schema, draft.clone()))
+        .await
+        .unwrap();
     let record = batch.records.as_slice()[0].clone();
     let program = program_of(&record);
     assert_eq!(program.task_signature, signature);
-    let order: Vec<&str> = program.steps.iter().map(|step| step.node.as_str()).collect();
+    let order: Vec<&str> = program
+        .steps
+        .iter()
+        .map(|step| step.node.as_str())
+        .collect();
     assert_eq!(order, ["fetch", "parse", "store", "recover"]);
     assert_eq!(program.source_run_id, None);
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert!(!stored(&h, &signature), "Decide wrote nothing");
-    let before = decide(&h, lookup_request(&schema, TENANT, &signature)).await.unwrap();
-    assert!(looked_up(&before.records.as_slice()[0]).is_none(), "nothing to look up yet");
+    let before = decide(&h, lookup_request(&schema, TENANT, &signature))
+        .await
+        .unwrap();
+    assert!(
+        looked_up(&before.records.as_slice()[0]).is_none(),
+        "nothing to look up yet"
+    );
 
     // The commit is the one write; the program is stored under the skill digest.
-    let committed: DecisionLogCommitted = decode(log_op(&h, "decider", commit(record.clone())).await).unwrap();
+    let committed: DecisionLogCommitted =
+        decode(log_op(&h, "decider", commit(record.clone())).await).unwrap();
     assert!(!committed.replayed);
     assert!(stored(&h, &signature));
     let again: DecisionLogCommitted = decode(log_op(&h, "decider", commit(record)).await).unwrap();
-    assert!(again.replayed, "a repeat commit replays and stores nothing new");
+    assert!(
+        again.replayed,
+        "a repeat commit replays and stores nothing new"
+    );
 
     // ProgramLookup returns the program by the skill digest, field for field.
-    let found = decide(&h, lookup_request(&schema, TENANT, &signature)).await.unwrap();
+    let found = decide(&h, lookup_request(&schema, TENANT, &signature))
+        .await
+        .unwrap();
     assert_eq!(looked_up(&found.records.as_slice()[0]), Some(program));
 }
 
@@ -165,7 +187,11 @@ async fn other_tenant_cannot_look_up_the_program() {
     )
     .unwrap();
     assert!(looked_up(&batch.records.as_slice()[0]).is_none());
-    assert!(h.store.decision_artifact(OTHER, &program_key(&signature)).unwrap().is_none());
+    assert!(h
+        .store
+        .decision_artifact(OTHER, &program_key(&signature))
+        .unwrap()
+        .is_none());
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R156.4
@@ -182,8 +208,14 @@ async fn incomplete_drafts_refuse() {
     let before = rows(&h);
     let mut unlabelled = step("a", "tool.a", &["b", "c"], Some("recover"));
     unlabelled.next = BoundedVec::new(vec![
-        StepEdge { step_id: "b".into(), label: Some("yes".into()) },
-        StepEdge { step_id: "c".into(), label: None },
+        StepEdge {
+            step_id: "b".into(),
+            label: Some("yes".into()),
+        },
+        StepEdge {
+            step_id: "c".into(),
+            label: None,
+        },
     ])
     .unwrap();
     let mut untyped = step("a", "tool.a", &[], Some("recover"));
@@ -193,12 +225,22 @@ async fn incomplete_drafts_refuse() {
         (
             "SKILL_WORKFLOW_AMBIGUOUS",
             "step a",
-            draft_of(b"d1", vec![step("a", "tool.a", &[], Some("recover")), step("a", "tool.b", &[], Some("recover")), recover()]),
+            draft_of(
+                b"d1",
+                vec![
+                    step("a", "tool.a", &[], Some("recover")),
+                    step("a", "tool.b", &[], Some("recover")),
+                    recover(),
+                ],
+            ),
         ),
         (
             "SKILL_WORKFLOW_AMBIGUOUS",
             "absent step ghost",
-            draft_of(b"d2", vec![step("a", "tool.a", &["ghost"], Some("recover")), recover()]),
+            draft_of(
+                b"d2",
+                vec![step("a", "tool.a", &["ghost"], Some("recover")), recover()],
+            ),
         ),
         (
             "SKILL_WORKFLOW_AMBIGUOUS",
@@ -218,7 +260,11 @@ async fn incomplete_drafts_refuse() {
             "step a",
             draft_of(b"d4", vec![step("a", "tool.a", &[], None), recover()]),
         ),
-        ("SKILL_WORKFLOW_UNTYPED_STEP", "step a", draft_of(b"d5", vec![untyped, recover()])),
+        (
+            "SKILL_WORKFLOW_UNTYPED_STEP",
+            "step a",
+            draft_of(b"d5", vec![untyped, recover()]),
+        ),
         (
             "SKILL_WORKFLOW_CYCLE",
             "step a",
@@ -256,18 +302,29 @@ async fn incomplete_drafts_refuse() {
 async fn golden_skill_drafts_have_fixed_program_digests() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let schema = pins(&h, TENANT).0;
-    let first = decide(&h, skill_request(&schema, golden(b"golden skill"))).await.unwrap();
-    let again = decide(&h, skill_request(&schema, golden(b"golden skill"))).await.unwrap();
+    let first = decide(&h, skill_request(&schema, golden(b"golden skill")))
+        .await
+        .unwrap();
+    let again = decide(&h, skill_request(&schema, golden(b"golden skill")))
+        .await
+        .unwrap();
     let record = first.records.as_slice()[0].clone();
     let program = program_of(&record);
-    assert_eq!(program, program_of(&again.records.as_slice()[0]), "the compile is deterministic");
+    assert_eq!(
+        program,
+        program_of(&again.records.as_slice()[0]),
+        "the compile is deterministic"
+    );
     assert_eq!(program.program_digest, program.compute_digest());
 
     // The error branch, the types and the step order survive the compile.
     let fetch = &program.steps.as_slice()[0];
     assert_eq!(fetch.next_node.as_deref(), Some("parse"));
     assert_eq!(fetch.edges.last().unwrap().label.as_deref(), Some("error"));
-    assert_eq!(fetch.input_types.iter().copied().collect::<Vec<_>>(), [TypeRef::Text]);
+    assert_eq!(
+        fetch.input_types.iter().copied().collect::<Vec<_>>(),
+        [TypeRef::Text]
+    );
 
     // Four premises: the document and the step count are claims, the program is a proof, the
     // compiler is a definition. The record class is the weakest one.
@@ -278,11 +335,20 @@ async fn golden_skill_drafts_have_fixed_program_digests() {
             .find(|premise| premise.fact == fact)
             .unwrap_or_else(|| panic!("premise {fact} missing from {premises:?}"))
     };
-    let document = find(&format!("skill_workflow:document={}", Digest256::sha256(b"golden skill").to_hex()));
+    let document = find(&format!(
+        "skill_workflow:document={}",
+        Digest256::sha256(b"golden skill").to_hex()
+    ));
     assert_eq!(document.class, PremiseClass::Claim);
-    let compiled = find(&format!("skill_workflow:program={}", program.program_digest));
+    let compiled = find(&format!(
+        "skill_workflow:program={}",
+        program.program_digest
+    ));
     assert_eq!(compiled.class, PremiseClass::Proof);
     assert_eq!(find("skill_workflow:steps=4").class, PremiseClass::Claim);
-    assert_eq!(find("skill_workflow:compiler=skill_workflow_compile@1").class, PremiseClass::Definition);
+    assert_eq!(
+        find("skill_workflow:compiler=skill_workflow_compile@1").class,
+        PremiseClass::Definition
+    );
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
 }

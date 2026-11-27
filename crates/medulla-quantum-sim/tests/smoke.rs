@@ -9,7 +9,7 @@ use medulla_quantum_core::backend::{
 };
 use medulla_quantum_core::estimate::{estimate, EstimateOptions};
 use medulla_quantum_core::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, ParamValue, QuantumProgram,
 };
 use medulla_quantum_core::planner::{select_backend, PlannerOptions, PlannerRule};

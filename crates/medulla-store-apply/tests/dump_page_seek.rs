@@ -89,7 +89,10 @@ fn page_reads_are_independent_of_prefix_length() {
     )
     .unwrap()
     .unwrap();
-    assert_eq!(page.nodes.first().map(|(id, _)| id.as_str()), Some("n000101"));
+    assert_eq!(
+        page.nodes.first().map(|(id, _)| id.as_str()),
+        Some("n000101")
+    );
     drop(shard);
     let _ = std::fs::remove_file(path);
 }

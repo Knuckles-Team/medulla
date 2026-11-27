@@ -38,10 +38,10 @@ use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
 
+use crate::materialization_machine::{MaterializationEvent, MaterializationFacts};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSnapshot;
 use medulla_protocol_types::protocol::GraphType;
-use crate::materialization_machine::{MaterializationEvent, MaterializationFacts};
 
 /// Metadata for a registered graph.
 ///
@@ -150,7 +150,10 @@ impl MaterializationManifest {
     /// Fires `event` on the phase through the one transition function
     /// ([`MaterializationPhase::apply`]); a refused pair changes nothing and reports `false`.
     pub(crate) fn apply_phase(&mut self, event: MaterializationEvent, indexes_valid: bool) -> bool {
-        match self.phase.apply(event, MaterializationFacts { indexes_valid }) {
+        match self
+            .phase
+            .apply(event, MaterializationFacts { indexes_valid })
+        {
             Ok(next) => {
                 self.phase = next;
                 true
@@ -2317,11 +2320,10 @@ mod tests {
             ..MaterialPage::default()
         };
         assert!(reg.publish_lazy_first_page(&ticket, Some(first)).accepted);
-        assert!(
-            !reg.materialization_manifest("tenant:versioned")
-                .unwrap()
-                .valid()
-        );
+        assert!(!reg
+            .materialization_manifest("tenant:versioned")
+            .unwrap()
+            .valid());
 
         let changed = MaterialPage {
             nodes: vec![("b".to_string(), props(serde_json::json!({"v": 2})))],

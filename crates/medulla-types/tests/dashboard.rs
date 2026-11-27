@@ -50,7 +50,10 @@ fn dashboard_asset_round_trips_and_shape_validates() {
     assert!(twice.validate().is_err());
     let mut big = asset();
     big.body.panels[0].query = "x".repeat(2_000_000);
-    assert!(big.validate().unwrap_err().starts_with(DASHBOARD_BODY_TOO_LARGE));
+    assert!(big
+        .validate()
+        .unwrap_err()
+        .starts_with(DASHBOARD_BODY_TOO_LARGE));
 
     // The revision only rises.
     let mut next = asset();

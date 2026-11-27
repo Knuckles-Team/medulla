@@ -201,12 +201,12 @@ impl LoopQueue {
 pub fn settle_gap(gap: &mut Gap) -> Result<(), LoopError> {
     match gap.state {
         GapState::Offered => {
-            gap.state = gap
-                .state
-                .apply(GapEvent::Settle)
-                .map_err(|_| LoopError::GapNotOffered {
-                    gap_id: gap.gap_id.clone(),
-                })?;
+            gap.state =
+                gap.state
+                    .apply(GapEvent::Settle)
+                    .map_err(|_| LoopError::GapNotOffered {
+                        gap_id: gap.gap_id.clone(),
+                    })?;
             Ok(())
         }
         GapState::Settled => Err(LoopError::GapAlreadySettled {

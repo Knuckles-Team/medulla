@@ -2,7 +2,13 @@
 // `PutObservation`, read back through the served graph read, and refused for another tenant, an
 // unknown run, a malformed envelope and an id stored with another content digest.
 
-#[cfg(all(unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+#[cfg(all(
+    unix,
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
 mod served {
     use medulla_protocol_types::protocol::Method;
     use medulla_work_types::orchestration::visual_observation::{
@@ -34,10 +40,18 @@ mod served {
         }
     }
 
-    async fn put(served: &Served, tenant: &str, record: VisualObservation) -> medulla_protocol_types::protocol::Response {
-        let method = Method::PutObservation { observation: record };
+    async fn put(
+        served: &Served,
+        tenant: &str,
+        record: VisualObservation,
+    ) -> medulla_protocol_types::protocol::Response {
+        let method = Method::PutObservation {
+            observation: record,
+        };
         if tenant == TENANT {
-            served.call_on(GRAPH, &format!("observation:{}", next_id()), method).await
+            served
+                .call_on(GRAPH, &format!("observation:{}", next_id()), method)
+                .await
         } else {
             served.verified(tenant, &["*"], method).await
         }
@@ -96,16 +110,39 @@ mod served {
         assert!(refusal(&put(&served, TENANT, other).await).starts_with("OBSERVATION_CONFLICT"));
 
         // An unknown run and another tenant's record read the same.
-        let unknown = refusal(&put(&served, TENANT, observation(TENANT, "no-run", "obs-2", "ab")).await);
-        assert!(unknown.starts_with("OBSERVATION_SCOPE_UNKNOWN"), "{unknown}");
+        let unknown = refusal(
+            &put(
+                &served,
+                TENANT,
+                observation(TENANT, "no-run", "obs-2", "ab"),
+            )
+            .await,
+        );
+        assert!(
+            unknown.starts_with("OBSERVATION_SCOPE_UNKNOWN"),
+            "{unknown}"
+        );
         let foreign = refusal(
-            &put(&served, TENANT, observation(OTHER_TENANT, RUN, "obs-3", "ab")).await,
+            &put(
+                &served,
+                TENANT,
+                observation(OTHER_TENANT, RUN, "obs-3", "ab"),
+            )
+            .await,
         );
         assert_eq!(foreign, unknown, "no existence oracle");
         let by_other = refusal(
-            &put(&served, OTHER_TENANT, observation(OTHER_TENANT, RUN, "obs-4", "ab")).await,
+            &put(
+                &served,
+                OTHER_TENANT,
+                observation(OTHER_TENANT, RUN, "obs-4", "ab"),
+            )
+            .await,
         );
-        assert!(by_other.starts_with("OBSERVATION_SCOPE_UNKNOWN"), "{by_other}");
+        assert!(
+            by_other.starts_with("OBSERVATION_SCOPE_UNKNOWN"),
+            "{by_other}"
+        );
 
         // A malformed envelope refuses before any scope check.
         let mut bad = observation(TENANT, RUN, "obs-5", "ab");

@@ -7,8 +7,8 @@
 
 use super::*;
 use medulla_decision_types::decision::skill_evolution::{
-    PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A, PARAM_PAIR_B,
-    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS, RolloutSet,
+    RolloutSet, PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A, PARAM_PAIR_B,
+    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
 };
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -451,12 +451,12 @@ fn skill_draft(
 // spec: MEDULLA-DECISION-ENGINE-R654.4
 #[tokio::test]
 async fn rollout_and_spec_refusals() {
+    use super::super::stat_promotion::rollouts_key;
     use super::promotion_tests::rollout_set;
     use super::retrieval_tests::learn;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
     use medulla_decision_types::decision::skill_evolution::Rollout;
     use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
-    use super::super::stat_promotion::rollouts_key;
 
     let h = Harness::new().await;
     let record = |set: RolloutSet| {
@@ -564,10 +564,16 @@ async fn spec_proposal_start_before_approval_refuses() {
         },
     )
     .await;
-    let text = refused.refusal_text().expect("start before approved refuses");
+    let text = refused
+        .refusal_text()
+        .expect("start before approved refuses");
     assert!(text.starts_with("STATECHART_NO_TRANSITION"), "{text}");
-    let state: serde_json::Value = decode(send(&h, &authority, 4, StatechartOp::GetState { instance_id }).await).unwrap();
-    assert_eq!(state["configuration"]["active"], serde_json::json!(["drafted"]));
+    let state: serde_json::Value =
+        decode(send(&h, &authority, 4, StatechartOp::GetState { instance_id }).await).unwrap();
+    assert_eq!(
+        state["configuration"]["active"],
+        serde_json::json!(["drafted"])
+    );
     assert_eq!(state["version"], serde_json::json!(0));
 }
 
@@ -578,6 +584,7 @@ async fn spec_proposal_start_before_approval_refuses() {
 // spec: MEDULLA-DECISION-ENGINE-R654.5
 #[tokio::test]
 async fn rollout_evidence_reads_back_field_for_field() {
+    use super::super::stat_promotion::rollouts_key;
     use super::path_preference_tests::pins;
     use super::promotion_tests::{commit, promotion_request, rollout_set};
     use super::retrieval_tests::learn;
@@ -585,7 +592,6 @@ async fn rollout_evidence_reads_back_field_for_field() {
     use medulla_decision_types::decision::statistical::retrieval::{
         LearningRecorded, LearningWrite,
     };
-    use super::super::stat_promotion::rollouts_key;
     use medulla_persistence_records::decision_jobs::decode_artifact;
 
     let h = Harness::new().await;
@@ -659,7 +665,10 @@ async fn rollout_evidence_reads_back_field_for_field() {
         format!("rollout.delta_lower_ppm={}", evidence.delta_ppm),
         format!("rollout.set_digest={digest}"),
     ] {
-        assert!(facts.contains(&expected.as_str()), "{expected} in {facts:?}");
+        assert!(
+            facts.contains(&expected.as_str()),
+            "{expected} in {facts:?}"
+        );
     }
 }
 
@@ -673,11 +682,9 @@ async fn served_skill_evolution_journey() {
     use super::path_preference_tests::pins;
     use super::promotion_tests::{commit, promotion_request};
     use super::retrieval_tests::learn;
-    use medulla_decision_types::decision::held_out::RevisionSubject;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
-    use medulla_decision_types::decision::skill_evolution::{
-        Rollout, ROLLOUT_SET_SCHEMA_VERSION,
-    };
+    use medulla_decision_types::decision::held_out::RevisionSubject;
+    use medulla_decision_types::decision::skill_evolution::{Rollout, ROLLOUT_SET_SCHEMA_VERSION};
     use medulla_decision_types::decision::statistical::retrieval::{
         LearningRecorded, LearningWrite, PointerMovement, PointerRef,
     };
@@ -711,7 +718,10 @@ async fn served_skill_evolution_journey() {
     };
 
     let mut promoted = Vec::new();
-    for (target, gain) in [("revision:skill-v1", 120_000), ("revision:skill-v2", 150_000)] {
+    for (target, gain) in [
+        ("revision:skill-v1", 120_000),
+        ("revision:skill-v2", 150_000),
+    ] {
         let set = paired(target, gain);
         let digest = rollout_set_digest(&set);
         let LearningRecorded::Rollouts(evidence) = learn(

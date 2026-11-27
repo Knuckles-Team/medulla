@@ -285,17 +285,23 @@ fn parse_tool_reply(reply: &Value) -> Result<Value, ConnectorToolError> {
                 } else {
                     code
                 },
-                message: text("message").chars().take(TOOL_MESSAGE_MAX_CHARS).collect(),
+                message: text("message")
+                    .chars()
+                    .take(TOOL_MESSAGE_MAX_CHARS)
+                    .collect(),
             })
         }
         Some(_) => Err(ConnectorToolError {
             code: TOOL_REPLY_INVALID.to_string(),
             message: "the tool call error is neither a string nor an object".to_string(),
         }),
-        None => reply.get("result").cloned().ok_or_else(|| ConnectorToolError {
-            code: TOOL_REPLY_INVALID.to_string(),
-            message: "the tool call reply has no `result`".to_string(),
-        }),
+        None => reply
+            .get("result")
+            .cloned()
+            .ok_or_else(|| ConnectorToolError {
+                code: TOOL_REPLY_INVALID.to_string(),
+                message: "the tool call reply has no `result`".to_string(),
+            }),
     }
 }
 
@@ -346,7 +352,10 @@ mod tests {
         let long = "m".repeat(1000);
         let cut = parse_tool_reply(&json!({"error": {"code": "C", "message": long}})).unwrap_err();
         assert_eq!(cut.message.chars().count(), 256);
-        assert_eq!(parse_tool_reply(&json!({})).unwrap_err().code, TOOL_REPLY_INVALID);
+        assert_eq!(
+            parse_tool_reply(&json!({})).unwrap_err().code,
+            TOOL_REPLY_INVALID
+        );
         assert_eq!(
             parse_tool_reply(&json!({"error": 7})).unwrap_err().code,
             TOOL_REPLY_INVALID

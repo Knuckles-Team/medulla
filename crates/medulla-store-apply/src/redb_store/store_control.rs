@@ -1,8 +1,8 @@
 use super::*;
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::commit_publish::CommitMaterial;
 use medulla_store::redb_store::shard::DrainCommit;
+use medulla_store::redb_store::store_prelude::*;
 
 /// Recover the logical graph name from a durable key produced by [`sanitize`].
 ///

@@ -125,7 +125,10 @@ pub async fn handle_participant_card(
     #[cfg(not(feature = "statechart"))]
     {
         let _ = (state, graph, verified, subject, observer);
-        Response::err(req_id, "ParticipantRead Card requires the `statechart` feature")
+        Response::err(
+            req_id,
+            "ParticipantRead Card requires the `statechart` feature",
+        )
     }
 }
 
@@ -143,7 +146,10 @@ async fn read_card(
     };
     let tenant = verified.tenant();
     let core = super::claims::participants_of(state, graph).await;
-    let exists = |slug: &ParticipantId| core.as_ref().is_some_and(|core| participant_exists(core, tenant, slug));
+    let exists = |slug: &ParticipantId| {
+        core.as_ref()
+            .is_some_and(|core| participant_exists(core, tenant, slug))
+    };
     if !exists(subject) {
         return Err(participant_unavailable(subject.as_str()));
     }
@@ -168,6 +174,7 @@ async fn read_card(
     .into_iter()
     .map(|(record, _)| record.claim_id)
     .collect();
-    card.claims.retain(|claim| allowed.contains(&claim.claim_id));
+    card.claims
+        .retain(|claim| allowed.contains(&claim.claim_id));
     Ok(card)
 }

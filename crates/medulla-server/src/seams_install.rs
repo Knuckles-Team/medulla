@@ -8,7 +8,10 @@ use medulla_server_api::state::ServerState;
 /// Install every seam on a state that is already shared (MEDULLA-ORCH-VOCAB-R013.7.5): the
 /// state-free seams, then the walkthrough readers, which hold a clone of `shared` and take its
 /// read lock for one read at a time.
-pub fn install_seams(state: &ServerState, shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
+pub fn install_seams(
+    state: &ServerState,
+    shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
+) {
     install_state_seams(state);
     install_freshness_search_port(state);
     install_walkthrough_seam(state, shared);
@@ -22,11 +25,9 @@ pub fn install_freshness_search_port(state: &ServerState) {
     #[cfg(all(feature = "decide", feature = "federation"))]
     {
         use medulla_server_ops::api::query_txn::ForeignStateExt;
-        medulla_h_decide::decide::stat_freshness::register_search_source_port(
-            std::sync::Arc::new(crate::freshness_search_port::FederationSearchPort::new(
-                state.foreign_sources(),
-            )),
-        );
+        medulla_h_decide::decide::stat_freshness::register_search_source_port(std::sync::Arc::new(
+            crate::freshness_search_port::FederationSearchPort::new(state.foreign_sources()),
+        ));
     }
 }
 

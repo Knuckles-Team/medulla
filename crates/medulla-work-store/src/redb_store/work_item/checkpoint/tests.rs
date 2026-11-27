@@ -173,7 +173,10 @@ fn sixty_fifth_revision_prunes_the_oldest_and_keeps_the_head() {
         assert_eq!(published.revision, revision);
         expected = Some(revision);
         let retained = count(shard);
-        assert_eq!(retained as u64, revision.min(SHORT_TERM_MAX_REVISIONS as u64));
+        assert_eq!(
+            retained as u64,
+            revision.min(SHORT_TERM_MAX_REVISIONS as u64)
+        );
     }
     // 65 revisions published: revision 1 is gone, the head reads back.
     assert_eq!(count(shard), SHORT_TERM_MAX_REVISIONS);
@@ -192,7 +195,8 @@ fn sixty_fifth_revision_prunes_the_oldest_and_keeps_the_head() {
     assert_eq!(retained.len(), SHORT_TERM_MAX_REVISIONS);
     assert_eq!(
         retained.last().map(String::as_str),
-        row.get(WORK_ITEM_CHECKPOINT_REF).and_then(|value| value.as_str()),
+        row.get(WORK_ITEM_CHECKPOINT_REF)
+            .and_then(|value| value.as_str()),
         "the head is the last retained reference"
     );
     // Completion deletes no revision.
@@ -202,7 +206,14 @@ fn sixty_fifth_revision_prunes_the_oldest_and_keeps_the_head() {
         let mut row: Row = decode_durable(bytes.value())?;
         drop(bytes);
         row.insert("status".into(), "succeeded".into());
-        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(
+            nodes,
+            transitions,
+            GRAPH,
+            &id,
+            &mut row,
+            DurableCrypto::none(),
+        )
     });
     assert_eq!(count(shard), SHORT_TERM_MAX_REVISIONS);
     assert!(get(shard, "owner", false, 2000).unwrap().is_some());
@@ -215,10 +226,7 @@ fn completed_history_survives_claim_expiry_but_resume_requires_live_fence() {
     let shard = &tmp.shard;
     seed(shard);
     apply(shard, "first", &request(None), "owner", 2000).unwrap();
-    assert_eq!(
-        get(shard, "owner", true, 10000).unwrap_err(),
-        STALE_FENCE
-    );
+    assert_eq!(get(shard, "owner", true, 10000).unwrap_err(), STALE_FENCE);
     assert!(get(shard, "owner", false, 10000).unwrap().is_some());
     with_node_rows(shard, "terminal", |nodes, transitions| {
         let id = request(None).work_item_id;
@@ -226,12 +234,16 @@ fn completed_history_survives_claim_expiry_but_resume_requires_live_fence() {
         let mut row: Row = decode_durable(bytes.value())?;
         drop(bytes);
         row.insert("status".into(), "succeeded".into());
-        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(
+            nodes,
+            transitions,
+            GRAPH,
+            &id,
+            &mut row,
+            DurableCrypto::none(),
+        )
     });
-    assert_eq!(
-        get(shard, "owner", true, 2000).unwrap_err(),
-        STALE_FENCE
-    );
+    assert_eq!(get(shard, "owner", true, 2000).unwrap_err(), STALE_FENCE);
     assert!(get(shard, "owner", false, 2000).unwrap().is_some());
     assert_eq!(count(shard), 1);
 }
@@ -278,7 +290,14 @@ fn mutable_metadata_cannot_rebind_checkpoint_context() {
             "metadata".into(),
             serde_json::json!({"a2a_context_id":"foreign"}),
         );
-        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(
+            nodes,
+            transitions,
+            GRAPH,
+            &id,
+            &mut row,
+            DurableCrypto::none(),
+        )
     });
     let valid = get(shard, "owner", true, 2000).unwrap().unwrap();
     assert_eq!(valid.context_id, "context");
@@ -320,7 +339,14 @@ fn checkpoint_rejects_missing_admission_and_non_work_item_owner_rows() {
             } else {
                 row.insert("node_type".into(), "Other".into());
             }
-            write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                &id,
+                &mut row,
+                DurableCrypto::none(),
+            )
         });
         assert!(apply(shard, "invalid", &request(None), "owner", 2000).is_err());
         assert!(get(shard, "owner", false, 2000).unwrap().is_none());
@@ -482,7 +508,10 @@ fn memory_refs_must_name_an_existing_revision_with_the_same_digest() {
         2000,
     )
     .unwrap_err();
-    assert!(absent.starts_with("CHECKPOINT_MEMORY_REF_MISSING: "), "{absent}");
+    assert!(
+        absent.starts_with("CHECKPOINT_MEMORY_REF_MISSING: "),
+        "{absent}"
+    );
     let wrong_revision = apply(
         shard,
         "wrong-revision",
@@ -503,7 +532,10 @@ fn memory_refs_must_name_an_existing_revision_with_the_same_digest() {
         2000,
     )
     .unwrap_err();
-    assert!(differing.starts_with("CHECKPOINT_DIGEST_MISMATCH: "), "{differing}");
+    assert!(
+        differing.starts_with("CHECKPOINT_DIGEST_MISMATCH: "),
+        "{differing}"
+    );
     assert_eq!(count(shard), 0, "no row changes on refusal");
     assert!(get(shard, "owner", false, 2000).unwrap().is_none());
     apply(

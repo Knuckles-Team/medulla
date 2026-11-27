@@ -71,36 +71,89 @@ fn step_node(view: &mut GraphView, id: &str, extra: serde_json::Value) {
 #[test]
 fn explicit_bindings_follow_graph_links() {
     let mut view = GraphView::default();
-    add_node(&mut view, WORKFLOW, serde_json::json!({ "type": "WorkflowPattern" }));
+    add_node(
+        &mut view,
+        WORKFLOW,
+        serde_json::json!({ "type": "WorkflowPattern" }),
+    );
     // The catalog tool, the prompt, the decision and the lane with its agent kind.
     add_node(
         &mut view,
         "tool:mail.send",
         serde_json::json!({ "name": "send_mail", "ofConnector": "mail-mcp" }),
     );
-    add_node(&mut view, "prompt:triage", serde_json::json!({ "name": "triage" }));
-    add_node(&mut view, "decision:limits", serde_json::json!({ "name": "limits" }));
-    add_node(&mut view, "kind:worker", serde_json::json!({ "name": "worker" }));
-    add_node(&mut view, "lane:ops", serde_json::json!({ "name": "Operations" }));
+    add_node(
+        &mut view,
+        "prompt:triage",
+        serde_json::json!({ "name": "triage" }),
+    );
+    add_node(
+        &mut view,
+        "decision:limits",
+        serde_json::json!({ "name": "limits" }),
+    );
+    add_node(
+        &mut view,
+        "kind:worker",
+        serde_json::json!({ "name": "worker" }),
+    );
+    add_node(
+        &mut view,
+        "lane:ops",
+        serde_json::json!({ "name": "Operations" }),
+    );
     add_edge(&mut view, "lane:ops", "kind:worker", "hasAgentKind");
 
     // Steps: a tool and a prompt on one agent step, a prompt-only agent step, a decision
     // linked by `evaluatesDecision`, a decision named by its reference, two human steps,
     // a wait, a call and the anchors.
-    step_node(&mut view, "s1", serde_json::json!({ "toolArguments": "{\"to\":\"{{owner}}\"}" }));
-    add_edge(&mut view, &step_node_id(WORKFLOW, "s1"), "tool:mail.send", "usesTool");
-    add_edge(&mut view, &step_node_id(WORKFLOW, "s1"), "prompt:triage", "hasPrompt");
+    step_node(
+        &mut view,
+        "s1",
+        serde_json::json!({ "toolArguments": "{\"to\":\"{{owner}}\"}" }),
+    );
+    add_edge(
+        &mut view,
+        &step_node_id(WORKFLOW, "s1"),
+        "tool:mail.send",
+        "usesTool",
+    );
+    add_edge(
+        &mut view,
+        &step_node_id(WORKFLOW, "s1"),
+        "prompt:triage",
+        "hasPrompt",
+    );
     step_node(&mut view, "s2", serde_json::json!({}));
-    add_edge(&mut view, &step_node_id(WORKFLOW, "s2"), "prompt:triage", "hasPrompt");
+    add_edge(
+        &mut view,
+        &step_node_id(WORKFLOW, "s2"),
+        "prompt:triage",
+        "hasPrompt",
+    );
     step_node(&mut view, "s3", serde_json::json!({}));
-    add_edge(&mut view, &step_node_id(WORKFLOW, "s3"), "decision:limits", "evaluatesDecision");
-    step_node(&mut view, "s4", serde_json::json!({ "approverRole": "controller" }));
+    add_edge(
+        &mut view,
+        &step_node_id(WORKFLOW, "s3"),
+        "decision:limits",
+        "evaluatesDecision",
+    );
+    step_node(
+        &mut view,
+        "s4",
+        serde_json::json!({ "approverRole": "controller" }),
+    );
     step_node(&mut view, "s5", serde_json::json!({}));
     step_node(&mut view, "s6", serde_json::json!({}));
     step_node(&mut view, "s7", serde_json::json!({}));
     step_node(&mut view, "s8", serde_json::json!({}));
     step_node(&mut view, "s9", serde_json::json!({}));
-    add_edge(&mut view, WORKFLOW, &step_node_id(WORKFLOW, "s9"), "hasStep");
+    add_edge(
+        &mut view,
+        WORKFLOW,
+        &step_node_id(WORKFLOW, "s9"),
+        "hasStep",
+    );
 
     let workflow = workflow(vec![
         step("s0", StepKind::Start, None, None),
@@ -223,11 +276,18 @@ fn ranked_fallback_respects_min_score() {
     // Step a: the top tool by rank scores 0.8; step b: the best tool scores 0.5, below 0.6.
     let relevance = |label: &str, _lane: &str| match label {
         // send_mail ranks first but has no registered contract, so it is not ranked.
-        "a" => vec![assigned("send_mail", 1, 900_000), assigned("find_mail", 2, 800_000)],
+        "a" => vec![
+            assigned("send_mail", 1, 900_000),
+            assigned("find_mail", 2, 800_000),
+        ],
         _ => vec![assigned("find_mail", 1, 500_000)],
     };
     let mut view = GraphView::default();
-    add_node(&mut view, "tool:send", serde_json::json!({ "name": "send_mail", "ofConnector": "mail-mcp" }));
+    add_node(
+        &mut view,
+        "tool:send",
+        serde_json::json!({ "name": "send_mail", "ofConnector": "mail-mcp" }),
+    );
     add_node(
         &mut view,
         "tool:find",
@@ -241,8 +301,18 @@ fn ranked_fallback_respects_min_score() {
             s
         })
         .collect();
-    let bound = ranked_bindings(&steps, &explicit, DEFAULT_MIN_TOOL_SCORE_MICROS, &relevance, &contract_of);
-    assert_eq!(bound.len(), 1, "only a clears the floor; b is below it, c is bound, d is human");
+    let bound = ranked_bindings(
+        &steps,
+        &explicit,
+        DEFAULT_MIN_TOOL_SCORE_MICROS,
+        &relevance,
+        &contract_of,
+    );
+    assert_eq!(
+        bound.len(),
+        1,
+        "only a clears the floor; b is below it, c is bound, d is human"
+    );
     assert_eq!(bound[0].step_id, "a");
     assert_eq!(
         bound[0].target,
@@ -254,12 +324,21 @@ fn ranked_fallback_respects_min_score() {
     );
     assert!(matches!(bound[0].source, BindingSource::Ranked { score_q32 } if score_q32 > 0));
     // A lower floor binds b as well.
-    assert_eq!(ranked_bindings(&steps, &explicit, 400_000, &relevance, &contract_of).len(),
+    assert_eq!(
+        ranked_bindings(&steps, &explicit, 400_000, &relevance, &contract_of).len(),
         2
     );
     // The contract is also found through a `hasContract` edge, and only for the serving connector.
-    add_node(&mut view, "tool:read", serde_json::json!({ "name": "read_mail", "ofConnector": "mail-mcp" }));
-    add_node(&mut view, "contract:read", serde_json::json!({ "name": "read" }));
+    add_node(
+        &mut view,
+        "tool:read",
+        serde_json::json!({ "name": "read_mail", "ofConnector": "mail-mcp" }),
+    );
+    add_node(
+        &mut view,
+        "contract:read",
+        serde_json::json!({ "name": "read" }),
+    );
     add_edge(&mut view, "tool:read", "contract:read", "hasContract");
     assert_eq!(
         registered_contract(&view, "mail-mcp", "read_mail").as_deref(),
@@ -269,7 +348,12 @@ fn ranked_fallback_respects_min_score() {
     assert_eq!(registered_contract(&view, "mail-mcp", "send_mail"), None);
 }
 
-fn flow(source: &str, target: &str, condition: Option<&str>, default: bool) -> medulla_types::process_import::CanonicalFlow {
+fn flow(
+    source: &str,
+    target: &str,
+    condition: Option<&str>,
+    default: bool,
+) -> medulla_types::process_import::CanonicalFlow {
     medulla_types::process_import::CanonicalFlow {
         source: source.to_string(),
         target: target.to_string(),
@@ -278,11 +362,7 @@ fn flow(source: &str, target: &str, condition: Option<&str>, default: bool) -> m
     }
 }
 
-fn gated(
-    id: &str,
-    kind: StepKind,
-    gate: medulla_types::process_import::GateKind,
-) -> CanonicalStep {
+fn gated(id: &str, kind: StepKind, gate: medulla_types::process_import::GateKind) -> CanonicalStep {
     CanonicalStep {
         gate: Some(gate),
         ..step(id, kind, None, None)
@@ -307,8 +387,12 @@ fn sealed(
     bindings: &[StepBinding],
     callee: super::plan::CalleeOf<'_>,
     max_call_depth: u32,
-) -> Result<medulla_decision_types::decision::task_plan::TaskPlan, medulla_decision_types::decision::process_plan::ProcessPlanRefusal> {
-    let drafted = super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth, 86_400)?;
+) -> Result<
+    medulla_decision_types::decision::task_plan::TaskPlan,
+    medulla_decision_types::decision::process_plan::ProcessPlanRefusal,
+> {
+    let drafted =
+        super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth, 86_400)?;
     medulla_decision_types::decision::task_plan::plan_explicit_tasks(&drafted.proposal)
         .map_err(|message| super::plan::engine_refusal(&message))
 }
@@ -352,9 +436,24 @@ fn invoice() -> (CanonicalWorkflow, Vec<StepBinding>) {
         agent_kind: "writer".to_string(),
     };
     let bindings = vec![
-        bound("s2", BindingTarget::Approval { approver_role: "clerk".to_string() }),
-        bound("s3", BindingTarget::Decision { decision_iri: "dmn:risk".to_string() }),
-        bound("s5", BindingTarget::Approval { approver_role: "manager".to_string() }),
+        bound(
+            "s2",
+            BindingTarget::Approval {
+                approver_role: "clerk".to_string(),
+            },
+        ),
+        bound(
+            "s3",
+            BindingTarget::Decision {
+                decision_iri: "dmn:risk".to_string(),
+            },
+        ),
+        bound(
+            "s5",
+            BindingTarget::Approval {
+                approver_role: "manager".to_string(),
+            },
+        ),
         bound(
             "s7",
             BindingTarget::Tool {
@@ -376,7 +475,10 @@ fn workflow_maps_to_canonical_plan() {
     let (wf, bindings) = invoice();
     let plan = sealed(&wf, &bindings, &no_callee, 4).unwrap();
     let again = sealed(&wf, &bindings, &no_callee, 4).unwrap();
-    assert_eq!(plan.plan_digest, again.plan_digest, "equal digest on a second run");
+    assert_eq!(
+        plan.plan_digest, again.plan_digest,
+        "equal digest on a second run"
+    );
     // start and end add no task.
     assert_eq!(plan.tasks.len(), 10);
     assert_eq!(plan.output_task_id, "s11");
@@ -384,9 +486,15 @@ fn workflow_maps_to_canonical_plan() {
     // A tool step, a prompt step, a decision step and two approval waits.
     assert_eq!(task("s7").call.as_ref().unwrap().tool, "post");
     assert!(task("s9").call.is_none() && task("s9").branch.is_none());
-    assert_eq!(task("s3").decision.as_ref().unwrap().decision_iri, "dmn:risk");
+    assert_eq!(
+        task("s3").decision.as_ref().unwrap().decision_iri,
+        "dmn:risk"
+    );
     assert_eq!(task("s2").approval.as_ref().unwrap().approver_role, "clerk");
-    assert_eq!(task("s5").approval.as_ref().unwrap().approver_role, "manager");
+    assert_eq!(
+        task("s5").approval.as_ref().unwrap().approver_role,
+        "manager"
+    );
     assert_eq!(task("s2").depends_on.len(), 0);
     // The XOR split takes one arm: the conditioned arm is a typed decision condition whose
     // IRI carries the flow condition text, and the default flow is the default arm.
@@ -403,7 +511,10 @@ fn workflow_maps_to_canonical_plan() {
     // The joins find the nearest dominating split of their gate.
     assert_eq!(task("s6").join.as_ref().unwrap().branch_task_id, "s4");
     assert_eq!(task("s11").join.as_ref().unwrap().branch_task_id, "s8");
-    assert_eq!(task("s8").branch.as_ref().unwrap().kind, BranchKind::Parallel);
+    assert_eq!(
+        task("s8").branch.as_ref().unwrap().kind,
+        BranchKind::Parallel
+    );
     // The flow condition is also returned as a decision question for the caller to register.
     let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4, 86_400).unwrap();
     assert_eq!(
@@ -423,16 +534,26 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
     };
     let (wf, bindings) = invoice();
     // An agent step with no binding is named.
-    let partial: Vec<StepBinding> = bindings.iter().filter(|b| b.step_id != "s9").cloned().collect();
-    let refused = super::plan::plan_from_workflow(&wf, &partial, &no_callee, 4, 86_400).unwrap_err();
+    let partial: Vec<StepBinding> = bindings
+        .iter()
+        .filter(|b| b.step_id != "s9")
+        .cloned()
+        .collect();
+    let refused =
+        super::plan::plan_from_workflow(&wf, &partial, &no_callee, 4, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_STEP_UNBOUND);
     assert_eq!(refused.steps, vec!["s9".to_string()]);
     // A flow back into the XOR split is a loop.
     let mut looped = wf.clone();
     looped.flows.push(flow("s7", "s4", None, false));
-    let refused = super::plan::plan_from_workflow(&looped, &bindings, &no_callee, 4, 86_400).unwrap_err();
+    let refused =
+        super::plan::plan_from_workflow(&looped, &bindings, &no_callee, 4, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_PLAN_LOOP);
-    assert!(refused.steps.contains(&"s4".to_string()), "{:?}", refused.steps);
+    assert!(
+        refused.steps.contains(&"s4".to_string()),
+        "{:?}",
+        refused.steps
+    );
     // A call step: unknown callee, then inlined, then too deep.
     let mut caller = workflow(vec![
         step("s1", StepKind::Start, None, None),
@@ -440,7 +561,11 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
         step("s3", StepKind::Agent, None, None),
         step("s4", StepKind::End, None, None),
     ]);
-    caller.flows = vec![flow("s1", "s2", None, false), flow("s2", "s3", None, false), flow("s3", "s4", None, false)];
+    caller.flows = vec![
+        flow("s1", "s2", None, false),
+        flow("s2", "s3", None, false),
+        flow("s3", "s4", None, false),
+    ];
     let post = bound(
         "s3",
         BindingTarget::Tool {
@@ -449,7 +574,8 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
             contract_iri: "urn:contract:post".to_string(),
         },
     );
-    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4, 86_400).unwrap_err();
+    let refused = super::plan::plan_from_workflow(&caller, &[post.clone()], &no_callee, 4, 86_400)
+        .unwrap_err();
     assert_eq!(refused.code, WORKFLOW_UNKNOWN);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
     let mut inner = workflow(vec![
@@ -461,14 +587,23 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
     let callee = |reference: &str| {
         (reference == "workflow:inner").then(|| super::plan::Callee {
             workflow: inner.clone(),
-            bindings: vec![bound("s2", BindingTarget::Approval { approver_role: "clerk".to_string() })],
+            bindings: vec![bound(
+                "s2",
+                BindingTarget::Approval {
+                    approver_role: "clerk".to_string(),
+                },
+            )],
         })
     };
     let plan = sealed(&caller, &[post.clone()], &callee, 4).unwrap();
     let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
     assert_eq!(ids, vec!["s2:s2", "s3"]);
-    assert_eq!(plan.tasks.as_slice()[1].depends_on.as_slice().to_vec(), vec!["s2:s2".to_string()]);
-    let refused = super::plan::plan_from_workflow(&caller, &[post], &callee, 0, 86_400).unwrap_err();
+    assert_eq!(
+        plan.tasks.as_slice()[1].depends_on.as_slice().to_vec(),
+        vec!["s2:s2".to_string()]
+    );
+    let refused =
+        super::plan::plan_from_workflow(&caller, &[post], &callee, 0, 86_400).unwrap_err();
     assert_eq!(refused.code, PROCESS_PLAN_CALL_DEPTH);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
 }

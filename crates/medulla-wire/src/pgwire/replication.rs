@@ -91,7 +91,12 @@ fn push_cstring(out: &mut Vec<u8>, text: &str) {
 /// An `ErrorResponse` carrying `sqlstate` and `message`.
 pub(super) fn error_response(sqlstate: &str, message: &str) -> Vec<u8> {
     let mut body = Vec::new();
-    for (field, text) in [(b'S', "ERROR"), (b'V', "ERROR"), (b'C', sqlstate), (b'M', message)] {
+    for (field, text) in [
+        (b'S', "ERROR"),
+        (b'V', "ERROR"),
+        (b'C', sqlstate),
+        (b'M', message),
+    ] {
         body.push(field);
         push_cstring(&mut body, text);
     }
@@ -188,7 +193,10 @@ fn take_frame(buffer: &mut Vec<u8>) -> io::Result<Option<(u8, Vec<u8>)>> {
         .ok()
         .filter(|length| (4..=MAX_CLIENT_FRAME).contains(length))
         .ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "replication frame length is invalid")
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "replication frame length is invalid",
+            )
         })?;
     if buffer.len() < 1 + length {
         return Ok(None);
@@ -612,7 +620,9 @@ where
                                 match end {
                                     StreamEnd::Client => {
                                         writer.write_all(&copy_done()).await?;
-                                        writer.write_all(&command_complete("START_STREAMING")).await?;
+                                        writer
+                                            .write_all(&command_complete("START_STREAMING"))
+                                            .await?;
                                         writer.write_all(&ready_for_query()).await?;
                                         writer.flush().await?;
                                         continue;
@@ -640,7 +650,9 @@ where
                     }
                     Command::Unsupported(text) => reply.extend(error_response(
                         "0A000",
-                        &format!("FEATURE_NOT_SUPPORTED: replication command `{text}` is not supported"),
+                        &format!(
+                            "FEATURE_NOT_SUPPORTED: replication command `{text}` is not supported"
+                        ),
                     )),
                 }
                 reply.extend(ready_for_query());
@@ -864,10 +876,7 @@ async fn confirm(
     flushed: u64,
 ) -> Result<(), String> {
     let mut confirmed: Option<String> = None;
-    while pending
-        .front()
-        .is_some_and(|page| page.end_lsn <= flushed)
-    {
+    while pending.front().is_some_and(|page| page.end_lsn <= flushed) {
         if let Some(page) = pending.pop_front() {
             *unconfirmed = unconfirmed.saturating_sub(page.bytes);
             confirmed = Some(page.cursor);
@@ -1016,7 +1025,10 @@ mod tests {
         assert!(take_frame(&mut buffer).unwrap().is_none());
         buffer.extend_from_slice(&message[7..]);
         let (tag, body) = take_frame(&mut buffer).unwrap().unwrap();
-        assert_eq!((tag, body.as_slice()), (b'Q', b"IDENTIFY_SYSTEM\0".as_slice()));
+        assert_eq!(
+            (tag, body.as_slice()),
+            (b'Q', b"IDENTIFY_SYSTEM\0".as_slice())
+        );
         assert!(buffer.is_empty());
         // A declared length below the length word, or above the cap, is a malformed frame.
         let mut bad = vec![b'Q', 0, 0, 0, 2];
@@ -1033,7 +1045,10 @@ mod tests {
         body.push(0);
         assert_eq!(status_update_flushed(&body), Some(9));
         assert_eq!(status_update_flushed(b"k"), None);
-        assert_eq!(refusal_sqlstate("CURSOR_EXPIRED: the cursor is past retention"), "55000");
+        assert_eq!(
+            refusal_sqlstate("CURSOR_EXPIRED: the cursor is past retention"),
+            "55000"
+        );
         assert_eq!(refusal_sqlstate("INTERNAL: x"), "XX000");
     }
 }

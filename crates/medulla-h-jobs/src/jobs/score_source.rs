@@ -112,10 +112,11 @@ pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, S
     }
     let mut scores = Vec::with_capacity(nodes.len());
     for (node_id, blob) in nodes {
-        let props = medulla_types::msgpack::decode_property_object(&blob)
-            .map_err(|_| ScoreRefusal::Invalid {
+        let props = medulla_types::msgpack::decode_property_object(&blob).map_err(|_| {
+            ScoreRefusal::Invalid {
                 node: node_id.clone(),
-            })?;
+            }
+        })?;
         let (Some(value), Some(range_min), Some(range_max)) = (
             number(&props, "value"),
             number(&props, "range_min"),
@@ -132,15 +133,14 @@ pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, S
         .map_err(|_| ScoreRefusal::GraderUnknown {
             node: node_id.clone(),
         })?;
-        let split =
-            match props.get("split") {
-                None | Some(serde_json::Value::Null) => None,
-                Some(raw) => Some(serde_json::from_value::<ExampleSplit>(raw.clone()).map_err(
-                    |_| ScoreRefusal::Invalid {
-                        node: node_id.clone(),
-                    },
-                )?),
-            };
+        let split = match props.get("split") {
+            None | Some(serde_json::Value::Null) => None,
+            Some(raw) => Some(serde_json::from_value::<ExampleSplit>(raw.clone()).map_err(
+                |_| ScoreRefusal::Invalid {
+                    node: node_id.clone(),
+                },
+            )?),
+        };
         let run_id = runs.get(&node_id).cloned();
         scores.push(StoredScore {
             input_ids: run_id.iter().cloned().collect(),

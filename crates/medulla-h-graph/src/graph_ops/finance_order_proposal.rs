@@ -23,11 +23,12 @@ use super::terminal::GraphOpsContext;
 use medulla_finance_market::market::digest;
 #[cfg(feature = "finance")]
 use medulla_finance_types::finance_order::{
-    EvidenceRef, OrderAdmissionReceipt, OrderProposalSnapshot, OrderPromoteRequest,
-    OrderPromoteResult, OrderReceiptGetRequest, OrderStageResult, ORDER_RECEIPT_NOT_FOUND, ORDER_LIMIT_BREACH, ORDER_PROMOTION_VETOED,
-    PROMOTE_EVIDENCE_MISMATCH, PROMOTE_GATE_FAILED, PROMOTE_GATE_UNAVAILABLE, PROMOTE_HEAD_STALE,
-    PROMOTE_RECEIPT_INCOMPLETE, PROMOTE_WRITE_FAILED, PROPOSAL_EVIDENCE_MISSING,
-    PROPOSAL_HEAD_STALE, PROPOSAL_REVISION_CONFLICT,
+    EvidenceRef, OrderAdmissionReceipt, OrderPromoteRequest, OrderPromoteResult,
+    OrderProposalSnapshot, OrderReceiptGetRequest, OrderStageResult, ORDER_LIMIT_BREACH,
+    ORDER_PROMOTION_VETOED, ORDER_RECEIPT_NOT_FOUND, PROMOTE_EVIDENCE_MISMATCH,
+    PROMOTE_GATE_FAILED, PROMOTE_GATE_UNAVAILABLE, PROMOTE_HEAD_STALE, PROMOTE_RECEIPT_INCOMPLETE,
+    PROMOTE_WRITE_FAILED, PROPOSAL_EVIDENCE_MISSING, PROPOSAL_HEAD_STALE,
+    PROPOSAL_REVISION_CONFLICT,
 };
 
 #[cfg(feature = "finance")]
@@ -345,7 +346,10 @@ fn check_heads(
 
 /// Every manifest gate needs a complete, passing receipt bound to the candidate.
 #[cfg(feature = "finance")]
-fn check_gates(request: &OrderPromoteRequest, candidate_digest: &str) -> Result<Vec<String>, Refusal> {
+fn check_gates(
+    request: &OrderPromoteRequest,
+    candidate_digest: &str,
+) -> Result<Vec<String>, Refusal> {
     if request.manifest_gate_ids.is_empty()
         || request.required_gate_manifest_digest
             != digest::of_json(MANIFEST_DOMAIN, &request.manifest_gate_ids)
@@ -370,7 +374,9 @@ fn check_gates(request: &OrderPromoteRequest, candidate_digest: &str) -> Result<
         {
             return Err((
                 PROMOTE_RECEIPT_INCOMPLETE,
-                format!("the receipt of gate {gate_id} is incomplete or bound to another candidate"),
+                format!(
+                    "the receipt of gate {gate_id} is incomplete or bound to another candidate"
+                ),
             ));
         }
         if !receipt.pass_fail && failed.is_none() {
@@ -402,8 +408,15 @@ fn check_approver(
         .leverage_limits
         .iter()
         .find(|policy| policy.instrument_id == instrument_id);
-    live_order_eligibility(OrderMode::Live, instrument_id, approver, false, false, policy)
-        .map_err(|refusal| (ORDER_PROMOTION_VETOED, format!("{refusal:?}")))?;
+    live_order_eligibility(
+        OrderMode::Live,
+        instrument_id,
+        approver,
+        false,
+        false,
+        policy,
+    )
+    .map_err(|refusal| (ORDER_PROMOTION_VETOED, format!("{refusal:?}")))?;
     if designated {
         Ok(())
     } else {
@@ -769,7 +782,10 @@ pub(super) async fn handle_receipt_get(
         .carrier()
         .map(|carrier| carrier.tenant_scope().to_owned())
     else {
-        return ControlFlow::Break(Response::err(ctx.req_id, "ACCESS_DENIED: no verified tenant"));
+        return ControlFlow::Break(Response::err(
+            ctx.req_id,
+            "ACCESS_DENIED: no verified tenant",
+        ));
     };
     ControlFlow::Break(match read_promoted_receipt(ctx.core, &scope, request) {
         Ok(result) => Response::ok(
@@ -827,7 +843,9 @@ mod receipt_get_tests {
                 "receipt": receipt(),
             }),
         );
-        let request = OrderReceiptGetRequest { proposal_id: "p1".into() };
+        let request = OrderReceiptGetRequest {
+            proposal_id: "p1".into(),
+        };
         let read = read_promoted_receipt(&core, "scope-a", &request).expect("reads");
         assert_eq!(read.receipt, receipt());
         assert_eq!(read.receipt_digest, "sha256:ff");
@@ -836,7 +854,9 @@ mod receipt_get_tests {
         let absent = read_promoted_receipt(
             &core,
             "scope-a",
-            &OrderReceiptGetRequest { proposal_id: "nope".into() },
+            &OrderReceiptGetRequest {
+                proposal_id: "nope".into(),
+            },
         )
         .unwrap_err();
         assert_eq!(foreign, absent);

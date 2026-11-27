@@ -28,7 +28,12 @@ fn the_scale_inventory_classes_are_declared_and_rooted_in_the_core_system() {
     ] {
         let iri = format!("{INFRASTRUCTURE}{class}");
         assert!(
-            has_iri(&triples, &iri, &format!("{RDF}type"), &format!("{OWL}Class")),
+            has_iri(
+                &triples,
+                &iri,
+                &format!("{RDF}type"),
+                &format!("{OWL}Class")
+            ),
             "{class} is declared as a class"
         );
         assert!(

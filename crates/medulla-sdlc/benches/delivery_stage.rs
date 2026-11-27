@@ -5,9 +5,7 @@ use std::collections::BTreeSet;
 use std::time::Instant;
 
 use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_report};
-use medulla_source_types::delivery::{
-    decode_delivery, DeliveryReportState, DeliveryReportWrite,
-};
+use medulla_source_types::delivery::{decode_delivery, DeliveryReportState, DeliveryReportWrite};
 
 fn main() {
     let assignments: Vec<_> = (0..64)
@@ -40,10 +38,16 @@ fn main() {
     for _ in 0..rounds {
         std::hint::black_box(record_report(&delivery, &write, &known).expect("report applies"));
     }
-    println!("lifecycle/delivery_stage record_report {:?}/op", start.elapsed() / rounds);
+    println!(
+        "lifecycle/delivery_stage record_report {:?}/op",
+        start.elapsed() / rounds
+    );
     let start = Instant::now();
     for _ in 0..rounds {
         std::hint::black_box(derive_stage(&delivery));
     }
-    println!("lifecycle/delivery_stage derive_stage {:?}/op", start.elapsed() / rounds);
+    println!(
+        "lifecycle/delivery_stage derive_stage {:?}/op",
+        start.elapsed() / rounds
+    );
 }

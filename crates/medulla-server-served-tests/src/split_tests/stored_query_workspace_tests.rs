@@ -76,7 +76,9 @@ fn masked(response: &Response, name: &str) -> String {
 
 /// As the reader `OTHER`, who is outside every private share scope.
 async fn as_other(served: &Served, method: Method) -> Response {
-    served.verified_as(OTHER, TENANT, &["kg:read"], method).await
+    served
+        .verified_as(OTHER, TENANT, &["kg:read"], method)
+        .await
 }
 
 fn refusal_text(response: &Response) -> String {
@@ -104,7 +106,10 @@ fn list(limit: Option<u32>, cursor: Option<String>, include_retired: bool) -> Me
 }
 
 fn names(page: &StoredQueryPage) -> Vec<&str> {
-    page.queries.iter().map(|entry| entry.name.as_str()).collect()
+    page.queries
+        .iter()
+        .map(|entry| entry.name.as_str())
+        .collect()
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R708.12
@@ -119,13 +124,20 @@ async fn get_and_list_hide_a_private_query_from_another_principal_exactly_like_a
     // The author reads the latest version as written, and a named version.
     let latest: StoredQueryView = ok(
         "StoredQueryGet latest",
-        served.verified(TENANT, &["kg:read"], get("beta_shared", None)).await,
+        served
+            .verified(TENANT, &["kg:read"], get("beta_shared", None))
+            .await,
     );
     assert_eq!((latest.version, latest.text.as_str()), (2, TEXT));
-    assert!(latest.created_at_ms.is_some(), "a put stamps its publication time");
+    assert!(
+        latest.created_at_ms.is_some(),
+        "a put stamps its publication time"
+    );
     let first: StoredQueryView = ok(
         "StoredQueryGet v1",
-        served.verified(TENANT, &["kg:read"], get("beta_shared", Some(1))).await,
+        served
+            .verified(TENANT, &["kg:read"], get("beta_shared", Some(1)))
+            .await,
     );
     assert_eq!(first.version, 1);
 
@@ -145,7 +157,10 @@ async fn get_and_list_hide_a_private_query_from_another_principal_exactly_like_a
         "a foreign name and a missing name must refuse alike"
     );
     let unpublished = refusal_text(&as_other(&served, get("beta_shared", Some(9))).await);
-    assert!(unpublished.contains("STORED_QUERY_NOT_FOUND"), "{unpublished}");
+    assert!(
+        unpublished.contains("STORED_QUERY_NOT_FOUND"),
+        "{unpublished}"
+    );
 
     // The list shows the other principal only what it may call; the author sees both.
     let other_page: StoredQueryPage = ok(
@@ -156,7 +171,9 @@ async fn get_and_list_hide_a_private_query_from_another_principal_exactly_like_a
     assert_eq!(other_page.queries[0].latest_version, 2);
     let author_page: StoredQueryPage = ok(
         "StoredQueryList as author",
-        served.verified(TENANT, &["kg:read"], list(None, None, false)).await,
+        served
+            .verified(TENANT, &["kg:read"], list(None, None, false))
+            .await,
     );
     assert_eq!(names(&author_page), vec!["alpha_private", "beta_shared"]);
 }
@@ -193,7 +210,9 @@ async fn list_pages_by_cursor_in_name_order_and_refuses_a_foreign_cursor() {
     // read grant, so the handler is what refuses.
     let minted = ok::<StoredQueryPage>(
         "StoredQueryList first page",
-        served.verified(TENANT, &["kg:read"], list(Some(1), None, false)).await,
+        served
+            .verified(TENANT, &["kg:read"], list(Some(1), None, false))
+            .await,
     )
     .next_cursor
     .expect("two names remain");
@@ -213,7 +232,9 @@ async fn list_pages_by_cursor_in_name_order_and_refuses_a_foreign_cursor() {
         text.contains("stored query list cursor was not minted for this tenant"),
         "{text}"
     );
-    let zero = served.verified(TENANT, &["kg:read"], list(Some(0), None, false)).await;
+    let zero = served
+        .verified(TENANT, &["kg:read"], list(Some(0), None, false))
+        .await;
     let zero_text = refusal_text(&zero);
     assert!(zero_text.contains("STORED_QUERY_INVALID"), "{zero_text}");
     assert!(zero_text.contains("limit must be 1..=256"), "{zero_text}");
@@ -244,7 +265,10 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
     let foreign = retire_as_other("old_report").await;
     let absent = retire_as_other("absent_report").await;
     let foreign_text = refusal_text(&foreign);
-    assert!(foreign_text.contains("STORED_QUERY_NOT_FOUND"), "{foreign_text}");
+    assert!(
+        foreign_text.contains("STORED_QUERY_NOT_FOUND"),
+        "{foreign_text}"
+    );
     assert!(foreign_text.contains("no stored query"), "{foreign_text}");
     assert_eq!(
         masked(&foreign, "old_report"),
@@ -253,7 +277,9 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
     );
     let still: StoredQueryView = ok(
         "StoredQueryGet after a foreign retire",
-        served.verified(TENANT, &["kg:read"], get("old_report", None)).await,
+        served
+            .verified(TENANT, &["kg:read"], get("old_report", None))
+            .await,
     );
     assert_eq!(still.name, "old_report");
 
@@ -270,13 +296,20 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
     };
     let retired: StoredQueryRetired = ok("StoredQueryRetire", retire("retire-1").await);
     assert!(retired.retired);
-    assert_eq!(retired.tombstone.reason, StoredQueryRetireReason::Superseded);
+    assert_eq!(
+        retired.tombstone.reason,
+        StoredQueryRetireReason::Superseded
+    );
     let again: StoredQueryRetired = ok("StoredQueryRetire again", retire("retire-2").await);
     assert_eq!(again.tombstone, retired.tombstone);
 
     // The name is no longer served to anyone: not read, not called, not published again, and
     // left out of the list unless retired names are asked for.
-    let gone = refusal_text(&served.verified(TENANT, &["kg:read"], get("old_report", None)).await);
+    let gone = refusal_text(
+        &served
+            .verified(TENANT, &["kg:read"], get("old_report", None))
+            .await,
+    );
     assert!(gone.contains("STORED_QUERY_NOT_FOUND"), "{gone}");
     let call = served
         .verified(
@@ -289,7 +322,10 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
             },
         )
         .await;
-    assert!(refusal_text(&call).contains("STORED_QUERY_NOT_FOUND"), "{call:?}");
+    assert!(
+        refusal_text(&call).contains("STORED_QUERY_NOT_FOUND"),
+        "{call:?}"
+    );
     let republish = served
         .call_on(
             served.graph(),
@@ -305,12 +341,16 @@ async fn retire_is_a_tombstone_only_the_author_can_write() {
     );
     let live: StoredQueryPage = ok(
         "StoredQueryList live",
-        served.verified(TENANT, &["kg:read"], list(None, None, false)).await,
+        served
+            .verified(TENANT, &["kg:read"], list(None, None, false))
+            .await,
     );
     assert_eq!(names(&live), vec!["keeper"]);
     let with_retired: StoredQueryPage = ok(
         "StoredQueryList with retired",
-        served.verified(TENANT, &["kg:read"], list(None, None, true)).await,
+        served
+            .verified(TENANT, &["kg:read"], list(None, None, true))
+            .await,
     );
     assert_eq!(names(&with_retired), vec!["keeper", "old_report"]);
     let tombstone = with_retired.queries[1]

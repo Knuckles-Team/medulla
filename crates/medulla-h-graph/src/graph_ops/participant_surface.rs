@@ -112,7 +112,10 @@ fn upsert(
 }
 
 /// The decoded properties of one node, when it is stored.
-fn node_properties(core: &GraphCore, node_id: &str) -> Option<serde_json::Map<String, serde_json::Value>> {
+fn node_properties(
+    core: &GraphCore,
+    node_id: &str,
+) -> Option<serde_json::Map<String, serde_json::Value>> {
     let blob = core.get_node_properties(node_id)?;
     medulla_types::msgpack::decode_property_object(&blob).ok()
 }
@@ -177,14 +180,18 @@ pub(super) fn admit(
 ) -> Result<Admitted, String> {
     match op {
         ParticipantOp::Put { participant } => admit_put(core, tenant_scope, agent_id, participant),
-        ParticipantOp::AddMember { session_id, participant_id } => {
-            admit_member(core, tenant_scope, agent_id, session_id, participant_id)
-        }
+        ParticipantOp::AddMember {
+            session_id,
+            participant_id,
+        } => admit_member(core, tenant_scope, agent_id, session_id, participant_id),
         ParticipantOp::PutScope { scope } => admit_scope(core, tenant_scope, agent_id, scope),
         ParticipantOp::SetObservation { config } => {
             admit_observation(core, tenant_scope, agent_id, config)
         }
-        ParticipantOp::CompleteDerivation { payload_ref, claims_written } => {
+        ParticipantOp::CompleteDerivation {
+            payload_ref,
+            claims_written,
+        } => {
             let at_ms = authoritative_now_ms();
             let (write, completed) = super::participant_derive::advance_checkpoint(
                 core,
@@ -193,7 +200,10 @@ pub(super) fn admit(
                 *claims_written,
                 at_ms,
             )?;
-            Ok(Admitted { write, out: Out::Derivation(completed) })
+            Ok(Admitted {
+                write,
+                out: Out::Derivation(completed),
+            })
         }
     }
 }
@@ -229,13 +239,22 @@ fn admit_put(
         updated.display_name = saved.display_name;
         updated.acts_as = saved.acts_as;
         if updated == stored {
-            return Ok(Admitted { write: None, out: Out::Participant(stored) });
+            return Ok(Admitted {
+                write: None,
+                out: Out::Participant(stored),
+            });
         }
         let write = upsert(iri, PARTICIPANT_NODE_TYPE, tenant_scope, &updated)?;
-        return Ok(Admitted { write: Some(write), out: Out::Participant(updated) });
+        return Ok(Admitted {
+            write: Some(write),
+            out: Out::Participant(updated),
+        });
     }
     let write = upsert(iri, PARTICIPANT_NODE_TYPE, tenant_scope, &saved)?;
-    Ok(Admitted { write: Some(write), out: Out::Participant(saved) })
+    Ok(Admitted {
+        write: Some(write),
+        out: Out::Participant(saved),
+    })
 }
 
 /// The `hasParticipant` edge from a thread to a participant.
@@ -268,10 +287,16 @@ fn admit_member(
     };
     // The pair is idempotent: an existing edge is the answer and commits nothing.
     if core.has_edge(&thread_id, &iri) {
-        return Ok(Admitted { write: None, out: Out::Member(membership) });
+        return Ok(Admitted {
+            write: None,
+            out: Out::Member(membership),
+        });
     }
     let write = membership_edge(thread_id, iri, added_at_ms)?;
-    Ok(Admitted { write: Some(write), out: Out::Member(membership) })
+    Ok(Admitted {
+        write: Some(write),
+        out: Out::Member(membership),
+    })
 }
 
 fn admit_scope(
@@ -314,10 +339,16 @@ fn admit_scope(
     saved.tenant = tenant_scope.to_string();
     saved.owner_principal = agent_id.to_string();
     if stored.as_ref() == Some(&saved) {
-        return Ok(Admitted { write: None, out: Out::Scope(saved) });
+        return Ok(Admitted {
+            write: None,
+            out: Out::Scope(saved),
+        });
     }
     let write = upsert(node_id, SCOPE_LABEL, tenant_scope, &saved)?;
-    Ok(Admitted { write: Some(write), out: Out::Scope(saved) })
+    Ok(Admitted {
+        write: Some(write),
+        out: Out::Scope(saved),
+    })
 }
 
 /// The sessions a read narrowed by `reference` may touch (MEDULLA-DECISION-ENGINE-R651.9): the
@@ -343,7 +374,10 @@ pub fn resolve_scope_ref(
     if scope.owner_principal != agent_id && !scope.shared_with.contains(agent_id) {
         return Err(refuse(
             "SCOPE_NOT_VISIBLE",
-            format!("scope {} is not available to the caller", reference.scope_id),
+            format!(
+                "scope {} is not available to the caller",
+                reference.scope_id
+            ),
         ));
     }
     if scope.session_ids.len() > scope_max_sessions() {
@@ -432,10 +466,16 @@ fn admit_observation(
     let stored: Option<ObservationConfig> =
         read_stored(core, &node_id, OBSERVATION_LABEL, tenant_scope);
     if stored.as_ref() == Some(config) {
-        return Ok(Admitted { write: None, out: Out::Observation(config.clone()) });
+        return Ok(Admitted {
+            write: None,
+            out: Out::Observation(config.clone()),
+        });
     }
     let write = upsert(node_id, OBSERVATION_LABEL, tenant_scope, config)?;
-    Ok(Admitted { write: Some(write), out: Out::Observation(config.clone()) })
+    Ok(Admitted {
+        write: Some(write),
+        out: Out::Observation(config.clone()),
+    })
 }
 
 fn payload(out: Out) -> Result<ResultPayload, String> {
@@ -471,7 +511,11 @@ fn stored_participants(core: &GraphCore, tenant_scope: &str) -> Vec<(String, Par
 
 /// Every participant of `tenant_scope` the principal acts as, in node-id order: the ones it may
 /// read (MEDULLA-DECISION-ENGINE-R655.4). A participant it does not act as reads as absent.
-pub fn readable_participants(core: &GraphCore, tenant_scope: &str, principal: &str) -> Vec<Participant> {
+pub fn readable_participants(
+    core: &GraphCore,
+    tenant_scope: &str,
+    principal: &str,
+) -> Vec<Participant> {
     stored_participants(core, tenant_scope)
         .into_iter()
         .map(|(_, participant)| participant)
@@ -496,7 +540,11 @@ pub struct PrincipalView {
 
 /// The sessions of every thread that holds a stored participant of `tenant_scope` with this slug,
 /// in any workspace (MEDULLA-DECISION-ENGINE-R655.3).
-pub fn sessions_of_participant(core: &GraphCore, tenant_scope: &str, slug: &ParticipantId) -> BTreeSet<String> {
+pub fn sessions_of_participant(
+    core: &GraphCore,
+    tenant_scope: &str,
+    slug: &ParticipantId,
+) -> BTreeSet<String> {
     stored_participants(core, tenant_scope)
         .into_iter()
         .filter(|(_, participant)| &participant.participant_id == slug)
@@ -506,7 +554,11 @@ pub fn sessions_of_participant(core: &GraphCore, tenant_scope: &str, slug: &Part
 
 /// The sessions of every thread that holds a participant the principal acts as: the sessions it
 /// may read about (MEDULLA-DECISION-ENGINE-R655.4).
-pub fn sessions_visible_to(core: &GraphCore, tenant_scope: &str, principal: &str) -> BTreeSet<String> {
+pub fn sessions_visible_to(
+    core: &GraphCore,
+    tenant_scope: &str,
+    principal: &str,
+) -> BTreeSet<String> {
     stored_participants(core, tenant_scope)
         .into_iter()
         .filter(|(_, participant)| participant.acts_as.iter().any(|name| name == principal))
@@ -521,8 +573,15 @@ fn sessions_of(core: &GraphCore, iri: &str) -> BTreeSet<String> {
         .into_iter()
         .filter(|id| id.starts_with(THREAD_NODE_PREFIX))
         .filter_map(|id| node_properties(core, &id))
-        .filter(|props| props.get("type").and_then(serde_json::Value::as_str) == Some(THREAD_NODE_TYPE))
-        .filter_map(|props| props.get("session_id").and_then(serde_json::Value::as_str).map(str::to_string))
+        .filter(|props| {
+            props.get("type").and_then(serde_json::Value::as_str) == Some(THREAD_NODE_TYPE)
+        })
+        .filter_map(|props| {
+            props
+                .get("session_id")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        })
         .collect()
 }
 
@@ -549,7 +608,12 @@ pub fn principal_view(
             acting
                 .iter()
                 .find(|(_, participant)| &participant.participant_id == wanted)
-                .ok_or_else(|| not_permitted(&format!("the principal does not act as {}", wanted.as_str())))?,
+                .ok_or_else(|| {
+                    not_permitted(&format!(
+                        "the principal does not act as {}",
+                        wanted.as_str()
+                    ))
+                })?,
         ),
         None => match acting.as_slice() {
             [] => None,
@@ -562,7 +626,10 @@ pub fn principal_view(
         },
     };
     Ok(match chosen {
-        None => PrincipalView { observer: ObserverRef::System, sessions: BTreeSet::new() },
+        None => PrincipalView {
+            observer: ObserverRef::System,
+            sessions: BTreeSet::new(),
+        },
         Some((iri, participant)) => PrincipalView {
             observer: ObserverRef::Participant(participant.participant_id.clone()),
             sessions: sessions_of(core, iri),
@@ -583,7 +650,10 @@ pub(super) async fn handle(
     let Some(agent_id) = ctx.caller.filter(|caller| !caller.trim().is_empty()) else {
         return Some(Response::err(
             ctx.req_id,
-            refuse("ACCESS_DENIED", "a participant write needs a verified caller"),
+            refuse(
+                "ACCESS_DENIED",
+                "a participant write needs a verified caller",
+            ),
         ));
     };
     let Admitted { write, out } = match admit(ctx.core, ctx.tenant_scope, agent_id, op) {
@@ -602,10 +672,15 @@ pub(super) async fn handle(
     // gateway applies like the memberships of an ingested thread.
     if let Method::BatchUpdate { operations_msgpack } = write.clone() {
         return Some(
-            medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
-                medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
-                payload(out)
-            })
+            medulla_server_ops::api::ingest::graph::commit_gateway(
+                ctx,
+                &plan,
+                &write,
+                move |core| {
+                    medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
+                    payload(out)
+                },
+            )
             .await,
         );
     }
@@ -674,11 +749,12 @@ pub(super) async fn commit_memberships(
     };
     let written = membership_edges(conversation).len();
     let plan = MutationPlan::for_method(&write);
-    let response = medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
-        medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
-        ResultPayload::of::<ParticipantAddMember>(first)
-    })
-    .await;
+    let response =
+        medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
+            medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
+            ResultPayload::of::<ParticipantAddMember>(first)
+        })
+        .await;
     match response.refusal_text() {
         Some(refusal) => Err(refusal),
         None => Ok(written),

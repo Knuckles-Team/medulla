@@ -114,7 +114,11 @@ impl Served {
                 node_id: node_id.to_string(),
             })
             .await;
-        assert!(response.error.is_none(), "read refused: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "read refused: {:?}",
+            response.error
+        );
         match response.result.as_ref() {
             Some(ResultPayload::Raw(bytes)) => {
                 rmp_serde::from_slice::<Option<serde_json::Value>>(bytes).expect("a node")
@@ -192,7 +196,10 @@ async fn second_create_refuses_harness_edit_exists() {
     assert!(text.contains("HARNESS_EDIT_EXISTS"), "{text}");
 
     // The refused create wrote nothing: the edit keeps its first round and status.
-    let properties = served.node("edit:twice").await.expect("the edit node exists");
+    let properties = served
+        .node("edit:twice")
+        .await
+        .expect("the edit node exists");
     assert_eq!(properties["editStatus"], "proposed");
     assert_eq!(properties["editRound"], 4);
 }
@@ -216,6 +223,9 @@ async fn served_add_node_of_edit_status_is_refused() {
     let moved = served.call(caller_write("edit:owned", "shipped")).await;
     let text = moved.refusal_text().unwrap_or_default();
     assert!(text.contains("EDIT_STATUS_ENGINE_OWNED"), "{text}");
-    let properties = served.node("edit:owned").await.expect("the edit node exists");
+    let properties = served
+        .node("edit:owned")
+        .await
+        .expect("the edit node exists");
     assert_eq!(properties["editStatus"], "proposed");
 }

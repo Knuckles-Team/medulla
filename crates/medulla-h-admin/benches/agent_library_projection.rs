@@ -31,7 +31,9 @@ fn card() -> AgentComponentEntry {
             source_revision_digest: &digest,
         },
     );
-    draft.declared_capabilities = (0..64).map(|i| format!("urn:vendor:capability-{i}")).collect();
+    draft.declared_capabilities = (0..64)
+        .map(|i| format!("urn:vendor:capability-{i}"))
+        .collect();
     AgentComponentEntry::publish(draft, 1, 1).expect("the card publishes")
 }
 

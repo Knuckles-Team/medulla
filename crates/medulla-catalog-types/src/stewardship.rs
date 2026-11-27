@@ -232,7 +232,10 @@ pub fn deprecated_assets<'a>(
     flags: impl IntoIterator<Item = &'a serde_json::Map<String, serde_json::Value>>,
     tenant: &str,
 ) -> std::collections::BTreeSet<String> {
-    fn text<'n>(node: &'n serde_json::Map<String, serde_json::Value>, key: &str) -> Option<&'n str> {
+    fn text<'n>(
+        node: &'n serde_json::Map<String, serde_json::Value>,
+        key: &str,
+    ) -> Option<&'n str> {
         node.get(key).and_then(serde_json::Value::as_str)
     }
     flags
@@ -326,6 +329,9 @@ mod deprecation_tests {
             flag("ledger", "deprecation", "t2"),
         ];
         let found = deprecated_assets(&flags, "t1");
-        assert_eq!(found.into_iter().collect::<Vec<_>>(), vec!["orders".to_string()]);
+        assert_eq!(
+            found.into_iter().collect::<Vec<_>>(),
+            vec!["orders".to_string()]
+        );
     }
 }

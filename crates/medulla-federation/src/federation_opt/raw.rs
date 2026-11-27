@@ -159,7 +159,10 @@ pub(crate) fn raw_scan(
     let found = remote.call(
         session,
         RAW_SEARCH,
-        BTreeMap::from([("query".to_string(), json!(text)), ("k".to_string(), json!(k))]),
+        BTreeMap::from([
+            ("query".to_string(), json!(text)),
+            ("k".to_string(), json!(k)),
+        ]),
         &mut cost,
     )?;
     let joined = join && !input.is_empty();
@@ -327,7 +330,9 @@ mod tests {
 
     fn scan(session: &FederationSession, remote: &RawRemote) -> Result<RowSet, String> {
         let op = Op::ForeignScan {
-            source: ForeignSourceSpec::Named { name: "docs".into() },
+            source: ForeignSourceSpec::Named {
+                name: "docs".into(),
+            },
             join: false,
         };
         session.bind_search_text(&op, "alpha");

@@ -458,7 +458,10 @@ fn a_link_resolves_to_its_principal_and_an_absent_one_to_none() {
     );
     let none = Ok(IdentityReply::LinkedPrincipal { principal_id: None });
     assert_eq!(resolve(&mut store, "ldap", "ext-nobody", &reader), none);
-    assert_eq!(resolve(&mut store, "no-such-idp", "ext-dana", &reader), none);
+    assert_eq!(
+        resolve(&mut store, "no-such-idp", "ext-dana", &reader),
+        none
+    );
     let nobody = IdentityStamp::for_actor(actor("usr:nobody", &[]));
     assert_eq!(
         resolve(&mut store, "ldap", "ext-dana", &nobody),

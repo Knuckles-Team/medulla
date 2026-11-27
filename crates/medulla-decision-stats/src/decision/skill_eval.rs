@@ -8,11 +8,13 @@
 use std::collections::BTreeSet;
 
 use medulla_decision_types::correction::{CorrectionSource, EvalCase};
+use medulla_decision_types::decision::codes::{
+    ABLATION_NOISE_BAND_MISSING, CANARY_TRAFFIC_OUT_OF_BOUNDS,
+};
 use medulla_decision_types::knowledge_flag::target_form;
-use medulla_decision_types::decision::codes::{ABLATION_NOISE_BAND_MISSING, CANARY_TRAFFIC_OUT_OF_BOUNDS};
 use medulla_decision_types::skill_eval::{
-    AblationVerdict, CanaryVerdict, CompileState, ModelCompile, NoiseBand,
-    EnvironmentAttestation, EvalCaseKind, EvalCaseSource, JudgeCalibration, SkillEvalCase, SuiteBand,
+    AblationVerdict, CanaryVerdict, CompileState, EnvironmentAttestation, EvalCaseKind,
+    EvalCaseSource, JudgeCalibration, ModelCompile, NoiseBand, SkillEvalCase, SuiteBand,
     TrajectoryStep, EVAL_CASE_INVALID, EVAL_RUN_NOT_CLEAN_ROOM, JUDGE_MIN_ANNOTATED,
     JUDGE_NOT_CALIBRATED,
 };
@@ -145,7 +147,10 @@ pub fn check_judge(
                 JUDGE_MIN_ANNOTATED
             ),
         )),
-        None => Err(refuse(JUDGE_NOT_CALIBRATED, "the case names no calibrated judge")),
+        None => Err(refuse(
+            JUDGE_NOT_CALIBRATED,
+            "the case names no calibrated judge",
+        )),
     }
 }
 
@@ -194,7 +199,10 @@ pub fn check_clean_room(attestation: &EnvironmentAttestation) -> Result<(), Eval
 /// mock names a tool the skill may call.
 pub fn check_case(case: &SkillEvalCase, known_tools: &BTreeSet<String>) -> Result<(), EvalRefusal> {
     if case.kind == EvalCaseKind::Golden && case.expected_digest.is_none() {
-        return Err(refuse(EVAL_CASE_INVALID, "a golden case names no expected_digest"));
+        return Err(refuse(
+            EVAL_CASE_INVALID,
+            "a golden case names no expected_digest",
+        ));
     }
     if case.kind == EvalCaseKind::RealPrompt && case.expected_trajectory.is_empty() {
         return Err(refuse(
@@ -202,7 +210,11 @@ pub fn check_case(case: &SkillEvalCase, known_tools: &BTreeSet<String>) -> Resul
             "a real-prompt case names no expected_trajectory",
         ));
     }
-    if let Some(mock) = case.tool_mocks.iter().find(|mock| !known_tools.contains(&mock.tool)) {
+    if let Some(mock) = case
+        .tool_mocks
+        .iter()
+        .find(|mock| !known_tools.contains(&mock.tool))
+    {
         return Err(refuse(
             EVAL_CASE_INVALID,
             format!("the case mocks unknown tool {}", mock.tool),
@@ -222,7 +234,10 @@ pub fn noise_band(identical_scores_ppm: &[u64], min_runs: u64) -> Result<NoiseBa
             format!("{n} identical runs are fewer than the {min_runs} a noise band needs"),
         ));
     }
-    let sum: u128 = identical_scores_ppm.iter().map(|score| u128::from(*score)).sum();
+    let sum: u128 = identical_scores_ppm
+        .iter()
+        .map(|score| u128::from(*score))
+        .sum();
     let squares: u128 = identical_scores_ppm
         .iter()
         .map(|score| u128::from(*score) * u128::from(*score))
@@ -304,10 +319,16 @@ pub fn canary_verdict(delta_lower_ppm: i64, band_ppm: u64, regressed: bool) -> C
 
 /// The rows of `model_ref` that a change of its model revision makes stale: every `Current` row
 /// of that model but the one just compiled (MEDULLA-DECISION-ENGINE-R712.2).
-pub fn stale_after_change(rows: &[ModelCompile], model_ref: &str, keep_skill: &str) -> Vec<ModelCompile> {
+pub fn stale_after_change(
+    rows: &[ModelCompile],
+    model_ref: &str,
+    keep_skill: &str,
+) -> Vec<ModelCompile> {
     rows.iter()
         .filter(|row| {
-            row.model_ref == model_ref && row.state == CompileState::Current && row.skill_ref != keep_skill
+            row.model_ref == model_ref
+                && row.state == CompileState::Current
+                && row.skill_ref != keep_skill
         })
         .map(|row| ModelCompile {
             state: CompileState::Stale,
@@ -374,7 +395,10 @@ mod tests {
         assert_eq!(outcome_score(None, "x"), 0);
         // Same kind and name only: a tool named like a skill is a different step.
         assert_eq!(
-            trajectory_score(&[step(TrajectoryKind::Skill, "a")], &[step(TrajectoryKind::Tool, "a")]),
+            trajectory_score(
+                &[step(TrajectoryKind::Skill, "a")],
+                &[step(TrajectoryKind::Tool, "a")]
+            ),
             0
         );
 
@@ -439,22 +463,34 @@ mod tests {
             host_paths_read: read,
         };
         assert!(check_clean_room(&attestation(0)).is_ok());
-        assert_eq!(check_clean_room(&attestation(1)).unwrap_err().code, EVAL_RUN_NOT_CLEAN_ROOM);
+        assert_eq!(
+            check_clean_room(&attestation(1)).unwrap_err().code,
+            EVAL_RUN_NOT_CLEAN_ROOM
+        );
 
         let tools: BTreeSet<String> = ["search".to_string()].into();
         let mut golden = case(EvalCaseKind::Golden);
         golden.expected_digest = None;
-        assert_eq!(check_case(&golden, &tools).unwrap_err().code, EVAL_CASE_INVALID);
+        assert_eq!(
+            check_case(&golden, &tools).unwrap_err().code,
+            EVAL_CASE_INVALID
+        );
         let mut real = case(EvalCaseKind::RealPrompt);
         real.expected_trajectory.clear();
-        assert_eq!(check_case(&real, &tools).unwrap_err().code, EVAL_CASE_INVALID);
+        assert_eq!(
+            check_case(&real, &tools).unwrap_err().code,
+            EVAL_CASE_INVALID
+        );
         let mut mocked = case(EvalCaseKind::RealPrompt);
         mocked.tool_mocks = vec![ToolMock {
             tool: "delete".into(),
             args_digest: "a".into(),
             result_digest: "r".into(),
         }];
-        assert_eq!(check_case(&mocked, &tools).unwrap_err().code, EVAL_CASE_INVALID);
+        assert_eq!(
+            check_case(&mocked, &tools).unwrap_err().code,
+            EVAL_CASE_INVALID
+        );
         assert!(check_case(&case(EvalCaseKind::RealPrompt), &tools).is_ok());
     }
 
@@ -463,21 +499,41 @@ mod tests {
     fn noise_band_and_canary_bucket_are_deterministic() {
         // Twice the standard deviation of five identical runs, rounded down.
         let band = noise_band(&[100, 200, 300, 400, 500], 5).expect("five runs");
-        assert_eq!(band, NoiseBand { identical_runs: 5, band_ppm: 282 });
+        assert_eq!(
+            band,
+            NoiseBand {
+                identical_runs: 5,
+                band_ppm: 282
+            }
+        );
         // Fewer runs than the knob refuse; identical scores have no noise.
-        assert_eq!(noise_band(&[1, 2, 3, 4], 5).unwrap_err().code, ABLATION_NOISE_BAND_MISSING);
+        assert_eq!(
+            noise_band(&[1, 2, 3, 4], 5).unwrap_err().code,
+            ABLATION_NOISE_BAND_MISSING
+        );
         assert_eq!(noise_band(&[7, 7, 7, 7, 7], 5).unwrap().band_ppm, 0);
 
         // The verdict compares the mean difference with the band.
         let with = [700_000, 710_000, 690_000];
         let without = [600_000, 610_000, 590_000];
-        assert_eq!(ablation_verdict(&with, &without, 282), AblationVerdict::Effect { delta_ppm: 100_000 });
-        assert_eq!(ablation_verdict(&with, &without, 100_000), AblationVerdict::WithinNoise);
+        assert_eq!(
+            ablation_verdict(&with, &without, 282),
+            AblationVerdict::Effect { delta_ppm: 100_000 }
+        );
+        assert_eq!(
+            ablation_verdict(&with, &without, 100_000),
+            AblationVerdict::WithinNoise
+        );
         assert_eq!(
             ablation_verdict(&without, &with, 282),
-            AblationVerdict::Effect { delta_ppm: -100_000 }
+            AblationVerdict::Effect {
+                delta_ppm: -100_000
+            }
         );
-        assert_eq!(ablation_verdict(&[], &without, 0), AblationVerdict::WithinNoise);
+        assert_eq!(
+            ablation_verdict(&[], &without, 0),
+            AblationVerdict::WithinNoise
+        );
 
         // A bucket is a pure function of the run and the skill, below one million.
         let bucket = canary_bucket("run-1", "skill:triage@3");
@@ -488,7 +544,10 @@ mod tests {
         let taking = (0..2_000)
             .filter(|index| takes_challenger(canary_bucket(&format!("run-{index}"), "s"), 100_000))
             .count();
-        assert!((100..300).contains(&taking), "about a tenth of 2000 runs, got {taking}");
+        assert!(
+            (100..300).contains(&taking),
+            "about a tenth of 2000 runs, got {taking}"
+        );
 
         assert_eq!(check_traffic(50_000, 1_000, 500_000), Ok(50_000));
         assert_eq!(
@@ -513,6 +572,9 @@ mod tests {
         ];
         let stale = stale_after_change(&rows, "m1", "a");
         assert_eq!(stale.len(), 1);
-        assert_eq!((stale[0].skill_ref.as_str(), stale[0].state), ("b", CompileState::Stale));
+        assert_eq!(
+            (stale[0].skill_ref.as_str(), stale[0].state),
+            ("b", CompileState::Stale)
+        );
     }
 }

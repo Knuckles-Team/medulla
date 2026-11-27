@@ -235,7 +235,10 @@ impl DeployRecordWrite {
 /// Whether `value` is `sha256:` followed by 64 lowercase hex digits.
 pub fn is_sha256_ref(value: &str) -> bool {
     value.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
     })
 }
 
@@ -268,7 +271,9 @@ fn text_ok(value: &str) -> bool {
 fn code_ok(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= MAX_DEPLOY_CODE_BYTES
-        && value.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
 }
 
 impl DeployRecordInput {
@@ -290,17 +295,28 @@ impl DeployRecordInput {
             return invalid("a node");
         }
         self.nodes.sort_by(|left, right| left.node.cmp(&right.node));
-        if self.nodes.windows(2).any(|pair| pair[0].node == pair[1].node) {
+        if self
+            .nodes
+            .windows(2)
+            .any(|pair| pair[0].node == pair[1].node)
+        {
             return invalid("nodes (a node is named twice)");
         }
         if self.image_digests.len() > MAX_DEPLOY_IMAGES
-            || !self.image_digests.iter().all(|digest| is_sha256_ref(digest))
+            || !self
+                .image_digests
+                .iter()
+                .all(|digest| is_sha256_ref(digest))
         {
             return invalid("image_digests");
         }
         self.image_digests.sort();
         self.image_digests.dedup();
-        if self.approver.as_deref().is_some_and(|approver| !text_ok(approver)) {
+        if self
+            .approver
+            .as_deref()
+            .is_some_and(|approver| !text_ok(approver))
+        {
             return invalid("approver");
         }
         if let (Some(started), Some(finished)) = (self.started_at_ms, self.finished_at_ms) {
@@ -406,7 +422,8 @@ pub fn handle_deploy_record_list(
     let more = rest.len() > limit;
     let page: Vec<DeployRecord> = rest.into_iter().take(limit).collect();
     let next_cursor = if more {
-        page.last().map(|last| LIST_CURSOR.encode(tenant, &resume_key(last)))
+        page.last()
+            .map(|last| LIST_CURSOR.encode(tenant, &resume_key(last)))
     } else {
         None
     };
@@ -484,13 +501,16 @@ mod tests {
         assert_eq!(first.record.actor, "usr:applier");
         assert_eq!(first.record.recorded_at_ms, 1_000);
         // The same body later, by another principal, returns the stored record unchanged.
-        let retry =
-            handle_deploy_record_put(Some(&first.record), body('1'), "usr:other", 9_000).expect("retry");
+        let retry = handle_deploy_record_put(Some(&first.record), body('1'), "usr:other", 9_000)
+            .expect("retry");
         assert!(retry.replayed);
         assert_eq!(retry.record, first.record);
         let node = deploy_record_node_id("acme", &digest('1'));
         let receipt = retry.receipt(node.clone());
-        assert_eq!((receipt.actor.as_str(), receipt.recorded_at_ms), ("usr:applier", 1_000));
+        assert_eq!(
+            (receipt.actor.as_str(), receipt.recorded_at_ms),
+            ("usr:applier", 1_000)
+        );
         assert_eq!(receipt.node_id, node);
     }
 
@@ -527,7 +547,9 @@ mod tests {
             assert_eq!(refusal.code(), DEPLOY_RECORD_INVALID, "case {index}");
         }
         assert_eq!(
-            handle_deploy_record_put(None, body('1'), "  ", 1).expect_err("blank actor").code(),
+            handle_deploy_record_put(None, body('1'), "  ", 1)
+                .expect_err("blank actor")
+                .code(),
             DEPLOY_RECORD_INVALID
         );
     }
@@ -546,33 +568,43 @@ mod tests {
     // spec: MEDULLA-SDLC-R002.8
     #[test]
     fn get_answers_one_refusal_for_a_missing_and_a_malformed_digest() {
-        let held = handle_deploy_record_put(None, body('1'), "usr:applier", 1).expect("write").record;
+        let held = handle_deploy_record_put(None, body('1'), "usr:applier", 1)
+            .expect("write")
+            .record;
         assert_eq!(
             handle_deploy_record_get(Some(held.clone()), &digest('1')).expect("found"),
             held
         );
         let missing = handle_deploy_record_get(None, &digest('2')).expect_err("missing");
-        let malformed = handle_deploy_record_get(Some(held), "not-a-digest").expect_err("malformed");
+        let malformed =
+            handle_deploy_record_get(Some(held), "not-a-digest").expect_err("malformed");
         assert_eq!(missing, malformed);
         assert_eq!(missing.code(), DEPLOY_RECORD_NOT_FOUND);
     }
 
     fn stored(plan: char, at: u64) -> DeployRecord {
-        handle_deploy_record_put(None, body(plan), "usr:applier", at).expect("write").record
+        handle_deploy_record_put(None, body(plan), "usr:applier", at)
+            .expect("write")
+            .record
     }
 
     // spec: MEDULLA-SDLC-R002.8
     #[test]
     fn list_pages_newest_first_with_a_tenant_bound_cursor() {
         let records = vec![stored('1', 100), stored('2', 300), stored('3', 200)];
-        let first = handle_deploy_record_list(records.clone(), "acme", Some(2), None).expect("page");
-        let digests: Vec<&str> = first.records.iter().map(|r| r.plan_digest.as_str()).collect();
+        let first =
+            handle_deploy_record_list(records.clone(), "acme", Some(2), None).expect("page");
+        let digests: Vec<&str> = first
+            .records
+            .iter()
+            .map(|r| r.plan_digest.as_str())
+            .collect();
         assert_eq!(digests, vec![digest('2').as_str(), digest('3').as_str()]);
         assert!(!first.records[0].all_succeeded);
         assert_eq!(first.records[0].node_count, 2);
         let cursor = first.next_cursor.expect("more remain");
-        let second =
-            handle_deploy_record_list(records.clone(), "acme", Some(2), Some(&cursor)).expect("page");
+        let second = handle_deploy_record_list(records.clone(), "acme", Some(2), Some(&cursor))
+            .expect("page");
         assert_eq!(second.records.len(), 1);
         assert_eq!(second.records[0].plan_digest, digest('1'));
         assert!(second.next_cursor.is_none());
@@ -581,7 +613,12 @@ mod tests {
             handle_deploy_record_list(records.clone(), "globex", Some(2), Some(&cursor)),
             handle_deploy_record_list(records.clone(), "acme", Some(2), Some("zz")),
             handle_deploy_record_list(records.clone(), "acme", Some(0), None),
-            handle_deploy_record_list(records, "acme", Some(MAX_DEPLOY_RECORD_LIST_LIMIT + 1), None),
+            handle_deploy_record_list(
+                records,
+                "acme",
+                Some(MAX_DEPLOY_RECORD_LIST_LIMIT + 1),
+                None,
+            ),
         ] {
             assert_eq!(refusal.expect_err("refused").code(), DEPLOY_RECORD_INVALID);
         }

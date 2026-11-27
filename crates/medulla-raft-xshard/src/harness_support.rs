@@ -19,6 +19,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use openraft::BasicNode;
 use tokio::sync::RwLock;
 
+use medulla_direct_state::direct_state::GroupId;
 use medulla_identity_types::acl::AgentIdentity;
 use medulla_identity_types::acl::AgentRole;
 use medulla_identity_types::acl::RequestContextClaims;
@@ -26,7 +27,6 @@ use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_raft::raft::multi::MultiRaft;
-use medulla_direct_state::direct_state::GroupId;
 use medulla_raft::raft::{AppCtx, NodeId};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;

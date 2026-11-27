@@ -135,21 +135,24 @@ mod compose {
         archive: &[u8],
         all: &[&PackEntry],
     ) -> Result<GraphSchemaSources, String> {
-        let documents = |kind: PackEntryKind| -> Result<Vec<crate::graph_schema::PackSchemaDocument>, String> {
-            let mut documents = Vec::new();
-            for entry in all.iter().filter(|e| e.kind == kind) {
-                let bytes = super::super::validation::section_bytes(archive, &entry.body)?;
-                let text = std::str::from_utf8(bytes)
-                    .map_err(|_| "MALFORMED_BODY: schema entry is not UTF-8".to_string())?;
-                documents.push(crate::graph_schema::PackSchemaDocument {
-                    uri: entry.uri.clone(),
-                    body: std::sync::Arc::from(text),
-                });
-            }
-            Ok(documents)
-        };
-        let shapes =
-            crate::graph_schema::compose_pack_documents("SHAPES", documents(PackEntryKind::Shapes)?)?;
+        let documents =
+            |kind: PackEntryKind| -> Result<Vec<crate::graph_schema::PackSchemaDocument>, String> {
+                let mut documents = Vec::new();
+                for entry in all.iter().filter(|e| e.kind == kind) {
+                    let bytes = super::super::validation::section_bytes(archive, &entry.body)?;
+                    let text = std::str::from_utf8(bytes)
+                        .map_err(|_| "MALFORMED_BODY: schema entry is not UTF-8".to_string())?;
+                    documents.push(crate::graph_schema::PackSchemaDocument {
+                        uri: entry.uri.clone(),
+                        body: std::sync::Arc::from(text),
+                    });
+                }
+                Ok(documents)
+            };
+        let shapes = crate::graph_schema::compose_pack_documents(
+            "SHAPES",
+            documents(PackEntryKind::Shapes)?,
+        )?;
         let ontology = crate::graph_schema::compose_pack_documents(
             "ONTOLOGY",
             documents(PackEntryKind::Ontology)?,
@@ -200,9 +203,9 @@ mod compose {
 }
 
 #[cfg(feature = "shacl")]
-pub(super) use compose::{pack_sources, pin};
-#[cfg(feature = "shacl")]
 pub(crate) use compose::pin_composed;
+#[cfg(feature = "shacl")]
+pub(super) use compose::{pack_sources, pin};
 
 #[cfg(not(feature = "shacl"))]
 pub(super) fn pin(

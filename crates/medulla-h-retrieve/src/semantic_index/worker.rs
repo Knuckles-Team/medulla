@@ -174,9 +174,11 @@ async fn record_probe(
             PromotionProbePoint::AnnIndex => SemanticStage::AnnIndex,
         };
         if intent.stage != expected {
-            return Err(medulla_ann_codes::semantic_ann_codes::SemanticCodeError::Refused(
-                "probe measurement requires a lease of the measured stage".to_string(),
-            ));
+            return Err(
+                medulla_ann_codes::semantic_ann_codes::SemanticCodeError::Refused(
+                    "probe measurement requires a lease of the measured stage".to_string(),
+                ),
+            );
         }
         service.record_probe_measurement(stage, generation, modality, &retrieved, now_ms)
     });

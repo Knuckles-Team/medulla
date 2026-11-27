@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
 use medulla_compute::parser::spec_artifacts::{is_row_id, parse_spec_file, SDD_NS};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_source_types::source_changeset::Changeset;
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
+use medulla_source_types::source_changeset::Changeset;
 use medulla_types::contract::EngineErrorCode;
 
 /// Refusal code of a row ID that resolves to no row.
@@ -659,7 +659,11 @@ fn item_marker(line: &str) -> Option<usize> {
 /// starts, after its indentation, with `- `, `* ` or `<digits>. `; its text runs to the next
 /// item, a blank line or a heading. An item is resolved, and not returned, when its text names
 /// `research.md` (a cited entry) or it starts `- [x]` or `- [X]`.
-pub fn plan_unknowns(text: &str, section_start_line: u32, section_end_line: u32) -> Vec<PlanUnknown> {
+pub fn plan_unknowns(
+    text: &str,
+    section_start_line: u32,
+    section_end_line: u32,
+) -> Vec<PlanUnknown> {
     let mut found: Vec<(u32, String, bool)> = Vec::new();
     let mut open = false;
     let mut fence = false;
@@ -1197,8 +1201,8 @@ pub fn parse_row_links(files: &[(String, Vec<u8>)]) -> Vec<SpecRowLinks> {
         }
         let mut current: Option<(String, String)> = None;
         let flush = |current: &mut Option<(String, String)>,
-                         links: &mut Vec<SpecRowLinks>,
-                         index: &mut BTreeMap<String, usize>| {
+                     links: &mut Vec<SpecRowLinks>,
+                     index: &mut BTreeMap<String, usize>| {
             if let Some((row, body)) = current.take() {
                 let mut depends = Vec::new();
                 depends_tokens(&body, &mut depends);
@@ -1618,7 +1622,10 @@ fn reingest_in(
     let mut known_rows: BTreeSet<String> = external.values().cloned().collect();
     let requirement_prefix = requirement_node_id(repo, "");
     for (name, old) in stored {
-        if !changed.iter().any(|(changed_name, ..)| *changed_name == name.as_str()) {
+        if !changed
+            .iter()
+            .any(|(changed_name, ..)| *changed_name == name.as_str())
+        {
             known_rows.extend(
                 old.records
                     .iter()
@@ -1632,7 +1639,10 @@ fn reingest_in(
     let principle_prefix = principle_node_id(repo, "");
     let mut known_principles: BTreeSet<String> = BTreeSet::new();
     for (name, old) in stored {
-        if !changed.iter().any(|(changed_name, ..)| *changed_name == name.as_str()) {
+        if !changed
+            .iter()
+            .any(|(changed_name, ..)| *changed_name == name.as_str())
+        {
             known_principles.extend(
                 old.records
                     .iter()
@@ -1675,15 +1685,25 @@ fn reingest_in(
         if is_constitution_file(name) {
             task_operations.extend(project_principles(repo, name, text).operations);
         }
-        task_operations.extend(governed_by_edges(repo, &projection.operations, &known_principles)?);
+        task_operations.extend(governed_by_edges(
+            repo,
+            &projection.operations,
+            &known_principles,
+        )?);
         let rows: Vec<(String, String)> = projection
             .operations
             .iter()
             .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
             .map(|op| {
                 (
-                    op["properties"]["rowId"].as_str().unwrap_or_default().to_string(),
-                    op["properties"]["text"].as_str().unwrap_or_default().to_string(),
+                    op["properties"]["rowId"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string(),
+                    op["properties"]["text"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string(),
                 )
             })
             .collect();
@@ -1712,9 +1732,14 @@ fn reingest_in(
                 if matches!(
                     op["properties"]["type"].as_str(),
                     Some(
-                    "Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "PlanUnknown"
-                        | "TaskLine" | "ConstitutionPrinciple"
-                )
+                        "Requirement"
+                            | "SpecDocument"
+                            | "SpecSection"
+                            | "PlanSection"
+                            | "PlanUnknown"
+                            | "TaskLine"
+                            | "ConstitutionPrinciple"
+                    )
                 ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
                 }
@@ -1731,18 +1756,15 @@ fn reingest_in(
                     .map(|id| serde_json::json!({"op": "remove_node", "id": id})),
             );
             // A row that no longer writes a term loses its `usesTerm` edge.
-            removals.extend(
-                old.terms
-                    .iter()
-                    .filter(|pair| !terms.contains(pair))
-                    .map(|(row, term)| {
-                        serde_json::json!({
-                            "op": "remove_edge",
-                            "source": requirement_node_id(repo, row),
-                            "target": term_node_id(term),
-                        })
-                    }),
-            );
+            removals.extend(old.terms.iter().filter(|pair| !terms.contains(pair)).map(
+                |(row, term)| {
+                    serde_json::json!({
+                        "op": "remove_edge",
+                        "source": requirement_node_id(repo, row),
+                        "target": term_node_id(term),
+                    })
+                },
+            ));
         }
         writes.push(node(
             &artifact_node_id(repo, name),
@@ -1921,12 +1943,9 @@ fn append_policy_candidates(
         .filter(|op| op["properties"]["type"] == "SpecPolicy")
         .filter_map(|op| op["properties"]["path"].as_str().map(str::to_owned))
         .collect();
-    for op in super::policy_candidates::synthesize_policy_candidates(
-        repo,
-        commit,
-        files,
-        &policy_paths,
-    ) {
+    for op in
+        super::policy_candidates::synthesize_policy_candidates(repo, commit, files, &policy_paths)
+    {
         result
             .nodes
             .push(super::policy_candidates::candidate_index_node(&op));
@@ -2044,7 +2063,12 @@ pub fn project_spec_artifacts(
             .cloned()
             .collect();
         ordered.extend(writes);
-        ordered.extend(plan.operations.iter().filter(|op| op["op"] != "upsert_node").cloned());
+        ordered.extend(
+            plan.operations
+                .iter()
+                .filter(|op| op["op"] != "upsert_node")
+                .cloned(),
+        );
         ordered.extend(links);
         plan.operations = ordered;
     }
@@ -2100,7 +2124,10 @@ pub fn project_spec_artifacts(
     let mut statuses: Vec<String> = Vec::new();
     for op in &history.operations {
         let properties = &op["properties"];
-        if let (Some(row), Some(state)) = (properties["rowId"].as_str(), properties["rowStatus"].as_str()) {
+        if let (Some(row), Some(state)) = (
+            properties["rowId"].as_str(),
+            properties["rowStatus"].as_str(),
+        ) {
             statuses.push(format!("{row}={state}"));
             if stored_status.get(row) != Some(&state) {
                 touched.insert(requirement_node_id(repo, row));
@@ -2111,7 +2138,10 @@ pub fn project_spec_artifacts(
     let mut referenced: BTreeSet<String> = BTreeSet::new();
     for op in &history.operations {
         if op["op"] == "upsert_edge" {
-            if op["source"].as_str().is_some_and(|source| touched.contains(source)) {
+            if op["source"]
+                .as_str()
+                .is_some_and(|source| touched.contains(source))
+            {
                 referenced.extend(op["target"].as_str().map(str::to_string));
                 kept.push(op.clone());
             }
@@ -2124,14 +2154,19 @@ pub fn project_spec_artifacts(
         }
         let keep = match op["properties"]["type"].as_str() {
             Some("Requirement") => op["id"].as_str().is_some_and(|id| touched.contains(id)),
-            Some("TestFile" | "SeamSide") => op["id"].as_str().is_some_and(|id| referenced.contains(id)),
+            Some("TestFile" | "SeamSide") => {
+                op["id"].as_str().is_some_and(|id| referenced.contains(id))
+            }
             _ => true,
         };
         if keep {
             history_ops.push(op.clone());
         }
     }
-    if history_ops.iter().any(|op| op["properties"]["type"] == "Requirement") {
+    if history_ops
+        .iter()
+        .any(|op| op["properties"]["type"] == "Requirement")
+    {
         history_ops.push(node(
             &artifact_node_id(repo, ROW_STATUS_ARTIFACT),
             serde_json::json!({
@@ -2179,7 +2214,9 @@ pub fn project_spec_artifacts(
             if rewritten.contains(id.as_str()) {
                 continue;
             }
-            if let (Some(base), Some(extra)) = (full.get(&id), op["properties"].as_object().cloned()) {
+            if let (Some(base), Some(extra)) =
+                (full.get(&id), op["properties"].as_object().cloned())
+            {
                 let mut merged = base.clone();
                 for (key, value) in extra {
                     merged[key] = value;
@@ -2311,7 +2348,10 @@ mod tests {
             .filter(|op| op["op"] == "upsert_node")
             .map(|op| op["properties"]["name"].as_str().unwrap())
             .collect();
-        assert_eq!(terms, BTreeSet::from(["REPORT_READ_ONLY", "UnifiedQuery", "row_id"]));
+        assert_eq!(
+            terms,
+            BTreeSet::from(["REPORT_READ_ONLY", "UnifiedQuery", "row_id"])
+        );
         assert_eq!((one.nodes, one.edges), (3, 3));
         let two = project_row_terms("two", &rows);
         let ids = |p: &RequirementProjection| -> BTreeSet<String> {
@@ -2321,7 +2361,11 @@ mod tests {
                 .map(|op| op["id"].as_str().unwrap().to_string())
                 .collect()
         };
-        assert_eq!(ids(&one), ids(&two), "one node per word across repositories");
+        assert_eq!(
+            ids(&one),
+            ids(&two),
+            "one node per word across repositories"
+        );
         assert!(one.operations.iter().any(|op| op["op"] == "upsert_edge"
             && op["source"] == "requirement:one:A-R1"
             && op["target"] == "term:row_id"
@@ -2339,7 +2383,9 @@ mod tests {
         stored_after(&first, &mut stored);
         let artifact = stored.get_mut("requirements.md").expect("stored");
         artifact.digest = "stale".to_string();
-        artifact.terms.push(("DEMO-R001".to_string(), "gone_term".to_string()));
+        artifact
+            .terms
+            .push(("DEMO-R001".to_string(), "gone_term".to_string()));
         let second = reingest_changed_artifacts(
             "demo",
             &[("requirements.md", REQUIREMENTS)],
@@ -2681,9 +2727,17 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ("src/lib.rs".to_string(), b"fn main() {}".to_vec()),
         ];
         let mut first = IndexResult::default();
-        let plan =
-            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], &[], "main", "c0ffee", &mut first)
-                .expect("first batch");
+        let plan = project_spec_artifacts(
+            "demo",
+            &files,
+            &BTreeMap::new(),
+            &[],
+            &[],
+            "main",
+            "c0ffee",
+            &mut first,
+        )
+        .expect("first batch");
         assert_eq!(plan.reingested, ["specs/a/requirements.md"]);
         // The DEMO-R002 `Depends: OTHER-R009` names another repository; it is skipped.
         assert!(first
@@ -2699,8 +2753,17 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let mut stored = BTreeMap::new();
         stored_after(&plan, &mut stored);
         let mut again = IndexResult::default();
-        let idle = project_spec_artifacts("demo", &files, &stored, &[], &[], "main", "c0ffee", &mut again)
-            .expect("idle");
+        let idle = project_spec_artifacts(
+            "demo",
+            &files,
+            &stored,
+            &[],
+            &[],
+            "main",
+            "c0ffee",
+            &mut again,
+        )
+        .expect("idle");
         assert!(idle.reingested.is_empty());
         assert!(again.nodes.is_empty() && again.edges.is_empty());
     }
@@ -2795,7 +2858,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         );
         assert_eq!((p.nodes, p.edges), (4, 1));
         // A re-projection of the same text is byte-equal, so an unchanged digest rewrites nothing.
-        assert_eq!(project_tasks("demo", "specs/x/tasks.md", tasks, &known).operations, p.operations);
+        assert_eq!(
+            project_tasks("demo", "specs/x/tasks.md", tasks, &known).operations,
+            p.operations
+        );
     }
 
     // spec: MEDULLA-SDLC-R014.6.2
@@ -2832,7 +2898,8 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
                 serde_json::json!({"type": "Requirement", "text": text}),
             )]
         };
-        let edges = governed_by_edges("demo", &row("Principle: XXXI, VII"), &known).expect("resolves");
+        let edges =
+            governed_by_edges("demo", &row("Principle: XXXI, VII"), &known).expect("resolves");
         let pairs: Vec<(&str, &str)> = edges
             .iter()
             .map(|e| (e["source"].as_str().unwrap(), e["target"].as_str().unwrap()))
@@ -2844,7 +2911,9 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
                 ("requirement:demo:DEMO-R001", "principle:demo:VII")
             ]
         );
-        assert!(edges.iter().all(|e| e["properties"]["relationship"] == "governedBy"));
+        assert!(edges
+            .iter()
+            .all(|e| e["properties"]["relationship"] == "governedBy"));
         let refusal = governed_by_edges("demo", &row("Principle: XXXI, LX"), &known).unwrap_err();
         assert!(refusal.starts_with("PRINCIPLE_UNRESOLVED: LX"));
     }
@@ -2925,7 +2994,11 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ]
         );
         assert_eq!(
-            edges_of(&projected, "planunknown:demo:specs/x/plan.md#L4", "inSection"),
+            edges_of(
+                &projected,
+                "planunknown:demo:specs/x/plan.md#L4",
+                "inSection"
+            ),
             ["plansection:demo:specs/x/plan.md#L3"]
         );
     }
@@ -2971,11 +3044,20 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
     #[test]
     fn test_bindings_use_the_gate_forms() {
         let files: Vec<(String, Vec<u8>)> = vec![
-            ("src/a.rs".into(), b"// spec: DEMO-R001, DEMO-R002\n".to_vec()),
+            (
+                "src/a.rs".into(),
+                b"// spec: DEMO-R001, DEMO-R002\n".to_vec(),
+            ),
             ("tests/b.py".into(), b"#spec: DEMO-R003\n".to_vec()),
-            ("tests/c.py".into(), b"@pytest.mark.spec(\"DEMO-R004\", \"DEMO-R005\")\n".to_vec()),
+            (
+                "tests/c.py".into(),
+                b"@pytest.mark.spec(\"DEMO-R004\", \"DEMO-R005\")\n".to_vec(),
+            ),
             // Not forms of the gate: a bare `spec:` word, the `spec(\"..\")` call, markdown, JSON.
-            ("tests/d.py".into(), b"x = \"spec: DEMO-R006\"\nspec(\"DEMO-R007\")\n".to_vec()),
+            (
+                "tests/d.py".into(),
+                b"x = \"spec: DEMO-R006\"\nspec(\"DEMO-R007\")\n".to_vec(),
+            ),
             ("specs/a/e.rs".into(), b"// spec: DEMO-R008\n".to_vec()),
             ("notes.md".into(), b"// spec: DEMO-R009\n".to_vec()),
             ("data.json".into(), b"// spec: DEMO-R010\n".to_vec()),
@@ -3046,7 +3128,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         assert_eq!(of("DEMO-R001").seam_provider, ["specs/a/contracts/seam.md"]);
         assert_eq!(of("DEMO-R003").seam_consumer, ["specs/a/contracts/seam.md"]);
         // A row of another repository is recorded but never linked: it is no row here.
-        assert_eq!(of("OTHER-R002").seam_consumer, ["specs/a/contracts/seam.md"]);
+        assert_eq!(
+            of("OTHER-R002").seam_consumer,
+            ["specs/a/contracts/seam.md"]
+        );
 
         let bindings = parse_test_bindings(&files);
         assert_eq!(bindings.len(), 2);
@@ -3117,7 +3202,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let status = |id: &str| {
             p.operations
                 .iter()
-                .find(|op| op["id"] == requirement_node_id("demo", id).as_str() && op["op"] == "upsert_node")
+                .find(|op| {
+                    op["id"] == requirement_node_id("demo", id).as_str()
+                        && op["op"] == "upsert_node"
+                })
                 .and_then(|op| op["properties"]["rowStatus"].as_str())
                 .map(str::to_string)
         };
@@ -3172,8 +3260,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &mut first,
         )
         .expect("first ingest");
-        assert!(first.edges.iter().any(|e| e.edge_type == "implementedByCommit"
-            && e.target == "changeset:demo:c1"));
+        assert!(first
+            .edges
+            .iter()
+            .any(|e| e.edge_type == "implementedByCommit" && e.target == "changeset:demo:c1"));
         let mut stored = BTreeMap::new();
         stored_after(&plan, &mut stored);
         assert!(stored.contains_key(ROW_STATUS_ARTIFACT));
@@ -3205,9 +3295,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let statuses: Vec<(&str, &str)> = delta
             .nodes
             .iter()
-            .filter_map(|n| {
-                Some((n.node_id.as_str(), n.properties.get("rowStatus")?.as_str()))
-            })
+            .filter_map(|n| Some((n.node_id.as_str(), n.properties.get("rowStatus")?.as_str())))
             .collect();
         // Only DEMO-R002 changed status; DEMO-R001 and DEMO-R003 are not rewritten.
         assert_eq!(statuses, [("requirement:demo:DEMO-R002", "LANDED")]);
@@ -3306,7 +3394,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .iter()
             .find(|n| n.node_id == "changeset:demo:c1")
             .expect("changeset node");
-        assert_eq!(changeset_node.properties.get("branch").map(String::as_str), Some("main"));
+        assert_eq!(
+            changeset_node.properties.get("branch").map(String::as_str),
+            Some("main")
+        );
 
         // The route hands over only the changesets after the last cited one.
         let mut stored = BTreeMap::new();
@@ -3329,8 +3420,17 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         // An id that resolves to no row refuses and writes nothing.
         let unknown = [changeset("c2", 1800, &["DEMO-R999"])];
         let mut refused = IndexResult::default();
-        let error = project_spec_artifacts("demo", &files, &stored, &unknown, &unknown, "main", "c0ffee", &mut refused)
-            .unwrap_err();
+        let error = project_spec_artifacts(
+            "demo",
+            &files,
+            &stored,
+            &unknown,
+            &unknown,
+            "main",
+            "c0ffee",
+            &mut refused,
+        )
+        .unwrap_err();
         assert!(error.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
         assert!(refused.nodes.is_empty() && refused.edges.is_empty());
         println!("CITE_REFUSED\t{error}");
@@ -3348,7 +3448,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ("specs/x/notes.md".into(), b"just notes\n".to_vec()),
             ("specs/x/tasks.md".into(), b"- [ ] T1 do it\n".to_vec()),
             ("specs/x/spec.md".into(), b"# Spec\n".to_vec()),
-            (".specify/memory/constitution.md".into(), b"# Rules\n".to_vec()),
+            (
+                ".specify/memory/constitution.md".into(),
+                b"# Rules\n".to_vec(),
+            ),
             ("specs/x/goal.md".into(), b"---\ngoal: ship\n---\n".to_vec()),
             ("specs/x/memory/lesson.md".into(), b"lesson\n".to_vec()),
             // Read once, at the first occurrence; not UTF-8 is skipped; not a spec file ignored.
@@ -3373,7 +3476,11 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         for (path, class, rule) in [
             ("specs/x/tasks.md", "SpecTask", "tasks-file"),
             ("specs/x/spec.md", "Specification", "spec-document"),
-            (".specify/memory/constitution.md", "SpecPolicy", "constitution-file"),
+            (
+                ".specify/memory/constitution.md",
+                "SpecPolicy",
+                "constitution-file",
+            ),
             ("specs/x/goal.md", "SpecGoal", "goal-front-matter"),
             ("specs/x/memory/lesson.md", "SpecMemory", "memory-folder"),
         ] {
@@ -3382,7 +3489,10 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             assert_eq!(properties["classifiedByRule"], rule, "{path}");
             assert_eq!(properties["repo"], "demo");
             let recorded = properties["blob_digest"].as_str().unwrap();
-            assert!(!recorded.starts_with("sha256:"), "{path}: bare hex, one digest format");
+            assert!(
+                !recorded.starts_with("sha256:"),
+                "{path}: bare hex, one digest format"
+            );
             assert_eq!(recorded.len(), 64, "{path}");
         }
         // The first occurrence of a repeated path wins.
@@ -3409,19 +3519,25 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .filter(|(path, _)| path == "specs/x/notes.md" || path.starts_with(".specify/"))
             .cloned()
             .collect();
-        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], &[], "main", "c0ffee", &mut result)
-            .expect("projects");
+        project_spec_artifacts(
+            "demo",
+            &batch,
+            &BTreeMap::new(),
+            &[],
+            &[],
+            "main",
+            "c0ffee",
+            &mut result,
+        )
+        .expect("projects");
         let diagnostics = result.file_outcomes[0].diagnostics.as_slice();
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].code, "SPEC_FILE_UNKNOWN_KIND");
         assert_eq!(diagnostics[0].message, "specs/x/notes.md");
         assert!(result.file_outcomes[1].diagnostics.as_slice().is_empty());
         assert_eq!(result.file_outcomes[0].verdict, IndexFileVerdict::Success);
-        assert!(result
-            .nodes
-            .iter()
-            .any(|node| node.node_id
-                == spec_kind_node_id("demo", ".specify/memory/constitution.md")
-                && node.node_type == "SpecPolicy"));
+        assert!(result.nodes.iter().any(|node| node.node_id
+            == spec_kind_node_id("demo", ".specify/memory/constitution.md")
+            && node.node_type == "SpecPolicy"));
     }
 }

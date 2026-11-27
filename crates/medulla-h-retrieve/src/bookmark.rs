@@ -57,7 +57,9 @@ pub fn bookmark_graph_selector(
         .ok_or_else(|| stale("the bookmark index has no binding"))?;
     match binding.source_selector {
         SemanticSourceSelector::GraphTextPropertyRef(selector) => Ok(selector),
-        _ => Err(stale("the bookmark index is not built from a graph property")),
+        _ => Err(stale(
+            "the bookmark index is not built from a graph property",
+        )),
     }
 }
 
@@ -138,7 +140,12 @@ pub fn encode_cursor(binding: &CursorBinding<'_>, offset: usize) -> Result<Strin
 /// The page offset of a cursor whose MAC binds this call's tenant, query, index revision and
 /// snapshot revision; any other cursor is `BOOKMARK_INDEX_STALE`.
 pub fn decode_cursor(binding: &CursorBinding<'_>, cursor: &str) -> Result<usize, String> {
-    let stale = || refusal(BOOKMARK_INDEX_STALE, "the cursor names another index or snapshot");
+    let stale = || {
+        refusal(
+            BOOKMARK_INDEX_STALE,
+            "the cursor names another index or snapshot",
+        )
+    };
     let (offset, mac) = cursor.split_once('.').ok_or_else(stale)?;
     let offset: usize = offset.parse().map_err(|_| stale())?;
     if cursor_mac(binding, offset)? != mac {
@@ -149,10 +156,7 @@ pub fn decode_cursor(binding: &CursorBinding<'_>, cursor: &str) -> Result<usize,
 
 /// The live generation of the tenant's `bookmark` semantic index, the `index_revision` of every
 /// bookmark answer. No live generation is `BOOKMARK_INDEX_STALE`, never an empty success.
-pub fn bookmark_index_revision(
-    persist_dir: &std::path::Path,
-    tenant: &str,
-) -> Result<u64, String> {
+pub fn bookmark_index_revision(persist_dir: &std::path::Path, tenant: &str) -> Result<u64, String> {
     let service = crate::semantic_index_runtime::open_semantic_service(
         persist_dir,
         tenant,
@@ -162,7 +166,12 @@ pub fn bookmark_index_revision(
     service
         .live_generation()
         .map_err(|error| error.to_string())?
-        .ok_or_else(|| refusal(BOOKMARK_INDEX_STALE, "the bookmark index has no live generation"))
+        .ok_or_else(|| {
+            refusal(
+                BOOKMARK_INDEX_STALE,
+                "the bookmark index has no live generation",
+            )
+        })
 }
 
 /// The five metadata keys the node does not carry: absent, `[]`, or (for `domains`) a pair whose
@@ -189,7 +198,11 @@ fn provenance(properties: &BTreeMap<String, String>) -> BTreeMap<String, String>
         .iter()
         .copied()
         .chain(["file_sha256", "source_revision"])
-        .filter_map(|key| properties.get(key).map(|value| (key.to_string(), value.clone())))
+        .filter_map(|key| {
+            properties
+                .get(key)
+                .map(|value| (key.to_string(), value.clone()))
+        })
         .collect()
 }
 
@@ -206,7 +219,12 @@ pub fn search(
     let index_revision = service
         .live_generation()
         .map_err(|error| error.to_string())?
-        .ok_or_else(|| refusal(BOOKMARK_INDEX_STALE, "the bookmark index has no live generation"))?;
+        .ok_or_else(|| {
+            refusal(
+                BOOKMARK_INDEX_STALE,
+                "the bookmark index has no live generation",
+            )
+        })?;
     let mut without_cursor = request.clone();
     without_cursor.cursor = None;
     let query_digest = digest_of(&without_cursor)?;
@@ -227,16 +245,20 @@ pub fn search(
         .map_err(|error| error.to_string())?
         .ok_or_else(|| refusal(BOOKMARK_INDEX_STALE, "the bookmark index has no binding"))?;
     let max_hits = request.limit_policy.max_hits as usize;
-    let wanted = offset
-        .saturating_add(max_hits)
-        .saturating_add(1);
+    let wanted = offset.saturating_add(max_hits).saturating_add(1);
     let candidates = wanted.saturating_mul(4).min(MAX_CANDIDATES);
     if wanted > MAX_CANDIDATES {
-        return Err(refusal(BOOKMARK_LIMIT_EXCEEDED, "the page lies beyond the candidate cap"));
+        return Err(refusal(
+            BOOKMARK_LIMIT_EXCEEDED,
+            "the page lies beyond the candidate cap",
+        ));
     }
     let probe = probe_vector(service, &binding, &request.query_embedding, candidates)?;
     if probe.generation != index_revision {
-        return Err(refusal(BOOKMARK_INDEX_STALE, "the live generation changed during the call"));
+        return Err(refusal(
+            BOOKMARK_INDEX_STALE,
+            "the live generation changed during the call",
+        ));
     }
     let sources: BTreeSet<&str> = request.source_ids.iter().map(String::as_str).collect();
     // Visibility filters before anything is counted.
@@ -251,7 +273,10 @@ pub fn search(
         let Some(properties) = (view.properties)(&id) else {
             continue;
         };
-        let source = properties.get("source_id").map(String::as_str).unwrap_or("");
+        let source = properties
+            .get("source_id")
+            .map(String::as_str)
+            .unwrap_or("");
         if !sources.is_empty() && !sources.contains(source) {
             continue;
         }

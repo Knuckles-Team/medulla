@@ -168,7 +168,9 @@ pub fn build_tree(
     for (_, entry) in sorted {
         let id = hex::decode(&entry.id).map_err(|_| malformed("tree entry id is not hex"))?;
         if id.len() != id_len(format) {
-            return Err(malformed("tree entry id length differs from the object format"));
+            return Err(malformed(
+                "tree entry id length differs from the object format",
+            ));
         }
         body.extend_from_slice(format!("{:o} ", entry.mode).as_bytes());
         body.extend_from_slice(entry.name.as_bytes());
@@ -339,7 +341,11 @@ fn inflate(input: &[u8], size: usize) -> Result<(Vec<u8>, usize), GitObjectError
         let in_before = stream.total_in();
         let out_before = out.len();
         let status = stream
-            .decompress_vec(&input[in_before as usize..], &mut out, FlushDecompress::Finish)
+            .decompress_vec(
+                &input[in_before as usize..],
+                &mut out,
+                FlushDecompress::Finish,
+            )
             .map_err(|error| malformed(format!("pack object stream: {error}")))?;
         if out.len() > size {
             return Err(malformed("pack object is longer than its header says"));
@@ -535,7 +541,10 @@ pub fn read_pack(
     for entry in raws {
         match entry.raw {
             Raw::Base(kind) => {
-                by_id.insert(object_id(format, kind, &entry.data), (kind, entry.data.clone()));
+                by_id.insert(
+                    object_id(format, kind, &entry.data),
+                    (kind, entry.data.clone()),
+                );
                 by_offset.insert(entry.offset, (kind, entry.data));
             }
             _ => pending.push(entry),
@@ -561,7 +570,9 @@ pub fn read_pack(
             }
         }
         if next.len() == before {
-            return Err(malformed("a pack delta names a base that is not in the pack"));
+            return Err(malformed(
+                "a pack delta names a base that is not in the pack",
+            ));
         }
         pending = next;
     }
@@ -678,7 +689,8 @@ mod tests {
                 (built_root.clone(), root_body.clone())
             );
 
-            let raw_headers = "author A <a@x> 1700000000 +0000\ncommitter A <a@x> 1700000000 +0000\n";
+            let raw_headers =
+                "author A <a@x> 1700000000 +0000\ncommitter A <a@x> 1700000000 +0000\n";
             let commit = build_commit(root_tree, raw_headers, "first\n");
             assert_eq!(object_id(format, GitObjectKind::Commit, &commit), commit_id);
             let parsed_commit = parse_commit(&commit).unwrap();

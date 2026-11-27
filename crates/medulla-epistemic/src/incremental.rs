@@ -329,7 +329,9 @@ mod tests {
                 &[],
             )
             .unwrap();
-        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base").unwrap();
+        index
+            .invalidate(ProjectionInvalidationKind::PolicyChanged, "base")
+            .unwrap();
         assert_eq!(
             index.status_of("derived"),
             Some(MaterializationStatus::Stale)
@@ -506,12 +508,13 @@ mod tests {
         );
 
         let derived_a = opaque_identity("derived-a");
-        restored.register_materialization_refs(
-            &derived_a,
-            BTreeSet::new(),
-            Some("model-v2".to_string()),
-        )
-        .unwrap();
+        restored
+            .register_materialization_refs(
+                &derived_a,
+                BTreeSet::new(),
+                Some("model-v2".to_string()),
+            )
+            .unwrap();
         let remaining_model_v1_output = BTreeSet::from([opaque_identity("derived-b")]);
         assert_eq!(
             restored.generator_materializations.get(&model_v1),
@@ -601,7 +604,8 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
+        let bootstrapped =
+            IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
 
         let mut incremental = IncrementalReasoningIndex::default();
         incremental
@@ -650,7 +654,8 @@ mod tests {
             )
             .unwrap();
         }
-        let bootstrapped = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
+        let bootstrapped =
+            IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot()).unwrap();
 
         // Deliberately reverse source-graph order. Incremental arrival order must
         // not alter the canonical generator or either reverse dependency index.
@@ -700,12 +705,13 @@ mod tests {
     fn validation_rejects_a_mismatched_generator_reverse_index() {
         let mut index = IncrementalReasoningIndex::default();
         let materialization = opaque_identity("derived");
-        index.register_materialization_refs(
-            &materialization,
-            BTreeSet::new(),
-            Some("model".to_string()),
-        )
-        .unwrap();
+        index
+            .register_materialization_refs(
+                &materialization,
+                BTreeSet::new(),
+                Some("model".to_string()),
+            )
+            .unwrap();
         index.generator_materializations.clear();
         assert!(index
             .validate()
@@ -716,12 +722,13 @@ mod tests {
     #[test]
     fn validation_rejects_generator_state_that_disagrees_with_provenance() {
         let mut index = IncrementalReasoningIndex::default();
-        index.add_edge_relationship(
-            &opaque_identity("derived"),
-            &opaque_identity("model"),
-            "GENERATED_BY",
-        )
-        .unwrap();
+        index
+            .add_edge_relationship(
+                &opaque_identity("derived"),
+                &opaque_identity("model"),
+                "GENERATED_BY",
+            )
+            .unwrap();
         index.remove_materialization_generator(&opaque_identity("derived"));
         assert!(index
             .validate()
@@ -823,7 +830,9 @@ mod tests {
                 }],
             )
             .unwrap();
-        index.invalidate(ProjectionInvalidationKind::PolicyChanged, "base").unwrap();
+        index
+            .invalidate(ProjectionInvalidationKind::PolicyChanged, "base")
+            .unwrap();
         let fence = index.claim_recompute("derived", 1).unwrap();
         index
             .apply_batch(
@@ -869,7 +878,10 @@ mod tests {
                 position("create", 1),
                 &[
                     node("base", serde_json::json!({})),
-                    node("derived", serde_json::json!({"invalidation_deps": ["base"]})),
+                    node(
+                        "derived",
+                        serde_json::json!({"invalidation_deps": ["base"]}),
+                    ),
                 ],
             )
             .unwrap();
@@ -909,9 +921,18 @@ mod tests {
         );
         // The writer itself answers the absorbed pairs without a transition.
         let derived = opaque_identity("derived");
-        assert_eq!(index.fire(&derived, MaterializationEvent::Invalidate), Ok(false));
-        assert_eq!(index.fire(&derived, MaterializationEvent::Retract), Ok(false));
-        assert_eq!(index.fire("unknown", MaterializationEvent::Invalidate), Ok(false));
+        assert_eq!(
+            index.fire(&derived, MaterializationEvent::Invalidate),
+            Ok(false)
+        );
+        assert_eq!(
+            index.fire(&derived, MaterializationEvent::Retract),
+            Ok(false)
+        );
+        assert_eq!(
+            index.fire("unknown", MaterializationEvent::Invalidate),
+            Ok(false)
+        );
         assert_eq!(
             index.status_of("derived"),
             Some(MaterializationStatus::Retracted)
@@ -940,7 +961,10 @@ mod tests {
                     .next()
                     .unwrap_or_default()
                     .to_string();
-                (path.file_name().unwrap().to_string_lossy().into_owned(), code)
+                (
+                    path.file_name().unwrap().to_string_lossy().into_owned(),
+                    code,
+                )
             })
             .collect()
     }

@@ -81,10 +81,16 @@ impl std::fmt::Display for GlossaryError {
                 write!(f, "term {term} is not in scheme {scheme}")
             }
             Self::LabelTaken { label, term } => {
-                write!(f, "the approved term {term} already carries the label '{label}'")
+                write!(
+                    f,
+                    "the approved term {term} already carries the label '{label}'"
+                )
             }
             Self::Unreviewed { term } => {
-                write!(f, "term {term} needs an approved change request to be approved")
+                write!(
+                    f,
+                    "term {term} needs an approved change request to be approved"
+                )
             }
         }
     }

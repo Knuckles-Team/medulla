@@ -6,8 +6,8 @@
 //! of one tenant. The handler (R702.3) turns the plan into the write.
 
 use medulla_decision_types::correction::{
-    CandidateOutcomes, Correction, CorrectionCommit, CorrectionEdge, CorrectionEffect, CorrectionNode,
-    CorrectionOutcome, CorrectionShapeError, EvalCase, OutcomeTag, RuleCandidate,
+    CandidateOutcomes, Correction, CorrectionCommit, CorrectionEdge, CorrectionEffect,
+    CorrectionNode, CorrectionOutcome, CorrectionShapeError, EvalCase, OutcomeTag, RuleCandidate,
 };
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
@@ -32,15 +32,17 @@ fn node(id: &str, class: &'static str, entries: Vec<(&str, Value)>) -> Correctio
 /// the digest, so one corrected value under two task classes is two candidates, and a JSON array
 /// has no separator the two fields could be confused across.
 pub fn rule_digest(task_class: &str, value: &str) -> String {
-    let canonical = serde_json::to_vec(&[task_class, value])
-        .expect("two strings serialize as a JSON array");
+    let canonical =
+        serde_json::to_vec(&[task_class, value]).expect("two strings serialize as a JSON array");
     Digest256::sha256(&canonical).to_hex()
 }
 
 /// Plan the commit of one correction: validate it, derive the receipt id from
 /// its serialized bytes, and derive every node and edge from the correction and
 /// the receipt id alone.
-pub fn commit_correction(correction: &Correction) -> Result<CorrectionCommit, CorrectionShapeError> {
+pub fn commit_correction(
+    correction: &Correction,
+) -> Result<CorrectionCommit, CorrectionShapeError> {
     correction.validate()?;
     let bytes = serde_json::to_vec(correction).expect("a correction of plain fields serializes");
     let receipt_id = Digest256::sha256(&bytes).to_hex();
@@ -185,12 +187,14 @@ pub fn candidate_outcomes(
     }
     grouped
         .into_iter()
-        .map(|(rule_id, (task_class, independent, sum))| CandidateOutcomes {
-            rule_id,
-            task_class,
-            independent,
-            mean_value: sum / independent as f64,
-        })
+        .map(
+            |(rule_id, (task_class, independent, sum))| CandidateOutcomes {
+                rule_id,
+                task_class,
+                independent,
+                mean_value: sum / independent as f64,
+            },
+        )
         .collect()
 }
 
@@ -235,10 +239,18 @@ mod tests {
         let classes: Vec<&str> = commit.nodes.iter().map(|n| n.class).collect();
         assert_eq!(
             classes,
-            ["Correction", "RuleCandidate", "CorrectionOutcome", "EvalCase"]
+            [
+                "Correction",
+                "RuleCandidate",
+                "CorrectionOutcome",
+                "EvalCase"
+            ]
         );
         let relationships: Vec<&str> = commit.edges.iter().map(|e| e.relationship).collect();
-        assert_eq!(relationships, ["yields_rule", "yields_outcome", "yields_case"]);
+        assert_eq!(
+            relationships,
+            ["yields_rule", "yields_outcome", "yields_case"]
+        );
         assert!(commit
             .edges
             .iter()
@@ -249,17 +261,29 @@ mod tests {
             commit.effect.rule_candidate.rule_id,
             format!("sha256:{}", rule_digest("action_kind:tool_call", "right"))
         );
-        assert_eq!(commit.effect.rule_candidate.task_class, "action_kind:tool_call");
-        assert_eq!(commit.nodes[1].properties["task_class"], "action_kind:tool_call");
+        assert_eq!(
+            commit.effect.rule_candidate.task_class,
+            "action_kind:tool_call"
+        );
+        assert_eq!(
+            commit.nodes[1].properties["task_class"],
+            "action_kind:tool_call"
+        );
         assert_eq!(commit.edges[0].target, format!("rule:{receipt}"));
         assert_eq!(commit.nodes[2].properties["tag"], "independent");
         assert_eq!(commit.nodes[2].properties["value"], 0.0);
-        assert_eq!(commit.nodes[3].properties["input_digest"], Digest256::sha256(b"wrong").to_hex());
+        assert_eq!(
+            commit.nodes[3].properties["input_digest"],
+            Digest256::sha256(b"wrong").to_hex()
+        );
 
         // Equal input gives an equal receipt; a changed `after` gives another.
         assert_eq!(commit_correction(&correction("right")).unwrap(), commit);
         assert_ne!(
-            commit_correction(&correction("righter")).unwrap().effect.receipt_id,
+            commit_correction(&correction("righter"))
+                .unwrap()
+                .effect
+                .receipt_id,
             *receipt
         );
         // The 8 KiB bound is the R702.1 shape error.
@@ -286,7 +310,10 @@ mod tests {
             nearest_corrections(&neighbours, lookup, "tenant-a", 8),
             ["c", "a", "b", "d"]
         );
-        assert_eq!(nearest_corrections(&neighbours, lookup, "tenant-a", 2), ["c", "a"]);
+        assert_eq!(
+            nearest_corrections(&neighbours, lookup, "tenant-a", 2),
+            ["c", "a"]
+        );
         let knob = &medulla_decision_types::correction::KNOBS[0];
         assert!(knob.admits(&knob.default));
     }

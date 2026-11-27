@@ -254,7 +254,13 @@ mod tests {
                 } else {
                     TransitionRefusalReason::IllegalTransition
                 };
-                assert_eq!(refused.reason, expected, "{} {}", state.stored(), event.name());
+                assert_eq!(
+                    refused.reason,
+                    expected,
+                    "{} {}",
+                    state.stored(),
+                    event.name()
+                );
                 assert_eq!(refused.machine, "HardwareJobMachine");
                 assert_eq!(refused.from, state.stored());
                 assert_eq!(refused.event, event.name());

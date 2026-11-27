@@ -6,13 +6,14 @@
 //! typed refusal rendered `"CODE: detail"`.
 
 use medulla_finance_market::{
-    market::backtest_run, market::codec, market::confidence, market::decimate, market::indicators,
-    market::corporate_actions, market::liquidity, market::rollup, market::scan, market::signal,
-    market::snapshot, market::MarketError, market::MarketResult, market::INVALID_REQUEST,
+    market::backtest_run, market::codec, market::confidence, market::corporate_actions,
+    market::decimate, market::indicators, market::liquidity, market::rollup, market::scan,
+    market::signal, market::snapshot, market::MarketError, market::MarketResult,
+    market::INVALID_REQUEST,
 };
-use medulla_result_types::compute_result::market::FinanceMarketOp;
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_protocol_types::result_contract::MethodResult;
+use medulla_result_types::compute_result::market::FinanceMarketOp;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;

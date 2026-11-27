@@ -190,7 +190,10 @@ fn run_analytical_sparql(
         })
         .collect();
     Ok(AnalyticalRows {
-        columns: vars.into_iter().map(|name| (name, "string", true)).collect(),
+        columns: vars
+            .into_iter()
+            .map(|name| (name, "string", true))
+            .collect(),
         rows,
     })
 }
@@ -209,7 +212,10 @@ fn run_analytical_sparql(
 fn base_row(id: &str, score: Option<f64>) -> BTreeMap<String, serde_json::Value> {
     BTreeMap::from([
         ("id".to_string(), serde_json::json!(id)),
-        ("kind".to_string(), serde_json::json!("analytical_query_row")),
+        (
+            "kind".to_string(),
+            serde_json::json!("analytical_query_row"),
+        ),
         ("confidence".to_string(), serde_json::json!(1.0)),
         ("evidence_refs".to_string(), serde_json::json!([])),
         ("source_refs".to_string(), serde_json::json!([])),

@@ -37,7 +37,11 @@ fn edge(core: &GraphCore, source: &str, target: &str, relationship: &str) {
 fn graph() -> GraphCore {
     let core = GraphCore::new();
     let requirement = "requirement:bench:BENCH-R001";
-    put(&core, requirement, serde_json::json!({"type": "Requirement", "text": "Serve the row."}));
+    put(
+        &core,
+        requirement,
+        serde_json::json!({"type": "Requirement", "text": "Serve the row."}),
+    );
     for line in 0..8 {
         let plan = format!("plansection:bench:specs/a/plan.md#L{line}");
         put(
@@ -65,10 +69,18 @@ fn graph() -> GraphCore {
     }
     for n in 0..40 {
         let symbol = format!("symbol:serve_{n}");
-        put(&core, &symbol, serde_json::json!({"type": "CodeSymbolRef", "name": format!("serve_{n}")}));
+        put(
+            &core,
+            &symbol,
+            serde_json::json!({"type": "CodeSymbolRef", "name": format!("serve_{n}")}),
+        );
         edge(&core, requirement, &symbol, "implementedBy");
         let caller = format!("symbol:caller_{n}");
-        put(&core, &caller, serde_json::json!({"type": "CodeSymbolRef", "name": format!("caller_{n}")}));
+        put(
+            &core,
+            &caller,
+            serde_json::json!({"type": "CodeSymbolRef", "name": format!("caller_{n}")}),
+        );
         edge(&core, &caller, &symbol, "calls");
     }
     core

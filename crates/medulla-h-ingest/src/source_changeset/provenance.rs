@@ -76,7 +76,10 @@ mod tests {
     // spec: MEDULLA-SCM-R012
     #[test]
     fn agent_needs_a_visible_run_trace() {
-        let graph = Graph(HashMap::from([("run-1", "run_trace"), ("doc-1", "document")]));
+        let graph = Graph(HashMap::from([
+            ("run-1", "run_trace"),
+            ("doc-1", "document"),
+        ]));
         // A human may omit the run; a named run must still resolve.
         assert!(check(None, None, &graph).is_ok());
         assert!(check(None, Some("run-1"), &graph).is_ok());

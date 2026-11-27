@@ -16,8 +16,10 @@
 //!   of the caller's tenant.
 
 use medulla_decision_stats::{
-    decision::retrieval::class_usage, decision::retrieval::hard_negatives,
-    decision::retrieval::proven_paths, decision::retrieval::Verdict,
+    decision::retrieval::class_usage,
+    decision::retrieval::hard_negatives,
+    decision::retrieval::proven_paths,
+    decision::retrieval::Verdict,
     decision::source_trust::{posterior, JudgedUnits, SourceTrust},
 };
 use medulla_decision_types::decision::statistical::retrieval_pointer::PointerEvent;

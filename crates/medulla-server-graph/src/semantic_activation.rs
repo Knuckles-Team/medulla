@@ -404,7 +404,13 @@ fn spawn_activation(
             None => inner,
         };
         let built = tokio::task::spawn_blocking(move || {
-            activate_with(&name, &core, persist_dir.as_deref(), &cluster, Some(build_sink))
+            activate_with(
+                &name,
+                &core,
+                persist_dir.as_deref(),
+                &cluster,
+                Some(build_sink),
+            )
         })
         .await;
         // One progress call at the end, so a build too short to report a step still shows where
@@ -414,7 +420,9 @@ fn spawn_activation(
             medulla_observe::registry::tasks::ProgressCursor::Counter(steps),
             steps,
         );
-        built.map(|_| ()).map_err(|error| format!("INTERNAL: the build task failed: {error}"))
+        built
+            .map(|_| ())
+            .map_err(|error| format!("INTERNAL: the build task failed: {error}"))
     });
 }
 

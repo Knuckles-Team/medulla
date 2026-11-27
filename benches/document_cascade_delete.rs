@@ -48,9 +48,10 @@ async fn build_document(state: &test_support::SharedState, id: &mut u64, doc: &s
             })
             .await;
         }
-        for (source, target, relationship) in
-            [(&chunk, doc, "chunkOf"), (&fact, chunk.as_str(), "extractedFrom")]
-        {
+        for (source, target, relationship) in [
+            (&chunk, doc, "chunkOf"),
+            (&fact, chunk.as_str(), "extractedFrom"),
+        ] {
             send(Method::AddEdge {
                 source_id: source.clone(),
                 target_id: target.to_string(),

@@ -27,7 +27,10 @@ fn blob(value: &Value) -> Vec<u8> {
 fn corpus() -> (GraphCore, Vec<(String, f32)>) {
     let core = GraphCore::new();
     for container in 0..CONTAINERS {
-        core.add_node(format!("c{container}"), blob(&json!({"type": "SourceContainer"})));
+        core.add_node(
+            format!("c{container}"),
+            blob(&json!({"type": "SourceContainer"})),
+        );
     }
     let mut scored = Vec::with_capacity(WINDOW);
     for n in 0..WINDOW {

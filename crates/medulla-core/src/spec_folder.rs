@@ -118,7 +118,9 @@ fn rule_front_matter_kind(
     _path: &str,
     front: &std::collections::BTreeMap<String, String>,
 ) -> Option<SpecNodeKind> {
-    front.get("kind").and_then(|value| SpecNodeKind::from_wire(value))
+    front
+        .get("kind")
+        .and_then(|value| SpecNodeKind::from_wire(value))
 }
 
 fn rule_constitution_file(

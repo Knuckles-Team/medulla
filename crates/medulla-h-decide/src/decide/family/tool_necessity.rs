@@ -25,7 +25,9 @@ use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef}
 use medulla_graph_core::graph::GraphView;
 use medulla_types::refusal_code::RefusalCode;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 use crate::decide::SharedState;
 
 use super::support::{abstained, advisory, invalid, param, single_option, text_param};
@@ -78,7 +80,9 @@ impl DecisionRefusal for Abstention {
 fn iri<'a>(request: &'a DecideRequest, name: &str) -> Result<&'a str, String> {
     match param(request, name)? {
         Some(TypedValue::Iri(value)) | Some(TypedValue::Text(value)) => Ok(value),
-        _ => Err(invalid(format!("parameter {name} is required and is an iri"))),
+        _ => Err(invalid(format!(
+            "parameter {name} is required and is an iri"
+        ))),
     }
 }
 
@@ -182,7 +186,10 @@ fn conclude_necessity(
             "tool_necessity.provenance_digest",
             necessity.provenance_digest.to_string(),
         ),
-        observed("tool_necessity.comparison", comparison.agreement.to_string()),
+        observed(
+            "tool_necessity.comparison",
+            comparison.agreement.to_string(),
+        ),
     ];
     if let Some(mismatch) = comparison.mismatch(model_call_id) {
         let reason = match mismatch.reason {

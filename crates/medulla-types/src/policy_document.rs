@@ -138,7 +138,10 @@ pub struct PolicyActivated {
 }
 
 fn is_hex64(text: &str) -> bool {
-    text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    text.len() == 64
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 fn is_sha256_form(text: &str) -> bool {

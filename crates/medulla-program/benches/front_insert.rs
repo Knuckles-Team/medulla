@@ -63,7 +63,11 @@ fn main() {
     let mut micros = Vec::with_capacity(CANDIDATES);
     for candidate in candidates {
         let start = Instant::now();
-        let changed = black_box(front.insert(black_box(candidate)).expect("a valid candidate"));
+        let changed = black_box(
+            front
+                .insert(black_box(candidate))
+                .expect("a valid candidate"),
+        );
         if changed {
             front.bound(FRONT_SIZE);
         }
@@ -82,6 +86,9 @@ fn main() {
     assert!(front.candidates().len() <= FRONT_SIZE);
     if !cfg!(debug_assertions) {
         assert!(p99 <= BUDGET_P99_US, "front insert exceeded its budget");
-        assert!(peak <= BUDGET_PEAK_MIB, "front insert exceeded its memory budget");
+        assert!(
+            peak <= BUDGET_PEAK_MIB,
+            "front insert exceeded its memory budget"
+        );
     }
 }

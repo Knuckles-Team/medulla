@@ -103,7 +103,9 @@ pub(super) fn agg_over(func: &AggregateFunction, vals: &[Binding]) -> Option<Bin
         AggregateFunction::Max => agg_extreme(vals, Extreme::Max),
         AggregateFunction::GroupConcat { separator } => {
             let texts: Vec<String> = vals.iter().filter_map(Binding::str_value).collect();
-            Some(Binding::string(texts.join(separator.as_deref().unwrap_or(" "))))
+            Some(Binding::string(
+                texts.join(separator.as_deref().unwrap_or(" ")),
+            ))
         }
         AggregateFunction::Sample => vals.first().cloned(),
         AggregateFunction::Custom(_) => None,
@@ -136,14 +138,12 @@ pub(super) enum Extreme {
 
 /// MIN/MAX under the SPARQL term ordering (the one `ORDER BY` uses).
 pub(super) fn agg_extreme(vals: &[Binding], end: Extreme) -> Option<Binding> {
-    vals.iter()
-        .cloned()
-        .reduce(|best, next| {
-            let order = cmp_binding(&Some(next.clone()), &Some(best.clone()));
-            match (end, order) {
-                (Extreme::Min, std::cmp::Ordering::Less)
-                | (Extreme::Max, std::cmp::Ordering::Greater) => next,
-                _ => best,
-            }
-        })
+    vals.iter().cloned().reduce(|best, next| {
+        let order = cmp_binding(&Some(next.clone()), &Some(best.clone()));
+        match (end, order) {
+            (Extreme::Min, std::cmp::Ordering::Less)
+            | (Extreme::Max, std::cmp::Ordering::Greater) => next,
+            _ => best,
+        }
+    })
 }

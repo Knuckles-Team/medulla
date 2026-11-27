@@ -30,8 +30,8 @@ use medulla_core::stewardship::{
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
-    StewardshipApply, StewardshipAssign, StewardshipCertify, StewardshipOpenChangeRequest,
-    StewardshipMarkCritical, StewardshipReview, StewardshipRevoke, StewardshipSetTrustFlag,
+    StewardshipApply, StewardshipAssign, StewardshipCertify, StewardshipMarkCritical,
+    StewardshipOpenChangeRequest, StewardshipReview, StewardshipRevoke, StewardshipSetTrustFlag,
 };
 use medulla_server_api::state::ServerState;
 use medulla_types::change_request_machine::ChangeRequestState;
@@ -163,11 +163,17 @@ pub async fn load_assignments(
         let count = nodes.len();
         after = nodes.last().map(|(id, _)| id.clone());
         for (_, properties) in nodes {
-            if properties.get(TENANT_PROPERTY).and_then(serde_json::Value::as_str) != Some(tenant)
+            if properties
+                .get(TENANT_PROPERTY)
+                .and_then(serde_json::Value::as_str)
+                != Some(tenant)
             {
                 continue;
             }
-            if let Some(assignment) = properties.as_object().and_then(StewardshipAssignment::from_properties) {
+            if let Some(assignment) = properties
+                .as_object()
+                .and_then(StewardshipAssignment::from_properties)
+            {
                 found.push(assignment);
             }
         }
@@ -267,7 +273,15 @@ async fn assign(
         },
     )
     .await?;
-    receipt(state, target, id, &scopes_of_assignment(assignment), None, None).await
+    receipt(
+        state,
+        target,
+        id,
+        &scopes_of_assignment(assignment),
+        None,
+        None,
+    )
+    .await
 }
 
 async fn revoke(
@@ -280,8 +294,23 @@ async fn revoke(
     if read_node(state, target, &id).await?.is_none() {
         return Err(invalid(format!("assignment '{id}' does not exist")));
     }
-    write(state, target, Method::RemoveNode { node_id: id.clone() }).await?;
-    receipt(state, target, id, &scopes_of_assignment(assignment), None, None).await
+    write(
+        state,
+        target,
+        Method::RemoveNode {
+            node_id: id.clone(),
+        },
+    )
+    .await?;
+    receipt(
+        state,
+        target,
+        id,
+        &scopes_of_assignment(assignment),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(super) fn request_id(tenant: &str, asset: &str, digest: &str) -> String {
@@ -386,7 +415,10 @@ fn request_properties(
     properties.insert("request_id".into(), id.into());
     properties.insert("target".into(), request.target.clone().into());
     properties.insert("state".into(), state_name(request.state).into());
-    properties.insert("proposed_digest".into(), request.proposed_digest.clone().into());
+    properties.insert(
+        "proposed_digest".into(),
+        request.proposed_digest.clone().into(),
+    );
     properties.insert("opened_by".into(), opened_by.into());
     properties.insert("reviewers".into(), serde_json::json!(request.reviewers));
     properties.insert(TENANT_PROPERTY.into(), tenant.into());
@@ -446,10 +478,14 @@ pub(super) async fn stored_request(
     let properties = read_node(state, target, id)
         .await?
         .ok_or_else(|| invalid(format!("change request '{id}' does not exist")))?;
-    if properties.get(TENANT_PROPERTY).and_then(serde_json::Value::as_str)
+    if properties
+        .get(TENANT_PROPERTY)
+        .and_then(serde_json::Value::as_str)
         != Some(target.verified.tenant())
     {
-        return Err(invalid(format!("change request '{id}' belongs to another tenant")));
+        return Err(invalid(format!(
+            "change request '{id}' belongs to another tenant"
+        )));
     }
     let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
     let not_a_request = || invalid(format!("node '{id}' is not a change request"));
@@ -462,7 +498,9 @@ pub(super) async fn stored_request(
         .collect();
     let request = ChangeRequest {
         target: text("target").ok_or_else(not_a_request)?.to_string(),
-        proposed_digest: text("proposed_digest").ok_or_else(not_a_request)?.to_string(),
+        proposed_digest: text("proposed_digest")
+            .ok_or_else(not_a_request)?
+            .to_string(),
         state: state_from(text("state").ok_or_else(not_a_request)?).ok_or_else(not_a_request)?,
         reviewers,
     };
@@ -508,7 +546,9 @@ async fn move_request(
     )
     .await?;
     if !took_effect(&committed) {
-        return Err(invalid(format!("change request '{id}' changed since it was read")));
+        return Err(invalid(format!(
+            "change request '{id}' changed since it was read"
+        )));
     }
     Ok(request)
 }
@@ -585,7 +625,15 @@ async fn apply(
     );
     extra.insert("receipt_id".into(), format!("receipt:{id}").into());
     extra.insert("applied_by".into(), target.verified.agent_id().into());
-    let request = move_request(state, target, id, &stored, ChangeRequestState::Applied, extra).await?;
+    let request = move_request(
+        state,
+        target,
+        id,
+        &stored,
+        ChangeRequestState::Applied,
+        extra,
+    )
+    .await?;
     let scopes = TargetScopes {
         asset: Some(request.target.clone()),
         concept_scheme: None,
@@ -616,7 +664,9 @@ async fn certify_asset(
         domain: None,
     };
     if !holds_review_role(state, target, &scopes).await? {
-        return Err(role_missing("certifying needs the steward or owner role of the asset"));
+        return Err(role_missing(
+            "certifying needs the steward or owner role of the asset",
+        ));
     }
     let now_secs = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000;
     let certification = certify(
@@ -654,7 +704,9 @@ async fn has_active_quality_rule(
     target: &GraphTarget<'_>,
     element: &str,
 ) -> Result<bool, String> {
-    use medulla_h_jobs::quality_rule::{QUALITY_RULE_LABEL, RULE_BODY_PROPERTY, RULE_STATE_PROPERTY};
+    use medulla_h_jobs::quality_rule::{
+        QUALITY_RULE_LABEL, RULE_BODY_PROPERTY, RULE_STATE_PROPERTY,
+    };
     let tenant = target.verified.tenant();
     let mut after: Option<String> = None;
     loop {
@@ -683,13 +735,20 @@ async fn has_active_quality_rule(
             let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
             let declared_on = text(RULE_BODY_PROPERTY)
                 .and_then(|body| serde_json::from_str::<serde_json::Value>(body).ok())
-                .and_then(|rule| rule.get("target").and_then(serde_json::Value::as_str).map(str::to_string));
+                .and_then(|rule| {
+                    rule.get("target")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string)
+                });
             let approved = properties
                 .get(RULE_STATE_PROPERTY)
                 .and_then(|state| state.get("state").and_then(serde_json::Value::as_str))
                 .or_else(|| text(RULE_STATE_PROPERTY))
                 == Some("approved");
-            if text(TENANT_PROPERTY) == Some(tenant) && approved && declared_on.as_deref() == Some(element) {
+            if text(TENANT_PROPERTY) == Some(tenant)
+                && approved
+                && declared_on.as_deref() == Some(element)
+            {
                 return Ok(true);
             }
         }
@@ -729,7 +788,10 @@ async fn seed_catalog_queries(
         write(
             state,
             target,
-            Method::AddNode { node_id, properties_msgpack: encode(&properties)? },
+            Method::AddNode {
+                node_id,
+                properties_msgpack: encode(&properties)?,
+            },
         )
         .await?;
     }
@@ -755,8 +817,13 @@ async fn mark_critical(
     };
     let assignments = load_assignments(state, target).await?;
     let principal = target.verified.agent_id();
-    if !reviewers(&assignments, &scopes).iter().any(|r| r == principal) {
-        return Err(role_missing("marking critical needs the steward or owner role of the element"));
+    if !reviewers(&assignments, &scopes)
+        .iter()
+        .any(|r| r == principal)
+    {
+        return Err(role_missing(
+            "marking critical needs the steward or owner role of the element",
+        ));
     }
     let (owners, stewards) = governing(&assignments, &scopes);
     let mut gaps = Vec::new();
@@ -834,7 +901,8 @@ fn plan_trust_flag(
     node.insert("flag".into(), flag.into());
     node.insert("reason".into(), reason.into());
     node.insert(TENANT_PROPERTY.into(), tenant.into());
-    let mut operations = vec![serde_json::json!({"op": "upsert_node", "id": id, "properties": node})];
+    let mut operations =
+        vec![serde_json::json!({"op": "upsert_node", "id": id, "properties": node})];
     if let Some((asset_key, mut properties)) = asset_node {
         let cat_flag = format!("{}flag", medulla_catalog_types::catalog_relevance::CAT_NS);
         let mut flags: Vec<String> = Vec::new();
@@ -853,7 +921,9 @@ fn plan_trust_flag(
         flags.sort();
         flags.dedup();
         properties.insert("flag".into(), flags.into());
-        operations.push(serde_json::json!({"op": "upsert_node", "id": asset_key, "properties": properties}));
+        operations.push(
+            serde_json::json!({"op": "upsert_node", "id": asset_key, "properties": properties}),
+        );
     }
     Ok(TrustFlagPlan { id, operations })
 }

@@ -169,7 +169,10 @@ pub(crate) async fn serve_blueprint_export(
     #[cfg(not(feature = "blob"))]
     {
         let _ = (state, store);
-        Response::err(req_id, "AgentComponent.export_blueprint requires the blob feature")
+        Response::err(
+            req_id,
+            "AgentComponent.export_blueprint requires the blob feature",
+        )
     }
     #[cfg(feature = "blob")]
     {
@@ -186,8 +189,7 @@ pub(crate) async fn serve_blueprint_export(
             Err(error) => return Response::err(req_id, error),
         };
         let result = medulla_agent_types::agent_component::BlueprintExport {
-            schema_version:
-                medulla_agent_types::agent_component::BLUEPRINT_EXPORT_SCHEMA_VERSION,
+            schema_version: medulla_agent_types::agent_component::BLUEPRINT_EXPORT_SCHEMA_VERSION,
             content_digest: format!("sha256:{}", pointer.body_sha256),
             media_type: pointer.media_type,
             entry: pointer.entry,
@@ -345,9 +347,9 @@ pub(crate) async fn serve_blueprint_import(
         context,
         component: draft_of(entry),
         evaluation_receipt_digest: None,
-        body: Some(medulla_agent_types::agent_component::ComponentBody::PromptBlueprint(
-            prompt_blueprint,
-        )),
+        body: Some(
+            medulla_agent_types::agent_component::ComponentBody::PromptBlueprint(prompt_blueprint),
+        ),
     };
     super::agent::component_publish(state, store, req_id, verified, Box::new(publish)).await
 }
@@ -528,16 +530,16 @@ pub(crate) async fn serve_prompt_render(
             Ok(value) => value,
             Err(code) => return Response::err(req_id, code),
         };
-        let validated = match validate_prompt_blueprint(&blueprint, &identity, &PromptLimits::default())
-        {
-            Ok(value) => value,
-            Err(code) => {
-                return Response::err(
-                    req_id,
-                    format!("{code}: the stored prompt blueprint is not admitted"),
-                )
-            }
-        };
+        let validated =
+            match validate_prompt_blueprint(&blueprint, &identity, &PromptLimits::default()) {
+                Ok(value) => value,
+                Err(code) => {
+                    return Response::err(
+                        req_id,
+                        format!("{code}: the stored prompt blueprint is not admitted"),
+                    )
+                }
+            };
         let spec = &prompt_render::KNOBS[prompt_render::MAX_RENDER_BYTES];
         let max_render_bytes = match spec.default {
             KnobValue::Integer(bytes) => u32::try_from(bytes).unwrap_or(u32::MAX),
@@ -641,7 +643,10 @@ mod tests {
             "unknown revision",
             served.call("export:unknown", export(TENANT, 99)).await,
         );
-        assert!(unknown.starts_with("COMPONENT_REVISION_UNKNOWN"), "{unknown}");
+        assert!(
+            unknown.starts_with("COMPONENT_REVISION_UNKNOWN"),
+            "{unknown}"
+        );
 
         // An unpinned (zero) revision is an invalid argument.
         let zero = refused(
@@ -653,7 +658,9 @@ mod tests {
         // Another tenant is refused before any read.
         let denied = refused(
             "other tenant",
-            served.call("export:denied", export("tenant-other", 1)).await,
+            served
+                .call("export:denied", export("tenant-other", 1))
+                .await,
         );
         assert!(denied.starts_with("ACCESS_DENIED"), "{denied}");
     }
@@ -728,11 +735,13 @@ mod tests {
         }
         let mut opaque = exported.clone();
         opaque.entry.facts = AgentComponentFacts::Opaque;
-        assert!(code(check_blueprint_envelope(&request(opaque)))
-            .starts_with("BLUEPRINT_MALFORMED"));
+        assert!(code(check_blueprint_envelope(&request(opaque))).starts_with("BLUEPRINT_MALFORMED"));
 
         // The identity of the base revision cannot change.
-        assert_eq!(check_blueprint_identity(&exported.entry, &exported.entry), Ok(()));
+        assert_eq!(
+            check_blueprint_identity(&exported.entry, &exported.entry),
+            Ok(())
+        );
         let mut other_id = exported.entry.clone();
         other_id.component_id = "prompt:other".to_string();
         let mut other_kind = exported.entry.clone();

@@ -38,7 +38,10 @@ pub fn graph_media_type(media_type: &str) -> Option<&'static str> {
         .unwrap_or_default()
         .trim()
         .to_ascii_lowercase();
-    GRAPH_MEDIA_TYPES.iter().copied().find(|known| *known == essence)
+    GRAPH_MEDIA_TYPES
+        .iter()
+        .copied()
+        .find(|known| *known == essence)
 }
 
 /// Serialize `triples` in the media type `ct`; a type outside [`GRAPH_MEDIA_TYPES`] is

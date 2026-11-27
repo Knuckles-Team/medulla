@@ -25,7 +25,12 @@ use medulla_query_types::wire::{
 const SECRET: &str = "medulla-unified-data-plane-r017-2-2-clickhouse-secret";
 
 /// The fixture table `events (id UInt64, name String, amount Int64)`.
-const ROWS: [(u64, &str, i64); 4] = [(1, "ada", 10), (2, "bea", 20), (3, "cam", 30), (4, "ada", 40)];
+const ROWS: [(u64, &str, i64); 4] = [
+    (1, "ada", 10),
+    (2, "bea", 20),
+    (3, "cam", 30),
+    (4, "ada", 40),
+];
 
 fn percent_decode(text: &str) -> String {
     let bytes = text.as_bytes();
@@ -100,7 +105,10 @@ fn answer(sql: &str, params: &BTreeMap<String, String>) -> String {
             .iter()
             .map(|c| serde_json::json!([c, type_of(c)]))
             .collect();
-        return format!(r#"{{"meta":{meta},"data":{},"rows":3}}"#, serde_json::json!(data));
+        return format!(
+            r#"{{"meta":{meta},"data":{},"rows":3}}"#,
+            serde_json::json!(data)
+        );
     }
     if sql.contains("FROM system.tables") {
         return r#"{"meta":[{"name":"engine","type":"String"}],"data":[["MergeTree"]],"rows":1}"#
@@ -137,9 +145,7 @@ fn answer(sql: &str, params: &BTreeMap<String, String>) -> String {
                 .iter()
                 .all(|(column, op, value)| compare(&cell(column, row), op, value))
         })
-        .map(|row| {
-            serde_json::Value::Array(columns.iter().map(|c| cell(c, row)).collect())
-        })
+        .map(|row| serde_json::Value::Array(columns.iter().map(|c| cell(c, row)).collect()))
         .collect();
     let meta: Vec<_> = columns
         .iter()
@@ -299,8 +305,18 @@ async fn federated_reads_match_native_and_capture_is_refused() {
     );
     let state = test_support::durable_state(SECRET, common::current_isolation());
 
-    let registered = register(&state, 1, "ch_events", clickhouse(port, &["id", "name", "amount"], None)).await;
-    assert!(registered.error.is_none(), "register: {:?}", registered.error);
+    let registered = register(
+        &state,
+        1,
+        "ch_events",
+        clickhouse(port, &["id", "name", "amount"], None),
+    )
+    .await;
+    assert!(
+        registered.error.is_none(),
+        "register: {:?}",
+        registered.error
+    );
 
     // A pushed ordered filter and a projection equal the table's own rows.
     let served = rows(
@@ -352,13 +368,33 @@ async fn federated_reads_match_native_and_capture_is_refused() {
     assert_eq!(ids, vec!["1".to_string(), "4".to_string()]);
 
     // A column the table lacks is schema drift, not an empty column.
-    let registered = register(&state, 4, "ch_drift", clickhouse(port, &["id", "missing"], None)).await;
-    assert!(registered.error.is_none(), "register: {:?}", registered.error);
+    let registered = register(
+        &state,
+        4,
+        "ch_drift",
+        clickhouse(port, &["id", "missing"], None),
+    )
+    .await;
+    assert!(
+        registered.error.is_none(),
+        "register: {:?}",
+        registered.error
+    );
     let drift = read(&state, 5, "ch_drift", &["missing"], vec![]).await;
-    assert!(refusal(&drift).starts_with("SCHEMA_DRIFT"), "{:?}", drift.error);
+    assert!(
+        refusal(&drift).starts_with("SCHEMA_DRIFT"),
+        "{:?}",
+        drift.error
+    );
 
     // A capture request is refused: ClickHouse has no change capture.
-    let capture = register(&state, 6, "ch_capture", clickhouse(port, &["id"], Some("updated_at"))).await;
+    let capture = register(
+        &state,
+        6,
+        "ch_capture",
+        clickhouse(port, &["id"], Some("updated_at")),
+    )
+    .await;
     let message = refusal(&capture);
     assert!(message.starts_with("CAPABILITY_UNSUPPORTED"), "{message}");
     assert!(message.contains("clickhouse_no_cdc"), "{message}");
@@ -372,7 +408,15 @@ async fn federated_reads_match_native_and_capture_is_refused() {
         format!("127.0.0.1:{port},127.0.0.1:{dead_port}"),
     );
     let registered = register(&state, 7, "ch_gone", clickhouse(dead_port, &["id"], None)).await;
-    assert!(registered.error.is_none(), "register: {:?}", registered.error);
+    assert!(
+        registered.error.is_none(),
+        "register: {:?}",
+        registered.error
+    );
     let gone = read(&state, 8, "ch_gone", &["id"], vec![]).await;
-    assert!(refusal(&gone).starts_with("SOURCE_UNAVAILABLE"), "{:?}", gone.error);
+    assert!(
+        refusal(&gone).starts_with("SOURCE_UNAVAILABLE"),
+        "{:?}",
+        gone.error
+    );
 }

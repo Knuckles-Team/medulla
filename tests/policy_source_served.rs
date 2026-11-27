@@ -14,9 +14,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_agent_types::agent_component::{
-    AgentComponentKind, AgentComponentPublishRequest,
-};
+use medulla_agent_types::agent_component::{AgentComponentKind, AgentComponentPublishRequest};
 use medulla_decision_types::decision::digest::policy_digest;
 use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
 use medulla_decision_types::decision::DecisionPolicy;
@@ -70,7 +68,9 @@ async fn publish(
         evaluation_receipt_digest: None,
         body: None,
     };
-    let committed = store.publish_component(request, None).expect("publish policy");
+    let committed = store
+        .publish_component(request, None)
+        .expect("publish policy");
     committed
         .result
         .component
@@ -105,7 +105,11 @@ async fn bind(state: &test_support::SharedState, id: u64, request: PolicySourceB
 }
 
 fn binding(response: Response) -> PolicySourceBinding {
-    assert!(response.error.is_none(), "bind failed: {:?}", response.error);
+    assert!(
+        response.error.is_none(),
+        "bind failed: {:?}",
+        response.error
+    );
     match response.result {
         Some(ResultPayload::Json(value)) => serde_json::from_value(value).expect("typed record"),
         other => panic!("unexpected payload {other:?}"),
@@ -148,8 +152,15 @@ async fn stale_review_leaves_policy_unchanged() {
     let newer = publish(&state, common::TEST_TENANT, POLICY, "2.0.0", 2, 1).await;
     let stale = bind(&state, 3, bind_request(POLICY, "1.0.0", &newer)).await;
     let error = stale.error.expect("the stale review is refused");
-    assert!(error.starts_with("POLICY_SOURCE_STALE"), "unexpected refusal: {error}");
-    assert_eq!(node(&state, 4).await, active, "a refusal leaves the activation unchanged");
+    assert!(
+        error.starts_with("POLICY_SOURCE_STALE"),
+        "unexpected refusal: {error}"
+    );
+    assert_eq!(
+        node(&state, 4).await,
+        active,
+        "a refusal leaves the activation unchanged"
+    );
 
     // A digest the head does not hold is a mismatch, and writes nothing either.
     let mismatch = bind(&state, 5, bind_request(POLICY, "2.0.0", &digest)).await;
@@ -164,7 +175,10 @@ async fn stale_review_leaves_policy_unchanged() {
     publish(&state, "other-tenant", "policy-b", "1.0.0", 3, 0).await;
     let foreign = bind(&state, 7, bind_request("policy-b", "1.0.0", &digest)).await;
     let error = foreign.error.expect("a foreign tenant's policy is refused");
-    assert!(error.starts_with("INVALID_ARGUMENT"), "unexpected refusal: {error}");
+    assert!(
+        error.starts_with("INVALID_ARGUMENT"),
+        "unexpected refusal: {error}"
+    );
 
     // The current review binds the newer head, replacing the one record.
     let rebound = binding(bind(&state, 8, bind_request(POLICY, "2.0.0", &newer)).await);
@@ -193,7 +207,11 @@ async fn stale_review_leaves_policy_unchanged() {
         .load_all(&restarted)
         .await
         .expect("reload durable graphs");
-    assert_eq!(node(&restarted, 20).await, activated, "the activation survives a restart");
+    assert_eq!(
+        node(&restarted, 20).await,
+        activated,
+        "the activation survives a restart"
+    );
 
     reopened.shutdown();
     restarted.write().await.persistence = None;

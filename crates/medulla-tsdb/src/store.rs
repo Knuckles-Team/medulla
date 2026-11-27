@@ -591,8 +591,8 @@ impl SeriesKey {
     }
 }
 
-pub use crate::projection_machine::ProjectionStatus;
 use crate::projection_machine::ProjectionEvent;
+pub use crate::projection_machine::ProjectionStatus;
 
 /// Durable high-water mark for the authoritative-to-served projection.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -2259,9 +2259,7 @@ mod ordered_chunk_tests {
     type FoldedCells = BTreeMap<i64, FoldedCell>;
 
     /// Fold points into `(count, first, last, min, max)` per cell of width 25, finite values only.
-    fn fold_cells(
-        points: impl Iterator<Item = (Ts, f64)>,
-    ) -> FoldedCells {
+    fn fold_cells(points: impl Iterator<Item = (Ts, f64)>) -> FoldedCells {
         let mut cells = BTreeMap::new();
         for (ts, v) in points.filter(|(_, v)| v.is_finite()) {
             let c = cells.entry(ts / 25).or_insert((0, (ts, v), (ts, v), v, v));
@@ -2331,11 +2329,7 @@ mod ordered_chunk_tests {
         }
     }
 
-    fn merge_cell(
-        into: &mut FoldedCells,
-        cell: i64,
-        c: FoldedCell,
-    ) {
+    fn merge_cell(into: &mut FoldedCells, cell: i64, c: FoldedCell) {
         match into.get_mut(&cell) {
             None => {
                 into.insert(cell, c);

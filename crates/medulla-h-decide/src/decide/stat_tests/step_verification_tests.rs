@@ -416,7 +416,10 @@ async fn failed_and_uncertain_steps_withhold_their_dependents() {
         "verify:evidence=s1/e-c",
         "verify:step=s1/verified",
     ] {
-        assert!(record_facts.contains(&expected), "missing premise {expected}");
+        assert!(
+            record_facts.contains(&expected),
+            "missing premise {expected}"
+        );
     }
 
     // A wide interval on step 2 (s1): uncertain, no recovery, s2 withheld.

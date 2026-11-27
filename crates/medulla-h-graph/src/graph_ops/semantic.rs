@@ -146,11 +146,11 @@ fn gather_candidates(
     if !query_embedding.is_empty() {
         let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
         let raw = match allowed {
-            Some(allowed) => core.semantic_store.read().semantic_search_filtered(
-                query_embedding,
-                fanout,
-                |id| allowed.contains(id),
-            ),
+            Some(allowed) => {
+                core.semantic_store
+                    .read()
+                    .semantic_search_filtered(query_embedding, fanout, |id| allowed.contains(id))
+            }
             None => core
                 .semantic_store
                 .read()
@@ -585,7 +585,11 @@ fn adapt_expansions(deep: &mut super::discover_plan::DeepArms, adapter: Option<&
 }
 
 #[cfg(all(feature = "query", not(feature = "decide")))]
-fn adapt_expansions(_deep: &mut super::discover_plan::DeepArms, _adapter: Option<&ServedAdapterRef>) {}
+fn adapt_expansions(
+    _deep: &mut super::discover_plan::DeepArms,
+    _adapter: Option<&ServedAdapterRef>,
+) {
+}
 
 /// The digest of the resolved adapter, `None` for the base space.
 #[cfg(all(feature = "query", feature = "decide"))]
@@ -812,14 +816,23 @@ async fn adapt_query_vector(_ctx: &GraphOpsContext<'_>, method: Method) -> Metho
 fn agent_scope_for(
     core: &GraphCore,
     agent_ref: Option<&str>,
-) -> Result<(Option<medulla_retrieval::knowledge_scope::ResolvedScope>, String), String> {
+) -> Result<
+    (
+        Option<medulla_retrieval::knowledge_scope::ResolvedScope>,
+        String,
+    ),
+    String,
+> {
     use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, ResolvedScope};
     let scope = match agent_ref {
         Some(agent) => agent_scope(core, agent).map_err(|refusal| refusal.to_string())?,
         None => None,
     };
     let digest = scope_digest(scope.as_ref());
-    Ok((scope.map(|scope| ResolvedScope::resolve(core, &scope)), digest))
+    Ok((
+        scope.map(|scope| ResolvedScope::resolve(core, &scope)),
+        digest,
+    ))
 }
 
 /// The grant gate of the agent's knowledge scope (MEDULLA-FEDERATED-QUERY-R704.4): every

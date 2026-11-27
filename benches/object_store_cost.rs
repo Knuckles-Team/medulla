@@ -129,8 +129,15 @@ async fn lifecycle(store: Arc<dyn ObjectStore>) -> usize {
         .unwrap();
     let fetcher = ObjectFetcher::new(store, ROOT);
     let head = fetcher.head(TENANT, GRAPH).await.unwrap();
-    let state = fetcher.materialize(TENANT, GRAPH, head.version).await.unwrap();
-    state.batches.iter().map(|segment| segment.bytes.len()).sum()
+    let state = fetcher
+        .materialize(TENANT, GRAPH, head.version)
+        .await
+        .unwrap();
+    state
+        .batches
+        .iter()
+        .map(|segment| segment.bytes.len())
+        .sum()
 }
 
 /// The digest of the lifecycle's shape: what the run did, not how fast.
@@ -169,12 +176,22 @@ fn main() {
     runtime.block_on(lifecycle(counting.clone()));
     let total = counting.total();
     emit(&host, &revision, "object_actions", total.actions() as f64);
-    emit(&host, &revision, "bytes", (total.bytes_read + total.bytes_written) as f64);
+    emit(
+        &host,
+        &revision,
+        "bytes",
+        (total.bytes_read + total.bytes_written) as f64,
+    );
 
     // The matched run without the wrapper: time and memory.
     let plain: Arc<dyn ObjectStore> = Arc::new(InMemory::new());
     let started = Instant::now();
     let resident = runtime.block_on(lifecycle(plain));
-    emit(&host, &revision, "time_ms", started.elapsed().as_secs_f64() * 1e3);
+    emit(
+        &host,
+        &revision,
+        "time_ms",
+        started.elapsed().as_secs_f64() * 1e3,
+    );
     emit(&host, &revision, "peak_memory_bytes", resident as f64);
 }

@@ -20,7 +20,10 @@ fn result_of(response: &Response) -> DiscoverResult {
     match response.result.as_ref() {
         Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone()).unwrap(),
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).unwrap(),
-        other => panic!("expected a discover answer, got {other:?} / {:?}", response.error),
+        other => panic!(
+            "expected a discover answer, got {other:?} / {:?}",
+            response.error
+        ),
     }
 }
 
@@ -28,9 +31,16 @@ fn result_of(response: &Response) -> DiscoverResult {
 fn fixture() -> GraphCore {
     let core = GraphCore::new();
     for id in ["a", "b", "x", "y", "z"] {
-        core.add_node(id.into(), props(serde_json::json!({"type": "Doc", "name": id})));
+        core.add_node(
+            id.into(),
+            props(serde_json::json!({"type": "Doc", "name": id})),
+        );
     }
-    for (from, to, label) in [("a", "x", "CITES"), ("a", "y", "KNOWS"), ("b", "z", "CITES")] {
+    for (from, to, label) in [
+        ("a", "x", "CITES"),
+        ("a", "y", "KNOWS"),
+        ("b", "z", "CITES"),
+    ] {
         core.add_edge(
             from.into(),
             to.into(),
@@ -81,7 +91,11 @@ fn each_refusal_names_its_code_and_hides_the_cause() {
     let hidden = check_seeds(&core, &["missing-two".to_string()]).unwrap_err();
     assert_eq!(absent.code, SEED_NOT_VISIBLE);
     assert_eq!(absent.message(), hidden.message());
-    assert!(!absent.message().contains("missing"), "{}", absent.message());
+    assert!(
+        !absent.message().contains("missing"),
+        "{}",
+        absent.message()
+    );
     assert_eq!(
         check_seeds(&core, &[String::new()]).unwrap_err().message(),
         absent.message()
@@ -133,7 +147,10 @@ fn each_refusal_names_its_code_and_hides_the_cause() {
             }),
             ..Default::default()
         };
-        assert_eq!(plan_discover(&request, &[], 4, None), Ok(DeepArms::default()));
+        assert_eq!(
+            plan_discover(&request, &[], 4, None),
+            Ok(DeepArms::default())
+        );
     }
 
     // With seeds the planner asks no provider, even in deep mode with no provider bound.
@@ -143,7 +160,10 @@ fn each_refusal_names_its_code_and_hides_the_cause() {
         seed_ids: vec!["a".into()],
         ..Default::default()
     };
-    assert_eq!(plan_discover(&deep_seeded, &[], 4, None), Ok(DeepArms::default()));
+    assert_eq!(
+        plan_discover(&deep_seeded, &[], 4, None),
+        Ok(DeepArms::default())
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R741.3
@@ -152,7 +172,10 @@ fn discover_routes_filter_to_expand_hops() {
     let core = fixture();
 
     // Seeds replace the arms: they come back in the given order, score 1.0, no filter.
-    assert_eq!(ids_of(&core, &["b", "a"], 0, &HopFilter::default()), ["b", "a"]);
+    assert_eq!(
+        ids_of(&core, &["b", "a"], 0, &HopFilter::default()),
+        ["b", "a"]
+    );
 
     // An empty filter returns the walk as it was before the filter existed.
     let mut unfiltered = ids_of(&core, &["a", "b"], 1, &HopFilter::default());

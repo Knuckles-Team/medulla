@@ -12,9 +12,15 @@ fn step_guard_records_duration_and_outcome() {
         std::thread::sleep(std::time::Duration::from_millis(5));
         step.ok();
     }
-    report.step("index-rebuild", "alpha").skipped("no index declared");
-    report.step("graph-materialization", "beta").refused("MIGRATION_REFUSED");
-    report.step("matview-reload", "beta").failed("MATVIEW_RELOAD_FAILED");
+    report
+        .step("index-rebuild", "alpha")
+        .skipped("no index declared");
+    report
+        .step("graph-materialization", "beta")
+        .refused("MIGRATION_REFUSED");
+    report
+        .step("matview-reload", "beta")
+        .failed("MATVIEW_RELOAD_FAILED");
     {
         // A guard dropped without a verdict is a failure, never a success.
         let _abandoned = report.step("ts-reconcile", "gamma");

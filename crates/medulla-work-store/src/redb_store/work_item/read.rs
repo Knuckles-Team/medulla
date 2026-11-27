@@ -8,10 +8,10 @@
 use medulla_types::keyset_page::{KeysetListing, KeysetPage, KeysetScan};
 use medulla_work_types::{
     work_item_read::validate_work_item_get, work_item_read::validate_work_item_transitions,
-    work_item_read::CommittedOutcomeRefs,
-    work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
-    work_item_read::WorkItemPage, work_item_read::WorkItemTransitionEntry,
-    work_item_read::WorkItemTransitionPage, work_item_read::WorkItemView,
+    work_item_read::CommittedOutcomeRefs, work_item_read::WorkItemListRequest,
+    work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage,
+    work_item_read::WorkItemTransitionEntry, work_item_read::WorkItemTransitionPage,
+    work_item_read::WorkItemView,
 };
 
 use super::*;
@@ -98,9 +98,7 @@ pub fn list_work_item_transitions(
         entries.pop();
         revisions.pop();
     }
-    let next_cursor = more
-        .then(|| revisions.last().map(u64::to_string))
-        .flatten();
+    let next_cursor = more.then(|| revisions.last().map(u64::to_string)).flatten();
     Ok(Some(WorkItemTransitionPage {
         entries,
         next_cursor,

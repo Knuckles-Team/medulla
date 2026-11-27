@@ -558,11 +558,18 @@ mod colocated_executor_tests {
         )
         .await;
         assert!(
-            refused.error.as_deref().is_some_and(|error| error.contains("capabilities are invalid")),
+            refused
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("capabilities are invalid")),
             "{:?}",
             refused.error
         );
-        for invalid in ["x".repeat(129), "bad\ncapability".to_string(), String::new()] {
+        for invalid in [
+            "x".repeat(129),
+            "bad\ncapability".to_string(),
+            String::new(),
+        ] {
             let refused = call_scoped(
                 &state,
                 Method::AnalyticsJob {
@@ -584,7 +591,10 @@ mod colocated_executor_tests {
         )
         .await;
         assert!(
-            denied.error.as_deref().is_some_and(|error| error.contains("ACCESS_DENIED")),
+            denied
+                .error
+                .as_deref()
+                .is_some_and(|error| error.contains("ACCESS_DENIED")),
             "{:?}",
             denied.error
         );
@@ -620,7 +630,13 @@ mod colocated_executor_tests {
         )
         .await;
         assert_eq!(state_name(&checkpointed), "Running");
-        let requested = job_op(&state, JobOp::Cancel { job_id: job_id.clone() }).await;
+        let requested = job_op(
+            &state,
+            JobOp::Cancel {
+                job_id: job_id.clone(),
+            },
+        )
+        .await;
         assert_eq!(state_name(&requested), "CancelRequested");
         let cancelled = job_op(
             &state,
@@ -685,7 +701,10 @@ mod colocated_executor_tests {
             .await,
         );
         let status = wait_for(&state, &job_id, limit, |job| job.get("Cancelled").is_some()).await;
-        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+        assert!(
+            status["lease"].is_null(),
+            "no lease outlives the stop: {status}"
+        );
 
         // A passed deadline ends the job `Failed` with `deadline_exceeded`.
         let job_id = submit_long(
@@ -699,7 +718,10 @@ mod colocated_executor_tests {
         .await;
         let status = wait_for(&state, &job_id, limit, |job| job.get("Failed").is_some()).await;
         assert_eq!(status["state"]["Failed"]["reason"], "deadline_exceeded");
-        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+        assert!(
+            status["lease"].is_null(),
+            "no lease outlives the stop: {status}"
+        );
 
         // An exhausted CPU budget ends it `Failed` with `cpu_budget_exceeded`.
         let job_id = submit_long(
@@ -713,7 +735,10 @@ mod colocated_executor_tests {
         .await;
         let status = wait_for(&state, &job_id, limit, |job| job.get("Failed").is_some()).await;
         assert_eq!(status["state"]["Failed"]["reason"], "cpu_budget_exceeded");
-        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+        assert!(
+            status["lease"].is_null(),
+            "no lease outlives the stop: {status}"
+        );
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R082.8
@@ -831,7 +856,10 @@ mod colocated_executor_tests {
         assert_eq!(reason, "kernel_failure");
         assert!(FAILURE_CODES.contains(&reason.as_str()));
         assert!(!reason.contains(secret_label));
-        assert!(claim_at(t2 + 10_000).is_none(), "a failed job is never claimed again");
+        assert!(
+            claim_at(t2 + 10_000).is_none(),
+            "a failed job is never claimed again"
+        );
 
         // A code outside the closed set is refused before any write.
         assert!(fail_attempt(&store, &job.job_id, "worker-ref", 1, "lease_lost", t2).is_err());

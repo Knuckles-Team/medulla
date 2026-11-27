@@ -75,27 +75,31 @@ pub(crate) async fn handle_schema_context(
             "ACCESS_DENIED: schema context of a source needs a verified caller",
         );
     };
-    let (graph, views) = {
-        let state = ctx.state.read().await;
-        let sources = state.foreign_sources();
-        match sources.catalog_read(carrier, &source_id) {
-            Ok(graph) => (graph, sources.views().registered_for(carrier)),
-            Err(refusal) if refusal.contains("unknown foreign source") => {
-                return Response::err(
+    let (graph, views) =
+        {
+            let state = ctx.state.read().await;
+            let sources = state.foreign_sources();
+            match sources.catalog_read(carrier, &source_id) {
+                Ok(graph) => (graph, sources.views().registered_for(carrier)),
+                Err(refusal) if refusal.contains("unknown foreign source") => return Response::err(
                     ctx.req_id,
-                    format!("{SCHEMA_CONTEXT_SOURCE_UNKNOWN}: no source '{source_id}' is registered"),
-                )
+                    format!(
+                        "{SCHEMA_CONTEXT_SOURCE_UNKNOWN}: no source '{source_id}' is registered"
+                    ),
+                ),
+                Err(refusal) => return Response::err(ctx.req_id, refusal),
             }
-            Err(refusal) => return Response::err(ctx.req_id, refusal),
-        }
-    };
+        };
     // The owner is the agent that registered the source: only the owner's own sources resolve.
     let catalog = SchemaContextCatalog::from_attached(&graph, &source_id, carrier.agent_id());
     let table = qualified_name(&schema, &object);
     let mut answer = match serve_schema_context(&catalog, &SchemaContextRequest { table }) {
         Ok(answer) => answer,
         Err(error) => {
-            return Response::err(ctx.req_id, format!("{SCHEMA_CONTEXT_TABLE_UNKNOWN}: {error}"))
+            return Response::err(
+                ctx.req_id,
+                format!("{SCHEMA_CONTEXT_TABLE_UNKNOWN}: {error}"),
+            )
         }
     };
     match (class_of(&views, &source_id, &schema, &object), intent) {
@@ -178,8 +182,14 @@ mod tests {
             class_of(&views, "gramps", "main", "person"),
             ClassLookup::One("gramps:Person".to_string())
         );
-        assert_eq!(class_of(&views, "gramps", "main", "family"), ClassLookup::Unmapped);
-        assert_eq!(class_of(&views, "other", "main", "person"), ClassLookup::Unmapped);
+        assert_eq!(
+            class_of(&views, "gramps", "main", "family"),
+            ClassLookup::Unmapped
+        );
+        assert_eq!(
+            class_of(&views, "other", "main", "person"),
+            ClassLookup::Unmapped
+        );
         let mut two_tables = view("gramps", "person", &["gramps:Person"]);
         two_tables.sources.push(ViewSource {
             name: "gramps".to_string(),
@@ -194,6 +204,9 @@ mod tests {
             view("gramps", "person", &["gramps:Person"]),
             view("gramps", "person", &["foaf:Person"]),
         ];
-        assert_eq!(class_of(&ambiguous, "gramps", "main", "person"), ClassLookup::Ambiguous);
+        assert_eq!(
+            class_of(&ambiguous, "gramps", "main", "person"),
+            ClassLookup::Ambiguous
+        );
     }
 }

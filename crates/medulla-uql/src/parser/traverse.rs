@@ -79,13 +79,10 @@ impl<'a> Parser<'a> {
             let at = self.cur_span();
             let layer = self.string("a layer name")?;
             let weight = self.number("a layer weight")?;
-            let refuse = |msg: String| {
-                UqlError::new(UqlCode::RiskHistory, msg, (at.0, self.prev_span().1))
-            };
+            let refuse =
+                |msg: String| UqlError::new(UqlCode::RiskHistory, msg, (at.0, self.prev_span().1));
             if !(0.0..=1.0).contains(&weight) {
-                return Err(refuse(format!(
-                    "layer `{layer}` weight must be in [0, 1]"
-                )));
+                return Err(refuse(format!("layer `{layer}` weight must be in [0, 1]")));
             }
             if layers.iter().any(|known| known.layer == layer) {
                 return Err(refuse(format!("layer `{layer}` is listed twice")));
@@ -244,21 +241,38 @@ mod tests {
         };
         let spec = risk_history.clone().expect("the tail parsed");
         assert_eq!(spec.dataset, "deploys");
-        assert_eq!((spec.from_ms, spec.to_ms), (1_700_000_000_000, 1_702_592_000_000));
+        assert_eq!(
+            (spec.from_ms, spec.to_ms),
+            (1_700_000_000_000, 1_702_592_000_000)
+        );
         assert_eq!(
             spec.layers,
             vec![
-                LayerWeight { layer: "service".into(), weight: 1.0 },
-                LayerWeight { layer: "os".into(), weight: 0.5 },
-                LayerWeight { layer: "hardware".into(), weight: 0.25 },
+                LayerWeight {
+                    layer: "service".into(),
+                    weight: 1.0
+                },
+                LayerWeight {
+                    layer: "os".into(),
+                    weight: 0.5
+                },
+                LayerWeight {
+                    layer: "hardware".into(),
+                    weight: 0.25
+                },
             ]
         );
 
         // The printer spells the tail and the text parses back to the same plan.
         let printed = plan.to_uql().unwrap();
-        assert!(printed.contains("RISK HISTORY 'deploys' WINDOW"), "{printed}");
+        assert!(
+            printed.contains("RISK HISTORY 'deploys' WINDOW"),
+            "{printed}"
+        );
         assert_eq!(parse(&printed).unwrap(), plan);
-        assert!(uql_op(plan.ops.last().unwrap()).unwrap().contains("LAYERS ('service' 1"));
+        assert!(uql_op(plan.ops.last().unwrap())
+            .unwrap()
+            .contains("LAYERS ('service' 1"));
 
         // Without the tail the stage is unchanged.
         let plain = parse(&text("")).unwrap();

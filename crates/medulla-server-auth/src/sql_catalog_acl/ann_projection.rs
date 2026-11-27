@@ -533,7 +533,9 @@ mod tests {
             "VectorScan binding=binding:notes.body space=model-digest generation=2"
         );
         // Another caller with no grant on the table is refused before any probe is read.
-        assert!(open_authorized_table(&authority("mallory"), &dir, "notes", SqlPrivilege::Select)
-            .is_err());
+        assert!(
+            open_authorized_table(&authority("mallory"), &dir, "notes", SqlPrivilege::Select)
+                .is_err()
+        );
     }
 }

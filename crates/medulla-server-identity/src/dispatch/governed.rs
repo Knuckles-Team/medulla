@@ -91,7 +91,10 @@ pub async fn dispatch_governed_change(
             .try_revoke_change(&actor, change_id, now_ms)
             .map(ResultPayload::of::<GovernedRevoke>),
         GovernedChangeOp::Get { change_id } => Ok(ResultPayload::of::<GovernedGet>(
-            isolation.rbac().governed().get(change_id, &actor.tenant, now_ms),
+            isolation
+                .rbac()
+                .governed()
+                .get(change_id, &actor.tenant, now_ms),
         )),
         GovernedChangeOp::List => Ok(ResultPayload::of::<GovernedList>(
             isolation.rbac().governed().list(&actor.tenant, now_ms),

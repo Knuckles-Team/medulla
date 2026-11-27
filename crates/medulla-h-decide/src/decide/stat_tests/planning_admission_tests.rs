@@ -269,7 +269,10 @@ async fn premises_name_view_and_each_attach_point() {
     );
     let batch = decide(&h, admission_request(&pin, wired)).await.unwrap();
     let record = &batch.records.as_slice()[0];
-    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
     // The record class stays an observation: the view derives from ingested code.
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
 

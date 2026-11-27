@@ -25,19 +25,19 @@ pub struct SubmitChangesetFields {
 mod served {
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
-    use medulla_h_ingest::source_history::index_rows;
-    use medulla_h_ingest::source_tree::checkpoint_after;
     use medulla_h_ingest::source_changeset::provenance::{self, RunTraceLookup};
     use medulla_h_ingest::source_changeset::{
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
+    use medulla_h_ingest::source_history::index_rows;
+    use medulla_h_ingest::source_tree::checkpoint_after;
     use medulla_persistence::branch_registry_store::{AppendError, CommitPlan, PayloadReader};
-    use medulla_source_types::source_changeset::decode_changeset;
     use medulla_server_auth::access::path_grant;
-    use medulla_source_types::source_path_grant::PathAccess;
-    use medulla_server_blob::blob::BlobStateExt;
     use medulla_server_blob::blob::store::ChunkStore;
+    use medulla_server_blob::blob::BlobStateExt;
+    use medulla_source_types::source_changeset::decode_changeset;
     use medulla_source_types::source_changeset::{Changeset, GitOrigin, SubmitChangesetReceipt};
+    use medulla_source_types::source_path_grant::PathAccess;
 
     /// The chain as the registry transaction reads it.
     struct RegistryChain<'a> {
@@ -300,7 +300,9 @@ mod served {
         let touched: Vec<&str> = request
             .paths
             .iter()
-            .flat_map(|entry| std::iter::once(entry.path.as_str()).chain(entry.renamed_from.as_deref()))
+            .flat_map(|entry| {
+                std::iter::once(entry.path.as_str()).chain(entry.renamed_from.as_deref())
+            })
             .collect();
         if let Err(refusal) = path_grant::check(&grants, &touched, PathAccess::Write) {
             return Response::err(
@@ -454,10 +456,10 @@ mod served {
                                 Ok(Ok(Some(bytes))) => {
                                     medulla_compute::source_history::decode_seq(&bytes)
                                 }
-                                Ok(Ok(None)) => Err(
-                                    "the history index holds no seq for the accepted changeset"
-                                        .to_string(),
-                                ),
+                                Ok(Ok(None)) => {
+                                    Err("the history index holds no seq for the accepted changeset"
+                                        .to_string())
+                                }
                                 Ok(Err(error)) | Err(error) => Err(error),
                             };
                             let accepted = match seq {

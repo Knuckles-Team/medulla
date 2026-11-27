@@ -428,12 +428,27 @@ mod tests {
         draft("card-ok", K::A2aAgentCard, &[("agent_kind", kind)])
             .validate()
             .unwrap();
-        draft("card-no-kind", K::A2aAgentCard, &[]).validate().unwrap();
-        for bad in ["", " ", "verifier", "has space:x", "a:", "1a:b", "a:b<c", "a:b\"c", "a:b`c"] {
+        draft("card-no-kind", K::A2aAgentCard, &[])
+            .validate()
+            .unwrap();
+        for bad in [
+            "",
+            " ",
+            "verifier",
+            "has space:x",
+            "a:",
+            "1a:b",
+            "a:b<c",
+            "a:b\"c",
+            "a:b`c",
+        ] {
             let error = draft("card-bad", K::A2aAgentCard, &[("agent_kind", bad)])
                 .validate()
                 .unwrap_err();
-            assert!(error.starts_with("MALFORMED_A2A_AGENT_CARD"), "{bad}: {error}");
+            assert!(
+                error.starts_with("MALFORMED_A2A_AGENT_CARD"),
+                "{bad}: {error}"
+            );
         }
         let mut capability = draft("card-cap", K::A2aAgentCard, &[]);
         capability.declared_capabilities = vec!["not an iri".to_string()];

@@ -196,7 +196,10 @@ fn assert_only_own(label: &str, tenant: &str, text: &str) {
     } else {
         prefix(TENANT)
     };
-    assert!(!text.contains(other), "{label} of {tenant} names {other}*: {text}");
+    assert!(
+        !text.contains(other),
+        "{label} of {tenant} names {other}*: {text}"
+    );
 }
 
 // spec: MEDULLA-IDENTITY-R727.1
@@ -270,9 +273,7 @@ async fn each_tenant_reads_counts_and_searches_only_its_own_nodes() {
 #[tokio::test(flavor = "multi_thread")]
 async fn foreign_tenant_context_is_refused_at_the_door() {
     let served = Served::new().await;
-    let refused = served
-        .read_at_door(OTHER_TENANT, uql("MATCH (:Doc)"))
-        .await;
+    let refused = served.read_at_door(OTHER_TENANT, uql("MATCH (:Doc)")).await;
     assert!(refused.error.is_some(), "expected a refusal");
     assert!(refused
         .refusal_text()

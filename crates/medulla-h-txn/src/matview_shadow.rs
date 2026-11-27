@@ -66,10 +66,9 @@ pub async fn check_view(state: &Arc<RwLock<ServerState>>, def: &PlanMatView) -> 
     let (snapshot, snapshot_version) = core.analysis_snapshot_versioned();
     let semantic = core.semantic_store.read().clone();
     let plan_def = def.clone();
-    let recomputed = tokio::task::spawn_blocking(move || {
-        matview::materialize(&plan_def, &snapshot, &semantic)
-    })
-    .await;
+    let recomputed =
+        tokio::task::spawn_blocking(move || matview::materialize(&plan_def, &snapshot, &semantic))
+            .await;
     let recomputed = match recomputed {
         Ok(Ok(rows)) => rows,
         _ => {
@@ -152,7 +151,9 @@ mod tests {
     use medulla_persistence::redb_backend::RedbBackend;
     use medulla_protocol_types::protocol::{GraphType, Method};
     use medulla_query_types::wire::{Op, Plan};
-    use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
+    use medulla_server_auth::auth::{
+        dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller,
+    };
     use medulla_server_cdc::matview::Mode;
 
     const SECRET: &str = "matview-shadow-test-secret";
@@ -244,7 +245,10 @@ mod tests {
         assert_eq!(check_view(&state, &empty_def).await, ShadowOutcome::Match);
         assert_eq!(manager.mode("shadow-empty-view"), Some(Mode::Incremental));
 
-        assert_eq!(check_view(&state, &stale_def).await, ShadowOutcome::Mismatch);
+        assert_eq!(
+            check_view(&state, &stale_def).await,
+            ShadowOutcome::Mismatch
+        );
         assert_eq!(manager.mode("shadow-stale-view"), Some(Mode::Recompute));
         assert_eq!(
             manager.fallback_reason("shadow-stale-view").as_deref(),

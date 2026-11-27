@@ -10,12 +10,13 @@ use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
 use medulla_decision_stats::decision::correction::commit_correction;
 use medulla_decision_types::correction::{
-    task_class_of, Correction, CorrectionInput, CorrectionOp, CorrectionOutcomes, CorrectionRead, CorrectionRecorded,
-    CorrectionSource, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, OUTCOME_SELF_REPORTED,
+    task_class_of, Correction, CorrectionInput, CorrectionOp, CorrectionOutcomes, CorrectionRead,
+    CorrectionRecorded, CorrectionSource, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED,
+    OUTCOME_SELF_REPORTED,
 };
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
+use medulla_protocol_types::protocol::ResultPayload;
 
 const GRAPH: &str = "__commons__";
 
@@ -41,7 +42,11 @@ fn correction(id: &str, target: &str, after: &str) -> CorrectionInput {
 /// The correction a fixture input becomes once the handler resolves it: the producer and the task
 /// class come from the action record, the corrector from the verified principal.
 fn stored(input: CorrectionInput) -> Correction {
-    input.resolve(PRODUCER.into(), "decider".into(), task_class_of("tool_call"))
+    input.resolve(
+        PRODUCER.into(),
+        "decider".into(),
+        task_class_of("tool_call"),
+    )
 }
 
 /// Store one `ActionRecord` the way ingestion does, owned by the test principal.
@@ -54,7 +59,10 @@ fn seed_action(core: &medulla_graph_core::graph::GraphCore, id: &str, tenant: &s
         "tenant_id": tenant,
         "_owner": "decider",
     });
-    core.add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
+    core.add_node(
+        id.to_string(),
+        rmp_serde::to_vec_named(&properties).unwrap(),
+    );
 }
 
 async fn core(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
@@ -156,10 +164,14 @@ async fn harness() -> Harness {
 async fn correction_reaches_the_handler() {
     let h = harness().await;
     seed_action(&core(&h).await, ACTION, TENANT, PRODUCER);
-    let write = plan(&h, &corrector(TENANT), record(correction("c1", ACTION, "right")))
-        .await
-        .ok()
-        .expect("plans");
+    let write = plan(
+        &h,
+        &corrector(TENANT),
+        record(correction("c1", ACTION, "right")),
+    )
+    .await
+    .ok()
+    .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     let receipt = &recorded.receipt_id;
     let ids: Vec<&str> = write
@@ -178,7 +190,11 @@ async fn correction_reaches_the_handler() {
         ]
     );
     assert_eq!(
-        write.operations.iter().filter(|op| op["op"] == "upsert_edge").count(),
+        write
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_edge")
+            .count(),
         3
     );
     let embedding = write.operations.last().unwrap();
@@ -207,24 +223,60 @@ async fn correction_refusals_commit_nothing() {
     // No verified role `corrector`.
     let plain = VerifiedRequestContext::verified_for_test_with_roles("decider", TENANT, &["test"]);
     let error = refused(plan(&h, &plain, record(correction("c1", ACTION, "right"))).await);
-    assert!(error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()), "{error}");
+    assert!(
+        error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()),
+        "{error}"
+    );
 
     // The target names no action record: absent, another tenant's and a node of another class
     // all refuse with the same bytes.
-    let absent = refused(plan(&h, &corrector(TENANT), record(correction("c1", "action:none", "x"))).await);
-    assert!(absent.starts_with(CORRECTION_NOT_FOUND.as_str()), "{absent}");
-    let foreign =
-        refused(plan(&h, &corrector(TENANT), record(correction("c1", "action:foreign", "x"))).await);
+    let absent = refused(
+        plan(
+            &h,
+            &corrector(TENANT),
+            record(correction("c1", "action:none", "x")),
+        )
+        .await,
+    );
+    assert!(
+        absent.starts_with(CORRECTION_NOT_FOUND.as_str()),
+        "{absent}"
+    );
+    let foreign = refused(
+        plan(
+            &h,
+            &corrector(TENANT),
+            record(correction("c1", "action:foreign", "x")),
+        )
+        .await,
+    );
     assert_eq!(foreign, absent);
     let wrong_class = serde_json::json!({"type": "Note", "tenant_id": TENANT, "_owner": "decider"});
-    core.add_node("note:1".to_string(), rmp_serde::to_vec_named(&wrong_class).unwrap());
+    core.add_node(
+        "note:1".to_string(),
+        rmp_serde::to_vec_named(&wrong_class).unwrap(),
+    );
     let nodes_before = nodes_before + 1;
-    let note = refused(plan(&h, &corrector(TENANT), record(correction("c1", "note:1", "x"))).await);
+    let note = refused(
+        plan(
+            &h,
+            &corrector(TENANT),
+            record(correction("c1", "note:1", "x")),
+        )
+        .await,
+    );
     assert_eq!(note, absent);
 
     // The corrector is the producer of the corrected action, read from the record: a caller
     // cannot attribute the correction to another actor.
-    let error = refused(plan(&h, &corrector(TENANT), record(correction("c2", "action:own", "right"))).await);
+    let error = refused(
+        plan(
+            &h,
+            &corrector(TENANT),
+            record(correction("c2", "action:own", "right")),
+        )
+        .await,
+    );
     assert!(error.starts_with(OUTCOME_SELF_REPORTED.as_str()), "{error}");
 
     // The candidate rule contradicts a stored invariant of its task class. Its id is the digest
@@ -259,10 +311,14 @@ async fn correction_refusals_commit_nothing() {
             on_class: task_class_of("filing"),
         },
     );
-    plan(&h, &corrector(TENANT), record(correction("c5", ACTION, "other text")))
-        .await
-        .ok()
-        .expect("an invariant of another class does not govern it");
+    plan(
+        &h,
+        &corrector(TENANT),
+        record(correction("c5", ACTION, "other text")),
+    )
+    .await
+    .ok()
+    .expect("an invariant of another class does not govern it");
 
     // An oversized value is the shape error of R702.1.
     let error = refused(
@@ -275,7 +331,11 @@ async fn correction_refusals_commit_nothing() {
     );
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
 
-    assert_eq!(core.node_ids().len(), nodes_before, "a refusal wrote nothing");
+    assert_eq!(
+        core.node_ids().len(),
+        nodes_before,
+        "a refusal wrote nothing"
+    );
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R702.5: all four nodes carry the receipt
@@ -286,32 +346,49 @@ async fn correction_reads_back_by_receipt() {
     let h = harness().await;
     let core = core(&h).await;
     seed_action(&core, ACTION, TENANT, PRODUCER);
-    let write = plan(&h, &corrector(TENANT), record(correction("c1", ACTION, "right")))
-        .await
-        .ok()
-        .expect("plans");
+    let write = plan(
+        &h,
+        &corrector(TENANT),
+        record(correction("c1", ACTION, "right")),
+    )
+    .await
+    .ok()
+    .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     commit(&core, &write);
     let receipt = recorded.receipt_id.clone();
-    for op in write.operations.iter().filter(|op| op["op"] == "upsert_node") {
+    for op in write
+        .operations
+        .iter()
+        .filter(|op| op["op"] == "upsert_node")
+    {
         assert_eq!(op["properties"]["receipt_id"], receipt.as_str());
     }
 
-    let get = CorrectionOp::Get { receipt_id: receipt.clone() };
+    let get = CorrectionOp::Get {
+        receipt_id: receipt.clone(),
+    };
     let read = plan(&h, &corrector(TENANT), get).await.ok().expect("reads");
     let read: CorrectionRead = reply(&read);
     assert_eq!(read.receipt_id, receipt);
     assert_eq!(read.correction, stored(correction("c1", ACTION, "right")));
     assert_eq!(read.correction.produced_by, PRODUCER);
     assert_eq!(read.correction.actor, "decider");
-    assert_eq!(read.effect.rule_candidate.task_class, task_class_of("tool_call"));
+    assert_eq!(
+        read.effect.rule_candidate.task_class,
+        task_class_of("tool_call")
+    );
     assert_eq!(read.effect, recorded.effect);
 
     // Another tenant reads the same as an absent receipt.
-    let foreign = CorrectionOp::Get { receipt_id: receipt };
+    let foreign = CorrectionOp::Get {
+        receipt_id: receipt,
+    };
     let error = refused(plan(&h, &corrector("tenant-other"), foreign).await);
     assert!(error.starts_with(CORRECTION_NOT_FOUND.as_str()), "{error}");
-    let absent = CorrectionOp::Get { receipt_id: "0".repeat(64) };
+    let absent = CorrectionOp::Get {
+        receipt_id: "0".repeat(64),
+    };
     let same = refused(plan(&h, &corrector("tenant-other"), absent).await);
     assert!(same.starts_with(CORRECTION_NOT_FOUND.as_str()), "{same}");
 }
@@ -328,12 +405,22 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     // A rejection yields the three effects and an outcome of 0.0, and names its source.
     let mut rejection = correction("r1", ACTION, "better");
     rejection.source = CorrectionSource::ReviewRejection;
-    let write = plan(&h, &corrector(TENANT), record(rejection)).await.ok().expect("plans");
+    let write = plan(&h, &corrector(TENANT), record(rejection))
+        .await
+        .ok()
+        .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     assert_eq!(recorded.effect.outcome.value, 0.0);
-    assert_eq!(write.operations[0]["properties"]["source"], "review_rejection");
     assert_eq!(
-        write.operations.iter().filter(|op| op["op"] == "upsert_node").count(),
+        write.operations[0]["properties"]["source"],
+        "review_rejection"
+    );
+    assert_eq!(
+        write
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .count(),
         4
     );
 
@@ -342,7 +429,10 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     unprivileged.source = CorrectionSource::ReviewRejection;
     let plain = VerifiedRequestContext::verified_for_test_with_roles("decider", TENANT, &["test"]);
     let error = refused(plan(&h, &plain, record(unprivileged)).await);
-    assert!(error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()), "{error}");
+    assert!(
+        error.starts_with(CORRECTION_ROLE_REQUIRED.as_str()),
+        "{error}"
+    );
 
     // A review comment with text is refused; with digests it is stored, and the stored nodes
     // hold neither the output nor the comment text.
@@ -353,10 +443,15 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     let mut digests = correction("r4", ACTION, &format!("sha256:{}", "c".repeat(64)));
     digests.before = format!("sha256:{}", "d".repeat(64));
     digests.source = CorrectionSource::ReviewComment;
-    let write = plan(&h, &corrector(TENANT), record(digests.clone())).await.ok().expect("plans");
+    let write = plan(&h, &corrector(TENANT), record(digests.clone()))
+        .await
+        .ok()
+        .expect("plans");
     commit(&core, &write);
     let receipt = reply::<CorrectionRecorded>(&write).receipt_id;
-    let get = CorrectionOp::Get { receipt_id: receipt };
+    let get = CorrectionOp::Get {
+        receipt_id: receipt,
+    };
     let read: CorrectionRead = reply(&plan(&h, &corrector(TENANT), get).await.ok().expect("reads"));
     assert_eq!(read.correction, stored(digests));
     assert_eq!(read.correction.source, CorrectionSource::ReviewComment);
@@ -370,7 +465,10 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
 async fn skill_corrections_feed_skill_eval_cases() {
     let h = harness().await;
     let human = correction("f1", "skill:triage@3", "ask for the order id first");
-    let write = plan(&h, &corrector(TENANT), record(human)).await.ok().expect("plans");
+    let write = plan(&h, &corrector(TENANT), record(human))
+        .await
+        .ok()
+        .expect("plans");
     let cases: Vec<&Value> = write
         .operations
         .iter()
@@ -388,7 +486,10 @@ async fn skill_corrections_feed_skill_eval_cases() {
 
     let mut rejection = correction("f2", "skill:triage@3", "better");
     rejection.source = CorrectionSource::ReviewRejection;
-    let write = plan(&h, &corrector(TENANT), record(rejection)).await.ok().expect("plans");
+    let write = plan(&h, &corrector(TENANT), record(rejection))
+        .await
+        .ok()
+        .expect("plans");
     let case = write
         .operations
         .iter()
@@ -397,8 +498,14 @@ async fn skill_corrections_feed_skill_eval_cases() {
     assert_eq!(case["properties"]["source"], "review_signal");
 
     let other = correction("f3", "answer:9", "better");
-    let write = plan(&h, &corrector(TENANT), record(other)).await.ok().expect("plans");
-    assert!(write.operations.iter().all(|op| op["properties"]["type"] != "SkillEvalCase"));
+    let write = plan(&h, &corrector(TENANT), record(other))
+        .await
+        .ok()
+        .expect("plans");
+    assert!(write
+        .operations
+        .iter()
+        .all(|op| op["properties"]["type"] != "SkillEvalCase"));
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R702.8: the independent outcomes group per rule candidate,
@@ -415,7 +522,10 @@ async fn independent_outcomes_read_per_rule_candidate() {
         correction("c2", "action:8", "right"),
         correction("c3", ACTION, "another rule"),
     ] {
-        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        let write = plan(&h, &corrector(TENANT), record(input))
+            .await
+            .ok()
+            .expect("plans");
         commit(&core, &write);
     }
     let read = |tenant: &str, rule_id: Option<String>| {
@@ -437,7 +547,11 @@ async fn independent_outcomes_read_per_rule_candidate() {
         .effect
         .rule_candidate
         .rule_id;
-    let right = all.candidates.iter().find(|c| c.rule_id == right_id).unwrap();
+    let right = all
+        .candidates
+        .iter()
+        .find(|c| c.rule_id == right_id)
+        .unwrap();
     assert_eq!(right.independent, 2);
     assert_eq!(right.mean_value, 0.0);
     assert_eq!(right.task_class, task_class_of("tool_call"));
@@ -466,7 +580,10 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
         correction("c2", "action:8", "right"),
         correction("c3", ACTION, "another rule"),
     ] {
-        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        let write = plan(&h, &corrector(TENANT), record(input))
+            .await
+            .ok()
+            .expect("plans");
         commit(&core, &write);
     }
     let aggregate = |corrections: Option<CorrectionLabelRequest>| {
@@ -503,10 +620,14 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
         rule_id: None,
     }))
     .await;
-    let read = plan(&h, &corrector(TENANT), CorrectionOp::Outcomes { rule_id: None })
-        .await
-        .ok()
-        .expect("reads");
+    let read = plan(
+        &h,
+        &corrector(TENANT),
+        CorrectionOp::Outcomes { rule_id: None },
+    )
+    .await
+    .ok()
+    .expect("reads");
     let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
     assert_eq!(joined.correction_labels.len(), outcomes.len());
     for (label, outcome) in joined.correction_labels.iter().zip(&outcomes) {
@@ -550,13 +671,20 @@ async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
         correction("c1", ACTION, "right"),
         correction("c2", "action:8", "right"),
     ] {
-        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        let write = plan(&h, &corrector(TENANT), record(input))
+            .await
+            .ok()
+            .expect("plans");
         commit(&core, &write);
     }
-    let read = plan(&h, &corrector(TENANT), CorrectionOp::Outcomes { rule_id: None })
-        .await
-        .ok()
-        .expect("reads");
+    let read = plan(
+        &h,
+        &corrector(TENANT),
+        CorrectionOp::Outcomes { rule_id: None },
+    )
+    .await
+    .ok()
+    .expect("reads");
     let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
     assert_eq!(outcomes.len(), 1, "equal rule text is one candidate");
     let rule_id = outcomes[0].rule_id.clone();
@@ -605,7 +733,10 @@ async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
     );
 
     let unevaluated = Err(EvidenceError::Refused(PROMOTION_UNEVALUATED));
-    assert_eq!(resolve(TENANT, &subject, &correction_set_digest(&rule_id, 3, 0)), unevaluated);
+    assert_eq!(
+        resolve(TENANT, &subject, &correction_set_digest(&rule_id, 3, 0)),
+        unevaluated
+    );
     let unknown = RevisionSubject::Definition {
         definition_kind: DefinitionKind::Rule,
         definition_ref: "sha256:unknown".to_owned(),

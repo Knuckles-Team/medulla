@@ -588,7 +588,9 @@ fn link_methods(plan: &EnrichmentPlan<'_>, digest_hex: &str) -> Result<Vec<Metho
             continue;
         };
         let target_id = link_target_id(&link.target)?;
-        targets.entry(target_id.clone()).or_insert_with(|| link.target.clone());
+        targets
+            .entry(target_id.clone())
+            .or_insert_with(|| link.target.clone());
         edges.entry((span.ordinal, target_id)).or_insert(link);
     }
     let mut methods = Vec::new();

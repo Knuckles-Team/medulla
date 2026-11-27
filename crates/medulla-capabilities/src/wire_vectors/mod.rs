@@ -40,9 +40,7 @@ impl ResultVisitor for ResultSchemas {
 /// One wire-callable method: published to a consumer profile and not internal.
 fn wire_methods() -> Vec<(&'static str, &'static str)> {
     let mut methods: Vec<_> = method_descriptors()
-        .filter(|d| {
-            d.stability != crate::Stability::Internal && !d.consumer_profiles.is_empty()
-        })
+        .filter(|d| d.stability != crate::Stability::Internal && !d.consumer_profiles.is_empty())
         .map(|d| (d.domain, d.id.as_str()))
         .collect();
     methods.sort();

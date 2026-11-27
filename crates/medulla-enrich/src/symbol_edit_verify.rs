@@ -73,7 +73,11 @@ fn find_old<'a>(old: &'a [ParseResult], symbol_id: &str) -> Option<(&'a str, &'a
     })
 }
 
-fn structure_hash(path: &str, bytes: &[u8], parsed: &ParseResult) -> Result<String, RoundtripRefusal> {
+fn structure_hash(
+    path: &str,
+    bytes: &[u8],
+    parsed: &ParseResult,
+) -> Result<String, RoundtripRefusal> {
     let mut signatures: Vec<String> = parsed
         .symbols
         .iter()
@@ -179,10 +183,9 @@ pub fn verify_roundtrip(
             if encloses_edit {
                 continue;
             }
-            let kept = new
-                .symbols
-                .iter()
-                .any(|s| s.qualified_name == symbol.qualified_name && s.ast_hash == symbol.ast_hash);
+            let kept = new.symbols.iter().any(|s| {
+                s.qualified_name == symbol.qualified_name && s.ast_hash == symbol.ast_hash
+            });
             if !kept {
                 return Err(mismatch(&file.file_path, &symbol.qualified_name));
             }

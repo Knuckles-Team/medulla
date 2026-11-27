@@ -5,9 +5,9 @@
 //! reads it to decide whether to yield. The tick's selections are graph facts in the
 //! commons graph (R101.5), not state held here.
 
-use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "jobs")]
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "jobs")]
 use std::sync::{Arc, RwLock};
 
@@ -119,8 +119,7 @@ pub trait DowntimeBody: Send + Sync {
 }
 
 #[cfg(feature = "jobs")]
-static BODIES: RwLock<BTreeMap<&'static str, Arc<dyn DowntimeBody>>> =
-    RwLock::new(BTreeMap::new());
+static BODIES: RwLock<BTreeMap<&'static str, Arc<dyn DowntimeBody>>> = RwLock::new(BTreeMap::new());
 
 /// Install the body of `intent`; a second install for the same intent replaces the first.
 #[cfg(feature = "jobs")]

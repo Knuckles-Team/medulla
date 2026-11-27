@@ -12,8 +12,8 @@ use medulla_core::meeting_transcript::{
     finalization_digest, get_final, FinalizedRevision, SummaryMark, TranscriptSnapshot,
 };
 use medulla_source_types::meeting_transcript::{
-    MeetingSummaryGetAnswer, MeetingSummaryGetRequest, MeetingSummaryRecord, MeetingTranscriptReadAnswer,
-    MeetingTranscriptReadRequest, SummaryClaim, TranscriptEventRecord,
+    MeetingSummaryGetAnswer, MeetingSummaryGetRequest, MeetingSummaryRecord,
+    MeetingTranscriptReadAnswer, MeetingTranscriptReadRequest, SummaryClaim, TranscriptEventRecord,
     DEFAULT_TRANSCRIPT_READ_LIMIT, MAX_TRANSCRIPT_READ_LIMIT,
 };
 use medulla_types::contract::Digest256;
@@ -230,8 +230,14 @@ mod tests {
             finalization_digest: finalization_digest(&segments),
         }];
         let answer = read_transcript(&sealed_state, &request(None, None)).expect("reads");
-        assert!(answer.events[0].segment_ids.is_empty(), "an unsealed revision names none");
-        assert_eq!(answer.events[2].segment_ids, vec!["s1".to_string(), "s2".to_string()]);
+        assert!(
+            answer.events[0].segment_ids.is_empty(),
+            "an unsealed revision names none"
+        );
+        assert_eq!(
+            answer.events[2].segment_ids,
+            vec!["s1".to_string(), "s2".to_string()]
+        );
         assert_eq!(answer.segment_digests.len(), 2);
         assert_eq!(answer.segment_digests["s1"], digest(1));
         assert_eq!(answer.segment_digests["s2"], digest(2));
@@ -242,16 +248,16 @@ mod tests {
         let after = read_transcript(&moved, &request(None, None)).expect("reads");
         assert!(after.segment_digests.is_empty());
         // No seal at all: none either.
-        let unsealed = read_transcript(&TranscriptSnapshot::default(), &request(None, None))
-            .expect("reads");
+        let unsealed =
+            read_transcript(&TranscriptSnapshot::default(), &request(None, None)).expect("reads");
         assert!(unsealed.segment_digests.is_empty());
     }
 
     // spec: MEDULLA-MEDIA-VOCAB-R001.101.7
     #[test]
     fn unknown_meeting_reads_empty_and_a_bad_limit_refuses() {
-        let empty = read_transcript(&TranscriptSnapshot::default(), &request(None, None))
-            .expect("reads");
+        let empty =
+            read_transcript(&TranscriptSnapshot::default(), &request(None, None)).expect("reads");
         assert!(empty.events.is_empty());
         assert_eq!((empty.transcript_revision, empty.last_sequence), (0, 0));
         for limit in [0, MAX_TRANSCRIPT_READ_LIMIT + 1] {

@@ -306,8 +306,8 @@ fn bundle_evidence(
     if independent_scores.is_empty() {
         return Err(unevaluated());
     }
-    let baseline_mean =
-        independent_scores.iter().sum::<i64>() / i64::try_from(independent_scores.len()).unwrap_or(1);
+    let baseline_mean = independent_scores.iter().sum::<i64>()
+        / i64::try_from(independent_scores.len()).unwrap_or(1);
     let delta_mean = contrasts
         .iter()
         .map(|contrast| q32_to_micros(contrast.eval_score_delta))
@@ -387,14 +387,12 @@ fn correction_evidence(
     let (_, state) = read_pointer(sources.store, sources.tenant, &subject.pointer_key())?;
     let champion_ref = state.target().map(str::to_owned);
     let champion_score = match &champion_ref {
-        Some(champion) => super::correction::independent_outcomes(
-            graph,
-            sources.tenant,
-            Some(champion.as_str()),
-        )
-        .into_iter()
-        .find(|candidate| &candidate.rule_id == champion && candidate.independent > 0)
-        .map(|candidate| mean_micros(candidate.mean_value)),
+        Some(champion) => {
+            super::correction::independent_outcomes(graph, sources.tenant, Some(champion.as_str()))
+                .into_iter()
+                .find(|candidate| &candidate.rule_id == champion && candidate.independent > 0)
+                .map(|candidate| mean_micros(candidate.mean_value))
+        }
         None => None,
     };
     Ok(HeldOutEvidence {
@@ -487,11 +485,9 @@ fn check_rollout_set(ctx: &ExecutionContext, set: &RolloutSet) -> Result<(), Str
     use medulla_decision_outcome_types::decision::promotion::{KNOBS, MIN_CASES};
     use medulla_decision_types::decision::knobs::KnobValue;
     use medulla_decision_types::decision::skill_evolution::{ROLLOUT_TOO_FEW, ROLLOUT_UNPAIRED};
-    if let Some(rollout) = set
-        .rollouts
-        .iter()
-        .find(|rollout| rollout.challenger_score_ppm.is_none() || rollout.champion_score_ppm.is_none())
-    {
+    if let Some(rollout) = set.rollouts.iter().find(|rollout| {
+        rollout.challenger_score_ppm.is_none() || rollout.champion_score_ppm.is_none()
+    }) {
         return Err(format!(
             "{}: task `{}` under seed {} lacks a challenger or a champion score",
             ROLLOUT_UNPAIRED.as_str(),
@@ -607,7 +603,10 @@ pub(super) fn promoted_tier(
     let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
     Ok(super::stat_skill_tier::tier_of_premises(
         entry.record.premises.iter().filter_map(|premise| {
-            premise.fact.strip_prefix(PREMISE_PREFIX).or(Some(premise.fact.as_str()))
+            premise
+                .fact
+                .strip_prefix(PREMISE_PREFIX)
+                .or(Some(premise.fact.as_str()))
         }),
     ))
 }

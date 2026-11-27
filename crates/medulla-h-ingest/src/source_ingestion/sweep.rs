@@ -846,8 +846,13 @@ mod tests {
         let gone = entity("gone");
         let kept = entity("kept");
         let node_of = |record: &SourceEntityRef| {
-            super::super::source_node_id("tenant", "wiki", record.stream.as_str(), &record.record_id)
-                .unwrap()
+            super::super::source_node_id(
+                "tenant",
+                "wiki",
+                record.stream.as_str(),
+                &record.record_id,
+            )
+            .unwrap()
         };
         for record in [&gone, &kept] {
             core.add_node(

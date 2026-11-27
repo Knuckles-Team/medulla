@@ -55,7 +55,16 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
     let temp = open("source-query-native");
     with_node_rows(&temp.shard, "source-query-issuer", |nodes, transitions| {
         // No admitted actor, or no admission, refuses and writes nothing.
-        assert!(issue(GRAPH, &request(), None, nodes, transitions, DurableCrypto::none(), 1_000).is_err());
+        assert!(issue(
+            GRAPH,
+            &request(),
+            None,
+            nodes,
+            transitions,
+            DurableCrypto::none(),
+            1_000
+        )
+        .is_err());
         let mut bare = request();
         bare.admission = None;
         let denied = issue(
@@ -69,8 +78,13 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
         )
         .unwrap_err();
         assert!(denied.starts_with("ACCESS_DENIED"), "{denied}");
-        assert!(load_row(nodes, GRAPH, "source-query-approval:one", DurableCrypto::none())?
-            .is_none());
+        assert!(load_row(
+            nodes,
+            GRAPH,
+            "source-query-approval:one",
+            DurableCrypto::none()
+        )?
+        .is_none());
 
         let issued = issue(
             GRAPH,
@@ -83,16 +97,27 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
         )?;
         assert_eq!(issued.outcome, ControlLeaseIssueOutcome::Issued);
         let approved = issued.approved.expect("the approval travels in the reply");
-        assert_eq!(approved.query_digest, approved.compute_query_digest().unwrap());
+        assert_eq!(
+            approved.query_digest,
+            approved.compute_query_digest().unwrap()
+        );
         assert_eq!(approved.issued_at_ms, 1_000);
         assert_eq!(approved.hard_expires_at_ms, 61_000);
         assert_eq!(approved.expires_at_ms, 61_000);
 
-        let row = load_row(nodes, GRAPH, "source-query-approval:one", DurableCrypto::none())?
-            .expect("one lease row");
+        let row = load_row(
+            nodes,
+            GRAPH,
+            "source-query-approval:one",
+            DurableCrypto::none(),
+        )?
+        .expect("one lease row");
         assert_eq!(row["kind"], "source.query.approval");
         let stored = row.to_string();
-        assert!(!stored.contains("secret_column"), "the grant holds no SQL text");
+        assert!(
+            !stored.contains("secret_column"),
+            "the grant holds no SQL text"
+        );
         assert_eq!(
             row["grant"]["source_query_approval"]["query_digest"],
             approved.query_digest

@@ -207,7 +207,11 @@ fn watch_changes(
     pending
         .changed
         .iter()
-        .filter(|id| watch.watches_label(plan::label_of(&medulla_exec::exec::propagate::node_props(view, id))))
+        .filter(|id| {
+            watch.watches_label(plan::label_of(&medulla_exec::exec::propagate::node_props(
+                view, id,
+            )))
+        })
         .cloned()
         .collect()
 }
@@ -237,8 +241,13 @@ async fn submit(
     let anonymous = state.read().await.local_anonymous;
     #[cfg(feature = "security")]
     if !anonymous {
-        grant::ensure(&mut medulla_server_api::state::timed_write(state).await.isolation, graph)
-            .map_err(|error| format!("cannot be granted its graph: {error}"))?;
+        grant::ensure(
+            &mut medulla_server_api::state::timed_write(state)
+                .await
+                .isolation,
+            graph,
+        )
+        .map_err(|error| format!("cannot be granted its graph: {error}"))?;
     }
     let context = if anonymous {
         VerifiedRequestContext::anonymous_local(Some(format!(

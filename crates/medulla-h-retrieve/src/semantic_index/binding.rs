@@ -151,7 +151,9 @@ fn check_sql_column_source(
     binding: &SemanticBinding,
 ) -> Result<(), Response> {
     use medulla_index_types::semantic_index::SemanticSourceSelector;
-    use medulla_server_auth::sql_catalog_acl::{open_authorized_table, SqlPrivilege, ACCESS_DENIED};
+    use medulla_server_auth::sql_catalog_acl::{
+        open_authorized_table, SqlPrivilege, ACCESS_DENIED,
+    };
 
     let SemanticSourceSelector::SqlColumnRef(selector) = &binding.source_selector else {
         return Ok(());

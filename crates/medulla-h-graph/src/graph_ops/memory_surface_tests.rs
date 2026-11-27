@@ -2,14 +2,16 @@
 //! They run the admission, recall and export rules over one graph holding two
 //! tenants, and check how the three methods are routed.
 
-use super::memory_surface::{absent_record, admit_remember, export, promotion_support_refusal, recall, Admitted};
+use super::memory_surface::{
+    absent_record, admit_remember, export, promotion_support_refusal, recall, Admitted,
+};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::is_gateway_routed;
 use medulla_types::contract::{ResourceId, TenantId};
 use medulla_work_types::memory::{
-    MediaAttachment, MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest,
-    MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
+    MediaAttachment, MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord,
+    MemoryRememberRequest, MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
 };
 
 pub(super) const NOW: i64 = 1_000_000;
@@ -59,11 +61,16 @@ fn apply_batch(core: &GraphCore, write: &Method) {
 }
 
 fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest {
-    MemoryRememberRequest { record, embedding, episode: None }
+    MemoryRememberRequest {
+        record,
+        embedding,
+        episode: None,
+    }
 }
 
 pub(super) fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
-    let Admitted::Write(write, embed, answer) = admit(core, tenant, request, &Default::default()).unwrap()
+    let Admitted::Write(write, embed, answer) =
+        admit(core, tenant, request, &Default::default()).unwrap()
     else {
         panic!("a first remember writes");
     };
@@ -74,11 +81,18 @@ pub(super) fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequ
         let Method::AddEmbedding { node_id, embedding } = *embed else {
             panic!("the vector write is an AddEmbedding");
         };
-        core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+        core.semantic_store
+            .write()
+            .add_embedding(node_id, embedding)
+            .unwrap();
     }
 }
 
-pub(super) fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> MemoryRecallRequest {
+pub(super) fn recall_request(
+    embedding: Vec<f32>,
+    keywords: &[&str],
+    budget: u32,
+) -> MemoryRecallRequest {
     MemoryRecallRequest {
         query_embedding: embedding,
         keywords: keywords.iter().map(|k| k.to_string()).collect(),
@@ -100,14 +114,19 @@ pub(super) fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32
 }
 
 pub(super) fn ids(hits: &[medulla_work_types::memory::MemoryHit]) -> Vec<&str> {
-    hits.iter().map(|hit| hit.record.memory_id.as_str()).collect()
+    hits.iter()
+        .map(|hit| hit.record.memory_id.as_str())
+        .collect()
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R651.3
 #[test]
 fn memory_methods_are_served_and_classified() {
     let write = Method::MemoryRemember {
-        request: Box::new(remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![])),
+        request: Box::new(remember(
+            record("tenant-a", "m:1", MemoryTier::Semantic, "x"),
+            vec![],
+        )),
     };
     let read = Method::MemoryRecall {
         request: Box::new(recall_request(vec![1.0], &[], 10)),
@@ -125,9 +144,14 @@ fn memory_methods_are_served_and_classified() {
     // no ACCESS_DENIED and no tenant-specific code (MEDULLA-DECISION-ENGINE-R651.4), and it
     // writes nothing.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
-    let refusal = admit(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-b", &foreign, &Default::default())
+        .err()
+        .unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
-    assert!(!refusal.contains("ACCESS_DENIED") && !refusal.to_lowercase().contains("tenant"), "{refusal}");
+    assert!(
+        !refusal.contains("ACCESS_DENIED") && !refusal.to_lowercase().contains("tenant"),
+        "{refusal}"
+    );
     assert_eq!(core.node_count(), 0);
     // Byte for byte the answer a write naming a nonexistent record receives.
     assert_eq!(refusal, absent_record("m:1"));
@@ -135,8 +159,17 @@ fn memory_methods_are_served_and_classified() {
     // Another tenant's record reads as absent to recall and to export.
     store(&core, "tenant-a", &foreign);
     let request = recall_request(vec![], &["x"], 100);
-    assert_eq!(recall(&core, "tenant-a", NOW, &request, None).unwrap().hits.len(), 1);
-    assert!(recall(&core, "tenant-b", NOW, &request, None).unwrap().hits.is_empty());
+    assert_eq!(
+        recall(&core, "tenant-a", NOW, &request, None)
+            .unwrap()
+            .hits
+            .len(),
+        1
+    );
+    assert!(recall(&core, "tenant-b", NOW, &request, None)
+        .unwrap()
+        .hits
+        .is_empty());
     let exported = export(&core, "tenant-b", &MemoryExportRequest::default()).unwrap();
     assert!(exported.records.is_empty());
     // A recall with nothing to search by is refused.
@@ -152,12 +185,27 @@ fn remember_recall_consolidate_and_export_round_trip() {
     let mut sky = record("tenant-a", "m:sky", MemoryTier::Semantic, "the sky is blue");
     sky.importance = 2.0;
     sky.session_id = Some(ResourceId::new("sess:1").unwrap());
-    let mut sky_copy = record("tenant-a", "m:sky2", MemoryTier::Semantic, "sky blue colour");
+    let mut sky_copy = record(
+        "tenant-a",
+        "m:sky2",
+        MemoryTier::Semantic,
+        "sky blue colour",
+    );
     sky_copy.session_id = Some(ResourceId::new("sess:1").unwrap());
-    let grass = record("tenant-a", "m:grass", MemoryTier::Procedural, "grass is green");
+    let grass = record(
+        "tenant-a",
+        "m:grass",
+        MemoryTier::Procedural,
+        "grass is green",
+    );
     let mut run1 = record("tenant-a", "m:run1", MemoryTier::Episodic, "ran the build");
     run1.pattern_key = Some("build".into());
-    let mut run2 = record("tenant-a", "m:run2", MemoryTier::Episodic, "ran the build again");
+    let mut run2 = record(
+        "tenant-a",
+        "m:run2",
+        MemoryTier::Episodic,
+        "ran the build again",
+    );
     run2.pattern_key = Some("build".into());
     let mut expired = record("tenant-a", "m:old", MemoryTier::Semantic, "sky blue stale");
     expired.expires_at_ms = Some(500);
@@ -174,22 +222,48 @@ fn remember_recall_consolidate_and_export_round_trip() {
     store(
         &core,
         "tenant-b",
-        &remember(record("tenant-b", "m:sky", MemoryTier::Semantic, "the sky is blue"), vec![1.0, 0.0]),
+        &remember(
+            record("tenant-b", "m:sky", MemoryTier::Semantic, "the sky is blue"),
+            vec![1.0, 0.0],
+        ),
     );
 
     // A repeat of the same record is a replay; a different body is refused.
     let same = remember(sky.clone(), vec![1.0, 0.0]);
-    assert!(matches!(admit(&core, "tenant-a", &same, &Default::default()), Ok(Admitted::Same(_))));
+    assert!(matches!(
+        admit(&core, "tenant-a", &same, &Default::default()),
+        Ok(Admitted::Same(_))
+    ));
     let mut changed = sky.clone();
     changed.text = "the sky is green".into();
-    assert!(admit(&core, "tenant-a", &remember(changed, vec![1.0, 0.0]), &Default::default()).is_err());
+    assert!(admit(
+        &core,
+        "tenant-a",
+        &remember(changed, vec![1.0, 0.0]),
+        &Default::default()
+    )
+    .is_err());
 
     // Recall ranks by cosine, drops the expired record and respects the budget.
-    let found = recall(&core, "tenant-a", NOW, &recall_request(vec![1.0, 0.0], &[], 25), None).unwrap();
+    let found = recall(
+        &core,
+        "tenant-a",
+        NOW,
+        &recall_request(vec![1.0, 0.0], &[], 25),
+        None,
+    )
+    .unwrap();
     assert_eq!(ids(&found.hits), ["m:sky", "m:sky2"]);
     assert!(found.tokens_used <= 25);
     assert!(found.hits[0].score_q16 >= found.hits[1].score_q16);
-    let by_keyword = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["grass"], 100), None).unwrap();
+    let by_keyword = recall(
+        &core,
+        "tenant-a",
+        NOW,
+        &recall_request(vec![], &["grass"], 100),
+        None,
+    )
+    .unwrap();
     assert_eq!(ids(&by_keyword.hits), ["m:grass"]);
     // As of an earlier instant the expired record is still visible.
     let mut earlier = recall_request(vec![1.0, 0.0], &[], 100);
@@ -212,8 +286,14 @@ fn remember_recall_consolidate_and_export_round_trip() {
 
     // Export returns only the procedural and semantic tiers of the tenant.
     let exported = export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap();
-    assert!(exported.records.iter().all(|r| matches!(r.tier, MemoryTier::Procedural | MemoryTier::Semantic)));
-    assert_eq!(exported.manifest.record_count as usize, exported.records.len());
+    assert!(exported
+        .records
+        .iter()
+        .all(|r| matches!(r.tier, MemoryTier::Procedural | MemoryTier::Semantic)));
+    assert_eq!(
+        exported.manifest.record_count as usize,
+        exported.records.len()
+    );
     assert_eq!(exported.manifest.manifest_digest.len(), 64);
     assert!(!exported.manifest.truncated);
     let limited = export(&core, "tenant-a", &MemoryExportRequest { limit: Some(1) }).unwrap();
@@ -236,7 +316,15 @@ fn recall_stays_stable_as_the_corpus_doubles() {
             store(
                 &core,
                 "tenant-a",
-                &remember(record("tenant-a", &format!("m:{n:05}"), MemoryTier::Semantic, &text), embedding),
+                &remember(
+                    record(
+                        "tenant-a",
+                        &format!("m:{n:05}"),
+                        MemoryTier::Semantic,
+                        &text,
+                    ),
+                    embedding,
+                ),
             );
         }
         core
@@ -249,8 +337,14 @@ fn recall_stays_stable_as_the_corpus_doubles() {
         let vector = recall(&core, "tenant-a", NOW, &by_vector, None).unwrap();
         let keyword = recall(&core, "tenant-a", NOW, &by_keyword, None).unwrap();
         let found = (
-            ids(&vector.hits).into_iter().map(String::from).collect::<Vec<_>>(),
-            ids(&keyword.hits).into_iter().map(String::from).collect::<Vec<_>>(),
+            ids(&vector.hits)
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+            ids(&keyword.hits)
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
         );
         assert_eq!(found.0.len(), 5, "size {size}: {found:?}");
         assert_eq!(found.1.len(), 5, "size {size}: {found:?}");
@@ -275,35 +369,53 @@ fn media_attachment_remember_and_recall() {
         derivation_ids: vec![ResourceId::new(derivation.as_str()).unwrap()],
     }];
     // An attachment the owner scope does not hold refuses before any write.
-    let refusal = admit(&core, "tenant-a", &remember(image.clone(), vec![0.0, 1.0]), &Default::default())
-        .err()
-        .unwrap();
+    let refusal = admit(
+        &core,
+        "tenant-a",
+        &remember(image.clone(), vec![0.0, 1.0]),
+        &Default::default(),
+    )
+    .err()
+    .unwrap();
     assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
     let known: std::collections::BTreeSet<String> = [digest].into_iter().collect();
     let request = remember(image, vec![0.0, 1.0]);
-    let Admitted::Write(write, embed, _) = admit(&core, "tenant-a", &request, &known).unwrap() else {
+    let Admitted::Write(write, embed, _) = admit(&core, "tenant-a", &request, &known).unwrap()
+    else {
         panic!("a first remember writes");
     };
     apply_batch(&core, &write);
     let Method::AddEmbedding { node_id, embedding } = *embed.unwrap() else {
         panic!("the vector write is an AddEmbedding");
     };
-    core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+    core.semantic_store
+        .write()
+        .add_embedding(node_id, embedding)
+        .unwrap();
     // The caption embedding sits on its derivation node.
-    core.semantic_store.write().add_embedding(derivation, vec![1.0, 0.0]).unwrap();
+    core.semantic_store
+        .write()
+        .add_embedding(derivation, vec![1.0, 0.0])
+        .unwrap();
 
     // Without `include_media` the caption vector does not find the record.
     let query = recall_request(vec![1.0, 0.0], &[], 100);
-    assert!(recall(&core, "tenant-a", NOW, &query, None).unwrap().hits.is_empty());
+    assert!(recall(&core, "tenant-a", NOW, &query, None)
+        .unwrap()
+        .hits
+        .is_empty());
     let mut media = query.clone();
     media.include_media = true;
     let hits = recall(&core, "tenant-a", NOW, &media, None).unwrap().hits;
     assert_eq!(ids(&hits), ["m:image"]);
     assert_eq!(hits[0].record.attachments.len(), 1);
     // Another tenant sees nothing, and `include_media` needs a query embedding.
-    assert!(recall(&core, "tenant-b", NOW, &media, None).unwrap().hits.is_empty());
+    assert!(recall(&core, "tenant-b", NOW, &media, None)
+        .unwrap()
+        .hits
+        .is_empty());
     let mut keywords_only = recall_request(vec![], &["photo"], 100);
     keywords_only.include_media = true;
     assert!(recall(&core, "tenant-a", NOW, &keywords_only, None)
@@ -329,7 +441,9 @@ fn media_refusals() {
     };
     // A blob above the default limit is refused, and nothing is stored.
     let limit = medulla_work_types::memory::MEDIA_MAX_BLOB_BYTES_DEFAULT;
-    let refusal = admit(&core, "tenant-a", &attach(limit + 1), &known).err().unwrap();
+    let refusal = admit(&core, "tenant-a", &attach(limit + 1), &known)
+        .err()
+        .unwrap();
     assert!(refusal.starts_with("MEDIA_TOO_LARGE"), "{refusal}");
     assert_eq!(core.node_count(), 0);
     // A blob at the limit passes the size check.
@@ -363,7 +477,9 @@ fn media_evidence_reads_back() {
     apply_batch(&core, &write);
 
     // The attachment keys ride the memory node, whose id is the citing memory id.
-    let blob = core.get_node_properties("memory:tenant-a:m:evidence").unwrap();
+    let blob = core
+        .get_node_properties("memory:tenant-a:m:evidence")
+        .unwrap();
     let props = medulla_types::msgpack::decode_property_object(&blob).unwrap();
     let attachment = &props["attachments"].as_array().unwrap()[0];
     assert_eq!(attachment["blob_digest"], digest.as_str());
@@ -371,11 +487,24 @@ fn media_evidence_reads_back() {
     assert_eq!(attachment["byte_len"], 4096);
     assert_eq!(attachment["derivation_ids"][0], derivation.as_str());
     // The same record is readable under its own tenant only.
-    assert!(recall(&core, "tenant-b", NOW, &recall_request(vec![], &["chart"], 100), None)
-        .unwrap()
-        .hits
-        .is_empty());
-    let own = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["chart"], 100), None).unwrap();
+    assert!(recall(
+        &core,
+        "tenant-b",
+        NOW,
+        &recall_request(vec![], &["chart"], 100),
+        None
+    )
+    .unwrap()
+    .hits
+    .is_empty());
+    let own = recall(
+        &core,
+        "tenant-a",
+        NOW,
+        &recall_request(vec![], &["chart"], 100),
+        None,
+    )
+    .unwrap();
     assert_eq!(own.hits[0].record.attachments[0].byte_len, 4096);
 }
 
@@ -404,10 +533,15 @@ fn episodes_promote_to_a_linked_semantic_fact() {
     }
     // Three episodes reach the default threshold of three: nothing refuses, and the route's
     // own `consolidate` writes one semantic node with one CONSOLIDATES edge per episode.
-    assert_eq!(promotion_support_refusal(&episodes, &promotion_props()), None);
+    assert_eq!(
+        promotion_support_refusal(&episodes, &promotion_props()),
+        None
+    );
     let semantic = core.consolidate(&episodes, promotion_props());
     let properties = medulla_types::msgpack::decode_property_object(
-        &core.get_node_properties(&semantic).expect("the semantic node exists"),
+        &core
+            .get_node_properties(&semantic)
+            .expect("the semantic node exists"),
     )
     .unwrap();
     assert_eq!(properties["pattern_key"], "build");
@@ -423,7 +557,10 @@ fn episodes_promote_to_a_linked_semantic_fact() {
     // A two-episode group is below the threshold and names its code.
     let refusal = promotion_support_refusal(&episode_ids(2), &promotion_props())
         .expect("two episodes are below the threshold");
-    assert!(refusal.starts_with("MEMORY_SUPPORT_BELOW_THRESHOLD"), "{refusal}");
+    assert!(
+        refusal.starts_with("MEMORY_SUPPORT_BELOW_THRESHOLD"),
+        "{refusal}"
+    );
     // The same id sent twice is one episode.
     let repeated = vec!["ep:0".to_string(); 5];
     assert!(promotion_support_refusal(&repeated, &promotion_props()).is_some());
@@ -441,16 +578,31 @@ fn consolidation_and_export_evidence_reads_back() {
         ("m:grass", MemoryTier::Procedural, "grass is green"),
         ("m:sky", MemoryTier::Semantic, "the sky is blue"),
     ] {
-        store(&core, "tenant-a", &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]));
+        store(
+            &core,
+            "tenant-a",
+            &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]),
+        );
     }
     // The export manifest counts the records, names the tiers and digests the records themselves.
     let exported = export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap();
     assert_eq!(exported.manifest.record_count, 2);
-    assert_eq!(exported.manifest.tiers, [MemoryTier::Procedural, MemoryTier::Semantic]);
+    assert_eq!(
+        exported.manifest.tiers,
+        [MemoryTier::Procedural, MemoryTier::Semantic]
+    );
     let digest = exported.manifest.manifest_digest.clone();
     assert_eq!(digest.len(), 64);
-    assert!(digest.bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)));
-    assert_eq!(export(&core, "tenant-a", &MemoryExportRequest::default()).unwrap().manifest.manifest_digest, digest);
+    assert!(digest
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)));
+    assert_eq!(
+        export(&core, "tenant-a", &MemoryExportRequest::default())
+            .unwrap()
+            .manifest
+            .manifest_digest,
+        digest
+    );
 
     // Changing a record's text changes the digest; the ids alone no longer decide it.
     let other = GraphCore::new();
@@ -458,7 +610,11 @@ fn consolidation_and_export_evidence_reads_back() {
         ("m:grass", MemoryTier::Procedural, "grass is green"),
         ("m:sky", MemoryTier::Semantic, "the sky is grey"),
     ] {
-        store(&other, "tenant-a", &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]));
+        store(
+            &other,
+            "tenant-a",
+            &remember(record("tenant-a", id, tier, text), vec![1.0, 0.0]),
+        );
     }
     let changed = export(&other, "tenant-a", &MemoryExportRequest::default()).unwrap();
     assert_ne!(changed.manifest.manifest_digest, digest);
@@ -468,21 +624,40 @@ fn consolidation_and_export_evidence_reads_back() {
     let plain = recall(&core, "tenant-a", NOW, &asked, None).unwrap();
     assert_eq!(plain.plan_digest.len(), 64);
     assert!(plain.drift.is_none());
-    assert_eq!(recall(&core, "tenant-a", NOW, &asked, None).unwrap().plan_digest, plain.plan_digest);
+    assert_eq!(
+        recall(&core, "tenant-a", NOW, &asked, None)
+            .unwrap()
+            .plan_digest,
+        plain.plan_digest
+    );
     let mut narrower = asked.clone();
     narrower.scope = Some(ResourceId::new("sess:1").unwrap());
-    assert_ne!(recall(&core, "tenant-a", NOW, &narrower, None).unwrap().plan_digest, plain.plan_digest);
+    assert_ne!(
+        recall(&core, "tenant-a", NOW, &narrower, None)
+            .unwrap()
+            .plan_digest,
+        plain.plan_digest
+    );
 
     asked.previous_manifest_digest = Some(digest.clone());
     let same = recall(&core, "tenant-a", NOW, &asked, None).unwrap();
-    assert_eq!(same.plan_digest, plain.plan_digest, "the comparison input is not part of the plan");
+    assert_eq!(
+        same.plan_digest, plain.plan_digest,
+        "the comparison input is not part of the plan"
+    );
     let report = same.drift.expect("a previous digest was supplied");
     assert!(!report.drifted);
     assert_eq!(report.manifest_digest, digest);
     asked.previous_manifest_digest = Some(changed.manifest.manifest_digest.clone());
-    let drifted = recall(&core, "tenant-a", NOW, &asked, None).unwrap().drift.expect("a report");
+    let drifted = recall(&core, "tenant-a", NOW, &asked, None)
+        .unwrap()
+        .drift
+        .expect("a report");
     assert!(drifted.drifted);
-    assert_eq!(drifted.previous_manifest_digest, changed.manifest.manifest_digest);
+    assert_eq!(
+        drifted.previous_manifest_digest,
+        changed.manifest.manifest_digest
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R651.4
@@ -492,32 +667,54 @@ fn memory_refusals() {
     // A foreign tenant's record reads exactly as one that is absent: the same code and text
     // shape as a record the caller never stored, and nothing is written.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
-    let refusal = admit(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-b", &foreign, &Default::default())
+        .err()
+        .unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
-    assert_eq!(refusal, absent_record("m:1"), "a foreign tenant's write is an existence oracle");
+    assert_eq!(
+        refusal,
+        absent_record("m:1"),
+        "a foreign tenant's write is an existence oracle"
+    );
     assert!(!refusal.to_lowercase().contains("tenant"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
     // A record whose stored encoding is above the knob default of 65536 bytes is refused.
     let huge = remember(
-        record("tenant-a", "m:big", MemoryTier::Semantic, &"x".repeat(70_000)),
+        record(
+            "tenant-a",
+            "m:big",
+            MemoryTier::Semantic,
+            &"x".repeat(70_000),
+        ),
         vec![],
     );
-    let refusal = admit(&core, "tenant-a", &huge, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-a", &huge, &Default::default())
+        .err()
+        .unwrap();
     assert!(refusal.starts_with("MEMORY_ENTRY_TOO_LARGE"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
     // A hard removal leaves a node a live node still points to, and reports it.
     let props = |importance: f64| {
-        rmp_serde::to_vec_named(&serde_json::json!({"importance": importance, "last_access_ms": 0})).unwrap()
+        rmp_serde::to_vec_named(&serde_json::json!({"importance": importance, "last_access_ms": 0}))
+            .unwrap()
     };
     core.add_node("old".into(), props(0.1));
     core.add_node("live".into(), props(9.0));
-    core.add_edge("live".into(), "old".into(), rmp_serde::to_vec_named(&serde_json::json!({"relationship": "CITES"})).unwrap()).unwrap();
+    core.add_edge(
+        "live".into(),
+        "old".into(),
+        rmp_serde::to_vec_named(&serde_json::json!({"relationship": "CITES"})).unwrap(),
+    )
+    .unwrap();
     let (pruned, live_referenced, _held) = core.evict_below(&["old".to_string()], 0.5, true);
     assert!(pruned.is_empty());
     assert_eq!(live_referenced, ["old"]);
-    assert!(core.get_node_properties("old").is_some(), "the node stays with its edges");
+    assert!(
+        core.get_node_properties("old").is_some(),
+        "the node stays with its edges"
+    );
     // Once the referrer is forgotten, the removal goes through.
     assert!(core.forget("live", false));
     let (pruned, live_referenced, _held) = core.evict_below(&["old".to_string()], 0.5, true);
@@ -529,12 +726,21 @@ fn memory_refusals() {
 #[test]
 fn tenant_total_admission_keeps_a_durable_counter() {
     let core = GraphCore::new();
-    let first = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let first = remember(
+        record("tenant-a", "m:1", MemoryTier::Semantic, "first"),
+        vec![],
+    );
     store(&core, "tenant-a", &first);
     let stored = |id: &str| core.get_node_properties(id).unwrap().len() as u64;
     // The counter is a graph node written with the record, and equals the stored bytes.
-    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1")));
-    let second = remember(record("tenant-a", "m:2", MemoryTier::Semantic, "second"), vec![]);
+    assert_eq!(
+        read_usage(&core, "tenant-a"),
+        Some(stored("memory:tenant-a:m:1"))
+    );
+    let second = remember(
+        record("tenant-a", "m:2", MemoryTier::Semantic, "second"),
+        vec![],
+    );
     store(&core, "tenant-a", &second);
     let total = stored("memory:tenant-a:m:1") + stored("memory:tenant-a:m:2");
     assert_eq!(read_usage(&core, "tenant-a"), Some(total));
@@ -542,17 +748,26 @@ fn tenant_total_admission_keeps_a_durable_counter() {
     assert_eq!(read_usage(&core, "tenant-b"), None);
 
     // The boundary: a total that lands exactly on the cap is admitted, one byte more is refused.
-    let third = remember(record("tenant-a", "m:3", MemoryTier::Semantic, "third"), vec![]);
+    let third = remember(
+        record("tenant-a", "m:3", MemoryTier::Semantic, "third"),
+        vec![],
+    );
     let third_len = node_blob("tenant-a", &third).unwrap().len() as u64;
     let known = Default::default();
     assert!(admit_remember(&core, "tenant-a", &third, &known, total + third_len).is_ok());
     let refusal = admit_remember(&core, "tenant-a", &third, &known, total + third_len - 1)
         .err()
         .unwrap();
-    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+    assert!(
+        refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"),
+        "{refusal}"
+    );
     assert!(core.get_node_properties("memory:tenant-a:m:3").is_none());
     // Another tenant is not charged for tenant-a's bytes.
-    let other = remember(record("tenant-b", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let other = remember(
+        record("tenant-b", "m:1", MemoryTier::Semantic, "first"),
+        vec![],
+    );
     let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
     assert!(admit_remember(&core, "tenant-b", &other, &known, other_len).is_ok());
 
@@ -562,19 +777,37 @@ fn tenant_total_admission_keeps_a_durable_counter() {
     assert_eq!(read_usage(&core, "tenant-a"), Some(after_delete));
     // Delete then remember at the boundary: the freed bytes are admitted, one byte fewer is not.
     assert!(admit_remember(&core, "tenant-a", &third, &known, after_delete + third_len).is_ok());
-    let refusal = admit_remember(&core, "tenant-a", &third, &known, after_delete + third_len - 1)
-        .err()
-        .unwrap();
-    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+    let refusal = admit_remember(
+        &core,
+        "tenant-a",
+        &third,
+        &known,
+        after_delete + third_len - 1,
+    )
+    .err()
+    .unwrap();
+    assert!(
+        refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"),
+        "{refusal}"
+    );
     store(&core, "tenant-a", &third);
-    assert_eq!(read_usage(&core, "tenant-a"), Some(after_delete + third_len));
+    assert_eq!(
+        read_usage(&core, "tenant-a"),
+        Some(after_delete + third_len)
+    );
     // The marking path of a forget rewrites the node, and the counter follows its new size; the
     // delete path then removes it and the counter drops by exactly the stored bytes.
     assert!(core.forget("memory:tenant-a:m:3", false));
     let marked = stored("memory:tenant-a:m:3");
-    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1") + marked));
+    assert_eq!(
+        read_usage(&core, "tenant-a"),
+        Some(stored("memory:tenant-a:m:1") + marked)
+    );
     assert!(core.forget("memory:tenant-a:m:3", true));
-    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1")));
+    assert_eq!(
+        read_usage(&core, "tenant-a"),
+        Some(stored("memory:tenant-a:m:1"))
+    );
     // A removal through the node route moves it too; the last removal leaves zero.
     core.remove_node("memory:tenant-a:m:1".to_string());
     assert_eq!(read_usage(&core, "tenant-a"), Some(0));
@@ -584,26 +817,41 @@ fn tenant_total_admission_keeps_a_durable_counter() {
 #[test]
 fn remember_refuses_over_tenant_capacity() {
     let core = GraphCore::new();
-    let first = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "first"), vec![]);
-    let second = remember(record("tenant-a", "m:2", MemoryTier::Semantic, "second"), vec![]);
+    let first = remember(
+        record("tenant-a", "m:1", MemoryTier::Semantic, "first"),
+        vec![],
+    );
+    let second = remember(
+        record("tenant-a", "m:2", MemoryTier::Semantic, "second"),
+        vec![],
+    );
     store(&core, "tenant-a", &first);
     store(&core, "tenant-a", &second);
     let used = read_usage(&core, "tenant-a").unwrap();
     let known = Default::default();
 
     // A write that lifts the total above the cap is refused with the registered code.
-    let third = remember(record("tenant-a", "m:3", MemoryTier::Semantic, "third"), vec![]);
+    let third = remember(
+        record("tenant-a", "m:3", MemoryTier::Semantic, "third"),
+        vec![],
+    );
     let refusal = admit_remember(&core, "tenant-a", &third, &known, used)
         .err()
         .expect("the tenant is at its cap");
-    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+    assert!(
+        refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"),
+        "{refusal}"
+    );
 
     // The refusal leaves the store unchanged: no node, no counter movement.
     assert!(core.get_node_properties("memory:tenant-a:m:3").is_none());
     assert_eq!(read_usage(&core, "tenant-a"), Some(used));
 
     // A second tenant, under the same cap, still writes.
-    let other = remember(record("tenant-b", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let other = remember(
+        record("tenant-b", "m:1", MemoryTier::Semantic, "first"),
+        vec![],
+    );
     let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
     assert!(admit_remember(&core, "tenant-b", &other, &known, used.max(other_len)).is_ok());
 }
@@ -611,7 +859,8 @@ fn remember_refuses_over_tenant_capacity() {
 // ---- MEDULLA-DECISION-ENGINE-R155: episodes and cross-session recall ----
 
 use medulla_work_types::memory::{
-    ConversationMessage, ConversationRecord, Episode, EpisodeScope, EpisodeSpec, MemoryRememberResult, MessageRole,
+    ConversationMessage, ConversationRecord, Episode, EpisodeScope, EpisodeSpec,
+    MemoryRememberResult, MessageRole,
 };
 
 pub(super) fn episodic(tenant: &str, id: &str, session: &str, timestamp_ms: i64) -> MemoryRecord {
@@ -621,16 +870,27 @@ pub(super) fn episodic(tenant: &str, id: &str, session: &str, timestamp_ms: i64)
     item
 }
 
-fn episode_spec(episode_id: &str, session: Option<&str>, preceding: &[&str]) -> medulla_work_types::memory::EpisodeSpec {
+fn episode_spec(
+    episode_id: &str,
+    session: Option<&str>,
+    preceding: &[&str],
+) -> medulla_work_types::memory::EpisodeSpec {
     EpisodeSpec {
         episode_id: ResourceId::new(episode_id).unwrap(),
         session_id: session.map(|session| ResourceId::new(session).unwrap()),
-        preceding: preceding.iter().map(|id| ResourceId::new(*id).unwrap()).collect(),
+        preceding: preceding
+            .iter()
+            .map(|id| ResourceId::new(*id).unwrap())
+            .collect(),
     }
 }
 
 /// Admit one remember and commit what it writes, as the served handler does.
-fn commit(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) -> Result<MemoryRememberResult, String> {
+fn commit(
+    core: &GraphCore,
+    tenant: &str,
+    request: &MemoryRememberRequest,
+) -> Result<MemoryRememberResult, String> {
     match admit(core, tenant, request, &Default::default())? {
         Admitted::Write(write, embed, answer) => {
             apply_batch(core, &write);
@@ -638,7 +898,10 @@ fn commit(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) -> Re
                 let Method::AddEmbedding { node_id, embedding } = *embed else {
                     panic!("the vector write is an AddEmbedding");
                 };
-                core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+                core.semantic_store
+                    .write()
+                    .add_embedding(node_id, embedding)
+                    .unwrap();
             }
             Ok(answer)
         }
@@ -664,7 +927,12 @@ pub(super) fn seal(
 ) -> MemoryRememberResult {
     let (last, earlier) = stamps.split_last().unwrap();
     for (id, at) in earlier {
-        commit(core, tenant, &remember(episodic(tenant, id, session, *at), vec![])).unwrap();
+        commit(
+            core,
+            tenant,
+            &remember(episodic(tenant, id, session, *at), vec![]),
+        )
+        .unwrap();
     }
     let preceding: Vec<&str> = earlier.iter().map(|(id, _)| *id).collect();
     commit(
@@ -696,9 +964,20 @@ fn contained(core: &GraphCore, episode_node: &str) -> usize {
 #[test]
 fn remember_seals_an_episode_and_recall_filters_by_time() {
     let core = GraphCore::new();
-    let sealed = seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200), ("e3", 300)]);
-    let view = sealed.episode.expect("the remember reports the episode it sealed");
-    assert_eq!((view.start_ms, view.end_ms, view.record_count), (100, 300, 3));
+    let sealed = seal(
+        &core,
+        "tenant-a",
+        "ep:1",
+        "s1",
+        &[("e1", 100), ("e2", 200), ("e3", 300)],
+    );
+    let view = sealed
+        .episode
+        .expect("the remember reports the episode it sealed");
+    assert_eq!(
+        (view.start_ms, view.end_ms, view.record_count),
+        (100, 300, 3)
+    );
     assert_eq!(view.digest.len(), 64);
     // A later session's episode, ending after the as-of instant of the first recall.
     seal(&core, "tenant-a", "ep:2", "s2", &[("f1", 1_000)]);
@@ -708,9 +987,20 @@ fn remember_seals_an_episode_and_recall_filters_by_time() {
     // The episode is one node with a CONTAINS edge per record.
     assert_eq!(contained(&core, "episode:tenant-a:ep:1"), 3);
 
-    let episodes = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Episodes, 500), None).unwrap();
+    let episodes = recall(
+        &core,
+        "tenant-a",
+        5_000,
+        &episode_recall(EpisodeScope::Episodes, 500),
+        None,
+    )
+    .unwrap();
     assert_eq!(
-        episodes.episodes.iter().map(|e| e.episode_id.as_str()).collect::<Vec<_>>(),
+        episodes
+            .episodes
+            .iter()
+            .map(|e| e.episode_id.as_str())
+            .collect::<Vec<_>>(),
         ["ep:1"],
         "the episode ending after the as-of time is hidden"
     );
@@ -718,18 +1008,46 @@ fn remember_seals_an_episode_and_recall_filters_by_time() {
     held.sort();
     assert_eq!(held, ["e1", "e2", "e3"], "only records of visible episodes");
 
-    let live_only = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Live, 500), None).unwrap();
+    let live_only = recall(
+        &core,
+        "tenant-a",
+        5_000,
+        &episode_recall(EpisodeScope::Live, 500),
+        None,
+    )
+    .unwrap();
     assert_eq!(ids(&live_only.hits), ["w1"]);
     assert!(live_only.episodes.is_empty());
 
-    let both = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Both, 500), None).unwrap();
+    let both = recall(
+        &core,
+        "tenant-a",
+        5_000,
+        &episode_recall(EpisodeScope::Both, 500),
+        None,
+    )
+    .unwrap();
     assert_eq!(both.hits.len(), 4);
 
-    let later = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Episodes, 2_000), None).unwrap();
+    let later = recall(
+        &core,
+        "tenant-a",
+        5_000,
+        &episode_recall(EpisodeScope::Episodes, 2_000),
+        None,
+    )
+    .unwrap();
     assert_eq!(later.episodes.len(), 2);
 
     // Another tenant sees no episode, and cannot seal one over this tenant's records.
-    let foreign = recall(&core, "tenant-b", 5_000, &episode_recall(EpisodeScope::Both, 2_000), None).unwrap();
+    let foreign = recall(
+        &core,
+        "tenant-b",
+        5_000,
+        &episode_recall(EpisodeScope::Both, 2_000),
+        None,
+    )
+    .unwrap();
     assert!(foreign.episodes.is_empty() && foreign.hits.is_empty());
     let nodes = core.node_count();
     let rival = with_episode(
@@ -748,10 +1066,14 @@ fn episode_refusals() {
     seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200)]);
     let nodes = core.node_count();
     let edges = core.get_edges().len();
-    let refused = |request: MemoryRememberRequest| commit(&core, "tenant-a", &request).err().unwrap();
+    let refused =
+        |request: MemoryRememberRequest| commit(&core, "tenant-a", &request).err().unwrap();
 
     // No session on the spec, and a record outside the spec's session.
-    let no_session = with_episode(remember(episodic("tenant-a", "x1", "s9", 900), vec![]), episode_spec("ep:x", None, &[]));
+    let no_session = with_episode(
+        remember(episodic("tenant-a", "x1", "s9", 900), vec![]),
+        episode_spec("ep:x", None, &[]),
+    );
     assert!(refused(no_session).starts_with("EPISODE_BOUNDARY_MISSING"));
     let other_session = with_episode(
         remember(episodic("tenant-a", "x2", "s9", 900), vec![]),
@@ -786,11 +1108,27 @@ fn episode_refusals() {
 #[test]
 fn recall_result_binds_episode_digests() {
     let core = GraphCore::new();
-    seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200), ("e3", 300)]);
+    seal(
+        &core,
+        "tenant-a",
+        "ep:1",
+        "s1",
+        &[("e1", 100), ("e2", 200), ("e3", 300)],
+    );
     seal(&core, "tenant-a", "ep:2", "s2", &[("f1", 400), ("f2", 500)]);
     let nodes = core.node_count();
-    let result = recall(&core, "tenant-a", 9_000, &episode_recall(EpisodeScope::Episodes, 600), None).unwrap();
-    assert_eq!((result.as_of_ms, result.episode_scope), (600, Some(EpisodeScope::Episodes)));
+    let result = recall(
+        &core,
+        "tenant-a",
+        9_000,
+        &episode_recall(EpisodeScope::Episodes, 600),
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        (result.as_of_ms, result.episode_scope),
+        (600, Some(EpisodeScope::Episodes))
+    );
     assert_eq!(result.episodes.len(), 2);
     for view in &result.episodes {
         // The digest is the one the stored records seal to.
@@ -798,7 +1136,12 @@ fn recall_result_binds_episode_digests() {
             .hits
             .iter()
             .filter(|hit| hit.record.session_id.as_ref() == Some(&view.session_id))
-            .map(|hit| (hit.record.timestamp_ms, hit.record.memory_id.as_str().to_string()))
+            .map(|hit| {
+                (
+                    hit.record.timestamp_ms,
+                    hit.record.memory_id.as_str().to_string(),
+                )
+            })
             .collect();
         members.sort();
         let again = Episode::seal(
@@ -824,13 +1167,40 @@ fn recall_result_binds_episode_digests() {
 fn later_session_recalls_earlier_episode_in_order() {
     let core = GraphCore::new();
     // Three sessions sealed out of order; a fourth ends in the future.
-    seal(&core, "tenant-a", "ep:b", "s2", &[("b1", 2_000), ("b2", 2_100)]);
-    seal(&core, "tenant-a", "ep:a", "s1", &[("a1", 1_000), ("a2", 1_100)]);
+    seal(
+        &core,
+        "tenant-a",
+        "ep:b",
+        "s2",
+        &[("b1", 2_000), ("b2", 2_100)],
+    );
+    seal(
+        &core,
+        "tenant-a",
+        "ep:a",
+        "s1",
+        &[("a1", 1_000), ("a2", 1_100)],
+    );
     seal(&core, "tenant-a", "ep:c", "s3", &[("c1", 3_000)]);
     seal(&core, "tenant-a", "ep:future", "s4", &[("d1", 90_000)]);
-    let result = recall(&core, "tenant-a", 10_000, &episode_recall(EpisodeScope::Episodes, 5_000), None).unwrap();
-    let order: Vec<&str> = result.episodes.iter().map(|e| e.episode_id.as_str()).collect();
-    assert_eq!(order, ["ep:a", "ep:b", "ep:c"], "by start time, the future episode hidden");
+    let result = recall(
+        &core,
+        "tenant-a",
+        10_000,
+        &episode_recall(EpisodeScope::Episodes, 5_000),
+        None,
+    )
+    .unwrap();
+    let order: Vec<&str> = result
+        .episodes
+        .iter()
+        .map(|e| e.episode_id.as_str())
+        .collect();
+    assert_eq!(
+        order,
+        ["ep:a", "ep:b", "ep:c"],
+        "by start time, the future episode hidden"
+    );
     assert!(!ids(&result.hits).contains(&"d1"));
 
     // A sealed episode is immutable: the same write is found again, another body is refused.
@@ -841,7 +1211,10 @@ fn later_session_recalls_earlier_episode_in_order() {
         remember(episodic("tenant-a", "a3", "s1", 1_200), vec![]),
         episode_spec("ep:a", Some("s1"), &["a1", "a2"]),
     );
-    assert!(commit(&core, "tenant-a", &changed).err().unwrap().starts_with("EPISODE_IMMUTABLE"));
+    assert!(commit(&core, "tenant-a", &changed)
+        .err()
+        .unwrap()
+        .starts_with("EPISODE_IMMUTABLE"));
 
     // A session scope narrows the episodes to that session.
     let mut one = episode_recall(EpisodeScope::Episodes, 5_000);
@@ -852,7 +1225,12 @@ fn later_session_recalls_earlier_episode_in_order() {
 }
 
 /// The last write of `seal` again, against a store that already holds everything.
-fn seal_again(core: &GraphCore, episode_id: &str, session: &str, stamps: &[(&str, i64)]) -> MemoryRememberResult {
+fn seal_again(
+    core: &GraphCore,
+    episode_id: &str,
+    session: &str,
+    stamps: &[(&str, i64)],
+) -> MemoryRememberResult {
     let (last, earlier) = stamps.split_last().unwrap();
     let preceding: Vec<&str> = earlier.iter().map(|(id, _)| *id).collect();
     commit(
@@ -902,10 +1280,18 @@ fn source_ingest_transcript_becomes_episodic_memory() {
         ],
     );
     let embeddings = vec![vec![1.0, 0.0]; 5];
-    let requests = super::memory_ingest::thread_requests(&thread, embeddings.clone(), 30 * MINUTE).unwrap();
+    let requests =
+        super::memory_ingest::thread_requests(&thread, embeddings.clone(), 30 * MINUTE).unwrap();
     assert_eq!(requests.len(), 5);
-    let sealing: Vec<_> = requests.iter().filter_map(|request| request.episode.as_ref()).collect();
-    assert_eq!(sealing.len(), 1, "the closed run seals; the open run stays open");
+    let sealing: Vec<_> = requests
+        .iter()
+        .filter_map(|request| request.episode.as_ref())
+        .collect();
+    assert_eq!(
+        sealing.len(),
+        1,
+        "the closed run seals; the open run stays open"
+    );
     assert_eq!(sealing[0].preceding.len(), 1);
     for request in &requests {
         commit(&core, "tenant-a", request).unwrap();
@@ -926,11 +1312,25 @@ fn source_ingest_transcript_becomes_episodic_memory() {
     held.sort();
     assert_eq!(held, ["chat:1:m1", "chat:1:m2"]);
     // Without the episode rule every turn is recallable; the tool turn is procedural.
-    let all = recall(&core, "tenant-a", 200 * MINUTE, &recall_request(vec![], &["note"], 10_000), None).unwrap();
+    let all = recall(
+        &core,
+        "tenant-a",
+        200 * MINUTE,
+        &recall_request(vec![], &["note"], 10_000),
+        None,
+    )
+    .unwrap();
     assert_eq!(all.hits.len(), 5);
-    let tool = all.hits.iter().find(|hit| hit.record.memory_id.as_str() == "chat:1:m3").unwrap();
+    let tool = all
+        .hits
+        .iter()
+        .find(|hit| hit.record.memory_id.as_str() == "chat:1:m3")
+        .unwrap();
     assert_eq!(tool.record.tier, MemoryTier::Procedural);
-    assert!(all.hits.iter().all(|hit| hit.record.session_id.as_ref().map(ResourceId::as_str) == Some("chat:1")));
+    assert!(all
+        .hits
+        .iter()
+        .all(|hit| hit.record.session_id.as_ref().map(ResourceId::as_str) == Some("chat:1")));
 
     // Another tenant recalls none of it.
     let foreign = recall(&core, "tenant-b", 200 * MINUTE, &ask, None).unwrap();
@@ -959,20 +1359,33 @@ fn held_memory_is_refused_and_logged() {
     let core = GraphCore::new();
     stored_record(&core, "tenant-a", "m:held", 0.1, true);
     stored_record(&core, "tenant-a", "m:free", 0.1, false);
-    let ids = ["memory:tenant-a:m:held".to_string(), "memory:tenant-a:m:free".to_string()];
+    let ids = [
+        "memory:tenant-a:m:held".to_string(),
+        "memory:tenant-a:m:free".to_string(),
+    ];
     let nodes = core.node_count();
     let (pruned, live, held) = core.evict_below(&ids, 0.5, true);
     assert_eq!(pruned, ["memory:tenant-a:m:free"]);
     assert!(live.is_empty());
     assert_eq!(held, ["memory:tenant-a:m:held"]);
     // The held record is untouched: stored, not forgotten, still recallable.
-    let found = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["memory"], 100), None).unwrap();
+    let found = recall(
+        &core,
+        "tenant-a",
+        NOW,
+        &recall_request(vec![], &["memory"], 100),
+        None,
+    )
+    .unwrap();
     assert_eq!(ids(&found.hits), ["m:held"]);
     // The prune left one record fewer and one report more.
     assert_eq!(core.node_count(), nodes, "one removed, one report written");
     let reports = report_nodes(&core);
     assert_eq!(reports.len(), 1);
-    assert_eq!(reports[0].get("held_code").and_then(|v| v.as_str()), Some("RETENTION_LEGAL_HOLD"));
+    assert_eq!(
+        reports[0].get("held_code").and_then(|v| v.as_str()),
+        Some("RETENTION_LEGAL_HOLD")
+    );
     assert!(medulla_work_types::memory::REFUSALS
         .iter()
         .any(|code| code.as_str() == "RETENTION_LEGAL_HOLD"));
@@ -998,26 +1411,41 @@ fn prune_report_records_examined_removed_held() {
     assert_eq!(report.get("examined").and_then(|v| v.as_u64()), Some(3));
     assert_eq!(report.get("removed").and_then(|v| v.as_u64()), Some(2));
     assert_eq!(report.get("held").and_then(|v| v.as_u64()), Some(1));
-    assert_eq!(report.get("held_ids"), Some(&serde_json::json!(["memory:tenant-a:m:held"])));
-    let digest = report.get("report_digest").and_then(|v| v.as_str()).unwrap();
+    assert_eq!(
+        report.get("held_ids"),
+        Some(&serde_json::json!(["memory:tenant-a:m:held"]))
+    );
+    let digest = report
+        .get("report_digest")
+        .and_then(|v| v.as_str())
+        .unwrap();
     assert_eq!(digest.len(), 64);
     // The report belongs to the tenant of the pruned records.
-    assert_eq!(report.get("tenant_scope").and_then(|v| v.as_str()), Some("tenant-a"));
+    assert_eq!(
+        report.get("tenant_scope").and_then(|v| v.as_str()),
+        Some("tenant-a")
+    );
     // A repeat finds the two records already forgotten: only the held one is a candidate, so
     // it reports its own prune, and a prune with no candidate reports nothing.
     core.evict_below(&ids, 0.5, false);
     let again = report_nodes(&core);
     assert_eq!(again.len(), 2);
-    assert!(again.iter().any(|report| report.get("examined").and_then(|v| v.as_u64()) == Some(1)
-        && report.get("removed").and_then(|v| v.as_u64()) == Some(0)));
+    assert!(again.iter().any(
+        |report| report.get("examined").and_then(|v| v.as_u64()) == Some(1)
+            && report.get("removed").and_then(|v| v.as_u64()) == Some(0)
+    ));
     core.evict_below(&["memory:tenant-a:m:high".to_string()], 0.5, false);
     assert_eq!(report_nodes(&core).len(), 2);
 }
 
 fn importance_of(core: &GraphCore, node: &str) -> f64 {
-    let blob = core.get_node_properties(node).expect("the memory node exists");
+    let blob = core
+        .get_node_properties(node)
+        .expect("the memory node exists");
     let properties: serde_json::Value = rmp_serde::from_slice(&blob).unwrap();
-    properties["importance"].as_f64().expect("a stored importance")
+    properties["importance"]
+        .as_f64()
+        .expect("a stored importance")
 }
 
 /// Reinforce adds its weight below `knob memory.importance_cap` and stops at it; decay halves
@@ -1029,7 +1457,10 @@ fn reinforce_then_decay_matches_the_half_life() {
     store(
         &core,
         "tenant-a",
-        &remember(record("tenant-a", "m:imp", MemoryTier::Episodic, "ran the build"), vec![]),
+        &remember(
+            record("tenant-a", "m:imp", MemoryTier::Episodic, "ran the build"),
+            vec![],
+        ),
     );
     let node = "memory:tenant-a:m:imp";
     assert_eq!(importance_of(&core, node), 1.0);

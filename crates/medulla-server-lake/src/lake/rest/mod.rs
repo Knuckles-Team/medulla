@@ -962,7 +962,13 @@ mod tests {
         }
 
         // Another owner's table, an unindexed path and a non-lake path all answer 404.
-        publish(&store, &mgr, "alice_ns", "alice_private", Some(alice.owner_scope()));
+        publish(
+            &store,
+            &mgr,
+            "alice_ns",
+            "alice_private",
+            Some(alice.owner_scope()),
+        );
         let digest = mgr.paths.lock().get(&manifest_list).cloned().unwrap();
         let alice_path = "lake://alice_ns/alice_private/metadata/list.avro";
         mgr.paths.lock().insert(alice_path.to_string(), digest);

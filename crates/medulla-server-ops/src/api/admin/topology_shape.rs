@@ -157,7 +157,8 @@ fn feeds_are_acyclic(draft: &AgentGraphDraft, facts: &TopologyFacts) -> Option<S
             }
         }
     }
-    (visited < slots.len()).then(|| "the unconditional feeds edges between slots form a cycle".to_string())
+    (visited < slots.len())
+        .then(|| "the unconditional feeds edges between slots form a cycle".to_string())
 }
 
 /// A `LoopsBack` edge has no condition, joins two slot nodes, and sits in a

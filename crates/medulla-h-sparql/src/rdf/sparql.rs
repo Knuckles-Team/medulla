@@ -100,7 +100,11 @@ pub(super) fn wire_rows(
     rows: Vec<Vec<Option<medulla_rdf::sparql::Binding>>>,
 ) -> Vec<Vec<Option<medulla_protocol_types::protocol::SparqlTerm>>> {
     rows.into_iter()
-        .map(|row| row.iter().map(|cell| cell.as_ref().map(wire_term)).collect())
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.as_ref().map(wire_term))
+                .collect()
+        })
         .collect()
 }
 
@@ -137,11 +141,12 @@ fn apply_sparql_shapes(
         })
         .collect();
     let verdicts = medulla_exec::policy_mask::judge_rows(&gate.policies, view, &row_nodes)?;
-    gate.log.record(medulla_exec::policy_mask::PolicyEvaluation {
-        policy_digest: medulla_exec::policy_mask::policy_digest(&gate.policies),
-        principal: gate.principal.clone(),
-        counts: verdicts.counts,
-    });
+    gate.log
+        .record(medulla_exec::policy_mask::PolicyEvaluation {
+            policy_digest: medulla_exec::policy_mask::policy_digest(&gate.policies),
+            principal: gate.principal.clone(),
+            counts: verdicts.counts,
+        });
     if let Some(policy_id) = verdicts.violated_policy {
         return Err(medulla_exec::policy_mask::violation_refusal(&policy_id));
     }
@@ -156,13 +161,14 @@ fn apply_sparql_shapes(
     }
     let mut keep = verdicts.keep.iter();
     wire.rows.retain(|_| keep.next().copied().unwrap_or(true));
-    wire.proofs.retain_mut(|proof| match renumbered.get(&proof.row) {
-        Some(new) => {
-            proof.row = *new;
-            true
-        }
-        None => false,
-    });
+    wire.proofs
+        .retain_mut(|proof| match renumbered.get(&proof.row) {
+            Some(new) => {
+                proof.row = *new;
+                true
+            }
+            None => false,
+        });
     Ok(())
 }
 

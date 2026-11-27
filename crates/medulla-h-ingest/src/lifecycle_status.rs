@@ -3,12 +3,12 @@
 //! its `boundTest` edges to test files, all through the visibility check of the caller. The
 //! derivation itself is `medulla_core::lifecycle::status::answer_spec_status`.
 
-use medulla_core::lifecycle::derive::TestBinding;
 use medulla_core::lifecycle::derive::DerivedEdge;
+use medulla_core::lifecycle::derive::TestBinding;
 use medulla_core::lifecycle::status::{SpecStatusView, StatusChangeset};
 use medulla_core::lifecycle::store::LifecycleStore;
-use medulla_source_types::lifecycle::{LifecycleEdgeKind, LifecycleKind};
 use medulla_graph_core::graph::GraphCore;
+use medulla_source_types::lifecycle::{LifecycleEdgeKind, LifecycleKind};
 use serde_json::Value;
 
 use crate::source_ingestion::spec_projection::{changeset_node_id, requirement_node_id};
@@ -113,7 +113,12 @@ pub fn spec_status_view(
         };
         let created_at = node
             .get("created_at")
-            .and_then(|value| value.as_str().and_then(|text| text.parse().ok()).or(value.as_u64()))
+            .and_then(|value| {
+                value
+                    .as_str()
+                    .and_then(|text| text.parse().ok())
+                    .or(value.as_u64())
+            })
             .unwrap_or(0);
         for requirement_id in core.get_successors(&node_id).unwrap_or_default() {
             let cites_it = core
@@ -121,7 +126,10 @@ pub fn spec_status_view(
                 .iter()
                 .any(|(relationship, _)| relationship == "citesRequirement");
             if cites_it {
-                cites.entry(node_id.clone()).or_default().push(requirement_id);
+                cites
+                    .entry(node_id.clone())
+                    .or_default()
+                    .push(requirement_id);
             }
         }
         changesets.push((

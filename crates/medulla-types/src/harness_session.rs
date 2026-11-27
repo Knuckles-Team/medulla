@@ -121,7 +121,10 @@ pub struct IndexHarnessSessionBatchResult {
 
 /// Whether `text` is 64 lowercase hex characters.
 pub fn is_hex64(text: &str) -> bool {
-    text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    text.len() == 64
+        && text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 impl IndexHarnessSessionBatch {
@@ -142,7 +145,11 @@ impl IndexHarnessSessionBatch {
             &self.source_cursor,
         ];
         for record in &self.records {
-            ids.extend([&record.harness_id, &record.source_session_id, &record.run_trace_id]);
+            ids.extend([
+                &record.harness_id,
+                &record.source_session_id,
+                &record.run_trace_id,
+            ]);
         }
         for entry in &self.unavailable {
             ids.extend([&entry.harness_id, &entry.source_session_id]);
@@ -152,7 +159,10 @@ impl IndexHarnessSessionBatch {
                 ));
             }
         }
-        if ids.iter().any(|id| id.is_empty() || too_long(id, MAX_ID_CHARS)) {
+        if ids
+            .iter()
+            .any(|id| id.is_empty() || too_long(id, MAX_ID_CHARS))
+        {
             return Err(format!(
                 "PARAMETER_INVALID: ids and the cursor are 1 to {MAX_ID_CHARS} characters"
             ));
@@ -244,16 +254,16 @@ mod tests {
     #[test]
     fn bounds_refuse_an_oversized_or_unnamed_batch() {
         assert!(batch().check_bounds(500).is_ok());
-        assert!(batch().check_bounds(1).unwrap_err().starts_with("PARAMETER_INVALID"));
+        assert!(batch()
+            .check_bounds(1)
+            .unwrap_err()
+            .starts_with("PARAMETER_INVALID"));
         let mut long = batch();
         long.source_cursor = "x".repeat(257);
         assert!(long.check_bounds(500).is_err());
         let mut reason = batch();
         reason.unavailable[0].reason = "r".repeat(513);
         assert!(reason.check_bounds(500).is_err());
-        assert_eq!(
-            session_node_id("t1", "h", "s"),
-            "harnesssession:t1:h:s"
-        );
+        assert_eq!(session_node_id("t1", "h", "s"), "harnesssession:t1:h:s");
     }
 }

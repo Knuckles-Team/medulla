@@ -16,7 +16,10 @@ use crate::watchdog::PAGE_IN_TASK_PREFIX;
 /// The report of the readiness registry `rows`. `lock_busy` is `Some(holder)` when the server
 /// state lock did not answer in time: the report is then not ready and its first blocker is the
 /// process blocker `STATE_LOCK_BUSY`, which names the holder of the lock when one is known.
-pub fn report_of(rows: Vec<GraphReadinessRow>, lock_busy: Option<Option<String>>) -> ReadinessReport {
+pub fn report_of(
+    rows: Vec<GraphReadinessRow>,
+    lock_busy: Option<Option<String>>,
+) -> ReadinessReport {
     let mut graphs = Vec::with_capacity(rows.len());
     let mut blockers = Vec::new();
     if let Some(holder) = lock_busy {

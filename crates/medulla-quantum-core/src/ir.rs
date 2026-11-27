@@ -13,7 +13,7 @@ mod gates;
 mod validation;
 
 pub use gates::{
-    CliffordGenerator, ControlQubit, ControlPolarity, GateInstruction, GateKind, ParamValue,
+    CliffordGenerator, ControlPolarity, ControlQubit, GateInstruction, GateKind, ParamValue,
 };
 pub use validation::IrValidationError;
 

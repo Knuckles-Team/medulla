@@ -10,9 +10,7 @@ use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Digest256;
-use medulla_types::policy_document::{
-    PolicyActivated, PolicyBinding, PolicyChange, PolicyReview,
-};
+use medulla_types::policy_document::{PolicyActivated, PolicyBinding, PolicyChange, PolicyReview};
 use serde_json::json;
 
 const OTHER_TENANT: &str = "tenant-other";
@@ -43,7 +41,12 @@ async fn dispatch_as(h: &Harness, tenant: &str, method: Method) -> Response {
             VerifiedRequestContext::verified_for_test_with_scopes(
                 "decider",
                 tenant,
-                &["kg:read", "kg:write", "agent:decision-write", "agent:decision-read"],
+                &[
+                    "kg:read",
+                    "kg:write",
+                    "agent:decision-write",
+                    "agent:decision-read",
+                ],
             ),
         ),
     )
@@ -103,12 +106,7 @@ async fn log(h: &Harness, tenant: &str, op: DecisionLogOp) -> Response {
     dispatch_as(h, tenant, Method::DecisionLog { op: Box::new(op) }).await
 }
 
-fn activation(
-    tenant: &str,
-    change: PolicyChange,
-    source: &str,
-    receipt: &str,
-) -> DecisionLogOp {
+fn activation(tenant: &str, change: PolicyChange, source: &str, receipt: &str) -> DecisionLogOp {
     DecisionLogOp::PolicyActivation {
         tenant_id: tenant.to_string(),
         change,
@@ -133,7 +131,12 @@ async fn activation_requires_a_matching_receipt() {
 
     // No review holds the receipt: the activation refuses and nothing moves.
     let missing: Result<PolicyActivated, String> = decode(
-        log(&h, TENANT, activation(TENANT, PolicyChange::Create, REPO, &receipt)).await,
+        log(
+            &h,
+            TENANT,
+            activation(TENANT, PolicyChange::Create, REPO, &receipt),
+        )
+        .await,
     );
     assert!(missing.unwrap_err().starts_with("POLICY_REVIEW_MISSING"));
 
@@ -167,11 +170,23 @@ async fn activation_requires_a_matching_receipt() {
     );
     assert!(foreign.unwrap_err().starts_with("POLICY_REVIEW_MISSING"));
     let wrong_source: Result<PolicyActivated, String> = decode(
-        log(&h, TENANT, activation(TENANT, PolicyChange::Create, "org/other", &receipt)).await,
+        log(
+            &h,
+            TENANT,
+            activation(TENANT, PolicyChange::Create, "org/other", &receipt),
+        )
+        .await,
     );
-    assert!(wrong_source.unwrap_err().starts_with("POLICY_REVIEW_MISMATCH"));
+    assert!(wrong_source
+        .unwrap_err()
+        .starts_with("POLICY_REVIEW_MISMATCH"));
     let update_without_revision: Result<PolicyActivated, String> = decode(
-        log(&h, TENANT, activation(TENANT, PolicyChange::Update, REPO, &receipt)).await,
+        log(
+            &h,
+            TENANT,
+            activation(TENANT, PolicyChange::Update, REPO, &receipt),
+        )
+        .await,
     );
     assert!(update_without_revision
         .unwrap_err()
@@ -179,16 +194,23 @@ async fn activation_requires_a_matching_receipt() {
 
     // The matching receipt activates the set.
     let activated: PolicyActivated = decode(
-        log(&h, TENANT, activation(TENANT, PolicyChange::Create, REPO, &receipt)).await,
+        log(
+            &h,
+            TENANT,
+            activation(TENANT, PolicyChange::Create, REPO, &receipt),
+        )
+        .await,
     )
     .expect("the reviewed set activates");
     assert_eq!(activated.scope_ref, format!("policy:{REPO}"));
-    assert_eq!(activated.revision.as_deref(), Some(format!("policyset:{set}").as_str()));
+    assert_eq!(
+        activated.revision.as_deref(),
+        Some(format!("policyset:{set}").as_str())
+    );
     assert_eq!(activated.entities.len(), 2);
-    assert!(activated
-        .entities
-        .iter()
-        .all(|entity| entity.entity_id.starts_with(&format!("policycandidate:{REPO}:"))));
+    assert!(activated.entities.iter().all(|entity| entity
+        .entity_id
+        .starts_with(&format!("policycandidate:{REPO}:"))));
 
     // A review by the author alone is not recorded as an approval the gate admits.
     let selfie = review(&set, "self", Some(&format!("policyset:{set}")), "alice");

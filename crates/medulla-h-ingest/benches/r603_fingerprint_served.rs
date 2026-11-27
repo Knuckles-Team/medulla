@@ -34,7 +34,9 @@ fn source_files() -> Vec<SourceFile> {
             path: Id::new(format!("file:src/module_{}/file_{n}.rs", n % 100)).expect("id"),
             content: format!("pub fn handler_{n}() {{}}\n{}", "// body line\n".repeat(40))
                 .into_bytes(),
-            signatures: (0..8).map(|s| format!("fn handler_{n}_{s}(a: u64) -> u64")).collect(),
+            signatures: (0..8)
+                .map(|s| format!("fn handler_{n}_{s}(a: u64) -> u64"))
+                .collect(),
         })
         .collect()
 }

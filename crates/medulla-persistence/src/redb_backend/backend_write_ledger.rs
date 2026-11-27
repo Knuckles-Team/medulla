@@ -109,12 +109,9 @@ mod tests {
     async fn ledger_counts_days_and_keeps_first_creator() {
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let dir = tempfile::tempdir().expect("tempdir");
-        let backend = RedbBackend::open_with_shards(
-            dir.path().to_string_lossy().to_string(),
-            64,
-            1,
-        )
-        .expect("open");
+        let backend =
+            RedbBackend::open_with_shards(dir.path().to_string_lossy().to_string(), 64, 1)
+                .expect("open");
         // The graph exists because one ordinary write created it.
         let seed = Method::AddNode {
             node_id: "seed".to_string(),
@@ -145,7 +142,13 @@ mod tests {
         counted("a", "n1").await;
         assert_eq!(version(&backend).await, before + 1);
         assert_eq!(
-            backend.write_days(GRAPH, 0).await.expect("days").iter().map(|r| r.1).sum::<u64>(),
+            backend
+                .write_days(GRAPH, 0)
+                .await
+                .expect("days")
+                .iter()
+                .map(|r| r.1)
+                .sum::<u64>(),
             1
         );
         counted("a", "n2").await;
@@ -155,17 +158,25 @@ mod tests {
             vec![("a".to_string(), 2), ("b".to_string(), 1)]
         );
         // An uncounted write (outside a served request) leaves the ledger alone.
-        backend.record_durable(GRAPH, &seed).await.expect("uncounted");
+        backend
+            .record_durable(GRAPH, &seed)
+            .await
+            .expect("uncounted");
         assert_eq!(backend.write_days(GRAPH, 0).await.expect("days").len(), 2);
 
         assert_eq!(backend.graph_creator(GRAPH).await.expect("creator"), None);
-        backend.record_graph_creator(GRAPH, "first").await.expect("record");
-        backend.record_graph_creator(GRAPH, "second").await.expect("record");
+        backend
+            .record_graph_creator(GRAPH, "first")
+            .await
+            .expect("record");
+        backend
+            .record_graph_creator(GRAPH, "second")
+            .await
+            .expect("record");
         assert_eq!(
             backend.graph_creator(GRAPH).await.expect("creator"),
             Some("first".to_string())
         );
-
     }
 
     // spec: MEDULLA-IDENTITY-R700.7
@@ -173,12 +184,9 @@ mod tests {
     async fn a_new_day_row_drops_ledger_rows_older_than_the_retention() {
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let dir = tempfile::tempdir().expect("tempdir");
-        let backend = RedbBackend::open_with_shards(
-            dir.path().to_string_lossy().to_string(),
-            64,
-            1,
-        )
-        .expect("open");
+        let backend =
+            RedbBackend::open_with_shards(dir.path().to_string_lossy().to_string(), 64, 1)
+                .expect("open");
         let seed = Method::AddNode {
             node_id: "seed".to_string(),
             properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).expect("encode"),
@@ -216,7 +224,11 @@ mod tests {
         // The first row sits exactly at the retention edge of a bump on day 1_000 + retention:
         // it is kept, and a later new-day row removes it.
         let kept = backend.write_days(GRAPH, 0).await.expect("days");
-        assert_eq!(kept.len(), 2, "a row at the retention edge is kept: {kept:?}");
+        assert_eq!(
+            kept.len(),
+            2,
+            "a row at the retention edge is kept: {kept:?}"
+        );
         on_day("newer", 1_000 + retention + 1).await;
         let after: Vec<String> = backend
             .write_days(GRAPH, 0)
@@ -225,14 +237,14 @@ mod tests {
             .into_iter()
             .map(|row| row.0)
             .collect();
-        assert!(!after.contains(&"old".to_string()), "older than the retention: {after:?}");
+        assert!(
+            !after.contains(&"old".to_string()),
+            "older than the retention: {after:?}"
+        );
         assert!(after.contains(&"recent".to_string()));
         assert!(after.contains(&"newer".to_string()));
         // A bump on a day that already has its row adds to it and deletes nothing.
         on_day("newer", 1_000 + retention + 1).await;
-        assert_eq!(
-            backend.write_days(GRAPH, 0).await.expect("days").len(),
-            2
-        );
+        assert_eq!(backend.write_days(GRAPH, 0).await.expect("days").len(), 2);
     }
 }

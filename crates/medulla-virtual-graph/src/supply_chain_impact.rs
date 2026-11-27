@@ -12,15 +12,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_source_types::{
-    supply_chain_report::assemble_supply_chain_report, supply_chain_report::ContractCoverage,
-    supply_chain_report::ImpactRow,
-    supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
-    supply_chain_report::sources_used_from_audit, supply_chain_report::SupplyChainImpactReport,
+    supply_chain_report::assemble_supply_chain_report,
+    supply_chain_report::sources_used_from_audit, supply_chain_report::ContractCoverage,
+    supply_chain_report::ImpactRow, supply_chain_report::ReportAbstention,
+    supply_chain_report::ReportError, supply_chain_report::SupplyChainImpactReport,
 };
 
 use crate::source_selection::{
-    audit_from, select_sources_with, AbstainReason, CoverageFixture, CoverageResult,
-    SelectionQuery,
+    audit_from, select_sources_with, AbstainReason, CoverageFixture, CoverageResult, SelectionQuery,
 };
 
 /// Plan `roots` (the question's ontology classes) against the authority
@@ -198,7 +197,8 @@ mod tests {
             mapping: None,
             read_at_ms: None,
         }];
-        let report = supply_chain_impact(&fixture, &roots, 2, &rows, &[], &[]).expect("the report assembles");
+        let report = supply_chain_impact(&fixture, &roots, 2, &rows, &[], &[])
+            .expect("the report assembles");
         let encoded = serde_json::to_string(&report).expect("the report encodes");
         let decoded: SupplyChainImpactReport =
             serde_json::from_str(&encoded).expect("the encoding is the typed model");
@@ -235,7 +235,10 @@ mod tests {
             mapping: None,
             read_at_ms: None,
         };
-        let rows = vec![row("v-from-github", "github-mcp"), row("v-from-erp", "erpnext-mcp")];
+        let rows = vec![
+            row("v-from-github", "github-mcp"),
+            row("v-from-erp", "erpnext-mcp"),
+        ];
         let report = supply_chain_impact(&fixture, &roots, 0, &rows, &[], &[])
             .expect("the answer is returned, not refused");
         let sources: Vec<&str> = report
@@ -354,7 +357,13 @@ mod tests {
     fn sources_used_equals_audit() {
         let fixture = CoverageFixture::new()
             .with_authority("Supplier", "erpnext-suppliers", "erpnext-mcp", 5, 1)
-            .with_authority("Vulnerability", "gitlab-vulnerabilities", "gitlab-mcp", 3, 1)
+            .with_authority(
+                "Vulnerability",
+                "gitlab-vulnerabilities",
+                "gitlab-mcp",
+                3,
+                1,
+            )
             .with_authority("ContainerImage", "dockerhub-images", "dockerhub-mcp", 4, 1)
             .with_unconnected_source("dockerhub-mcp");
         let roots = vec![
@@ -362,7 +371,8 @@ mod tests {
             "Vulnerability".to_string(),
             "ContainerImage".to_string(),
         ];
-        let report = supply_chain_impact(&fixture, &roots, 0, &[], &[], &[]).expect("the report assembles");
+        let report =
+            supply_chain_impact(&fixture, &roots, 0, &[], &[], &[]).expect("the report assembles");
         let audit = audit_from(&select_sources(&fixture, &roots, 0));
         // One entry per used audit entry, in the audit's order, with its premises and mode.
         assert!(!audit.used.is_empty());

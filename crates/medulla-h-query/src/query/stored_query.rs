@@ -26,9 +26,8 @@ use medulla_source_types::stored_query::{
     serve_materialized, staleness_s, Served, StoredCall, StoredParamType, StoredQuery,
     StoredQueryLanguage, StoredQueryListEntry, StoredQueryPage, StoredQueryReceipt,
     StoredQueryRefusal, StoredQueryRetireReason, StoredQueryRetired, StoredQueryTombstone,
-    StoredQueryView, StoredQueryWarning, StoredResult, ACCESS_DENIED,
-    MAX_STORED_QUERY_LIST_LIMIT, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID,
-    STORED_QUERY_NOT_FOUND,
+    StoredQueryView, StoredQueryWarning, StoredResult, ACCESS_DENIED, MAX_STORED_QUERY_LIST_LIMIT,
+    STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID, STORED_QUERY_NOT_FOUND,
 };
 use serde_json::{json, Value};
 
@@ -96,7 +95,13 @@ pub(crate) async fn dispatch_stored_query(
             include_retired,
         } => Ok(reply::<results::StoredQueryList>(
             ctx.req_id,
-            handle_stored_list(ctx, limit, cursor.as_deref(), author.as_deref(), include_retired),
+            handle_stored_list(
+                ctx,
+                limit,
+                cursor.as_deref(),
+                author.as_deref(),
+                include_retired,
+            ),
         )),
         Method::StoredQueryRetire { name, reason } => Ok(reply::<results::StoredQueryRetire>(
             ctx.req_id,
@@ -238,7 +243,9 @@ pub fn seed_catalog_queries(
         .map(medulla_server_api::carrier::GraphReadAuthority::verified_principal)
         .unwrap_or_default()
         .to_string();
-    let tenant = ReadCaller::from_authority(authority, graph_name).principal.tenant;
+    let tenant = ReadCaller::from_authority(authority, graph_name)
+        .principal
+        .tenant;
     let existing = catalog_query_head_nodes()
         .into_iter()
         .filter(|head| core.has_node(head))
@@ -284,7 +291,10 @@ fn query_references(query: &StoredQuery) -> Vec<String> {
 fn deprecated_in(ctx: &QueryHandlerCtx<'_>) -> std::collections::BTreeSet<String> {
     let flags: Vec<serde_json::Map<String, Value>> = ctx
         .core
-        .get_nodes_by_label(medulla_catalog_types::stewardship::TRUST_FLAG_LABEL, usize::MAX)
+        .get_nodes_by_label(
+            medulla_catalog_types::stewardship::TRUST_FLAG_LABEL,
+            usize::MAX,
+        )
         .into_iter()
         .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_object(&blob).ok())
         .collect();

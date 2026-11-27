@@ -28,9 +28,9 @@ use std::time::{Duration, Instant};
 
 use crate::credentials::CredentialSource;
 use crate::error::HardwareError;
+use crate::job_machine::{HardwareJobEvent, HardwareJobPhase, HARDWARE_JOB_MACHINE};
 use crate::quota::{QuotaStatus, QuotaTracker, QuotaUnits};
 use crate::transport::HttpResponse;
-use crate::job_machine::{HardwareJobEvent, HardwareJobPhase, HARDWARE_JOB_MACHINE};
 use medulla_quantum_core::backend::{BackendError, BackendId, JobHandle, JobStatus, RunOptions};
 use medulla_quantum_core::hash::CircuitHash;
 use medulla_quantum_core::ir::QuantumProgram;
@@ -761,9 +761,7 @@ mod tests {
     fn adapter_core_holds_identity_and_jobs() {
         let core = AdapterCore::new("hardware-ibm");
         assert_eq!(core.id, BackendId::from("hardware-ibm"));
-        assert!(core
-            .quota_status_at_submit(JobHandle(u64::MAX))
-            .is_none());
+        assert!(core.quota_status_at_submit(JobHandle(u64::MAX)).is_none());
     }
 
     fn queued_job() -> HardwareJob {
@@ -783,7 +781,11 @@ mod tests {
             instructions: vec![],
             metadata: Default::default(),
         };
-        HardwareJob::queued("remote-1".to_string(), quota, program.circuit_hash().unwrap())
+        HardwareJob::queued(
+            "remote-1".to_string(),
+            quota,
+            program.circuit_hash().unwrap(),
+        )
     }
 
     // spec: MEDULLA-CONTRACT-R062.2
@@ -794,12 +796,20 @@ mod tests {
         assert_eq!(job.status, JobStatus::Running);
         let refused = job.observe(JobStatus::Queued).unwrap_err();
         assert!(matches!(refused, HardwareError::Transition(_)), "{refused}");
-        assert_eq!(job.status, JobStatus::Running, "a refused move changes nothing");
+        assert_eq!(
+            job.status,
+            JobStatus::Running,
+            "a refused move changes nothing"
+        );
 
         job.cancel_accepted().unwrap();
         assert_eq!(job.status, JobStatus::Cancelled);
         assert!(job.is_terminal());
         job.refresh_with(|_| Ok(JobStatus::Running)).unwrap();
-        assert_eq!(job.status, JobStatus::Cancelled, "a terminal job is not refreshed");
+        assert_eq!(
+            job.status,
+            JobStatus::Cancelled,
+            "a terminal job is not refreshed"
+        );
     }
 }

@@ -125,7 +125,8 @@ mod tests {
         );
         // The same node write passes under the edit machine and a replica.
         for writer in [StatusWriter::EditMachine, StatusWriter::Replicated] {
-            let write = add_node(serde_json::json!({"_harness_edit": true, "editStatus": "proposed"}));
+            let write =
+                add_node(serde_json::json!({"_harness_edit": true, "editStatus": "proposed"}));
             assert!(refuse_direct_edit_status_all(&[write], writer).is_ok());
         }
         // A write that never names the key passes for a caller.

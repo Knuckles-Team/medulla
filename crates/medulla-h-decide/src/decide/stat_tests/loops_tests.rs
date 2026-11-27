@@ -469,7 +469,10 @@ fn no_writer_sets_state_outside_view_of() {
     let source = include_str!("../loops.rs");
     let production = source.split("#[cfg(test)]").next().unwrap();
     let assignments = production.matches("instance.state =").count();
-    assert_eq!(assignments, 1, "view_of is the one writer of the loop state");
+    assert_eq!(
+        assignments, 1,
+        "view_of is the one writer of the loop state"
+    );
     let view_of = production.split("fn view_of").nth(1).unwrap();
     let body = view_of.split("fn refreshed").next().unwrap();
     assert!(body.contains("view.instance.state = Self::state_of(state)?;"));
@@ -489,7 +492,10 @@ async fn unfired_event_refuses_transition_refused() {
         .send(&state, EventInput::new("reject"), 5)
         .unwrap_err();
     assert!(error.starts_with("TRANSITION_REFUSED:"), "{error}");
-    assert!(error.contains("loop refused 'reject' from 'running'"), "{error}");
+    assert!(
+        error.contains("loop refused 'reject' from 'running'"),
+        "{error}"
+    );
     assert!(error.contains("illegal_transition"), "{error}");
     assert_eq!(
         writer(&h, get(id)).await.unwrap().instance.state,
@@ -510,7 +516,9 @@ async fn loop_ops_reach_the_handler() {
     let epoch = claimed.instance.lease.as_ref().unwrap().epoch;
 
     // FileGap files an open gap under the lease.
-    let filed = writer(&h, file_gap(id, epoch, "g1", 800_000)).await.unwrap();
+    let filed = writer(&h, file_gap(id, epoch, "g1", 800_000))
+        .await
+        .unwrap();
     assert_eq!(filed.gaps.len(), 1);
     assert_eq!(filed.gaps[0].state, GapState::Open);
 

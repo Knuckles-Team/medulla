@@ -1062,7 +1062,9 @@ mod tests {
         );
         identity.validate().unwrap();
         identity.validate_against_binding(&binding).unwrap();
-        assert!(identity.source_entity_id().starts_with("semantic-graph-source:sha256:"));
+        assert!(identity
+            .source_entity_id()
+            .starts_with("semantic-graph-source:sha256:"));
     }
 
     #[test]

@@ -21,8 +21,8 @@ mod served {
     use medulla_mutation_types::branch::BranchRef;
     use medulla_persistence::branch_registry_store::BranchRegistry;
     use medulla_server_auth::access::path_grant;
-    use medulla_source_types::source_path_grant::PathAccess;
     use medulla_source_types::source_changeset::{Changeset, ReadTreeReceipt};
+    use medulla_source_types::source_path_grant::PathAccess;
 
     /// The branch chain as a tree read sees it.
     pub(in crate::dispatch::router) struct RegistryTree<'a> {
@@ -70,7 +70,10 @@ mod served {
             Err(error) => return ops::target_error_response(req.id, error),
         };
         // MEDULLA-SCM-R007: the grants are read inside the same blocking snapshot.
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let answered = target
             .read_blocking(move |registry, branch| {
                 let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
@@ -84,9 +87,9 @@ mod served {
                 let answer = read_tree(&RegistryTree { registry, branch }, &request)?;
                 Ok(answer
                     .map(|mut receipt| {
-                        receipt
-                            .entries
-                            .retain(|entry| path_grant::allows(&grants, &entry.path, PathAccess::Read));
+                        receipt.entries.retain(|entry| {
+                            path_grant::allows(&grants, &entry.path, PathAccess::Read)
+                        });
                         receipt
                     })
                     .map_err(|refusal| refusal.message()))

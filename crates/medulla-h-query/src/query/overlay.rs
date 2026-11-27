@@ -264,7 +264,10 @@ pub fn run_unified_with_staged_finish<T>(
     >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
-    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+    finish: impl FnOnce(
+        &medulla_query_types::wire::Plan,
+        &medulla_exec::exec::PlanCtx,
+    ) -> Result<T, String>,
 ) -> Result<T, String> {
     let indexes = CoreIndexes::open(core);
     let mut served = indexes.served(

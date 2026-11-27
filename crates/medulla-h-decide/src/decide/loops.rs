@@ -86,9 +86,7 @@ pub(super) mod served {
         Gap, ImprovementLedger, LoopInstance, LoopOp, LoopState, LoopTransition, LoopView,
         OfferEvidence, StageBeacon, PPM_MAX,
     };
-    use medulla_types::gap_machine::GapState;
     use medulla_protocol_types::protocol::ResultPayload;
-    use medulla_types::gap_machine::GapEvent;
     use medulla_protocol_types::result_contract::coordination::{
         LoopsBeacon, LoopsClaim, LoopsFileGap, LoopsGet, LoopsMine, LoopsOffer, LoopsRatchet,
         LoopsRecordSample, LoopsRelease, LoopsSettle,
@@ -105,6 +103,8 @@ pub(super) mod served {
         loop_record_statechart_def, loop_statechart_def, LOOP_RECORD_KEY,
     };
     use medulla_types::contract::ServerErrorCode;
+    use medulla_types::gap_machine::GapEvent;
+    use medulla_types::gap_machine::GapState;
     use medulla_types::transition_refused::{TransitionRefusalReason, TransitionRefused};
 
     use crate::decide::claims::served::{invalid, refuse, request_key};

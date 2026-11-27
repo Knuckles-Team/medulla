@@ -29,10 +29,10 @@ use medulla_finance::lot_accounting::{
 };
 use medulla_finance_market::market::calendar::{days_from_civil, session_at};
 use medulla_finance_market::market::corporate_actions::resolve;
+use medulla_finance_quant::leverage::{daily_reset_path, DailyResetAssumptions};
 use medulla_result_types::compute_result::market::{
     CorporateAction, CorporateActionKind, ExchangeCalendar, TradingCalendar,
 };
-use medulla_finance_quant::leverage::{daily_reset_path, DailyResetAssumptions};
 use medulla_types::finance_accounting::{
     FinanceAccountProjection, ProjectedFigure, BASIS_POLICY_UNSUPPORTED, FIGURE_PROVENANCE_MISSING,
 };

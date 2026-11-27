@@ -199,7 +199,10 @@ async fn package_journey() {
     .unwrap();
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.question.kind, QuestionKind::ContextPackage);
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &record.outcome
+    else {
         panic!(
             "expected an Advisory outcome carrying the package: {:?}",
             record.outcome

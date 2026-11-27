@@ -354,7 +354,10 @@ fn program_front_columns(
                 serde_json::json!(row.cost_micro_usd)
             }),
         ),
-        ("front_next_parent".to_string(), serde_json::json!(next_parent)),
+        (
+            "front_next_parent".to_string(),
+            serde_json::json!(next_parent),
+        ),
         (
             "evaluation_set_digest".to_string(),
             optimization

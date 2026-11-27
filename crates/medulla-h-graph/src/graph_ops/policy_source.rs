@@ -122,7 +122,9 @@ pub fn bind(
 }
 
 /// The node properties of a record: its fields flat, under the label.
-fn record_properties(binding: &PolicySourceBinding) -> Result<serde_json::Map<String, serde_json::Value>, String> {
+fn record_properties(
+    binding: &PolicySourceBinding,
+) -> Result<serde_json::Map<String, serde_json::Value>, String> {
     let serde_json::Value::Object(mut fields) = serde_json::to_value(binding)
         .map_err(|error| format!("INVALID_ARGUMENT: policy source encoding failed: {error}"))?
     else {
@@ -175,10 +177,7 @@ fn write_method(
     })
 }
 
-fn answer(
-    req_id: u64,
-    binding: PolicySourceBinding,
-) -> Response {
+fn answer(req_id: u64, binding: PolicySourceBinding) -> Response {
     match ResultPayload::of::<medulla_protocol_types::result_contract::graph::PolicySourceBind>(
         binding,
     ) {
@@ -233,7 +232,10 @@ pub(super) async fn handle_policy_source_bind(
     };
     let node_id = policy_source_node_id(&request.policy_iri);
     let stored = stored_record(ctx.core, &node_id);
-    if let Some(stored) = stored.as_ref().filter(|stored| stored.same_review(&binding)) {
+    if let Some(stored) = stored
+        .as_ref()
+        .filter(|stored| stored.same_review(&binding))
+    {
         return answer(ctx.req_id, stored.clone());
     }
     let write = match write_method(&node_id, &binding, stored.as_ref()) {
@@ -272,7 +274,9 @@ fn apply_node_write(core: &GraphCore, write: &Method) -> Result<bool, String> {
             updates_msgpack,
         } => {
             let conditions = medulla_types::msgpack::decode_property_object(conditions_msgpack)
-                .map_err(|_| "INVALID_ARGUMENT: policy source condition is malformed".to_string())?;
+                .map_err(|_| {
+                    "INVALID_ARGUMENT: policy source condition is malformed".to_string()
+                })?;
             let updates = medulla_types::msgpack::decode_property_object(updates_msgpack)
                 .map_err(|_| "INVALID_ARGUMENT: policy source record is malformed".to_string())?;
             Ok(core.compare_and_set_fields(node_id, &conditions, &updates))

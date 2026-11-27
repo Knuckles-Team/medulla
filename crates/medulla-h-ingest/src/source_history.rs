@@ -13,8 +13,8 @@ use medulla_compute::source_history::{
     HistoryIndex, HistoryRow, SOURCE_HISTORY_INDEX_VERSION,
 };
 use medulla_source_types::source_changeset::{
-    Changeset, ReadBlameReceipt, ReadBlameRequest, ReadPathHistoryReceipt,
-    ReadPathHistoryRequest, SubmitRefusal,
+    Changeset, ReadBlameReceipt, ReadBlameRequest, ReadPathHistoryReceipt, ReadPathHistoryRequest,
+    SubmitRefusal,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -121,7 +121,9 @@ pub fn index_rows(
     Ok(merged.into_iter().collect())
 }
 
-fn refusal_or_store<T>(outcome: Result<T, HistoryError>) -> Result<Result<T, SubmitRefusal>, String> {
+fn refusal_or_store<T>(
+    outcome: Result<T, HistoryError>,
+) -> Result<Result<T, SubmitRefusal>, String> {
     match outcome {
         Ok(receipt) => Ok(Ok(receipt)),
         Err(HistoryError::Refused(refusal)) => Ok(Err(refusal)),
@@ -237,7 +239,10 @@ mod tests {
             .map(|n| (format!("c{n}"), mem.changesets[&format!("c{n}")].clone()))
             .collect();
         chain.push(("c3".to_string(), fresh));
-        let expected: BTreeMap<String, Vec<u8>> = rebuild(&chain, &|_: &str| Ok(b"x\n".to_vec())).unwrap().into_iter().collect();
+        let expected: BTreeMap<String, Vec<u8>> = rebuild(&chain, &|_: &str| Ok(b"x\n".to_vec()))
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(rows, expected);
     }
 }

@@ -187,13 +187,11 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
     // tenant graph's unfiltered snapshot (a policy the caller cannot see must
     // still apply to them), exactly as the UQL read does; a malformed record
     // refuses the read.
-    let policies = match medulla_exec::policy_mask::load_policy_set(
-        graph_name,
-        &core.analysis_snapshot(),
-    ) {
-        Ok(set) => set,
-        Err(error) => return Response::err(req_id, error.to_string()),
-    };
+    let policies =
+        match medulla_exec::policy_mask::load_policy_set(graph_name, &core.analysis_snapshot()) {
+            Ok(set) => set,
+            Err(error) => return Response::err(req_id, error.to_string()),
+        };
     let (query, _applied) = match medulla_exec::policy_mask::sql_read_rewrite(
         &query,
         &policies,
@@ -600,8 +598,9 @@ pub(crate) async fn handle_unified_query(
     let scope = ReadScope::resolve(state, ctx.read_authority, ctx.graph_name).await;
     // MEDULLA-FEDERATED-QUERY-R731: an interactive query runs within the node budget of the
     // knob `query.interactive_node_budget` and refuses `QUERY_BUDGET_EXCEEDED` past it.
-    let max_nodes = usize::try_from(medulla_server_api::knob_config::knobs().query_interactive_node_budget)
-        .unwrap_or(usize::MAX);
+    let max_nodes =
+        usize::try_from(medulla_server_api::knob_config::knobs().query_interactive_node_budget)
+            .unwrap_or(usize::MAX);
     if report_shortfall {
         let result = run_unified_off_lock_with(
             state,

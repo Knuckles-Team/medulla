@@ -23,7 +23,9 @@ pub(super) async fn serve_claims_and_publish(
     if served.response.refusal_text().is_none() {
         #[cfg(feature = "statechart")]
         if !served.events.is_empty() {
-            if let Err(error) = medulla_h_jobs::memory_event_publisher::publish_claim_events(state).await {
+            if let Err(error) =
+                medulla_h_jobs::memory_event_publisher::publish_claim_events(state).await
+            {
                 tracing::error!(code = "MEMORY_EVENT_PUBLISH_FAILED", %error, "memory event publish failed after the claim committed");
             }
         }

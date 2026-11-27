@@ -536,7 +536,11 @@ pub mod worker {
             &medulla_identity_types::tenancy::TenantId::new(tenant)
                 .map_err(|error| error.to_string())?,
         );
-        let session = format!("{}:{tenant}:{}", stream.consumer(), cursor_partition(&agent_id));
+        let session = format!(
+            "{}:{tenant}:{}",
+            stream.consumer(),
+            cursor_partition(&agent_id)
+        );
         let context = service_context(anonymous, &server, session.clone())?;
         // The service holds exactly this tenant graph, which must be resident
         // before its offset can be read.
@@ -553,7 +557,8 @@ pub mod worker {
             state, 0, &context, &graph, &session,
         )
         .await?;
-        let stored = stored_offset(state, &context, &graph, tenant, &agent_id, stream.source()).await?;
+        let stored =
+            stored_offset(state, &context, &graph, tenant, &agent_id, stream.source()).await?;
         let step = match (&event, &component) {
             (Some(event), _) => {
                 let previous_entry = match stored {
@@ -867,9 +872,11 @@ mod tests {
             plan_step(AgentLibraryMutationKind::Retire, &tombstone, None, None),
             ProjectionStep::Skip
         );
-        assert!(draft_for_step(CURSOR_SOURCE, "tenant-a", "agent-a", &ProjectionStep::Skip)
-            .unwrap()
-            .is_none());
+        assert!(
+            draft_for_step(CURSOR_SOURCE, "tenant-a", "agent-a", &ProjectionStep::Skip)
+                .unwrap()
+                .is_none()
+        );
     }
 
     fn card(revision: u64, lifecycle: AgentLibraryLifecycle) -> AgentComponentEntry {
@@ -954,5 +961,4 @@ mod tests {
             ProjectionStep::Skip
         );
     }
-
 }

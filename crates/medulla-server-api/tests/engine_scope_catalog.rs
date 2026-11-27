@@ -34,12 +34,21 @@ fn each_added_scope_is_a_user_class_engine_scope_a_person_may_hold() {
 #[test]
 fn a_caller_without_an_added_scope_is_refused_and_one_with_it_is_admitted() {
     for scope in ADDED {
-        let without =
-            VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &["kg:read"]);
-        assert!(!without.allows_action(scope), "{scope} must be refused without the grant");
+        let without = VerifiedRequestContext::verified_for_test_with_scopes(
+            "agent-1",
+            "tenant-a",
+            &["kg:read"],
+        );
+        assert!(
+            !without.allows_action(scope),
+            "{scope} must be refused without the grant"
+        );
         let with =
             VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &[scope]);
-        assert!(with.allows_action(scope), "{scope} must be admitted with the grant");
+        assert!(
+            with.allows_action(scope),
+            "{scope} must be admitted with the grant"
+        );
         // A grant of one added scope admits no other.
         for other in ADDED.iter().filter(|other| **other != scope) {
             assert!(!with.allows_action(other), "{scope} must not admit {other}");
@@ -53,7 +62,10 @@ fn the_reused_scopes_are_registered_and_the_names_arbora_asked_for_are_not() {
     // `agents:read` and `prompts:read` are the agent library read, `agent:library-read`.
     assert!(scope_entry("agent:library-read").is_some());
     for asked in ["agents:read", "prompts:read"] {
-        assert!(scope_entry(asked).is_none(), "{asked} must not become a second name");
+        assert!(
+            scope_entry(asked).is_none(),
+            "{asked} must not become a second name"
+        );
     }
 }
 
@@ -63,8 +75,11 @@ fn telemetry_write_is_user_class_so_a_person_may_hold_it() {
     let entry = scope_entry("telemetry:write").expect("registered");
     assert_eq!(entry.class, ScopeClass::User);
     assert!(entry.class.allows_kind(UserKind::Human));
-    let without =
-        VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &["telemetry:read"]);
+    let without = VerifiedRequestContext::verified_for_test_with_scopes(
+        "agent-1",
+        "tenant-a",
+        &["telemetry:read"],
+    );
     assert!(!without.allows_action("telemetry:write"));
 }
 
@@ -77,8 +92,11 @@ fn webhook_manage_is_a_domain_scope_of_the_door_that_a_person_or_a_service_may_h
     assert!(entry.class.allows_kind(UserKind::Human));
     assert!(entry.class.allows_kind(UserKind::Service));
     assert_eq!(ScopeRegistry.approver_group_of("webhook:manage"), None);
-    let without =
-        VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &["memory:read"]);
+    let without = VerifiedRequestContext::verified_for_test_with_scopes(
+        "agent-1",
+        "tenant-a",
+        &["memory:read"],
+    );
     assert!(!without.allows_action("webhook:manage"));
     let with = VerifiedRequestContext::verified_for_test_with_scopes(
         "agent-1",

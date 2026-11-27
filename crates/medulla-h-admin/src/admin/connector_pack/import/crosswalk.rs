@@ -68,9 +68,9 @@ pub(crate) fn parse_record(bytes: &[u8]) -> Result<VocabularyCrosswalk, Crosswal
 /// (MEDULLA-TYPED-PACKS-R097.2.4).
 pub(crate) fn parse_violation_code(error: &CrosswalkParseError) -> PackViolationCode {
     match error {
-        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch { .. }) => {
-            PackViolationCode::CrosswalkEvidenceInvalid
-        }
+        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch {
+            ..
+        }) => PackViolationCode::CrosswalkEvidenceInvalid,
         _ => PackViolationCode::MalformedBody,
     }
 }
@@ -78,9 +78,9 @@ pub(crate) fn parse_violation_code(error: &CrosswalkParseError) -> PackViolation
 /// The registered server code of a body that did not parse, as the activation path answers it.
 pub(crate) fn parse_server_code(error: &CrosswalkParseError) -> ServerErrorCode {
     match error {
-        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch { .. }) => {
-            ServerErrorCode::CrosswalkEvidenceInvalid
-        }
+        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch {
+            ..
+        }) => ServerErrorCode::CrosswalkEvidenceInvalid,
         _ => ServerErrorCode::MalformedBody,
     }
 }

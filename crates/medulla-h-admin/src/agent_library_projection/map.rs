@@ -88,7 +88,11 @@ pub fn project_entry(entry: &AgentLibraryEntry) -> Vec<Triple> {
 
 /// The IRI of one tenant's agent component.
 pub fn component_iri(tenant: &str, component_id: &str) -> String {
-    format!("{CORE}component/{}/{}", segment(tenant), segment(component_id))
+    format!(
+        "{CORE}component/{}/{}",
+        segment(tenant),
+        segment(component_id)
+    )
 }
 
 /// The triples of one published component revision (MEDULLA-ORCH-VOCAB-R003.6). Only a
@@ -272,7 +276,10 @@ mod tests {
             rendered,
             vec![
                 format!("<{subject}> <{RDF_TYPE}> <{CORE}A2AAgentCard>"),
-                format!("<{subject}> <{CORE}memberOfLibrary> <{}>", library_iri("tenant-a")),
+                format!(
+                    "<{subject}> <{CORE}memberOfLibrary> <{}>",
+                    library_iri("tenant-a")
+                ),
                 format!("<{subject}> <{CORE}providesCapability> <urn:vendor:summarize>"),
                 format!("<{subject}> <{CORE}providesCapability> <urn:vendor:translate>"),
                 format!("<{subject}> <{CORE}hasAgentKind> <{kind}>"),
@@ -306,7 +313,10 @@ mod tests {
             rendered,
             vec![
                 format!("<{subject}> <{RDF_TYPE}> <{CORE}BestPractice>"),
-                format!("<{subject}> <{CORE}memberOfLibrary> <{}>", library_iri("tenant-a")),
+                format!(
+                    "<{subject}> <{CORE}memberOfLibrary> <{}>",
+                    library_iri("tenant-a")
+                ),
                 format!("<{subject}> <{CORE}appliesToTaskClass> <{class}>"),
             ]
         );

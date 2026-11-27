@@ -114,15 +114,14 @@ pub(super) fn prepare(inputs: &DecisionInputs) -> Result<Prepared<'_>, AssembleE
     if let Some(reasons) = super::coding_agent::refusals(inputs)? {
         return Ok(Prepared::Done(abstained(&[], screened.eliminated, reasons)));
     }
-    let required =
-        match required_capabilities(
-            &inputs.request.requirements,
-            inputs.steps.as_slice(),
-            &inputs.ontology_digest,
-        ) {
-            Ok(required) => required,
-            Err(reasons) => return Ok(Prepared::Done(abstained(&[], screened.eliminated, reasons))),
-        };
+    let required = match required_capabilities(
+        &inputs.request.requirements,
+        inputs.steps.as_slice(),
+        &inputs.ontology_digest,
+    ) {
+        Ok(required) => required,
+        Err(reasons) => return Ok(Prepared::Done(abstained(&[], screened.eliminated, reasons))),
+    };
     if required.len() > MAX_ASSEMBLY_REQUIRED_CAPABILITIES {
         return Err(AssembleError::new(
             DecisionErrorCode::RecordTooLarge,
@@ -130,7 +129,11 @@ pub(super) fn prepare(inputs: &DecisionInputs) -> Result<Prepared<'_>, AssembleE
         ));
     }
     if let Some(reasons) = pinned_ineligible(inputs, &screened.eliminated) {
-        return Ok(Prepared::Done(abstained(&required, screened.eliminated, reasons)));
+        return Ok(Prepared::Done(abstained(
+            &required,
+            screened.eliminated,
+            reasons,
+        )));
     }
     if inputs.policy.unknown_cost == UnknownCostRule::ExcludeWhenStrict {
         if let Some((component_id, field)) =
@@ -140,7 +143,11 @@ pub(super) fn prepare(inputs: &DecisionInputs) -> Result<Prepared<'_>, AssembleE
                 component_id,
                 field: field.to_string(),
             };
-            return Ok(Prepared::Done(abstained(&required, screened.eliminated, vec![reason])));
+            return Ok(Prepared::Done(abstained(
+                &required,
+                screened.eliminated,
+                vec![reason],
+            )));
         }
     }
     let ladder = Ladder {

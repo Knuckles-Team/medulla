@@ -157,7 +157,9 @@ fn check_program_parent(
     let parent = load_program_revision_identity(core, parent_ref)
         .map_err(|error| format!("program promotion parent is not a stored revision: {error}"))?;
     if parent.program_ref != identity.program_ref || parent.revision != identity.base_revision {
-        return Err("program promotion parent is not the base revision of this program".to_string());
+        return Err(
+            "program promotion parent is not the base revision of this program".to_string(),
+        );
     }
     Ok(())
 }
@@ -544,10 +546,7 @@ pub(super) fn apply_promotion_projectable_method(
             if core.compare_and_set_fields(node_id, &conditions, &updates) {
                 Ok(())
             } else {
-                Err(format!(
-                    "promotion binding CAS failed for '{}'",
-                    node_id
-                ))
+                Err(format!("promotion binding CAS failed for '{}'", node_id))
             }
         }
         _ => Err("promotion write-set contains a non-projectable method".to_string()),

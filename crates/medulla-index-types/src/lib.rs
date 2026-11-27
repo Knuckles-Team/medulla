@@ -20,10 +20,10 @@ pub mod entity_resolution;
 pub mod embedding;
 // MEDULLA-FEDERATED-QUERY-R040.1.7 — the one served carrier of retrieval constraints, topic
 // fusion and the modality pair on `Method::UnifiedQuery`.
-pub mod retrieval_request;
 /// User-managed indexes and edge-native search on the wire (EH-351 / EH-352).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod managed_index;
+pub mod retrieval_request;
 // RF-019 — the sole transport-neutral semantic-index contract.  Runtime
 // storage, queues, handlers, and surface projections live in crates above this
 // bottom-of-DAG owner and must consume these exact operation and identity DTOs.

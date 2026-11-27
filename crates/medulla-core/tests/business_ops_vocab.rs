@@ -702,7 +702,8 @@ fn objects_of(data: &[Triple], subject: &str, predicate: &str) -> BTreeSet<Strin
 fn subjects_of(data: &[Triple], predicate: &str, object: &str) -> BTreeSet<String> {
     data.iter()
         .filter(|t| {
-            t.predicate.as_str() == format!("{KG}{predicate}") && object_iri(&t.object) == Some(object)
+            t.predicate.as_str() == format!("{KG}{predicate}")
+                && object_iri(&t.object) == Some(object)
         })
         .filter_map(|t| subject_str(&t.subject).map(str::to_string))
         .collect()
@@ -730,8 +731,12 @@ fn orders_holding(data: &[Triple], lot: &str) -> BTreeSet<String> {
         .filter(|t| t.predicate.as_str() == format!("{KG}lotOfBatch"))
         .filter_map(|t| subject_str(&t.subject).map(str::to_string))
         .filter_map(|candidate| {
-            let batch = objects_of(data, &candidate, "lotOfBatch").into_iter().next()?;
-            lots_that_fed(data, &batch).contains(lot).then_some(candidate)
+            let batch = objects_of(data, &candidate, "lotOfBatch")
+                .into_iter()
+                .next()?;
+            lots_that_fed(data, &batch)
+                .contains(lot)
+                .then_some(candidate)
         })
         .collect();
     let mut held = BTreeSet::from([lot.to_string()]);
@@ -771,19 +776,31 @@ fn lot_traceability_closure_answers_both_directions() {
     ] {
         let subject = format!("{KG}{property}");
         assert!(
-            has_iri(&triples, &subject, &format!("{RDFS}range"), &format!("{KG}{range}")),
+            has_iri(
+                &triples,
+                &subject,
+                &format!("{RDFS}range"),
+                &format!("{KG}{range}")
+            ),
             "{property} ranges over {range}"
         );
         if let Some(domain) = domain {
             assert!(
-                has_iri(&triples, &subject, &format!("{RDFS}domain"), &format!("{KG}{domain}")),
+                has_iri(
+                    &triples,
+                    &subject,
+                    &format!("{RDFS}domain"),
+                    &format!("{KG}{domain}")
+                ),
                 "{property} has domain {domain}"
             );
         }
         for annotation in ["label", "comment"] {
             assert!(
-                triples.iter().any(|t| subject_str(&t.subject) == Some(&subject)
-                    && t.predicate.as_str() == format!("{RDFS}{annotation}")),
+                triples
+                    .iter()
+                    .any(|t| subject_str(&t.subject) == Some(&subject)
+                        && t.predicate.as_str() == format!("{RDFS}{annotation}")),
                 "{property} carries rdfs:{annotation}"
             );
         }
@@ -802,7 +819,14 @@ fn lot_traceability_closure_answers_both_directions() {
     }
 
     // Names other packs own are not declared here.
-    for reused in ["Lot", "lotQuantity", "suppliedBy", "variantOf", "soldInLot", "Batch"] {
+    for reused in [
+        "Lot",
+        "lotQuantity",
+        "suppliedBy",
+        "variantOf",
+        "soldInLot",
+        "Batch",
+    ] {
         assert!(
             !triples
                 .iter()
@@ -816,21 +840,29 @@ fn lot_traceability_closure_answers_both_directions() {
                     ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity 12.5 ; \
                       :lotQuantityUnit \"kg\" ; :lotStatus \"released\" .\n";
     assert_eq!(conforms(complete), (true, Vec::new()));
-    let (ok, paths) = conforms(
-        "ex:l a :InventoryLot ; :lotQuantity 1.0 ; :lotQuantityUnit \"kg\" .\n",
+    let (ok, paths) =
+        conforms("ex:l a :InventoryLot ; :lotQuantity 1.0 ; :lotQuantityUnit \"kg\" .\n");
+    assert!(
+        !ok && paths.iter().any(|p| p.ends_with("lotOfBatch")),
+        "{paths:?}"
     );
-    assert!(!ok && paths.iter().any(|p| p.ends_with("lotOfBatch")), "{paths:?}");
     let (ok, paths) = conforms(
         "ex:b a :ProductionBatch .\n\
          ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity \"many\" ; :lotQuantityUnit \"kg\" .\n",
     );
-    assert!(!ok && paths.iter().any(|p| p.ends_with("lotQuantity")), "{paths:?}");
+    assert!(
+        !ok && paths.iter().any(|p| p.ends_with("lotQuantity")),
+        "{paths:?}"
+    );
     let (ok, paths) = conforms(
         "ex:b a :ProductionBatch .\n\
          ex:l a :InventoryLot ; :lotOfBatch ex:b ; :lotQuantity 1.0 ; :lotQuantityUnit \"kg\" ; \
            :lotStatus \"lost\" .\n",
     );
-    assert!(!ok && paths.iter().any(|p| p.ends_with("lotStatus")), "{paths:?}");
+    assert!(
+        !ok && paths.iter().any(|p| p.ends_with("lotStatus")),
+        "{paths:?}"
+    );
 
     // Input lot L1 -> batch B1 via madeFromLot; lot L2 is a lot of B1; order line OL1 draws
     // L2 and belongs to O1.

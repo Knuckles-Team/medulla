@@ -69,7 +69,10 @@ impl TraceContext {
 
     /// The trace id as 32 lower-case hex digits.
     pub fn trace_id_hex(&self) -> String {
-        self.trace_id.iter().map(|byte| format!("{byte:02x}")).collect()
+        self.trace_id
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
     }
 }
 
@@ -104,7 +107,12 @@ pub fn trace_id_of(trace_id: Option<&str>) -> String {
 /// The span of one request: `request{request_id, trace_id, op, graph}` with target
 /// `medulla::request`. It is the single place that sets these fields; the dispatch boundary
 /// instruments the whole dispatch with it and a spawned task inherits it.
-pub fn request_span(request_id: u64, trace_id: Option<&str>, op: &str, graph: &str) -> tracing::Span {
+pub fn request_span(
+    request_id: u64,
+    trace_id: Option<&str>,
+    op: &str,
+    graph: &str,
+) -> tracing::Span {
     tracing::info_span!(
         target: "medulla::request",
         "request",

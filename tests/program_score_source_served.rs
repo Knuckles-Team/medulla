@@ -429,9 +429,11 @@ fn score_refusals() {
                 .await;
                 put_node(&state, id + 1, "score-a", score).await;
                 link_run(&state, id + 2, "score-a", "run-a").await;
-                let refused =
-                    Box::pin(test_support::dispatch(&state, submit(id + 3, &score_request())))
-                        .await;
+                let refused = Box::pin(test_support::dispatch(
+                    &state,
+                    submit(id + 3, &score_request()),
+                ))
+                .await;
                 let text = refusal(&refused);
                 assert!(text.starts_with(code), "{code}: {text}");
                 assert!(

@@ -182,7 +182,14 @@ fn ids_in(column: &str, ids: impl Iterator<Item = i64>) -> RowPredicate {
 }
 
 /// Seed `table` with `rows` rows in chunks of 50,000.
-fn seed(store: &TableStore, table: &str, cols: &[&str], rows: i64, n: &mut u64, row: &dyn Fn(i64) -> Vec<Value>) {
+fn seed(
+    store: &TableStore,
+    table: &str,
+    cols: &[&str],
+    rows: i64,
+    n: &mut u64,
+    row: &dyn Fn(i64) -> Vec<Value>,
+) {
     let mut next = 1;
     while next <= rows {
         let upper = (next + 49_999).min(rows);
@@ -367,15 +374,30 @@ fn main() {
         &mut n,
     );
     let regions = ["eu", "us", "apac", "latam"];
-    seed(&store, "orders", &["id", "region", "qty"], rows, &mut n, &|id| {
-        vec![json!(id), json!(regions[(id % 4) as usize]), json!(id % 9)]
-    });
-    seed(&store, "customers", &["cid", "area"], 10_000, &mut n, &|id| {
-        vec![json!(id), json!(format!("area-{}", id % 50))]
-    });
-    seed(&store, "sales", &["sid", "customer_id", "amount"], rows, &mut n, &|sid| {
-        vec![json!(sid), json!(sid % 10_000 + 1), json!(sid % 9)]
-    });
+    seed(
+        &store,
+        "orders",
+        &["id", "region", "qty"],
+        rows,
+        &mut n,
+        &|id| vec![json!(id), json!(regions[(id % 4) as usize]), json!(id % 9)],
+    );
+    seed(
+        &store,
+        "customers",
+        &["cid", "area"],
+        10_000,
+        &mut n,
+        &|id| vec![json!(id), json!(format!("area-{}", id % 50))],
+    );
+    seed(
+        &store,
+        "sales",
+        &["sid", "customer_id", "amount"],
+        rows,
+        &mut n,
+        &|sid| vec![json!(sid), json!(sid % 10_000 + 1), json!(sid % 9)],
+    );
     for (schema, table, column) in [
         (customers_schema(), "customers", "cid"),
         (sales_schema(), "sales", "customer_id"),

@@ -45,7 +45,9 @@ pub trait ConflictDecider: Send + Sync {
 }
 
 /// The installed conflict decider, if any.
-pub async fn conflict_decider(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn ConflictDecider>> {
+pub async fn conflict_decider(
+    state: &Arc<RwLock<ServerState>>,
+) -> Option<Arc<dyn ConflictDecider>> {
     state.read().await.seams.conflict.get().cloned()
 }
 

@@ -5,8 +5,8 @@ use super::index_branches;
 use crate::parser::branch_scope::{blob_node_id, branch_node_id, content_digest, file_version_id};
 use crate::parser::enrichment_admission::{native_admissions, NativePolicyVerdict, UnitKey};
 use medulla_ingestion_types::ingestion_wire::{
-    IndexFileVerdict, IndexFileVersion, IndexRef, IndexRefPresence, IndexRepositoryScope, IndexResult,
-    IndexTombstone,
+    IndexFileVerdict, IndexFileVersion, IndexRef, IndexRefPresence, IndexRepositoryScope,
+    IndexResult, IndexTombstone,
 };
 use medulla_types::contract::BoundedVec;
 

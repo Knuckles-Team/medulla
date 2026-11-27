@@ -20,8 +20,8 @@
 //!
 //! [`AuditAppendReceipt::outcome_seq`]: crate::protocol::AuditAppendReceipt
 
-use super::audit_status::{AuditStatus, AUDIT_FIELDS_INVALID};
 use super::audit::{append_audit_entry_with_line, fresh_attempt_id, verify_audit, AuditTailCache};
+use super::audit_status::{AuditStatus, AUDIT_FIELDS_INVALID};
 use super::shard::{Shard, ShardWrite};
 use super::{AUDIT, AUDIT_REQUESTS};
 use medulla_kernel::audit::Hash;
@@ -66,7 +66,12 @@ pub fn read_audit_chain_scope(tenant: &str, graph_fname: &str) -> String {
 }
 
 /// The audit classes an operation may declare.
-const AUDIT_CLASSES: [&str; 4] = ["event", "identity_chain", "scope_exceeds_policy", OPERATOR_AUDIT_CLASS];
+const AUDIT_CLASSES: [&str; 4] = [
+    "event",
+    "identity_chain",
+    "scope_exceeds_policy",
+    OPERATOR_AUDIT_CLASS,
+];
 /// The operator-only audit class (ARBORA-OPS-R052.5): a record such as a withheld count that the
 /// tenant's own audit reads never return. Only `AuditList`, under `audit:operator`, lists it.
 pub const OPERATOR_AUDIT_CLASS: &str = "operator";

@@ -10,9 +10,7 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_catalog_types::stewardship::{
-    StewardRole, StewardshipAssignment, StewardshipScope,
-};
+use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::{resolve, TargetScopes};
 
 const ASSIGNMENTS: usize = 100_000;

@@ -41,12 +41,15 @@ fn publish(store: &AgentLibraryStore, tenant: &str, id: &str, class: &str, nonce
     }
     .to_attributes();
     store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(store, tenant, id, nonce, 0, "agent-component:publish"),
-            component,
-            evaluation_receipt_digest: None,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(store, tenant, id, nonce, 0, "agent-component:publish"),
+                component,
+                evaluation_receipt_digest: None,
+                body: None,
+            },
+            None,
+        )
         .unwrap();
 }
 

@@ -87,6 +87,5 @@ pub use result::{ReproducibilityManifest, ResultColumn, ResultUsage, TypedJobRes
 pub use store::{
     analytics_job_scope_identity, ClaimFamily, ClaimPacing, JobError, JobStore, RedriveError,
     RedriveOutcome, RoutingCandidates, RoutingEvidence, SubmitSpec, TaskAckError, TaskAckOutcome,
-    TaskSubmit, TaskSubmitOutcome, TenantJobQuota, WorkerClaim,
-    TASK_FAMILY_PREFIX,
+    TaskSubmit, TaskSubmitOutcome, TenantJobQuota, WorkerClaim, TASK_FAMILY_PREFIX,
 };

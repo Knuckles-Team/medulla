@@ -162,7 +162,10 @@ pub fn validate_rendered_package(
     let rendered_digest =
         Digest256::parse(&rendered.digest).map_err(|_| PublicationRefusal::DigestMismatch)?;
     let mut seen = std::collections::BTreeSet::new();
-    if !history.iter().all(|entry| seen.insert(entry.run_id.as_str())) {
+    if !history
+        .iter()
+        .all(|entry| seen.insert(entry.run_id.as_str()))
+    {
         return Err(PublicationRefusal::RunSetInvalid);
     }
     let total = history.len() as u64;
@@ -302,7 +305,10 @@ mod tests {
     #[test]
     fn refusal_codes_are_unique_and_registered() {
         let refusals = [
-            (PublicationRefusal::DigestMismatch, "PACKAGE_DIGEST_MISMATCH"),
+            (
+                PublicationRefusal::DigestMismatch,
+                "PACKAGE_DIGEST_MISMATCH",
+            ),
             (PublicationRefusal::RunSetInvalid, "PACKAGE_RUN_SET_INVALID"),
             (
                 PublicationRefusal::RunHistoryMissing,
@@ -341,8 +347,14 @@ mod tests {
             REFUSALS.iter().map(|code| code.as_str()).collect();
         assert_eq!(listed, declared);
         // The codes the spec says do not exist stay unregistered.
-        assert_eq!(crate::decision::codes::resolve("PACKAGE_RUN_SET_INCOMPLETE"), None);
-        assert_eq!(crate::decision::codes::resolve("PACKAGE_POLICY_MISMATCH"), None);
+        assert_eq!(
+            crate::decision::codes::resolve("PACKAGE_RUN_SET_INCOMPLETE"),
+            None
+        );
+        assert_eq!(
+            crate::decision::codes::resolve("PACKAGE_POLICY_MISMATCH"),
+            None
+        );
     }
 
     fn rendered(content: &[u8]) -> RenderedSkillPackage {
@@ -360,14 +372,23 @@ mod tests {
     fn validation_gates_publication() {
         let package = rendered(b"package");
         // A passing history.
-        let good = vec![entry("run-1", b"package", true), entry("run-2", b"package", true)];
+        let good = vec![
+            entry("run-1", b"package", true),
+            entry("run-2", b"package", true),
+        ];
         let validation = validate_rendered_package(&package, &good).unwrap();
         assert!(validation.validation_passed);
         assert_eq!(validation.rendered_digest, Digest256::sha256(b"package"));
-        assert_eq!(validation.run_history_digest, run_history_digest(&good).unwrap());
+        assert_eq!(
+            validation.run_history_digest,
+            run_history_digest(&good).unwrap()
+        );
 
         // A pass share below the knob: one of two is 500000 < 1000000.
-        let half = vec![entry("run-1", b"package", true), entry("run-2", b"package", false)];
+        let half = vec![
+            entry("run-1", b"package", true),
+            entry("run-2", b"package", false),
+        ];
         assert_eq!(
             validate_rendered_package(&package, &half),
             Err(PublicationRefusal::ValidationFailed {
@@ -387,7 +408,10 @@ mod tests {
             Err(PublicationRefusal::RunHistoryMissing)
         );
         // A duplicate run.
-        let duplicate = vec![entry("run-1", b"package", true), entry("run-1", b"package", true)];
+        let duplicate = vec![
+            entry("run-1", b"package", true),
+            entry("run-1", b"package", true),
+        ];
         assert_eq!(
             validate_rendered_package(&package, &duplicate),
             Err(PublicationRefusal::RunSetInvalid)
@@ -401,7 +425,10 @@ mod tests {
         );
         // The first failing step wins: a duplicate run id beats a short history, a mismatch
         // and a low pass share; an unparseable digest beats a duplicate.
-        let everything = vec![entry("run-1", b"other", false), entry("run-1", b"other", false)];
+        let everything = vec![
+            entry("run-1", b"other", false),
+            entry("run-1", b"other", false),
+        ];
         assert_eq!(
             validate_rendered_package(&package, &everything),
             Err(PublicationRefusal::RunSetInvalid)

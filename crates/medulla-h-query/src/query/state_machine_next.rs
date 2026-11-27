@@ -65,9 +65,14 @@ mod tests {
     // spec: MEDULLA-ORCH-VOCAB-R811.7
     #[test]
     fn unsafe_machine_or_state_text_is_refused() {
-        for machine in ["", "a b", "a<b", "a>b", "a\"b", "a{b", "a}b", "a|b", "a\\b", "a^b", "a\tb"] {
+        for machine in [
+            "", "a b", "a<b", "a>b", "a\"b", "a{b", "a}b", "a|b", "a\\b", "a^b", "a\tb",
+        ] {
             let error = next_events_sparql(machine, "ready").unwrap_err();
-            assert!(error.starts_with("INVALID_ARGUMENT"), "{machine:?}: {error}");
+            assert!(
+                error.starts_with("INVALID_ARGUMENT"),
+                "{machine:?}: {error}"
+            );
         }
         for state in ["", "re\"ady", "re\\ady"] {
             let error = next_events_sparql(MACHINE, state).unwrap_err();

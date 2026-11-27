@@ -60,8 +60,8 @@ mod task_queue;
 use index_keys::{capability_index_key, tenant_index_key};
 use serde::de::DeserializeOwned;
 pub use task_queue::{
-    ClaimFamily, RedriveError, RedriveOutcome, TaskAckError, TaskAckOutcome, TaskQueueLoad, TaskSubmit, TaskSubmitOutcome,
-    TASK_FAMILY_PREFIX,
+    ClaimFamily, RedriveError, RedriveOutcome, TaskAckError, TaskAckOutcome, TaskQueueLoad,
+    TaskSubmit, TaskSubmitOutcome, TASK_FAMILY_PREFIX,
 };
 
 use crate::intent::JobIntent;
@@ -70,8 +70,7 @@ use crate::model::{AnalyticsJob, Checkpoint, JobId, JobPolicy, JobState, WorkerL
 use crate::result::TypedJobResult;
 use medulla_types::transition_refused::{MachineState, TransitionRefused};
 
-const JOBS: TableDefinition<'static, &str, &[u8]> =
-    TableDefinition::new("analytics_job_records");
+const JOBS: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("analytics_job_records");
 const COMMITTED_RESULTS: TableDefinition<'static, &str, &str> =
     TableDefinition::new("analytics_job_committed_results");
 const JOB_INTENTS: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("job_intents");
@@ -1593,7 +1592,9 @@ impl JobStore {
             let carried = job.state.checkpoint().cloned();
             match &job.state {
                 JobState::Running { .. } | JobState::Publishing { .. } => {
-                    let reclaimed = JobState::Submitted { checkpoint: carried };
+                    let reclaimed = JobState::Submitted {
+                        checkpoint: carried,
+                    };
                     job.transition(JobEvent::Reclaim, &facts, committed, reclaimed)?;
                 }
                 // The batch is no worker: `Claim` is refused from every other state.
@@ -2194,7 +2195,10 @@ fn ready_indexed(job: &AnalyticsJob) -> bool {
 
 fn deadline_indexed(job: &AnalyticsJob) -> bool {
     job.policy.deadline_unix_ms.is_some()
-        && matches!(&job.state, JobState::Submitted { .. } | JobState::Backoff { .. })
+        && matches!(
+            &job.state,
+            JobState::Submitted { .. } | JobState::Backoff { .. }
+        )
 }
 
 /// A cancel-requested job is in the cancellation index until its holder confirms the stop or
@@ -3299,7 +3303,11 @@ mod tests {
     /// `JobStore::mutation_version`) -- NOT necessarily the version of
     /// whichever store `job` happened to come from, since a batch built once
     /// (e.g. by a Raft leader) is applied identically to every replica.
-    pub(super) fn request_batch(job: &AnalyticsJob, action: &str, expected_version: u64) -> MutationBatch {
+    pub(super) fn request_batch(
+        job: &AnalyticsJob,
+        action: &str,
+        expected_version: u64,
+    ) -> MutationBatch {
         static NEXT_REQUEST: AtomicU64 = AtomicU64::new(1);
         let sequence = NEXT_REQUEST.fetch_add(1, Ordering::Relaxed);
         let identity = analytics_job_scope_identity().unwrap();
@@ -4110,7 +4118,10 @@ mod tests {
                 TenantJobQuota::default(),
             )
             .unwrap();
-        assert!(none.is_none(), "an analytics worker never leases downtime work");
+        assert!(
+            none.is_none(),
+            "an analytics worker never leases downtime work"
+        );
         let only = vec!["downtime".to_string()];
         let claim = store
             .claim_next(
@@ -4145,7 +4156,10 @@ mod tests {
                 TenantJobQuota::default(),
             )
             .unwrap();
-        assert!(none.is_none(), "a host without the capability claims nothing");
+        assert!(
+            none.is_none(),
+            "a host without the capability claims nothing"
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R004.5
@@ -4541,7 +4555,6 @@ mod tests {
     }
 }
 
-
 /// Appends the routing decision of a claim to the job: the first required capability of the job
 /// that the evidence names. A job with no such capability records none; the oldest decision is
 /// dropped past [`MAX_ROUTING_HISTORY`].
@@ -4555,14 +4568,15 @@ fn record_routing(job: &mut AnalyticsJob, evidence: &RoutingEvidence) {
     else {
         return;
     };
-    job.routing
-        .push(medulla_decision_types::decision::statistical::placement::RoutingDecision {
+    job.routing.push(
+        medulla_decision_types::decision::statistical::placement::RoutingDecision {
             job_id: job.job_id.clone(),
             required_capability: found.capability.clone(),
             candidates: found.candidates.clone(),
             chosen: evidence.chosen.clone(),
             topology_generation: found.topology_generation,
-        });
+        },
+    );
     if job.routing.len() > MAX_ROUTING_HISTORY {
         let excess = job.routing.len() - MAX_ROUTING_HISTORY;
         job.routing.drain(..excess);

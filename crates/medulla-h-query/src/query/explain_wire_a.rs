@@ -334,10 +334,11 @@ pub(crate) fn explain_provenance_result(
         .map(|row| {
             // Reuse the SAME `Op::EvidenceFor` resolution the plan-Op surface runs, as
             // its own tiny one-op plan — no private medulla-plan access needed.
-            let evidence_plan =
-                medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::EvidenceFor {
+            let evidence_plan = medulla_query_types::wire::Plan::new(vec![
+                medulla_query_types::wire::Op::EvidenceFor {
                     claim_id: row.id.clone(),
-                }]);
+                },
+            ]);
             let source_refs = medulla_exec::exec::execute(&evidence_plan, _ctx)
                 .map(|r| r.ids())
                 .unwrap_or_default();

@@ -328,12 +328,10 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             // loaded `kvcache.min_worth` and `kvcache.answer_max_bytes`, before any graph
             // builds its cache.
             #[cfg(feature = "result-cache")]
-            medulla_query_cache::result_cache::install_tier_policy(
-                medulla_kvcache::TierPolicy {
-                    max_bytes: knobs.kvcache_answer_max_bytes,
-                    min_worth: knobs.kvcache_min_worth,
-                },
-            );
+            medulla_query_cache::result_cache::install_tier_policy(medulla_kvcache::TierPolicy {
+                max_bytes: knobs.kvcache_answer_max_bytes,
+                min_worth: knobs.kvcache_min_worth,
+            });
             medulla_server_api::knob_config::install(knobs)
         }
         Err(refusal) => {
@@ -1582,7 +1580,9 @@ async fn recover_durable_catalog(
         match p.load_catalog(state).await {
             Ok(n) => {
                 step.ok();
-                info!("durable catalog recovered: {n} graph(s); material pages load on first access")
+                info!(
+                    "durable catalog recovered: {n} graph(s); material pages load on first access"
+                )
             }
             Err(error) => {
                 step.failed("DURABLE_RECOVERY_FAILED");

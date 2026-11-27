@@ -34,12 +34,10 @@ pub fn run(_root: &Path, args: &[String]) -> Result<(), String> {
     let (wheel, binary, library) = match args {
         [wheel, binary] => (wheel, binary, None),
         [wheel, binary, library] => (wheel, binary, Some(Path::new(library))),
-        _ => {
-            return Err(
-                "usage: cargo xtask inject-server-binary <medulla_wheel> <server_binary> [<library>]"
-                    .into(),
-            )
-        }
+        _ => return Err(
+            "usage: cargo xtask inject-server-binary <medulla_wheel> <server_binary> [<library>]"
+                .into(),
+        ),
     };
     let target = inject(Path::new(wheel), Path::new(binary), library)?;
     println!("OK: injected {target} (mode {SERVER_MODE:04o}) into the release wheel");
@@ -298,7 +296,11 @@ mod tests {
     // spec: MEDULLA-CONTRACT-R066.3
     #[test]
     fn inject_folds_the_library_as_a_non_executable_member_beside_the_server() {
-        let tree = Tree::new(&[("medulla-server", "x"), ("libduckdb.so", "y"), ("bad.so", "z")]);
+        let tree = Tree::new(&[
+            ("medulla-server", "x"),
+            ("libduckdb.so", "y"),
+            ("bad.so", "z"),
+        ]);
         let path = tree.path().join("medulla-1.0-cp39-abi3-linux_x86_64.whl");
         wheel(
             &path,
@@ -322,8 +324,13 @@ mod tests {
             .filter(|n| n.contains("/_bin/"))
             .collect();
         bin.sort();
-        assert_eq!(bin, ["medulla/_bin/libduckdb.so", "medulla/_bin/medulla-server"]);
-        let member = archive.by_name("medulla/_bin/libduckdb.so").expect("member");
+        assert_eq!(
+            bin,
+            ["medulla/_bin/libduckdb.so", "medulla/_bin/medulla-server"]
+        );
+        let member = archive
+            .by_name("medulla/_bin/libduckdb.so")
+            .expect("member");
         assert_eq!(member.unix_mode().expect("mode") & 0o777, 0o644);
         drop(member);
         let mut text = String::new();

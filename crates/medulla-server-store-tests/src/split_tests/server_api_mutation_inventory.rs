@@ -146,5 +146,8 @@ fn bundle_import_is_classified_as_a_write() {
     let reading = medulla_capabilities::policy(&export);
     assert!(!reading.mutates);
     assert_eq!(reading.authz_action, "graph:read");
-    assert_eq!(medulla_capabilities::policy(&import).authz_action, "graph:write");
+    assert_eq!(
+        medulla_capabilities::policy(&import).authz_action,
+        "graph:write"
+    );
 }

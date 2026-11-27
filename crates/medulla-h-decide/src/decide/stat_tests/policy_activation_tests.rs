@@ -147,7 +147,10 @@ async fn activation_refuses_contradiction_and_stale_review() {
         subject_gate(&evidence.subject, &evidence, &policy),
         PromotionGate::Promote
     );
-    assert_eq!(record_review(&ctx, &graph, approved.clone()).unwrap(), evidence);
+    assert_eq!(
+        record_review(&ctx, &graph, approved.clone()).unwrap(),
+        evidence
+    );
     let mut other = approved.clone();
     other.reviewer = "carol".to_string();
     let mismatch = record_review(&ctx, &graph, other).unwrap_err();
@@ -165,7 +168,11 @@ async fn activation_refuses_contradiction_and_stale_review() {
 
     // A source indexed again since the review no longer yields the reviewed set; an inactive
     // clause cannot be activated; neither is recorded.
-    let (new_set, reindexed) = graph_of(&h, &[("no-secrets", "proposed"), ("no-force-push", "proposed")]).await;
+    let (new_set, reindexed) = graph_of(
+        &h,
+        &[("no-secrets", "proposed"), ("no-force-push", "proposed")],
+    )
+    .await;
     assert_ne!(new_set, set);
     let stale = record_review(
         &ctx,
@@ -179,13 +186,28 @@ async fn activation_refuses_contradiction_and_stale_review() {
     let unsupported = record_review(
         &ctx,
         &with_inactive,
-        review(&inactive_set, &generation, None, "inactive", ("alice", "bob")),
+        review(
+            &inactive_set,
+            &generation,
+            None,
+            "inactive",
+            ("alice", "bob"),
+        ),
     )
     .unwrap_err();
-    assert!(unsupported.starts_with("POLICY_CLAUSE_UNSUPPORTED"), "{unsupported}");
-    assert!(load_review(&h.store, TENANT, &review(&set, &generation, None, "stale", ("a", "b")).binding.review_receipt_digest)
-        .unwrap()
-        .is_none());
+    assert!(
+        unsupported.starts_with("POLICY_CLAUSE_UNSUPPORTED"),
+        "{unsupported}"
+    );
+    assert!(load_review(
+        &h.store,
+        TENANT,
+        &review(&set, &generation, None, "stale", ("a", "b"))
+            .binding
+            .review_receipt_digest
+    )
+    .unwrap()
+    .is_none());
 
     // The review holds against the store as it was reviewed.
     let stored = load_review(&h.store, TENANT, &approved.binding.review_receipt_digest)
@@ -193,7 +215,8 @@ async fn activation_refuses_contradiction_and_stale_review() {
         .unwrap();
     let target = format!("policyset:{set}");
     check_activation(&h.store, TENANT, &stored, Some(&target)).unwrap();
-    let other_target = check_activation(&h.store, TENANT, &stored, Some("policyset:other")).unwrap_err();
+    let other_target =
+        check_activation(&h.store, TENANT, &stored, Some("policyset:other")).unwrap_err();
     assert_eq!(other_target.code, "POLICY_REVIEW_MISMATCH");
 
     // An invariant published after the review moves the generation: the review is stale.
@@ -209,18 +232,33 @@ async fn activation_refuses_contradiction_and_stale_review() {
     // A review of the new generation still cannot activate a rule that invariant forbids; the
     // refusal names the invariant, the rule and the clause.
     let generation = invariant_generation(&h.store, TENANT).unwrap();
-    record_review(&ctx, &graph, review(&set, &generation, None, "two", ("alice", "bob"))).unwrap();
+    record_review(
+        &ctx,
+        &graph,
+        review(&set, &generation, None, "two", ("alice", "bob")),
+    )
+    .unwrap();
     let again = load_review(
         &h.store,
         TENANT,
-        &review(&set, &generation, None, "two", ("alice", "bob")).binding.review_receipt_digest,
+        &review(&set, &generation, None, "two", ("alice", "bob"))
+            .binding
+            .review_receipt_digest,
     )
     .unwrap()
     .unwrap();
     let contradiction = check_activation(&h.store, TENANT, &again, Some(&target)).unwrap_err();
     assert_eq!(contradiction.code, "POLICY_CONTRADICTS_INVARIANT");
-    for named in ["inv:no-secrets", "policy-no-secrets", format!("{PATH}:3-3").as_str()] {
-        assert!(contradiction.detail.contains(named), "{}", contradiction.detail);
+    for named in [
+        "inv:no-secrets",
+        "policy-no-secrets",
+        format!("{PATH}:3-3").as_str(),
+    ] {
+        assert!(
+            contradiction.detail.contains(named),
+            "{}",
+            contradiction.detail
+        );
     }
     // Each refusal kept the prior set: nothing is active.
     assert!(active_policy(&h.store, TENANT, REPO).unwrap().is_none());
@@ -270,9 +308,13 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
     .as_slice()[0]
         .clone();
     commit(&h, &decided).await;
-    let state = pointer_state(&h, champion.clone(), activate(&first_target, &decided.record_id))
-        .await
-        .unwrap();
+    let state = pointer_state(
+        &h,
+        champion.clone(),
+        activate(&first_target, &decided.record_id),
+    )
+    .await
+    .unwrap();
     assert_eq!(state.target(), Some(first_target.as_str()));
     let active = active_policy(&h.store, TENANT, REPO).unwrap().unwrap();
     assert_eq!(active.revision, first_target);
@@ -303,8 +345,16 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
             format!("policy.candidate_set_digest={first_set}"),
         ]
     );
-    assert_eq!(facts_of(policy_premises(&ctx, &request).unwrap()), first_facts);
-    let sealed = decide(&h, request.clone()).await.unwrap().records.as_slice()[0].clone();
+    assert_eq!(
+        facts_of(policy_premises(&ctx, &request).unwrap()),
+        first_facts
+    );
+    let sealed = decide(&h, request.clone())
+        .await
+        .unwrap()
+        .records
+        .as_slice()[0]
+        .clone();
     let sealed_facts: Vec<&str> = sealed.premises.iter().map(|p| p.fact.as_str()).collect();
     for fact in &first_facts {
         assert!(sealed_facts.contains(&fact.as_str()), "{sealed_facts:?}");
@@ -330,8 +380,11 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
     );
 
     // A second review made against no active policy cannot take the seat: the revision raced.
-    let (second_set, second_graph) =
-        graph_of(&h, &[("no-secrets", "proposed"), ("no-force-push", "proposed")]).await;
+    let (second_set, second_graph) = graph_of(
+        &h,
+        &[("no-secrets", "proposed"), ("no-force-push", "proposed")],
+    )
+    .await;
     let raced = review(&second_set, &generation, None, "raced", ("alice", "bob"));
     record_review(&ctx, &second_graph, raced.clone()).unwrap();
     let second_target = raced.binding.target();
@@ -350,9 +403,13 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
     .as_slice()[0]
         .clone();
     commit(&h, &decided).await;
-    let conflict = pointer_state(&h, champion.clone(), activate(&second_target, &decided.record_id))
-        .await
-        .unwrap_err();
+    let conflict = pointer_state(
+        &h,
+        champion.clone(),
+        activate(&second_target, &decided.record_id),
+    )
+    .await
+    .unwrap_err();
     assert!(conflict.starts_with("PROMOTION_CAS_CONFLICT"), "{conflict}");
 
     // An invariant that forbids a reviewed rule refuses the move; the first set stays active.
@@ -389,7 +446,10 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
     let refused = pointer_state(&h, champion, activate(&second_target, &decided.record_id))
         .await
         .unwrap_err();
-    assert!(refused.starts_with("POLICY_CONTRADICTS_INVARIANT"), "{refused}");
+    assert!(
+        refused.starts_with("POLICY_CONTRADICTS_INVARIANT"),
+        "{refused}"
+    );
     assert!(refused.contains("inv:no-force-push"), "{refused}");
     let (_, kept) = read_pointer(&h.store, TENANT, &scope_subject().pointer_key()).unwrap();
     assert_eq!(kept.target(), Some(first_target.as_str()));

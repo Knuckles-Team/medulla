@@ -191,10 +191,26 @@ fn core_process_terms_resolve() {
     // Seven properties, each with its domain and range ("no range" is an empty set).
     let none = BTreeSet::new;
     for (property, domain, range) in [
-        ("flowSource", core(&["ProcessSequenceFlow"]), core(&["TaskStep"])),
-        ("flowTarget", core(&["ProcessSequenceFlow"]), core(&["TaskStep"])),
-        ("flowCondition", core(&["ProcessSequenceFlow"]), xsd("string")),
-        ("isDefaultFlow", core(&["ProcessSequenceFlow"]), xsd("boolean")),
+        (
+            "flowSource",
+            core(&["ProcessSequenceFlow"]),
+            core(&["TaskStep"]),
+        ),
+        (
+            "flowTarget",
+            core(&["ProcessSequenceFlow"]),
+            core(&["TaskStep"]),
+        ),
+        (
+            "flowCondition",
+            core(&["ProcessSequenceFlow"]),
+            xsd("string"),
+        ),
+        (
+            "isDefaultFlow",
+            core(&["ProcessSequenceFlow"]),
+            xsd("boolean"),
+        ),
         ("inLane", core(&["TaskStep"]), core(&["ProcessLane"])),
         ("hasProcessElement", core(&["ProcessModel"]), none()),
         ("eventPosition", core(&["ProcessEventNode"]), xsd("string")),
@@ -314,8 +330,16 @@ fn step_binding_properties_resolve() {
         ("evaluatesDecision", step.clone(), core(&["DecisionLogic"])),
         ("approverRole", step.clone(), xsd("string")),
         ("toolArguments", step.clone(), xsd("string")),
-        ("orchestrationUsesTool", core(&["Agent", "ProcessStep"]), core(&["Tool"])),
-        ("hasPrompt", core(&["Agent", "ProcessStep"]), core(&["Prompt"])),
+        (
+            "orchestrationUsesTool",
+            core(&["Agent", "ProcessStep"]),
+            core(&["Tool"]),
+        ),
+        (
+            "hasPrompt",
+            core(&["Agent", "ProcessStep"]),
+            core(&["Prompt"]),
+        ),
     ] {
         assert_eq!(
             domain_and_range(&triples, &format!("{KG}{property}")),
@@ -324,12 +348,12 @@ fn step_binding_properties_resolve() {
         );
     }
     // The shared :usesTool carries no domain, and the lane names the agent kind.
-    assert!(domain_and_range(&triples, &format!("{KG}usesTool")).0.is_empty());
-    assert!(
-        domain_and_range(&triples, &format!("{KG}hasAgentKind"))
-            .0
-            .contains(&format!("{KG}ProcessLane"))
-    );
+    assert!(domain_and_range(&triples, &format!("{KG}usesTool"))
+        .0
+        .is_empty());
+    assert!(domain_and_range(&triples, &format!("{KG}hasAgentKind"))
+        .0
+        .contains(&format!("{KG}ProcessLane")));
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R014.9
@@ -339,7 +363,13 @@ fn dag_node_kinds_are_closed_and_roll_up() {
         "start", "end", "human", "agent", "decision", "branch", "fork", "join", "wait", "call",
         "boundary", "graph", "state",
     ];
-    let core_docs = [FOUNDATION, ENTERPRISE, PROCESS_INTELLIGENCE, ORCHESTRATION, BPMN];
+    let core_docs = [
+        FOUNDATION,
+        ENTERPRISE,
+        PROCESS_INTELLIGENCE,
+        ORCHESTRATION,
+        BPMN,
+    ];
     for (pack, system) in [(CAMUNDA_PACK, "camunda"), (ARIS_PACK, "aris")] {
         let mut docs = core_docs.to_vec();
         docs.push(pack);
@@ -466,7 +496,13 @@ fn bpmn_shapes_refuse_planted_faults() {
 // spec: MEDULLA-ORCH-VOCAB-R014.10
 #[test]
 fn aris_pack_extends_core_epc_terms() {
-    let core_docs = [FOUNDATION, ENTERPRISE, PROCESS_INTELLIGENCE, ORCHESTRATION, BPMN];
+    let core_docs = [
+        FOUNDATION,
+        ENTERPRISE,
+        PROCESS_INTELLIGENCE,
+        ORCHESTRATION,
+        BPMN,
+    ];
     let core_triples = parse_all(&core_docs);
     let mut docs = core_docs.to_vec();
     docs.push(ARIS_PACK);
@@ -505,7 +541,12 @@ fn aris_pack_extends_core_epc_terms() {
     }
 
     // Core EPC terms gain no parent from the pack, and the pack declares none of them.
-    for term in ["EpcFunction", "EpcRuleOperator", "ProcessEventType", "flowsTo"] {
+    for term in [
+        "EpcFunction",
+        "EpcRuleOperator",
+        "ProcessEventType",
+        "flowsTo",
+    ] {
         let iri = class(term);
         assert_eq!(
             parents(&triples, &iri),
@@ -516,7 +557,9 @@ fn aris_pack_extends_core_epc_terms() {
     for term in ["EpcFunction", "EpcRuleOperator", "flowsTo"] {
         let iri = class(term);
         assert!(
-            !parse_all(&[ARIS_PACK]).iter().any(|t| named(t) == Some(iri.as_str())),
+            !parse_all(&[ARIS_PACK])
+                .iter()
+                .any(|t| named(t) == Some(iri.as_str())),
             "the pack re-declares core {term}"
         );
     }

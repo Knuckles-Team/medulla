@@ -100,7 +100,10 @@ enum Scalar {
     Bool(bool),
     Text(String),
     /// `unscaled / 10^scale`; an integer has scale 0.
-    Num { unscaled: i128, scale: u32 },
+    Num {
+        unscaled: i128,
+        scale: u32,
+    },
 }
 
 fn overflow() -> String {
@@ -113,9 +116,7 @@ fn pow10(scale: u32) -> Result<i128, String> {
 
 /// `value` rescaled to `scale` (which must not be smaller than its own).
 fn rescale(unscaled: i128, from: u32, to: u32) -> Result<i128, String> {
-    unscaled
-        .checked_mul(pow10(to - from)?)
-        .ok_or_else(overflow)
+    unscaled.checked_mul(pow10(to - from)?).ok_or_else(overflow)
 }
 
 fn parse_decimal(text: &str) -> Result<Scalar, String> {
@@ -126,7 +127,10 @@ fn parse_decimal(text: &str) -> Result<Scalar, String> {
     };
     let (whole, fraction) = digits.split_once('.').unwrap_or((digits, ""));
     if whole.is_empty() && fraction.is_empty()
-        || !whole.bytes().chain(fraction.bytes()).all(|b| b.is_ascii_digit())
+        || !whole
+            .bytes()
+            .chain(fraction.bytes())
+            .all(|b| b.is_ascii_digit())
     {
         return Err(bad());
     }
@@ -161,8 +165,14 @@ fn from_value(value: &Value) -> Result<Scalar, String> {
         Value::Bool(flag) => Ok(Scalar::Bool(*flag)),
         Value::String(text) => Ok(Scalar::Text(text.clone())),
         Value::Number(number) => match (number.as_i64(), number.as_u64()) {
-            (Some(int), _) => Ok(Scalar::Num { unscaled: i128::from(int), scale: 0 }),
-            (None, Some(int)) => Ok(Scalar::Num { unscaled: i128::from(int), scale: 0 }),
+            (Some(int), _) => Ok(Scalar::Num {
+                unscaled: i128::from(int),
+                scale: 0,
+            }),
+            (None, Some(int)) => Ok(Scalar::Num {
+                unscaled: i128::from(int),
+                scale: 0,
+            }),
             _ => Err("ROW_EXPR_FLOAT: a float is not an exact number".to_string()),
         },
         other => Err(format!("ROW_EXPR_UNSUPPORTED_VALUE: {other}")),
@@ -291,8 +301,8 @@ impl RowExpr {
             return Ok(Scalar::Null);
         };
         let scale = a.1.max(b.1);
-        let value = operation(rescale(a.0, a.1, scale)?, rescale(b.0, b.1, scale)?)
-            .ok_or_else(overflow)?;
+        let value =
+            operation(rescale(a.0, a.1, scale)?, rescale(b.0, b.1, scale)?).ok_or_else(overflow)?;
         Ok(scalar_of(value, scale))
     }
 
@@ -400,9 +410,16 @@ fn round_half_even_div(numerator: i128, denominator: i128) -> Result<i128, Strin
     }
     let quotient = numerator / denominator;
     let remainder = numerator % denominator;
-    let twice = remainder.unsigned_abs().checked_mul(2).ok_or_else(weight_overflow)?;
+    let twice = remainder
+        .unsigned_abs()
+        .checked_mul(2)
+        .ok_or_else(weight_overflow)?;
     let divisor = denominator.unsigned_abs();
-    let away = if numerator.signum() * denominator.signum() < 0 { -1 } else { 1 };
+    let away = if numerator.signum() * denominator.signum() < 0 {
+        -1
+    } else {
+        1
+    };
     let bump = match twice.cmp(&divisor) {
         Ordering::Greater => true,
         Ordering::Equal => quotient % 2 != 0,
@@ -470,11 +487,17 @@ impl ExactSum {
 
     /// `self / count` with 6 fractional digits, rounded half to even.
     pub fn average(&self, count: i64) -> Result<String, String> {
-        let numerator = self.unscaled.checked_mul(1_000_000).ok_or_else(weight_overflow)?;
+        let numerator = self
+            .unscaled
+            .checked_mul(1_000_000)
+            .ok_or_else(weight_overflow)?;
         let denominator = pow10(self.scale)?
             .checked_mul(i128::from(count))
             .ok_or_else(weight_overflow)?;
-        Ok(format_decimal(round_half_even_div(numerator, denominator)?, 6))
+        Ok(format_decimal(
+            round_half_even_div(numerator, denominator)?,
+            6,
+        ))
     }
 }
 
@@ -580,7 +603,11 @@ impl GroupState {
                             None => true,
                             Some(held) => {
                                 let order = compare_values(decimal, &value, held)?;
-                                if is_min { order == Ordering::Less } else { order == Ordering::Greater }
+                                if is_min {
+                                    order == Ordering::Less
+                                } else {
+                                    order == Ordering::Greater
+                                }
                             }
                         };
                         if better {
@@ -629,7 +656,11 @@ impl GroupState {
                     None => true,
                     Some(held) => {
                         let order = compare_values(decimal, &value, held)?;
-                        if is_min { order == Ordering::Less } else { order == Ordering::Greater }
+                        if is_min {
+                            order == Ordering::Less
+                        } else {
+                            order == Ordering::Greater
+                        }
                     }
                 };
                 if better {
@@ -661,7 +692,9 @@ impl GroupState {
                 ExactAgg::Sum(_) => sum.to_value(),
                 ExactAgg::Avg(_) if *nonnull == 0 => Value::Null,
                 ExactAgg::Avg(_) => Value::String(sum.average(*nonnull)?),
-                ExactAgg::Min(_) | ExactAgg::Max(_) => self.extremes[index].clone().unwrap_or(Value::Null),
+                ExactAgg::Min(_) | ExactAgg::Max(_) => {
+                    self.extremes[index].clone().unwrap_or(Value::Null)
+                }
             };
             row.insert(name.clone(), output);
             if matches!(agg, ExactAgg::Sum(_) | ExactAgg::Avg(_)) {
@@ -862,7 +895,10 @@ mod tests {
         let unknown = || column("b");
         // An unknown operand makes a comparison and arithmetic unknown.
         assert_eq!(eval(RowExpr::Eq(unknown(), literal(json!(1)))), Value::Null);
-        assert_eq!(eval(RowExpr::Add(unknown(), literal(json!(1)))), Value::Null);
+        assert_eq!(
+            eval(RowExpr::Add(unknown(), literal(json!(1)))),
+            Value::Null
+        );
         assert_eq!(eval(RowExpr::IsNull(unknown())), json!(true));
         assert_eq!(eval(RowExpr::IsNotNull(unknown())), json!(false));
         assert_eq!(eval(RowExpr::IsNotNull(column("a"))), json!(true));
@@ -899,23 +935,39 @@ mod tests {
         assert_eq!(eval(RowExpr::Add(column("a"), column("qty"))), json!(10));
         assert_eq!(eval(RowExpr::Sub(column("qty"), column("a"))), json!(-4));
         assert_eq!(eval(RowExpr::Mul(price(), column("qty"))), json!("37.50"));
-        assert_eq!(eval(RowExpr::Sub(price(), literal(json!("0.75")))), json!("11.75"));
-        assert_eq!(eval(RowExpr::Sub(literal(json!("0.25")), price())), json!("-12.25"));
+        assert_eq!(
+            eval(RowExpr::Sub(price(), literal(json!("0.75")))),
+            json!("11.75")
+        );
+        assert_eq!(
+            eval(RowExpr::Sub(literal(json!("0.25")), price())),
+            json!("-12.25")
+        );
         // Decimals compare by value, not as text.
         assert_eq!(
             eval(RowExpr::Gt(price(), literal(json!("9.5")))),
             json!(true)
         );
-        assert_eq!(eval(RowExpr::Eq(price(), literal(json!("12.5")))), json!(true));
+        assert_eq!(
+            eval(RowExpr::Eq(price(), literal(json!("12.5")))),
+            json!(true)
+        );
         // Text compares as text.
-        assert_eq!(eval(RowExpr::Eq(column("name"), literal(json!("north")))), json!(true));
+        assert_eq!(
+            eval(RowExpr::Eq(column("name"), literal(json!("north")))),
+            json!(true)
+        );
         // Refusals.
         assert!(RowExpr::Column("missing".into()).eval(&row()).is_err());
         assert!(RowExpr::Literal(json!(1.5)).eval(&row()).is_err());
-        assert!(RowExpr::Add(column("name"), column("a")).eval(&row()).is_err());
-        assert!(RowExpr::Mul(literal(json!(i64::MAX)), literal(json!(i64::MAX)))
+        assert!(RowExpr::Add(column("name"), column("a"))
             .eval(&row())
-            .is_ok());
+            .is_err());
+        assert!(
+            RowExpr::Mul(literal(json!(i64::MAX)), literal(json!(i64::MAX)))
+                .eval(&row())
+                .is_ok()
+        );
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R009.1
@@ -930,19 +982,31 @@ mod tests {
                 keys: vec![("region".into(), RowExpr::Column("region".into()))],
                 aggs: vec![
                     ("n".into(), ExactAgg::Count),
-                    ("total".into(), ExactAgg::Sum(RowExpr::Column("amount".into()))),
-                    ("mean".into(), ExactAgg::Avg(RowExpr::Column("amount".into()))),
+                    (
+                        "total".into(),
+                        ExactAgg::Sum(RowExpr::Column("amount".into())),
+                    ),
+                    (
+                        "mean".into(),
+                        ExactAgg::Avg(RowExpr::Column("amount".into())),
+                    ),
                 ],
             },
         };
         let bytes = rmp_serde::to_vec_named(&program).unwrap();
-        assert_eq!(rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(), program);
+        assert_eq!(
+            rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(),
+            program
+        );
         let rows = IncrementalViewProgram {
             output: ViewOutput::Rows(vec![("x".into(), RowExpr::Column("a".into()))]),
             ..program
         };
         let json = serde_json::to_string(&rows).unwrap();
-        assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), rows);
+        assert_eq!(
+            serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(),
+            rows
+        );
     }
 
     // proves R013.1: Model: join program
@@ -961,9 +1025,15 @@ mod tests {
             output: ViewOutput::Rows(vec![("id".into(), RowExpr::Column("id".into()))]),
         };
         let bytes = rmp_serde::to_vec_named(&program).unwrap();
-        assert_eq!(rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(), program);
+        assert_eq!(
+            rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(),
+            program
+        );
         let json = serde_json::to_string(&program).unwrap();
-        assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), program);
+        assert_eq!(
+            serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(),
+            program
+        );
         // A program stored before the join field existed reads as a single-table program.
         let mut value = serde_json::to_value(&program).unwrap();
         value.as_object_mut().unwrap().remove("join");
@@ -994,9 +1064,15 @@ mod tests {
         };
         for program in [extremes, distinct] {
             let bytes = rmp_serde::to_vec_named(&program).unwrap();
-            assert_eq!(rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(), program);
+            assert_eq!(
+                rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(),
+                program
+            );
             let json = serde_json::to_string(&program).unwrap();
-            assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), program);
+            assert_eq!(
+                serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(),
+                program
+            );
         }
         // A distinct view stores one group per output tuple with the hidden weight column.
         assert_eq!(MV_COUNT, "__mv_count");

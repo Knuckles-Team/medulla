@@ -13,8 +13,8 @@ use medulla_jobs::schedule::{
 use medulla_jobs::schedule_run::ScheduleBudget;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::result_contract::coordination::{
-    JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobSchedulePause,
-    JobScheduleCalendar, JobScheduleResume, JobScheduleTicks, JobScheduleUpdate, ScheduleCalendar,
+    JobScheduleCalendar, JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList,
+    JobSchedulePause, JobScheduleResume, JobScheduleTicks, JobScheduleUpdate, ScheduleCalendar,
     ScheduleCalendarEntry, ScheduleCalendarLog, ScheduleRemoved, ScheduleTickList,
     ScheduleTickView, ScheduleView, ScheduleViewList,
 };
@@ -403,7 +403,9 @@ pub(super) async fn calendar(
 ) -> Response {
     let result = async {
         if to_ms <= from_ms || to_ms - from_ms > MAX_CALENDAR_RANGE_MS {
-            return Err("INVALID_ARGUMENT: a schedule calendar range is 1 ms to 31 days".to_string());
+            return Err(
+                "INVALID_ARGUMENT: a schedule calendar range is 1 ms to 31 days".to_string(),
+            );
         }
         let core = core_of(&call, &graph).await?;
         let tenant = call.verified_context.tenant().to_string();
@@ -431,7 +433,11 @@ pub(super) async fn calendar(
                 }
             }
             let tick_prefix = format!("schedule-tick:{tenant}:{}:", record.name);
-            for id in core.node_ids().iter().filter(|id| id.starts_with(&tick_prefix)) {
+            for id in core
+                .node_ids()
+                .iter()
+                .filter(|id| id.starts_with(&tick_prefix))
+            {
                 let Some(raw) = core.get_node_properties(id) else {
                     continue;
                 };

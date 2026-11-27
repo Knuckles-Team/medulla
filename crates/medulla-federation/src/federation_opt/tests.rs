@@ -13,9 +13,8 @@ use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use super::capability::{
     connection_protocol_row, in_matrix, require_in_matrix, ConnectionProtocol,
-    ForeignSourceCapability, KeyLookup, LimitPushdown,
-    PushdownKind, RemoteRequest, SourceCapabilities, SourceCostModel, SourceRate,
-    CONNECTION_PROTOCOL_MATRIX,
+    ForeignSourceCapability, KeyLookup, LimitPushdown, PushdownKind, RemoteRequest,
+    SourceCapabilities, SourceCostModel, SourceRate, CONNECTION_PROTOCOL_MATRIX,
 };
 use super::remote::{Identity, RemoteFetch};
 use super::run::Fragment;
@@ -227,12 +226,25 @@ fn protocol_matrix_bounds_pushdown() {
 
     // The planner's chokepoint refuses a pushdown outside the row with the typed code, and
     // permits one inside it; a source that names no protocol has no row to bound it.
-    let refused = require_in_matrix(Some(ConnectionProtocol::EventStream), PushdownKind::LimitOrder)
-        .unwrap_err();
+    let refused = require_in_matrix(
+        Some(ConnectionProtocol::EventStream),
+        PushdownKind::LimitOrder,
+    )
+    .unwrap_err();
     assert!(refused.starts_with("PUSHDOWN_NOT_IN_MATRIX"), "{refused}");
-    assert!(require_in_matrix(Some(ConnectionProtocol::EventStream), PushdownKind::TimeRange).is_ok());
-    assert!(in_matrix(Some(ConnectionProtocol::Sql), PushdownKind::LimitOrder));
-    assert!(!in_matrix(Some(ConnectionProtocol::Webhook), PushdownKind::LimitOrder));
+    assert!(require_in_matrix(
+        Some(ConnectionProtocol::EventStream),
+        PushdownKind::TimeRange
+    )
+    .is_ok());
+    assert!(in_matrix(
+        Some(ConnectionProtocol::Sql),
+        PushdownKind::LimitOrder
+    ));
+    assert!(!in_matrix(
+        Some(ConnectionProtocol::Webhook),
+        PushdownKind::LimitOrder
+    ));
     assert!(in_matrix(None, PushdownKind::LimitOrder));
 }
 
@@ -1584,8 +1596,15 @@ mod web_metasearch {
         assert_eq!(set.query_text, "needle");
         assert_eq!(set.query_digest, WebQuery::new("needle").digest());
         assert_eq!(
-            set.candidates.iter().map(|c| c.url.as_str()).collect::<Vec<_>>(),
-            ["https://a.example/1", "https://b.example/2", "https://c.example/3"]
+            set.candidates
+                .iter()
+                .map(|c| c.url.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "https://a.example/1",
+                "https://b.example/2",
+                "https://c.example/3"
+            ]
         );
         // A spec that is not a web source answers `None` and calls nothing.
         let other = ForeignSourceSpec::HttpJson {
@@ -1599,7 +1618,12 @@ mod web_metasearch {
         };
         let calls = port.calls.lock().unwrap().len();
         assert!(crate::federation_opt::web::web_read_with(
-            &other, None, shared(), "needle", &session, 1_000_000
+            &other,
+            None,
+            shared(),
+            "needle",
+            &session,
+            1_000_000
         )
         .unwrap()
         .is_none());

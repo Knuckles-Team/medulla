@@ -191,9 +191,9 @@ pub(super) fn run_scores_graded(
         let independent = props
             .get("grader_kind")
             .and_then(|v| {
-                serde_json::from_value::<
-                    medulla_decision_types::decision::held_out::GraderKind,
-                >(v.clone())
+                serde_json::from_value::<medulla_decision_types::decision::held_out::GraderKind>(
+                    v.clone(),
+                )
                 .ok()
             })
             .is_some_and(|kind| kind.decides_promotion());

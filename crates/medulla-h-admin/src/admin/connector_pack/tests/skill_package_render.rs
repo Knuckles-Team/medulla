@@ -273,8 +273,7 @@ async fn list_skills_as_tenant(served: &Served, tenant: &str, key: &str) -> Vec<
             idempotency_key: key,
         },
     );
-    let response =
-        medulla_server_auth::auth::dispatch_test_on_heap(&served.state, request).await;
+    let response = medulla_server_auth::auth::dispatch_test_on_heap(&served.state, request).await;
     if response.refusal_text().is_some() {
         return Vec::new();
     }
@@ -322,14 +321,18 @@ async fn list_after_reingest_returns_new_digest() {
         .package
         .clone()
         .expect("the second listing renders a package");
-    assert_ne!(after.digest, before.digest, "the second listing has a new digest");
+    assert_ne!(
+        after.digest, before.digest,
+        "the second listing has a new digest"
+    );
     assert!(
         after.graph_revision > before.graph_revision,
         "the second listing has a newer graph revision"
     );
 
     // A second tenant never sees the skill.
-    let elsewhere = list_skills_as_tenant(&served, "tenant-other", "skill-render:other-tenant").await;
+    let elsewhere =
+        list_skills_as_tenant(&served, "tenant-other", "skill-render:other-tenant").await;
     assert!(
         elsewhere.iter().all(|row| row.component.name != "triage"),
         "another tenant must not list the skill"

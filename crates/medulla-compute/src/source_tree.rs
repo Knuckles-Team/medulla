@@ -257,8 +257,13 @@ mod tests {
         assert!(!checkpointed.checkpoints.is_empty());
         assert!(plain.checkpoints.is_empty());
         for rev in &ids {
-            for (prefix, depth) in [("", 0), ("src", 0), ("src", 1), ("src/deep", 0), ("READ", 0)]
-            {
+            for (prefix, depth) in [
+                ("", 0),
+                ("src", 0),
+                ("src", 1),
+                ("src/deep", 0),
+                ("READ", 0),
+            ] {
                 let full = tree_at_full_replay(&plain, rev, prefix, depth).unwrap();
                 assert_eq!(tree_at(&plain, rev, prefix, depth).unwrap(), full);
                 assert_eq!(tree_at(&checkpointed, rev, prefix, depth).unwrap(), full);

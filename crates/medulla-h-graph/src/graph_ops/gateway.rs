@@ -123,12 +123,12 @@ pub async fn try_handle_gateway(
     // (CompareAndSetNodeFields) at the same pre-commit point, so the persisted blob and the
     // applied one carry the same mark.
     #[cfg(feature = "security")]
-    let method = match super::gateway_graph::stamp_trust_mark_if_applicable(
-        method, core, caller, isolation,
-    ) {
-        Ok(stamped) => stamped,
-        Err(error) => return Ok(Response::err(req_id, error)),
-    };
+    let method =
+        match super::gateway_graph::stamp_trust_mark_if_applicable(method, core, caller, isolation)
+        {
+            Ok(stamped) => stamped,
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
 
     // MEDULLA-ORCH-VOCAB-R801.3: a harness-component version write is admitted at
     // the SAME pre-commit point — validated, bitemporally stamped and linked
@@ -227,9 +227,10 @@ pub async fn try_handle_gateway(
     // MEDULLA-SRC-AUTH-R801: a policy source bind reads the head component of its
     // tenant and commits the one activation node.
     if matches!(method, Method::PolicySourceBind { .. }) {
-        return Ok(
-            super::policy_source::handle_policy_source_bind(state, &ctx, tenant_id, &method).await,
-        );
+        return Ok(super::policy_source::handle_policy_source_bind(
+            state, &ctx, tenant_id, &method,
+        )
+        .await);
     }
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes under the engine actor,
     // never under the caller that asked for it.

@@ -9,6 +9,11 @@
 #![deny(missing_docs)]
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "ann-redb", feature = "query"))]
+pub mod bookmark;
+#[cfg(all(feature = "ann-redb", feature = "query"))]
+pub mod bookmark_binding;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "epistemic-tms")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod reasoning_projection;
@@ -16,11 +21,6 @@ pub mod reasoning_projection;
 #[cfg(any(feature = "text", feature = "tsdb", feature = "owl", feature = "geo"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod secondary_indexes;
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(all(feature = "ann-redb", feature = "query"))]
-pub mod bookmark;
-#[cfg(all(feature = "ann-redb", feature = "query"))]
-pub mod bookmark_binding;
 #[cfg(feature = "ann-redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod semantic_index;

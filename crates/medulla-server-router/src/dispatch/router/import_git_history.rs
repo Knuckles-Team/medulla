@@ -138,14 +138,11 @@ mod served {
                     store.as_ref(),
                     &owner,
                     &format!("cas:sha256:{}", request.pack_digest),
-                    medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES
-                        as usize,
+                    medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES as usize,
                 )
-                .map_err(|error| {
-                    refusal(ChangesetRefusal::BlobNotFound, &error)
-                })?;
-                let objects = decode_pack(request.object_format, &bytes)
-                    .map_err(|error| error.message())?;
+                .map_err(|error| refusal(ChangesetRefusal::BlobNotFound, &error))?;
+                let objects =
+                    decode_pack(request.object_format, &bytes).map_err(|error| error.message())?;
                 plan_import(
                     request.object_format,
                     &objects,

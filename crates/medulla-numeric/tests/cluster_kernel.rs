@@ -689,7 +689,8 @@ fn wide_path_is_bit_equal_to_baseline() {
     for dim in 1..=70usize {
         for k in [1usize, 3, 8] {
             let v: Vec<f32> = (0..dim).map(|_| rng.gen::<f32>() * 8.0 - 4.0).collect();
-            let mut centroids: Vec<f32> = (0..dim * k).map(|_| rng.gen::<f32>() * 8.0 - 4.0).collect();
+            let mut centroids: Vec<f32> =
+                (0..dim * k).map(|_| rng.gen::<f32>() * 8.0 - 4.0).collect();
             if k == 8 {
                 // Two equal centroids: the lowest index wins on both paths.
                 let (first, rest) = centroids.split_at_mut(dim);
@@ -718,6 +719,9 @@ fn wide_path_is_bit_equal_to_baseline() {
     let c: Vec<f32> = (0..38).map(|i| (i * i) as f32 * 0.011 + 0.5).collect();
     let public = medulla_numeric::cluster::nearest_with_dist(&v, &c, 19, 2);
     let baseline = nearest_baseline(&v, &c, 19, 2);
-    assert_eq!((public.0, public.1.to_bits()), (baseline.0, baseline.1.to_bits()));
+    assert_eq!(
+        (public.0, public.1.to_bits()),
+        (baseline.0, baseline.1.to_bits())
+    );
     println!("wide path compared on {compared} cases");
 }

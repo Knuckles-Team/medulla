@@ -145,7 +145,12 @@ pub async fn copy_graph(
     let mut pages: Vec<RowBatch> = Vec::new();
     loop {
         let Some(page) = backend
-            .export_graph_raw_page(graph_fname, node_after.clone(), edge_after.clone(), BATCH_ROWS)
+            .export_graph_raw_page(
+                graph_fname,
+                node_after.clone(),
+                edge_after.clone(),
+                BATCH_ROWS,
+            )
             .map_err(GraphCopyRefusal::Source)?
         else {
             break;
@@ -248,9 +253,7 @@ pub async fn copy_graph(
         .ok_or_else(|| {
             GraphCopyRefusal::Source(format!("graph {graph_fname} has no durable identity row"))
         })?;
-    let seal_key_id = backend
-        .seal_key_id()
-        .map_err(GraphCopyRefusal::Source)?;
+    let seal_key_id = backend.seal_key_id().map_err(GraphCopyRefusal::Source)?;
     let manifest = |version: u64, parent: Option<u64>, batches: Vec<SegmentHeader>| {
         let mut manifest = VersionManifest {
             schema_version: 3,
@@ -269,7 +272,9 @@ pub async fn copy_graph(
             batches,
             digest: String::new(),
         };
-        manifest.digest = manifest.body_digest().map_err(GraphCopyRefusal::Destination)?;
+        manifest.digest = manifest
+            .body_digest()
+            .map_err(GraphCopyRefusal::Destination)?;
         serde_json::to_vec(&manifest).map_err(destination)
     };
     let version = u64::from(!headers.is_empty());

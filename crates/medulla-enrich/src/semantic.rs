@@ -549,7 +549,11 @@ pub fn fit_topics(
             centroid: unit_mean(&vectors, dimensions),
             floor_bp: None,
         });
-        held.push((topic, aside.to_vec(), u32::try_from(train.len()).unwrap_or(u32::MAX)));
+        held.push((
+            topic,
+            aside.to_vec(),
+            u32::try_from(train.len()).unwrap_or(u32::MAX),
+        ));
     }
     // Classify every hold-out example against all centroids: (assigned topic, confidence, truth).
     let mut predictions: Vec<(Id, u32, bool)> = Vec::new();
@@ -558,7 +562,11 @@ pub fn fit_topics(
             let assignment = classify_with_floor(&member.example, &member.vector, &centroids, 0)?
                 .expect("a floor of zero assigns every document");
             let correct = assignment.topic == **topic;
-            predictions.push((assignment.topic, assignment.confidence.basis_points(), correct));
+            predictions.push((
+                assignment.topic,
+                assignment.confidence.basis_points(),
+                correct,
+            ));
         }
     }
     let mut topics = Vec::with_capacity(held.len());
@@ -581,8 +589,10 @@ pub fn fit_topics(
         let mut distinct: Vec<u32> = mine.iter().map(|(confidence, _)| *confidence).collect();
         distinct.dedup();
         for candidate in distinct {
-            let suffix: Vec<&(u32, bool)> =
-                mine.iter().filter(|(confidence, _)| *confidence >= candidate).collect();
+            let suffix: Vec<&(u32, bool)> = mine
+                .iter()
+                .filter(|(confidence, _)| *confidence >= candidate)
+                .collect();
             let right = suffix.iter().filter(|(_, ok)| *ok).count() as u64;
             if right * 10_000 >= FLOOR_TARGET_PRECISION_BP * suffix.len() as u64 {
                 floor_bp = candidate;

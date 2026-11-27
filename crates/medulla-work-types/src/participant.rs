@@ -38,7 +38,9 @@ impl ParticipantId {
         let slug = slug.into();
         let valid = !slug.is_empty()
             && slug.len() <= MAX_SLUG_LEN
-            && slug.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-');
+            && slug
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-');
         if !valid {
             return Err(invalid(format!(
                 "participant_id `{slug}` is not 1 to {MAX_SLUG_LEN} characters of a-z, 0-9 and -"
@@ -143,14 +145,21 @@ impl Participant {
             return Err(invalid("a participant needs a display_name"));
         }
         if self.kind.represents_someone()
-            && self.represents.as_deref().is_none_or(|node| node.trim().is_empty())
+            && self
+                .represents
+                .as_deref()
+                .is_none_or(|node| node.trim().is_empty())
         {
             return Err(invalid(format!(
                 "a participant of kind {} must name the node it represents",
                 self.kind.as_str()
             )));
         }
-        if self.acts_as.iter().any(|principal| principal.trim().is_empty()) {
+        if self
+            .acts_as
+            .iter()
+            .any(|principal| principal.trim().is_empty())
+        {
             return Err(invalid("acts_as names no empty principal"));
         }
         Ok(())
@@ -164,7 +173,11 @@ impl Participant {
 
 /// The stable IRI of a participant: `urn:medulla:participant:<workspace>:<slug>`.
 pub fn participant_iri(workspace: &ResourceId, participant_id: &ParticipantId) -> String {
-    format!("{PARTICIPANT_IRI_PREFIX}{}:{}", workspace.as_str(), participant_id.as_str())
+    format!(
+        "{PARTICIPANT_IRI_PREFIX}{}:{}",
+        workspace.as_str(),
+        participant_id.as_str()
+    )
 }
 
 /// The edge type from a transcript thread to a participant it holds
@@ -300,14 +313,20 @@ mod tests {
     #[test]
     fn participant_round_trips_and_iri_is_stable() {
         let participant = person();
-        assert_eq!(participant.iri(), "urn:medulla:participant:ws-1:ada-lovelace");
+        assert_eq!(
+            participant.iri(),
+            "urn:medulla:participant:ws-1:ada-lovelace"
+        );
         let wire = serde_json::to_value(&participant).unwrap();
         assert_eq!(wire["kind"], "person");
         assert_eq!(wire["participant_id"], "ada-lovelace");
         let decoded: Participant = serde_json::from_value(wire.clone()).unwrap();
         assert_eq!(decoded, participant);
         let packed = rmp_serde::to_vec_named(&participant).unwrap();
-        assert_eq!(rmp_serde::from_slice::<Participant>(&packed).unwrap(), participant);
+        assert_eq!(
+            rmp_serde::from_slice::<Participant>(&packed).unwrap(),
+            participant
+        );
 
         // An unknown field is refused.
         let mut extra = wire.clone();
@@ -317,9 +336,26 @@ mod tests {
         let mut bare = wire.clone();
         bare["represents"] = serde_json::Value::Null;
         assert!(serde_json::from_value::<Participant>(bare).is_err());
-        let object = Participant::new("whiteboard", "tenant-a", "ws-1", ParticipantKind::Object, "Whiteboard", None, vec![]);
+        let object = Participant::new(
+            "whiteboard",
+            "tenant-a",
+            "ws-1",
+            ParticipantKind::Object,
+            "Whiteboard",
+            None,
+            vec![],
+        );
         assert!(object.is_ok());
-        assert!(Participant::new("a", "tenant-a", "ws-1", ParticipantKind::Agent, "Agent", None, vec![]).is_err());
+        assert!(Participant::new(
+            "a",
+            "tenant-a",
+            "ws-1",
+            ParticipantKind::Agent,
+            "Agent",
+            None,
+            vec![]
+        )
+        .is_err());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R617.8
@@ -353,7 +389,10 @@ mod tests {
         assert!(edges.iter().all(|edge| edge.session_id == "session-1"));
         // The speaker travels onto each memory record.
         let records = conversation.to_memory_records().unwrap();
-        assert_eq!(records[0].speaker.as_ref().map(ParticipantId::as_str), Some("ada-1"));
+        assert_eq!(
+            records[0].speaker.as_ref().map(ParticipantId::as_str),
+            Some("ada-1")
+        );
         assert!(records[1].speaker.is_none());
     }
 
@@ -365,7 +404,16 @@ mod tests {
         }
         assert!(ParticipantId::new("a-1").is_ok());
         assert!(ParticipantId::new("x".repeat(64)).is_ok());
-        assert!(Participant::new("ok", "tenant-a", "", ParticipantKind::Object, "x", None, vec![]).is_err());
+        assert!(Participant::new(
+            "ok",
+            "tenant-a",
+            "",
+            ParticipantKind::Object,
+            "x",
+            None,
+            vec![]
+        )
+        .is_err());
         assert!(serde_json::from_str::<ParticipantId>("\"Bad Slug\"").is_err());
     }
 }

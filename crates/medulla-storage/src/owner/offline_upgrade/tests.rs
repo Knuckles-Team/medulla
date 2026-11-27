@@ -432,8 +432,14 @@ fn jobs_upgrade_creates_empty_task_queue_tables() {
     );
     let database = redb::Database::open(&path).unwrap();
     let read = database.begin_read().unwrap();
-    assert_eq!(read.open_table(TASK_QUEUE_TOTALS).unwrap().len().unwrap(), 0);
-    assert_eq!(read.open_table(TASK_QUEUE_OLDEST).unwrap().len().unwrap(), 0);
+    assert_eq!(
+        read.open_table(TASK_QUEUE_TOTALS).unwrap().len().unwrap(),
+        0
+    );
+    assert_eq!(
+        read.open_table(TASK_QUEUE_OLDEST).unwrap().len().unwrap(),
+        0
+    );
     drop(read);
     drop(database);
     StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).unwrap();
@@ -464,7 +470,10 @@ fn jobs_upgrade_creates_empty_dead_letter_table() {
     );
     let database = redb::Database::open(&path).unwrap();
     let read = database.begin_read().unwrap();
-    assert_eq!(read.open_table(TASK_DEAD_LETTERS).unwrap().len().unwrap(), 0);
+    assert_eq!(
+        read.open_table(TASK_DEAD_LETTERS).unwrap().len().unwrap(),
+        0
+    );
     drop(read);
     drop(database);
     StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).unwrap();

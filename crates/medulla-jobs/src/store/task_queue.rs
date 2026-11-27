@@ -194,7 +194,8 @@ fn dead_letter_item_bytes(
         medulla_types::contract::Digest256::framed(DEAD_LETTER_PAYLOAD_DOMAIN, &[payload])
             .map_err(codec_err)?;
     let item = medulla_ingestion_types::ingest_capabilities::DeadLetterItem {
-        schema_version: medulla_ingestion_types::ingest_capabilities::INGEST_CAPABILITIES_SCHEMA_VERSION,
+        schema_version:
+            medulla_ingestion_types::ingest_capabilities::INGEST_CAPABILITIES_SCHEMA_VERSION,
         item_id: job.job_id.clone(),
         queue: task_queue_of(job).unwrap_or_default().to_string(),
         reason: code.to_string(),
@@ -384,10 +385,7 @@ impl JobStore {
             let in_table = {
                 let read = self.scoped_read()?;
                 let table = read.open_owner_table(TASK_DEAD_LETTERS).map_err(redb_err)?;
-                let found = table
-                    .get(item_id.as_str())
-                    .map_err(redb_err)?
-                    .is_some();
+                let found = table.get(item_id.as_str()).map_err(redb_err)?.is_some();
                 found
             };
             if !in_table {
@@ -552,11 +550,7 @@ impl JobStore {
             TaskAckOutcome::Succeeded => {
                 // Running reaches Succeeded through Publishing (J03, J04) inside the one transaction.
                 let result_ref = job.result_ref();
-                let lease = job
-                    .state
-                    .lease()
-                    .cloned()
-                    .ok_or(TaskAckError::NotClaimed)?;
+                let lease = job.state.lease().cloned().ok_or(TaskAckError::NotClaimed)?;
                 let publishing = JobState::Publishing {
                     lease,
                     result_ref: result_ref.clone(),
@@ -689,10 +683,7 @@ impl JobStore {
             Err(error) => return Err(error.into()),
         };
         require_task_lease(&job, tenant, worker_ref, now_ms)?;
-        let lease = job
-            .state
-            .lease_mut()
-            .ok_or(TaskAckError::NotClaimed)?;
+        let lease = job.state.lease_mut().ok_or(TaskAckError::NotClaimed)?;
         lease.expires_at_ms = now_ms.saturating_add(i64::try_from(lease_ms).unwrap_or(i64::MAX));
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
@@ -728,18 +719,31 @@ mod lane_count_tests {
     fn task_lane_counts_split_running_and_queued() {
         let dir = tempfile::tempdir().unwrap();
         let store = open_dev_store_in_dir(dir.path()).unwrap();
-        store.submit_task(task("general", "g1", "cap-a"), 1_000).unwrap();
-        store.submit_task(task("general", "g2", "cap-a"), 1_000).unwrap();
-        store.submit_task(task("hydration", "h1", "cap-a"), 1_000).unwrap();
-        store.submit_task(task("general", "other", "cap-b"), 1_000).unwrap();
+        store
+            .submit_task(task("general", "g1", "cap-a"), 1_000)
+            .unwrap();
+        store
+            .submit_task(task("general", "g2", "cap-a"), 1_000)
+            .unwrap();
+        store
+            .submit_task(task("hydration", "h1", "cap-a"), 1_000)
+            .unwrap();
+        store
+            .submit_task(task("general", "other", "cap-b"), 1_000)
+            .unwrap();
 
         let before = store.task_lane_counts("cap-a", 1_001).unwrap();
         assert_eq!(before.get("general"), Some(&(0, 2)));
         assert_eq!(before.get("hydration"), Some(&(0, 1)));
         assert_eq!(store.task_lane_counts("cap-b", 1_001).unwrap().len(), 1);
-        assert!(store.task_lane_counts("cap-none", 1_001).unwrap().is_empty());
+        assert!(store
+            .task_lane_counts("cap-none", 1_001)
+            .unwrap()
+            .is_empty());
 
-        let claim = store.claim_task("worker-ref", "cap-a", 1_002, 60_000).unwrap();
+        let claim = store
+            .claim_task("worker-ref", "cap-a", 1_002, 60_000)
+            .unwrap();
         assert!(claim.is_some());
         let after = store.task_lane_counts("cap-a", 1_003).unwrap();
         let running: u32 = after.values().map(|(running, _)| *running).sum();
@@ -865,11 +869,20 @@ mod tests {
         let second = park(&store, "b", 10_000);
         let listed = store.list_dead_letters("acme", "ingest", 10).unwrap();
         assert_eq!(
-            listed.iter().map(|item| item.item_id.as_str()).collect::<Vec<_>>(),
+            listed
+                .iter()
+                .map(|item| item.item_id.as_str())
+                .collect::<Vec<_>>(),
             [first.as_str(), second.as_str()]
         );
-        assert!(store.list_dead_letters("other", "ingest", 10).unwrap().is_empty());
-        assert_eq!(store.list_dead_letters("acme", "ingest", 1).unwrap().len(), 1);
+        assert!(store
+            .list_dead_letters("other", "ingest", 10)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            store.list_dead_letters("acme", "ingest", 1).unwrap().len(),
+            1
+        );
 
         // One unknown id refuses the whole call: nothing is redriven, both rows stay.
         let before = store.live_version().unwrap();
@@ -878,7 +891,10 @@ mod tests {
             .unwrap_err();
         assert!(matches!(refused, RedriveError::Unknown { ref item_id } if item_id == "ghost"));
         assert_eq!(store.live_version().unwrap(), before);
-        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 2);
+        assert_eq!(
+            store.list_dead_letters("acme", "ingest", 10).unwrap().len(),
+            2
+        );
         // A tenant that does not own the item reads it as unknown.
         assert!(matches!(
             store.redrive_dead_letters("other", &[first.clone()], 20_000),
@@ -889,7 +905,10 @@ mod tests {
             .redrive_dead_letters("acme", &[first.clone()], 20_000)
             .unwrap();
         assert_eq!(done.redriven, 1);
-        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 1);
+        assert_eq!(
+            store.list_dead_letters("acme", "ingest", 10).unwrap().len(),
+            1
+        );
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!(load.queued, 1);
         // The task is claimable again with a fresh attempt count.
@@ -923,14 +942,20 @@ mod tests {
             .unwrap_err();
         assert!(matches!(refused, RedriveError::Unknown { .. }));
         assert_eq!(store.live_version().unwrap(), before);
-        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 2);
+        assert_eq!(
+            store.list_dead_letters("acme", "ingest", 10).unwrap().len(),
+            2
+        );
         // Both ids in one call commit as one version step.
         let done = store
             .redrive_dead_letters("acme", &[first, second], 21_000)
             .unwrap();
         assert_eq!(done.redriven, 2);
         assert_eq!(store.live_version().unwrap(), before + 1);
-        assert!(store.list_dead_letters("acme", "ingest", 10).unwrap().is_empty());
+        assert!(store
+            .list_dead_letters("acme", "ingest", 10)
+            .unwrap()
+            .is_empty());
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.9
@@ -986,7 +1011,10 @@ mod tests {
                 oldest_enqueued_at_ms: Some(1_000)
             }
         );
-        assert_eq!(store.task_queue_load("other-tenant", "ingest").unwrap(), TaskQueueLoad::default());
+        assert_eq!(
+            store.task_queue_load("other-tenant", "ingest").unwrap(),
+            TaskQueueLoad::default()
+        );
 
         let claim = store
             .claim_task("worker-1", CAPABILITY, 4_000, 60_000)

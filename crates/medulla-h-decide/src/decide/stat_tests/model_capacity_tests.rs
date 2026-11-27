@@ -125,8 +125,11 @@ async fn limit_narrows_on_latency_and_never_exceeds_ceiling() {
 
     // Time running backwards is an invalid parameter.
     let backwards = observations(&[(5, 100, "success"), (4, 100, "success")]);
-    let error = decide(&h, capacity_request(&schema, &backwards, &bounds(4, 16, 16, 9)))
-        .await
-        .unwrap_err();
+    let error = decide(
+        &h,
+        capacity_request(&schema, &backwards, &bounds(4, 16, 16, 9)),
+    )
+    .await
+    .unwrap_err();
     assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
 }

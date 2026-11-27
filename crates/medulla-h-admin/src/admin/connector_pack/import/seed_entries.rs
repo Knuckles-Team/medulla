@@ -25,7 +25,10 @@ pub(super) fn validate_seed_entries(
     blob: &dyn medulla_server_blob::blob::ChunkStore,
     violations: &mut Vec<PackViolation>,
 ) -> Option<SeedImportReceipt> {
-    if !all.iter().any(|entry| entry.kind == PackEntryKind::SeedPart) {
+    if !all
+        .iter()
+        .any(|entry| entry.kind == PackEntryKind::SeedPart)
+    {
         return None;
     }
     match plan_seed(request, archive, all, prior, blob) {
@@ -75,7 +78,10 @@ fn plan_seed(
     let mut parts = BTreeMap::new();
     for entry in all.iter().filter(|e| e.kind == PackEntryKind::SeedPart) {
         let key = SeedPartKey::from_uri(&entry.uri).ok_or_else(|| {
-            format!("SEED_INVALID: '{}' names no seed part (identity, catalog, references)", entry.uri)
+            format!(
+                "SEED_INVALID: '{}' names no seed part (identity, catalog, references)",
+                entry.uri
+            )
         })?;
         if parts.contains_key(&key) {
             return Err(format!(
@@ -129,18 +135,19 @@ fn plan_seed(
             .map_err(|_| "SEED_INVALID: a stored seed part is not UTF-8".to_string())?;
         prior_turtle.insert(key, turtle);
     }
-    let current = if !prior_turtle.is_empty()
-        && prior_turtle.keys().eq(seed.parts.keys())
-    {
+    let current = if !prior_turtle.is_empty() && prior_turtle.keys().eq(seed.parts.keys()) {
         Some(current_seed_content(&prior_turtle)?)
     } else {
         None
     };
 
-    let sources = super::vocabulary::pack_sources(request, archive, all)
-        .map_err(|error| format!("SEED_INVALID: the pack's vocabulary does not compose: {error}"))?;
-    let composed = medulla_server_api::schema_compose::validate_and_compose(&sources)
-        .map_err(|error| format!("SEED_INVALID: the pack's vocabulary does not compose: {error}"))?;
+    let sources = super::vocabulary::pack_sources(request, archive, all).map_err(|error| {
+        format!("SEED_INVALID: the pack's vocabulary does not compose: {error}")
+    })?;
+    let composed =
+        medulla_server_api::schema_compose::validate_and_compose(&sources).map_err(|error| {
+            format!("SEED_INVALID: the pack's vocabulary does not compose: {error}")
+        })?;
     let plan = prepare_seed_import(&seed, current.as_ref(), &composed.shapes, &sources)?;
     let outcomes = seed
         .parts
@@ -174,7 +181,10 @@ pub(super) fn validate_seed_entries(
     _blob: &dyn medulla_server_blob::blob::ChunkStore,
     violations: &mut Vec<PackViolation>,
 ) -> Option<SeedImportReceipt> {
-    if all.iter().any(|entry| entry.kind == PackEntryKind::SeedPart) {
+    if all
+        .iter()
+        .any(|entry| entry.kind == PackEntryKind::SeedPart)
+    {
         violations.push(violation(
             PackViolationCode::SeedInvalid,
             None,

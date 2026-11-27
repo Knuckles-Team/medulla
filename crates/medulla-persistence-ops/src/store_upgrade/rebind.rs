@@ -16,8 +16,8 @@ use medulla_storage::{
 };
 
 use super::discover::{discover, StoreFile};
-use super::report::{Report, StoreReport, StoreStatus};
 use super::existing_directory;
+use super::report::{Report, StoreReport, StoreStatus};
 
 /// What `rebind` was asked to do.
 #[derive(Debug, Clone)]

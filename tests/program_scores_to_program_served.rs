@@ -79,7 +79,14 @@ async fn seed_authored_score(
     split: &str,
 ) {
     let run = format!("run-{name}");
-    put_node_as(state, id, None, &run, serde_json::json!({"type": "ExperimentRun"})).await;
+    put_node_as(
+        state,
+        id,
+        None,
+        &run,
+        serde_json::json!({"type": "ExperimentRun"}),
+    )
+    .await;
     put_node_as(
         state,
         id + 1,
@@ -100,7 +107,16 @@ async fn journey() -> Observed {
     let request = score_source_request("scores");
 
     // Another tenant's score alone leaves the caller no corpus.
-    seed_score(&state, 10, Some("tenant-foreign"), "score-foreign", 5.0, "human", "test").await;
+    seed_score(
+        &state,
+        10,
+        Some("tenant-foreign"),
+        "score-foreign",
+        5.0,
+        "human",
+        "test",
+    )
+    .await;
     let foreign_refusal = refused_submit(&state, 20, &request).await;
 
     // Fifty stored scores of the caller: 49 linked to a run and one that is not.
@@ -197,7 +213,9 @@ fn example_names_score_grader_author_and_run() {
         .collect();
     assert!(!demonstrations.is_empty(), "a candidate cites its examples");
     assert!(
-        demonstrations.iter().all(|reference| reference.starts_with("eg:score:")),
+        demonstrations
+            .iter()
+            .all(|reference| reference.starts_with("eg:score:")),
         "an example is named by the score it came from: {demonstrations:?}"
     );
 }
@@ -211,8 +229,7 @@ fn served_scores_to_program_journey() {
     assert_eq!(revision["type"], "ProgramRevision");
     assert_eq!(revision["stage"], "published");
     assert_eq!(
-        revision["held_out"]["case_count"],
-        TEST_SCORES,
+        revision["held_out"]["case_count"], TEST_SCORES,
         "the held-out cases are the stored test scores"
     );
     assert_eq!(

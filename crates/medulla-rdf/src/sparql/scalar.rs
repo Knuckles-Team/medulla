@@ -265,9 +265,12 @@ fn catalog_node_key<'a>(ctx: &'a Ctx, asset: &Binding) -> Option<String> {
     asset
         .node_keys()
         .into_iter()
-        .chain(ctx.proj.base_iri.as_ref().and_then(|base| {
-            bare.strip_prefix(base.as_str()).map(str::to_string)
-        }))
+        .chain(
+            ctx.proj
+                .base_iri
+                .as_ref()
+                .and_then(|base| bare.strip_prefix(base.as_str()).map(str::to_string)),
+        )
         .find(|key| ctx.active.node_properties.contains_key(key))
 }
 
@@ -291,7 +294,8 @@ fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relev
     use medulla_catalog_types::catalog_relevance::{term_labels, AssetDoc};
     let mut doc = AssetDoc::from_props(&node_object(ctx, key)?);
     if let Some(index) = &ctx.proj.usage {
-        doc.usage_reads = medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, key);
+        doc.usage_reads =
+            medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, key);
     }
     for ((from, to), blobs) in &ctx.active.edge_properties {
         if to != key {
@@ -300,7 +304,10 @@ fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relev
         let defines = blobs.iter().any(|blob| {
             medulla_types::msgpack::decode_property_value(blob.as_slice())
                 .ok()
-                .and_then(|v| v.get("relationship").and_then(|r| r.as_str().map(str::to_string)))
+                .and_then(|v| {
+                    v.get("relationship")
+                        .and_then(|r| r.as_str().map(str::to_string))
+                })
                 .is_some_and(|rel| local_name(&rel) == "definesAsset")
         });
         if !defines {
@@ -315,7 +322,8 @@ fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relev
                     medulla_types::msgpack::decode_property_value(blob.as_slice())
                         .ok()
                         .and_then(|v| {
-                            v.get("relationship").and_then(|r| r.as_str().map(str::to_string))
+                            v.get("relationship")
+                                .and_then(|r| r.as_str().map(str::to_string))
                         })
                         .is_some_and(|rel| local_name(&rel) == "definesClass")
                 });

@@ -13,8 +13,9 @@ use medulla_protocol_types::result_contract::ingestion::StandardsDrift;
 use medulla_source_types::standards_drift::{
     drift_score, form_cohorts, recommend_consolidation, Standard, StandardsAsset,
     StandardsDriftResult, StandardsRefusal, MAX_STANDARDS_NODES, STANDARDS_ASSET_BODY_KEY,
-    STANDARDS_ASSET_LABEL, STANDARDS_MIN_COHORT_SIZE, STANDARDS_OVERLAP_MIN, STANDARDS_TENANT_KEY,
-    STANDARD_BODY_KEY, STANDARD_LABEL, STANDARDS_NODE_INVALID, STANDARD_NOT_FOUND,
+    STANDARDS_ASSET_LABEL, STANDARDS_MIN_COHORT_SIZE, STANDARDS_NODE_INVALID,
+    STANDARDS_OVERLAP_MIN, STANDARDS_TENANT_KEY, STANDARD_BODY_KEY, STANDARD_LABEL,
+    STANDARD_NOT_FOUND,
 };
 
 /// The tenant's nodes of `label`, decoded from `body_key` and checked by `valid`. A node of
@@ -186,9 +187,27 @@ mod tests {
     fn tenant_nodes_are_scored_and_recommendations_stay_proposals() {
         let core = GraphCore::new();
         put_standard(&core, "tenant-a", &baseline());
-        put_asset(&core, "tenant-a", "tenant-a", "orders-db", &["tls", "backup"]);
-        put_asset(&core, "tenant-a", "tenant-a", "billing-db", &["tls", "backup"]);
-        put_asset(&core, "tenant-b", "tenant-b", "other-db", &["tls", "backup"]);
+        put_asset(
+            &core,
+            "tenant-a",
+            "tenant-a",
+            "orders-db",
+            &["tls", "backup"],
+        );
+        put_asset(
+            &core,
+            "tenant-a",
+            "tenant-a",
+            "billing-db",
+            &["tls", "backup"],
+        );
+        put_asset(
+            &core,
+            "tenant-b",
+            "tenant-b",
+            "other-db",
+            &["tls", "backup"],
+        );
 
         let result = standards_drift(&core, "tenant-a", None, None).unwrap();
         let scored: Vec<&str> = result.scores.iter().map(|s| s.asset.as_str()).collect();

@@ -12,8 +12,7 @@ use medulla_sql_lang::sql::classify::CreateMatViewPlan;
 use medulla_sql_lang::sql::typed_result::{matview_result_schema, PgColType};
 use medulla_table_store::tables::{
     create_incremental_matview_txn, create_matview_txn, drop_matview_txn, join_key_indexed,
-    refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp,
-    MATVIEW_EXISTS, MATVIEW_UNKNOWN,
+    refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp, MATVIEW_EXISTS, MATVIEW_UNKNOWN,
 };
 use medulla_tables::schema::ColumnType;
 
@@ -31,7 +30,11 @@ pub(crate) fn matview_column_type(ty: PgColType) -> ColumnType {
 /// relation is refused `FEATURE_NOT_SUPPORTED`.
 fn matview_inputs(store: &TableStore, select_sql: &str) -> WireResult<Vec<String>> {
     let referenced = referenced_tables(select_sql, medulla_exec::sql_text::SqlDialect::Postgres)
-        .map_err(|e| user_err(format!("FEATURE_NOT_SUPPORTED: materialized view select: {e}")))?;
+        .map_err(|e| {
+            user_err(format!(
+                "FEATURE_NOT_SUPPORTED: materialized view select: {e}"
+            ))
+        })?;
     let mut inputs = Vec::new();
     for qualified in referenced {
         let leaf = qualified
@@ -58,8 +61,7 @@ impl WireSession {
     /// sorted by name. A statement that does not parse as a read, or a store that cannot
     /// be opened, reports none: the read itself already succeeded or refused on its own.
     pub(super) async fn stale_matviews_read(&self, sql: &str) -> Vec<String> {
-        let Ok(referenced) =
-            referenced_tables(sql, medulla_exec::sql_text::SqlDialect::Postgres)
+        let Ok(referenced) = referenced_tables(sql, medulla_exec::sql_text::SqlDialect::Postgres)
         else {
             return Vec::new();
         };
@@ -147,7 +149,13 @@ impl WireSession {
             Ok(program) => {
                 let txn = create_incremental_matview_txn(&store, spec, &schema, program)
                     .map_err(user_err)?;
-                publish_sql_status(&name, graph, medulla_core::view_status::ViewMode::Incremental, None, None);
+                publish_sql_status(
+                    &name,
+                    graph,
+                    medulla_core::view_status::ViewMode::Incremental,
+                    None,
+                    None,
+                );
                 txn
             }
             Err(refusal) => {

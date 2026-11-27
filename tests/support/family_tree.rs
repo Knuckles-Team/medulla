@@ -100,12 +100,10 @@ impl FamilyTree {
         let mut lines = Vec::new();
         for person in &self.people {
             let subject = person_iri(&person.handle);
-            let iri = |predicate: &str, object: &str| {
-                format!("<{subject}> <{predicate}> <{object}> .")
-            };
-            let text = |name: &str, value: &str| {
-                format!("<{subject}> <{NAMESPACE}{name}> \"{value}\" .")
-            };
+            let iri =
+                |predicate: &str, object: &str| format!("<{subject}> <{predicate}> <{object}> .");
+            let text =
+                |name: &str, value: &str| format!("<{subject}> <{NAMESPACE}{name}> \"{value}\" .");
             let number = |name: &str, value: u32| {
                 format!("<{subject}> <{NAMESPACE}{name}> \"{value}\"^^<{XSD_INTEGER}> .")
             };
@@ -118,13 +116,18 @@ impl FamilyTree {
         }
         for family in &self.families {
             let subject = family_iri(&family.handle);
-            let iri = |predicate: &str, object: &str| {
-                format!("<{subject}> <{predicate}> <{object}> .")
-            };
+            let iri =
+                |predicate: &str, object: &str| format!("<{subject}> <{predicate}> <{object}> .");
             lines.push(iri(RDF_TYPE, &format!("{NAMESPACE}Family")));
             lines.push(format!("<{subject}> <{NAMESPACE}gid> \"{}\" .", family.gid));
-            lines.push(iri(&format!("{NAMESPACE}father"), &person_iri(&family.father)));
-            lines.push(iri(&format!("{NAMESPACE}mother"), &person_iri(&family.mother)));
+            lines.push(iri(
+                &format!("{NAMESPACE}father"),
+                &person_iri(&family.father),
+            ));
+            lines.push(iri(
+                &format!("{NAMESPACE}mother"),
+                &person_iri(&family.mother),
+            ));
             for child in &family.children {
                 lines.push(iri(&format!("{NAMESPACE}child"), &person_iri(child)));
             }
@@ -161,7 +164,12 @@ pub fn family_tree_corpus(tree: &FamilyTree) -> Vec<String> {
     let families = tree
         .families
         .iter()
-        .map(|f| format!("('{}', '{}', '{}', '{}')", f.handle, f.gid, f.father, f.mother))
+        .map(|f| {
+            format!(
+                "('{}', '{}', '{}', '{}')",
+                f.handle, f.gid, f.father, f.mother
+            )
+        })
         .collect::<Vec<_>>()
         .join(", ");
     let child_refs = tree
@@ -247,7 +255,10 @@ mod tests {
         assert_eq!(tree.people.len(), 120);
         assert_eq!(tree.families.len(), 60);
         assert_eq!(
-            tree.families.iter().map(|f| f.children.len()).sum::<usize>(),
+            tree.families
+                .iter()
+                .map(|f| f.children.len())
+                .sum::<usize>(),
             59
         );
         assert_eq!(tree.triples().len(), 1_019);
@@ -261,6 +272,9 @@ mod tests {
         // Batches of 500 lines cover every triple once.
         let batches = tree.ntriples_batches(500);
         assert_eq!(batches.len(), 3);
-        assert_eq!(batches.iter().map(|b| b.lines().count()).sum::<usize>(), 1_019);
+        assert_eq!(
+            batches.iter().map(|b| b.lines().count()).sum::<usize>(),
+            1_019
+        );
     }
 }

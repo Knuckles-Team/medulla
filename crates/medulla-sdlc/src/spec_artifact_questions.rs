@@ -843,9 +843,18 @@ mod tests {
             &view,
         )
         .unwrap();
-        let deployments: Vec<&str> = deployed.rows.iter().map(|r| r["deployment"].as_str()).collect();
+        let deployments: Vec<&str> = deployed
+            .rows
+            .iter()
+            .map(|r| r["deployment"].as_str())
+            .collect();
         assert_eq!(deployments, ["deployment:d1", "deployment:d2"]);
-        let open = answer(SpecQuestion::OpenDefectsInRelease, Some("release:r:1"), &view).unwrap();
+        let open = answer(
+            SpecQuestion::OpenDefectsInRelease,
+            Some("release:r:1"),
+            &view,
+        )
+        .unwrap();
         assert_eq!(open.rows.len(), 1);
         assert_eq!(open.rows[0]["defect"], "defect:r/1");
         let between = answer(
@@ -863,7 +872,11 @@ mod tests {
             let refused = answer(question, Some(subject), &view).unwrap_err();
             assert_eq!(refused.code(), "COMPETENCY_SUBJECT_UNKNOWN");
         }
-        let malformed = answer(SpecQuestion::ChangesetsBetweenDeployments, Some("one"), &view);
+        let malformed = answer(
+            SpecQuestion::ChangesetsBetweenDeployments,
+            Some("one"),
+            &view,
+        );
         assert_eq!(malformed.unwrap_err().code(), "PARAMETER_INVALID");
     }
 
@@ -875,7 +888,10 @@ mod tests {
             "bundle:b".into(),
             node(
                 "ReleaseBundle",
-                &[("train_order", "other,demo"), ("open_tasks", "D-R2,O-R9,D-R1")],
+                &[
+                    ("train_order", "other,demo"),
+                    ("open_tasks", "D-R2,O-R9,D-R1"),
+                ],
             ),
         );
         for (id, repo, row) in [
@@ -884,8 +900,10 @@ mod tests {
             ("requirement:demo:D-R3", "demo", "D-R3"),
             ("requirement:other:O-R9", "other", "O-R9"),
         ] {
-            view.nodes
-                .insert(id.into(), node("Requirement", &[("repo", repo), ("rowId", row)]));
+            view.nodes.insert(
+                id.into(),
+                node("Requirement", &[("repo", repo), ("rowId", row)]),
+            );
             edge(&mut view, id, "inBundle", "bundle:b");
         }
         for (id, task_id, row, ticked) in [
@@ -902,7 +920,11 @@ mod tests {
         }
         let answered = answer(SpecQuestion::OpenTasksOfBundle, Some("bundle:b"), &view).unwrap();
         let rows: Vec<&str> = answered.rows.iter().map(|r| r["row"].as_str()).collect();
-        assert_eq!(rows, ["O-R9", "D-R1", "D-R2"], "other first, D-R3 is not open");
+        assert_eq!(
+            rows,
+            ["O-R9", "D-R1", "D-R2"],
+            "other first, D-R3 is not open"
+        );
         assert_eq!(answered.rows[2]["tasks"], "task:demo:t#T2,task:demo:t#T10");
         assert_eq!(answered.rows[1]["tasks"], "");
         let unknown = answer(SpecQuestion::OpenTasksOfBundle, Some("bundle:none"), &view);
@@ -999,13 +1021,21 @@ mod tests {
         );
         view.nodes.insert(
             "task:r:t#T1".into(),
-            node("TaskLine", &[("taskId", "T1"), ("phase", "2"), ("ticked", "false")]),
+            node(
+                "TaskLine",
+                &[("taskId", "T1"), ("phase", "2"), ("ticked", "false")],
+            ),
         );
         view.nodes.insert(
             "plansection:r:p.md#L3".into(),
             node(
                 "PlanSection",
-                &[("title", "Phase 2"), ("phase", "2"), ("start_line", "3"), ("digest", "sha256:x")],
+                &[
+                    ("title", "Phase 2"),
+                    ("phase", "2"),
+                    ("start_line", "3"),
+                    ("digest", "sha256:x"),
+                ],
             ),
         );
         view.nodes
@@ -1034,7 +1064,12 @@ mod tests {
         assert_eq!(row["blocked"], "true");
         assert!(!task.digests.is_empty());
 
-        let section = answer(SpecQuestion::PlanSection, Some("plansection:r:p.md#L3"), &view).unwrap();
+        let section = answer(
+            SpecQuestion::PlanSection,
+            Some("plansection:r:p.md#L3"),
+            &view,
+        )
+        .unwrap();
         assert_eq!(section.rows[0]["phase"], "2");
         assert_eq!(section.rows[0]["section_digest"], "sha256:x");
         assert_eq!(
@@ -1056,7 +1091,8 @@ mod tests {
         assert_eq!(routed.rows[0]["provider_repo"], "p");
         assert_eq!(routed.rows[0]["provider_row"], "P-R7");
         assert_eq!(routed.rows[0]["provider_status"], "SPECIFIED");
-        let provider = answer(SpecQuestion::SeamRouting, Some("requirement:p:P-R7"), &view).unwrap();
+        let provider =
+            answer(SpecQuestion::SeamRouting, Some("requirement:p:P-R7"), &view).unwrap();
         assert_eq!(provider.rows[0]["direction"], "provider");
 
         let goals = answer(

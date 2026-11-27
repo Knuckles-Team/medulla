@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use tree_sitter::{Language, Node, Parser};
 
-use medulla_ingestion_types::ingestion_wire::{IndexDiagnostic, IndexFileOutcome, IndexFileVerdict};
+use medulla_ingestion_types::ingestion_wire::{
+    IndexDiagnostic, IndexFileOutcome, IndexFileVerdict,
+};
 use medulla_types::contract::BoundedVec;
 use sha2::{Digest, Sha256};
 

@@ -106,10 +106,11 @@ pub fn shared_graph_source_binding_store(
     state: &medulla_server_api::state::ServerState,
 ) -> Result<Arc<GraphSourceBindingStore>, String> {
     let mut guard = state.graph_source_binding_store.lock();
-    if let Some(store) = guard
-        .as_ref()
-        .and_then(|handle| Arc::clone(handle).downcast::<GraphSourceBindingStore>().ok())
-    {
+    if let Some(store) = guard.as_ref().and_then(|handle| {
+        Arc::clone(handle)
+            .downcast::<GraphSourceBindingStore>()
+            .ok()
+    }) {
         return Ok(store);
     }
     let persist_dir = state.persist_dir.as_deref().ok_or_else(|| {

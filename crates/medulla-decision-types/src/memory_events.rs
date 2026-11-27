@@ -24,8 +24,11 @@ pub const TOPIC_CLAIM_CHANGED: &str = "memory.claim.changed";
 /// Topic of a card change.
 pub const TOPIC_CARD_UPDATED: &str = "memory.card.updated";
 /// The three topics, in one table; `Pull` accepts only these.
-pub const MEMORY_EVENT_TOPICS: [&str; 3] =
-    [TOPIC_DERIVATION_COMPLETED, TOPIC_CLAIM_CHANGED, TOPIC_CARD_UPDATED];
+pub const MEMORY_EVENT_TOPICS: [&str; 3] = [
+    TOPIC_DERIVATION_COMPLETED,
+    TOPIC_CLAIM_CHANGED,
+    TOPIC_CARD_UPDATED,
+];
 
 /// A derivation job finished and advanced its checkpoint.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -133,16 +136,18 @@ impl MemoryEvent {
         &self,
         tenant: &str,
     ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
-        Ok(medulla_mutation_types::mutation_scope::MutationOutboxIntent {
-            topic: self.topic().to_string(),
-            key: self.key().to_string(),
-            payload: rmp_serde::to_vec_named(&self.payload()?)
-                .map_err(|error| format!("memory event intent encoding failed: {error}"))?,
-            headers: std::collections::BTreeMap::from([
-                ("tenant".to_string(), tenant.to_string()),
-                ("event_kind".to_string(), self.event_kind().to_string()),
-            ]),
-        })
+        Ok(
+            medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+                topic: self.topic().to_string(),
+                key: self.key().to_string(),
+                payload: rmp_serde::to_vec_named(&self.payload()?)
+                    .map_err(|error| format!("memory event intent encoding failed: {error}"))?,
+                headers: std::collections::BTreeMap::from([
+                    ("tenant".to_string(), tenant.to_string()),
+                    ("event_kind".to_string(), self.event_kind().to_string()),
+                ]),
+            },
+        )
     }
 
     /// The id of the node that carries this event. It is a digest of the tenant, topic, key and
@@ -150,7 +155,13 @@ impl MemoryEvent {
     /// later, different change of the same claim names another.
     pub fn node_id(&self, tenant: &str, at_ms: u64) -> Result<String, String> {
         let mut hasher = Sha256::new();
-        for part in [tenant, self.topic(), self.key(), &self.payload()?.to_string(), &at_ms.to_string()] {
+        for part in [
+            tenant,
+            self.topic(),
+            self.key(),
+            &self.payload()?.to_string(),
+            &at_ms.to_string(),
+        ] {
             hasher.update((part.len() as u64).to_be_bytes());
             hasher.update(part.as_bytes());
         }
@@ -165,7 +176,9 @@ impl MemoryEvent {
         graph: &str,
     ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
         let mut intent = self.outbox_intent(tenant)?;
-        intent.headers.insert("graph".to_string(), graph.to_string());
+        intent
+            .headers
+            .insert("graph".to_string(), graph.to_string());
         Ok(intent)
     }
 
@@ -196,7 +209,11 @@ impl MemoryEvent {
         batch_id: &str,
         ordinal: u32,
     ) -> Result<serde_json::Value, String> {
-        self.node_operation_with_id(Self::row_node_id(tenant, self.topic(), batch_id, ordinal), tenant, at_ms)
+        self.node_operation_with_id(
+            Self::row_node_id(tenant, self.topic(), batch_id, ordinal),
+            tenant,
+            at_ms,
+        )
     }
 
     fn node_operation_with_id(
@@ -280,9 +297,18 @@ mod tests {
         let first = event.row_node_operation("t1", 5, "batch-a", 1).unwrap();
         let later = event.row_node_operation("t1", 900, "batch-a", 1).unwrap();
         assert_eq!(first["id"], later["id"]);
-        assert_ne!(first["id"], event.row_node_operation("t1", 5, "batch-a", 2).unwrap()["id"]);
-        assert_ne!(first["id"], event.row_node_operation("t1", 5, "batch-b", 1).unwrap()["id"]);
-        assert_ne!(first["id"], event.row_node_operation("t2", 5, "batch-a", 1).unwrap()["id"]);
+        assert_ne!(
+            first["id"],
+            event.row_node_operation("t1", 5, "batch-a", 2).unwrap()["id"]
+        );
+        assert_ne!(
+            first["id"],
+            event.row_node_operation("t1", 5, "batch-b", 1).unwrap()["id"]
+        );
+        assert_ne!(
+            first["id"],
+            event.row_node_operation("t2", 5, "batch-a", 1).unwrap()["id"]
+        );
         let intent = event.outbox_intent_in("t1", "g1").unwrap();
         assert_eq!(intent.headers["graph"], "g1");
         assert_eq!(intent.headers["tenant"], "t1");

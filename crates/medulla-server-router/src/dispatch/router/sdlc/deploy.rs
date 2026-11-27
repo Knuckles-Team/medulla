@@ -102,12 +102,18 @@ pub(super) async fn put(
             let mut properties = Map::new();
             properties.insert("type".into(), DEPLOY_RECORD_TYPE.into());
             properties.insert(DEPLOY_RECORD_BODY_PROPERTY.into(), body.into());
-            properties.insert(DEPLOY_RECORD_SEAL_PROPERTY.into(), write.record.seal.clone().into());
+            properties.insert(
+                DEPLOY_RECORD_SEAL_PROPERTY.into(),
+                write.record.seal.clone().into(),
+            );
             properties.insert(
                 DEPLOY_RECORD_RECORDED_AT_PROPERTY.into(),
                 write.record.recorded_at_ms.into(),
             );
-            properties.insert("plan_digest".into(), write.record.record.plan_digest.clone().into());
+            properties.insert(
+                "plan_digest".into(),
+                write.record.record.plan_digest.clone().into(),
+            );
             properties.insert("target".into(), write.record.record.target.clone().into());
             stamp(&mut properties, &target);
             let operations = bounded(vec![

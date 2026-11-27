@@ -1931,7 +1931,8 @@ pub mod tests {
                         source_revision_digest: digest('8'),
                     },
                     body: None,
-                }, None,
+                },
+                None,
             )
             .expect_err("an unresolvable `requires` must be refused");
         assert!(

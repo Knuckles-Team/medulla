@@ -26,7 +26,10 @@ async fn a_held_lock_shows_its_holder_and_a_waiter() {
     });
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     while registry.snapshot()[0].waiters == 0 {
-        assert!(std::time::Instant::now() < deadline, "the waiter never queued");
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the waiter never queued"
+        );
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     tokio::time::sleep(Duration::from_millis(30)).await;

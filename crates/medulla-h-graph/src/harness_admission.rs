@@ -794,7 +794,10 @@ fn validate_agent_definition_node(
     let tenant = props.get("tenant_id").and_then(|value| value.as_str());
     let holds = |set: &str| {
         view.props(set).is_some_and(|stored| {
-            match (tenant, stored.get("tenant_id").and_then(|value| value.as_str())) {
+            match (
+                tenant,
+                stored.get("tenant_id").and_then(|value| value.as_str()),
+            ) {
                 (Some(writer), Some(owner)) => writer == owner,
                 _ => true,
             }

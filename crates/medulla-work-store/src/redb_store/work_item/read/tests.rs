@@ -443,7 +443,9 @@ fn transition_ledger_appends_on_status_change_only() {
     };
 
     // Exactly ready, leased, running, succeeded: the second renewal added none.
-    let whole = page("tenant", None, 100).unwrap().expect("the item has a ledger");
+    let whole = page("tenant", None, 100)
+        .unwrap()
+        .expect("the item has a ledger");
     assert_eq!(whole.next_cursor, None);
     let states: Vec<_> = whole.entries.iter().map(|entry| entry.state).collect();
     assert_eq!(
@@ -484,6 +486,10 @@ fn transition_ledger_appends_on_status_change_only() {
         .unwrap(),
         None
     );
-    assert!(page("tenant", None, 0).unwrap_err().starts_with("INVALID_PARAMS"));
-    assert!(page("tenant", None, 201).unwrap_err().starts_with("INVALID_PARAMS"));
+    assert!(page("tenant", None, 0)
+        .unwrap_err()
+        .starts_with("INVALID_PARAMS"));
+    assert!(page("tenant", None, 201)
+        .unwrap_err()
+        .starts_with("INVALID_PARAMS"));
 }

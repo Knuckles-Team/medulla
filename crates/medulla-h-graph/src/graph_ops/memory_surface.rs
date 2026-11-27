@@ -24,27 +24,30 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_decision_memory::memory::episodes::{
+    episodes_visible_at, first_session_overlap, valid_episode, RecordStamp,
+};
 use medulla_decision_stats::decision::memory as kernel;
+use medulla_decision_stats::decision::session_note::{annotate_notes_with, NoteKnobs, StoredNote};
 use medulla_decision_types::decision::knob_families::memory::{
     ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, SEARCH_STATE_MAX_BYTES, TENANT_MAX_BYTES,
 };
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
+use medulla_modality::media_memory::match_derivation;
 use medulla_protocol_types::result_contract::graph::{
     MemoryExport as MemoryExportResultKind, MemoryRecall as MemoryRecallResultKind,
     MemoryRemember as MemoryRememberResultKind,
 };
-use medulla_modality::media_memory::match_derivation;
 use medulla_types::contract::ResourceId;
-use medulla_decision_memory::memory::episodes::{episodes_visible_at, first_session_overlap, valid_episode, RecordStamp};
 use medulla_work_types::memory::{
-    Episode, EpisodeScope, EpisodeSpec, EPISODE_BOUNDARY_MISSING, EPISODE_IMMUTABLE, EPISODE_OVERLAP,
-    EPISODE_ORDER_UNKNOWN, MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
-    MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
+    Episode, EpisodeScope, EpisodeSpec, MemoryDriftReport, MemoryExportManifest,
+    MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest, MemoryRecallResult,
+    MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
+    EPISODE_BOUNDARY_MISSING, EPISODE_IMMUTABLE, EPISODE_ORDER_UNKNOWN, EPISODE_OVERLAP,
     MEMORY_ENTRY_TOO_LARGE, MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
     MEMORY_TENANT_QUOTA_EXCEEDED, NOTE_RELEVANCE_OUT_OF_RANGE, NOTE_UNAUTHORIZED,
 };
-use medulla_decision_stats::decision::session_note::{annotate_notes_with, NoteKnobs, StoredNote};
 use medulla_work_types::memory::{MemoryKind, NoteView, SessionNoteBody};
 use sha2::{Digest, Sha256};
 
@@ -142,7 +145,9 @@ struct Stored {
 pub fn session_of(core: &GraphCore, tenant: &str, memory_id: &str) -> Option<String> {
     let blob = core.get_node_properties(&node_id(tenant, memory_id))?;
     let record = decode(&blob, tenant)?.record;
-    record.session_id.map(|session| session.as_str().to_string())
+    record
+        .session_id
+        .map(|session| session.as_str().to_string())
 }
 
 /// One stored turn of a session: who spoke it and when (MEDULLA-DECISION-ENGINE-R651.11).
@@ -165,7 +170,12 @@ pub fn session_turns(core: &GraphCore, tenant: &str, session_id: &str) -> Vec<Se
         .into_iter()
         .map(|stored| stored.record)
         .filter(|record| !record.forgotten)
-        .filter(|record| record.session_id.as_ref().is_some_and(|session| session.as_str() == session_id))
+        .filter(|record| {
+            record
+                .session_id
+                .as_ref()
+                .is_some_and(|session| session.as_str() == session_id)
+        })
         .filter_map(|record| {
             Some(SessionTurn {
                 timestamp_ms: u64::try_from(record.timestamp_ms).unwrap_or(0),
@@ -228,7 +238,10 @@ fn decode(blob: &[u8], tenant: &str) -> Option<Stored> {
 }
 
 fn read_stored(core: &GraphCore, tenant: &str, memory_id: &str) -> Option<Stored> {
-    decode(&core.get_node_properties(&node_id(tenant, memory_id))?, tenant)
+    decode(
+        &core.get_node_properties(&node_id(tenant, memory_id))?,
+        tenant,
+    )
 }
 
 /// The node type of a sealed episode (MEDULLA-DECISION-ENGINE-R155.1).
@@ -260,7 +273,10 @@ fn decode_episode(blob: &[u8], tenant: &str) -> Option<Episode> {
 }
 
 fn read_episode(core: &GraphCore, tenant: &str, episode_id: &str) -> Option<Episode> {
-    decode_episode(&core.get_node_properties(&episode_node_id(tenant, episode_id))?, tenant)
+    decode_episode(
+        &core.get_node_properties(&episode_node_id(tenant, episode_id))?,
+        tenant,
+    )
 }
 
 /// Every episode of `tenant`.
@@ -283,14 +299,26 @@ struct EpisodePlan {
 /// write: `EPISODE_BOUNDARY_MISSING` (no session, or a record outside it), `EPISODE_ORDER_UNKNOWN`
 /// (a record without a timestamp), `EPISODE_IMMUTABLE` (the id is sealed with another digest) and
 /// `EPISODE_OVERLAP` (the window overlaps another episode of the session).
-fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &EpisodeSpec) -> Result<EpisodePlan, String> {
+fn plan_episode(
+    core: &GraphCore,
+    tenant: &str,
+    record: &MemoryRecord,
+    spec: &EpisodeSpec,
+) -> Result<EpisodePlan, String> {
     let Some(session) = spec.session_id.as_ref() else {
-        return Err(refuse(EPISODE_BOUNDARY_MISSING.as_str(), "an episode spec needs a session_id"));
+        return Err(refuse(
+            EPISODE_BOUNDARY_MISSING.as_str(),
+            "an episode spec needs a session_id",
+        ));
     };
     let outside = |id: &ResourceId| {
         refuse(
             EPISODE_BOUNDARY_MISSING.as_str(),
-            format!("record {} is not an episodic record of session {}", id.as_str(), session.as_str()),
+            format!(
+                "record {} is not an episodic record of session {}",
+                id.as_str(),
+                session.as_str()
+            ),
         )
     };
     if record.session_id.as_ref() != Some(session) || record.tier != MemoryTier::Episodic {
@@ -304,8 +332,11 @@ fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &Ep
         if stamps.iter().any(|stamp| stamp.record_id == id.as_str()) {
             continue;
         }
-        let held = read_stored(core, tenant, id.as_str()).ok_or_else(|| absent_record(id.as_str()))?;
-        if held.record.session_id.as_ref() != Some(session) || held.record.tier != MemoryTier::Episodic {
+        let held =
+            read_stored(core, tenant, id.as_str()).ok_or_else(|| absent_record(id.as_str()))?;
+        if held.record.session_id.as_ref() != Some(session)
+            || held.record.tier != MemoryTier::Episodic
+        {
             return Err(outside(id));
         }
         stamps.push(RecordStamp {
@@ -319,7 +350,9 @@ fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &Ep
             format!("record {} has no timestamp_ms", stamp.record_id),
         ));
     }
-    stamps.sort_by(|a, b| (a.timestamp_ms, a.record_id.as_str()).cmp(&(b.timestamp_ms, b.record_id.as_str())));
+    stamps.sort_by(|a, b| {
+        (a.timestamp_ms, a.record_id.as_str()).cmp(&(b.timestamp_ms, b.record_id.as_str()))
+    });
     let episode = Episode::seal(
         spec.episode_id.as_str(),
         tenant,
@@ -329,10 +362,14 @@ fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &Ep
         stamps.iter().map(|stamp| stamp.record_id.clone()).collect(),
     )
     .map_err(invalid)?;
-    valid_episode(&episode, &stamps).map_err(|fault| invalid(format!("episode is not valid: {fault:?}")))?;
+    valid_episode(&episode, &stamps)
+        .map_err(|fault| invalid(format!("episode is not valid: {fault:?}")))?;
     match read_episode(core, tenant, spec.episode_id.as_str()) {
         Some(sealed) if sealed.digest == episode.digest => {
-            return Ok(EpisodePlan { episode, operations: Vec::new() });
+            return Ok(EpisodePlan {
+                episode,
+                operations: Vec::new(),
+            });
         }
         Some(sealed) => {
             return Err(refuse(
@@ -349,14 +386,21 @@ fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &Ep
     }
     let mut all = load_episodes(core, tenant);
     all.push(episode.clone());
-    if first_session_overlap(&all).is_some_and(|(a, b)| a.episode_id == episode.episode_id || b.episode_id == episode.episode_id) {
+    if first_session_overlap(&all).is_some_and(|(a, b)| {
+        a.episode_id == episode.episode_id || b.episode_id == episode.episode_id
+    }) {
         return Err(refuse(
             EPISODE_OVERLAP.as_str(),
-            format!("episode {} overlaps another episode of session {}", spec.episode_id.as_str(), session.as_str()),
+            format!(
+                "episode {} overlaps another episode of session {}",
+                spec.episode_id.as_str(),
+                session.as_str()
+            ),
         ));
     }
     let id = episode_node_id(tenant, spec.episode_id.as_str());
-    let serde_json::Value::Object(mut props) = serde_json::to_value(&episode).map_err(invalid)? else {
+    let serde_json::Value::Object(mut props) = serde_json::to_value(&episode).map_err(invalid)?
+    else {
         return Err(invalid("an episode serializes as an object"));
     };
     props.insert("type".into(), EPISODE_TYPE.into());
@@ -370,13 +414,21 @@ fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &Ep
             "properties": {"relationship": CONTAINS},
         }));
     }
-    Ok(EpisodePlan { episode, operations })
+    Ok(EpisodePlan {
+        episode,
+        operations,
+    })
 }
 
 /// The one batch of operations, as the gateway commits it.
 fn batch_of(operations: Vec<serde_json::Value>) -> Result<Method, String> {
     let operations_msgpack = rmp_serde::to_vec_named(&serde_json::Value::Array(operations))
-        .map_err(|error| refuse("PARAMETER_INVALID", format!("record encoding failed: {error}")))?;
+        .map_err(|error| {
+            refuse(
+                "PARAMETER_INVALID",
+                format!("record encoding failed: {error}"),
+            )
+        })?;
     Ok(Method::BatchUpdate { operations_msgpack })
 }
 
@@ -413,7 +465,10 @@ fn node_props(tenant: &str, request: &MemoryRememberRequest) -> serde_json::Valu
 
 fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(&node_props(tenant, request)).map_err(|error| {
-        refuse("PARAMETER_INVALID", format!("record encoding failed: {error}"))
+        refuse(
+            "PARAMETER_INVALID",
+            format!("record encoding failed: {error}"),
+        )
     })
 }
 
@@ -438,8 +493,17 @@ fn vectors_agree(stored: &[f32], given: &[f32]) -> bool {
     if stored.len() != given.len() || stored.is_empty() {
         return false;
     }
-    let dot: f64 = stored.iter().zip(given).map(|(a, b)| f64::from(*a) * f64::from(*b)).sum();
-    let norm = |v: &[f32]| v.iter().map(|x| f64::from(*x) * f64::from(*x)).sum::<f64>().sqrt();
+    let dot: f64 = stored
+        .iter()
+        .zip(given)
+        .map(|(a, b)| f64::from(*a) * f64::from(*b))
+        .sum();
+    let norm = |v: &[f32]| {
+        v.iter()
+            .map(|x| f64::from(*x) * f64::from(*x))
+            .sum::<f64>()
+            .sqrt()
+    };
     let (a, b) = (norm(stored), norm(given));
     a > 0.0 && b > 0.0 && dot / (a * b) >= 0.999_999
 }
@@ -456,7 +520,10 @@ fn check_embedding(embedding: &[f32], what: &str) -> Result<(), String> {
 
 /// Whether `digest` is 64 lowercase hex characters.
 fn is_sha256_hex(digest: &str) -> bool {
-    digest.len() == 64 && digest.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+    digest.len() == 64
+        && digest
+            .bytes()
+            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 /// What an admitted remember does.
@@ -501,7 +568,10 @@ pub(super) fn admit_remember(
     if record.schema_version != MEMORY_RECORD_SCHEMA_VERSION {
         return Err(refuse(
             "PARAMETER_INVALID",
-            format!("memory record schema version {} is not served", record.schema_version),
+            format!(
+                "memory record schema version {} is not served",
+                record.schema_version
+            ),
         ));
     }
     if record.text.is_empty() || !record.importance.is_finite() {
@@ -585,8 +655,19 @@ pub(super) fn admit_remember(
         })
     };
     let Some(existing) = read_stored(core, tenant, record.memory_id.as_str()) else {
-        let write = admitted_batch(core, tenant, &id, request, (blob.len() as u64, tenant_max_bytes), episode_ops)?;
-        return Ok(Admitted::Write(Box::new(write), embed(&request.embedding), answer(true)));
+        let write = admitted_batch(
+            core,
+            tenant,
+            &id,
+            request,
+            (blob.len() as u64, tenant_max_bytes),
+            episode_ops,
+        )?;
+        return Ok(Admitted::Write(
+            Box::new(write),
+            embed(&request.embedding),
+            answer(true),
+        ));
     };
     let indexed = core.semantic_store.read().get_embedding(&id);
     let conflict = || {
@@ -607,7 +688,11 @@ pub(super) fn admit_remember(
         if episode_ops.is_empty() {
             Ok(Admitted::Same(answer(stored)))
         } else {
-            Ok(Admitted::Write(Box::new(batch_of(episode_ops.clone())?), None, answer(stored)))
+            Ok(Admitted::Write(
+                Box::new(batch_of(episode_ops.clone())?),
+                None,
+                answer(stored),
+            ))
         }
     };
     match (indexed, request.embedding.is_empty()) {
@@ -619,7 +704,11 @@ pub(super) fn admit_remember(
             if episode_ops.is_empty() {
                 Ok(Admitted::Embed(embed, answer(true)))
             } else {
-                Ok(Admitted::Write(Box::new(batch_of(episode_ops.clone())?), Some(embed), answer(true)))
+                Ok(Admitted::Write(
+                    Box::new(batch_of(episode_ops.clone())?),
+                    Some(embed),
+                    answer(true),
+                ))
             }
         }
     }
@@ -640,7 +729,9 @@ fn admitted_batch(
     (blob_len, max_tenant): (u64, u64),
     episode_ops: Vec<serde_json::Value>,
 ) -> Result<Method, String> {
-    let replaced = core.get_node_properties(id).map_or(0, |stored| stored.len() as u64);
+    let replaced = core
+        .get_node_properties(id)
+        .map_or(0, |stored| stored.len() as u64);
     let project = |total: u64| total.saturating_sub(replaced).saturating_add(blob_len);
     let projected = project(read_usage(core, tenant).unwrap_or_else(|| scan_usage(core, tenant)));
     if projected > max_tenant {
@@ -740,7 +831,10 @@ pub(super) async fn check_attachment_types(
                 None => {
                     return Err(refuse(
                         "MEDIA_TYPE_UNSUPPORTED",
-                        format!("attachment '{}' has an unsupported type", attachment.blob_digest),
+                        format!(
+                            "attachment '{}' has an unsupported type",
+                            attachment.blob_digest
+                        ),
                     ));
                 }
                 Some(sniffed) if sniffed != attachment.mime => {
@@ -815,7 +909,13 @@ pub(super) async fn handle_remember(
     // the batch, so two concurrent writes must not both start from the same total.
     let tenant_gate = tenant_gate(ctx.tenant_scope);
     let _held = tenant_gate.lock().await;
-    match admit_remember(ctx.core, ctx.tenant_scope, request, known_digests, tenant_max_bytes()) {
+    match admit_remember(
+        ctx.core,
+        ctx.tenant_scope,
+        request,
+        known_digests,
+        tenant_max_bytes(),
+    ) {
         Err(error) => Some(Response::err(ctx.req_id, error)),
         Ok(Admitted::Same(answer)) => Some(Response::ok(ctx.req_id, ok(answer))),
         Ok(Admitted::Embed(embed, answer)) => {
@@ -829,12 +929,20 @@ pub(super) async fn handle_remember(
         Ok(Admitted::Write(write, embed, answer)) => {
             let plan = MutationPlan::for_method(&write);
             let Method::BatchUpdate { operations_msgpack } = write.as_ref().clone() else {
-                return Some(Response::err(ctx.req_id, refuse("PARAMETER_INVALID", "an admitted write is one batch")));
+                return Some(Response::err(
+                    ctx.req_id,
+                    refuse("PARAMETER_INVALID", "an admitted write is one batch"),
+                ));
             };
-            let node = medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
-                medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
-                ResultPayload::of::<MemoryRememberResultKind>(answer)
-            })
+            let node = medulla_server_ops::api::ingest::graph::commit_gateway(
+                ctx,
+                &plan,
+                &write,
+                move |core| {
+                    medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
+                    ResultPayload::of::<MemoryRememberResultKind>(answer)
+                },
+            )
             .await;
             let Some(embed) = embed else {
                 return Some(node);
@@ -925,8 +1033,9 @@ fn raise_by_derivations(
                 })
                 .collect()
         };
-        let Some(best) =
-            match_derivation(&request.query_embedding, &owned, SEARCH_FANOUT).into_iter().next()
+        let Some(best) = match_derivation(&request.query_embedding, &owned, SEARCH_FANOUT)
+            .into_iter()
+            .next()
         else {
             continue;
         };
@@ -950,11 +1059,15 @@ pub fn stage_remember(
     tenant: &str,
     request: &MemoryRememberRequest,
 ) -> Result<Vec<Method>, String> {
-    Ok(match admit_remember(core, tenant, request, &BTreeSet::new(), tenant_max_bytes())? {
-        Admitted::Write(write, embed, _) => std::iter::once(*write).chain(embed.map(|m| *m)).collect(),
-        Admitted::Embed(embed, _) => vec![*embed],
-        Admitted::Same(_) => Vec::new(),
-    })
+    Ok(
+        match admit_remember(core, tenant, request, &BTreeSet::new(), tenant_max_bytes())? {
+            Admitted::Write(write, embed, _) => {
+                std::iter::once(*write).chain(embed.map(|m| *m)).collect()
+            }
+            Admitted::Embed(embed, _) => vec![*embed],
+            Admitted::Same(_) => Vec::new(),
+        },
+    )
 }
 
 /// The node id of the row that carries a session note's own fields beside its memory record.
@@ -983,18 +1096,32 @@ pub fn stage_session_note(
             .ok()
             .and_then(|props| props.get("user_id")?.as_str().map(str::to_string));
         if held.as_deref() != Some(note.user_id.as_str()) {
-            return Err(refuse(NOTE_UNAUTHORIZED.as_str(), "the note is not visible to the caller"));
+            return Err(refuse(
+                NOTE_UNAUTHORIZED.as_str(),
+                "the note is not visible to the caller",
+            ));
         }
     }
     let record = note
         .to_record(tenant, now_ms)
         .map_err(|error| refuse("PARAMETER_INVALID", error))?;
-    let mut methods = stage_remember(core, tenant, &MemoryRememberRequest { record, embedding, episode: None })?;
+    let mut methods = stage_remember(
+        core,
+        tenant,
+        &MemoryRememberRequest {
+            record,
+            embedding,
+            episode: None,
+        },
+    )?;
     if core.get_node_properties(&sidecar).is_none() {
         let serde_json::Value::Object(mut props) =
             serde_json::to_value(note).map_err(|error| refuse("PARAMETER_INVALID", error))?
         else {
-            return Err(refuse("PARAMETER_INVALID", "a note serializes as an object"));
+            return Err(refuse(
+                "PARAMETER_INVALID",
+                "a note serializes as an object",
+            ));
         };
         props.insert("type".into(), NOTE_TYPE.into());
         props.insert(TENANT_KEY.into(), tenant.into());
@@ -1013,9 +1140,15 @@ pub fn stage_session_note(
 }
 
 /// One stored note read back: its fields, the embedding it is recalled by and its digest.
-fn read_session_note(core: &GraphCore, tenant: &str, note_id: &str) -> Option<(StoredNote, String)> {
-    let mut props =
-        medulla_types::msgpack::decode_property_object(&core.get_node_properties(&session_note_node_id(tenant, note_id))?).ok()?;
+fn read_session_note(
+    core: &GraphCore,
+    tenant: &str,
+    note_id: &str,
+) -> Option<(StoredNote, String)> {
+    let mut props = medulla_types::msgpack::decode_property_object(
+        &core.get_node_properties(&session_note_node_id(tenant, note_id))?,
+    )
+    .ok()?;
     if props.remove(TENANT_KEY)?.as_str()? != tenant {
         return None;
     }
@@ -1030,7 +1163,15 @@ fn read_session_note(core: &GraphCore, tenant: &str, note_id: &str) -> Option<(S
         .read()
         .get_embedding(&node_id(tenant, note_id))
         .unwrap_or_default();
-    Some((StoredNote { body, revision, embedding, created_ms }, digest))
+    Some((
+        StoredNote {
+            body,
+            revision,
+            embedding,
+            created_ms,
+        },
+        digest,
+    ))
 }
 
 /// Flag the session notes among `hits` (MEDULLA-DECISION-ENGINE-R150.2, R150.3): stale, archived,
@@ -1056,9 +1197,13 @@ fn annotate_recalled_notes(
     if let Some(min) = request.min_relevance {
         knobs.min_relevance_q4 = (min * 10_000.0).round().clamp(0.0, 10_000.0) as u16;
     }
-    let current = request
-        .current_revision
-        .unwrap_or_else(|| found.iter().map(|(note, _)| note.body.source_revision).max().unwrap_or(0));
+    let current = request.current_revision.unwrap_or_else(|| {
+        found
+            .iter()
+            .map(|(note, _)| note.body.source_revision)
+            .max()
+            .unwrap_or(0)
+    });
     let stored: Vec<StoredNote> = found.iter().map(|(note, _)| note.clone()).collect();
     let views = annotate_notes_with(
         &stored,
@@ -1071,8 +1216,12 @@ fn annotate_recalled_notes(
     let mut premises = Vec::new();
     for (view, (note, digest)) in views.into_iter().zip(&found) {
         if view.archived && !request.include_archived {
-            if let Some(index) = hits.iter().position(|hit| hit.record.memory_id.as_str() == view.note_id) {
-                *tokens_used = tokens_used.saturating_sub(kernel::record_tokens(&hits.remove(index).record));
+            if let Some(index) = hits
+                .iter()
+                .position(|hit| hit.record.memory_id.as_str() == view.note_id)
+            {
+                *tokens_used =
+                    tokens_used.saturating_sub(kernel::record_tokens(&hits.remove(index).record));
             }
             continue;
         }
@@ -1091,8 +1240,14 @@ fn annotate_recalled_notes(
     }
     if !premises.is_empty() {
         premises.extend([
-            format!("knob:memory.note_stale_after={}", knobs.stale_after_ms / 86_400_000),
-            format!("knob:memory.note_archive_after={}", knobs.archive_after_ms / 86_400_000),
+            format!(
+                "knob:memory.note_stale_after={}",
+                knobs.stale_after_ms / 86_400_000
+            ),
+            format!(
+                "knob:memory.note_archive_after={}",
+                knobs.archive_after_ms / 86_400_000
+            ),
             format!(
                 "knob:memory.note_min_relevance={}",
                 KnobValue::DecimalMicros(i64::from(knobs.min_relevance_q4) * 100).render()
@@ -1123,7 +1278,10 @@ pub(super) fn recall(
     let allowed = narrowing.and_then(|narrowing| narrowing.documents.as_ref());
     let scope_sessions = narrowing.and_then(|narrowing| narrowing.sessions.as_ref());
     check_embedding(&request.query_embedding, "the query embedding")?;
-    if request.min_relevance.is_some_and(|min| !(0.0..=1.0).contains(&min)) {
+    if request
+        .min_relevance
+        .is_some_and(|min| !(0.0..=1.0).contains(&min))
+    {
         return Err(refuse(
             NOTE_RELEVANCE_OUT_OF_RANGE.as_str(),
             "min_relevance is outside [0, 1]",
@@ -1143,8 +1301,7 @@ pub(super) fn recall(
     if request.include_media && !has_embedding {
         return Err(invalid("include_media needs a non-empty query embedding"));
     }
-    if !has_embedding && !has_keywords && request.prime_session.is_none() && !request.include_plan
-    {
+    if !has_embedding && !has_keywords && request.prime_session.is_none() && !request.include_plan {
         return Err(invalid(
             "a recall needs a query embedding, keywords, a session to prime or a plan",
         ));
@@ -1179,9 +1336,15 @@ pub(super) fn recall(
             let sealed = load_episodes(core, tenant);
             episodes_visible_at(&sealed, tenant, as_of)
                 .into_iter()
-                .filter(|episode| request.scope.as_ref().is_none_or(|session| *session == episode.session_id))
                 .filter(|episode| {
-                    scope_sessions.is_none_or(|sessions| sessions.contains(episode.session_id.as_str()))
+                    request
+                        .scope
+                        .as_ref()
+                        .is_none_or(|session| *session == episode.session_id)
+                })
+                .filter(|episode| {
+                    scope_sessions
+                        .is_none_or(|sessions| sessions.contains(episode.session_id.as_str()))
                 })
                 .cloned()
                 .collect()
@@ -1208,7 +1371,8 @@ pub(super) fn recall(
         Some(EpisodeScope::Episodes) => episode_members.contains(stored.record.memory_id.as_str()),
         Some(EpisodeScope::Live) => stored.record.tier == MemoryTier::Working,
         Some(EpisodeScope::Both) => {
-            episode_members.contains(stored.record.memory_id.as_str()) || stored.record.tier == MemoryTier::Working
+            episode_members.contains(stored.record.memory_id.as_str())
+                || stored.record.tier == MemoryTier::Working
         }
     };
     let searched_by_request = |stored: &Stored| {
@@ -1268,8 +1432,12 @@ pub(super) fn recall(
         .filter(|(score, _)| *score > 0.0)
         .collect();
     ranked.sort_by(|a, b| {
-        b.0.total_cmp(&a.0)
-            .then_with(|| a.1.record.memory_id.as_str().cmp(b.1.record.memory_id.as_str()))
+        b.0.total_cmp(&a.0).then_with(|| {
+            a.1.record
+                .memory_id
+                .as_str()
+                .cmp(b.1.record.memory_id.as_str())
+        })
     });
     let mut hits = Vec::new();
     let mut tokens_used: u32 = 0;
@@ -1327,8 +1495,12 @@ pub(super) fn recall(
         episodes: episodes.iter().map(Episode::view).collect(),
         as_of_ms: as_of,
         episode_scope: request.episode_scope,
-        memory_scope: request.memory_scope.as_ref().map(|reference| reference.scope_id.clone()),
-        scope_session_count: scope_sessions.map(|sessions| u32::try_from(sessions.len()).unwrap_or(u32::MAX)),
+        memory_scope: request
+            .memory_scope
+            .as_ref()
+            .map(|reference| reference.scope_id.clone()),
+        scope_session_count: scope_sessions
+            .map(|sessions| u32::try_from(sessions.len()).unwrap_or(u32::MAX)),
     })
 }
 
@@ -1390,7 +1562,11 @@ fn hex_digest(domain: &str, canonical: &[u8]) -> String {
     hasher.update(domain.as_bytes());
     hasher.update([0u8]);
     hasher.update(canonical);
-    hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// SHA-256 over the canonical JSON of `records` in order, 64 lowercase hex characters.
@@ -1403,7 +1579,10 @@ fn manifest_digest(records: &[MemoryRecord]) -> Result<String, String> {
 /// SHA-256 over the canonical recall plan: the query, the filters, the scope
 /// and the knob values the recall reads. `previous_manifest_digest` is a
 /// comparison input, not part of the plan.
-fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Result<String, String> {
+fn recall_plan_digest(
+    request: &MemoryRecallRequest,
+    keywords: &[String],
+) -> Result<String, String> {
     let mut plan = serde_json::json!({
         "query_embedding": request.query_embedding,
         "keywords": keywords,
@@ -1494,10 +1673,21 @@ fn resolve_memory_scope(
     let agent_id = ctx.read_authority.verified_actor()?.to_string();
     let visible: BTreeSet<String> = load(ctx.core, tenant, &TIERS)
         .into_iter()
-        .filter_map(|stored| stored.record.session_id.map(|session| session.as_str().to_string()))
+        .filter_map(|stored| {
+            stored
+                .record
+                .session_id
+                .map(|session| session.as_str().to_string())
+        })
         .collect();
-    super::participant_surface::resolve_scope_ref(ctx.raw_core, tenant, &agent_id, reference, &visible)
-        .map(Some)
+    super::participant_surface::resolve_scope_ref(
+        ctx.raw_core,
+        tenant,
+        &agent_id,
+        reference,
+        &visible,
+    )
+    .map(Some)
 }
 
 /// Route the memory reads served from the graph.
@@ -1524,18 +1714,23 @@ pub(super) async fn try_handle_memory_surface(
     let answer = match &method {
         Method::MemoryRecall { request } => {
             let now_ms = i64::try_from(authoritative_now_ms()).unwrap_or(i64::MAX);
-            let documents =
-                match super::assistant_profile::resolve_document_sets(&ctx, &request.document_set_ids)
-                    .await
-                {
-                    Ok(allowed) => allowed,
-                    Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
-                };
+            let documents = match super::assistant_profile::resolve_document_sets(
+                &ctx,
+                &request.document_set_ids,
+            )
+            .await
+            {
+                Ok(allowed) => allowed,
+                Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
+            };
             let sessions = match resolve_memory_scope(&ctx, &tenant, request) {
                 Ok(sessions) => sessions,
                 Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
             };
-            let narrowing = Narrowing { documents, sessions };
+            let narrowing = Narrowing {
+                documents,
+                sessions,
+            };
             recall(ctx.core, &tenant, now_ms, request, Some(&narrowing))
                 .and_then(ResultPayload::of::<MemoryRecallResultKind>)
         }

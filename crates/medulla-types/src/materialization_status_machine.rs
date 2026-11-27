@@ -129,8 +129,13 @@ pub const MATERIALIZATION_STATUS_MACHINE: MachineDef<
 impl MaterializationStatus {
     /// The one transition function: the next status, or the typed refusal.
     pub fn apply(self, event: MaterializationEvent) -> Result<Self, TransitionRefused> {
-        transition(&MATERIALIZATION_STATUS_MACHINE, self, event, |guard| match guard {})
-            .map(|edge| edge.to)
+        transition(
+            &MATERIALIZATION_STATUS_MACHINE,
+            self,
+            event,
+            |guard| match guard {},
+        )
+        .map(|edge| edge.to)
     }
 
     /// Whether `event` in this status is an idempotent no-op rather than a transition:

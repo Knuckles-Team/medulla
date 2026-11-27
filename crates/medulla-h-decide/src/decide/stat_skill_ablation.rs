@@ -14,7 +14,6 @@ use medulla_decision_stats::decision::skill_eval::{
     ablation_verdict, check_traffic, noise_band, stale_after_change,
 };
 use medulla_decision_types::decision::codes::CANARY_NO_CHAMPION;
-use medulla_persistence_records::decision_jobs::read_pointer;
 use medulla_decision_types::decision::codes::COMPILE_MODEL_UNKNOWN;
 use medulla_decision_types::decision::skill_evolution::{Rollout, RolloutSet};
 use medulla_decision_types::skill_eval::{
@@ -22,8 +21,9 @@ use medulla_decision_types::skill_eval::{
     ModelCompile, ModelCompileRecorded, NoiseBand, SkillCanary, CANARY_TRAFFIC_MAX_PPM,
     CANARY_TRAFFIC_MIN_PPM,
 };
-use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::read_pointer;
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;
@@ -75,7 +75,10 @@ pub(super) fn read_noise_band(
         .transpose()
 }
 
-fn refuse(code: medulla_types::refusal_code::RefusalCode, detail: impl std::fmt::Display) -> String {
+fn refuse(
+    code: medulla_types::refusal_code::RefusalCode,
+    detail: impl std::fmt::Display,
+) -> String {
     format!("{}: {detail}", code.as_str())
 }
 
@@ -84,7 +87,11 @@ pub(super) fn record_ablation(
     ctx: &ExecutionContext,
     record: AblationRecord,
 ) -> Result<AblationRecorded, String> {
-    if record.runs.iter().any(|run| run.skill_ref != record.skill_ref) {
+    if record
+        .runs
+        .iter()
+        .any(|run| run.skill_ref != record.skill_ref)
+    {
         return Err(invalid_parameter(format!(
             "every run tests {}",
             record.skill_ref
@@ -119,7 +126,10 @@ pub(super) fn record_ablation(
                 .filter(|ppm| *ppm <= 1_000_000)
                 .ok_or_else(|| invalid_parameter("a run score is a ppm share, at most 1000000"))
         };
-        let (challenger, champion) = (score(with.outcome_score_ppm)?, score(without.outcome_score_ppm)?);
+        let (challenger, champion) = (
+            score(with.outcome_score_ppm)?,
+            score(without.outcome_score_ppm)?,
+        );
         with_scores.push(u64::from(challenger));
         without_scores.push(u64::from(champion));
         rollouts.push(Rollout {
@@ -210,13 +220,13 @@ pub(super) fn record_model_compile(
     ];
     let mut proposals = Vec::new();
     for row in &stale {
-        writes.push((
-            format!("{prefix}{}", row.skill_ref),
-            encode_artifact(row)?,
-        ));
+        writes.push((format!("{prefix}{}", row.skill_ref), encode_artifact(row)?));
         // One draft revision per stale row: the skill is compiled again for the new revision.
         let draft = RevisionRow {
-            id: format!("compile:{}:{}:{model_revision}", row.skill_ref, row.model_ref),
+            id: format!(
+                "compile:{}:{}:{model_revision}",
+                row.skill_ref, row.model_ref
+            ),
             subject_kind: "skill".to_string(),
             subject_ref: row.skill_ref.clone(),
             stage: RevisionStage::Draft,
@@ -249,12 +259,18 @@ pub(super) fn record_canary(
         tier: None,
     };
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &subject.pointer_key())?;
-    let champion = state.active.as_ref().and_then(|active| active.target.clone());
+    let champion = state
+        .active
+        .as_ref()
+        .and_then(|active| active.target.clone());
     if verdict != CanaryVerdict::Rollback {
         let Some(champion) = champion else {
             return Err(refuse(
                 CANARY_NO_CHAMPION,
-                format!("{} has no champion to run a canary against", canary.skill_ref),
+                format!(
+                    "{} has no champion to run a canary against",
+                    canary.skill_ref
+                ),
             ));
         };
         if champion != canary.champion_revision {
@@ -263,8 +279,12 @@ pub(super) fn record_canary(
                 "the canary names a champion revision that is not the active one",
             ));
         }
-        check_traffic(canary.traffic_ppm, CANARY_TRAFFIC_MIN_PPM, CANARY_TRAFFIC_MAX_PPM)
-            .map_err(|refusal| refuse(refusal.code, refusal.reason))?;
+        check_traffic(
+            canary.traffic_ppm,
+            CANARY_TRAFFIC_MIN_PPM,
+            CANARY_TRAFFIC_MAX_PPM,
+        )
+        .map_err(|refusal| refuse(refusal.code, refusal.reason))?;
     }
     let stored = (verdict != CanaryVerdict::Rollback).then_some(canary);
     let current = ctx.store.decision_artifact(ctx.tenant_id, &key)?;

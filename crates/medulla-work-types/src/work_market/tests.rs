@@ -170,7 +170,10 @@ fn transitions_follow_the_legal_edge_table_under_revision_cas() {
     );
     assert_eq!(gap.evidence.last().unwrap().kind, "resolved");
     // An illegal edge is refused with the typed record and changes nothing.
-    for to in [GapTransitionTarget::Specified, GapTransitionTarget::Deferred] {
+    for to in [
+        GapTransitionTarget::Specified,
+        GapTransitionTarget::Deferred,
+    ] {
         let refused = gap.transition(&request(to, 3), 13).unwrap_err();
         assert_eq!(refused.machine, "GapViewMachine");
         assert_eq!(refused.from, "resolved");

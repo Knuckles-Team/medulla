@@ -278,7 +278,11 @@ async fn executed_uql_returned_and_read_only() {
         (1110, "MATCH ((( not uql", "NL_QUERY_STEPS_EXHAUSTED"),
         (1111, over_budget.as_str(), "QUERY_TEXT_TOO_LONG"),
         (1112, "MATCH (:Doc) |> DELETE", "NL_MUTATION_REFUSED"),
-        (1113, "CREATE (n:Doc {id: 'injected'})", "NL_MUTATION_REFUSED"),
+        (
+            1113,
+            "CREATE (n:Doc {id: 'injected'})",
+            "NL_MUTATION_REFUSED",
+        ),
     ] {
         let refused = send(&state, id, nl(candidate)).await;
         assert!(refused.result.is_none(), "{code}: no rows");

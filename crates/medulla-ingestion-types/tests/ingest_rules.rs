@@ -151,10 +151,17 @@ fn instance_profile_becomes_a_draft_proposal_with_thresholds() {
     assert_eq!(kept, ["name", "title", "worksAt"]);
     let person = draft.classes.iter().find(|c| c.name == "Person").unwrap();
     assert_eq!(
-        person.properties.iter().map(String::as_str).collect::<Vec<_>>(),
+        person
+            .properties
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
         ["name", "worksAt"]
     );
-    assert_eq!(observed, ["age", "knows", "name", "taggedWith", "title", "worksAt"]);
+    assert_eq!(
+        observed,
+        ["age", "knows", "name", "taggedWith", "title", "worksAt"]
+    );
     // Half the observed names fell below a threshold, so the checks leave it a draft.
     let thresholds = ProposalThresholds::default();
     assert_eq!(
@@ -175,7 +182,9 @@ fn instance_profile_becomes_a_draft_proposal_with_thresholds() {
     let (draft, observed) = draft_from_profile("p2", &clean, provenance()).unwrap();
     assert_eq!(draft.state, ProposalState::Draft);
     assert_eq!(
-        judge_proposal(&draft, &observed, &thresholds).unwrap().state,
+        judge_proposal(&draft, &observed, &thresholds)
+            .unwrap()
+            .state,
         ProposalState::Admitted
     );
 }
@@ -188,9 +197,12 @@ fn a_profile_over_its_limits_refuses() {
     let classes: Vec<serde_json::Value> = (0..=MAX_PROFILE_ENTRIES)
         .map(|n| serde_json::json!({"iri": format!("C{n}"), "instances": 2}))
         .collect();
-    let refusal =
-        draft_from_profile("big", &profile(serde_json::json!({"classes": classes})), provenance())
-            .unwrap_err();
+    let refusal = draft_from_profile(
+        "big",
+        &profile(serde_json::json!({"classes": classes})),
+        provenance(),
+    )
+    .unwrap_err();
     assert_eq!(refusal.code(), "PROFILE_TOO_LARGE");
     let dangling = profile(serde_json::json!({
         "classes": [{"iri": "Person", "instances": 5}],

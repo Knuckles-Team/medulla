@@ -114,12 +114,13 @@ fn page_of<T>(
 }
 
 fn tasks_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, String> {
-    let after_id: Option<u64> = match cursor {
-        Some(value) => Some(value.parse().map_err(|_| {
-            "INTROSPECT_CURSOR_INVALID: a tasks cursor is a task id".to_string()
-        })?),
-        None => None,
-    };
+    let after_id: Option<u64> =
+        match cursor {
+            Some(value) => Some(value.parse().map_err(|_| {
+                "INTROSPECT_CURSOR_INVALID: a tasks cursor is a task id".to_string()
+            })?),
+            None => None,
+        };
     let registry = medulla_observe::global();
     let seq = registry.sequence();
     let (rows, next_cursor) = page_of(

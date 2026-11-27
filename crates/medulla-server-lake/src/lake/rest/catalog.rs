@@ -138,8 +138,7 @@ fn serve_lake_file(
         return not_found_reply();
     };
     let mut parts = rest.splitn(3, '/');
-    let (Some(namespace), Some(table), Some(relative)) =
-        (parts.next(), parts.next(), parts.next())
+    let (Some(namespace), Some(table), Some(relative)) = (parts.next(), parts.next(), parts.next())
     else {
         return not_found_reply();
     };

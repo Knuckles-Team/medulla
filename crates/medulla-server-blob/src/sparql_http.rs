@@ -49,8 +49,8 @@ pub use graph_store::{
     parse_rdf_body, rdf_graph_write_event_update, rdf_graph_write_update, RdfBodyRefusal,
     RdfWriteMode, RDF_BODY_MAX_TRIPLES,
 };
-use negotiation::{choose_ct, render_query_outcome};
 use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
+use negotiation::{choose_ct, render_query_outcome};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
 pub use update_plan::{plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate};
@@ -1041,14 +1041,28 @@ mod tests {
         let j: serde_json::Value = serde_json::from_str(&select_json(&r)).unwrap();
         let b = &j["results"]["bindings"][0];
         assert_eq!(b["t"]["xml:lang"], "fr");
-        assert_eq!(b["n"]["datatype"], "http://www.w3.org/2001/XMLSchema#integer");
+        assert_eq!(
+            b["n"]["datatype"],
+            "http://www.w3.org/2001/XMLSchema#integer"
+        );
         assert!(b["p"].get("datatype").is_none() && b["p"].get("xml:lang").is_none());
         let xml = results_xml(&r);
-        assert!(xml.contains("<literal xml:lang=\"fr\">chat</literal>"), "{xml}");
-        assert!(xml.contains("<literal datatype=\"http://www.w3.org/2001/XMLSchema#integer\">42</literal>"), "{xml}");
+        assert!(
+            xml.contains("<literal xml:lang=\"fr\">chat</literal>"),
+            "{xml}"
+        );
+        assert!(
+            xml.contains(
+                "<literal datatype=\"http://www.w3.org/2001/XMLSchema#integer\">42</literal>"
+            ),
+            "{xml}"
+        );
         let tsv = results_tsv(&r);
         assert!(tsv.contains("\"chat\"@fr"), "{tsv}");
-        assert!(tsv.contains("\"42\"^^<http://www.w3.org/2001/XMLSchema#integer>"), "{tsv}");
+        assert!(
+            tsv.contains("\"42\"^^<http://www.w3.org/2001/XMLSchema#integer>"),
+            "{tsv}"
+        );
         let csv = results_csv(&r);
         assert!(csv.contains("chat,42,plain"), "{csv}");
     }
@@ -1217,10 +1231,7 @@ mod tests {
         let r = parse_results_json(body).unwrap();
         assert_eq!(r.vars, vec!["s", "b", "l"]);
         let sol = &r.solutions[0];
-        assert_eq!(
-            sol.get("s").unwrap(),
-            &Binding::iri("http://x")
-        );
+        assert_eq!(sol.get("s").unwrap(), &Binding::iri("http://x"));
         assert_eq!(sol.get("b").unwrap(), &Binding::blank("n1"));
         assert_eq!(sol.get("l").unwrap(), &Binding::string("hi"));
         // And `term_json` maps them straight back to the same JSON term kinds.
@@ -1262,7 +1273,9 @@ mod tests {
         assert_eq!(parse_rdf_body("text/turtle", ttl, "g").unwrap().len(), 1);
         let nt = "<http://ex/a> <http://ex/p> <http://ex/b> .";
         assert_eq!(
-            parse_rdf_body("application/n-triples", nt, "g").unwrap().len(),
+            parse_rdf_body("application/n-triples", nt, "g")
+                .unwrap()
+                .len(),
             1
         );
         // An unnamed content type is refused: the media type is exact (MEDULLA-FEDERATED-QUERY-R740.1).

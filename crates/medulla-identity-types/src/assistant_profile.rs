@@ -305,6 +305,8 @@ mod tests {
             kind: DocumentSetKind::Members(vec![]),
             ..set
         };
-        assert!(resolve_document_set(&empty, &visible, 10).unwrap().is_empty());
+        assert!(resolve_document_set(&empty, &visible, 10)
+            .unwrap()
+            .is_empty());
     }
 }

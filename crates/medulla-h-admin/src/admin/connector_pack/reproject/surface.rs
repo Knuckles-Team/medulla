@@ -243,8 +243,12 @@ fn seed_triples(
     connector: &str,
     receipt: Option<&SeedImportReceipt>,
 ) -> Result<Vec<Triple>, String> {
-    use crate::admin::connector_pack::seed::{canonical_digest, seed_content_digest, MAX_SEED_TRIPLES};
-    use medulla_catalog_types::connector_pack::{seed_receipt_iri, seed_revision_iri, SeedPartKey, SeedPartOutcome};
+    use crate::admin::connector_pack::seed::{
+        canonical_digest, seed_content_digest, MAX_SEED_TRIPLES,
+    };
+    use medulla_catalog_types::connector_pack::{
+        seed_receipt_iri, seed_revision_iri, SeedPartKey, SeedPartOutcome,
+    };
 
     if seed.is_empty() {
         return Ok(Vec::new());
@@ -257,7 +261,10 @@ fn seed_triples(
     let mut triples = Vec::new();
     for document in seed {
         let key = SeedPartKey::from_uri(&document.uri).ok_or_else(|| {
-            format!("CORRUPT_CONNECTOR_PACK: '{}' is not a seed part", document.uri)
+            format!(
+                "CORRUPT_CONNECTOR_PACK: '{}' is not a seed part",
+                document.uri
+            )
         })?;
         digests.insert(key, canonical_digest(&document.body)?);
         triples.extend(
@@ -309,7 +316,11 @@ fn seed_triples(
                 SeedPartOutcome::Unchanged => "unchanged",
             };
             let part_node = node(&seed_receipt_iri(connector, &content_digest, *key))?;
-            triples.push(Triple::new(part_node.clone(), rdf_type.clone(), receipt_class.clone()));
+            triples.push(Triple::new(
+                part_node.clone(),
+                rdf_type.clone(),
+                receipt_class.clone(),
+            ));
             triples.push(Triple::new(
                 part_node.clone(),
                 part_property.clone(),
@@ -325,7 +336,11 @@ fn seed_triples(
                 digest_property.clone(),
                 Literal::new_simple_literal(format!("sha256:{}", digest.to_hex())),
             ));
-            triples.push(Triple::new(part_node, revision_property.clone(), revision.clone()));
+            triples.push(Triple::new(
+                part_node,
+                revision_property.clone(),
+                revision.clone(),
+            ));
         }
     }
     Ok(triples)
@@ -385,8 +400,14 @@ mod tests {
         };
 
         let bodies = [
-            ("seed://identity", "<urn:seed:instance> a <urn:seed:Identity> .\n"),
-            ("seed://catalog", "<urn:seed:item> a <urn:seed:CatalogEntry> .\n"),
+            (
+                "seed://identity",
+                "<urn:seed:instance> a <urn:seed:Identity> .\n",
+            ),
+            (
+                "seed://catalog",
+                "<urn:seed:item> a <urn:seed:CatalogEntry> .\n",
+            ),
             (
                 "seed://references",
                 "<urn:seed:item> <urn:seed:references> <urn:source:item> .\n",
@@ -402,7 +423,10 @@ mod tests {
         let digests: std::collections::BTreeMap<_, _> = bodies
             .iter()
             .map(|(uri, body)| {
-                (SeedPartKey::from_uri(uri).unwrap(), canonical_digest(body).unwrap())
+                (
+                    SeedPartKey::from_uri(uri).unwrap(),
+                    canonical_digest(body).unwrap(),
+                )
             })
             .collect();
         let content_digest = seed_content_digest(&digests);
@@ -459,16 +483,34 @@ mod tests {
         assert!(seed_triples(&documents, "demo", Some(&other)).is_err());
         // No receipt, no receipt nodes.
         let bare = seed_triples(&documents, "demo", None).unwrap();
-        assert!(bare.iter().all(|t| t.object.to_string() != format!("<{seed_ns}SeedImportReceipt>")));
+        assert!(bare
+            .iter()
+            .all(|t| t.object.to_string() != format!("<{seed_ns}SeedImportReceipt>")));
     }
 
     // spec: MEDULLA-MEDIA-VOCAB-R655
     #[test]
     fn a_newer_head_drops_the_triples_it_no_longer_names() {
         let core = medulla_graph_core::graph::GraphCore::new();
-        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a", "amount_b"])), &[], None, "demo").unwrap();
+        write_projection_triples(
+            &core,
+            "pack",
+            Some(&individuals(&["amount_a", "amount_b"])),
+            &[],
+            None,
+            "demo",
+        )
+        .unwrap();
         assert_eq!(subjects_of(&core).len(), 2);
-        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a"])), &[], None, "demo").unwrap();
+        write_projection_triples(
+            &core,
+            "pack",
+            Some(&individuals(&["amount_a"])),
+            &[],
+            None,
+            "demo",
+        )
+        .unwrap();
         assert_eq!(
             subjects_of(&core),
             vec!["<https://knuckles-team.github.io/ontology/core#amount_a>".to_string()],

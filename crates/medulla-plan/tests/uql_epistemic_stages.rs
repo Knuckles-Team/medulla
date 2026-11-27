@@ -227,7 +227,11 @@ fn score_at_least_is_the_similarity_floor() {
     let kept = program.execute(&ctx).unwrap().ids();
     let mut sorted = kept.clone();
     sorted.sort();
-    assert_eq!(sorted, ["a1", "a2", "a3"], "the b-direction docs fall below 0.75");
+    assert_eq!(
+        sorted,
+        ["a1", "a2", "a3"],
+        "the b-direction docs fall below 0.75"
+    );
 
     // An unscored row takes 1.0, so a floor of 1.0 keeps it and a floor above drops it.
     let unscored = plan("MATCH (:Claim) |> SCORE AT LEAST 1.0")
@@ -266,11 +270,9 @@ fn contradicts_each_then_decay_weights_each_contradiction_by_age() {
     let view = core.analysis_snapshot();
     let semantic = SemanticStore::new();
     let ctx = PlanCtx::new(&view, &semantic).with_now_ms(NOW_MS);
-    let weights = plan(
-        "MATCH (:Claim) |> CONTRADICTS EACH |> DECAY HALF_LIFE 604800",
-    )
-    .execute(&ctx)
-    .unwrap();
+    let weights = plan("MATCH (:Claim) |> CONTRADICTS EACH |> DECAY HALF_LIFE 604800")
+        .execute(&ctx)
+        .unwrap();
     assert_eq!(weights.len(), 2);
     assert!((f64::from(score(&weights, "recent")) - 1.0).abs() < 1e-9);
     assert!((f64::from(score(&weights, "week_old")) - 0.5).abs() < 1e-9);

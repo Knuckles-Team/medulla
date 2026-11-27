@@ -76,20 +76,25 @@ pub struct SourceQueryApprovalIssued {
 /// `approval`, naming the query by its operation digest. The text starts with the closed code
 /// `SOURCE_QUERY_<KIND>` and never carries SQL text or a parameter value.
 pub fn approval_refusal(kind: SourceQueryError, query: &SourceQueryRequest) -> String {
-    let identity = query
-        .operation_digest()
-        .unwrap_or_else(|_| "0".repeat(64));
+    let identity = query.operation_digest().unwrap_or_else(|_| "0".repeat(64));
     source_query_refusal(kind, &identity, SourceQueryStep::Approval)
 }
 
 /// A refusal in the `SourceQueryFailure` shape (MEDULLA-FEDERATED-QUERY-R085.7) for `step`,
 /// naming the query by `identity`; an identity that is not a 64-hex digest is replaced by 64
 /// zeros so no literal can ride in the reply. The text starts with `SOURCE_QUERY_<KIND>`.
-pub fn source_query_refusal(kind: SourceQueryError, identity: &str, step: SourceQueryStep) -> String {
+pub fn source_query_refusal(
+    kind: SourceQueryError,
+    identity: &str,
+    step: SourceQueryStep,
+) -> String {
     let failure = SourceQueryFailure::new(kind, identity, step, None)
         .or_else(|_| SourceQueryFailure::new(kind, &"0".repeat(64), step, None))
         .expect("64 zeros are a 64-hex digest");
-    format!("SOURCE_QUERY_{}: {failure}", kind.to_string().to_uppercase())
+    format!(
+        "SOURCE_QUERY_{}: {failure}",
+        kind.to_string().to_uppercase()
+    )
 }
 
 impl SourceQueryApprovalGrant {
@@ -153,7 +158,9 @@ impl ApproveSourceQueryRequest {
             query_digest: String::new(),
         };
         approved.query_digest = approved.compute_query_digest().map_err(|_| invalid())?;
-        approved.validate().map_err(|kind| approval_refusal(kind, &self.query))?;
+        approved
+            .validate()
+            .map_err(|kind| approval_refusal(kind, &self.query))?;
         let grant = SourceQueryApprovalGrant::of(&approved);
         let mut body = serde_json::Map::new();
         body.insert(

@@ -129,8 +129,11 @@ fn advisory(inputs: &LadderInputs, reading: &Evaluated) -> RefusalResult<Statist
             })
         })
         .collect::<RefusalResult<Vec<_>>>()?;
-    Ok(StatisticalOutcome::advisory(BoundedVec::new(scores)
-            .map_err(|detail| Refusal::new(StatisticalErrorCode::CandidateSetTooLarge, detail))?, false))
+    Ok(StatisticalOutcome::advisory(
+        BoundedVec::new(scores)
+            .map_err(|detail| Refusal::new(StatisticalErrorCode::CandidateSetTooLarge, detail))?,
+        false,
+    ))
 }
 
 fn greedy(reading: Option<&Evaluated>) -> Option<usize> {

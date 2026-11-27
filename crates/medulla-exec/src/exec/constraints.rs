@@ -131,9 +131,7 @@ pub fn compile_constraints(
     constraints: &RetrievalConstraints,
     current_revision: Option<u64>,
 ) -> Result<ConstraintSet, ConstraintError> {
-    constraints
-        .validate()
-        .map_err(ConstraintError::Invalid)?;
+    constraints.validate().map_err(ConstraintError::Invalid)?;
     if constraints.graph_revision != 0 {
         match current_revision {
             Some(current) if current == constraints.graph_revision => {}
@@ -234,11 +232,12 @@ pub fn compile_constraints(
 
 /// The row predicate an entity predicate means.
 fn entity_pred(predicate: &EntityPredicate) -> Pred {
-    let cmp = |property: &String, op: CmpOp, value: &medulla_query_types::wire::PredLiteral| Pred::Cmp {
-        prop: property.clone(),
-        op,
-        value: value.clone(),
-    };
+    let cmp =
+        |property: &String, op: CmpOp, value: &medulla_query_types::wire::PredLiteral| Pred::Cmp {
+            prop: property.clone(),
+            op,
+            value: value.clone(),
+        };
     match predicate {
         EntityPredicate::Eq { property, value } => cmp(property, CmpOp::Eq, value),
         EntityPredicate::Ne { property, value } => cmp(property, CmpOp::Ne, value),
@@ -257,8 +256,8 @@ fn entity_pred(predicate: &EntityPredicate) -> Pred {
 mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
-    use medulla_types::contract::BoundedVec;
     use medulla_query_types::wire::{EdgeDir, PredLiteral};
+    use medulla_types::contract::BoundedVec;
     use serde_json::json;
     use std::collections::BTreeMap;
 
@@ -390,8 +389,14 @@ mod tests {
         assert_eq!(
             trace.per_predicate,
             vec![
-                PredicateOutcome { predicate_id: "entity[0]".into(), outcome: 4 },
-                PredicateOutcome { predicate_id: "relationship[0]".into(), outcome: 4 },
+                PredicateOutcome {
+                    predicate_id: "entity[0]".into(),
+                    outcome: 4
+                },
+                PredicateOutcome {
+                    predicate_id: "relationship[0]".into(),
+                    outcome: 4
+                },
             ]
         );
         // The binding is a function of the declared constraints alone.
@@ -512,13 +517,7 @@ mod tests {
         // An older or newer revision than the pin is stale.
         for current in [3, 5] {
             let stale = compile_constraints(&view, &pinned, Some(current)).unwrap_err();
-            assert_eq!(
-                stale,
-                ConstraintError::RevisionStale {
-                    pinned: 4,
-                    current
-                }
-            );
+            assert_eq!(stale, ConstraintError::RevisionStale { pinned: 4, current });
             assert_eq!(stale.code().as_str(), "GRAPH_REVISION_STALE");
             assert!(stale.to_string().starts_with("GRAPH_REVISION_STALE"));
         }
@@ -569,7 +568,10 @@ mod tests {
         // The query binds no revision: the pin cannot be compared, so the whole
         // constraint set is refused and no candidate set is produced to rank.
         let refusal = compile_constraints(&view, &pinned, None).unwrap_err();
-        assert!(matches!(refusal, ConstraintError::Unevaluable(_)), "{refusal:?}");
+        assert!(
+            matches!(refusal, ConstraintError::Unevaluable(_)),
+            "{refusal:?}"
+        );
         assert_eq!(refusal.code(), ServerErrorCode::ConstraintUnevaluable);
         assert_eq!(refusal.code().as_str(), "CONSTRAINT_UNEVALUABLE");
         // The wire text starts with the registered code and names the pinned revision.

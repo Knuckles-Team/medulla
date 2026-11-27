@@ -90,7 +90,8 @@ pub fn encode(value: &Properties) -> Result<Vec<u8>, String> {
 pub fn took_effect(response: &Response) -> bool {
     !matches!(
         &response.result,
-        Some(ResultPayload::Bool(false)) | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
+        Some(ResultPayload::Bool(false))
+            | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
     )
 }
 

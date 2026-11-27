@@ -68,7 +68,14 @@ async fn registered_search_source_binds_and_unregistered_does_not() {
     // Nothing is registered: no tenant binds.
     assert!(port.binding(TENANT, "__commons__").is_none());
 
-    register(&h, TENANT, "agent-a", SEARCH_SOURCE_NAME, web_spec("search-one")).await;
+    register(
+        &h,
+        TENANT,
+        "agent-a",
+        SEARCH_SOURCE_NAME,
+        web_spec("search-one"),
+    )
+    .await;
     let binding = port
         .binding(TENANT, "__commons__")
         .expect("the registered web source binds for its tenant");
@@ -108,7 +115,14 @@ async fn registered_search_source_binds_and_unregistered_does_not() {
         ("agent-b", "agent-a")
     };
     register(&h, TENANT, low, SEARCH_SOURCE_NAME, web_spec("search-low")).await;
-    register(&h, TENANT, high, SEARCH_SOURCE_NAME, web_spec("search-high")).await;
+    register(
+        &h,
+        TENANT,
+        high,
+        SEARCH_SOURCE_NAME,
+        web_spec("search-high"),
+    )
+    .await;
     assert_eq!(
         catalog.spec_for_tenant(TENANT, SEARCH_SOURCE_NAME),
         Some(web_spec("search-low"))

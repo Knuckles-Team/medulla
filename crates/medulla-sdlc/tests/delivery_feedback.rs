@@ -49,7 +49,10 @@ fn the_admitted_principal_is_optional_on_the_wire() {
     stamped.admitted_principal = Some("usr:alice".into());
     let json = serde_json::to_value(&stamped).unwrap();
     assert_eq!(json["admitted_principal"], "usr:alice");
-    assert!(serde_json::to_value(&bare).unwrap().get("admitted_principal").is_none());
+    assert!(serde_json::to_value(&bare)
+        .unwrap()
+        .get("admitted_principal")
+        .is_none());
 }
 
 fn context<'a>(
@@ -76,10 +79,17 @@ fn events_route_to_following_deliveries_and_bots_never_resume() {
         delivery("ended-no", Some("completed")),
         delivery("stopped", Some("stopped")),
     ];
-    let bot = route_feedback(&event("e1", InputSource::Automation, false), &deliveries, &ctx)
-        .expect("routes");
+    let bot = route_feedback(
+        &event("e1", InputSource::Automation, false),
+        &deliveries,
+        &ctx,
+    )
+    .expect("routes");
     assert_eq!(
-        bot.deliveries.iter().map(|d| d.id.as_str()).collect::<Vec<_>>(),
+        bot.deliveries
+            .iter()
+            .map(|d| d.id.as_str())
+            .collect::<Vec<_>>(),
         ["live"]
     );
     assert!(bot.resumed.is_empty() && !bot.file_defect);
@@ -99,11 +109,11 @@ fn unrouted_failed_check_files_a_defect_and_refusals_are_typed() {
     let none = BTreeSet::new();
     let ctx = context(&connectors, &none);
     let ended = vec![delivery("ended", Some("merged"))];
-    let failed = route_feedback(&event("e3", InputSource::Automation, true), &ended, &ctx)
-        .expect("routes");
+    let failed =
+        route_feedback(&event("e3", InputSource::Automation, true), &ended, &ctx).expect("routes");
     assert!(failed.file_defect && failed.deliveries.is_empty());
-    let passed = route_feedback(&event("e4", InputSource::Automation, false), &ended, &ctx)
-        .expect("routes");
+    let passed =
+        route_feedback(&event("e4", InputSource::Automation, false), &ended, &ctx).expect("routes");
     assert!(!passed.file_defect);
     let mut stored = context(&connectors, &none);
     stored.already_stored = true;
@@ -113,15 +123,21 @@ fn unrouted_failed_check_files_a_defect_and_refusals_are_typed() {
     let mut unknown_connector = event("e5", InputSource::Person, false);
     unknown_connector.connector = "other".into();
     assert_eq!(
-        route_feedback(&unknown_connector, &ended, &ctx).unwrap_err().code(),
+        route_feedback(&unknown_connector, &ended, &ctx)
+            .unwrap_err()
+            .code(),
         "FEEDBACK_SOURCE_UNKNOWN"
     );
     let mut no_proposal = context(&connectors, &none);
     no_proposal.proposal_known = false;
     assert_eq!(
-        route_feedback(&event("e6", InputSource::Person, false), &ended, &no_proposal)
-            .unwrap_err()
-            .code(),
+        route_feedback(
+            &event("e6", InputSource::Person, false),
+            &ended,
+            &no_proposal
+        )
+        .unwrap_err()
+        .code(),
         "FEEDBACK_PROPOSAL_UNKNOWN"
     );
     let mut blank = event("", InputSource::Person, false);

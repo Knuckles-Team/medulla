@@ -35,7 +35,8 @@ use medulla_work_types::{control_lease::ControlLeaseStatus, control_lease::Contr
 /// Key prefix of a governed, approval-bound schema source.
 pub const APPROVED_SOURCE_PREFIX: &str = "approved:";
 /// Control-lease kind of the approval record (the AU approvals queue).
-pub const SCHEMA_APPROVAL_LEASE_KIND: &str = medulla_work_types::control_lease::ACTION_APPROVAL_LEASE_KIND;
+pub const SCHEMA_APPROVAL_LEASE_KIND: &str =
+    medulla_work_types::control_lease::ACTION_APPROVAL_LEASE_KIND;
 /// The approved action a schema-activation grant must name.
 pub const SCHEMA_APPROVAL_ACTION: &str = "schema_repair";
 /// Domain separator of the candidate digest.
@@ -95,7 +96,10 @@ fn mismatch(field: &str) -> String {
 }
 
 fn self_approved(detail: &str) -> String {
-    format!("{}: {detail}", GraphSchemaErrorCode::RepairSelfApproved.as_str())
+    format!(
+        "{}: {detail}",
+        GraphSchemaErrorCode::RepairSelfApproved.as_str()
+    )
 }
 
 /// Whether `lease` approves `expected_action` for `candidate_digest` under `source_id` at

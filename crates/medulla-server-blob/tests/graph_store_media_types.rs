@@ -69,7 +69,11 @@ fn each_media_type_parses_and_each_refusal_leaves_store_unchanged() {
     // RDF_MEDIA_TYPE_UNSUPPORTED (415): a type outside the six, and no type at all.
     for media_type in ["text/plain", "application/json", ""] {
         let refusal = parse_rdf_body(media_type, BODIES[0].1, GRAPH).unwrap_err();
-        assert_eq!(refusal.code(), "RDF_MEDIA_TYPE_UNSUPPORTED", "{media_type:?}");
+        assert_eq!(
+            refusal.code(),
+            "RDF_MEDIA_TYPE_UNSUPPORTED",
+            "{media_type:?}"
+        );
         assert!(refusal.http_status().starts_with("415"));
     }
 
@@ -87,13 +91,17 @@ fn each_media_type_parses_and_each_refusal_leaves_store_unchanged() {
     assert!(refusal.http_status().starts_with("422"));
     let trig = "<http://ex/other> { <http://ex/a> <http://ex/p> \"x\" . }";
     assert_eq!(
-        parse_rdf_body("application/trig", trig, GRAPH).unwrap_err().code(),
+        parse_rdf_body("application/trig", trig, GRAPH)
+            .unwrap_err()
+            .code(),
         "RDF_DATASET_GRAPH_MISMATCH"
     );
     let jsonld = "{\"@id\": \"http://ex/other\", \"@graph\": [{\"@id\": \"http://ex/a\", \
                   \"http://ex/p\": \"x\"}]}";
     assert_eq!(
-        parse_rdf_body("application/ld+json", jsonld, GRAPH).unwrap_err().code(),
+        parse_rdf_body("application/ld+json", jsonld, GRAPH)
+            .unwrap_err()
+            .code(),
         "RDF_DATASET_GRAPH_MISMATCH"
     );
     let named = "<http://ex/a> <http://ex/p> \"x\" <http://ex/g> .\n";
@@ -116,11 +124,14 @@ fn each_media_type_parses_and_each_refusal_leaves_store_unchanged() {
 
     // A refused body builds no update: the store has nothing to change.
     assert!(rdf_graph_write_update("text/plain", "x", GRAPH, RdfWriteMode::Replace).is_err());
-    let replace = rdf_graph_write_update("text/turtle", BODIES[1].1, GRAPH, RdfWriteMode::Replace)
-        .unwrap();
-    assert!(replace.starts_with("CLEAR DEFAULT; INSERT DATA {"), "{replace}");
-    let merge = rdf_graph_write_update("text/turtle", BODIES[1].1, GRAPH, RdfWriteMode::Merge)
-        .unwrap();
+    let replace =
+        rdf_graph_write_update("text/turtle", BODIES[1].1, GRAPH, RdfWriteMode::Replace).unwrap();
+    assert!(
+        replace.starts_with("CLEAR DEFAULT; INSERT DATA {"),
+        "{replace}"
+    );
+    let merge =
+        rdf_graph_write_update("text/turtle", BODIES[1].1, GRAPH, RdfWriteMode::Merge).unwrap();
     assert!(merge.starts_with("INSERT DATA {"), "{merge}");
 
     // The served event carries the same body in one JSON envelope.
@@ -128,11 +139,13 @@ fn each_media_type_parses_and_each_refusal_leaves_store_unchanged() {
         "media_type": "text/turtle", "mode": "replace", "body": BODIES[1].1,
     })
     .to_string();
-    assert_eq!(rdf_graph_write_event_update(&envelope, GRAPH).unwrap(), replace);
+    assert_eq!(
+        rdf_graph_write_event_update(&envelope, GRAPH).unwrap(),
+        replace
+    );
     for bad in [
         "not json".to_string(),
-        serde_json::json!({"media_type": "text/turtle", "mode": "append", "body": ""})
-            .to_string(),
+        serde_json::json!({"media_type": "text/turtle", "mode": "append", "body": ""}).to_string(),
         serde_json::json!({"media_type": "text/turtle", "mode": "merge"}).to_string(),
     ] {
         let refusal = rdf_graph_write_event_update(&bad, GRAPH).unwrap_err();

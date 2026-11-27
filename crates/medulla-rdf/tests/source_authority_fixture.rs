@@ -9,8 +9,8 @@ use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_virtual_graph::source_selection::{
-    audit_from, fixture_from_schema_sources, select_sources, select_sources_with,
-    AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
+    audit_from, fixture_from_schema_sources, select_sources, select_sources_with, AuthorityOrigin,
+    AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
 };
 
 const TEMPLATE: &str = include_str!("fixtures/source_authority_incident.ttl");
@@ -164,11 +164,7 @@ fn verdicts(
 }
 
 /// The (source, alternates) of the covered verdict for `class` and `facet`.
-fn covered(
-    verdicts: &[CoverageResult],
-    class: &str,
-    facet: Option<&str>,
-) -> (String, Vec<String>) {
+fn covered(verdicts: &[CoverageResult], class: &str, facet: Option<&str>) -> (String, Vec<String>) {
     verdicts
         .iter()
         .find_map(|v| match v {
@@ -178,9 +174,7 @@ fn covered(
                 source,
                 alternates,
                 ..
-            } if c == class && f.as_deref() == facet => {
-                Some((source.clone(), alternates.clone()))
-            }
+            } if c == class && f.as_deref() == facet => Some((source.clone(), alternates.clone())),
             _ => None,
         })
         .unwrap_or_else(|| panic!("a covered verdict for {class} {facet:?}: {verdicts:?}"))
@@ -208,20 +202,37 @@ fn assert_pack_proposes_only(seed: &str, classes: &[String]) {
 fn supplier_seed_passes_shape() {
     let fixture = seed_fixture(SUPPLIER_SEED, SchemaSourceOrigin::Operator);
     assert_eq!(fixture.rows().count(), 6);
-    let classes: Vec<String> = ["Supplier", "SupplyChainItem", "RiskScenario", "PrivacyAssessment"]
-        .iter()
-        .map(|name| format!("{CORE}{name}"))
-        .collect();
+    let classes: Vec<String> = [
+        "Supplier",
+        "SupplyChainItem",
+        "RiskScenario",
+        "PrivacyAssessment",
+    ]
+    .iter()
+    .map(|name| format!("{CORE}{name}"))
+    .collect();
     let got = verdicts(&fixture, &classes, &[]);
     let supplier = format!("{CORE}Supplier");
     let item = format!("{CORE}SupplyChainItem");
     let risk = format!("{CORE}RiskScenario");
     let privacy = format!("{CORE}PrivacyAssessment");
     // ERPNext ranks first for suppliers and items, LeanIX second.
-    assert_eq!(covered(&got, &supplier, None), ("erpnext-mcp".into(), names(&["leanix-mcp"])));
-    assert_eq!(covered(&got, &item, None), ("erpnext-mcp".into(), names(&["leanix-mcp"])));
-    assert_eq!(covered(&got, &risk, None), ("ciso-assistant-mcp".into(), Vec::new()));
-    assert_eq!(covered(&got, &privacy, None), ("onetrust-mcp".into(), Vec::new()));
+    assert_eq!(
+        covered(&got, &supplier, None),
+        ("erpnext-mcp".into(), names(&["leanix-mcp"]))
+    );
+    assert_eq!(
+        covered(&got, &item, None),
+        ("erpnext-mcp".into(), names(&["leanix-mcp"]))
+    );
+    assert_eq!(
+        covered(&got, &risk, None),
+        ("ciso-assistant-mcp".into(), Vec::new())
+    );
+    assert_eq!(
+        covered(&got, &privacy, None),
+        ("onetrust-mcp".into(), Vec::new())
+    );
     assert_pack_proposes_only(SUPPLIER_SEED, &classes);
 }
 
@@ -237,7 +248,10 @@ fn component_seed_passes_shape() {
     let facets = vec![(image.clone(), built_from.clone())];
     let got = verdicts(&fixture, &classes, &facets);
     // The registry says what an image is; the code host says what is wrong with it.
-    assert_eq!(covered(&got, &image, None), ("dockerhub-mcp".into(), Vec::new()));
+    assert_eq!(
+        covered(&got, &image, None),
+        ("dockerhub-mcp".into(), Vec::new())
+    );
     assert_eq!(
         covered(&got, &vulnerability, None),
         ("gitlab-mcp".into(), names(&["github-mcp"]))
@@ -285,7 +299,10 @@ fn workload_seed_passes_shape() {
     let classes = vec![image.clone(), host.clone()];
     let facets = vec![(host.clone(), temperature.clone())];
     let got = verdicts(&fixture, &classes, &facets);
-    let first = ("container-manager-mcp".to_string(), names(&["portainer-mcp"]));
+    let first = (
+        "container-manager-mcp".to_string(),
+        names(&["portainer-mcp"]),
+    );
     assert_eq!(covered(&got, &image, None), first);
     assert_eq!(covered(&got, &host, None), first);
     // Hardware facts come from systems-manager as a facet row.
@@ -366,6 +383,9 @@ fn data_location_yields_a_proposed_pack_row() {
     // The location with no instance is audited by name.
     let audit = fixture.audit_entries();
     assert_eq!(audit.len(), 1, "{audit:?}");
-    assert!(audit[0].starts_with("DATA_LOCATION_INCOMPLETE"), "{audit:?}");
+    assert!(
+        audit[0].starts_with("DATA_LOCATION_INCOMPLETE"),
+        "{audit:?}"
+    );
     assert!(audit[0].contains("orders-nowhere"), "{audit:?}");
 }

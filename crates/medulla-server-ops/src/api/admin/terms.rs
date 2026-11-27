@@ -12,9 +12,8 @@ use std::sync::Arc;
 use medulla_catalog_types::{
     graph_schema::term_local_name, graph_schema::validate_term_page_limit,
     graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaInterfaceView,
-    graph_schema::GraphSchemaTermKind,
-    graph_schema::GraphSchemaTermPosition, graph_schema::GraphSchemaTermView,
-    graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+    graph_schema::GraphSchemaTermKind, graph_schema::GraphSchemaTermPosition,
+    graph_schema::GraphSchemaTermView, graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
     graph_schema::MAX_GRAPH_SCHEMA_INTERFACE_REPORTS,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
@@ -152,7 +151,10 @@ fn classes_page(
         .cursor
         .map(GraphSchemaTermPosition::parse)
         .transpose()?;
-    let DeclaredVocabulary { terms, superclasses } = scan_vocabulary(sources)?;
+    let DeclaredVocabulary {
+        terms,
+        superclasses,
+    } = scan_vocabulary(sources)?;
     let model = object_model(sources)?;
     let marks = InterfaceMarks::of(&model);
     let matching: Vec<(&GraphSchemaTermPosition, &String)> = terms
@@ -164,9 +166,7 @@ fn classes_page(
         .into_iter()
         .filter(|(position, _)| after.as_ref().is_none_or(|after| *position > after))
         .take(limit + 1)
-        .map(|(position, source_id)| {
-            term_view(position, source_id, sources, &superclasses, &marks)
-        })
+        .map(|(position, source_id)| term_view(position, source_id, sources, &superclasses, &marks))
         .collect();
     let next_cursor = (page.len() > limit).then(|| {
         page.truncate(limit);
@@ -215,7 +215,10 @@ fn interface_reports(
         .iter()
         .map(|implementation| {
             (
-                (implementation.class.clone(), implementation.interface.clone()),
+                (
+                    implementation.class.clone(),
+                    implementation.interface.clone(),
+                ),
                 Vec::new(),
             )
         })
@@ -270,7 +273,11 @@ fn term_view(
         superclasses,
         interface: is_class && marks.interfaces.contains(&position.iri),
         implements: if is_class {
-            marks.implements.get(&position.iri).cloned().unwrap_or_default()
+            marks
+                .implements
+                .get(&position.iri)
+                .cloned()
+                .unwrap_or_default()
         } else {
             Vec::new()
         },
@@ -316,7 +323,10 @@ fn scan_vocabulary(sources: &GraphSchemaSources) -> Result<DeclaredVocabulary, S
             }
         }
     }
-    Ok(DeclaredVocabulary { terms, superclasses })
+    Ok(DeclaredVocabulary {
+        terms,
+        superclasses,
+    })
 }
 
 fn subclass_pair(triple: &Triple) -> Option<(String, String)> {
@@ -448,11 +458,9 @@ mod tests {
             0,
         )
         .expect("a bounded admin source");
-        let sources = GraphSchemaSources::with_dynamic(BTreeMap::from([(
-            "admin:tree".to_string(),
-            source,
-        )]))
-        .expect("the source composes with the core catalog");
+        let sources =
+            GraphSchemaSources::with_dynamic(BTreeMap::from([("admin:tree".to_string(), source)]))
+                .expect("the source composes with the core catalog");
         let page = classes_page("g", &sources, &request(None, None, 1000))
             .expect("a first page")
             .terms
@@ -471,9 +479,13 @@ mod tests {
             ],
             "the restriction is not a named superclass"
         );
-        assert!(term("https://example.org/pack#Base").superclasses.is_empty());
+        assert!(term("https://example.org/pack#Base")
+            .superclasses
+            .is_empty());
         assert!(
-            term("https://example.org/pack#partOf").superclasses.is_empty(),
+            term("https://example.org/pack#partOf")
+                .superclasses
+                .is_empty(),
             "a property term carries no superclasses"
         );
     }
@@ -517,13 +529,19 @@ mod tests {
                 .unwrap_or_else(|| panic!("{iri} is listed"))
         };
         let named = term("https://example.org/pack#Named");
-        assert!(named.interface, "an :Interface is a class row marked interface");
+        assert!(
+            named.interface,
+            "an :Interface is a class row marked interface"
+        );
         assert_eq!(named.kind, GraphSchemaTermKind::Class);
         assert!(named.implements.is_empty());
         for implementer in ["Person", "Robot"] {
             let row = term(&format!("https://example.org/pack#{implementer}"));
             assert!(!row.interface);
-            assert_eq!(row.implements, ["https://example.org/pack#Named".to_string()]);
+            assert_eq!(
+                row.implements,
+                ["https://example.org/pack#Named".to_string()]
+            );
         }
         let plain = term("https://example.org/pack#Plain");
         assert!(!plain.interface && plain.implements.is_empty());

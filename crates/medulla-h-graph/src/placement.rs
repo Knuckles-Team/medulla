@@ -174,7 +174,10 @@ async fn handle_route(
         );
     };
 
-    let control = match multi.group(medulla_direct_state::direct_state::DEFAULT_GROUP).await {
+    let control = match multi
+        .group(medulla_direct_state::direct_state::DEFAULT_GROUP)
+        .await
+    {
         Some(group) => group,
         None => {
             return Response::stale_route(

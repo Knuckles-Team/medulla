@@ -55,7 +55,10 @@ pub fn measures(
         };
     }
     let total = inside.len() as u64;
-    let users: BTreeSet<&str> = inside.iter().map(|row| row.principal_pseudonym.as_str()).collect();
+    let users: BTreeSet<&str> = inside
+        .iter()
+        .map(|row| row.principal_pseudonym.as_str())
+        .collect();
     let first: BTreeSet<&str> = inside
         .iter()
         .filter(|row| row.started_ms < window.start_ms.saturating_add(RETENTION_WINDOW_MS))
@@ -178,7 +181,10 @@ pub fn peer_skills(
     caller: &str,
     min_peers: u64,
 ) -> Result<Vec<PeerSkill>, RefusalCode> {
-    let peers: BTreeSet<&String> = cohort.iter().filter(|user| user.as_str() != caller).collect();
+    let peers: BTreeSet<&String> = cohort
+        .iter()
+        .filter(|user| user.as_str() != caller)
+        .collect();
     if (peers.len() as u64) < min_peers {
         return Err(PEER_COHORT_TOO_SMALL);
     }
@@ -190,7 +196,10 @@ pub fn peer_skills(
     let mut users_of: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for (user, skill) in uses {
         if peers.contains(user) && !caller_used.contains(skill.as_str()) {
-            users_of.entry(skill.as_str()).or_default().insert(user.as_str());
+            users_of
+                .entry(skill.as_str())
+                .or_default()
+                .insert(user.as_str());
         }
     }
     let mut skills: Vec<PeerSkill> = users_of
@@ -216,7 +225,14 @@ mod tests {
 
     const DAY: u64 = 24 * 60 * 60 * 1000;
 
-    fn call(user: &str, day: u64, chosen_by: ChosenBy, latency: u64, error: bool, cost: Option<i64>) -> SkillInvocation {
+    fn call(
+        user: &str,
+        day: u64,
+        chosen_by: ChosenBy,
+        latency: u64,
+        error: bool,
+        cost: Option<i64>,
+    ) -> SkillInvocation {
         SkillInvocation {
             invocation_id: format!("{user}-{day}-{latency}"),
             tenant_id: "t".into(),
@@ -228,7 +244,9 @@ mod tests {
             started_ms: day * DAY,
             ended_ms: day * DAY + latency,
             outcome: if error {
-                InvocationOutcome::Error { code: "TOOL_TIMEOUT".into() }
+                InvocationOutcome::Error {
+                    code: "TOOL_TIMEOUT".into(),
+                }
             } else {
                 InvocationOutcome::Ok
             },
@@ -241,7 +259,10 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R713.2
     #[test]
     fn twelve_measures_match_golden_vectors() {
-        let window = Window { start_ms: 0, end_ms: 30 * DAY };
+        let window = Window {
+            start_ms: 0,
+            end_ms: 30 * DAY,
+        };
         let rows = vec![
             call("u1", 1, ChosenBy::Agent, 100, false, Some(10)),
             call("u1", 29, ChosenBy::User, 200, false, Some(20)),
@@ -272,7 +293,14 @@ mod tests {
             }
         );
         // A window with no invocation: zero counts and no percentile.
-        let empty = measures(&rows, None, Window { start_ms: 100 * DAY, end_ms: 130 * DAY });
+        let empty = measures(
+            &rows,
+            None,
+            Window {
+                start_ms: 100 * DAY,
+                end_ms: 130 * DAY,
+            },
+        );
         assert_eq!(empty, SkillMeasures::default());
         assert_eq!(empty.latency_p50_ms, None);
         assert_eq!(nearest_rank::<u64>(&[], 50), None);
@@ -310,12 +338,24 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R713.6
     #[test]
     fn the_cohort_is_computed_from_the_callers_class() {
-        let uses: Vec<(String, String)> = [("me", "s1"), ("p1", "s1"), ("p2", "s1"), ("p2", "s9"), ("q", "s9")]
-            .iter()
-            .map(|(u, s)| (u.to_string(), s.to_string()))
-            .collect();
+        let uses: Vec<(String, String)> = [
+            ("me", "s1"),
+            ("p1", "s1"),
+            ("p2", "s1"),
+            ("p2", "s9"),
+            ("q", "s9"),
+        ]
+        .iter()
+        .map(|(u, s)| (u.to_string(), s.to_string()))
+        .collect();
         let cohort = cohort_of(&uses, "me");
-        assert_eq!(cohort, ["p1", "p2"].iter().map(|u| u.to_string()).collect::<BTreeSet<_>>());
+        assert_eq!(
+            cohort,
+            ["p1", "p2"]
+                .iter()
+                .map(|u| u.to_string())
+                .collect::<BTreeSet<_>>()
+        );
         // A caller with no telemetry has an empty cohort.
         assert!(cohort_of(&uses, "nobody").is_empty());
     }
@@ -335,14 +375,23 @@ mod tests {
         .iter()
         .map(|(u, s)| (u.to_string(), s.to_string()))
         .collect();
-        let cohort: BTreeSet<String> = ["me", "p1", "p2", "p3"].iter().map(|u| u.to_string()).collect();
+        let cohort: BTreeSet<String> = ["me", "p1", "p2", "p3"]
+            .iter()
+            .map(|u| u.to_string())
+            .collect();
         // Three peers use s2 and the caller does not; s1 is the caller's; s3 has one user.
         assert_eq!(
             peer_skills(&uses, &cohort, "me", 3).unwrap(),
-            vec![PeerSkill { skill_ref: "s2".into(), cohort_users: 3 }]
+            vec![PeerSkill {
+                skill_ref: "s2".into(),
+                cohort_users: 3
+            }]
         );
         // A cohort of two peers is too small for a floor of three.
         let small: BTreeSet<String> = ["me", "p1", "p2"].iter().map(|u| u.to_string()).collect();
-        assert_eq!(peer_skills(&uses, &small, "me", 3), Err(PEER_COHORT_TOO_SMALL));
+        assert_eq!(
+            peer_skills(&uses, &small, "me", 3),
+            Err(PEER_COHORT_TOO_SMALL)
+        );
     }
 }

@@ -97,8 +97,14 @@ fn main() {
         "decide/definitions: {RENDERS} renders, p50 {p50} ns, p99 {p99} ns, \
          worst allocation {worst_alloc} bytes"
     );
-    assert!(p50 < BUDGET_P50_NS, "p50 {p50} ns is over {BUDGET_P50_NS} ns");
-    assert!(p99 < BUDGET_P99_NS, "p99 {p99} ns is over {BUDGET_P99_NS} ns");
+    assert!(
+        p50 < BUDGET_P50_NS,
+        "p50 {p50} ns is over {BUDGET_P50_NS} ns"
+    );
+    assert!(
+        p99 < BUDGET_P99_NS,
+        "p99 {p99} ns is over {BUDGET_P99_NS} ns"
+    );
     assert!(
         worst_alloc < BUDGET_ALLOC_BYTES,
         "a render allocated {worst_alloc} bytes, over {BUDGET_ALLOC_BYTES}"

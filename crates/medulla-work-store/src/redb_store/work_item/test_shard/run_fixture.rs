@@ -6,9 +6,7 @@ use medulla_work_types::native_control::SubmitWorkItemRequest;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 
-pub fn admission(
-    metadata: serde_json::Value,
-) -> SubmitWorkItemRequest {
+pub fn admission(metadata: serde_json::Value) -> SubmitWorkItemRequest {
     let mut request = super::run_request();
     request.metadata = serde_json::from_value(metadata).unwrap();
     request
@@ -31,10 +29,7 @@ pub fn with_rows<R>(
 
 /// Seed the canonical owner-bound live lease, including its private native
 /// claim record. Each view supplies only the additional row fields it needs.
-pub fn seed_claim(
-    shard: &Shard,
-    customize: impl FnOnce(&mut Row),
-) {
+pub fn seed_claim(shard: &Shard, customize: impl FnOnce(&mut Row)) {
     let id = run_owner::work_item_id(GRAPH, "tenant", "run").unwrap();
     with_rows(shard, "seed", 1000, |rows| {
         let mut row = serde_json::json!({"node_type":"WorkItem", "tenant":"tenant", "status":"running", "lease_owner":"worker", "lease_epoch":1, "fencing_token":2, "lease_expires_at":10.0, "run_owner_binding":{"graph":GRAPH,"tenant":"tenant","run_id":"run","work_item_id":id,"principal":"owner"}}).as_object().unwrap().clone();

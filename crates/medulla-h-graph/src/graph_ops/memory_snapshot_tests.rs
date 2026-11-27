@@ -2,10 +2,10 @@
 //! the bytes the CAS receives before the graph commit are the bytes the commit
 //! stores, read from the plan alone.
 
-use super::memory_snapshot::{planned_content, decide_sync};
-use medulla_graph_core::memory_snapshot::SnapshotSlot;
+use super::memory_snapshot::{decide_sync, planned_content};
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::memory_snapshot as store;
+use medulla_graph_core::memory_snapshot::SnapshotSlot;
 use medulla_mutation_types::memory_sync::{
     DocId, RequestId, SyncAction, SyncOutcome, SyncRequest, SyncStamp,
 };
@@ -62,7 +62,10 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
     };
     assert_eq!(
         planned_content(&plan, &doc, &outcome),
-        Some((SnapshotSlot::Candidate(candidate_revision), "two".to_string()))
+        Some((
+            SnapshotSlot::Candidate(candidate_revision),
+            "two".to_string()
+        ))
     );
 
     // An outcome that stores no content stages nothing.
@@ -89,8 +92,20 @@ fn a_head_the_cas_cannot_serve_reads_as_the_unavailable_standing() {
         admit_receipt_digests: Vec::new(),
     };
     let (held, _) = decide_sync(&core, &observe, &stamp(), true);
-    assert!(matches!(held, SyncOutcome::Observed { standing: SyncStanding::InSync, .. }));
+    assert!(matches!(
+        held,
+        SyncOutcome::Observed {
+            standing: SyncStanding::InSync,
+            ..
+        }
+    ));
     let (lost, plan) = decide_sync(&core, &observe, &stamp(), false);
-    assert!(matches!(lost, SyncOutcome::Observed { standing: SyncStanding::Unavailable, .. }));
+    assert!(matches!(
+        lost,
+        SyncOutcome::Observed {
+            standing: SyncStanding::Unavailable,
+            ..
+        }
+    ));
     assert!(plan.writes.is_empty());
 }

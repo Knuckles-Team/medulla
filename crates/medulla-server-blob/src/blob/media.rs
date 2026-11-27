@@ -95,9 +95,7 @@ mod tests {
             ENGINE_BLOB_OWNER_SCOPE,
         )
         .unwrap();
-        store
-            .holder_batch(&change, &fresh(store, op), 1)
-            .unwrap();
+        store.holder_batch(&change, &fresh(store, op), 1).unwrap();
         digest
     }
 
@@ -106,7 +104,10 @@ mod tests {
     fn a_foreign_missing_and_malformed_digest_refuse_alike() {
         let store = RedbChunkStore::open_temp().unwrap();
         let digest = put(&store, "tenant-a", b"png bytes", "put-a");
-        assert_eq!(read_media(&store, "tenant-a", &digest).unwrap(), b"png bytes");
+        assert_eq!(
+            read_media(&store, "tenant-a", &digest).unwrap(),
+            b"png bytes"
+        );
         let absent = hex_digest(b"never stored");
         let refusals = [
             read_media(&store, "tenant-b", &digest),
@@ -136,10 +137,20 @@ mod tests {
     fn a_tombstone_makes_the_digest_read_as_missing_and_is_idempotent() {
         let store = RedbChunkStore::open_temp().unwrap();
         let digest = put(&store, "tenant-a", b"expiring", "put-a");
-        let release = HolderChange::release(&digest, media_holder("tenant-a", &digest).unwrap())
-            .unwrap();
-        assert!(store.holder_batch(&release, &fresh(&store, "tomb-1"), 2).unwrap().changed);
-        assert!(!store.holder_batch(&release, &fresh(&store, "tomb-2"), 3).unwrap().changed);
+        let release =
+            HolderChange::release(&digest, media_holder("tenant-a", &digest).unwrap()).unwrap();
+        assert!(
+            store
+                .holder_batch(&release, &fresh(&store, "tomb-1"), 2)
+                .unwrap()
+                .changed
+        );
+        assert!(
+            !store
+                .holder_batch(&release, &fresh(&store, "tomb-2"), 3)
+                .unwrap()
+                .changed
+        );
         assert_eq!(
             read_media(&store, "tenant-a", &digest).unwrap_err(),
             MEDIA_NOT_FOUND

@@ -91,7 +91,10 @@ impl WalkthroughReaders {
         blob_owner: &str,
         walkthrough: &CodeWalkthrough,
     ) -> Result<(), WalkthroughReadRefusal> {
-        match self.index.current_revision(tenant, &walkthrough.repository_id) {
+        match self
+            .index
+            .current_revision(tenant, &walkthrough.repository_id)
+        {
             Some(current) if current == walkthrough.repository_revision => {}
             _ => return Err(WalkthroughReadRefusal::RevisionStale),
         }

@@ -19,7 +19,10 @@ pub const MAX_DELEGATIONS: usize = 100_000;
 /// An agent-run record names its run and a bounded, non-empty operation set, no tool scope, and
 /// expires in the future of the engine clock.
 fn agent_run_shape(record: &DelegationRecord, now_ms: u64) -> Result<(), IdentityRefusal> {
-    let run_id = record.run_id.as_deref().ok_or(IdentityRefusal::InvalidRequest)?;
+    let run_id = record
+        .run_id
+        .as_deref()
+        .ok_or(IdentityRefusal::InvalidRequest)?;
     bounded(run_id, MAX_NAME_BYTES)?;
     if !record.tool.is_empty()
         || record.operations.is_empty()

@@ -88,13 +88,19 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
     let (schema, _) = publish_route_schema(&h);
 
     // At the bound the action passes; one unit over, it is withheld.
-    let batch = decide(&h, limited_join(&h, &schema, vec![rule()], Some(action(10_000, None))))
-        .await
-        .unwrap();
+    let batch = decide(
+        &h,
+        limited_join(&h, &schema, vec![rule()], Some(action(10_000, None))),
+    )
+    .await
+    .unwrap();
     assert!(!is_withheld(&batch.records.as_slice()[0]));
-    let batch = decide(&h, limited_join(&h, &schema, vec![rule()], Some(action(10_001, None))))
-        .await
-        .unwrap();
+    let batch = decide(
+        &h,
+        limited_join(&h, &schema, vec![rule()], Some(action(10_001, None))),
+    )
+    .await
+    .unwrap();
     let record = &batch.records.as_slice()[0];
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         panic!("a breaching action is withheld, got {:?}", record.outcome);
@@ -104,7 +110,10 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
         AbstainReason::LimitBreach { rule_id, observed: 10_001, bound: 10_000, .. } if rule_id == RULE
     ));
     assert_eq!(reasons.as_slice()[0].code(), LIMIT_BREACH);
-    assert!(record.answer.is_none(), "a withheld decision answers nothing");
+    assert!(
+        record.answer.is_none(),
+        "a withheld decision answers nothing"
+    );
     let premise = record
         .premises
         .iter()
@@ -118,13 +127,24 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
     ));
 
     // A request bound tightens the policy bound; it can never loosen it.
-    let tighter = decide(&h, limited_join(&h, &schema, vec![rule()], Some(action(6_000, Some(5_000)))))
-        .await
-        .unwrap();
+    let tighter = decide(
+        &h,
+        limited_join(&h, &schema, vec![rule()], Some(action(6_000, Some(5_000)))),
+    )
+    .await
+    .unwrap();
     assert!(is_withheld(&tighter.records.as_slice()[0]));
-    let looser = decide(&h, limited_join(&h, &schema, vec![rule()], Some(action(12_000, Some(50_000)))))
-        .await
-        .unwrap();
+    let looser = decide(
+        &h,
+        limited_join(
+            &h,
+            &schema,
+            vec![rule()],
+            Some(action(12_000, Some(50_000))),
+        ),
+    )
+    .await
+    .unwrap();
     assert!(is_withheld(&looser.records.as_slice()[0]));
 
     // No param, or no limits, passes unchanged.
@@ -132,9 +152,12 @@ async fn breaching_action_abstains_and_commit_records_the_breach() {
         .await
         .unwrap();
     assert!(!is_withheld(&no_action.records.as_slice()[0]));
-    let no_limits = decide(&h, limited_join(&h, &schema, Vec::new(), Some(action(99_999, None))))
-        .await
-        .unwrap();
+    let no_limits = decide(
+        &h,
+        limited_join(&h, &schema, Vec::new(), Some(action(99_999, None))),
+    )
+    .await
+    .unwrap();
     assert!(!is_withheld(&no_limits.records.as_slice()[0]));
 
     // A foreign tenant is refused before any limit is read.
@@ -180,7 +203,11 @@ async fn breach_abstains_naming_the_first_rule() {
     let ids: Vec<&str> = reasons
         .iter()
         .map(|reason| match reason {
-            AbstainReason::LimitBreach { rule_id, signal_iri, .. } => {
+            AbstainReason::LimitBreach {
+                rule_id,
+                signal_iri,
+                ..
+            } => {
                 assert_eq!(signal_iri, "urn:signal:buy");
                 rule_id.as_str()
             }

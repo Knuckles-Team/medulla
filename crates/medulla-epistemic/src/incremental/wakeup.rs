@@ -4,8 +4,9 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::materialization_status_machine::MaterializationEvent;
 
 use super::{
-    opaque_identity, refused, IncrementalDelta, IncrementalReasoningEvent, IncrementalReasoningIndex,
-    ProjectionInvalidationKind, ProjectionPosition, ReasoningProjectionWakeup, WakeupEventSource,
+    opaque_identity, refused, IncrementalDelta, IncrementalReasoningEvent,
+    IncrementalReasoningIndex, ProjectionInvalidationKind, ProjectionPosition,
+    ReasoningProjectionWakeup, WakeupEventSource,
 };
 
 impl IncrementalReasoningIndex {

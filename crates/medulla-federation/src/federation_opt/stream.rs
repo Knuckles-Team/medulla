@@ -106,7 +106,10 @@ mod tests {
         assert_eq!(source.protocol(), Some(ConnectionProtocol::EventStream));
         assert_eq!(
             source.arguments(),
-            BTreeMap::from([("from_ms".to_string(), json!(1_000)), ("to_ms".to_string(), json!(2_000))])
+            BTreeMap::from([
+                ("from_ms".to_string(), json!(1_000)),
+                ("to_ms".to_string(), json!(2_000))
+            ])
         );
         assert_eq!(
             remote(Some(5), None).arguments(),
@@ -127,6 +130,9 @@ mod tests {
         ] {
             assert!(!in_matrix(protocol, kind), "{kind:?} is outside the row");
         }
-        assert_eq!(source.identity().label.split('#').next(), Some("event-stream"));
+        assert_eq!(
+            source.identity().label.split('#').next(),
+            Some("event-stream")
+        );
     }
 }

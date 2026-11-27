@@ -3,9 +3,7 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_observe::progress::ProgressGuard;
-use medulla_observe::registry::tasks::{
-    Outcome, ProgressCursor, TaskKind, TaskRegistry, TaskSpec,
-};
+use medulla_observe::registry::tasks::{Outcome, ProgressCursor, TaskKind, TaskRegistry, TaskSpec};
 
 fn spec() -> TaskSpec {
     TaskSpec {

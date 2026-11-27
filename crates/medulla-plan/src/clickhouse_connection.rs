@@ -179,14 +179,13 @@ pub fn query(
     use std::io::Read;
     let scheme = if handle.tls { "https" } else { "http" };
     let url = format!("{scheme}://{}:{}/", handle.host, handle.port);
-    let allow: Vec<String> = std::env::var(
-        medulla_federation::federation_ssrf::HTTP_JSON_FEDERATION_ALLOW_ENV,
-    )
-    .unwrap_or_default()
-    .split(',')
-    .take(1024)
-    .map(str::to_string)
-    .collect();
+    let allow: Vec<String> =
+        std::env::var(medulla_federation::federation_ssrf::HTTP_JSON_FEDERATION_ALLOW_ENV)
+            .unwrap_or_default()
+            .split(',')
+            .take(1024)
+            .map(str::to_string)
+            .collect();
     let target = medulla_federation::federation_ssrf::validate_outbound_http_target(
         &url,
         &allow,
@@ -259,7 +258,10 @@ fn decode_json_compact(body: &[u8]) -> Result<ClickHouseResult, String> {
         .ok_or_else(malformed)?;
     let mut rows = Vec::with_capacity(data.len());
     for row in data {
-        let cells = row.as_array().filter(|c| c.len() == columns.len()).ok_or_else(malformed)?;
+        let cells = row
+            .as_array()
+            .filter(|c| c.len() == columns.len())
+            .ok_or_else(malformed)?;
         rows.push(
             cells
                 .iter()
@@ -305,7 +307,9 @@ fn decode_cell(cell: &serde_json::Value, type_name: &str) -> serde_json::Value {
 
 /// The engine family `system.tables.engine` names.
 #[cfg(feature = "federation")]
-fn engine_family(engine: &str) -> medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily {
+fn engine_family(
+    engine: &str,
+) -> medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily {
     use medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily as Family;
     match engine {
         "MergeTree" => Family::MergeTree,
@@ -331,7 +335,10 @@ pub fn read_catalog(
     let bind = |sql: &str| ClickHouseStatement {
         sql: sql.to_string(),
         params: vec![
-            (format!("{CLICKHOUSE_PARAM_PREFIX}db"), handle.database.clone()),
+            (
+                format!("{CLICKHOUSE_PARAM_PREFIX}db"),
+                handle.database.clone(),
+            ),
             (format!("{CLICKHOUSE_PARAM_PREFIX}tbl"), table.to_string()),
         ],
     };
@@ -344,7 +351,9 @@ pub fn read_catalog(
     )?;
     let engine = query(
         handle,
-        &bind("SELECT engine FROM system.tables WHERE database = {db:String} AND name = {tbl:String}"),
+        &bind(
+            "SELECT engine FROM system.tables WHERE database = {db:String} AND name = {tbl:String}",
+        ),
     )?;
     let columns: Vec<ClickHouseColumn> = columns
         .rows
@@ -391,7 +400,9 @@ impl medulla_federation::clickhouse_foreign::ClickHouseReader for EngineClickHou
         &self,
         request: &medulla_federation::clickhouse_foreign::ClickHouseRead<'_>,
     ) -> Result<medulla_federation::federation_opt::ForeignRows, String> {
-        use medulla_exec::sql_text::{render_columnar_select, ClickHouseFilter, ClickHouseParamKind};
+        use medulla_exec::sql_text::{
+            render_columnar_select, ClickHouseFilter, ClickHouseParamKind,
+        };
         use medulla_federation::federation_opt::{Comparison, ForeignRow, ForeignRows};
         let config = ClickHouseDriverConfig::build(
             request.host,
@@ -452,8 +463,8 @@ impl medulla_federation::clickhouse_foreign::ClickHouseReader for EngineClickHou
         let statement = render_columnar_select(request.table, &request.columns, &filters)
             .map_err(|error| format!("INVALID_ARGUMENT: {error}"))?;
         let result = query(&handle, &statement)?;
-        Ok(ForeignRows::from_rows(result.rows.into_iter().enumerate().map(
-            |(ordinal, cells)| {
+        Ok(ForeignRows::from_rows(
+            result.rows.into_iter().enumerate().map(|(ordinal, cells)| {
                 let columns: std::collections::BTreeMap<String, serde_json::Value> = result
                     .columns
                     .iter()
@@ -472,8 +483,8 @@ impl medulla_federation::clickhouse_foreign::ClickHouseReader for EngineClickHou
                     score: None,
                     columns,
                 }
-            },
-        )))
+            }),
+        ))
     }
 }
 
@@ -567,6 +578,8 @@ mod tests {
         assert_eq!(decoded.rows[0][1], serde_json::Value::Null);
         assert_eq!(decoded.rows[0][2], serde_json::json!("a"));
         assert_eq!(decoded.rows[0][3], serde_json::json!(1.5));
-        assert!(decode_json_compact(b"not json").unwrap_err().starts_with("SOURCE_UNAVAILABLE"));
+        assert!(decode_json_compact(b"not json")
+            .unwrap_err()
+            .starts_with("SOURCE_UNAVAILABLE"));
     }
 }

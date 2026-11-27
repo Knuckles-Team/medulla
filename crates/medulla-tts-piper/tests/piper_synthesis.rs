@@ -11,8 +11,8 @@ use std::collections::HashMap;
 
 use medulla_audio::ingress::CarrierRef;
 use medulla_audio::tts::{
-    self, InputMode, TtsOutcome, OutputEncoding, OutputFormat, PolicyDecision, SpeakerSelection,
-    SynthesisControls, TtsBoundedId, TtsError, TtsLimits,
+    self, InputMode, OutputEncoding, OutputFormat, PolicyDecision, SpeakerSelection,
+    SynthesisControls, TtsBoundedId, TtsError, TtsLimits, TtsOutcome,
 };
 use medulla_tts_piper::{
     resolve_voice_paths, segment_phrases, synthesize_streaming, verify_voice_digests,

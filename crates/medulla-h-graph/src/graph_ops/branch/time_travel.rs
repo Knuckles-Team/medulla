@@ -190,13 +190,17 @@ impl VersionState {
                     };
                     entries.push(self.upsert_node(&id, &merged, image_ref));
                 }
-                BatchOperation::RemoveNode { id } => entries.extend(self.remove_node(&id, image_ref)),
+                BatchOperation::RemoveNode { id } => {
+                    entries.extend(self.remove_node(&id, image_ref))
+                }
                 BatchOperation::AddEdge {
                     source,
                     target,
                     properties_msgpack,
                     ..
-                } => entries.push(self.upsert_edge(&source, &target, &properties_msgpack, image_ref)),
+                } => {
+                    entries.push(self.upsert_edge(&source, &target, &properties_msgpack, image_ref))
+                }
                 // The fold keeps one row per pair, so it cannot replay a type-scoped removal.
                 BatchOperation::RemoveEdge {
                     relationship: Some(_),
@@ -220,7 +224,8 @@ impl VersionState {
                     }
                 }
                 BatchOperation::AddEmbedding { .. } => {
-                    self.unreplayable.insert("BatchUpdate.add_embedding".to_string());
+                    self.unreplayable
+                        .insert("BatchUpdate.add_embedding".to_string());
                     entries.extend(other("BatchUpdate.add_embedding", image_ref));
                 }
                 BatchOperation::DeclareEmbeddingSpace { .. } => {
@@ -386,7 +391,11 @@ impl VersionState {
             Ok(serde_json::Value::Object(decoded.into_iter().collect()))
         };
         let mut operations = Vec::new();
-        for (source, target) in self.edges.keys().filter(|key| !next.edges.contains_key(*key)) {
+        for (source, target) in self
+            .edges
+            .keys()
+            .filter(|key| !next.edges.contains_key(*key))
+        {
             if next.nodes.contains_key(source) && next.nodes.contains_key(target) {
                 operations.push(
                     serde_json::json!({"op": "remove_edge", "source": source, "target": target}),
@@ -602,7 +611,9 @@ pub fn fold_chain(chain: &[ChainEntry]) -> VersionState {
 /// The state at the commit `commit_id` of a first-parent chain, or `None` when
 /// that commit is not on this chain.
 pub fn fold_to_commit(chain: &[ChainEntry], commit_id: &str) -> Option<VersionState> {
-    let end = chain.iter().position(|(commit, _)| commit.id == commit_id)?;
+    let end = chain
+        .iter()
+        .position(|(commit, _)| commit.id == commit_id)?;
     Some(fold_chain(&chain[..=end]))
 }
 
@@ -1005,7 +1016,10 @@ mod tests {
         state.apply_payload(Some(&remove("base-node")), "c0");
         state.apply_payload(Some(&node("fresh")), "c1");
         let operations = state.trunk_operations().unwrap();
-        assert_eq!(operations[0], serde_json::json!({"op": "remove_node", "id": "base-node"}));
+        assert_eq!(
+            operations[0],
+            serde_json::json!({"op": "remove_node", "id": "base-node"})
+        );
         assert_eq!(operations[1]["op"], "add_node");
         assert_eq!(operations[1]["id"], "fresh");
         // A node removed and added again is added, not removed.

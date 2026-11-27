@@ -321,7 +321,9 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R005.1
     #[test]
     fn violation_round_trips_and_rejects_unknown_kind() {
-        let pinned = IntegrityShape::parse("integrity:consistency:ab12").unwrap().unwrap();
+        let pinned = IntegrityShape::parse("integrity:consistency:ab12")
+            .unwrap()
+            .unwrap();
         assert_eq!(
             pinned,
             IntegrityShape::Consistency {

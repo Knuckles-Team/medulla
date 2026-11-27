@@ -33,19 +33,19 @@ mod cluster;
 #[cfg(feature = "redb")]
 mod component_content;
 #[cfg(feature = "redb")]
-mod prompt_receipt;
-mod skill_admission;
-#[cfg(feature = "redb")]
-mod skill_source_edit;
+pub mod concept_lineage;
+/// The read-only graph ownership plan (MEDULLA-IDENTITY-R700.3).
+#[cfg(all(feature = "redb", feature = "security"))]
+pub mod ownership;
 #[cfg(feature = "redb")]
 mod package_validation;
 #[cfg(all(test, feature = "redb"))]
 mod package_validation_tests;
 #[cfg(feature = "redb")]
-pub mod concept_lineage;
-/// The read-only graph ownership plan (MEDULLA-IDENTITY-R700.3).
-#[cfg(all(feature = "redb", feature = "security"))]
-pub mod ownership;
+mod prompt_receipt;
+mod skill_admission;
+#[cfg(feature = "redb")]
+mod skill_source_edit;
 // Declared in every build -- the dispatch arm that reaches it carries no cfg;
 // each op refuses by name in a build without its durable substrates.
 // `pub(crate)` so the projection worker shares the admin re-projection path.

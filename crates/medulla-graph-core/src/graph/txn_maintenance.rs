@@ -303,14 +303,17 @@ impl<'a> GraphTxn<'a> {
         threshold: f64,
         tenant: Option<serde_json::Value>,
     ) {
-        let mut candidates: Vec<&String> = pruned.iter().chain(live_referenced).chain(held).collect();
+        let mut candidates: Vec<&String> =
+            pruned.iter().chain(live_referenced).chain(held).collect();
         candidates.sort();
         if candidates.is_empty() {
             return;
         }
         let canonical = serde_json::json!({"candidate_ids": candidates, "threshold": threshold});
         let body = serde_json::to_vec(&canonical).unwrap_or_default();
-        let Ok(digest) = medulla_types::contract::Digest256::framed(PRUNE_REPORT_DOMAIN, &[body.as_slice()]) else {
+        let Ok(digest) =
+            medulla_types::contract::Digest256::framed(PRUNE_REPORT_DOMAIN, &[body.as_slice()])
+        else {
             return;
         };
         let report_digest = digest.to_hex();
@@ -378,9 +381,8 @@ mod tests {
     #[test]
     fn reinforce_and_decay_share_importance_update() {
         // The rule itself: capped addition, half-life decay, no-ops.
-        let reinforce = |current, weight| {
-            importance_update(current, ImportanceChange::Reinforce { weight })
-        };
+        let reinforce =
+            |current, weight| importance_update(current, ImportanceChange::Reinforce { weight });
         assert_eq!(reinforce(2.0, 1.5), 3.5);
         assert_eq!(reinforce(9.5, 5.0), 10.0, "capped at the knob default");
         assert_eq!(reinforce(12.0, 1.0), 12.0, "never lowered by reinforcement");
@@ -428,15 +430,22 @@ mod tests {
             memory(&core, "held", 0.1, true);
             memory(&core, "free", 0.1, false);
             memory(&core, "kept", 0.9, true);
-            core.add_edge("held".into(), "kept".into(), rmp_serde::to_vec_named(&serde_json::json!({"relationship": "r"})).unwrap())
-                .unwrap();
+            core.add_edge(
+                "held".into(),
+                "kept".into(),
+                rmp_serde::to_vec_named(&serde_json::json!({"relationship": "r"})).unwrap(),
+            )
+            .unwrap();
             let ids = ["held".to_string(), "free".to_string(), "kept".to_string()];
             let (pruned, live, held) = core.evict_below(&ids, 0.5, delete);
             // The held node below the threshold is reported; the one above it is no candidate.
             assert_eq!(held, ["held"], "delete={delete}");
             assert!(live.is_empty());
             let held_props = props_of(&core, "held");
-            assert!(held_props.get("forgotten").is_none(), "a held node is never marked");
+            assert!(
+                held_props.get("forgotten").is_none(),
+                "a held node is never marked"
+            );
             assert_eq!(held_props.get("importance"), Some(&serde_json::json!(0.1)));
             // Its edge stays, and only the free node was pruned.
             assert_eq!(core.get_edges().len(), 1, "the held node keeps its edges");

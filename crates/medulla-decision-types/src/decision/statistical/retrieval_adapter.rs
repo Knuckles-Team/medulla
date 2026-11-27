@@ -318,7 +318,10 @@ mod tests {
             adapter_digest: "sha256:a".to_string(),
             scope: AdapterScope::Graph,
             verdict: AdapterVerdict::RolledBack,
-            window: RecordWindow { from_ms: 1, to_ms: 2 },
+            window: RecordWindow {
+                from_ms: 1,
+                to_ms: 2,
+            },
             outcomes: 10,
             wins: 2,
             losses: 8,

@@ -115,7 +115,9 @@ pub struct OwnershipRecord {
 /// SHA-256 over `serde_json::to_vec(signals)`, 64 lowercase hex (the `signals_digest` of the
 /// plan reply).
 pub fn signals_digest(signals: &GraphOwnershipSignals) -> String {
-    hex::encode(Sha256::digest(serde_json::to_vec(signals).unwrap_or_default()))
+    hex::encode(Sha256::digest(
+        serde_json::to_vec(signals).unwrap_or_default(),
+    ))
 }
 
 /// An ownership value outside its bounds.

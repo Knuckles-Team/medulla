@@ -72,7 +72,8 @@ impl Row {
 
     /// The node's day: `valid_from` in epoch seconds, `div_euclid(86_400)`.
     fn day(&self) -> Result<i64, RuleRefusal> {
-        self.int("valid_from").map(|seconds| seconds.div_euclid(DAY_S))
+        self.int("valid_from")
+            .map(|seconds| seconds.div_euclid(DAY_S))
     }
 
     fn input_ref(&self) -> InputRef {
@@ -83,7 +84,11 @@ impl Row {
 fn read_row(ctx: &PlanCtx, id: &str) -> Row {
     let props = node_props(ctx.view, id);
     let revision = props.get("tx_from").and_then(Value::as_u64).unwrap_or(0);
-    Row { id: id.to_string(), props, revision }
+    Row {
+        id: id.to_string(),
+        props,
+        revision,
+    }
 }
 
 /// The live edges of relationship `rel`, as `(source, target)` pairs in key order.
@@ -146,7 +151,10 @@ fn load_rule(ctx: &PlanCtx, rule: &str) -> Result<RuleSpec, RuleRefusal> {
         if stored != spec.digest {
             return Err(RuleRefusal::new(
                 RULE_DIGEST_MISMATCH,
-                format!("rule `{rule}` stores digest {stored}, computed {}", spec.digest),
+                format!(
+                    "rule `{rule}` stores digest {stored}, computed {}",
+                    spec.digest
+                ),
             ));
         }
     }
@@ -160,7 +168,10 @@ fn recurrence_inputs(rows: &[Row], count: Option<u32>) -> Result<RuleInputs, Rul
         (Some(_), Some(extra)) => {
             return Err(RuleRefusal::new(
                 RULE_INPUT_INVALID,
-                format!("more than one HolidayCalendar row, `{}` is one too many", extra.id),
+                format!(
+                    "more than one HolidayCalendar row, `{}` is one too many",
+                    extra.id
+                ),
             ))
         }
         (Some(row), None) => {
@@ -169,7 +180,10 @@ fn recurrence_inputs(rows: &[Row], count: Option<u32>) -> Result<RuleInputs, Rul
                 Some(Value::String(one)) => vec![one.as_str()],
                 Some(Value::Array(many)) => many
                     .iter()
-                    .map(|date| date.as_str().ok_or_else(|| invalid_input(&row.id, "holidayDate")))
+                    .map(|date| {
+                        date.as_str()
+                            .ok_or_else(|| invalid_input(&row.id, "holidayDate"))
+                    })
                     .collect::<Result<Vec<_>, _>>()?,
                 Some(_) => return Err(invalid_input(&row.id, "holidayDate")),
             };
@@ -180,7 +194,10 @@ fn recurrence_inputs(rows: &[Row], count: Option<u32>) -> Result<RuleInputs, Rul
                 })
                 .collect::<Result<std::collections::BTreeSet<_>, RuleRefusal>>()?;
             (
-                HolidayCalendar { revision: row.revision.to_string(), holidays },
+                HolidayCalendar {
+                    revision: row.revision.to_string(),
+                    holidays,
+                },
                 Some(row.input_ref()),
             )
         }
@@ -193,7 +210,11 @@ fn recurrence_inputs(rows: &[Row], count: Option<u32>) -> Result<RuleInputs, Rul
 }
 
 /// The amount of an order: its lines' `lineQuantity * unitPriceMinor + taxMinor`.
-fn order_amount(ctx: &PlanCtx, order: &Row, of_order: &[(String, String)]) -> Result<i64, RuleRefusal> {
+fn order_amount(
+    ctx: &PlanCtx,
+    order: &Row,
+    of_order: &[(String, String)],
+) -> Result<i64, RuleRefusal> {
     let mut total = 0i64;
     for (line, _) in of_order.iter().filter(|(_, to)| *to == order.id) {
         let line = read_row(ctx, line);
@@ -254,11 +275,14 @@ fn reconcile_inputs(ctx: &PlanCtx, rows: &[Row]) -> Result<RuleInputs, RuleRefus
     let mut sets = Sets::default();
     for row in rows {
         if row.is("Order") {
-            sets.orders.push(amount_node(row, order_amount(ctx, row, &of_order)?)?);
+            sets.orders
+                .push(amount_node(row, order_amount(ctx, row, &of_order)?)?);
         } else if row.is("Payment") {
-            sets.payments.push(amount_node(row, row.int("amountMinor")?)?);
+            sets.payments
+                .push(amount_node(row, row.int("amountMinor")?)?);
         } else if row.is("Payout") {
-            sets.payouts.push(amount_node(row, row.int("amountMinor")?)?);
+            sets.payouts
+                .push(amount_node(row, row.int("amountMinor")?)?);
         } else if row.is("Refund") {
             sets.refunds.push(Refund {
                 id: row.id.clone(),
@@ -313,7 +337,11 @@ fn reorder_inputs(rows: &[Row]) -> Result<RuleInputs, RuleRefusal> {
             "a reorder rule takes exactly one StockLevel row",
         ));
     };
-    Ok(RuleInputs::Reorder { sales, stock, open_lines })
+    Ok(RuleInputs::Reorder {
+        sales,
+        stock,
+        open_lines,
+    })
 }
 
 /// The phrases the policy `policy` links to by `rel`, in target id order.
@@ -332,7 +360,11 @@ fn phrases(ctx: &PlanCtx, policy: &str, rel: &str) -> Result<Vec<Phrase>, RuleRe
         .collect()
 }
 
-fn phrase_inputs(ctx: &PlanCtx, rows: &[Row], op: &EvaluateRuleOp) -> Result<RuleInputs, RuleRefusal> {
+fn phrase_inputs(
+    ctx: &PlanCtx,
+    rows: &[Row],
+    op: &EvaluateRuleOp,
+) -> Result<RuleInputs, RuleRefusal> {
     let mut policies = rows.iter().filter(|row| row.is("ClaimPolicy"));
     let (Some(row), None) = (policies.next(), policies.next()) else {
         return Err(RuleRefusal::new(
@@ -341,7 +373,10 @@ fn phrase_inputs(ctx: &PlanCtx, rows: &[Row], op: &EvaluateRuleOp) -> Result<Rul
         ));
     };
     let text = op.text.clone().ok_or_else(|| {
-        RuleRefusal::new(RULE_INPUT_INVALID, "a phrase policy rule needs a TEXT to check")
+        RuleRefusal::new(
+            RULE_INPUT_INVALID,
+            "a phrase policy rule needs a TEXT to check",
+        )
     })?;
     let policy = Policy {
         revision: row.revision.to_string(),

@@ -198,13 +198,19 @@ mod tests {
         ));
         // Printed last, and parsed back to the same plan.
         let printed = plan.to_uql().expect("prints");
-        assert!(printed.ends_with("KEEP VIOLATING FAIL ON FATAL"), "{printed}");
+        assert!(
+            printed.ends_with("KEEP VIOLATING FAIL ON FATAL"),
+            "{printed}"
+        );
         assert_eq!(parse(&printed).expect("re-parses"), plan);
         // The clause is optional and case-insensitive; a clause alone, with no `FATAL`, is
         // a positioned error.
         assert!(matches!(
             stage("MATCH (:P) |> VALIDATE SHAPE <http://ex/S> fail on fatal"),
-            Op::ValidateShape { fail_on_fatal: true, .. }
+            Op::ValidateShape {
+                fail_on_fatal: true,
+                ..
+            }
         ));
         let bad = parse("MATCH (:P) |> VALIDATE SHAPE <http://ex/S> FAIL ON").unwrap_err();
         assert!(bad.msg.contains("FATAL"), "{}", bad.msg);

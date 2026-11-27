@@ -524,15 +524,30 @@ mod tests {
     fn planned_swaps_leave_memory_until_the_commit_applies() {
         let registry = DriftRegistry::default();
         let mut shard = warm(4);
-        shard.transition(ShardMonitorEvent::SealReference, 4).unwrap();
-        registry.shards.lock().insert(("t".into(), "g".into(), 1), shard);
+        shard
+            .transition(ShardMonitorEvent::SealReference, 4)
+            .unwrap();
+        registry
+            .shards
+            .lock()
+            .insert(("t".into(), "g".into(), 1), shard);
         let durable = BTreeMap::new();
-        let planned = registry.planned_swaps("t", "g", &[(1, 1)], &durable).unwrap();
+        let planned = registry
+            .planned_swaps("t", "g", &[(1, 1)], &durable)
+            .unwrap();
         assert_eq!(planned, vec![(1, 1, 2)]);
         let held = |registry: &DriftRegistry| {
-            registry.shards.lock().get(&("t".into(), "g".into(), 1)).map(|s| s.generation)
+            registry
+                .shards
+                .lock()
+                .get(&("t".into(), "g".into(), 1))
+                .map(|s| s.generation)
         };
-        assert_eq!(held(&registry), Some(1), "planning moved the in-memory generation");
+        assert_eq!(
+            held(&registry),
+            Some(1),
+            "planning moved the in-memory generation"
+        );
         registry.apply_committed_swaps("t", "g", &planned);
         assert_eq!(held(&registry), Some(2));
     }

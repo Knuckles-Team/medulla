@@ -188,7 +188,10 @@ async fn match_and_ledger_reach_their_handlers() {
     assert_eq!(answer.plans.len(), 1);
     let plan = answer.plans[0].clone();
     assert_eq!(plan.feature_ids, vec!["f-e2".to_string()]);
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &record.outcome
+    else {
         panic!("feature_match answers an advisory: {:?}", record.outcome);
     };
     assert!(!calibrated);
@@ -455,13 +458,20 @@ async fn ledger_rows_cite_matches_and_plan() {
         .iter()
         .find(|p| p.fact.starts_with("feature_match:match=f-e1/f-l1;"))
         .expect("a claim per match");
-    assert_eq!(cited.class, medulla_decision_types::decision::PremiseClass::Claim);
+    assert_eq!(
+        cited.class,
+        medulla_decision_types::decision::PremiseClass::Claim
+    );
     for part in ["token_ppm=", "label_ppm=", "embedding_ppm="] {
         assert!(cited.fact.contains(part), "{}", cited.fact);
     }
     // The label is shared and the declared cosine is one: those parts are full.
     assert!(cited.fact.contains("label_ppm=1000000"), "{}", cited.fact);
-    assert!(cited.fact.contains("embedding_ppm=1000000"), "{}", cited.fact);
+    assert!(
+        cited.fact.contains("embedding_ppm=1000000"),
+        "{}",
+        cited.fact
+    );
     let plan = record
         .answer
         .as_ref()

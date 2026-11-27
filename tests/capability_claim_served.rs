@@ -67,12 +67,20 @@ async fn claim_uses_declared_host_capability() {
                     .expect("create graph");
             }
         }
-        let commons = guard.registry.get(COMMONS).expect("commons graph").core.clone();
+        let commons = guard
+            .registry
+            .get(COMMONS)
+            .expect("commons graph")
+            .core
+            .clone();
         commons.add_node("host:alpha".to_string(), host_node(&["backtest"]));
         commons.add_node("host:beta".to_string(), host_node(&[]));
     }
 
-    for (id, worker, host) in [(1, "worker-alpha", "host:alpha"), (2, "worker-beta", "host:beta")] {
+    for (id, worker, host) in [
+        (1, "worker-alpha", "host:alpha"),
+        (2, "worker-beta", "host:beta"),
+    ] {
         let registered = medulla_h_jobs::worker_registry::try_handle(
             &state,
             id,
@@ -153,7 +161,10 @@ async fn claim_uses_declared_host_capability() {
     // The worker on the host that declares nothing is not offered the job.
     let beta = claim(4, "worker-beta", Vec::new()).await;
     assert!(beta.error.is_none(), "{:?}", beta.error);
-    assert!(!claimed(&beta), "a host without the declaration claims nothing");
+    assert!(
+        !claimed(&beta),
+        "a host without the declaration claims nothing"
+    );
 
     // A claim that lists a heavy capability itself is refused.
     let lying = claim(5, "worker-beta", vec!["backtest".to_string()]).await;

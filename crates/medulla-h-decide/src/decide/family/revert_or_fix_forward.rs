@@ -8,8 +8,8 @@
 //! `Decide` is evaluate-only: it writes nothing.
 
 use medulla_decision_types::decision::revert_or_fix_forward::{
-    legal_ranked, RecordedVerdict, RevertRefusal, OPTION_FIX_FORWARD, OPTION_REVERT,
-    PARAM_CULPRIT, PARAM_DEPENDENTS, PARAM_VERDICTS,
+    legal_ranked, RecordedVerdict, RevertRefusal, OPTION_FIX_FORWARD, OPTION_REVERT, PARAM_CULPRIT,
+    PARAM_DEPENDENTS, PARAM_VERDICTS,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -20,7 +20,9 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::step_verdict::VerificationVerdict;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 
 use super::support::{abstained, advisory_scored, invalid, json_param, text_param};
 use super::DecisionFamily;
@@ -44,7 +46,10 @@ fn inputs_of(request: &DecideRequest) -> Result<Inputs, String> {
         .ok_or_else(|| invalid("a revert_or_fix_forward question requires culprit"))?
         .to_string();
     let dependents: Vec<String> = json_param(request, PARAM_DEPENDENTS)?;
-    if dependents.iter().any(|id| id.trim().is_empty() || *id == culprit) {
+    if dependents
+        .iter()
+        .any(|id| id.trim().is_empty() || *id == culprit)
+    {
         return Err(invalid(
             "dependents name changesets other than the culprit, none of them blank",
         ));
@@ -68,9 +73,14 @@ fn inputs_of(request: &DecideRequest) -> Result<Inputs, String> {
 
 fn declared_ids(request: &DecideRequest) -> Result<Vec<String>, String> {
     let CandidateSource::Declared { options } = &request.candidates else {
-        return Err(invalid("a revert_or_fix_forward question declares its options"));
+        return Err(invalid(
+            "a revert_or_fix_forward question declares its options",
+        ));
     };
-    Ok(options.iter().map(|option| option.option_id.clone()).collect())
+    Ok(options
+        .iter()
+        .map(|option| option.option_id.clone())
+        .collect())
 }
 
 fn premise(fact: String, culprit: &str) -> FamilyPremise {
@@ -110,7 +120,10 @@ fn conclude_over(request: &DecideRequest) -> Result<Executed, String> {
         .count();
     executed.family_premises = vec![
         premise(
-            format!("revert_or_fix_forward.dependents={}", inputs.dependents.len()),
+            format!(
+                "revert_or_fix_forward.dependents={}",
+                inputs.dependents.len()
+            ),
             &inputs.culprit,
         ),
         premise(
@@ -132,9 +145,9 @@ impl DecisionFamily for RevertOrFixForwardFamily {
         _principal: &str,
     ) -> Result<(), String> {
         if options.is_empty()
-            || options
-                .iter()
-                .any(|option| option.option_id != OPTION_REVERT && option.option_id != OPTION_FIX_FORWARD)
+            || options.iter().any(|option| {
+                option.option_id != OPTION_REVERT && option.option_id != OPTION_FIX_FORWARD
+            })
         {
             return Err(invalid(format!(
                 "a revert_or_fix_forward question declares `{OPTION_REVERT}`, `{OPTION_FIX_FORWARD}` or both"

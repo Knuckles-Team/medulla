@@ -25,7 +25,8 @@ use parking_lot::Mutex;
 /// The default retention, equal to the registry knob's default.
 pub const DEFAULT_NODE_HISTORY_REVISIONS: usize = 200_000;
 
-pub(super) static NODE_HISTORY_LIMIT: AtomicUsize = AtomicUsize::new(DEFAULT_NODE_HISTORY_REVISIONS);
+pub(super) static NODE_HISTORY_LIMIT: AtomicUsize =
+    AtomicUsize::new(DEFAULT_NODE_HISTORY_REVISIONS);
 
 /// Install the resolved retention bound (the knob `graph.node_history_revisions`).
 /// Called once at startup by the knob installer; a limit of zero keeps no history.

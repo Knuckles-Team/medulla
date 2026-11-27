@@ -78,13 +78,7 @@ fn store_with_groups() -> IdentityStore {
     for group in ["editors", "ops"] {
         apply_kept(&mut store, &upsert_group(group), &admin(), NOW).unwrap();
     }
-    apply_kept(
-        &mut store,
-        &join("ops", BOOTSTRAP_PRINCIPAL),
-        &admin(),
-        NOW,
-    )
-    .unwrap();
+    apply_kept(&mut store, &join("ops", BOOTSTRAP_PRINCIPAL), &admin(), NOW).unwrap();
     store
 }
 
@@ -143,7 +137,10 @@ fn bundle_compiles_and_refuses_both_codes() {
         apply_kept(&mut store, &bind(editors_write_g("b2")), &admin(), NOW),
         Err(IdentityRefusal::PolicyScopeBound)
     );
-    assert_eq!(IdentityRefusal::PolicyScopeBound.as_str(), "POLICY_SCOPE_BOUND");
+    assert_eq!(
+        IdentityRefusal::PolicyScopeBound.as_str(),
+        "POLICY_SCOPE_BOUND"
+    );
     assert_eq!(store, bound);
 
     // The same bundle id replaces its own binding.

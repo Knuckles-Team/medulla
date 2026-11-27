@@ -4,9 +4,9 @@
 use std::collections::BTreeMap;
 
 use medulla_numeric::business::phrase_policy::Policy as ClaimPolicy;
+use medulla_numeric::business::reconcile::Sets;
 use medulla_numeric::business::recurrence::HolidayCalendar;
 use medulla_numeric::business::registry::{evaluate_rule, RuleInputs, RuleResult};
-use medulla_numeric::business::reconcile::Sets;
 use medulla_numeric::business::reorder::{Sale, Stock};
 use medulla_numeric::business::rule_spec::{self, InputRef, RuleKind};
 use medulla_numeric::business::RULE_REFUSAL_CODES;

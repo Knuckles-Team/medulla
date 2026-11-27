@@ -1192,9 +1192,11 @@ async fn test_served_scan_reads_node_type_labels() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
-                    label: "Paper".into(),
-                }]),
+                plan: medulla_query_types::wire::Plan::new(vec![
+                    medulla_query_types::wire::Op::Scan {
+                        label: "Paper".into(),
+                    },
+                ]),
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
@@ -3464,8 +3466,8 @@ async fn test_discover_verdict_ratio_counts_only_the_callers_graph() {
                         as_of: None,
                         perspectives: None,
                         capability: None,
-                document_set_ids: Vec::new(),
-                agent_ref: None,
+                        document_set_ids: Vec::new(),
+                        agent_ref: None,
                         seed_ids: Vec::new(),
                         hop_filter: None,
                     },
@@ -3473,8 +3475,7 @@ async fn test_discover_verdict_ratio_counts_only_the_callers_graph() {
             )
             .await;
             assert_ok(&resp);
-            let Some(ResultPayload::Json(serde_json::Value::Object(envelope))) = resp.result
-            else {
+            let Some(ResultPayload::Json(serde_json::Value::Object(envelope))) = resp.result else {
                 panic!("expected the Discover envelope");
             };
             envelope["verdict"].clone()

@@ -41,7 +41,11 @@ async fn graph_harness() -> Harness {
         .write()
         .await
         .registry
-        .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Team, None)
+        .create_graph(
+            GRAPH,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
         .unwrap();
     h
 }
@@ -126,14 +130,10 @@ async fn served_decide_triages_a_seeded_defect() {
     let (pin, _) = publish_route_schema(&h);
     put_defect(&h, &defect("d1", DefectStatus::New, FRAME), None).await;
     seed_code(&h).await;
-    let outcome = super::super::triage::handle_triage_defect(
-        &h.state,
-        1,
-        &verified(),
-        request(&pin, "d1"),
-    )
-    .await
-    .unwrap();
+    let outcome =
+        super::super::triage::handle_triage_defect(&h.state, 1, &verified(), request(&pin, "d1"))
+            .await
+            .unwrap();
     assert_eq!(outcome.decision.suspected_symbols, ["symbol:a"]);
     assert_eq!(outcome.decision.owner_principal.as_deref(), Some("alice"));
     assert_eq!(outcome.decision.abstain_reason, None);
@@ -168,7 +168,12 @@ async fn triage_refusals() {
     let (pin, _) = publish_route_schema(&h);
     put_defect(&h, &defect("closed", DefectStatus::Closed, FRAME), None).await;
     put_defect(&h, &defect("verified", DefectStatus::Verified, FRAME), None).await;
-    put_defect(&h, &defect("foreign", DefectStatus::New, FRAME), Some("other-tenant")).await;
+    put_defect(
+        &h,
+        &defect("foreign", DefectStatus::New, FRAME),
+        Some("other-tenant"),
+    )
+    .await;
     seed_code(&h).await;
     let before = artifact_rows(&h);
     for (id, code) in [
@@ -177,14 +182,10 @@ async fn triage_refusals() {
         ("closed", "DEFECT_CLOSED"),
         ("verified", "DEFECT_CLOSED"),
     ] {
-        let refused = super::super::triage::handle_triage_defect(
-            &h.state,
-            1,
-            &verified(),
-            request(&pin, id),
-        )
-        .await
-        .unwrap_err();
+        let refused =
+            super::super::triage::handle_triage_defect(&h.state, 1, &verified(), request(&pin, id))
+                .await
+                .unwrap_err();
         assert!(refused.starts_with(code), "{id}: {refused}");
     }
     assert_eq!(artifact_rows(&h), before, "a refusal stores no record");
@@ -229,7 +230,9 @@ async fn triage_record_replays_to_an_equal_digest() {
     assert!(facts.contains(&format!("triage.symptom_digest:{digest}").as_str()));
     assert!(facts.contains(&"triage.blame:symbol:a=c1@500"));
     assert!(facts.contains(&"triage.culprit:c1"));
-    assert!(facts.iter().any(|fact| fact.starts_with("knob:triage.max_frames=")));
+    assert!(facts
+        .iter()
+        .any(|fact| fact.starts_with("knob:triage.max_frames=")));
     assert_eq!(entry.record.record_digest.len(), 64);
 }
 
@@ -241,7 +244,12 @@ async fn triage_journey() {
     let h = graph_harness().await;
     let (pin, _) = publish_route_schema(&h);
     put_defect(&h, &defect("d1", DefectStatus::New, FRAME), None).await;
-    put_defect(&h, &defect("d2", DefectStatus::New, "nothing resolves here"), None).await;
+    put_defect(
+        &h,
+        &defect("d2", DefectStatus::New, "nothing resolves here"),
+        None,
+    )
+    .await;
     seed_code(&h).await;
     let triaged =
         super::super::triage::handle_triage_defect(&h.state, 1, &verified(), request(&pin, "d1"))

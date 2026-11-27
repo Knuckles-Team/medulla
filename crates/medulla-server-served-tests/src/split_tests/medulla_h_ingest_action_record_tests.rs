@@ -66,7 +66,10 @@ fn refusal_of(result: Result<impl std::fmt::Debug, String>) -> String {
 /// The gate decision and its request as graph nodes joined by a `decisionRequest` edge.
 fn add_gate_edge(core: &Arc<GraphCore>) {
     core.add_node("gate:1".to_string(), blob(&json!({"type": "GateDecision"})));
-    core.add_node("req:1".to_string(), blob(&json!({"type": "ApprovalRequest"})));
+    core.add_node(
+        "req:1".to_string(),
+        blob(&json!({"type": "ApprovalRequest"})),
+    );
     core.add_edge(
         "gate:1".to_string(),
         "req:1".to_string(),
@@ -110,19 +113,32 @@ fn refusals_and_idempotent_replay() {
         &[record(ActionKind::ToolCall, "k-2", Some(&forged))],
         &reads(&core, vec![]),
     ));
-    assert!(refused.starts_with("ACTION_FACT_REVISION_UNKNOWN:"), "{refused}");
+    assert!(
+        refused.starts_with("ACTION_FACT_REVISION_UNKNOWN:"),
+        "{refused}"
+    );
 
     // ACTION_APPROVAL_REQUIRED: a money movement with no approved gate decision.
     let unapproved = record(ActionKind::MoneyMovement, "k-3", Some(&fact));
     let refused = refusal_of(admit_actions(TENANT, &[unapproved], &reads(&core, vec![])));
-    assert!(refused.starts_with("ACTION_APPROVAL_REQUIRED:"), "{refused}");
+    assert!(
+        refused.starts_with("ACTION_APPROVAL_REQUIRED:"),
+        "{refused}"
+    );
 
     // An approved money movement commits: the record, one fact use, and its edges.
     // A decision with no `decisionRequest` edge in the graph is not approved.
     let mut paid = record(ActionKind::MoneyMovement, "k-4", Some(&fact));
     paid.approved_by = Some("gate:1".to_string());
-    let refused = refusal_of(admit_actions(TENANT, &[paid.clone()], &reads(&core, approved_gate())));
-    assert!(refused.starts_with("ACTION_APPROVAL_REQUIRED:"), "{refused}");
+    let refused = refusal_of(admit_actions(
+        TENANT,
+        &[paid.clone()],
+        &reads(&core, approved_gate()),
+    ));
+    assert!(
+        refused.starts_with("ACTION_APPROVAL_REQUIRED:"),
+        "{refused}"
+    );
     add_gate_edge(&core);
     let admitted = admit_actions(TENANT, &[paid.clone()], &reads(&core, approved_gate())).unwrap();
     let id = action_node_id(TENANT, "k-4").unwrap();
@@ -136,7 +152,10 @@ fn refusals_and_idempotent_replay() {
     assert_eq!(edges, 2, "usedFact and approvedBy");
 
     // Sending it again with the held node returns the same id and writes nothing.
-    let Method::AddNode { properties_msgpack, .. } = &admitted.methods[0] else {
+    let Method::AddNode {
+        properties_msgpack, ..
+    } = &admitted.methods[0]
+    else {
         panic!("the record node is written first");
     };
     let held_record: Value = rmp_serde::from_slice(properties_msgpack).unwrap();
@@ -150,7 +169,10 @@ fn refusals_and_idempotent_replay() {
     let mut changed = paid;
     changed.outcome = Some("refunded".to_string());
     let refused = refusal_of(admit_actions(TENANT, &[changed], &reads(&core, held)));
-    assert!(refused.starts_with("ACTION_IDEMPOTENCY_CONFLICT:"), "{refused}");
+    assert!(
+        refused.starts_with("ACTION_IDEMPOTENCY_CONFLICT:"),
+        "{refused}"
+    );
 }
 
 // MEDULLA-DECISION-ENGINE-R869.3, R869.4: the why chain over the served ingest. Records are
@@ -227,19 +249,29 @@ mod why_chain {
                 },
             )
             .await;
-        assert!(response.error.is_none(), "link {source}->{target}: {response:?}");
+        assert!(
+            response.error.is_none(),
+            "link {source}->{target}: {response:?}"
+        );
     }
 
     /// The graph version now, and the `sha256:` digest of the node's blob at that version.
     async fn pin(served: &Served, node: &str) -> (u64, String) {
         let guard = served.state().read().await;
-        let core = &guard.registry.get(served.graph()).expect("the ingest graph").core;
+        let core = &guard
+            .registry
+            .get(served.graph())
+            .expect("the ingest graph")
+            .core;
         let revision = core.version();
         let blob = core
             .node_properties_at(node, revision)
             .expect("the revision is readable")
             .expect("the node exists at the revision");
-        (revision, format!("sha256:{}", hex::encode(Sha256::digest(blob.as_slice()))))
+        (
+            revision,
+            format!("sha256:{}", hex::encode(Sha256::digest(blob.as_slice()))),
+        )
     }
 
     /// Ingest `items` as one `action_records` batch and assert it is accepted.
@@ -273,7 +305,9 @@ mod why_chain {
     /// The node id of the record with `key`, read back through UQL.
     async fn record_id(served: &Served, key: &str) -> String {
         let ids = served
-            .uql_ids(&format!("MATCH (:ActionRecord) WHERE idempotencyKey = '{key}'"))
+            .uql_ids(&format!(
+                "MATCH (:ActionRecord) WHERE idempotencyKey = '{key}'"
+            ))
             .await;
         assert_eq!(ids.len(), 1, "one record holds key {key}: {ids:?}");
         ids.into_iter().next().unwrap()
@@ -307,7 +341,9 @@ mod why_chain {
             .call_on(
                 served.graph(),
                 "put-why-action",
-                Method::StoredQueryPut { query: why_action() },
+                Method::StoredQueryPut {
+                    query: why_action(),
+                },
             )
             .await;
         assert!(response.error.is_none(), "StoredQueryPut: {response:?}");
@@ -315,7 +351,12 @@ mod why_chain {
 
     /// The gate decision of an approved money movement and the request it decides.
     async fn seed_approval(served: &Served, action_kind: &str) {
-        put(served, GATE, json!({"type": "GateDecision", "gateOutcome": "approve"})).await;
+        put(
+            served,
+            GATE,
+            json!({"type": "GateDecision", "gateOutcome": "approve"}),
+        )
+        .await;
         put(
             served,
             REQUEST,
@@ -334,10 +375,16 @@ mod why_chain {
     }
 
     /// The `(type, properties)` of every answered row.
-    async fn rows_of(served: &Served, ids: &[String]) -> Vec<(String, serde_json::Map<String, Value>)> {
+    async fn rows_of(
+        served: &Served,
+        ids: &[String],
+    ) -> Vec<(String, serde_json::Map<String, Value>)> {
         let mut rows = Vec::new();
         for id in ids {
-            let properties = served.properties(id).await.expect("an answered row is readable");
+            let properties = served
+                .properties(id)
+                .await
+                .expect("an answered row is readable");
             let kind = properties["type"].as_str().unwrap_or_default().to_string();
             rows.push((kind, properties));
         }
@@ -399,15 +446,25 @@ mod why_chain {
         // Each of the two records' facts is its `FactUse` row at the revision and digest used;
         // the fact's current node is never reached.
         let uses: Vec<_> = rows.iter().filter(|(kind, _)| kind == "FactUse").collect();
-        assert_eq!(uses.len(), 2, "the record's and the earlier record's fact use");
+        assert_eq!(
+            uses.len(),
+            2,
+            "the record's and the earlier record's fact use"
+        );
         for (_, properties) in &uses {
             assert_eq!(properties["factNode"], FACT);
             assert_eq!(properties["factRevision"], revision);
             assert_eq!(properties["factDigest"], digest.as_str());
         }
         assert!(!ids.iter().any(|id| id == FACT));
-        assert!(ids.iter().any(|id| id == GATE), "the approver is on the chain");
-        assert!(ids.contains(&earlier), "the earlier record named by causedBy");
+        assert!(
+            ids.iter().any(|id| id == GATE),
+            "the approver is on the chain"
+        );
+        assert!(
+            ids.contains(&earlier),
+            "the earlier record named by causedBy"
+        );
 
         // A second principal who may not read the record gets no rows.
         let reader = "reader-without-access";
@@ -423,8 +480,18 @@ mod why_chain {
         let served = served().await;
         const RULE: &str = "rule:reorder";
         // The stock level, the reorder rule and the reorder evaluation the action used.
-        put(&served, FACT, json!({"type": "StockLevel", "quantity": 2, "reorderPoint": 5})).await;
-        put(&served, RULE, json!({"type": "ReorderRule", "ruleVersion": 3})).await;
+        put(
+            &served,
+            FACT,
+            json!({"type": "StockLevel", "quantity": 2, "reorderPoint": 5}),
+        )
+        .await;
+        put(
+            &served,
+            RULE,
+            json!({"type": "ReorderRule", "ruleVersion": 3}),
+        )
+        .await;
         seed_approval(&served, "money_movement").await;
         let (stock_revision, stock_digest) = pin(&served, FACT).await;
         let (rule_revision, rule_digest) = pin(&served, RULE).await;
@@ -445,10 +512,16 @@ mod why_chain {
 
         let ids = why(&served, "connector-pack-admin", "po-7").await;
         let rows = rows_of(&served, &ids).await;
-        let fact = rows.iter().find(|(kind, _)| kind == "FactUse").expect("the stock fact use");
+        let fact = rows
+            .iter()
+            .find(|(kind, _)| kind == "FactUse")
+            .expect("the stock fact use");
         assert_eq!(fact.1["factNode"], FACT);
         assert_eq!(fact.1["factRevision"], stock_revision);
-        let rule = rows.iter().find(|(kind, _)| kind == "RuleUse").expect("the reorder rule use");
+        let rule = rows
+            .iter()
+            .find(|(kind, _)| kind == "RuleUse")
+            .expect("the reorder rule use");
         assert_eq!(rule.1["ruleNode"], RULE);
         assert_eq!(rule.1["ruleDigest"], rule_digest.as_str());
         assert!(ids.iter().any(|id| id == GATE), "the approver");

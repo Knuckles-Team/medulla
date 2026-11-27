@@ -88,9 +88,7 @@ async fn digest_pending_and_overdue_with_supporting_nodes() {
             "valid_from": 1_700_000_000_i64,
         });
         assert_ok(&dispatch_on_heap(&state, send(node(id, properties))).await);
-        assert_ok(
-            &dispatch_on_heap(&state, send(edge(id, role, "requestRequiredRole"))).await,
-        );
+        assert_ok(&dispatch_on_heap(&state, send(edge(id, role, "requestRequiredRole"))).await);
     }
     // Four obligation instances: two open or overdue before the as-of date, one
     // satisfied, one due after it.
@@ -176,8 +174,12 @@ async fn tx_from_of(
         panic!("node properties answer raw msgpack");
     };
     let properties = medulla_types::msgpack::decode_property_value(&bytes).unwrap();
-    i64::try_from(properties["tx_from"].as_u64().expect("an engine-stamped tx_from"))
-        .expect("tx_from fits Int")
+    i64::try_from(
+        properties["tx_from"]
+            .as_u64()
+            .expect("an engine-stamped tx_from"),
+    )
+    .expect("tx_from fits Int")
 }
 
 // spec: MEDULLA-BUSINESS-OPS-R003.2
@@ -202,11 +204,15 @@ async fn digest_changed_since_uses_known_at() {
         ("incident:second", "Incident"),
     ] {
         assert_ok(
-            &dispatch_on_heap(&state, send(node(
-                id,
-                // An old valid time: the window reads the transaction time, not this.
-                serde_json::json!({ "type": label, "valid_from": 1_u64 }),
-            ))).await,
+            &dispatch_on_heap(
+                &state,
+                send(node(
+                    id,
+                    // An old valid time: the window reads the transaction time, not this.
+                    serde_json::json!({ "type": label, "valid_from": 1_u64 }),
+                )),
+            )
+            .await,
         );
     }
     let first = tx_from_of(&state, 7600, "order:first").await;
@@ -241,8 +247,10 @@ async fn digest_changed_since_uses_known_at() {
 // spec: MEDULLA-BUSINESS-OPS-R003.3
 #[tokio::test]
 async fn digest_hides_out_of_scope_nodes() {
-    use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
     use medulla_server_api::state::ServerState;
+    use medulla_server_auth::auth::{
+        dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller,
+    };
 
     const SECRET: &str = "business-digest-scope-secret"; // sanitizer:ignore
     const TENANT: &str = "tenant-shared";
@@ -270,7 +278,11 @@ async fn digest_hides_out_of_scope_nodes() {
         if guard.registry.get(GRAPH).is_none() {
             guard
                 .registry
-                .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Team, None)
+                .create_graph(
+                    GRAPH,
+                    medulla_protocol_types::protocol::GraphType::Team,
+                    None,
+                )
                 .unwrap();
         }
     }
@@ -404,8 +416,11 @@ async fn evaluate_rule_stage_serves_recurrence_with_inputs() {
     );
 
     let stage = "MATCH (:HolidayCalendar) WHERE id = 'cal:1' |> EVALUATE RULE 'rule:sales-tax'";
-    let answered =
-        dispatch_on_heap(&state, send(uql(&format!("{stage} ASOF 1767225600000 COUNT 2")))).await;
+    let answered = dispatch_on_heap(
+        &state,
+        send(uql(&format!("{stage} ASOF 1767225600000 COUNT 2"))),
+    )
+    .await;
     let (id, cells) = single_row(&answered);
     assert_eq!(id, "rule:sales-tax");
     assert_eq!(cells["kind"], "recurrence");
@@ -419,7 +434,10 @@ async fn evaluate_rule_stage_serves_recurrence_with_inputs() {
     let revision = cells["inputs"]
         .strip_prefix("cal:1@")
         .expect("the one input is the calendar node");
-    assert!(revision.bytes().all(|byte| byte.is_ascii_digit()), "{revision}");
+    assert!(
+        revision.bytes().all(|byte| byte.is_ascii_digit()),
+        "{revision}"
+    );
 
     // The two due dates after the as-of day; the second falls on a holiday and moves to
     // the next business day.

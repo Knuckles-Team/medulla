@@ -15,9 +15,7 @@ use medulla_decision_types::decision::statistical::scale::{
     judge, ScaleIntentRecord, ScaleObservation, ScalePoolFacts, ScaleUnitFacts, PARAM_GRAPH,
     PARAM_INTENT, VERDICT_OPTION,
 };
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, StatisticalOutcome,
-};
+use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
@@ -87,7 +85,9 @@ fn rows_of(view: &GraphView, label: &str) -> Vec<Row> {
 
 /// The one row of `label` whose `key` property is `value`.
 fn row_with(rows: &[Row], key: &str, value: &str) -> Option<Row> {
-    let mut found = rows.iter().filter(|row| text(row, key).as_deref() == Some(value));
+    let mut found = rows
+        .iter()
+        .filter(|row| text(row, key).as_deref() == Some(value));
     let first = found.next()?;
     found.next().is_none().then(|| first.clone())
 }
@@ -121,9 +121,18 @@ fn observe(view: &GraphView, unit_id: &str) -> ScaleObservation {
         .and_then(|row| text(row, "failure_domain_id"))
         .and_then(|id| row_with(&rows_of(view, "ScaleFailureDomain"), "domain_id", &id))
         .and_then(|row| text(&row, "status"));
-    let registration_fence = row_with(&rows_of(view, "ScaleControllerRegistration"), "unit_id", unit_id)
-        .and_then(|row| object(&row, "lease_fence"))
-        .and_then(|fence| Some((number(&fence, "lease_epoch")?, number(&fence, "fence_token")?)));
+    let registration_fence = row_with(
+        &rows_of(view, "ScaleControllerRegistration"),
+        "unit_id",
+        unit_id,
+    )
+    .and_then(|row| object(&row, "lease_fence"))
+    .and_then(|fence| {
+        Some((
+            number(&fence, "lease_epoch")?,
+            number(&fence, "fence_token")?,
+        ))
+    });
     ScaleObservation {
         authority_revisions: rows_of(view, "ScaleAuthorityRevision").len(),
         unit,
@@ -133,10 +142,7 @@ fn observe(view: &GraphView, unit_id: &str) -> ScaleObservation {
     }
 }
 
-fn conclude_verdict(
-    view: Option<&GraphView>,
-    request: &DecideRequest,
-) -> Result<Executed, String> {
+fn conclude_verdict(view: Option<&GraphView>, request: &DecideRequest) -> Result<Executed, String> {
     let intent: ScaleIntentRecord = json_param(request, PARAM_INTENT)?;
     let view = view.ok_or_else(|| invalid("the scale authority graph was not read"))?;
     let unit_id = intent.target.workload_id.clone();

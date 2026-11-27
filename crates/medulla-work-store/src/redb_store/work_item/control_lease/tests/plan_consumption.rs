@@ -249,7 +249,14 @@ fn persisted_plan_drift_refuses_before_any_paired_write() {
             if field != "row_revision" {
                 plan.insert("row_revision".into(), 0.into());
             }
-            write_work_item_props(nodes, transitions, GRAPH, "plan-a", &mut plan, DurableCrypto::none())
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                "plan-a",
+                &mut plan,
+                DurableCrypto::none(),
+            )
         });
         let before = snapshot(&temp.shard);
         assert!(native_call(

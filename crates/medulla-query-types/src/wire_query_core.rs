@@ -535,7 +535,9 @@ impl CompanyCategory {
 
     /// The category a name spells, if any.
     pub fn from_name(name: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|category| category.name() == name)
+        Self::ALL
+            .into_iter()
+            .find(|category| category.name() == name)
     }
 }
 
@@ -953,14 +955,18 @@ pub enum Op {
     /// series, a report stage after `Skill`. Kernel names and parameter keys are the ones
     /// of MEDULLA-FINANCE-PRIMITIVES-R002.2.3.15.
     #[cfg(feature = "timeseries")]
-    Evaluate { spec: crate::series_expr::EvaluateOp },
+    Evaluate {
+        spec: crate::series_expr::EvaluateOp,
+    },
     /// REPORT (business rules, MEDULLA-BUSINESS-OPS-R002.7, UQL `EVALUATE RULE <id> [ASOF <ms>]
     /// [COUNT <n>] [TEXT <string> [LOCALE <string>]]`) — evaluate one stored `:RuleSpec` node
     /// over the rows it is given and answer one row per evaluation: the rule kind, its digest,
     /// the input nodes with their revisions, the steps taken and the canonical JSON result.
     /// Takes an explicit as-of time, never reads a clock and writes nothing. Not feature
     /// gated on the wire; a build without `numeric` refuses the stage at execution.
-    EvaluateRule { spec: crate::rule_expr::EvaluateRuleOp },
+    EvaluateRule {
+        spec: crate::rule_expr::EvaluateRuleOp,
+    },
     /// REPORT (series, EH-529 motif / discord search, UQL `MOTIF [OF c] LIKE shape [TOP k]`,
     /// `MOTIF [OF c] LENGTH m [TOP k] [SEED s]`, `DISCORD [OF c] LENGTH m [TOP k] [SEED s]`)
     /// — per series, over value channel `c` in timestamp order: the `k` non-overlapping
@@ -1110,7 +1116,10 @@ pub enum Op {
     /// kept when every relational predicate holds over the edge's properties and the
     /// `source`, `target` and `rel` columns. The row id is `source|target|ord`. Unscored, in
     /// `(source, target, ord)` order.
-    ScanEdges { rel: Option<String>, preds: Vec<Pred> },
+    ScanEdges {
+        rel: Option<String>,
+        preds: Vec<Pred>,
+    },
     /// SOURCE (MEDULLA-TYPED-PACKS-R108.8, UQL `USAGE QUERIES` / `USAGE ASSETS`) — the
     /// caller's usage over the trailing window `knob catalog.top_queries_window_days`, ranked
     /// by use. `Queries` ranks question digests from the server's own query provenance;

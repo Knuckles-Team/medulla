@@ -50,7 +50,10 @@ fn check_identity(payload: &Value) -> Result<(), RefusalCode> {
 }
 
 fn lowercase_sha256(text: &str) -> bool {
-    text.len() == 64 && text.bytes().all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+    text.len() == 64
+        && text
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 fn check_receipt(payload: &Value, receipt: &Value, tenant: &str) -> Result<(), RefusalCode> {
@@ -92,7 +95,9 @@ fn check_artifact(payload: &Value, receipt: Option<&Value>) -> Result<(), Refusa
             _ => return Err(PAPER_ARTIFACT_UNAVAILABLE),
         }
     }
-    let receipt_sha = receipt.and_then(|receipt| receipt.get("sha256")).and_then(Value::as_str);
+    let receipt_sha = receipt
+        .and_then(|receipt| receipt.get("sha256"))
+        .and_then(Value::as_str);
     let cited = payload
         .get("field_provenance")
         .and_then(Value::as_object)
@@ -113,7 +118,9 @@ fn check_artifact(payload: &Value, receipt: Option<&Value>) -> Result<(), Refusa
 /// The first failing check refuses the paper; nothing is written here.
 pub(crate) fn validate_paper(payload: &Value, tenant: &str) -> Result<(), RefusalCode> {
     check_identity(payload)?;
-    let receipt = payload.get("document_receipt").filter(|value| !value.is_null());
+    let receipt = payload
+        .get("document_receipt")
+        .filter(|value| !value.is_null());
     if let Some(receipt) = receipt {
         check_receipt(payload, receipt, tenant)?;
     }

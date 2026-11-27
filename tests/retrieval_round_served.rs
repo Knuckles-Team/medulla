@@ -2330,9 +2330,7 @@ async fn abstain_returns_both_candidates() {
 
 // ---- R081.102: the distilled rerank head and its champion gate ----
 
-fn fitted_head(
-    weights: Vec<f64>,
-) -> medulla_plan::retrieval_head::RerankHeadArtifact {
+fn fitted_head(weights: Vec<f64>) -> medulla_plan::retrieval_head::RerankHeadArtifact {
     let mut head = medulla_plan::retrieval_head::RerankHeadArtifact {
         weights,
         corpus_revision: "corpus-1".into(),
@@ -2451,7 +2449,12 @@ fn clock_basis_and_second_pass_are_bounded() {
     assert_eq!(at.sufficiency, 0.5);
     assert!(at.queries.is_empty() && !at.budget_exceeded);
 
-    let below = [slot("a", true), slot("b", false), slot("c", false), slot("d", false)];
+    let below = [
+        slot("a", true),
+        slot("b", false),
+        slot("c", false),
+        slot("d", false),
+    ];
     let planned = plan_second_pass(&below, 0.5, 3);
     assert_eq!(planned.queries, ["find b", "find c", "find d"]);
     assert!(!planned.budget_exceeded);
@@ -2459,7 +2462,10 @@ fn clock_basis_and_second_pass_are_bounded() {
     let many: Vec<RequestedSlot> = (0..6).map(|n| slot(&format!("s{n}"), false)).collect();
     let capped = plan_second_pass(&many, 0.5, 3);
     assert_eq!(capped.queries.len(), 3);
-    assert!(capped.budget_exceeded, "a partial result reports the budget");
+    assert!(
+        capped.budget_exceeded,
+        "a partial result reports the budget"
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R081.8.6
@@ -2490,7 +2496,10 @@ async fn terminal_feedback_continuation_executes_nothing() {
     let mut terminal = stop_request(4, spent);
     terminal.corpus_revision = REVISION.into();
     let response = round_as(&state, None, terminal).await;
-    assert!(response.result.is_none(), "a terminal continuation has no result");
+    assert!(
+        response.result.is_none(),
+        "a terminal continuation has no result"
+    );
     let refused = error_of(response);
     assert!(
         refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
@@ -2534,11 +2543,18 @@ async fn terminal_stop_runs_no_later_retrieval() {
     let mut later = stop_request(4, spent);
     later.corpus_revision = REVISION.into();
     let response = round_as(&state, None, later).await;
-    assert!(response.result.is_none(), "a continuation after a stop has no result");
+    assert!(
+        response.result.is_none(),
+        "a continuation after a stop has no result"
+    );
     let refused = error_of(response);
     assert!(
         refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
         "{refused}"
     );
-    assert_eq!(executed(), 1, "no later retrieval ran after the terminal stop");
+    assert_eq!(
+        executed(),
+        1,
+        "no later retrieval ran after the terminal stop"
+    );
 }

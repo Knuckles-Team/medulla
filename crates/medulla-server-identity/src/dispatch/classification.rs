@@ -23,6 +23,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+use medulla_core::stewardship::TargetScopes;
 use medulla_decision_types::decision::knob_families::classification as classification_knobs;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_identity_types::classification::{
@@ -35,11 +36,10 @@ use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::ClassificationClaim as ClassificationClaimResultContract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_core::stewardship::TargetScopes;
 use medulla_server_graph::dispatch::graph_client::GraphTarget;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
-use medulla_server_graph::dispatch::stewardship::holds_review_role;
 use medulla_server_graph::dispatch::shared::typed_response;
+use medulla_server_graph::dispatch::stewardship::holds_review_role;
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
@@ -79,7 +79,10 @@ fn refuse(code: ServerErrorCode, detail: impl std::fmt::Display) -> String {
 }
 
 fn state_illegal(from: &str, to: &str) -> String {
-    refuse(ServerErrorCode::ClaimStateIllegal, format!("{from} to {to}"))
+    refuse(
+        ServerErrorCode::ClaimStateIllegal,
+        format!("{from} to {to}"),
+    )
 }
 
 fn evidence_missing() -> String {
@@ -217,7 +220,8 @@ fn encode(value: &Properties) -> Result<Vec<u8>, String> {
 fn took_effect(response: &Response) -> bool {
     !matches!(
         &response.result,
-        Some(ResultPayload::Bool(false)) | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
+        Some(ResultPayload::Bool(false))
+            | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
     )
 }
 
@@ -281,7 +285,10 @@ async fn propose(
 ) -> Result<ClassificationClaimResult, String> {
     claim.validate()?;
     if claim.state != ClaimState::Proposed {
-        return Err(state_illegal(claim.state.as_str(), ClaimState::Proposed.as_str()));
+        return Err(state_illegal(
+            claim.state.as_str(),
+            ClaimState::Proposed.as_str(),
+        ));
     }
     for category in &claim.categories {
         let node = format!("{MARKING_NODE_PREFIX}{}", category.as_str());
@@ -297,7 +304,10 @@ async fn propose(
                 record: stored,
                 propagated: Vec::new(),
             }),
-            decided => Err(state_illegal(decided.as_str(), ClaimState::Proposed.as_str())),
+            decided => Err(state_illegal(
+                decided.as_str(),
+                ClaimState::Proposed.as_str(),
+            )),
         };
     }
     let current = match read_node(state, target, &claim.asset).await? {
@@ -388,7 +398,14 @@ async fn review(
         });
     }
 
-    stamp_asset(state, target, &record.claim.asset, asset_properties.as_ref(), &after).await?;
+    stamp_asset(
+        state,
+        target,
+        &record.claim.asset,
+        asset_properties.as_ref(),
+        &after,
+    )
+    .await?;
     let propagated = propagate_downstream(state, target, &record).await?;
     Ok(ClassificationClaimResult { record, propagated })
 }
@@ -410,7 +427,10 @@ async fn stamp_asset(
             .unwrap_or(serde_json::Value::Null),
     );
     let mut updates = Properties::new();
-    updates.insert(MARKINGS_PROPERTY.to_string(), serde_json::json!(names(markings)));
+    updates.insert(
+        MARKINGS_PROPERTY.to_string(),
+        serde_json::json!(names(markings)),
+    );
     let response = write(
         state,
         target,
@@ -484,10 +504,16 @@ async fn read_lineage(
                 });
             match relationship.as_deref() {
                 Some(name) if is_lineage_to(name) => {
-                    lineage.entry(source.clone()).or_default().insert(destination.clone());
+                    lineage
+                        .entry(source.clone())
+                        .or_default()
+                        .insert(destination.clone());
                 }
                 Some(name) if is_derived_from(name) => {
-                    lineage.entry(destination.clone()).or_default().insert(source.clone());
+                    lineage
+                        .entry(destination.clone())
+                        .or_default()
+                        .insert(source.clone());
                 }
                 _ => {}
             }

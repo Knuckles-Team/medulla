@@ -8,9 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_decision_outcome_types::decision::defect_triage::{OpenDefect, SuspectInput};
 use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_source_types::lifecycle::{
-    defect_from_node, Defect, DefectStatus, DEFECT_TYPE,
-};
+use medulla_source_types::lifecycle::{defect_from_node, Defect, DefectStatus, DEFECT_TYPE};
 use medulla_source_types::source_changeset::COMMIT_TYPE;
 use medulla_source_types::stack_frame::{SymbolIndex, SymbolRef, SYMBOL_TYPE};
 
@@ -63,7 +61,10 @@ fn blame_of(core: &GraphCore, symbol: &str) -> Option<(SuspectInput, Option<Stri
         let (Some(changeset), Some(at)) = (changeset, number(&node, "timestamp_ms")) else {
             continue;
         };
-        let author = node.get("author").and_then(|v| v.as_str()).map(str::to_owned);
+        let author = node
+            .get("author")
+            .and_then(|v| v.as_str())
+            .map(str::to_owned);
         let better = match &best {
             None => true,
             Some((held_at, held_id, _)) => {

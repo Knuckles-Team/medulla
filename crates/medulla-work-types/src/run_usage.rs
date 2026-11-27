@@ -210,7 +210,9 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "two".into()],
-            &[one.clone(), one], &[])
+            &[one.clone(), one],
+            &[],
+        )
         .unwrap();
         assert_eq!(result.recorded_runs, 1);
         assert_eq!(result.missing_runs, 1);
@@ -227,7 +229,9 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "missing".into()],
-            &[zero], &[])
+            &[zero],
+            &[],
+        )
         .unwrap();
         assert_eq!(result.counts.get("requests"), Some(&0));
         assert!(!result.counts.contains_key("input_tokens"));
@@ -248,7 +252,9 @@ mod tests {
                 "owner",
                 "context",
                 &["one".into()],
-                &[other], &[])
+                &[other],
+                &[]
+            )
             .is_err());
         }
         let mut other = original.clone();
@@ -258,7 +264,9 @@ mod tests {
             "owner",
             "context",
             &["one".into()],
-            &[original, other], &[])
+            &[original, other],
+            &[]
+        )
         .is_err());
         let mut high = record("one");
         high.counts.insert("input_tokens".into(), MAX_USAGE_COUNT);
@@ -267,7 +275,9 @@ mod tests {
             "owner",
             "context",
             &["one".into(), "two".into()],
-            &[high, record("two")], &[])
+            &[high, record("two")],
+            &[]
+        )
         .is_err());
     }
     #[test]
@@ -328,6 +338,8 @@ mod tests {
         );
         let none = aggregate_session_usage("tenant", "owner", "context", &[], &[], &[]).unwrap();
         assert!(none.turn_timings.is_empty());
-        assert!(!serde_json::to_string(&none).unwrap().contains("turn_timings"));
+        assert!(!serde_json::to_string(&none)
+            .unwrap()
+            .contains("turn_timings"));
     }
 }

@@ -21,16 +21,16 @@ use medulla_decision_types::decision::{
     STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
 };
 use medulla_decision_types::{
-    decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
+    decision::statistical::declared::MAX_DECLARED_OPTIONS, decision::statistical::CandidatePool,
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::DecisionBatch, decision::statistical::ExplorationRecord,
+    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
+    decision::statistical::ShortlistProvenance, decision::statistical::StatisticalDecisionRecord,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalInputs,
+    decision::statistical::StatisticalOutcome,
 };
 use medulla_decision_types::{
-    decision::statistical::CandidatePool, decision::statistical::CandidateSource,
-    decision::statistical::DecideRequest, decision::statistical::DecisionBatch,
-    decision::statistical::ExplorationRecord, decision::statistical::FeatureMatrixRef,
-    decision::statistical::QuestionKind, decision::statistical::ShortlistProvenance,
-    decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
-    decision::statistical::StatisticalInputs, decision::statistical::StatisticalOutcome,
-    decision::statistical::declared::MAX_DECLARED_OPTIONS,
+    decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
@@ -660,13 +660,12 @@ pub(super) fn decide_blocking(
             &policy.policy,
         )
     })?;
-    let (pinned, provider_binding) =
-        telemetry::stage(Stage::Constraints, family, tenant, || {
-            registry.constraints(request)?;
-            let provider_binding = registry.bind(ctx, request)?;
-            let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
-            Ok::<_, String>((pinned, provider_binding))
-        })?;
+    let (pinned, provider_binding) = telemetry::stage(Stage::Constraints, family, tenant, || {
+        registry.constraints(request)?;
+        let provider_binding = registry.bind(ctx, request)?;
+        let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
+        Ok::<_, String>((pinned, provider_binding))
+    })?;
     let comparative = super::family::comparative_analysis::plan(
         request,
         &candidates.entries,

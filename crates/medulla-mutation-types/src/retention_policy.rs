@@ -40,7 +40,9 @@ pub enum RetentionPolicyError {
     HoldCheckRequired,
     #[error("RETENTION_POLICY_INVALID: a retention policy age must be above zero")]
     ZeroAge,
-    #[error("RETENTION_POLICY_INVALID: a retention batch must be between 1 and {MAX_RETENTION_BATCH}")]
+    #[error(
+        "RETENTION_POLICY_INVALID: a retention batch must be between 1 and {MAX_RETENTION_BATCH}"
+    )]
     BatchOutOfRange,
 }
 

@@ -691,24 +691,25 @@ fn fetch_one(
         // reads a stored copy only while the policy resolves `Copy` inside the row bound; any
         // other resolution, and a refused copy, runs live.
         let mut copy_refusal = None;
-        let replica = scope
-            .get(name, &fingerprint, request)
-            .filter(|rows| match remote.acceleration() {
-                None => true,
-                Some(policy) => match super::accel::copy_route(
-                    policy,
-                    super::cache::now_ms(),
-                    rows.len(),
-                    session.copy_knobs(),
-                ) {
-                    Ok(()) => true,
-                    Err(super::accel::LiveReason::Policy) => false,
-                    Err(super::accel::LiveReason::Refused(text)) => {
-                        copy_refusal = Some(text);
-                        false
-                    }
-                },
-            });
+        let replica =
+            scope
+                .get(name, &fingerprint, request)
+                .filter(|rows| match remote.acceleration() {
+                    None => true,
+                    Some(policy) => match super::accel::copy_route(
+                        policy,
+                        super::cache::now_ms(),
+                        rows.len(),
+                        session.copy_knobs(),
+                    ) {
+                        Ok(()) => true,
+                        Err(super::accel::LiveReason::Policy) => false,
+                        Err(super::accel::LiveReason::Refused(text)) => {
+                            copy_refusal = Some(text);
+                            false
+                        }
+                    },
+                });
         if let Some(rows) = replica {
             let charged = session
                 .with_meter(|meter| meter.check_wall())

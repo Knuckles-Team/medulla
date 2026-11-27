@@ -8,27 +8,25 @@
 //! `NO_PROGRAM`.
 
 use medulla_decision_types::decision::program_store::preplan::{pattern_key, ReusablePattern};
-use medulla_decision_types::decision::program_store::semantic::{
-    bind_request, bind_steps, match_key, Binding, BindingSource, select_match, MatchKind, MatchRefusal, ProgramCandidates,
-    ProgramHit, ProgramMatch, ProgramMatchIndex, Selection, MATCH_ANSWER_PREFIX,
-    MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES, PARAM_PROGRAM_GRAPH,
-    PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
-};
 use medulla_decision_types::decision::program_store::replay::{
     replay_prefix, replay_verdict, ProgramDemoted, ReplayKnobs, StoredReplay, MAX_REPLAY_ROWS,
 };
-use medulla_decision_types::decision::program_store::{
-    CompiledProgram, NoProgram, ProgramKnobs,
+use medulla_decision_types::decision::program_store::semantic::{
+    bind_request, bind_steps, match_key, select_match, Binding, BindingSource, MatchKind,
+    MatchRefusal, ProgramCandidates, ProgramHit, ProgramMatch, ProgramMatchIndex, Selection,
+    MATCH_ANSWER_PREFIX, MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES,
+    PARAM_PROGRAM_GRAPH, PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
 };
+use medulla_decision_types::decision::program_store::{CompiledProgram, NoProgram, ProgramKnobs};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -158,9 +156,16 @@ fn demotion(
         .into_iter()
         .map(|(_, bytes)| decode_artifact(&bytes, "program replay"))
         .collect::<Result<_, _>>()?;
-    let verdict = replay_verdict(&rows, &program.program_digest, &ReplayKnobs::from_policy(policy));
+    let verdict = replay_verdict(
+        &rows,
+        &program.program_digest,
+        &ReplayKnobs::from_policy(policy),
+    );
     let premises = vec![
-        claim(format!("program.replays={}", verdict.replays), PARAM_TASK_SIGNATURE),
+        claim(
+            format!("program.replays={}", verdict.replays),
+            PARAM_TASK_SIGNATURE,
+        ),
         claim(
             format!("program.replay_fallbacks={}", verdict.fallbacks),
             PARAM_TASK_SIGNATURE,
@@ -194,11 +199,20 @@ fn match_claims(
     let mut claims = vec![
         claim(format!("program.match_kind={kind}"), PARAM_REQUEST_TEXT),
         claim(
-            format!("program.match_score_micros={}", or_none(score.map(|n| n.to_string()))),
+            format!(
+                "program.match_score_micros={}",
+                or_none(score.map(|n| n.to_string()))
+            ),
             PARAM_REQUEST_TEXT,
         ),
-        claim(format!("program.match_threshold_micros={threshold}"), PARAM_REQUEST_TEXT),
-        claim(format!("program.match_threshold_source={source}"), PARAM_REQUEST_TEXT),
+        claim(
+            format!("program.match_threshold_micros={threshold}"),
+            PARAM_REQUEST_TEXT,
+        ),
+        claim(
+            format!("program.match_threshold_source={source}"),
+            PARAM_REQUEST_TEXT,
+        ),
         claim(
             format!("program.matched_node={}", or_none(node.map(str::to_string))),
             PARAM_REQUEST_TEXT,
@@ -208,7 +222,10 @@ fn match_claims(
             PARAM_REQUEST_TEXT,
         ),
         claim(
-            format!("program.space_digest={}", or_none(candidates.space_digest.clone())),
+            format!(
+                "program.space_digest={}",
+                or_none(candidates.space_digest.clone())
+            ),
             PARAM_REQUEST_TEXT,
         ),
     ];
@@ -341,7 +358,8 @@ fn semantic(
     };
     let (demoted, replay_premises) = demotion(ctx, policy, &chosen, &program)?;
     if let Some(mut executed) = demoted {
-        executed.family_premises = match_claims("none", score, threshold, source, None, &candidates, &[]);
+        executed.family_premises =
+            match_claims("none", score, threshold, source, None, &candidates, &[]);
         executed.family_premises.extend(replay_premises);
         return Ok(executed);
     }

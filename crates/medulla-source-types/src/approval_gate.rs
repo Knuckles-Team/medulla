@@ -238,7 +238,9 @@ impl ApprovalGateRequest {
     /// Check the bounds of the request.
     pub fn validate(&self) -> Result<(), ApprovalGateRefusal> {
         let bad = |field: &str| {
-            Err(ApprovalGateRefusal::Invalid(format!("{field} is out of bounds")))
+            Err(ApprovalGateRefusal::Invalid(format!(
+                "{field} is out of bounds"
+            )))
         };
         let text_ok = |value: &str| {
             !value.trim().is_empty()
@@ -248,7 +250,11 @@ impl ApprovalGateRequest {
         if !text_ok(&self.operation) {
             return bad("operation");
         }
-        if self.currency.as_deref().is_some_and(|currency| !text_ok(currency)) {
+        if self
+            .currency
+            .as_deref()
+            .is_some_and(|currency| !text_ok(currency))
+        {
             return bad("currency");
         }
         Ok(())
@@ -318,7 +324,11 @@ pub fn resolve_approval_gate(
 fn policy_digest(selected: &[&ApprovalRule]) -> String {
     format!(
         "sha256:{}",
-        sha256_hex(serde_json::to_string(selected).unwrap_or_default().as_bytes())
+        sha256_hex(
+            serde_json::to_string(selected)
+                .unwrap_or_default()
+                .as_bytes()
+        )
     )
 }
 
@@ -368,7 +378,10 @@ mod tests {
             serde_json::to_value(ApprovalGate::TwoPerson).expect("json"),
             json!("two_person")
         );
-        assert_eq!(serde_json::to_value(ApprovalGate::NoGate).expect("json"), json!("none"));
+        assert_eq!(
+            serde_json::to_value(ApprovalGate::NoGate).expect("json"),
+            json!("none")
+        );
     }
 
     // spec: MEDULLA-BUSINESS-OPS-R004
@@ -396,7 +409,10 @@ mod tests {
         large.gate_class = Some(GateClass::MoneyMovement);
         let rules = [large, small];
         let few = resolve_approval_gate(&ask("money.transfer", Some(500)), &rules).expect("answer");
-        assert_eq!((few.gate, few.rule_ids), (ApprovalGate::Single, vec!["small".to_owned()]));
+        assert_eq!(
+            (few.gate, few.rule_ids),
+            (ApprovalGate::Single, vec!["small".to_owned()])
+        );
         let many =
             resolve_approval_gate(&ask("money.transfer", Some(50_000)), &rules).expect("answer");
         assert_eq!(many.gate, ApprovalGate::TwoPerson);
@@ -419,12 +435,14 @@ mod tests {
         second.required_role = Some("owner".to_owned());
         second.gate_class = Some(GateClass::ProductionQa);
         second.expiry_ms = None;
-        let answer =
-            resolve_approval_gate(&ask("deploy.promotions.apply", None), &[second, first])
-                .expect("answer");
+        let answer = resolve_approval_gate(&ask("deploy.promotions.apply", None), &[second, first])
+            .expect("answer");
         assert_eq!(answer.gate, ApprovalGate::TwoPerson);
         assert_eq!(answer.gate_class, Some(GateClass::ProductionQa));
-        assert_eq!(answer.approver_roles, vec!["owner".to_owned(), "release-manager".to_owned()]);
+        assert_eq!(
+            answer.approver_roles,
+            vec!["owner".to_owned(), "release-manager".to_owned()]
+        );
         assert_eq!(answer.expires_after_ms, Some(3_600_000));
         assert_eq!(answer.rule_ids, vec!["a".to_owned(), "b".to_owned()]);
         assert!(answer.policy_digest.starts_with("sha256:"));
@@ -439,12 +457,16 @@ mod tests {
         let mut request = ask("money.transfer", Some(10));
         request.currency = Some("USD".to_owned());
         assert_eq!(
-            resolve_approval_gate(&request, &[bare.clone()]).expect("answer").gate,
+            resolve_approval_gate(&request, &[bare.clone()])
+                .expect("answer")
+                .gate,
             ApprovalGate::Single
         );
         request.currency = Some("EUR".to_owned());
         assert_eq!(
-            resolve_approval_gate(&request, &[bare]).expect("answer").gate,
+            resolve_approval_gate(&request, &[bare])
+                .expect("answer")
+                .gate,
             ApprovalGate::Unresolved
         );
     }
@@ -475,7 +497,10 @@ mod tests {
         ] {
             let mut broken = node.clone();
             broken[key] = bad;
-            assert!(ApprovalRule::from_node("rule:1", &broken, "acme").is_none(), "{key}");
+            assert!(
+                ApprovalRule::from_node("rule:1", &broken, "acme").is_none(),
+                "{key}"
+            );
         }
     }
 
@@ -491,14 +516,22 @@ mod tests {
         let plain = ApprovalRule::from_node("rule:1", &node, "acme").expect("non-monetary rule");
         assert_eq!((plain.ceiling_minor, plain.currency), (None, None));
         node["approvalGateClass"] = json!("money_movement");
-        assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none(), "neither");
+        assert!(
+            ApprovalRule::from_node("rule:1", &node, "acme").is_none(),
+            "neither"
+        );
         node["approvalCeilingMinor"] = json!(5_000);
-        assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none(), "no currency");
+        assert!(
+            ApprovalRule::from_node("rule:1", &node, "acme").is_none(),
+            "no currency"
+        );
         node["approvalCurrency"] = json!("USD");
         let money = ApprovalRule::from_node("rule:1", &node, "acme").expect("complete rule");
         assert_eq!(money.ceiling_minor, Some(5_000));
         // A monetary rule left out answers unresolved, never a looser gate.
-        node.as_object_mut().expect("object").remove("approvalCurrency");
+        node.as_object_mut()
+            .expect("object")
+            .remove("approvalCurrency");
         assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none());
     }
 

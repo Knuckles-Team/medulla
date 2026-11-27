@@ -507,7 +507,13 @@ pub(super) async fn resolve_document_sets(
             let op = ProfileOp::GetDocumentSet {
                 set_id: set_id.clone(),
             };
-            match read_op(ctx.raw_core, &state.isolation, &tenant_scope, &agent_id, &op) {
+            match read_op(
+                ctx.raw_core,
+                &state.isolation,
+                &tenant_scope,
+                &agent_id,
+                &op,
+            ) {
                 Ok(ReadOut::Set(set)) => sets.push(set),
                 _ => return Err(set_unavailable(set_id)),
             }
@@ -521,7 +527,8 @@ pub(super) async fn resolve_document_sets(
             DocumentSetKind::SavedQuery(text) => {
                 #[cfg(feature = "query")]
                 {
-                    let Some(seam) = medulla_server_ops::api::query_txn::query_seam(ctx.state).await
+                    let Some(seam) =
+                        medulla_server_ops::api::query_txn::query_seam(ctx.state).await
                     else {
                         return Err(refuse(
                             "ENGINE_UNAVAILABLE",

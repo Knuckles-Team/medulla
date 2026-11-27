@@ -62,10 +62,7 @@ fn request(
     }
 }
 
-fn decide(
-    h: &Harness,
-    request: &DecideRequest,
-) -> Result<StatisticalDecisionRecord, String> {
+fn decide(h: &Harness, request: &DecideRequest) -> Result<StatisticalDecisionRecord, String> {
     let ctx = ExecutionContext {
         store: h.store.as_ref(),
         tenant_id: TENANT,
@@ -124,7 +121,11 @@ async fn dependents_forbid_revert() {
     assert_eq!(ranked(&held).unwrap(), ["fix_forward"]);
 
     // Only revert declared, and a dependent exists: the registered refusal.
-    let only = decide(&h, &request(&pin, &["revert"], r#"["cs-2","cs-3"]"#, FAILED)).unwrap();
+    let only = decide(
+        &h,
+        &request(&pin, &["revert"], r#"["cs-2","cs-3"]"#, FAILED),
+    )
+    .unwrap();
     let refusal = ranked(&only).unwrap_err();
     assert!(refusal.contains("REVERT_HAS_DEPENDENTS"), "{refusal}");
 

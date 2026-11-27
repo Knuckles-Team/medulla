@@ -192,9 +192,8 @@ fn incident_audit_line(method: &Method) -> Option<String> {
         }
         // MEDULLA-IDENTITY-R753: the line names the client and the connector, never a secret.
         Method::CredentialReceipt { op } => {
-            let medulla_identity_types::credential_receipt::CredentialReceiptOp::Record {
-                receipt,
-            } = op.as_ref();
+            let medulla_identity_types::credential_receipt::CredentialReceiptOp::Record { receipt } =
+                op.as_ref();
             Some(format!(
                 "CREDENTIAL_RECEIPT|record|{}|{}",
                 receipt.client, receipt.connector
@@ -262,10 +261,9 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             request.policy.repo, request.policy.branch
         )),
         // MEDULLA-SDLC-R003.3: the line names the repository and the intake path, never the symptom text.
-        Method::FileDefect { request } => Some(format!(
-            "FILE_DEFECT|{}|{:?}",
-            request.repo, request.intake
-        )),
+        Method::FileDefect { request } => {
+            Some(format!("FILE_DEFECT|{}|{:?}", request.repo, request.intake))
+        }
         // MEDULLA-SDLC-R003.4: the line names the defect and the move, never the reason text.
         Method::TransitionDefect { request } => Some(format!(
             "TRANSITION_DEFECT|{}|{}|{:?}",
@@ -315,9 +313,9 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
         Method::FinanceAlertRaise { envelope } => {
             Some(format!("FINANCE_ALERT_RAISE|{}", envelope.event_id))
         }
-        Method::FinanceReceiptTransition { receipt_id, event } => Some(format!(
-            "FINANCE_RECEIPT_TRANSITION|{receipt_id}|{event:?}"
-        )),
+        Method::FinanceReceiptTransition { receipt_id, event } => {
+            Some(format!("FINANCE_RECEIPT_TRANSITION|{receipt_id}|{event:?}"))
+        }
         Method::NlQueryCorrect { .. } => Some("NL_QUERY_CORRECT".to_string()),
         Method::FinanceFactorRecord { factor_ids, .. } => {
             Some(format!("FINANCE_FACTOR_RECORD|{}", factor_ids.len()))
@@ -978,7 +976,8 @@ pub(super) fn memory_audit_line(method: &Method) -> Option<String> {
             Some(format!("BUS_REGISTER|{}", participant.session_ref))
         }
         Method::BusHeartbeat { session_ref, .. } => Some(format!("BUS_HEARTBEAT|{session_ref}")),
-        Method::SyncMemorySnapshot { request, .. } | Method::SyncMemorySnapshotStore { request, .. } => {
+        Method::SyncMemorySnapshot { request, .. }
+        | Method::SyncMemorySnapshotStore { request, .. } => {
             Some(format!("MEMORY_SYNC|{}", request.doc_id.as_str()))
         }
         _ => None,

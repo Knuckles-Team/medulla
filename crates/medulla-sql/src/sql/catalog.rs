@@ -802,7 +802,9 @@ fn rfc3339_utc(ms: i64) -> String {
 
 /// `pg_catalog.pg_stat_activity`: one row per supplied session, with the nine
 /// columns the shaped relation always had.
-fn pg_stat_activity_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, RecordBatch), String> {
+fn pg_stat_activity_batch(
+    sessions: &[PgStatActivityRow],
+) -> Result<(SchemaRef, RecordBatch), String> {
     let schema = Arc::new(Schema::new(vec![
         Field::new("datid", DataType::Int32, false),
         Field::new("datname", DataType::Utf8, false),
@@ -824,7 +826,10 @@ fn pg_stat_activity_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, 
         vec![
             Arc::new(Int32Array::from(vec![DATABASE_OID; n])),
             Arc::new(StringArray::from(
-                sessions.iter().map(|r| r.graph.as_str()).collect::<Vec<_>>(),
+                sessions
+                    .iter()
+                    .map(|r| r.graph.as_str())
+                    .collect::<Vec<_>>(),
             )),
             Arc::new(Int32Array::from(
                 sessions.iter().map(|r| r.pid).collect::<Vec<_>>(),
@@ -844,7 +849,10 @@ fn pg_stat_activity_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, 
                 sessions.iter().map(|r| r.state).collect::<Vec<_>>(),
             )),
             Arc::new(StringArray::from(
-                sessions.iter().map(|r| r.query.as_str()).collect::<Vec<_>>(),
+                sessions
+                    .iter()
+                    .map(|r| r.query.as_str())
+                    .collect::<Vec<_>>(),
             )),
         ],
     )
@@ -854,7 +862,9 @@ fn pg_stat_activity_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, 
 
 /// `pg_catalog.pg_stat_database`: one row per distinct graph among the supplied
 /// sessions, with the number of those sessions in `numbackends`.
-fn pg_stat_database_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, RecordBatch), String> {
+fn pg_stat_database_batch(
+    sessions: &[PgStatActivityRow],
+) -> Result<(SchemaRef, RecordBatch), String> {
     let schema = Arc::new(Schema::new(vec![
         Field::new("datid", DataType::Int32, false),
         Field::new("datname", DataType::Utf8, false),
@@ -870,8 +880,12 @@ fn pg_stat_database_batch(sessions: &[PgStatActivityRow]) -> Result<(SchemaRef, 
         schema.clone(),
         vec![
             Arc::new(Int32Array::from(vec![DATABASE_OID; n])),
-            Arc::new(StringArray::from(per_graph.keys().copied().collect::<Vec<_>>())),
-            Arc::new(Int32Array::from(per_graph.values().copied().collect::<Vec<_>>())),
+            Arc::new(StringArray::from(
+                per_graph.keys().copied().collect::<Vec<_>>(),
+            )),
+            Arc::new(Int32Array::from(
+                per_graph.values().copied().collect::<Vec<_>>(),
+            )),
         ],
     )
     .map(|b| (schema, b))
@@ -1769,8 +1783,16 @@ pub(crate) async fn register_system_catalogs(
     for (name, columns) in shaped_empty_pg_catalog() {
         register_syscat_table(&pg_schema, name, empty_catalog_batch(name, &columns)?)?;
     }
-    register_syscat_table(&pg_schema, "pg_stat_activity", pg_stat_activity_batch(sessions)?)?;
-    register_syscat_table(&pg_schema, "pg_stat_database", pg_stat_database_batch(sessions)?)?;
+    register_syscat_table(
+        &pg_schema,
+        "pg_stat_activity",
+        pg_stat_activity_batch(sessions)?,
+    )?;
+    register_syscat_table(
+        &pg_schema,
+        "pg_stat_database",
+        pg_stat_database_batch(sessions)?,
+    )?;
     register_syscat_table(&pg_schema, "pg_proc", pg_proc_batch(functions)?)?;
     register_syscat_table(&pg_schema, "pg_database", pg_database_batch()?)?;
     register_syscat_table(&pg_schema, "pg_settings", pg_settings_batch()?)?;
@@ -1944,9 +1966,11 @@ mod tests {
             .unwrap()
             .is_empty());
         // With no supplied sessions the views are empty.
-        assert!(rows(&store, &[], "SELECT * FROM pg_catalog.pg_stat_activity")
-            .unwrap()
-            .is_empty());
+        assert!(
+            rows(&store, &[], "SELECT * FROM pg_catalog.pg_stat_activity")
+                .unwrap()
+                .is_empty()
+        );
 
         for write in [
             "INSERT INTO pg_catalog.pg_stat_activity (pid) VALUES (1)",

@@ -1406,17 +1406,94 @@ mod tests {
     fn observe_knobs_have_defaults_bounds_and_units() {
         // name, default, minimum, maximum, unit, class: the rows of data-model.md.
         let expect: [(&str, KnobValue, KnobValue, KnobValue, &str, KnobClass); 11] = [
-            ("observe.task_stall_after_ms", KnobValue::U64(60_000), KnobValue::U64(100), KnobValue::U64(3_600_000), "ms", KnobClass::Tunable),
-            ("observe.stall_check_interval_ms", KnobValue::U64(5_000), KnobValue::U64(50), KnobValue::U64(60_000), "ms", KnobClass::Tunable),
-            ("observe.health_deadline_ms", KnobValue::U64(2_000), KnobValue::U64(100), KnobValue::U64(30_000), "ms", KnobClass::Tunable),
-            ("observe.event_ring_capacity", KnobValue::U64(4_096), KnobValue::U64(256), KnobValue::U64(65_536), "events", KnobClass::Tunable),
-            ("observe.task_registry_capacity", KnobValue::U64(4_096), KnobValue::U64(64), KnobValue::U64(65_536), "tasks", KnobClass::Tunable),
-            ("observe.progress_idle_limit", KnobValue::U64(2), KnobValue::U64(1), KnobValue::U64(100), "iterations", KnobClass::Tunable),
-            ("observe.worker_spin_busy_ratio", KnobValue::F64(0.9), KnobValue::F64(0.5), KnobValue::F64(1.0), "ratio", KnobClass::Tunable),
-            ("observe.lock_hold_warn_ms", KnobValue::U64(5_000), KnobValue::U64(100), KnobValue::U64(600_000), "ms", KnobClass::Tunable),
-            ("observe.startup_reports_kept", KnobValue::U64(8), KnobValue::U64(1), KnobValue::U64(64), "reports", KnobClass::Tunable),
-            ("observe.profile_hz", KnobValue::U64(99), KnobValue::U64(10), KnobValue::U64(1_000), "Hz", KnobClass::Tunable),
-            ("observe.profile_max_seconds", KnobValue::U64(60), KnobValue::U64(60), KnobValue::U64(60), "s", KnobClass::Fixed),
+            (
+                "observe.task_stall_after_ms",
+                KnobValue::U64(60_000),
+                KnobValue::U64(100),
+                KnobValue::U64(3_600_000),
+                "ms",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.stall_check_interval_ms",
+                KnobValue::U64(5_000),
+                KnobValue::U64(50),
+                KnobValue::U64(60_000),
+                "ms",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.health_deadline_ms",
+                KnobValue::U64(2_000),
+                KnobValue::U64(100),
+                KnobValue::U64(30_000),
+                "ms",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.event_ring_capacity",
+                KnobValue::U64(4_096),
+                KnobValue::U64(256),
+                KnobValue::U64(65_536),
+                "events",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.task_registry_capacity",
+                KnobValue::U64(4_096),
+                KnobValue::U64(64),
+                KnobValue::U64(65_536),
+                "tasks",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.progress_idle_limit",
+                KnobValue::U64(2),
+                KnobValue::U64(1),
+                KnobValue::U64(100),
+                "iterations",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.worker_spin_busy_ratio",
+                KnobValue::F64(0.9),
+                KnobValue::F64(0.5),
+                KnobValue::F64(1.0),
+                "ratio",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.lock_hold_warn_ms",
+                KnobValue::U64(5_000),
+                KnobValue::U64(100),
+                KnobValue::U64(600_000),
+                "ms",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.startup_reports_kept",
+                KnobValue::U64(8),
+                KnobValue::U64(1),
+                KnobValue::U64(64),
+                "reports",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.profile_hz",
+                KnobValue::U64(99),
+                KnobValue::U64(10),
+                KnobValue::U64(1_000),
+                "Hz",
+                KnobClass::Tunable,
+            ),
+            (
+                "observe.profile_max_seconds",
+                KnobValue::U64(60),
+                KnobValue::U64(60),
+                KnobValue::U64(60),
+                "s",
+                KnobClass::Fixed,
+            ),
         ];
         for (name, default, min, max, unit, class) in expect {
             let spec = KNOB_TABLE
@@ -1442,10 +1519,7 @@ mod tests {
             60_000
         );
         assert_eq!(medulla_observe::settings::DEFAULT_HEALTH_DEADLINE_MS, 2_000);
-        assert_eq!(
-            medulla_observe::events::DEFAULT_EVENT_RING_CAPACITY,
-            4_096
-        );
+        assert_eq!(medulla_observe::events::DEFAULT_EVENT_RING_CAPACITY, 4_096);
         // A bound is enforced: a value below the minimum is refused with the knob's name.
         let refused = resolve_all(
             &[("observe.event_ring_capacity".to_string(), "255".to_string())],

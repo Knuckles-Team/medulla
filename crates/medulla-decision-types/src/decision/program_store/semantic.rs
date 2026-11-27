@@ -187,15 +187,18 @@ pub const PHRASING_SLOTS_ADJACENT: RefusalCode = RefusalCode::new("PHRASING_SLOT
 /// Refusal code `PHRASING_SLOTS_DIFFER` (MEDULLA-DECISION-ENGINE-R135.16.4).
 pub const PHRASING_SLOTS_DIFFER: RefusalCode = RefusalCode::new("PHRASING_SLOTS_DIFFER");
 /// Refusal code `MATCH_THRESHOLD_OUT_OF_RANGE` (MEDULLA-DECISION-ENGINE-R135.16.4).
-pub const MATCH_THRESHOLD_OUT_OF_RANGE: RefusalCode = RefusalCode::new("MATCH_THRESHOLD_OUT_OF_RANGE");
+pub const MATCH_THRESHOLD_OUT_OF_RANGE: RefusalCode =
+    RefusalCode::new("MATCH_THRESHOLD_OUT_OF_RANGE");
 /// Refusal code `PROGRAM_EMBEDDING_SPACE_MISMATCH` (MEDULLA-DECISION-ENGINE-R135.16.4).
-pub const PROGRAM_EMBEDDING_SPACE_MISMATCH: RefusalCode = RefusalCode::new("PROGRAM_EMBEDDING_SPACE_MISMATCH");
+pub const PROGRAM_EMBEDDING_SPACE_MISMATCH: RefusalCode =
+    RefusalCode::new("PROGRAM_EMBEDDING_SPACE_MISMATCH");
 /// Refusal code `REQUEST_TEXT_TOO_LONG` (MEDULLA-DECISION-ENGINE-R135.16.4).
 pub const REQUEST_TEXT_TOO_LONG: RefusalCode = RefusalCode::new("REQUEST_TEXT_TOO_LONG");
 /// Refusal code `PROGRAM_GRAPH_REQUIRED` (MEDULLA-DECISION-ENGINE-R135.16.4).
 pub const PROGRAM_GRAPH_REQUIRED: RefusalCode = RefusalCode::new("PROGRAM_GRAPH_REQUIRED");
 /// Refusal code `PROGRAM_CANDIDATES_RESERVED` (MEDULLA-DECISION-ENGINE-R135.16.4).
-pub const PROGRAM_CANDIDATES_RESERVED: RefusalCode = RefusalCode::new("PROGRAM_CANDIDATES_RESERVED");
+pub const PROGRAM_CANDIDATES_RESERVED: RefusalCode =
+    RefusalCode::new("PROGRAM_CANDIDATES_RESERVED");
 /// Abstain reason: the best score is below the program's threshold.
 pub const PROGRAM_BELOW_THRESHOLD: RefusalCode = RefusalCode::new("PROGRAM_BELOW_THRESHOLD");
 /// Abstain reason: no phrasing fits the request text, or a capture does not convert.
@@ -226,10 +229,19 @@ pub const MATCH_REFUSALS: &[RefusalCode] = &[
 /// Why a semantic lookup abstains (MEDULLA-DECISION-ENGINE-R135.16.3).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MatchRefusal {
-    BelowThreshold { score_micros: i64, threshold_micros: i64 },
-    SlotsUnbound { parameters: Vec<String> },
-    NotExecutable { task_signature: String },
-    EmbeddingUnavailable { cause: String },
+    BelowThreshold {
+        score_micros: i64,
+        threshold_micros: i64,
+    },
+    SlotsUnbound {
+        parameters: Vec<String>,
+    },
+    NotExecutable {
+        task_signature: String,
+    },
+    EmbeddingUnavailable {
+        cause: String,
+    },
 }
 
 impl DecisionRefusal for MatchRefusal {
@@ -244,11 +256,15 @@ impl DecisionRefusal for MatchRefusal {
 
     fn detail(&self) -> String {
         match self {
-            Self::BelowThreshold { score_micros, threshold_micros } => format!(
-                "the best score {score_micros} is below the threshold {threshold_micros}"
-            ),
+            Self::BelowThreshold {
+                score_micros,
+                threshold_micros,
+            } => format!("the best score {score_micros} is below the threshold {threshold_micros}"),
             Self::SlotsUnbound { parameters } => {
-                format!("the request text binds no value for {}", parameters.join(", "))
+                format!(
+                    "the request text binds no value for {}",
+                    parameters.join(", ")
+                )
             }
             Self::NotExecutable { task_signature } => {
                 format!("the program of `{task_signature}` is not executable")
@@ -427,8 +443,7 @@ pub fn build_match_index(
         match &slots {
             Some(first) if *first != names => {
                 return Err(invalid(
-                    "PHRASING_SLOTS_DIFFER: every phrasing names the same placeholders"
-                        .to_string(),
+                    "PHRASING_SLOTS_DIFFER: every phrasing names the same placeholders".to_string(),
                 ));
             }
             Some(_) => {}
@@ -603,11 +618,18 @@ fn convert(kind: ProgramParameterKind, capture: &str) -> Option<TraceScalar> {
 /// Bind the parameters of an indexed program from a request text
 /// (MEDULLA-DECISION-ENGINE-R135.16.2). Slots come from the first phrasing that fits and whose
 /// captures all convert; the fixed values bind the rest.
-pub fn bind_request(index: &ProgramMatchIndex, request_text: &str) -> Result<Vec<Binding>, Unbound> {
+pub fn bind_request(
+    index: &ProgramMatchIndex,
+    request_text: &str,
+) -> Result<Vec<Binding>, Unbound> {
     let parameters: std::collections::BTreeSet<&str> = index
         .steps
         .iter()
-        .flat_map(|step| step.arguments.iter().map(|argument| argument.parameter.as_str()))
+        .flat_map(|step| {
+            step.arguments
+                .iter()
+                .map(|argument| argument.parameter.as_str())
+        })
         .collect();
     if parameters.is_empty() {
         return Ok(Vec::new());
@@ -690,7 +712,10 @@ pub fn select_match(
         .into_iter()
         .map(|(signature, (node, score))| (signature, node, score))
         .collect();
-    ordered.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.0.as_bytes().cmp(b.0.as_bytes())));
+    ordered.sort_by(|a, b| {
+        b.2.cmp(&a.2)
+            .then_with(|| a.0.as_bytes().cmp(b.0.as_bytes()))
+    });
     for (signature, node, score) in ordered {
         let Some(own) = threshold_of(signature) else {
             continue;
@@ -767,17 +792,28 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R135.16.1
     #[test]
     fn match_types_round_trip() {
-        round_trip(&ProgramPhrasing { text: "book a table".into() });
-        round_trip(&TemplateArgument { name: "city".into(), parameter: "p0".into() });
+        round_trip(&ProgramPhrasing {
+            text: "book a table".into(),
+        });
+        round_trip(&TemplateArgument {
+            name: "city".into(),
+            parameter: "p0".into(),
+        });
         let step = StepTemplate {
             index: 1,
             kind: StepKind::ToolCall,
             server: "maps".into(),
             tool: "search".into(),
-            arguments: bounded(vec![TemplateArgument { name: "q".into(), parameter: "p0".into() }]),
+            arguments: bounded(vec![TemplateArgument {
+                name: "q".into(),
+                parameter: "p0".into(),
+            }]),
         };
         round_trip(&step);
-        let fixed = FixedValue { parameter: "p1".into(), value: TraceScalar::Int(3) };
+        let fixed = FixedValue {
+            parameter: "p1".into(),
+            value: TraceScalar::Int(3),
+        };
         round_trip(&fixed);
         let index = ProgramMatchIndex {
             schema_version: MATCH_SCHEMA_VERSION,
@@ -804,7 +840,10 @@ mod tests {
             index: 1,
             server: "maps".into(),
             tool: "search".into(),
-            arguments: bounded(vec![BoundArgument { name: "q".into(), value: TraceScalar::Bool(true) }]),
+            arguments: bounded(vec![BoundArgument {
+                name: "q".into(),
+                value: TraceScalar::Bool(true),
+            }]),
         };
         round_trip(&bound.arguments.as_slice()[0]);
         round_trip(&bound);
@@ -819,7 +858,11 @@ mod tests {
             bindings: bounded(vec![binding]),
             steps: bounded(vec![bound]),
         });
-        let hit = ProgramHit { node_id: "n".into(), task_signature: "sig".into(), score_micros: 1 };
+        let hit = ProgramHit {
+            node_id: "n".into(),
+            task_signature: "sig".into(),
+            score_micros: 1,
+        };
         round_trip(&hit);
         round_trip(&ProgramCandidates {
             space_digest: None,
@@ -838,15 +881,22 @@ mod tests {
             "trace": serde_json::Value::Null,
         });
         assert!(body.get("phrasings").is_none());
-        let empty: BoundedVec<ProgramPhrasing, 16> = serde_json::from_value(serde_json::json!([])).unwrap();
+        let empty: BoundedVec<ProgramPhrasing, 16> =
+            serde_json::from_value(serde_json::json!([])).unwrap();
         assert!(empty.is_empty());
         let too_many = vec![serde_json::json!({"text": "x"}); 17];
-        assert!(serde_json::from_value::<BoundedVec<ProgramPhrasing, 16>>(serde_json::Value::Array(too_many)).is_err());
+        assert!(serde_json::from_value::<BoundedVec<ProgramPhrasing, 16>>(
+            serde_json::Value::Array(too_many)
+        )
+        .is_err());
     }
 
     fn sample_trace() -> RunTraceRecord {
         use crate::decision::run_governance::{RunOutcome, StepOutcome, TraceArgument, TraceStep};
-        let argument = |name: &str, value: TraceScalar| TraceArgument { name: name.into(), value };
+        let argument = |name: &str, value: TraceScalar| TraceArgument {
+            name: name.into(),
+            value,
+        };
         RunTraceRecord {
             schema_version: 1,
             run_id: "run-1".into(),
@@ -867,16 +917,23 @@ mod tests {
         }
     }
 
-    fn sample_index(phrasings: &[&str], threshold: Option<i64>) -> Result<ProgramMatchIndex, ProgramError> {
+    fn sample_index(
+        phrasings: &[&str],
+        threshold: Option<i64>,
+    ) -> Result<ProgramMatchIndex, ProgramError> {
         let trace = sample_trace();
         let program = super::super::compile_program(
             &trace,
-            &super::super::ProgramKnobs::from_policy(&crate::decision::policy::DecisionPolicy::engine_default()),
+            &super::super::ProgramKnobs::from_policy(
+                &crate::decision::policy::DecisionPolicy::engine_default(),
+            ),
         )
         .unwrap();
         let phrasings: Vec<ProgramPhrasing> = phrasings
             .iter()
-            .map(|text| ProgramPhrasing { text: (*text).into() })
+            .map(|text| ProgramPhrasing {
+                text: (*text).into(),
+            })
             .collect();
         build_match_index(&trace, &program, &phrasings, threshold)
     }
@@ -886,24 +943,49 @@ mod tests {
     fn phrasing_binds_slots_and_fixed_values() {
         let index = sample_index(&["refund status for order {p0}"], None).unwrap();
         assert_eq!(index.slots.as_slice(), ["p0"]);
-        assert_eq!(index.fixed.as_slice(), [FixedValue { parameter: "p1".into(), value: TraceScalar::Int(3) }]);
+        assert_eq!(
+            index.fixed.as_slice(),
+            [FixedValue {
+                parameter: "p1".into(),
+                value: TraceScalar::Int(3)
+            }]
+        );
         assert!(index.executable);
-        assert_eq!((index.steps.as_slice()[0].server.as_str(), index.steps.as_slice()[0].tool.as_str()), ("orders", "status"));
+        assert_eq!(
+            (
+                index.steps.as_slice()[0].server.as_str(),
+                index.steps.as_slice()[0].tool.as_str()
+            ),
+            ("orders", "status")
+        );
         let bound = bind_request(&index, "Refund  status for order A-1001").unwrap();
         assert_eq!(
             bound,
             vec![
-                Binding { parameter: "p0".into(), source: BindingSource::Slot, value: TraceScalar::Text("A-1001".into()) },
-                Binding { parameter: "p1".into(), source: BindingSource::Fixed, value: TraceScalar::Int(3) },
+                Binding {
+                    parameter: "p0".into(),
+                    source: BindingSource::Slot,
+                    value: TraceScalar::Text("A-1001".into())
+                },
+                Binding {
+                    parameter: "p1".into(),
+                    source: BindingSource::Fixed,
+                    value: TraceScalar::Int(3)
+                },
             ]
         );
         let steps = bind_steps(&index, &bound);
         assert_eq!(steps.len(), 1);
-        assert_eq!(steps[0].arguments.as_slice()[0].value, TraceScalar::Text("A-1001".into()));
+        assert_eq!(
+            steps[0].arguments.as_slice()[0].value,
+            TraceScalar::Text("A-1001".into())
+        );
         // No phrasing fits.
         assert_eq!(
             bind_request(&index, "where is my parcel").unwrap_err(),
-            Unbound { parameters: vec!["p0".into()] }
+            Unbound {
+                parameters: vec!["p0".into()]
+            }
         );
         // No phrasings: a program with parameters is unbound; the index holds no slots or fixed values.
         let bare = sample_index(&[], None).unwrap();
@@ -918,12 +1000,21 @@ mod tests {
             let error = sample_index(&[phrasing], None).unwrap_err().to_string();
             assert!(error.contains(code), "{error}");
         }
-        assert!(sample_index(&["a {p0}", "b {p1}"], None).unwrap_err().to_string().contains("PHRASING_SLOTS_DIFFER"));
-        assert!(sample_index(&["a {p0}"], Some(499_999)).unwrap_err().to_string().contains("MATCH_THRESHOLD_OUT_OF_RANGE"));
+        assert!(sample_index(&["a {p0}", "b {p1}"], None)
+            .unwrap_err()
+            .to_string()
+            .contains("PHRASING_SLOTS_DIFFER"));
+        assert!(sample_index(&["a {p0}"], Some(499_999))
+            .unwrap_err()
+            .to_string()
+            .contains("MATCH_THRESHOLD_OUT_OF_RANGE"));
         assert!(sample_index(&["a {p0}"], Some(500_000)).is_ok());
         // Kinds convert: an int slot refuses text and binds a decimal.
         let int_slot = sample_index(&["limit {p1} for {p0}"], None).unwrap();
-        assert_eq!(int_slot.slot_kinds.as_slice(), [ProgramParameterKind::Text, ProgramParameterKind::Int]);
+        assert_eq!(
+            int_slot.slot_kinds.as_slice(),
+            [ProgramParameterKind::Text, ProgramParameterKind::Int]
+        );
         assert!(bind_request(&int_slot, "limit many for A").is_err());
         let ok = bind_request(&int_slot, "LIMIT 12 for A").unwrap();
         assert_eq!(ok[1].value, TraceScalar::Int(12));
@@ -963,17 +1054,29 @@ mod tests {
             }
         );
         // A score exactly at the threshold wins; one below it does not.
-        assert!(matches!(select_match(&candidates, known, 900_000), Selection::Selected { .. }));
+        assert!(matches!(
+            select_match(&candidates, known, 900_000),
+            Selection::Selected { .. }
+        ));
         assert_eq!(
             select_match(&candidates, known, 900_001),
-            Selection::BelowThreshold { score_micros: 900_000, threshold_micros: 900_001 }
+            Selection::BelowThreshold {
+                score_micros: 900_000,
+                threshold_micros: 900_001
+            }
         );
         // The program's own threshold overrides the default.
         let own = |signature: &str| (signature == "a-sig").then_some(Some(950_000));
         assert_eq!(
             select_match(&candidates, own, 500_000),
-            Selection::BelowThreshold { score_micros: 900_000, threshold_micros: 950_000 }
+            Selection::BelowThreshold {
+                score_micros: 900_000,
+                threshold_micros: 950_000
+            }
         );
-        assert_eq!(select_match(&candidates, |_| None, 850_000), Selection::NoProgram);
+        assert_eq!(
+            select_match(&candidates, |_| None, 850_000),
+            Selection::NoProgram
+        );
     }
 }

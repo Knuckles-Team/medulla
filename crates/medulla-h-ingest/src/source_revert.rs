@@ -141,7 +141,11 @@ mod tests {
     use super::*;
     use medulla_source_types::source_changeset::{ChangedPath, Trailers};
 
-    fn changeset(id: &str, message: &str, paths: &[(&str, PathOp, Option<&str>, Option<&str>)]) -> Changeset {
+    fn changeset(
+        id: &str,
+        message: &str,
+        paths: &[(&str, PathOp, Option<&str>, Option<&str>)],
+    ) -> Changeset {
         Changeset {
             id: id.into(),
             repo: "repo".into(),
@@ -184,12 +188,22 @@ mod tests {
                     ("c.rs", PathOp::Delete, Some("blob-c"), None),
                 ],
             ),
-            changeset("c2", "unrelated", &[("z.rs", PathOp::Add, None, Some("blob-z"))]),
+            changeset(
+                "c2",
+                "unrelated",
+                &[("z.rs", PathOp::Add, None, Some("blob-z"))],
+            ),
         ];
         let RevertPlan::Submit(request) = plan_revert(&window, "c1", &sizes).unwrap() else {
             panic!("a fresh revert submits");
         };
-        let by_path = |path: &str| request.paths.iter().find(|entry| entry.path == path).unwrap();
+        let by_path = |path: &str| {
+            request
+                .paths
+                .iter()
+                .find(|entry| entry.path == path)
+                .unwrap()
+        };
         assert_eq!(by_path("a.rs").op, PathOp::Delete);
         assert!(by_path("a.rs").blob.is_none());
         assert_eq!(by_path("b.rs").op, PathOp::Modify);
@@ -211,7 +225,11 @@ mod tests {
         assert!(refused.message().starts_with("REVERT_HAS_DEPENDENTS: "));
         // Once reverted, the same request answers the revert on the chain: it is idempotent, and
         // the revert itself (which touches the same paths) is not a dependent.
-        let revert = changeset("c3", "Revert changeset c1\n\nThis reverts changeset c1: x", &[("a.rs", PathOp::Modify, Some("n"), Some("o"))]);
+        let revert = changeset(
+            "c3",
+            "Revert changeset c1\n\nThis reverts changeset c1: x",
+            &[("a.rs", PathOp::Modify, Some("n"), Some("o"))],
+        );
         assert_eq!(
             plan_revert(&[target, revert], "c1", &sizes).unwrap(),
             RevertPlan::Existing(1)

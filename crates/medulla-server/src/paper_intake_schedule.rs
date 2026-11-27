@@ -69,10 +69,7 @@ pub async fn register(state: &Arc<RwLock<ServerState>>) -> Result<bool, String> 
         anonymous,
         &server,
         PAPER_INTAKE_ACTOR,
-        format!(
-            "paper-intake:{}",
-            CALLS.fetch_add(1, Ordering::Relaxed)
-        ),
+        format!("paper-intake:{}", CALLS.fetch_add(1, Ordering::Relaxed)),
     )?;
     let owner = CarrierAuthority::from_verified(&context)?
         .actor_scope()
@@ -111,7 +108,10 @@ pub async fn register(state: &Arc<RwLock<ServerState>>) -> Result<bool, String> 
         _ => None,
     };
     // The same interval is already registered: keep it, with its pause state and cursor.
-    if existing.as_ref().is_some_and(|held| held.spec == record.spec) {
+    if existing
+        .as_ref()
+        .is_some_and(|held| held.spec == record.spec)
+    {
         return Ok(false);
     }
     // A changed interval keeps the schedule's pause state and resume time.

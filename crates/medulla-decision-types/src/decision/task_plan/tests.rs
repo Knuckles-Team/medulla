@@ -1263,7 +1263,10 @@ fn foreach_round_trips_and_digest_covers_it() {
         wire["tasks"][1]["foreach"],
         serde_json::json!({ "source": { "$ref": "steps.a.output.items" }, "max_items": 3 })
     );
-    assert!(wire["tasks"][0].get("foreach").is_none(), "a plain step keeps its form");
+    assert!(
+        wire["tasks"][0].get("foreach").is_none(),
+        "a plain step keeps its form"
+    );
     assert_eq!(
         serde_json::from_value::<TaskPlanProposal>(wire).unwrap(),
         proposal
@@ -1374,7 +1377,10 @@ fn refuses_each_foreach_defect() {
                 ..tool(id, &["a"], serde_json::json!({ "n": reference("item.n") }))
             });
         }
-        tasks.push(task("out", &ids.iter().map(String::as_str).collect::<Vec<_>>()));
+        tasks.push(task(
+            "out",
+            &ids.iter().map(String::as_str).collect::<Vec<_>>(),
+        ));
         TaskPlanProposal {
             output_task_id: "out".into(),
             max_concurrency: 8,
@@ -1383,7 +1389,10 @@ fn refuses_each_foreach_defect() {
             tasks: BoundedVec::new(tasks).unwrap(),
         }
     };
-    assert!(plan_explicit_tasks(&wide(4)).is_ok(), "4 x 256 = 1,024 is the ceiling");
+    assert!(
+        plan_explicit_tasks(&wide(4)).is_ok(),
+        "4 x 256 = 1,024 is the ceiling"
+    );
     assert!(foreach_refusal(wide(5)).starts_with("FOREACH_BOUNDS: task=f4 pointer=/foreach"));
     // More than eight foreach steps refuse even with small bounds.
     let many = {

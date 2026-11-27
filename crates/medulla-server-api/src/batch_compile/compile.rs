@@ -25,7 +25,8 @@ use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 mod finish_helpers;
 mod graph_source_dirty;
 use finish_helpers::{
-    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_event_intents, memory_snapshot_intents, trust_flag_intents,
+    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_event_intents,
+    memory_snapshot_intents, trust_flag_intents,
 };
 
 /// Resolve the current graph version without treating RAM as a substitute for a
@@ -187,13 +188,12 @@ pub fn compile_methods_with_source_dirty(
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =
         medulla_epistemic::ReasoningProjectionWakeup::events_for_methods(&methods);
-    let semantic_source_dirty_input =
-        graph_source_dirty::graph_source_dirty_input(
-            ctx.tenant,
-            ctx.graph,
-            &methods,
-            &source_dirty,
-        );
+    let semantic_source_dirty_input = graph_source_dirty::graph_source_dirty_input(
+        ctx.tenant,
+        ctx.graph,
+        &methods,
+        &source_dirty,
+    );
     let state_backed = ctx.authoritative_state.is_some();
     let operations = methods
         .into_iter()
@@ -974,7 +974,10 @@ mod tests {
         assert_eq!(intents[0].key, "trust_flag:t:asset:a:deprecation");
         assert_eq!(intents[0].headers["flag"], "deprecation");
         let endorsed = compile_methods(source_context(), vec![flag_batch("endorsement")]).unwrap();
-        assert!(endorsed.outbox.iter().all(|intent| intent.topic != "catalog.trust_flag"));
+        assert!(endorsed
+            .outbox
+            .iter()
+            .all(|intent| intent.topic != "catalog.trust_flag"));
     }
 
     #[test]

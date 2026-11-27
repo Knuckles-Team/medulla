@@ -360,7 +360,8 @@ fn filtered_ann_path_returns_k_candidates_with_high_recall() {
         let set: HashSet<&str> = members.iter().map(String::as_str).collect();
         let owned: HashSet<String> = members.iter().cloned().collect();
         let query = vector(9_001);
-        let got = replenish_until_k(&semantic, &query, &set, 10, 0, ReplenishPolicy::default()).scored;
+        let got =
+            replenish_until_k(&semantic, &query, &set, 10, 0, ReplenishPolicy::default()).scored;
         assert_eq!(got.len(), 10, "{label}: k rows survive");
         assert!(
             got.iter().all(|(id, _)| set.contains(id.as_str())),

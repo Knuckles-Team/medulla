@@ -41,10 +41,9 @@ fn check_staged_body(
             },
             _,
         ) => Some(hex.as_str()),
-        (_, Some(ComponentBody::SkillSource(_))) => request
-            .component
-            .content_digest
-            .strip_prefix("sha256:"),
+        (_, Some(ComponentBody::SkillSource(_))) => {
+            request.component.content_digest.strip_prefix("sha256:")
+        }
         _ => None,
     };
     match (pin, staged_body) {
@@ -57,7 +56,9 @@ fn check_staged_body(
         )),
         (Some(hex), Some(holder)) => {
             if holder.body_sha256.to_hex() != hex {
-                return Err(staged_body_invalid("the staged body is not the pinned body"));
+                return Err(staged_body_invalid(
+                    "the staged body is not the pinned body",
+                ));
             }
             if holder.component_id != request.component.component_id {
                 return Err(staged_body_invalid(
@@ -192,7 +193,10 @@ impl AgentLibraryStore {
                     )),
                     None => {
                         table
-                            .insert((receipt.tenant_id.as_str(), key.as_str()), encoded.as_slice())
+                            .insert(
+                                (receipt.tenant_id.as_str(), key.as_str()),
+                                encoded.as_slice(),
+                            )
                             .map_err(|error| error.to_string())?;
                         recorded = true;
                         Ok(())
@@ -265,12 +269,14 @@ impl AgentLibraryStore {
                 }
             }
         })?;
-        Ok(medulla_agent_types::agent_component::BlueprintProposalResult {
-            component_id: component_id.to_string(),
-            source_revision,
-            payload_digest: payload_digest.to_string(),
-            recorded,
-        })
+        Ok(
+            medulla_agent_types::agent_component::BlueprintProposalResult {
+                component_id: component_id.to_string(),
+                source_revision,
+                payload_digest: payload_digest.to_string(),
+                recorded,
+            },
+        )
     }
 
     /// Retain the current component revision as a durable tombstone.

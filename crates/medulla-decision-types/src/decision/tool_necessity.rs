@@ -11,8 +11,8 @@ use medulla_types::contract::Digest256;
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::run_adjustment::INSUFFICIENT_SAMPLES;
-use medulla_types::refusal_code::RefusalCode;
 use super::run_governance::{RunOutcome, RunTraceRecord, StepKind};
+use medulla_types::refusal_code::RefusalCode;
 
 const DAY_MS: u64 = 86_400_000;
 /// Domain of the necessity provenance digest.
@@ -338,7 +338,13 @@ mod tests {
         }
     }
 
-    fn runs(model: &str, with_ok: u32, with_bad: u32, without_ok: u32, without_bad: u32) -> Vec<RunTraceRecord> {
+    fn runs(
+        model: &str,
+        with_ok: u32,
+        with_bad: u32,
+        without_ok: u32,
+        without_bad: u32,
+    ) -> Vec<RunTraceRecord> {
         let mut all = Vec::new();
         let mut push = |count: u32, tool: bool, outcome: RunOutcome| {
             for _ in 0..count {
@@ -382,8 +388,9 @@ mod tests {
         assert!(agreed.mismatch("call:1").is_none());
 
         // An unnecessary tool the model called is an unneeded tool.
-        let flat = measure_tool_necessity(&runs("model:m", 5, 5, 5, 5), "tool:search", "model:m", 10)
-            .unwrap();
+        let flat =
+            measure_tool_necessity(&runs("model:m", 5, 5, 5, 5), "tool:search", "model:m", 10)
+                .unwrap();
         assert_eq!(flat.necessity_q32, 0);
         let unneeded = compare_tool_decision(&flat, true, min);
         assert_eq!(
@@ -394,7 +401,8 @@ mod tests {
         // The same runs give the same provenance; an arm below the floor abstains.
         let again = measure_tool_necessity(&all, "tool:search", "model:m", 10).unwrap();
         assert_eq!(again.provenance_digest, necessity.provenance_digest);
-        let thin = measure_tool_necessity(&runs("model:m", 9, 1, 2, 2), "tool:search", "model:m", 10);
+        let thin =
+            measure_tool_necessity(&runs("model:m", 9, 1, 2, 2), "tool:search", "model:m", 10);
         assert_eq!(
             thin,
             Err(NecessityRefusal::InsufficientSamples {

@@ -73,12 +73,19 @@ async fn decay_weight_follows_the_engine_clock() {
         ),
     )
     .await;
-    assert!(response.error.is_none(), "AddNode failed: {:?}", response.error);
+    assert!(
+        response.error.is_none(),
+        "AddNode failed: {:?}",
+        response.error
+    );
 
     // The engine clock at the node's own time: the weight is one.
     let fresh = uql_rows(&state, 2, 0).await;
     let score = fresh[0].score.expect("a decayed row carries a score");
-    assert!((f64::from(score) - 1.0).abs() < 1e-6, "fresh weight {score}");
+    assert!(
+        (f64::from(score) - 1.0).abs() < 1e-6,
+        "fresh weight {score}"
+    );
 
     // The engine clock one half-life later: the weight is one half. The wall clock did
     // not move, so only the engine clock can explain it.

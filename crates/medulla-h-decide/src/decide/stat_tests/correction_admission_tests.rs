@@ -276,7 +276,10 @@ async fn receipts_gate_correction_admission() {
 
     let admit = decide(&h, request(&schema, admitted())).await.unwrap();
     let record = &admit.records.as_slice()[0];
-    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert!(record

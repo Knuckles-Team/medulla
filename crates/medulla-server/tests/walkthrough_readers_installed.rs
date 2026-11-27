@@ -34,9 +34,9 @@ async fn installed_readers_confirm_a_current_revision_and_refuse_another_tenant(
     let store: Arc<dyn medulla_server_blob::blob::store::ChunkStore> = Arc::new(
         medulla_server_blob::blob::store::RedbChunkStore::open_temp().expect("open blob store"),
     );
-    state.set_blob_cursors(Some(Arc::new(
-        medulla_server_blob::blob::BlobCursors::new(Arc::clone(&store)),
-    )));
+    state.set_blob_cursors(Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(
+        Arc::clone(&store),
+    ))));
     let graph_a = medulla_identity_types::tenancy::tenant_graph(
         &medulla_identity_types::tenancy::TenantId::new(TENANT_A).expect("tenant id"),
     );

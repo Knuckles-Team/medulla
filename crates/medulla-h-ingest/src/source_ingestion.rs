@@ -12,21 +12,24 @@ use medulla_server_blob::blob::BlobStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+#[cfg(all(feature = "redb", feature = "blob"))]
+use medulla_source_types::{
+    source_document::{
+        DocumentIngestError, QuarantineReason, QuarantineReceipt, ReplayDisposition,
+        SourceIngestionOutcome,
+    },
+    source_ingestion::SourceCheckpoint,
+    source_ingestion::SourceEntityRef,
+    source_ingestion::SourceIngestionDisposition,
+    source_ingestion::SourceIngestionReceipt,
+    source_ingestion::SourceMappingKind,
+    source_ingestion::SourceWithdrawal,
+};
 use medulla_source_types::{
     source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt,
     source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest,
     source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt,
     source_ingestion::SourceTombstoneReceipt,
-};
-#[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_source_types::{
-    source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition,
-    source_document::{
-        DocumentIngestError, QuarantineReason, QuarantineReceipt, ReplayDisposition,
-        SourceIngestionOutcome,
-    },
-    source_ingestion::SourceCheckpoint, source_ingestion::SourceIngestionReceipt,
-    source_ingestion::SourceMappingKind, source_ingestion::SourceWithdrawal,
 };
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
@@ -41,9 +44,9 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
-pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod bookmark;
+pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use crate::paper_ingest;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -55,11 +58,12 @@ pub mod drift_methods;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod facts;
 pub mod governance;
-pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod media_derivation;
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod media_tag;
+pub mod permissions;
+pub mod policy_candidates;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -67,7 +71,6 @@ pub mod quality;
 pub mod row_version;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod skill_document;
-pub mod policy_candidates;
 pub mod spec_projection;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod transcript;
@@ -320,7 +323,13 @@ pub fn normalize_label(ontology_class: &str) -> String {
         .unwrap_or(ontology_class);
     local
         .nfc()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -447,11 +456,13 @@ pub async fn prepare(
                     stream.report.action
                         == medulla_catalog_types::graph_schema::drift::DriftAction::Quarantined
                 })
-                .map(|(stream, shape)| medulla_source_types::schema_drift_methods::DriftEvidence {
-                    stream: stream.stream.clone(),
-                    report: stream.report.clone(),
-                    shape: shape.clone(),
-                })
+                .map(
+                    |(stream, shape)| medulla_source_types::schema_drift_methods::DriftEvidence {
+                        stream: stream.stream.clone(),
+                        report: stream.report.clone(),
+                        shape: shape.clone(),
+                    },
+                )
                 .collect(),
         };
         let evidence = serde_json::to_value(&evidence).map_err(|e| e.to_string())?;
@@ -534,9 +545,13 @@ pub async fn prepare(
     // Near duplicates are decided here, before any record is admitted and before atom storage
     // (MEDULLA-INGEST-WORKER-R702.3).
     let bucket_ids = documents::candidate_bucket_ids(ctx.tenant_scope, &layout, &normalized)?;
-    let candidates =
-        read_lsh_candidates(persistence.as_ref(), &graph_fname, &bucket_ids, layout.signature_len())
-            .await?;
+    let candidates = read_lsh_candidates(
+        persistence.as_ref(),
+        &graph_fname,
+        &bucket_ids,
+        layout.signature_len(),
+    )
+    .await?;
     let dedup = documents::dedup_documents(
         ctx.tenant_scope,
         &layout,
@@ -944,18 +959,19 @@ async fn prepare_extension_batch(
                 grace_s: medulla_server_api::knob_config::knobs().ingest_reconcile_grace_s,
                 admin_override,
             })?;
-            let lifted =
-                admin_override && admission.missing_count * 100 > held.len() as u64 * 20;
-            reconcile = Some(medulla_ingestion_types::source_governance::ReconcileReport {
-                ids_digest: admission.ids_digest.clone(),
-                missing_count: admission.missing_count,
-                deleted_count: 0,
-                override_principal: if lifted {
-                    ctx.verified.principal().to_string()
-                } else {
-                    String::new()
+            let lifted = admin_override && admission.missing_count * 100 > held.len() as u64 * 20;
+            reconcile = Some(
+                medulla_ingestion_types::source_governance::ReconcileReport {
+                    ids_digest: admission.ids_digest.clone(),
+                    missing_count: admission.missing_count,
+                    deleted_count: 0,
+                    override_principal: if lifted {
+                        ctx.verified.principal().to_string()
+                    } else {
+                        String::new()
+                    },
                 },
-            });
+            );
             policies.push(policy(&run_id, ctx.tenant_scope, &policy_subject, 0));
             if admission.plan.is_some() {
                 policies.push(policy(&plan_id, ctx.tenant_scope, &policy_subject, 0));
@@ -1067,12 +1083,9 @@ async fn prepare_extension_batch(
             // Typed items, never mapped records: the batch does not resolve mappings. Every
             // refusal happens before any write (MEDULLA-INGEST-WORKER-R003.15).
             let decoded = transcript::decode_transcript_items(items.as_slice())?;
-            let held = read_held_concepts(
-                persistence.as_ref(),
-                &graph_fname,
-                &decoded.concept_ids(),
-            )
-            .await?;
+            let held =
+                read_held_concepts(persistence.as_ref(), &graph_fname, &decoded.concept_ids())
+                    .await?;
             let validated = transcript::validate_transcript(
                 ctx.tenant_scope,
                 request,
@@ -2332,14 +2345,20 @@ async fn known_paper_nodes(
             continue;
         }
         let payload = record.payload.value()?;
-        if let Some(canonical_id) = payload.get("canonical_id").and_then(serde_json::Value::as_str)
+        if let Some(canonical_id) = payload
+            .get("canonical_id")
+            .and_then(serde_json::Value::as_str)
         {
             known.insert(paper_ingest::paper_node_id(canonical_id));
         }
         cited.extend(paper_ingest::cites::cited_node_ids(&payload));
     }
     for node_id in cited {
-        if !known.contains(&node_id) && persistence.read_node(graph_fname, &node_id).await?.is_some()
+        if !known.contains(&node_id)
+            && persistence
+                .read_node(graph_fname, &node_id)
+                .await?
+                .is_some()
         {
             known.insert(node_id);
         }
@@ -3020,10 +3039,12 @@ fn admit_record(
             ) {
                 Ok(mapped) => Some(mapped),
                 Err(code) => {
-                    papers.refusals.push(medulla_types::paper_ingest::PaperRefusal {
-                        record_id: record.record_id.clone(),
-                        code: code.as_str().to_string(),
-                    });
+                    papers
+                        .refusals
+                        .push(medulla_types::paper_ingest::PaperRefusal {
+                            record_id: record.record_id.clone(),
+                            code: code.as_str().to_string(),
+                        });
                     return Ok(None);
                 }
             }
@@ -3114,7 +3135,12 @@ fn admit_record(
     );
     // A bookmark record is the `bookmark:<record_key>` node; its envelope keys replace the mapped
     // ones and `raw` is not stored (MEDULLA-MEDIA-VOCAB-R001.102.2).
-    let bookmark = if mapping.schema_mapping.ontology_class.trim_start_matches(':') == bookmark::BOOKMARK_CLASS {
+    let bookmark = if mapping
+        .schema_mapping
+        .ontology_class
+        .trim_start_matches(':')
+        == bookmark::BOOKMARK_CLASS
+    {
         Some(bookmark::map_bookmark(
             &record.payload.value()?,
             record.stream.as_str(),
@@ -3504,14 +3530,16 @@ fn build_envelope(
         features: batch
             .features
             .iter()
-            .map(|feature| medulla_protocol_types::change_envelope::FeatureRecord {
-                feature_id: feature.feature_id.clone(),
-                operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
-                object_id: feature.object_id.clone(),
-                kind: feature.kind.clone(),
-                value_msgpack: feature.value_msgpack.clone(),
-                model_version: feature.model_version.clone(),
-            })
+            .map(
+                |feature| medulla_protocol_types::change_envelope::FeatureRecord {
+                    feature_id: feature.feature_id.clone(),
+                    operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
+                    object_id: feature.object_id.clone(),
+                    kind: feature.kind.clone(),
+                    value_msgpack: feature.value_msgpack.clone(),
+                    model_version: feature.model_version.clone(),
+                },
+            )
             .collect(),
         evidence: Vec::new(),
         policies,
@@ -3709,10 +3737,12 @@ fn build_terminal_receipt(
             prepared
                 .class_reports
                 .iter()
-                .map(|(label, report)| medulla_types::ingest_materialize::ClassReport {
-                    ontology_class: label.clone(),
-                    report: *report,
-                })
+                .map(
+                    |(label, report)| medulla_types::ingest_materialize::ClassReport {
+                        ontology_class: label.clone(),
+                        report: *report,
+                    },
+                )
                 .collect(),
         )?,
         committed_graph_version: prepared.committed_graph_version,
@@ -3733,7 +3763,12 @@ fn receipt_bytes(value: &impl serde::Serialize) -> Result<Vec<u8>, String> {
 
 /// The id of the quarantine node of one batch (MEDULLA-INGEST-WORKER-R003.10.1).
 #[cfg(all(feature = "redb", feature = "blob"))]
-pub(super) fn quarantine_node_id(tenant: &str, connector: &str, stream: &str, batch_id: &str) -> Result<String, String> {
+pub(super) fn quarantine_node_id(
+    tenant: &str,
+    connector: &str,
+    stream: &str,
+    batch_id: &str,
+) -> Result<String, String> {
     Ok(Digest256::framed(
         b"eg/source-quarantine/v1",
         &[
@@ -3991,17 +4026,18 @@ fn replay_quarantine(
         batch.provider_checkpoint.stream.as_str(),
         batch_id,
     )?;
-    let Some(properties) = envelope
-        .mutation
-        .operations
-        .iter()
-        .find_map(|operation| match &operation.method {
-            Method::AddNode {
-                node_id: id,
-                properties_msgpack,
-            } if *id == node_id => Some(properties_msgpack),
-            _ => None,
-        })
+    let Some(properties) =
+        envelope
+            .mutation
+            .operations
+            .iter()
+            .find_map(|operation| match &operation.method {
+                Method::AddNode {
+                    node_id: id,
+                    properties_msgpack,
+                } if *id == node_id => Some(properties_msgpack),
+                _ => None,
+            })
     else {
         return Ok(None);
     };

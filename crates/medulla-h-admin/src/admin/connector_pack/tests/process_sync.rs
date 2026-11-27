@@ -22,9 +22,8 @@ const GRAPH: &str = "process-sync";
 const CONNECTION: &str = "urn:eg:fixture:process-sync:process-engine";
 const SCOPE: &str = "urn:model:sync";
 const KEY: &str = "bpmn20:invoice:1";
-const AUTHORITY: &str = include_str!(
-    "../../../../../medulla-core/tests/fixtures/process_sync/authority.ttl"
-);
+const AUTHORITY: &str =
+    include_str!("../../../../../medulla-core/tests/fixtures/process_sync/authority.ttl");
 const INVOICE: &str = include_str!(
     "../../../../../medulla-core/tests/fixtures/process_equivalence/invoice-approval.bpmn"
 );
@@ -134,7 +133,11 @@ async fn both_sides_changed_records_conflict_and_graph_wins() {
             },
         )
         .await;
-    assert!(edited.refusal_text().is_none(), "{:?}", edited.refusal_text());
+    assert!(
+        edited.refusal_text().is_none(),
+        "{:?}",
+        edited.refusal_text()
+    );
 
     // The source side: the same definition at revision 8 with a different task name.
     let source_document = INVOICE.replace("name=\"Check invoice\"", "name=\"Check (source)\"");

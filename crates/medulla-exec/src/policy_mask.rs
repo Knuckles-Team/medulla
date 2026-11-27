@@ -500,7 +500,9 @@ pub fn load_policy_set(
         if !belongs_to(&object, tenant) {
             continue;
         }
-        if let Some(registered) = id.strip_prefix(medulla_identity_types::classification::MARKING_NODE_PREFIX) {
+        if let Some(registered) =
+            id.strip_prefix(medulla_identity_types::classification::MARKING_NODE_PREFIX)
+        {
             if medulla_graph_core::graph::node_carries_label(
                 &object,
                 medulla_identity_types::classification::MARKING_LABEL,
@@ -658,9 +660,13 @@ impl<'s> ShapeJudge<'s> {
         view: &medulla_graph_core::graph::GraphView,
     ) -> Result<Self, String> {
         let projection = medulla_rdf::sparql::Projection::from_wire(SHAPE_PROJECTION_BASE, "");
-        let triples = medulla_rdf::mapping::export_view_projected(view, &projection).map_err(
-            |error| format!("{}: project the graph to RDF: {error}", shape_invalid_code()),
-        )?;
+        let triples =
+            medulla_rdf::mapping::export_view_projected(view, &projection).map_err(|error| {
+                format!(
+                    "{}: project the graph to RDF: {error}",
+                    shape_invalid_code()
+                )
+            })?;
         let mut data = medulla_rdf::oxrdf::Graph::new();
         for triple in &triples {
             data.insert(triple);
@@ -1325,12 +1331,21 @@ mod tests {
             ("p1", mask_record("pii.email", "acme")),
             ("marking:pii.email", marking_record("other")),
         ]);
-        assert_eq!(load_policy_set("acme", &foreign).unwrap_err().code, "POLICY_TAG_UNKNOWN");
+        assert_eq!(
+            load_policy_set("acme", &foreign).unwrap_err().code,
+            "POLICY_TAG_UNKNOWN"
+        );
         let unlabelled = view_of(&[
             ("p1", mask_record("pii.email", "acme")),
-            ("marking:pii.email", serde_json::json!({"node_type": "Other", "tenant": "acme"})),
+            (
+                "marking:pii.email",
+                serde_json::json!({"node_type": "Other", "tenant": "acme"}),
+            ),
         ]);
-        assert_eq!(load_policy_set("acme", &unlabelled).unwrap_err().code, "POLICY_TAG_UNKNOWN");
+        assert_eq!(
+            load_policy_set("acme", &unlabelled).unwrap_err().code,
+            "POLICY_TAG_UNKNOWN"
+        );
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R706.8
@@ -1350,20 +1365,27 @@ mod tests {
             PolicyOutcome::Violation,
         ] {
             let text = serde_json::to_string(&outcome).unwrap();
-            assert_eq!(serde_json::from_str::<PolicyOutcome>(&text).unwrap(), outcome);
+            assert_eq!(
+                serde_json::from_str::<PolicyOutcome>(&text).unwrap(),
+                outcome
+            );
         }
 
         // A set with no shape encodes without the field, so its digest is the one it had
         // before shapes existed; one with a shape differs.
         let empty = PolicySet::default();
-        assert!(serde_json::to_value(&empty).unwrap().get("shapes").is_none());
+        assert!(serde_json::to_value(&empty)
+            .unwrap()
+            .get("shapes")
+            .is_none());
         let shaped = PolicySet {
             shapes: vec![shape],
             ..PolicySet::default()
         };
         assert!(shaped.has_shapes() && !empty.has_shapes());
         assert_ne!(policy_digest(&shaped), policy_digest(&empty));
-        let back: PolicySet = serde_json::from_value(serde_json::to_value(&shaped).unwrap()).unwrap();
+        let back: PolicySet =
+            serde_json::from_value(serde_json::to_value(&shaped).unwrap()).unwrap();
         assert_eq!(back, shaped);
 
         // A shape rewrites no plan: the plan stays as lowered and nothing is applied.

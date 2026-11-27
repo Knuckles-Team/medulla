@@ -84,7 +84,10 @@ pub(crate) fn freeze_logical_revisions(
 
 /// Whether the reservation table of `tables` carries the revision `predecessor` froze. A
 /// predecessor of any other layout has no revised table and always agrees.
-pub(crate) fn frozen_revisions_agree(predecessor: &LayoutPredecessor, tables: &[TableContract]) -> bool {
+pub(crate) fn frozen_revisions_agree(
+    predecessor: &LayoutPredecessor,
+    tables: &[TableContract],
+) -> bool {
     if predecessor.layout != OwnerLayout::GraphShard {
         return true;
     }

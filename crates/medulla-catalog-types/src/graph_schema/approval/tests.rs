@@ -62,15 +62,29 @@ fn approving_grant() -> Value {
 }
 
 fn refusal(lease: Option<&ControlLeaseView>) -> String {
-    verify_schema_approval(lease, SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW, EXECUTOR)
-        .unwrap_err()
+    verify_schema_approval(
+        lease,
+        SCHEMA_APPROVAL_ACTION,
+        SOURCE,
+        &candidate(),
+        NOW,
+        EXECUTOR,
+    )
+    .unwrap_err()
 }
 
 #[test]
 fn an_approved_unexpired_lease_naming_the_candidate_admits_it() {
     let approved = lease(ControlLeaseStatus::Consumed, approving_grant());
-    verify_schema_approval(Some(&approved), SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW, EXECUTOR)
-        .unwrap();
+    verify_schema_approval(
+        Some(&approved),
+        SCHEMA_APPROVAL_ACTION,
+        SOURCE,
+        &candidate(),
+        NOW,
+        EXECUTOR,
+    )
+    .unwrap();
 }
 
 #[test]

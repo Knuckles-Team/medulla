@@ -172,7 +172,9 @@ pub(super) fn memory_event_intents(
             }
             let topic = properties["topic"].as_str().unwrap_or_default();
             if !MEMORY_EVENT_TOPICS.contains(&topic) {
-                return Err(format!("MEMORY_EVENT_TOPIC_UNKNOWN: {topic:?} is not a memory event topic"));
+                return Err(format!(
+                    "MEMORY_EVENT_TOPIC_UNKNOWN: {topic:?} is not a memory event topic"
+                ));
             }
             let payload: serde_json::Value =
                 serde_json::from_str(properties["json"].as_str().unwrap_or_default())
@@ -185,11 +187,17 @@ pub(super) fn memory_event_intents(
                 headers: BTreeMap::from([
                     (
                         "tenant".to_string(),
-                        properties["tenant_scope"].as_str().unwrap_or_default().to_string(),
+                        properties["tenant_scope"]
+                            .as_str()
+                            .unwrap_or_default()
+                            .to_string(),
                     ),
                     (
                         "event_kind".to_string(),
-                        properties["event_kind"].as_str().unwrap_or_default().to_string(),
+                        properties["event_kind"]
+                            .as_str()
+                            .unwrap_or_default()
+                            .to_string(),
                     ),
                 ]),
             });
@@ -210,19 +218,22 @@ pub(super) fn memory_snapshot_intents(
         .iter()
         .filter_map(|method| match method {
             medulla_protocol_types::protocol::Method::SyncMemorySnapshotStore { request, plan }
-                if !plan.writes.is_empty() => Some(
-                rmp_serde::to_vec_named(request.as_ref())
-                    .map_err(|error| format!("memory snapshot intent encoding failed: {error}"))
-                    .map(|payload| MutationOutboxIntent {
-                        topic: "memory_snapshot_synced".to_string(),
-                        key: request.doc_id.as_str().to_string(),
-                        payload,
-                        headers: BTreeMap::from([(
-                            "request_id".to_string(),
-                            request.request_id.as_str().to_string(),
-                        )]),
-                    }),
-            ),
+                if !plan.writes.is_empty() =>
+            {
+                Some(
+                    rmp_serde::to_vec_named(request.as_ref())
+                        .map_err(|error| format!("memory snapshot intent encoding failed: {error}"))
+                        .map(|payload| MutationOutboxIntent {
+                            topic: "memory_snapshot_synced".to_string(),
+                            key: request.doc_id.as_str().to_string(),
+                            payload,
+                            headers: BTreeMap::from([(
+                                "request_id".to_string(),
+                                request.request_id.as_str().to_string(),
+                            )]),
+                        }),
+                )
+            }
             _ => None,
         })
         .collect()
@@ -310,7 +321,9 @@ mod memory_event_tests {
     use medulla_work_types::participant::ParticipantId;
 
     fn batch_of(operations: Vec<serde_json::Value>) -> Method {
-        Method::BatchUpdate { operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap() }
+        Method::BatchUpdate {
+            operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap(),
+        }
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R073.6
@@ -324,7 +337,8 @@ mod memory_event_tests {
             observer: ObserverRef::System,
         });
         let node = event.node_operation("t1", 7).unwrap();
-        let other = serde_json::json!({"op": "upsert_node", "id": "n", "properties": {"type": "Other"}});
+        let other =
+            serde_json::json!({"op": "upsert_node", "id": "n", "properties": {"type": "Other"}});
         // One memory event node, one intent, in the batch that writes the node.
         let intents = memory_event_intents(&[batch_of(vec![other.clone(), node.clone()])]).unwrap();
         assert_eq!(intents.len(), 1);
@@ -334,7 +348,9 @@ mod memory_event_tests {
         assert_eq!(intents[0].headers["event_kind"], "claim_changed");
         assert_eq!(intents[0], event.outbox_intent("t1").unwrap());
         // A batch without the node emits none.
-        assert!(memory_event_intents(&[batch_of(vec![other])]).unwrap().is_empty());
+        assert!(memory_event_intents(&[batch_of(vec![other])])
+            .unwrap()
+            .is_empty());
         // A node naming another topic refuses the whole batch.
         let mut foreign = node;
         foreign["properties"]["topic"] = serde_json::json!("memory.other");

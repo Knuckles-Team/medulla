@@ -31,11 +31,11 @@ mod development_lane_tests;
 mod mutation_batch_tests;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod resource_reservation_tests;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod restore_round_trip_tests;
 #[cfg(feature = "security")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod security_tests;
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-mod restore_round_trip_tests;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod shard_control_tests;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

@@ -62,7 +62,10 @@ async fn archive_pass_writes_ordered_segments_and_resumes() {
         .await
         .unwrap();
     assert_eq!(report.records_archived, 50);
-    assert!(report.segments_written > 1, "a small bound splits the scope");
+    assert!(
+        report.segments_written > 1,
+        "a small bound splits the scope"
+    );
 
     let first_pass = archived(&archive, &graph).await;
     assert_eq!(first_pass.len() as u64, report.segments_written);

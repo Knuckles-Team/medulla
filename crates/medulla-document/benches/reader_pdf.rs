@@ -115,7 +115,8 @@ fn main() {
         "the fixture is {} bytes",
         bytes.len()
     );
-    let registry = text_registry(ReaderLimits::new(64 << 20, 4).expect("limits")).expect("registry");
+    let registry =
+        text_registry(ReaderLimits::new(64 << 20, 4).expect("limits")).expect("registry");
     let read = || {
         registry
             .read("application/pdf", black_box(&bytes))
@@ -143,8 +144,14 @@ fn main() {
         bytes.len(),
         !cfg!(debug_assertions)
     );
-    assert!(peak_bytes < PEAK_BUDGET, "peak memory {peak_bytes} over budget");
+    assert!(
+        peak_bytes < PEAK_BUDGET,
+        "peak memory {peak_bytes} over budget"
+    );
     if !cfg!(debug_assertions) {
-        assert!(p50 < 20_000 && p99 < 120_000, "reader_pdf exceeded its budget");
+        assert!(
+            p50 < 20_000 && p99 < 120_000,
+            "reader_pdf exceeded its budget"
+        );
     }
 }

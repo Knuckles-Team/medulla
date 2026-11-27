@@ -161,8 +161,13 @@ pub const PARENT_TRANSACTION_MACHINE: MachineDef<
 impl ParentTransactionKind {
     /// The one transition function: the next kind, or the typed refusal.
     pub fn apply(self, event: ParentTransactionEvent) -> Result<Self, TransitionRefused> {
-        transition(&PARENT_TRANSACTION_MACHINE, self, event, |guard| match guard {})
-            .map(|edge| edge.to)
+        transition(
+            &PARENT_TRANSACTION_MACHINE,
+            self,
+            event,
+            |guard| match guard {},
+        )
+        .map(|edge| edge.to)
     }
 }
 

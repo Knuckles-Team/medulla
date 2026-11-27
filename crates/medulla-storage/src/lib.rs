@@ -50,16 +50,18 @@ pub use owner::blob_shared::{
 pub use owner::branch_registry::BRANCH_REGISTRY;
 pub use owner::domain::{
     AgentLibraryOwner, BlobOwner, BranchRegistryOwner, ClusterHierarchyOwner, ColdTierOwner,
-    GraphShardOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner, OwnerDomain,
-    PathIndexOwner, RbacOwner, RequestReplayOwner, RetrievalStateOwner, SchedulerConfigOwner,
-    GraphSourceBindingsOwner, ObserveStartupOwner, SemanticIndexOwner, SqlOwner, StatechartOwner, TenantCatalogOwner, TimeSeriesOwner,
-    VizProvenanceOwner,
+    GraphShardOwner, GraphSourceBindingsOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner,
+    ObserveStartupOwner, OwnerDomain, PathIndexOwner, RbacOwner, RequestReplayOwner,
+    RetrievalStateOwner, SchedulerConfigOwner, SemanticIndexOwner, SqlOwner, StatechartOwner,
+    TenantCatalogOwner, TimeSeriesOwner, VizProvenanceOwner,
 };
 pub use owner::grant::{AuthenticatedScopeGrant, ScopeGrantVerifier};
-pub use owner::handle::OwnedStoreHandle;
 pub use owner::graph_rows::{
-    export_graph_table_rows, visit_graph_scoped_tables, GraphTableVisitor, TableRows, PAGED_GRAPH_TABLES,
+    export_graph_table_rows, visit_graph_scoped_tables, GraphTableVisitor, TableRows,
+    PAGED_GRAPH_TABLES,
 };
+pub use owner::graph_source_bindings::GRAPH_SOURCE_BINDINGS;
+pub use owner::handle::OwnedStoreHandle;
 pub use owner::identity::PhysicalStoreIdentity;
 pub use owner::layout::OwnerLayout;
 pub use owner::lineage::{
@@ -70,9 +72,10 @@ pub use owner::lineage::{
     GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
     GRAPH_SHARD_BEFORE_ENRICHMENT, JOBS_BEFORE_JOB_MACHINE, KV_BEFORE_NAMESPACE_COLD,
     RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
-    SQL_BEFORE_NAMED_SEQUENCES,
-    SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
+    SQL_BEFORE_MATVIEWS, SQL_BEFORE_NAMED_SEQUENCES, SQL_BEFORE_SOURCE_CHECKPOINTS,
+    SQL_BEFORE_TRIGGER_REACTIONS,
 };
+pub use owner::observe_startup::OBSERVE_STARTUP_REPORT;
 pub use owner::offline_upgrade::{
     classify_owner_store_format, offline_upgrades_for, registered_offline_upgrade,
     InspectedStoreUpgrade, OfflineStoreUpgrade, OfflineUpgradeInspectionOptions, OwnerStoreFormat,
@@ -96,25 +99,23 @@ pub use owner::registry::{
     SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_STAGE_RECEIPTS,
     SEMANTIC_STATES, SEMANTIC_TOMBSTONES, SEMANTIC_VECTORS, SERIAL_SEQUENCE_CACHE,
     SERIAL_SEQUENCE_INCREMENT, SERIAL_SEQUENCE_START, SQL_ANN_DIRTY, SQL_ANN_GENERATIONS,
-    SQL_BOOTSTRAP_RESOURCE, SQL_EDGE_INDEXES, SQL_SEQUENCES, SQL_SOURCE_AUTHORITY,
-    SQL_MATVIEWS, SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS, WRITE_BACK_CHANGE_SETS, WRITE_BACK_IDEMPOTENCY,
+    SQL_BOOTSTRAP_RESOURCE, SQL_EDGE_INDEXES, SQL_MATVIEWS, SQL_SEQUENCES, SQL_SOURCE_AUTHORITY,
+    SQL_SOURCE_CHECKPOINTS, SQL_TRIGGER_REACTIONS, WRITE_BACK_CHANGE_SETS, WRITE_BACK_IDEMPOTENCY,
     WRITE_BACK_RECEIPTS, WRITE_BACK_RECEIPT_HEADS,
 };
 pub use owner::retrieval_state::DOC_STATE;
-pub use owner::observe_startup::OBSERVE_STARTUP_REPORT;
-pub use owner::scheduler_config::SCHEDULER_CONFIG;
-pub use owner::graph_source_bindings::GRAPH_SOURCE_BINDINGS;
 pub use owner::row_key::{
     is_control_scope, owner_row_key, reserved_control_graph, OwnerRowScope, OwnerRowScopeStart,
     RowKey, GRAPH_SHARD_CONTROL_GRAPH, GRAPH_SHARD_TENANT,
 };
+pub use owner::scheduler_config::SCHEDULER_CONFIG;
 pub use owner::sql_checkpoint_upgrade::{
-    inspect_sql_ann_dirty_upgrade, inspect_sql_ann_generation_upgrade,
+    inspect_sql_ann_dirty_upgrade, inspect_sql_ann_generation_upgrade, inspect_sql_matview_upgrade,
     inspect_sql_named_sequence_upgrade, inspect_sql_source_checkpoint_upgrade,
-    inspect_sql_matview_upgrade, inspect_sql_trigger_reaction_upgrade, upgrade_sql_ann_dirty, upgrade_sql_ann_generations,
-    upgrade_sql_named_sequences, upgrade_sql_source_checkpoints, upgrade_sql_matviews, upgrade_sql_trigger_reactions,
-    SqlSourceCheckpointInspectionOptions, SqlSourceCheckpointUpgradeReport,
-    ValidatedSqlSourceCheckpointUpgrade,
+    inspect_sql_trigger_reaction_upgrade, upgrade_sql_ann_dirty, upgrade_sql_ann_generations,
+    upgrade_sql_matviews, upgrade_sql_named_sequences, upgrade_sql_source_checkpoints,
+    upgrade_sql_trigger_reactions, SqlSourceCheckpointInspectionOptions,
+    SqlSourceCheckpointUpgradeReport, ValidatedSqlSourceCheckpointUpgrade,
 };
 pub use owner::table_api::*;
 pub use payload::private_payload_digest;
@@ -137,8 +138,7 @@ pub use recovery::archive::{
 };
 #[cfg(feature = "object-archive")]
 pub use recovery::archiver::{
-    archive_store_pass, last_committed_sequences, ArchivePassReport, ArchivePolicy,
-    ArchiveSegment,
+    archive_store_pass, last_committed_sequences, ArchivePassReport, ArchivePolicy, ArchiveSegment,
 };
 pub use recovery::authority::{rebind_copied_store, store_root_is_current};
 pub use recovery::backup::{

@@ -7,8 +7,8 @@
 //! into the one `:ReadbackReceipt` node the route commits.
 
 use medulla_ingestion_types::ingest_readback::{
-    HydrationRun, HydrationRunClaim, ReadbackReceipt, ReadbackVerdict, VerifyIngestReadbackRequest, READBACK_DENIED,
-    READBACK_MISMATCH, READBACK_PARTIAL, READBACK_STALE,
+    HydrationRun, HydrationRunClaim, ReadbackReceipt, ReadbackVerdict, VerifyIngestReadbackRequest,
+    READBACK_DENIED, READBACK_MISMATCH, READBACK_PARTIAL, READBACK_STALE,
 };
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
@@ -232,7 +232,9 @@ pub fn bind_hydration_run(
             .and_then(|hex| Digest256::parse(hex).ok())
     };
     let (Some(document), Some(types)) = (own("document_digest"), own("type_digest")) else {
-        return Err(mismatch("the workflow compilation carries no document or type digest"));
+        return Err(mismatch(
+            "the workflow compilation carries no document or type digest",
+        ));
     };
     let capability = Digest256::parse(medulla_capabilities::catalog::contract_catalog_digest())
         .map_err(|_| mismatch("the contract catalog digest is invalid"))?;
@@ -242,7 +244,9 @@ pub fn bind_hydration_run(
         &capability,
         &types,
     ) {
-        return Err(mismatch(&format!("the workflow compilation is stale: {drifted}")));
+        return Err(mismatch(&format!(
+            "the workflow compilation is stale: {drifted}"
+        )));
     }
     if revision < 1 || revision != claim.workflow_revision {
         return Err(mismatch("the workflow revision differs from the claim"));
@@ -333,7 +337,11 @@ mod tests {
     use medulla_ingestion_types::ingest_readback::ReadbackExpectation;
     use std::collections::BTreeMap;
 
-    struct View(u64, BTreeMap<String, NodeRead>, BTreeMap<String, serde_json::Value>);
+    struct View(
+        u64,
+        BTreeMap<String, NodeRead>,
+        BTreeMap<String, serde_json::Value>,
+    );
     impl ReadbackView for View {
         fn graph_revision(&self) -> u64 {
             self.0

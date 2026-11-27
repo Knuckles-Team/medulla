@@ -74,7 +74,11 @@ fn proof_receipt() -> ProofReceipt {
         toolchain_version: "1.2.3".to_string(),
         declaration: "Mathlib.Foo.bar".to_string(),
         artifact_digest: "ab".repeat(32),
-        axioms: vec!["Quot.sound".to_string(), "propext".to_string(), "propext".to_string()],
+        axioms: vec![
+            "Quot.sound".to_string(),
+            "propext".to_string(),
+            "propext".to_string(),
+        ],
         has_sorry: false,
         verdict: ProofVerdict::Pass,
     }
@@ -438,14 +442,23 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
 
     let recorded: ClaimRecord = writer(
         &h,
-        receipt_evidence(id, "proof-e1", EvidenceChannel::Process, true, proof_receipt()),
+        receipt_evidence(
+            id,
+            "proof-e1",
+            EvidenceChannel::Process,
+            true,
+            proof_receipt(),
+        ),
     )
     .await
     .unwrap();
     // The receipt never moves the log-odds, however heavy its weight.
     assert_eq!(recorded.log_odds_micro, 0);
     let stored = recorded.evidence.last().unwrap();
-    let receipt = stored.proof.as_ref().expect("the receipt is stored on the evidence");
+    let receipt = stored
+        .proof
+        .as_ref()
+        .expect("the receipt is stored on the evidence");
     assert_eq!(receipt.axioms, ["Quot.sound", "propext"]);
     assert_eq!(receipt.verdict, ProofVerdict::Pass);
 
@@ -463,7 +476,13 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
             "PROOF_RECEIPT_INVALID",
             writer(
                 &h,
-                receipt_evidence(id, "proof-e2", EvidenceChannel::Process, true, invalid(proof_receipt())),
+                receipt_evidence(
+                    id,
+                    "proof-e2",
+                    EvidenceChannel::Process,
+                    true,
+                    invalid(proof_receipt()),
+                ),
             )
             .await,
         ),
@@ -471,7 +490,13 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
             "PROOF_RECEIPT_INVALID",
             writer(
                 &h,
-                receipt_evidence(id, "proof-e3", EvidenceChannel::Outcome, true, proof_receipt()),
+                receipt_evidence(
+                    id,
+                    "proof-e3",
+                    EvidenceChannel::Outcome,
+                    true,
+                    proof_receipt(),
+                ),
             )
             .await,
         ),
@@ -479,7 +504,13 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
             "PROOF_RECEIPT_INVALID",
             writer(
                 &h,
-                receipt_evidence(id, "proof-e4", EvidenceChannel::Process, false, proof_receipt()),
+                receipt_evidence(
+                    id,
+                    "proof-e4",
+                    EvidenceChannel::Process,
+                    false,
+                    proof_receipt(),
+                ),
             )
             .await,
         ),
@@ -495,7 +526,11 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
     for (code, result) in refused {
         assert_eq!(result, Err(code.to_string()));
     }
-    assert_eq!(read_claim(&h, id).await, before, "a refusal changes no state");
+    assert_eq!(
+        read_claim(&h, id).await,
+        before,
+        "a refusal changes no state"
+    );
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R652.11: standing is recomputed from the
@@ -520,13 +555,23 @@ async fn get_reports_proven_standing_from_receipt() {
     };
     let recorded: ClaimRecord = writer(
         &h,
-        receipt_evidence(extra, "standing-e1", EvidenceChannel::Process, true, non_standard),
+        receipt_evidence(
+            extra,
+            "standing-e1",
+            EvidenceChannel::Process,
+            true,
+            non_standard,
+        ),
     )
     .await
     .unwrap();
     assert_eq!(recorded.proof_standing, ProofStanding::Unproven);
     let kept = read_claim(&h, extra).await;
-    assert_eq!(kept.evidence.len(), 1, "the receipt stays recorded and readable");
+    assert_eq!(
+        kept.evidence.len(),
+        1,
+        "the receipt stays recorded and readable"
+    );
     assert_eq!(kept.proof_standing, ProofStanding::Unproven);
 
     let proven = "standing-proven";
@@ -534,14 +579,23 @@ async fn get_reports_proven_standing_from_receipt() {
     let state_before = read_claim(&h, proven).await.state;
     let recorded: ClaimRecord = writer(
         &h,
-        receipt_evidence(proven, "standing-e2", EvidenceChannel::Process, true, proof_receipt()),
+        receipt_evidence(
+            proven,
+            "standing-e2",
+            EvidenceChannel::Process,
+            true,
+            proof_receipt(),
+        ),
     )
     .await
     .unwrap();
     assert_eq!(recorded.proof_standing, ProofStanding::Proven);
     let read = read_claim(&h, proven).await;
     assert_eq!(read.proof_standing, ProofStanding::Proven);
-    assert_eq!(read.state, state_before, "proven standing does not change the state");
+    assert_eq!(
+        read.state, state_before,
+        "proven standing does not change the state"
+    );
 
     // A failing receipt records without granting standing.
     let failing = "standing-fail";
@@ -552,11 +606,20 @@ async fn get_reports_proven_standing_from_receipt() {
     };
     let _: ClaimRecord = writer(
         &h,
-        receipt_evidence(failing, "standing-e3", EvidenceChannel::Process, true, failed),
+        receipt_evidence(
+            failing,
+            "standing-e3",
+            EvidenceChannel::Process,
+            true,
+            failed,
+        ),
     )
     .await
     .unwrap();
-    assert_eq!(read_claim(&h, failing).await.proof_standing, ProofStanding::Unproven);
+    assert_eq!(
+        read_claim(&h, failing).await.proof_standing,
+        ProofStanding::Unproven
+    );
 }
 
 /// Seed the request graph with the participants and threads a perspective test reads: the
@@ -564,7 +627,12 @@ async fn get_reports_proven_standing_from_receipt() {
 async fn seed_participants(h: &Harness, tenant: &str, members: &[(&str, &str, &str)]) {
     use medulla_work_types::participant::{Participant, ParticipantKind};
     let guard = h.state.read().await;
-    let core = guard.registry.get("default").expect("request graph").core.clone();
+    let core = guard
+        .registry
+        .get("default")
+        .expect("request graph")
+        .core
+        .clone();
     for (slug, principal, session) in members {
         let participant = Participant::new(
             slug,
@@ -598,7 +666,8 @@ async fn seed_participants(h: &Harness, tenant: &str, members: &[(&str, &str, &s
         core.add_edge(
             thread,
             participant.iri(),
-            rmp_serde::to_vec_named(&serde_json::json!({"relationship": "hasParticipant"})).unwrap(),
+            rmp_serde::to_vec_named(&serde_json::json!({"relationship": "hasParticipant"}))
+                .unwrap(),
         )
         .unwrap();
     }
@@ -619,60 +688,126 @@ fn perspective_propose(claim_id: &str, subject: &str, observer: ObserverRef) -> 
 #[tokio::test]
 async fn perspective_claims_hide_other_observers() {
     let h = Harness::new().await;
-    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    seed_participants(
+        &h,
+        TENANT,
+        &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")],
+    )
+    .await;
     let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
     let bo = || ObserverRef::Participant(ParticipantId::new("bo").unwrap());
 
     // Ada's own claim and a shared system claim, each grounded in session s1.
     for (claim, observer) in [("c-ada", ada()), ("c-system", ObserverRef::System)] {
-        let stored: ClaimRecord =
-            call(&h, "ada-principal", TENANT, perspective_propose(claim, "ada", observer)).await.unwrap();
+        let stored: ClaimRecord = call(
+            &h,
+            "ada-principal",
+            TENANT,
+            perspective_propose(claim, "ada", observer),
+        )
+        .await
+        .unwrap();
         assert_eq!(stored.perspective.as_ref().unwrap().subject.as_str(), "ada");
-        let mut op = evidence(claim, &format!("{claim}-e1"), Some(EvidenceChannel::Outcome), true, 100_000);
+        let mut op = evidence(
+            claim,
+            &format!("{claim}-e1"),
+            Some(EvidenceChannel::Outcome),
+            true,
+            100_000,
+        );
         if let ClaimOp::RecordEvidence { session_id, .. } = &mut op {
             *session_id = Some("s1".to_string());
         }
         let _: ClaimRecord = call(&h, "ada-principal", TENANT, op).await.unwrap();
     }
-    let read = |who: &'static str, tenant: &'static str, claim: &'static str, as_observer: Option<ObserverRef>| {
+    let read = |who: &'static str,
+                tenant: &'static str,
+                claim: &'static str,
+                as_observer: Option<ObserverRef>| {
         let h = &h;
         async move {
             call::<ClaimGetResult>(
                 h,
                 who,
                 tenant,
-                ClaimOp::Get { claim_id: Some(claim.to_string()), artifact_id: None, as_observer },
+                ClaimOp::Get {
+                    claim_id: Some(claim.to_string()),
+                    artifact_id: None,
+                    as_observer,
+                },
             )
             .await
         }
     };
     // The observer reads its own claim and the system claim of its own session.
-    assert!(read("ada-principal", TENANT, "c-ada", None).await.unwrap().claim.is_some());
-    assert!(read("ada-principal", TENANT, "c-system", None).await.unwrap().claim.is_some());
+    assert!(read("ada-principal", TENANT, "c-ada", None)
+        .await
+        .unwrap()
+        .claim
+        .is_some());
+    assert!(read("ada-principal", TENANT, "c-system", None)
+        .await
+        .unwrap()
+        .claim
+        .is_some());
     // Another participant's principal sees neither: not its claim, and not its session.
-    assert_eq!(read("bo-principal", TENANT, "c-ada", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
-    assert_eq!(read("bo-principal", TENANT, "c-system", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
-    // A principal that acts as nobody reads as the system observer over no session.
-    assert_eq!(read("stranger", TENANT, "c-system", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
-    // A request cannot name a view the principal does not hold.
     assert_eq!(
-        read("bo-principal", TENANT, "c-ada", Some(ada())).await.unwrap_err(),
-        "OBSERVER_NOT_PERMITTED"
-    );
-    assert!(read("bo-principal", TENANT, "c-ada", Some(bo())).await.is_err());
-
-    // Cross-tenant negative: another tenant neither reads the claim nor proposes a perspective
-    // over a participant it does not hold.
-    assert_eq!(read("ada-principal", OTHER_TENANT, "c-ada", None).await.unwrap_err(), "CLAIM_NOT_FOUND");
-    assert_eq!(
-        call::<ClaimRecord>(&h, "ada-principal", OTHER_TENANT, perspective_propose("x", "ada", ObserverRef::System))
+        read("bo-principal", TENANT, "c-ada", None)
             .await
             .unwrap_err(),
         "PARTICIPANT_NOT_VISIBLE"
     );
+    assert_eq!(
+        read("bo-principal", TENANT, "c-system", None)
+            .await
+            .unwrap_err(),
+        "PARTICIPANT_NOT_VISIBLE"
+    );
+    // A principal that acts as nobody reads as the system observer over no session.
+    assert_eq!(
+        read("stranger", TENANT, "c-system", None)
+            .await
+            .unwrap_err(),
+        "PARTICIPANT_NOT_VISIBLE"
+    );
+    // A request cannot name a view the principal does not hold.
+    assert_eq!(
+        read("bo-principal", TENANT, "c-ada", Some(ada()))
+            .await
+            .unwrap_err(),
+        "OBSERVER_NOT_PERMITTED"
+    );
+    assert!(read("bo-principal", TENANT, "c-ada", Some(bo()))
+        .await
+        .is_err());
+
+    // Cross-tenant negative: another tenant neither reads the claim nor proposes a perspective
+    // over a participant it does not hold.
+    assert_eq!(
+        read("ada-principal", OTHER_TENANT, "c-ada", None)
+            .await
+            .unwrap_err(),
+        "CLAIM_NOT_FOUND"
+    );
+    assert_eq!(
+        call::<ClaimRecord>(
+            &h,
+            "ada-principal",
+            OTHER_TENANT,
+            perspective_propose("x", "ada", ObserverRef::System)
+        )
+        .await
+        .unwrap_err(),
+        "PARTICIPANT_NOT_VISIBLE"
+    );
 }
 
-fn receipt_of(declaration: &str, axioms: &[&str], has_sorry: bool, verdict: ProofVerdict) -> ProofReceipt {
+fn receipt_of(
+    declaration: &str,
+    axioms: &[&str],
+    has_sorry: bool,
+    verdict: ProofVerdict,
+) -> ProofReceipt {
     ProofReceipt {
         declaration: declaration.to_string(),
         axioms: axioms.iter().map(|axiom| axiom.to_string()).collect(),
@@ -682,7 +817,13 @@ fn receipt_of(declaration: &str, axioms: &[&str], has_sorry: bool, verdict: Proo
     }
 }
 
-async fn record_receipt(h: &Harness, tenant: &str, claim: &str, evidence_id: &str, proof: ProofReceipt) {
+async fn record_receipt(
+    h: &Harness,
+    tenant: &str,
+    claim: &str,
+    evidence_id: &str,
+    proof: ProofReceipt,
+) {
     let _: ClaimRecord = call(
         h,
         "claim-writer",
@@ -694,7 +835,10 @@ async fn record_receipt(h: &Harness, tenant: &str, claim: &str, evidence_id: &st
 }
 
 fn proven_op(axiom: Option<&str>, limit: Option<u32>) -> ClaimOp {
-    ClaimOp::ProvenClaims { axiom: axiom.map(str::to_string), limit }
+    ClaimOp::ProvenClaims {
+        axiom: axiom.map(str::to_string),
+        limit,
+    }
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R652.13: `ProvenClaims` lists one row per claim and passing,
@@ -710,22 +854,72 @@ async fn proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants() {
     }
     let standard = ["Classical.choice", "Quot.sound", "propext"];
     // Two receipts on one claim: one row each, sorted by declaration.
-    record_receipt(&h, TENANT, "pc-a", "e-a2", receipt_of("Z.last", &standard, false, ProofVerdict::Pass)).await;
-    record_receipt(&h, TENANT, "pc-a", "e-a1", receipt_of("A.first", &standard, false, ProofVerdict::Pass)).await;
+    record_receipt(
+        &h,
+        TENANT,
+        "pc-a",
+        "e-a2",
+        receipt_of("Z.last", &standard, false, ProofVerdict::Pass),
+    )
+    .await;
+    record_receipt(
+        &h,
+        TENANT,
+        "pc-a",
+        "e-a1",
+        receipt_of("A.first", &standard, false, ProofVerdict::Pass),
+    )
+    .await;
     // A non-standard axiom is listed, as `unproven`, and always shows its axioms.
-    record_receipt(&h, TENANT, "pc-b", "e-b", receipt_of("B.decl", &["Foo.axiom"], false, ProofVerdict::Pass)).await;
+    record_receipt(
+        &h,
+        TENANT,
+        "pc-b",
+        "e-b",
+        receipt_of("B.decl", &["Foo.axiom"], false, ProofVerdict::Pass),
+    )
+    .await;
     // A `sorry` and a failing receipt are recorded but never listed.
-    record_receipt(&h, TENANT, "pc-sorry", "e-s", receipt_of("S.decl", &[], true, ProofVerdict::Fail)).await;
-    record_receipt(&h, TENANT, "pc-fail", "e-f", receipt_of("F.decl", &[], false, ProofVerdict::Fail)).await;
+    record_receipt(
+        &h,
+        TENANT,
+        "pc-sorry",
+        "e-s",
+        receipt_of("S.decl", &[], true, ProofVerdict::Fail),
+    )
+    .await;
+    record_receipt(
+        &h,
+        TENANT,
+        "pc-fail",
+        "e-f",
+        receipt_of("F.decl", &[], false, ProofVerdict::Fail),
+    )
+    .await;
     // Another tenant's claim and receipt.
-    let _: ClaimRecord = call(&h, "claim-writer", OTHER_TENANT, propose("pc-other")).await.unwrap();
-    record_receipt(&h, OTHER_TENANT, "pc-other", "e-o", receipt_of("O.decl", &standard, false, ProofVerdict::Pass)).await;
+    let _: ClaimRecord = call(&h, "claim-writer", OTHER_TENANT, propose("pc-other"))
+        .await
+        .unwrap();
+    record_receipt(
+        &h,
+        OTHER_TENANT,
+        "pc-other",
+        "e-o",
+        receipt_of("O.decl", &standard, false, ProofVerdict::Pass),
+    )
+    .await;
 
     let all: ProvenClaimsResult = writer(&h, proven_op(None, None)).await.unwrap();
     let rows: Vec<(&str, &str, ProofStanding)> = all
         .claims
         .iter()
-        .map(|row| (row.claim_id.as_str(), row.declaration.as_str(), row.standing))
+        .map(|row| {
+            (
+                row.claim_id.as_str(),
+                row.declaration.as_str(),
+                row.standing,
+            )
+        })
         .collect();
     assert_eq!(
         rows,
@@ -740,22 +934,30 @@ async fn proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants() {
     assert_eq!(all.claims[0].checker_id, "kernel-checker");
 
     // The axiom filter keeps the rows whose receipt names the axiom.
-    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None)).await.unwrap();
+    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None))
+        .await
+        .unwrap();
     assert_eq!(foo.claims.len(), 1);
     assert_eq!(foo.claims[0].claim_id, "pc-b");
-    let case: ProvenClaimsResult = writer(&h, proven_op(Some("foo.axiom"), None)).await.unwrap();
+    let case: ProvenClaimsResult = writer(&h, proven_op(Some("foo.axiom"), None))
+        .await
+        .unwrap();
     assert!(case.claims.is_empty(), "axiom names compare exactly");
 
     // The limit cuts the answer; a larger one than the most is refused.
     let one: ProvenClaimsResult = writer(&h, proven_op(None, Some(1))).await.unwrap();
     assert_eq!(one.claims.len(), 1);
     assert_eq!(
-        writer::<ProvenClaimsResult>(&h, proven_op(None, Some(1001))).await.unwrap_err(),
+        writer::<ProvenClaimsResult>(&h, proven_op(None, Some(1001)))
+            .await
+            .unwrap_err(),
         "PARAMETER_INVALID"
     );
 
     // A second tenant sees only its own claim, and the first sees none of it.
-    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None)).await.unwrap();
+    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None))
+        .await
+        .unwrap();
     assert_eq!(other.claims.len(), 1);
     assert_eq!(other.claims[0].claim_id, "pc-other");
     assert!(all.claims.iter().all(|row| row.claim_id != "pc-other"));
@@ -773,8 +975,18 @@ async fn proof_journey() {
     let _: ClaimRecord = writer(&h, propose(id)).await.unwrap();
     let standard = ["Classical.choice", "Quot.sound", "propext"];
 
-    record_receipt(&h, TENANT, id, "j1", receipt_of("Main.thm", &standard, false, ProofVerdict::Pass)).await;
-    assert_eq!(read_claim(&h, id).await.proof_standing, ProofStanding::Proven);
+    record_receipt(
+        &h,
+        TENANT,
+        id,
+        "j1",
+        receipt_of("Main.thm", &standard, false, ProofVerdict::Pass),
+    )
+    .await;
+    assert_eq!(
+        read_claim(&h, id).await.proof_standing,
+        ProofStanding::Proven
+    );
 
     // A pass with `sorry`, and a malformed receipt, are refused and change nothing.
     let before = read_claim(&h, id).await;
@@ -792,17 +1004,32 @@ async fn proof_journey() {
     assert_eq!(refused_sorry, Err("PROOF_SORRY_PRESENT".to_string()));
     let mut malformed = receipt_of("Main.bad", &[], false, ProofVerdict::Pass);
     malformed.artifact_digest = "xyz".to_string();
-    let refused_invalid: Result<ClaimRecord, String> =
-        writer(&h, receipt_evidence(id, "j3", EvidenceChannel::Process, true, malformed)).await;
+    let refused_invalid: Result<ClaimRecord, String> = writer(
+        &h,
+        receipt_evidence(id, "j3", EvidenceChannel::Process, true, malformed),
+    )
+    .await;
     assert_eq!(refused_invalid, Err("PROOF_RECEIPT_INVALID".to_string()));
     assert_eq!(read_claim(&h, id).await, before);
 
     // A non-standard axiom records without refusal; the claim keeps its standing.
-    record_receipt(&h, TENANT, id, "j4", receipt_of("Main.extra", &["Foo.axiom"], false, ProofVerdict::Pass)).await;
-    assert_eq!(read_claim(&h, id).await.proof_standing, ProofStanding::Proven);
+    record_receipt(
+        &h,
+        TENANT,
+        id,
+        "j4",
+        receipt_of("Main.extra", &["Foo.axiom"], false, ProofVerdict::Pass),
+    )
+    .await;
+    assert_eq!(
+        read_claim(&h, id).await.proof_standing,
+        ProofStanding::Proven
+    );
 
     // The list, filtered by axiom, shows the non-standard receipt as `unproven`.
-    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None)).await.unwrap();
+    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None))
+        .await
+        .unwrap();
     assert_eq!(foo.claims.len(), 1);
     assert_eq!(foo.claims[0].declaration, "Main.extra");
     assert_eq!(foo.claims[0].standing, ProofStanding::Unproven);
@@ -810,16 +1037,14 @@ async fn proof_journey() {
     assert_eq!(all.claims.len(), 2);
 
     // A second tenant reads none of it.
-    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None)).await.unwrap();
+    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None))
+        .await
+        .unwrap();
     assert!(other.claims.is_empty());
 }
 
 /// Serve one operation and return the memory events it committed.
-async fn planned(
-    h: &Harness,
-    who: &str,
-    op: ClaimOp,
-) -> crate::decide::claims::ClaimsServed {
+async fn planned(h: &Harness, who: &str, op: ClaimOp) -> crate::decide::claims::ClaimsServed {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     crate::decide::claims::handle_claims_planned(&h.state, 3, "default", &verified, op).await
 }
@@ -831,15 +1056,40 @@ async fn a_perspective_claim_transition_announces_one_event_after_commit() {
     let h = Harness::new().await;
     seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1")]).await;
     let observer = ObserverRef::System;
-    let _: ClaimRecord = call(&h, "ada-principal", TENANT, perspective_propose("c-event", "ada", observer.clone())).await.unwrap();
-    let _: ClaimRecord = call(&h, "ada-principal", TENANT, evidence("c-event", "e1", Some(EvidenceChannel::Outcome), true, 900_000)).await.unwrap();
+    let _: ClaimRecord = call(
+        &h,
+        "ada-principal",
+        TENANT,
+        perspective_propose("c-event", "ada", observer.clone()),
+    )
+    .await
+    .unwrap();
+    let _: ClaimRecord = call(
+        &h,
+        "ada-principal",
+        TENANT,
+        evidence(
+            "c-event",
+            "e1",
+            Some(EvidenceChannel::Outcome),
+            true,
+            900_000,
+        ),
+    )
+    .await
+    .unwrap();
     // A refused transition announces nothing.
     let refused = planned(&h, "ada-principal", advance("c-event", ClaimState::Retired)).await;
     if refused.response.refusal_text().is_some() {
         assert!(refused.events.is_empty());
     }
     // The committed transition announces exactly one event naming the states and the perspective.
-    let served = planned(&h, "ada-principal", advance("c-event", ClaimState::Supported)).await;
+    let served = planned(
+        &h,
+        "ada-principal",
+        advance("c-event", ClaimState::Supported),
+    )
+    .await;
     assert!(served.response.refusal_text().is_none());
     assert_eq!(
         served.events,
@@ -853,9 +1103,30 @@ async fn a_perspective_claim_transition_announces_one_event_after_commit() {
     );
     // A claim with no perspective, and a read, announce nothing.
     let _: ClaimRecord = writer(&h, propose("c-plain")).await.unwrap();
-    let _: ClaimRecord = writer(&h, evidence("c-plain", "p1", Some(EvidenceChannel::Outcome), true, 900_000)).await.unwrap();
-    assert!(planned(&h, "claim-writer", advance("c-plain", ClaimState::Supported)).await.events.is_empty());
-    assert!(planned(&h, "claim-writer", get_claim("c-plain")).await.events.is_empty());
+    let _: ClaimRecord = writer(
+        &h,
+        evidence(
+            "c-plain",
+            "p1",
+            Some(EvidenceChannel::Outcome),
+            true,
+            900_000,
+        ),
+    )
+    .await
+    .unwrap();
+    assert!(planned(
+        &h,
+        "claim-writer",
+        advance("c-plain", ClaimState::Supported)
+    )
+    .await
+    .events
+    .is_empty());
+    assert!(planned(&h, "claim-writer", get_claim("c-plain"))
+        .await
+        .events
+        .is_empty());
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R651.12
@@ -882,8 +1153,19 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
         )
         .await
         .unwrap();
-        let mut op = evidence(&claim_id, &format!("{claim_id}:{turn}"), Some(EvidenceChannel::Mined), true, 200_000);
-        if let ClaimOp::RecordEvidence { session_id, source_digest, .. } = &mut op {
+        let mut op = evidence(
+            &claim_id,
+            &format!("{claim_id}:{turn}"),
+            Some(EvidenceChannel::Mined),
+            true,
+            200_000,
+        );
+        if let ClaimOp::RecordEvidence {
+            session_id,
+            source_digest,
+            ..
+        } = &mut op
+        {
             *session_id = Some("s1".to_string());
             *source_digest = format!("turn:{turn}");
         }
@@ -892,11 +1174,20 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
     }
     // One claim, two pieces of mined evidence, each citing its turn.
     assert_eq!(stored[0].0, stored[1].0);
-    let got: ClaimGetResult = call(&h, "worker-principal", TENANT, get_claim(&stored[0].0)).await.unwrap();
+    let got: ClaimGetResult = call(&h, "worker-principal", TENANT, get_claim(&stored[0].0))
+        .await
+        .unwrap();
     let record = got.claim.unwrap();
     assert_eq!(record.evidence.len(), 2);
-    assert!(record.evidence.iter().all(|e| e.channel == EvidenceChannel::Mined));
-    let digests: Vec<&str> = record.evidence.iter().map(|e| e.source_digest.as_str()).collect();
+    assert!(record
+        .evidence
+        .iter()
+        .all(|e| e.channel == EvidenceChannel::Mined));
+    let digests: Vec<&str> = record
+        .evidence
+        .iter()
+        .map(|e| e.source_digest.as_str())
+        .collect();
     assert_eq!(digests, ["turn:t1", "turn:t4"]);
 
     // The claim store is the authority on how many claims a range wrote: the key's one claim is
@@ -909,11 +1200,29 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
         &verified.principal_persistence_id(),
     )
     .unwrap();
-    let prefix = medulla_decision_stats::decision::participant_derive::conclusion_claim_prefix(&key);
-    let range = |ids: &[&'static str]| ids.iter().copied().collect::<std::collections::BTreeSet<&str>>();
-    assert_eq!(store.derived_claim_count(&prefix, &range(&["t1", "t2"])).unwrap(), 1);
-    assert_eq!(store.derived_claim_count(&prefix, &range(&["t7"])).unwrap(), 0);
-    assert_eq!(store.derived_claim_count("derived:other:", &range(&["t1"])).unwrap(), 0);
+    let prefix =
+        medulla_decision_stats::decision::participant_derive::conclusion_claim_prefix(&key);
+    let range = |ids: &[&'static str]| {
+        ids.iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<&str>>()
+    };
+    assert_eq!(
+        store
+            .derived_claim_count(&prefix, &range(&["t1", "t2"]))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        store.derived_claim_count(&prefix, &range(&["t7"])).unwrap(),
+        0
+    );
+    assert_eq!(
+        store
+            .derived_claim_count("derived:other:", &range(&["t1"]))
+            .unwrap(),
+        0
+    );
 }
 
 async fn ask_as(
@@ -934,23 +1243,47 @@ async fn ask_as(
         as_of_ms: None,
     };
     decode(crate::decide::handle_participant_ask(&h.state, 3, "default", &verified, question).await)
-        .map_err(|text| text.split_once(':').map_or(text.as_str(), |(code, _)| code).to_string())
+        .map_err(|text| {
+            text.split_once(':')
+                .map_or(text.as_str(), |(code, _)| code)
+                .to_string()
+        })
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R655.2
 #[tokio::test]
 async fn ask_cites_claims_and_turns_or_abstains() {
     let h = Harness::new().await;
-    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    seed_participants(
+        &h,
+        TENANT,
+        &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")],
+    )
+    .await;
     let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
     let mut propose_op = perspective_propose("c-tea", "ada", ada());
-    if let ClaimOp::Propose { perspective: Some(perspective), .. } = &mut propose_op {
+    if let ClaimOp::Propose {
+        perspective: Some(perspective),
+        ..
+    } = &mut propose_op
+    {
         perspective.statement = Some("Prefers green tea".to_string());
     }
     let _: ClaimRecord = call(&h, "ada-principal", TENANT, propose_op).await.unwrap();
     for (n, turn) in ["m1", "m4"].iter().enumerate() {
-        let mut op = evidence("c-tea", &format!("e{n}"), Some(EvidenceChannel::Mined), true, 400_000);
-        if let ClaimOp::RecordEvidence { session_id, source_digest, .. } = &mut op {
+        let mut op = evidence(
+            "c-tea",
+            &format!("e{n}"),
+            Some(EvidenceChannel::Mined),
+            true,
+            400_000,
+        );
+        if let ClaimOp::RecordEvidence {
+            session_id,
+            source_digest,
+            ..
+        } = &mut op
+        {
             *session_id = Some("s1".to_string());
             *source_digest = format!("turn:{turn}");
         }
@@ -958,7 +1291,16 @@ async fn ask_cites_claims_and_turns_or_abstains() {
     }
 
     // A grounded question is answered with the claim and its turns.
-    let answer = ask_as(&h, "ada-principal", TENANT, "ada", ada(), "what tea does she prefer").await.unwrap();
+    let answer = ask_as(
+        &h,
+        "ada-principal",
+        TENANT,
+        "ada",
+        ada(),
+        "what tea does she prefer",
+    )
+    .await
+    .unwrap();
     assert_eq!(answer.text, "Prefers green tea.");
     assert!(answer.abstained.is_none());
     assert_eq!(answer.citations.len(), 1);
@@ -966,7 +1308,16 @@ async fn ask_cites_claims_and_turns_or_abstains() {
     assert_eq!(answer.citations[0].turn_ids, ["m1", "m4"]);
 
     // A question nothing grounds abstains and names the code.
-    let none = ask_as(&h, "ada-principal", TENANT, "ada", ada(), "where was she born").await.unwrap();
+    let none = ask_as(
+        &h,
+        "ada-principal",
+        TENANT,
+        "ada",
+        ada(),
+        "where was she born",
+    )
+    .await
+    .unwrap();
     assert!(none.text.is_empty() && none.citations.is_empty());
     let reason = format!("{:?}", none.abstained.expect("an abstention"));
     assert!(reason.contains("NO_GROUNDED_CLAIMS"), "{reason}");
@@ -995,7 +1346,12 @@ async fn ask_cites_claims_and_turns_or_abstains() {
 /// Store the operations a card refresh planned, as the router's batch would.
 async fn apply_planned(h: &Harness, operations: &[serde_json::Value]) {
     let guard = h.state.read().await;
-    let core = guard.registry.get("default").expect("request graph").core.clone();
+    let core = guard
+        .registry
+        .get("default")
+        .expect("request graph")
+        .core
+        .clone();
     for operation in operations {
         core.add_node(
             operation["id"].as_str().unwrap().to_string(),
@@ -1023,7 +1379,11 @@ async fn card_as(
         )
         .await,
     )
-    .map_err(|text| text.split_once(':').map_or(text.as_str(), |(code, _)| code).to_string())
+    .map_err(|text| {
+        text.split_once(':')
+            .map_or(text.as_str(), |(code, _)| code)
+            .to_string()
+    })
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R655.3
@@ -1031,15 +1391,27 @@ async fn card_as(
 async fn claim_change_refreshes_card_once() {
     use medulla_decision_types::memory_events::MEMORY_EVENT_LABEL;
     let h = Harness::new().await;
-    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    seed_participants(
+        &h,
+        TENANT,
+        &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")],
+    )
+    .await;
     let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
     let subject = ParticipantId::new("ada").unwrap();
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("ada-principal", TENANT);
     // No claim, no card.
-    assert_eq!(card_as(&h, "ada-principal", TENANT, "ada", ada()).await, Err("CARD_ABSENT".to_string()));
+    assert_eq!(
+        card_as(&h, "ada-principal", TENANT, "ada", ada()).await,
+        Err("CARD_ABSENT".to_string())
+    );
 
     let mut propose_op = perspective_propose("c-tea", "ada", ada());
-    if let ClaimOp::Propose { perspective: Some(perspective), .. } = &mut propose_op {
+    if let ClaimOp::Propose {
+        perspective: Some(perspective),
+        ..
+    } = &mut propose_op
+    {
         perspective.statement = Some("Prefers green tea".to_string());
     }
     let _: ClaimRecord = call(&h, "ada-principal", TENANT, propose_op).await.unwrap();
@@ -1050,21 +1422,31 @@ async fn claim_change_refreshes_card_once() {
     let _: ClaimRecord = call(&h, "ada-principal", TENANT, op).await.unwrap();
 
     // The first refresh stores the card and announces it; the same instant again changes nothing.
-    let planned = crate::decide::plan_card_refresh(&h.state, "default", &verified, &subject, &ada(), 9_000)
-        .await
-        .unwrap()
-        .expect("a new card is stored");
+    let planned =
+        crate::decide::plan_card_refresh(&h.state, "default", &verified, &subject, &ada(), 9_000)
+            .await
+            .unwrap()
+            .expect("a new card is stored");
     assert_eq!(planned.len(), 2);
     assert_eq!(planned[1]["properties"]["type"], MEMORY_EVENT_LABEL);
     assert_eq!(planned[1]["properties"]["topic"], "memory.card.updated");
     apply_planned(&h, &planned).await;
-    assert!(crate::decide::plan_card_refresh(&h.state, "default", &verified, &subject, &ada(), 9_000)
-        .await
-        .unwrap()
-        .is_none());
+    assert!(crate::decide::plan_card_refresh(
+        &h.state,
+        "default",
+        &verified,
+        &subject,
+        &ada(),
+        9_000
+    )
+    .await
+    .unwrap()
+    .is_none());
 
     // The card read is a lookup of that card; another participant's view reads none of it.
-    let card = card_as(&h, "ada-principal", TENANT, "ada", ada()).await.unwrap();
+    let card = card_as(&h, "ada-principal", TENANT, "ada", ada())
+        .await
+        .unwrap();
     assert_eq!(card.claims.len(), 1);
     assert_eq!(card.claims[0].text, "Prefers green tea");
     assert!(card.digest.starts_with("sha256:"));
@@ -1085,7 +1467,9 @@ async fn claim_change_refreshes_card_once() {
 // spec: MEDULLA-DECISION-ENGINE-R655.5
 #[tokio::test]
 async fn participant_refusals_are_non_disclosing_and_change_no_state() {
-    use medulla_decision_types::participant_memory::{ParticipantAnswer, ParticipantCard, ParticipantQuestion};
+    use medulla_decision_types::participant_memory::{
+        ParticipantAnswer, ParticipantCard, ParticipantQuestion,
+    };
     let h = Harness::new().await;
     seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1")]).await;
     let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
@@ -1096,7 +1480,9 @@ async fn participant_refusals_are_non_disclosing_and_change_no_state() {
             let core = guard.registry.get("default").unwrap().core.clone();
             let mut ids = core.node_ids();
             ids.sort();
-            ids.into_iter().map(|id| (core.get_node_properties(&id), id)).collect::<Vec<_>>()
+            ids.into_iter()
+                .map(|id| (core.get_node_properties(&id), id))
+                .collect::<Vec<_>>()
         }
     };
     let before = snapshot(&h).await;
@@ -1112,7 +1498,8 @@ async fn participant_refusals_are_non_disclosing_and_change_no_state() {
         let state = h.state.clone();
         async move {
             decode::<ParticipantAnswer>(
-                crate::decide::handle_participant_ask(&state, 3, "default", &verified, question).await,
+                crate::decide::handle_participant_ask(&state, 3, "default", &verified, question)
+                    .await,
             )
             .unwrap_err()
         }
@@ -1133,15 +1520,25 @@ async fn participant_refusals_are_non_disclosing_and_change_no_state() {
         let subject = ParticipantId::new(subject).unwrap();
         async move {
             decode::<ParticipantCard>(
-                crate::decide::handle_participant_card(&state, 3, "default", &verified, subject, ObserverRef::System)
-                    .await,
+                crate::decide::handle_participant_card(
+                    &state,
+                    3,
+                    "default",
+                    &verified,
+                    subject,
+                    ObserverRef::System,
+                )
+                .await,
             )
             .unwrap_err()
         }
     };
     let absent_card = card_text(TENANT, "ghost").await;
     let foreign_card = card_text(OTHER_TENANT, "ada").await;
-    assert_eq!(absent_card.replace("ghost", "<id>"), foreign_card.replace("ada", "<id>"));
+    assert_eq!(
+        absent_card.replace("ghost", "<id>"),
+        foreign_card.replace("ada", "<id>")
+    );
     // Every refusal above changed nothing stored.
     assert_eq!(snapshot(&h).await, before);
 }
@@ -1152,5 +1549,8 @@ async fn the_claims_harness_registers_the_default_graph() {
     // `seed_participants` and every perspective test read the request graph named `default`.
     let h = Harness::new().await;
     let guard = h.state.read().await;
-    assert!(guard.registry.get("default").is_some(), "the harness registers `default`");
+    assert!(
+        guard.registry.get("default").is_some(),
+        "the harness registers `default`"
+    );
 }

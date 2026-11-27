@@ -89,7 +89,10 @@ impl std::fmt::Display for ProcessCompilationError {
         match self {
             Self::Unknown => write!(f, "the process is not visible to the caller's tenant"),
             Self::TaskUnbound { node_id } => {
-                write!(f, "step {node_id} hands off to nothing and is not an end step")
+                write!(
+                    f,
+                    "step {node_id} hands off to nothing and is not an end step"
+                )
             }
             Self::CycleWithoutGate { nodes } => write!(
                 f,
@@ -97,7 +100,10 @@ impl std::fmt::Display for ProcessCompilationError {
                 nodes.join(", ")
             ),
             Self::TooLarge { nodes, limit } => {
-                write!(f, "the process view holds {nodes} nodes, above the limit {limit}")
+                write!(
+                    f,
+                    "the process view holds {nodes} nodes, above the limit {limit}"
+                )
             }
             Self::Import(error) => write!(f, "{error}"),
         }
@@ -212,7 +218,10 @@ pub fn load_process_graph(
                 frontier.push(edge.target.as_str());
             }
         } else {
-            hands_off.entry(edge.source.as_str()).or_default().push(edge);
+            hands_off
+                .entry(edge.source.as_str())
+                .or_default()
+                .push(edge);
         }
     }
     while let Some(node) = frontier.pop() {
@@ -248,7 +257,10 @@ pub fn load_process_graph(
     }
     let mut cyclic: BTreeMap<usize, bool> = BTreeMap::new();
     for edge in &flows {
-        let (s, t) = (position[edge.source.as_str()], position[edge.target.as_str()]);
+        let (s, t) = (
+            position[edge.source.as_str()],
+            position[edge.target.as_str()],
+        );
         if component[s] == component[t] && (s == t || size[&component[s]] > 1) {
             let gated = cyclic.entry(component[s]).or_insert(false);
             *gated |= edge.loop_gate;
@@ -353,7 +365,10 @@ mod tests {
         ];
         let codes: Vec<&str> = errors.iter().map(ProcessCompilationError::code).collect();
         assert_eq!(codes, &REFUSALS[..4]);
-        assert_eq!(REFUSALS[4], medulla_types::process_import::WORKFLOW_VERSION_CONFLICT);
+        assert_eq!(
+            REFUSALS[4],
+            medulla_types::process_import::WORKFLOW_VERSION_CONFLICT
+        );
         let mut unique = REFUSALS.to_vec();
         unique.sort_unstable();
         unique.dedup();

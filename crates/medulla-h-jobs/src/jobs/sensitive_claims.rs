@@ -8,8 +8,7 @@
 
 use medulla_core::sensitive_scan::{passing, ScanError, ScanLimits};
 use medulla_identity_types::classification::{
-    ClaimKind, ClaimProvenance, ClaimRecord, ClaimState, ClassificationClaim,
-    CLAIM_OF_RELATIONSHIP,
+    ClaimKind, ClaimProvenance, ClaimRecord, ClaimState, ClassificationClaim, CLAIM_OF_RELATIONSHIP,
 };
 use medulla_identity_types::tenancy::Marking;
 use medulla_query_types::sensitive_detect::{builtin_detectors, Detection, SensitiveDetector};
@@ -140,7 +139,10 @@ pub fn claim_methods(
         };
         let mut properties = record.node_properties(tenant)?;
         properties.insert("_owner".to_string(), agent.to_string().into());
-        methods.push(node_method(claim_id.clone(), &serde_json::Value::Object(properties))?);
+        methods.push(node_method(
+            claim_id.clone(),
+            &serde_json::Value::Object(properties),
+        )?);
         methods.push(edge_method(
             claim_id,
             detection.asset.clone(),

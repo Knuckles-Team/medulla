@@ -1,7 +1,7 @@
 //! OpenQASM 2.0 parsing for the bounded quantum IR.
 
 use crate::ir::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, ParamValue, ProgramMetadata, QuantumProgram, IR_VERSION,
 };
 

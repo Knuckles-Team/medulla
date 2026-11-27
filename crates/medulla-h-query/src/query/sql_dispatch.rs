@@ -221,8 +221,10 @@ async fn exec_sql_catalog_matview(
         store,
         medulla_server_auth::sql_catalog_acl::AuthorizedReadStore::store,
     );
-    sql_matview::exec_sql_matview(req_id, scope, sql_method, read_core, store, read_store, kind)
-        .await
+    sql_matview::exec_sql_matview(
+        req_id, scope, sql_method, read_core, store, read_store, kind,
+    )
+    .await
 }
 
 #[cfg(feature = "query")]

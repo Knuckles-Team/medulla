@@ -117,7 +117,10 @@ fn parse_literal(text: &str) -> Option<DmnValue> {
         let inner = &text[1..text.len() - 1];
         return (!inner.contains('"')).then(|| DmnValue::String(inner.to_string()));
     }
-    if let Some(inner) = text.strip_prefix("date(\"").and_then(|t| t.strip_suffix("\")")) {
+    if let Some(inner) = text
+        .strip_prefix("date(\"")
+        .and_then(|t| t.strip_suffix("\")"))
+    {
         return parse_date(inner).map(DmnValue::Date);
     }
     let digits = text.strip_prefix('-').unwrap_or(text);
@@ -177,7 +180,11 @@ fn parse_alternative(text: &str) -> Option<Alternative> {
         (">", Ordering::Greater, false),
     ] {
         if let Some(rest) = text.strip_prefix(prefix) {
-            return Some(Alternative::Compare(ordering, inclusive, parse_literal(rest)?));
+            return Some(Alternative::Compare(
+                ordering,
+                inclusive,
+                parse_literal(rest)?,
+            ));
         }
     }
     let first = text.chars().next()?;
@@ -196,7 +203,10 @@ fn parse_alternative(text: &str) -> Option<Alternative> {
 }
 
 fn parse_alternatives(text: &str) -> Option<Vec<Alternative>> {
-    split_list(text).into_iter().map(parse_alternative).collect()
+    split_list(text)
+        .into_iter()
+        .map(parse_alternative)
+        .collect()
 }
 
 fn parse_entry(entry: &str) -> Result<Test, DmnError> {
@@ -222,12 +232,18 @@ fn compare(left: &DmnValue, right: &DmnValue) -> Option<Ordering> {
         (DmnValue::Boolean(a), DmnValue::Boolean(b)) => Some(a.cmp(b)),
         (DmnValue::Integer(a), DmnValue::Integer(b)) => Some(a.cmp(b)),
         (DmnValue::Integer(a), DmnValue::Decimal(b)) => {
-            let a = FixedDecimal { units: *a, scale: 0 };
+            let a = FixedDecimal {
+                units: *a,
+                scale: 0,
+            };
             let scale = b.scale;
             Some(scaled(&a, scale).cmp(&scaled(b, scale)))
         }
         (DmnValue::Decimal(a), DmnValue::Integer(b)) => {
-            let b = FixedDecimal { units: *b, scale: 0 };
+            let b = FixedDecimal {
+                units: *b,
+                scale: 0,
+            };
             let scale = a.scale;
             Some(scaled(a, scale).cmp(&scaled(&b, scale)))
         }
@@ -304,7 +320,11 @@ fn aggregate(
     rows: &[Vec<DmnValue>],
 ) -> Result<Vec<BTreeMap<String, DmnValue>>, DmnError> {
     if kind == "COUNT" {
-        let name = table.outputs.first().map(|o| o.name.clone()).unwrap_or_default();
+        let name = table
+            .outputs
+            .first()
+            .map(|o| o.name.clone())
+            .unwrap_or_default();
         let count = i64::try_from(rows.len()).map_err(|_| DmnError::Overflow)?;
         return Ok(vec![BTreeMap::from([(name, DmnValue::Integer(count))])]);
     }
@@ -338,7 +358,10 @@ fn aggregate(
     } else {
         DmnValue::Decimal(FixedDecimal { units, scale })
     };
-    Ok(vec![BTreeMap::from([(table.outputs[0].name.clone(), value)])])
+    Ok(vec![BTreeMap::from([(
+        table.outputs[0].name.clone(),
+        value,
+    )])])
 }
 
 /// Evaluate `table` over `inputs`. Equal inputs give equal outputs.
@@ -368,9 +391,11 @@ pub fn evaluate_table(
             if matches!(test, Test::Any) {
                 continue;
             }
-            let value = inputs.get(name.trim()).ok_or_else(|| DmnError::InputMissing {
-                name: name.trim().to_string(),
-            })?;
+            let value = inputs
+                .get(name.trim())
+                .ok_or_else(|| DmnError::InputMissing {
+                    name: name.trim().to_string(),
+                })?;
             let hit = |alternatives: &[Alternative]| {
                 alternatives.iter().any(|a| alternative_holds(a, value))
             };
@@ -398,7 +423,10 @@ pub fn evaluate_table(
     };
     let verdict = |rules: Vec<(&DmnRule, Vec<DmnValue>)>| TableVerdict {
         matched_rule_ids: ids(&rules),
-        outputs: rules.into_iter().map(|(_, row)| named(table, row)).collect(),
+        outputs: rules
+            .into_iter()
+            .map(|(_, row)| named(table, row))
+            .collect(),
     };
     match policy.as_str() {
         "UNIQUE" => match matched.len() {
@@ -498,7 +526,11 @@ mod tests {
     }
 
     fn discounts(verdict: &TableVerdict) -> Vec<DmnValue> {
-        verdict.outputs.iter().map(|row| row["discount"].clone()).collect()
+        verdict
+            .outputs
+            .iter()
+            .map(|row| row["discount"].clone())
+            .collect()
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R180.2
@@ -550,14 +582,22 @@ mod tests {
         for (kind, expected) in [("SUM", 30), ("MIN", 10), ("MAX", 20), ("COUNT", 2)] {
             let verdict =
                 evaluate_table(&table("COLLECT", Some(kind), &[]), &inputs(70, "gold")).unwrap();
-            assert_eq!(discounts(&verdict), vec![DmnValue::Integer(expected)], "{kind}");
+            assert_eq!(
+                discounts(&verdict),
+                vec![DmnValue::Integer(expected)],
+                "{kind}"
+            );
         }
 
         // RULE ORDER keeps declared order; OUTPUT ORDER sorts by priority.
-        let rule_order = evaluate_table(&table("RULE ORDER", None, &[]), &inputs(70, "gold")).unwrap();
+        let rule_order =
+            evaluate_table(&table("RULE ORDER", None, &[]), &inputs(70, "gold")).unwrap();
         assert_eq!(rule_order.matched_rule_ids, vec!["r2", "r4"]);
-        let output_order =
-            evaluate_table(&table("OUTPUT ORDER", None, &["10", "20"]), &inputs(70, "gold")).unwrap();
+        let output_order = evaluate_table(
+            &table("OUTPUT ORDER", None, &["10", "20"]),
+            &inputs(70, "gold"),
+        )
+        .unwrap();
         assert_eq!(
             discounts(&output_order),
             vec![DmnValue::Integer(10), DmnValue::Integer(20)]

@@ -29,8 +29,8 @@ pub(super) async fn commit_asset(
         changed_at_ms: Some(evidence.changed_at_ms),
         ..medulla_catalog::emit::AssetLinks::default()
     };
-    let triples = medulla_catalog::emit::emit_asset(record, &links)
-        .map_err(|error| error.to_string())?;
+    let triples =
+        medulla_catalog::emit::emit_asset(record, &links).map_err(|error| error.to_string())?;
     let response = dispatch_graph_op(
         state,
         graph,
@@ -61,7 +61,11 @@ pub(super) fn emit_failures() -> u64 {
 /// logged and counted on the registered `medulla_catalog_emit_failures_total` series, and the
 /// replayed request emits the nodes again.
 #[cfg(feature = "rdf")]
-pub(super) fn after_emit(response: Response, _req_id: u64, emitted: Result<(), String>) -> Response {
+pub(super) fn after_emit(
+    response: Response,
+    _req_id: u64,
+    emitted: Result<(), String>,
+) -> Response {
     if let Err(refusal) = emitted {
         medulla_kernel::metrics::process().catalog_emit_failed();
         tracing::error!(target: "medulla::catalog", %refusal, "catalog emit failed after the record committed");
@@ -337,7 +341,10 @@ mod run_trace_tests {
         let runs = run_traces(&[trace_node("run-1")], "t", "wi");
         assert_eq!(runs.len(), 1);
         assert_eq!(runs[0].run_id, "run-1");
-        assert_eq!((runs[0].tenant.as_str(), runs[0].work_item_id.as_str()), ("t", "wi"));
+        assert_eq!(
+            (runs[0].tenant.as_str(), runs[0].work_item_id.as_str()),
+            ("t", "wi")
+        );
         // The trace the caller sent names a definition; the run does not take it.
         assert!(runs[0].definition.is_none());
 
@@ -346,7 +353,10 @@ mod run_trace_tests {
             version: "1.2.0".into(),
             content_digest: format!("sha256:{}", "a".repeat(64)),
         };
-        assert_eq!(definition_of(Some(&view(Some(valid.clone())))), Some(valid.clone()));
+        assert_eq!(
+            definition_of(Some(&view(Some(valid.clone())))),
+            Some(valid.clone())
+        );
         assert!(definition_of(Some(&view(None))).is_none());
         assert!(definition_of(None).is_none());
         let badly_digested = WorkflowIdentity {
@@ -367,7 +377,10 @@ mod tests {
     #[test]
     fn a_failed_emit_after_a_committed_record_is_counted_and_never_fails_the_response() {
         let before = emit_failures();
-        let ok = Response::ok(7, medulla_protocol_types::protocol::ResultPayload::Raw(Vec::new()));
+        let ok = Response::ok(
+            7,
+            medulla_protocol_types::protocol::ResultPayload::Raw(Vec::new()),
+        );
         let answered = after_emit(ok, 7, Err("CATALOG_EMIT_FAILED: boom".to_string()));
         assert!(answered.error.is_none());
         assert_eq!(emit_failures(), before + 1);

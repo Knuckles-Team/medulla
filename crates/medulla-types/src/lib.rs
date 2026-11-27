@@ -21,13 +21,13 @@ pub mod refusal_code;
 pub mod reservation_machine;
 pub mod schedule_machine;
 // MEDULLA-INCREMENTAL-VIEWS-R016.1 — the materialization status as one explicit state machine.
-pub mod materialization_status_machine;
 pub mod edit_machine;
 pub mod gap_machine;
+pub mod materialization_status_machine;
 // MEDULLA-DATAPLAT-VOCAB-R009 — the data-platform lifecycles as explicit state machines.
 pub mod access_request_machine;
-pub mod clock;
 pub mod change_request_machine;
+pub mod clock;
 pub mod durable_unit_machine;
 pub mod glossary_term_machine;
 pub mod ontology_proposal_machine;
@@ -39,13 +39,13 @@ pub mod ontology_base;
 // MEDULLA-INGEST-WORKER-R604.1 — ingest lanes, queue classes and lane metrics.
 pub mod ingest_lanes;
 // MEDULLA-INGEST-WORKER-R900.4/R901.4/R902.4/R903.4/R904.4/R701.2/R701.4/R002.4/R003.4 — pure ingest refusal rules.
-pub mod dashboard;
 pub mod corpus_retrieval;
+pub mod dashboard;
 pub mod ingest_materialize;
 // MEDULLA-FEDERATED-QUERY-R654.1 — served CodeContext and Diagnose wire records.
 pub mod code_context;
-pub mod participant;
 pub mod media_tag;
+pub mod participant;
 // MEDULLA-MEDIA-VOCAB-R650.3 — the media derivation feature value.
 pub mod media_derivation;
 // MEDULLA-MEDIA-VOCAB-R001.102.1 — bookmark semantic search and relations wire types.
@@ -122,8 +122,8 @@ pub mod policy_document;
 // MEDULLA-SDLC-R014.13: the spec intelligence report.
 pub mod spec_report;
 // MEDULLA-SRC-AUTH-R801: the reviewed policy source binding records.
-pub mod policy_source;
 pub mod ingest_throughput;
+pub mod policy_source;
 // MEDULLA-INGEST-WORKER-R911.3: the ingest stage machine.
 pub mod ingest_machine;
 // MEDULLA-INGEST-WORKER-R911.4: the throughput window trust machine.

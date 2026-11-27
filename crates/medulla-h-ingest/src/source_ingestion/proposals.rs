@@ -260,7 +260,13 @@ mod tests {
     fn a_proposed_class_parses_only_in_its_one_form() {
         assert_eq!(proposal_class("proposal:p1#Thing"), Some(("p1", "Thing")));
         assert_eq!(proposal_class("proposal:p#1#Thing"), Some(("p", "1#Thing")));
-        for plain in ["Document", ":Document", "proposal:#Thing", "proposal:p1#", "proposal:p1"] {
+        for plain in [
+            "Document",
+            ":Document",
+            "proposal:#Thing",
+            "proposal:p1#",
+            "proposal:p1",
+        ] {
             assert_eq!(proposal_class(plain), None, "{plain}");
         }
     }

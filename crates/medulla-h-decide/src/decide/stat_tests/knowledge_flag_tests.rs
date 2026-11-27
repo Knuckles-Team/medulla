@@ -129,9 +129,13 @@ async fn raise_writes_one_node_and_dedups() {
     seed(&core);
     let who = raiser(TENANT);
 
-    let first = run(&h, &who, raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN))
-        .await
-        .expect("raises");
+    let first = run(
+        &h,
+        &who,
+        raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN),
+    )
+    .await
+    .expect("raises");
     let receipt: KnowledgeFlagReceipt = reply(&first);
     assert_eq!(receipt.outcome, Some(RaiseOutcome::Created));
     assert_eq!(receipt.flag.raise_count, 1);
@@ -152,9 +156,13 @@ async fn raise_writes_one_node_and_dedups() {
     commit(&core, &first);
 
     // The same flag again keeps one node and adds one to the count.
-    let again = run(&h, &who, raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN))
-        .await
-        .expect("dedups");
+    let again = run(
+        &h,
+        &who,
+        raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN),
+    )
+    .await
+    .expect("dedups");
     let repeat: KnowledgeFlagReceipt = reply(&again);
     assert_eq!(repeat.outcome, Some(RaiseOutcome::Deduplicated));
     assert_eq!(repeat.flag.raise_count, 2);
@@ -181,14 +189,28 @@ async fn each_refusal_writes_nothing() {
     let who = raiser(TENANT);
 
     let unknown_target = refusal(
-        run(&h, &who, raise_op("skill:nowhere@1", FlagKind::Wrong, "x", RUN)).await,
+        run(
+            &h,
+            &who,
+            raise_op("skill:nowhere@1", FlagKind::Wrong, "x", RUN),
+        )
+        .await,
     );
-    assert!(unknown_target.starts_with(FLAG_TARGET_UNKNOWN.as_str()), "{unknown_target}");
+    assert!(
+        unknown_target.starts_with(FLAG_TARGET_UNKNOWN.as_str()),
+        "{unknown_target}"
+    );
     let unknown_run = refusal(run(&h, &who, raise_op(TARGET, FlagKind::Wrong, "x", "run-9")).await);
-    assert!(unknown_run.starts_with(FLAG_RUN_UNKNOWN.as_str()), "{unknown_run}");
+    assert!(
+        unknown_run.starts_with(FLAG_RUN_UNKNOWN.as_str()),
+        "{unknown_run}"
+    );
     let big = "x".repeat(WHAT_OBSERVED_MAX_BYTES + 1);
     let too_large = refusal(run(&h, &who, raise_op(TARGET, FlagKind::Wrong, &big, RUN)).await);
-    assert!(too_large.starts_with(FLAG_TEXT_TOO_LARGE.as_str()), "{too_large}");
+    assert!(
+        too_large.starts_with(FLAG_TEXT_TOO_LARGE.as_str()),
+        "{too_large}"
+    );
 
     // The 21st open flag of one run is refused at the default knob.
     for index in 0..20 {
@@ -198,7 +220,14 @@ async fn each_refusal_writes_nothing() {
             .expect("within the quota");
         commit(&core, &write);
     }
-    let over = refusal(run(&h, &who, raise_op("topic:t20", FlagKind::Missing, "gap", RUN)).await);
+    let over = refusal(
+        run(
+            &h,
+            &who,
+            raise_op("topic:t20", FlagKind::Missing, "gap", RUN),
+        )
+        .await,
+    );
     assert!(over.starts_with(FLAG_RUN_QUOTA_EXCEEDED.as_str()), "{over}");
 
     // Resolve without the curate scope, a missing flag and an illegal event.
@@ -214,7 +243,10 @@ async fn each_refusal_writes_nothing() {
         fixed_by: None,
     };
     let denied = refusal(run(&h, &who, resolve(&flag_id, FlagResolution::Dismiss)).await);
-    assert!(denied.starts_with(FLAG_RESOLVE_ROLE_REQUIRED.as_str()), "{denied}");
+    assert!(
+        denied.starts_with(FLAG_RESOLVE_ROLE_REQUIRED.as_str()),
+        "{denied}"
+    );
     let boss = curator(TENANT);
     let missing = refusal(run(&h, &boss, resolve("flag:none", FlagResolution::Dismiss)).await);
     assert!(missing.starts_with(FLAG_NOT_FOUND.as_str()), "{missing}");
@@ -223,7 +255,10 @@ async fn each_refusal_writes_nothing() {
         .expect("dismisses");
     commit(&core, &done);
     let illegal = refusal(run(&h, &boss, resolve(&flag_id, FlagResolution::Adopt)).await);
-    assert!(illegal.starts_with(FLAG_STATE_ILLEGAL.as_str()), "{illegal}");
+    assert!(
+        illegal.starts_with(FLAG_STATE_ILLEGAL.as_str()),
+        "{illegal}"
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R708.5
@@ -238,15 +273,23 @@ async fn flag_is_agent_asserted_and_linked_to_trace_and_correction() {
         json!({"type": "Correction", "correction_id": "c1", "tenant_id": TENANT}),
     );
     let boss = curator(TENANT);
-    let raised = run(&h, &boss, raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN))
-        .await
-        .expect("raises");
+    let raised = run(
+        &h,
+        &boss,
+        raise_op(TARGET, FlagKind::Wrong, "step 3 is wrong", RUN),
+    )
+    .await
+    .expect("raises");
     let receipt: KnowledgeFlagReceipt = reply(&raised);
     commit(&core, &raised);
     // Every node and edge of the raise shares the one receipt id.
     for operation in &raised.operations {
         let properties = &operation["properties"];
-        assert_eq!(properties["receipt_id"], receipt.receipt_id.as_str(), "{operation}");
+        assert_eq!(
+            properties["receipt_id"],
+            receipt.receipt_id.as_str(),
+            "{operation}"
+        );
     }
     let resolved = run(
         &h,

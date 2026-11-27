@@ -206,12 +206,16 @@ pub fn retention_plan(
             } else {
                 None
             };
-            let past_deadline = superseded_at
-                .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
+            let past_deadline =
+                superseded_at.is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
             if revision < first_kept || past_deadline {
-                plan.released.push((SnapshotSlot::Revision(revision), row.head.content_digest.to_hex()));
+                plan.released.push((
+                    SnapshotSlot::Revision(revision),
+                    row.head.content_digest.to_hex(),
+                ));
             } else {
-                plan.held.push((SnapshotSlot::Revision(revision), row.content));
+                plan.held
+                    .push((SnapshotSlot::Revision(revision), row.content));
             }
         }
     }
@@ -221,9 +225,11 @@ pub fn retention_plan(
                 .resolved_at_ms
                 .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
         if past_deadline {
-            plan.released.push((SnapshotSlot::Candidate(number), row.content_digest.to_hex()));
+            plan.released
+                .push((SnapshotSlot::Candidate(number), row.content_digest.to_hex()));
         } else {
-            plan.held.push((SnapshotSlot::Candidate(number), row.content));
+            plan.held
+                .push((SnapshotSlot::Candidate(number), row.content));
         }
     }
     plan
@@ -275,7 +281,13 @@ mod retention_tests {
     use super::*;
     use medulla_mutation_types::memory_sync::{RequestId, SnapshotProvenance};
 
-    fn put_revision(core: &GraphCore, doc: &DocId, revision: u64, committed_at_ms: u64, head: bool) {
+    fn put_revision(
+        core: &GraphCore,
+        doc: &DocId,
+        revision: u64,
+        committed_at_ms: u64,
+        head: bool,
+    ) {
         let content = format!("content-{revision}");
         let row = RevisionRow {
             label: REVISION_LABEL.to_string(),
@@ -307,8 +319,14 @@ mod retention_tests {
     #[test]
     fn revision_and_candidate_holders_never_share_an_id() {
         let doc = DocId::new("notes/a.md").unwrap();
-        assert_eq!(SnapshotSlot::Revision(2).holder_id(&doc), "memory_snapshot:notes/a.md@2");
-        assert_eq!(SnapshotSlot::Candidate(2).holder_id(&doc), "memory_snapshot:notes/a.md@c2");
+        assert_eq!(
+            SnapshotSlot::Revision(2).holder_id(&doc),
+            "memory_snapshot:notes/a.md@2"
+        );
+        assert_eq!(
+            SnapshotSlot::Candidate(2).holder_id(&doc),
+            "memory_snapshot:notes/a.md@c2"
+        );
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R085.7
@@ -327,6 +345,9 @@ mod retention_tests {
         assert_eq!(after.released.len(), 1);
         assert_eq!(after.released[0].0, SnapshotSlot::Revision(1));
         // The head never releases on a deadline.
-        assert_eq!(after.held, vec![(SnapshotSlot::Revision(2), "content-2".to_string())]);
+        assert_eq!(
+            after.held,
+            vec![(SnapshotSlot::Revision(2), "content-2".to_string())]
+        );
     }
 }

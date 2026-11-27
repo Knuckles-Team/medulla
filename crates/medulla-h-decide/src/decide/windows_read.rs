@@ -52,9 +52,8 @@ fn windows_of(
         for key in ENGINE_KEYS {
             props.remove(key);
         }
-        let window: RunObservationWindow =
-            serde_json::from_value(serde_json::Value::Object(props))
-                .map_err(|error| format!("observation window '{node_id}' is malformed: {error}"))?;
+        let window: RunObservationWindow = serde_json::from_value(serde_json::Value::Object(props))
+            .map_err(|error| format!("observation window '{node_id}' is malformed: {error}"))?;
         match newest.get(&window.window_id) {
             Some(held) if held.window_revision >= window.window_revision => {}
             _ => {
@@ -162,7 +161,11 @@ mod tests {
         };
         let kept = select_windows(read.clone(), 1_100_000, &knobs);
         let kept_ids: Vec<&str> = kept.iter().map(|w| w.window_id.as_str()).collect();
-        assert_eq!(kept_ids, vec!["w-b", "w-a"], "the old window is out of the age bound");
+        assert_eq!(
+            kept_ids,
+            vec!["w-b", "w-a"],
+            "the old window is out of the age bound"
+        );
         let one = select_windows(read, 1_100_000, &WidthKnobs { window: 1, ..knobs });
         assert_eq!(one.len(), 1, "at most width.window windows");
         assert!(windows_of(Vec::new(), "run-1").unwrap().is_empty());

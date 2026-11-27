@@ -42,7 +42,10 @@ fn edit(kind: SymbolEditKind, symbol_id: String, new_text: &str) -> SymbolEdit {
 fn project(parsed: &ParseResult, name: &str, replacement: &str) -> Vec<(String, Vec<u8>)> {
     let symbol = parsed.symbols.iter().find(|s| s.name == name).unwrap();
     let mut text = BASE.to_string();
-    text.replace_range(symbol.byte_start as usize..symbol.byte_end as usize, replacement);
+    text.replace_range(
+        symbol.byte_start as usize..symbol.byte_end as usize,
+        replacement,
+    );
     vec![(PATH.to_string(), text.into_bytes())]
 }
 
@@ -89,7 +92,11 @@ fn reparse_confirms_edit_and_untouched_symbols() {
     // A projected file that does not parse refuses EDIT_UNPARSEABLE.
     let broken = project(&old, "beta", "fn beta( {");
     assert_eq!(
-        verify_roundtrip(&edit(SymbolEditKind::ReplaceSymbol, beta.clone(), "x"), old_files, &broken),
+        verify_roundtrip(
+            &edit(SymbolEditKind::ReplaceSymbol, beta.clone(), "x"),
+            old_files,
+            &broken
+        ),
         Err(RoundtripRefusal::Unparseable { path: PATH.into() })
     );
 
@@ -114,7 +121,9 @@ fn reparse_confirms_edit_and_untouched_symbols() {
 
     // An untouched symbol whose bytes changed outside the edit mismatches.
     let mut tampered = project(&old, "beta", replaced);
-    let text = String::from_utf8(tampered[0].1.clone()).unwrap().replace("    3", "    33");
+    let text = String::from_utf8(tampered[0].1.clone())
+        .unwrap()
+        .replace("    3", "    33");
     tampered[0].1 = text.into_bytes();
     match verify_roundtrip(
         &edit(SymbolEditKind::ReplaceSymbol, beta, replaced),

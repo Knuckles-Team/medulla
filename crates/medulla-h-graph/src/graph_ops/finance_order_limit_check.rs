@@ -108,18 +108,31 @@ pub(super) fn read_policy(
             .ok_or_else(|| missing(format!("trading policy {policy_id} has no {name}")))
     };
     let json = |name: &str| -> Result<serde_json::Value, Refusal> {
-        serde_json::from_str(&text(name)?)
-            .map_err(|_| missing(format!("trading policy {policy_id} has an unreadable {name}")))
+        serde_json::from_str(&text(name)?).map_err(|_| {
+            missing(format!(
+                "trading policy {policy_id} has an unreadable {name}"
+            ))
+        })
     };
-    let revision = text("tradingPolicyRevision")?
-        .parse::<u64>()
-        .map_err(|_| missing(format!("trading policy {policy_id} has a non-numeric revision")))?;
+    let revision = text("tradingPolicyRevision")?.parse::<u64>().map_err(|_| {
+        missing(format!(
+            "trading policy {policy_id} has a non-numeric revision"
+        ))
+    })?;
     let leverage_limits = json("tradingPolicyLeverageLimits")?;
     let risk_limits = json("tradingPolicyRiskLimits")?;
     let designated_approvers: Vec<String> = serde_json::from_value(json("tradingPolicyApprovers")?)
-        .map_err(|_| missing(format!("trading policy {policy_id} has unreadable approvers")))?;
-    let parsed_risk: Vec<LimitRule> = serde_json::from_value(risk_limits.clone())
-        .map_err(|_| missing(format!("trading policy {policy_id} has unreadable risk limits")))?;
+        .map_err(|_| {
+            missing(format!(
+                "trading policy {policy_id} has unreadable approvers"
+            ))
+        })?;
+    let parsed_risk: Vec<LimitRule> =
+        serde_json::from_value(risk_limits.clone()).map_err(|_| {
+            missing(format!(
+                "trading policy {policy_id} has unreadable risk limits"
+            ))
+        })?;
     let parsed_leverage: Vec<LeveragePolicy> = serde_json::from_value(leverage_limits.clone())
         .map_err(|_| {
             missing(format!(
@@ -239,7 +252,12 @@ fn handle_limit_check(ctx: GraphOpsContext<'_>, proposal: &OrderProposalSnapshot
     match verify_proposal(ctx.core, &scope, proposal) {
         Ok((_, _, breaches)) => {
             let result = OrderLimitCheckResult {
-                outcome: if breaches.is_empty() { "Passed" } else { "Abstained" }.to_owned(),
+                outcome: if breaches.is_empty() {
+                    "Passed"
+                } else {
+                    "Abstained"
+                }
+                .to_owned(),
                 reasons: reasons_of(&breaches),
             };
             Response::ok(

@@ -176,11 +176,12 @@ async fn enrich(
         ))
     })
     .await;
-    let (document, decided, vectors, embedded_units, embedder, sections, tree_check, links) = match embedded {
-        Ok(Ok(parts)) => parts,
-        Ok(Err(error)) => return Response::err(req_id, error),
-        Err(response) => return response,
-    };
+    let (document, decided, vectors, embedded_units, embedder, sections, tree_check, links) =
+        match embedded {
+            Ok(Ok(parts)) => parts,
+            Ok(Err(error)) => return Response::err(req_id, error),
+            Err(response) => return response,
+        };
     let admissions = decided.iter().map(|u| u.admission.clone()).collect();
     let (spans, digests): (Vec<_>, Vec<_>) = decided
         .into_iter()
@@ -193,7 +194,8 @@ async fn enrich(
             medulla_types::msgpack::decode_property_value(&bytes).ok()
         };
         // The same ChunkFacts scope key the facts batch handler derives.
-        let scope = medulla_h_ingest::source_ingestion::facts::chunk_facts_scope(ctx.verified_context);
+        let scope =
+            medulla_h_ingest::source_ingestion::facts::chunk_facts_scope(ctx.verified_context);
         match web::prior_fact_supersession(&scope, &prior, &read) {
             Ok(methods) => methods,
             Err(error) => return Response::err(req_id, error),
@@ -210,10 +212,7 @@ async fn enrich(
                 return Response::err(req_id, format!("{}: {}", refusal.code, refusal.detail))
             }
         };
-        let chunk_texts: Vec<&str> = spans
-            .iter()
-            .map(|span| span.text(&document.text))
-            .collect();
+        let chunk_texts: Vec<&str> = spans.iter().map(|span| span.text(&document.text)).collect();
         let detections = match scan_chunks(
             &doc_id,
             &chunk_texts,
@@ -506,7 +505,10 @@ async fn enqueue_extraction(
     if chunks.is_empty() {
         return Vec::new();
     }
-    vec!["EXTRACTION_ENQUEUE_FAILED: UNAVAILABLE: ingest enqueue requires the `jobs` feature".to_string()]
+    vec![
+        "EXTRACTION_ENQUEUE_FAILED: UNAVAILABLE: ingest enqueue requires the `jobs` feature"
+            .to_string(),
+    ]
 }
 
 #[cfg(all(feature = "query", feature = "modality-serving"))]

@@ -908,8 +908,14 @@ async fn signed_public_dispatch_lists_the_tenants_library_in_cursor_pages() {
     assert_eq!(first_page.entries.len(), 1);
     assert_eq!(first_page.entries[0].agent_id, "agent-a");
     assert_eq!(first_page.entries[0].entry_revision, 1);
-    assert_eq!(first_page.entries[0].lifecycle, AgentLibraryLifecycle::Published);
-    let cursor = first_page.next_cursor.clone().expect("a second page remains");
+    assert_eq!(
+        first_page.entries[0].lifecycle,
+        AgentLibraryLifecycle::Published
+    );
+    let cursor = first_page
+        .next_cursor
+        .clone()
+        .expect("a second page remains");
     let second_page = page_of(
         dispatch_library_op(
             &state,
@@ -958,7 +964,10 @@ async fn signed_public_dispatch_lists_the_tenants_library_in_cursor_pages() {
         list_op("tenant-other", None, None, None),
     )
     .await;
-    assert!(format!("{foreign:?}").contains("ACCESS_DENIED"), "{foreign:?}");
+    assert!(
+        format!("{foreign:?}").contains("ACCESS_DENIED"),
+        "{foreign:?}"
+    );
     let other_claims = claims(
         "caller-a",
         "tenant-other",
@@ -987,7 +996,10 @@ async fn signed_public_dispatch_lists_the_tenants_library_in_cursor_pages() {
         list_op("tenant-shared", None, Some(0), None),
     )
     .await;
-    assert!(format!("{bad_limit:?}").contains("limit must be"), "{bad_limit:?}");
+    assert!(
+        format!("{bad_limit:?}").contains("limit must be"),
+        "{bad_limit:?}"
+    );
     let write_only = dispatch_library_op(
         &state,
         secret,
@@ -1022,7 +1034,12 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
         let mut guard = state.write().await;
         guard.ensure_agent_library().unwrap()
     };
-    let write_claims = claims("caller-a", "tenant-shared", &["agent:library-write"], "policy-test");
+    let write_claims = claims(
+        "caller-a",
+        "tenant-shared",
+        &["agent:library-write"],
+        "policy-test",
+    );
     // Seeding the agent's pins publishes its tool component `tool:search` beside it.
     let published = dispatch_library_op(
         &state,
@@ -1039,7 +1056,12 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
     .await;
     assert!(published.error.is_none(), "publish failed: {published:?}");
 
-    let read_claims = claims("caller-a", "tenant-shared", &["agent:library-read"], "policy-test");
+    let read_claims = claims(
+        "caller-a",
+        "tenant-shared",
+        &["agent:library-read"],
+        "policy-test",
+    );
     let get = |kind, id: &str| AgentLibraryOp::Get {
         tenant_id: "tenant-shared".to_string(),
         kind,
@@ -1050,14 +1072,29 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
     };
 
     let tool = head_of(
-        dispatch_library_op(&state, secret, &read_claims, 702, get(AgentLibraryKind::Tool, "tool:search"))
-            .await,
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            702,
+            get(AgentLibraryKind::Tool, "tool:search"),
+        )
+        .await,
     )
     .expect("the tool is held");
-    assert_eq!((tool.kind, tool.agent_id.as_str()), (AgentLibraryKind::Tool, "tool:search"));
+    assert_eq!(
+        (tool.kind, tool.agent_id.as_str()),
+        (AgentLibraryKind::Tool, "tool:search")
+    );
     let agent = head_of(
-        dispatch_library_op(&state, secret, &read_claims, 703, get(AgentLibraryKind::Agent, "agent-a"))
-            .await,
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            703,
+            get(AgentLibraryKind::Agent, "agent-a"),
+        )
+        .await,
     )
     .expect("the agent is held");
     assert_eq!(agent.kind, AgentLibraryKind::Agent);
@@ -1067,9 +1104,8 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
         (AgentLibraryKind::Tool, "ghost"),
         (AgentLibraryKind::Agent, "ghost"),
     ] {
-        let absent = head_of(
-            dispatch_library_op(&state, secret, &read_claims, 704, get(kind, id)).await,
-        );
+        let absent =
+            head_of(dispatch_library_op(&state, secret, &read_claims, 704, get(kind, id)).await);
         assert!(absent.is_none(), "{kind:?} {id}");
     }
 
@@ -1083,24 +1119,50 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
     };
     let tools: AgentLibraryPage = medulla_server_api::test_support::decode_raw_response(
         "Agent Library list tools",
-        dispatch_library_op(&state, secret, &read_claims, 705, list_kind(AgentLibraryKind::Tool)).await,
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            705,
+            list_kind(AgentLibraryKind::Tool),
+        )
+        .await,
     );
     assert_eq!(
-        tools.entries.iter().map(|entry| entry.agent_id.as_str()).collect::<Vec<_>>(),
+        tools
+            .entries
+            .iter()
+            .map(|entry| entry.agent_id.as_str())
+            .collect::<Vec<_>>(),
         ["tool:search"]
     );
-    assert!(tools.entries.iter().all(|entry| entry.kind == AgentLibraryKind::Tool));
+    assert!(tools
+        .entries
+        .iter()
+        .all(|entry| entry.kind == AgentLibraryKind::Tool));
     let agents: AgentLibraryPage = medulla_server_api::test_support::decode_raw_response(
         "Agent Library list agents",
-        dispatch_library_op(&state, secret, &read_claims, 706, list_op("tenant-shared", None, None, None))
-            .await,
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            706,
+            list_op("tenant-shared", None, None, None),
+        )
+        .await,
     );
     assert_eq!(agents.entries.len(), 1);
     assert_eq!(agents.entries[0].kind, AgentLibraryKind::Agent);
 
     // The engine holds no suggestions, and a tenant other than the verified one is refused.
-    let suggestion =
-        dispatch_library_op(&state, secret, &read_claims, 707, list_kind(AgentLibraryKind::Suggestion)).await;
+    let suggestion = dispatch_library_op(
+        &state,
+        secret,
+        &read_claims,
+        707,
+        list_kind(AgentLibraryKind::Suggestion),
+    )
+    .await;
     assert!(
         format!("{suggestion:?}").contains("PARAMETER_INVALID"),
         "{suggestion:?}"
@@ -1117,5 +1179,8 @@ async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agent
         },
     )
     .await;
-    assert!(format!("{foreign:?}").contains("ACCESS_DENIED"), "{foreign:?}");
+    assert!(
+        format!("{foreign:?}").contains("ACCESS_DENIED"),
+        "{foreign:?}"
+    );
 }

@@ -152,7 +152,11 @@ fn commit_seqs(scope: &IndexRepositoryScope) -> std::collections::BTreeMap<Strin
                 .filter(|parent| !seqs.contains_key(*parent))
                 .collect();
             if pending.is_empty() || !visiting.insert(digest) {
-                let seq = parents.iter().filter_map(|p| seqs.get(*p)).max().map_or(1, |m| m + 1);
+                let seq = parents
+                    .iter()
+                    .filter_map(|p| seqs.get(*p))
+                    .max()
+                    .map_or(1, |m| m + 1);
                 seqs.insert(digest.to_string(), seq);
                 stack.pop();
             } else {

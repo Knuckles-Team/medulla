@@ -78,7 +78,11 @@ fn not_found(drift_id: &str) -> String {
 
 /// One drift of `tenant`. Another tenant's drift and an unknown id refuse identically.
 /// `SchemaDriftGet`.
-pub fn get(rows: &[QuarantineRow], tenant: &str, drift_id: &str) -> Result<DriftRecordView, String> {
+pub fn get(
+    rows: &[QuarantineRow],
+    tenant: &str,
+    drift_id: &str,
+) -> Result<DriftRecordView, String> {
     rows.iter()
         .filter(|row| row.0 == drift_id)
         .find_map(|row| Some((row, evidence_of(row, tenant)?)))
@@ -199,9 +203,11 @@ mod tests {
         let listed = list(&rows, "tenant-a", None);
         assert_eq!(listed.drifts.len(), 1);
         assert_eq!(listed.drifts[0].drift_id, "q1");
-        assert!(list(&rows, "tenant-a", Some(&ResourceId::new("other").unwrap()))
-            .drifts
-            .is_empty());
+        assert!(
+            list(&rows, "tenant-a", Some(&ResourceId::new("other").unwrap()))
+                .drifts
+                .is_empty()
+        );
         assert!(get(&rows, "tenant-a", "q1").is_ok());
         // Another tenant's drift and an unknown id answer the same body but for the id asked.
         let other = get(&rows, "tenant-a", "q2").unwrap_err();
@@ -213,7 +219,12 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R806
     #[test]
     fn the_candidate_is_derived_from_the_stored_shape_and_the_approval_must_bind_its_digest() {
-        let rows = vec![row("q1", "tenant-a", "items", serde_json::json!({"name": 7}))];
+        let rows = vec![row(
+            "q1",
+            "tenant-a",
+            "items",
+            serde_json::json!({"name": 7}),
+        )];
         let proposal = repair_proposal(&rows, "tenant-a", &target("q1", "items")).unwrap();
         assert_eq!(proposal.source_id, "approved:items");
         assert!(proposal.candidate.fields.contains_key("name"));
@@ -226,9 +237,8 @@ mod tests {
             &proposal.candidate_digest
         )
         .is_ok());
-        let refused =
-            approved_proposal(&rows, "tenant-a", &target("q1", "items"), &"0".repeat(64))
-                .unwrap_err();
+        let refused = approved_proposal(&rows, "tenant-a", &target("q1", "items"), &"0".repeat(64))
+            .unwrap_err();
         assert!(refused.starts_with(REPAIR_DIGEST_MISMATCH), "{refused}");
         assert!(repair_proposal(&rows, "tenant-a", &target("q1", "missing"))
             .unwrap_err()

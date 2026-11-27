@@ -1,10 +1,10 @@
 use super::*;
 
-use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 #[cfg(feature = "jobs")]
 use medulla_ingestion_types::ingest_drain::DrainState;
 #[cfg(feature = "jobs")]
 use medulla_protocol_types::result_contract::coordination as coordination_results;
+use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 
 /// Source ingestion: parse a file or a batch of files, index a repository,
 /// observe a screen. All are stateless parses that never touch `state`.
@@ -40,9 +40,7 @@ pub async fn dispatch_source_ingest_methods(
         }
         // MEDULLA-INGEST-WORKER-R001.11: the served backpressure read.
         #[cfg(feature = "jobs")]
-        Method::IngestQueueDepth { queue } => {
-            dispatch_boxed(ingest_queue_depth(ctx, queue)).await
-        }
+        Method::IngestQueueDepth { queue } => dispatch_boxed(ingest_queue_depth(ctx, queue)).await,
         // MEDULLA-INGEST-WORKER-R605.2, R605.5: the chunked drain start and its status.
         #[cfg(feature = "jobs")]
         Method::StartSourceDrain {
@@ -302,12 +300,13 @@ async fn routed_graph_of(
     key: &str,
 ) -> Option<String> {
     let id = medulla_ingestion_types::ingest_drain::route_node_id(scope, key)?;
-    let properties =
-        medulla_server_graph::dispatch::graph_client::read_node(state, target, &id)
-            .await
-            .ok()
-            .flatten()?;
-    if properties.get("tenant_id").and_then(serde_json::Value::as_str)
+    let properties = medulla_server_graph::dispatch::graph_client::read_node(state, target, &id)
+        .await
+        .ok()
+        .flatten()?;
+    if properties
+        .get("tenant_id")
+        .and_then(serde_json::Value::as_str)
         != Some(target.verified.tenant())
     {
         return None;
@@ -518,12 +517,12 @@ pub(super) async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Resp
         Ok(None) => return ack_plain(ctx, plain).await,
         Err(error) => return Response::err(req_id, error),
     };
-    let page = match serde_json::from_str::<medulla_source_types::ingest_job::IngestJobEnvelope>(
-        &payload,
-    ) {
-        Ok(envelope) => envelope.page,
-        Err(_) => None,
-    };
+    let page =
+        match serde_json::from_str::<medulla_source_types::ingest_job::IngestJobEnvelope>(&payload)
+        {
+            Ok(envelope) => envelope.page,
+            Err(_) => None,
+        };
     let Some(page) = page else {
         return invalid("the task is not a drain page".to_string());
     };

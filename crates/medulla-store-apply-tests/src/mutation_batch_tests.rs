@@ -5837,7 +5837,9 @@ fn no_graph_version_bump_goes_unpublished() {
     publisher
         .refuse
         .store(true, std::sync::atomic::Ordering::SeqCst);
-    let (group, batches) = db.admit_maintenance(&members, "maintenance-refused").unwrap();
+    let (group, batches) = db
+        .admit_maintenance(&members, "maintenance-refused")
+        .unwrap();
     let write = medulla_store::redb_store::shard::ShardWrite::open(&db, &group, &members, &batches)
         .unwrap();
     write.finish().unwrap();

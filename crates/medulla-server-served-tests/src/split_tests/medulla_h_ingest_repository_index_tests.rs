@@ -330,7 +330,11 @@ fn similar_to_removal_keeps_the_calls_edge_between_the_same_pair() {
     };
     let core = GraphCore::new();
     for id in ["symbol:a", "symbol:b"] {
-        core.add_node(id.to_string(), rmp_serde::to_vec_named(&std::collections::BTreeMap::from([("type", "SYMBOL")])).expect("node"));
+        core.add_node(
+            id.to_string(),
+            rmp_serde::to_vec_named(&std::collections::BTreeMap::from([("type", "SYMBOL")]))
+                .expect("node"),
+        );
     }
     for kind in ["calls", "similar_to"] {
         core.add_typed_edge(
@@ -354,7 +358,11 @@ fn similar_to_removal_keeps_the_calls_edge_between_the_same_pair() {
     else {
         unreachable!("constructed above");
     };
-    core.remove_edge_scoped(source_id.clone(), target_id.clone(), relationship.as_deref());
+    core.remove_edge_scoped(
+        source_id.clone(),
+        target_id.clone(),
+        relationship.as_deref(),
+    );
     let kinds: Vec<String> = core
         .typed_edges_between("symbol:a", "symbol:b")
         .into_iter()

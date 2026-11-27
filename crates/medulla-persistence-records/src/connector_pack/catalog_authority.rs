@@ -13,8 +13,8 @@ use medulla_catalog_types::{
     connector_pack::catalog_authority::joined_configuration_digest,
     connector_pack::reconcile_catalog_authority, connector_pack::reconcile_joined_configuration,
     connector_pack::tenant_reconciliation_receipt, connector_pack::McpCatalogAttestation,
-    connector_pack::McpCatalogReconciliationReceipt, connector_pack::McpCatalogAuthorityCandidate,
-    connector_pack::McpCatalogAuthorityRow, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::McpCatalogAuthorityCandidate, connector_pack::McpCatalogAuthorityRow,
+    connector_pack::McpCatalogReconciliationReceipt, connector_pack::McpCatalogSnapshotBinding,
     connector_pack::McpJoinedConfigurationRow,
 };
 use medulla_mutation_types::mutation_scope::DurabilityDomain;

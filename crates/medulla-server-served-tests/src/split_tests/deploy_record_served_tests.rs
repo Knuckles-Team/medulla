@@ -124,10 +124,19 @@ async fn a_record_is_written_once_replays_on_retry_and_refuses_a_different_body(
         served.verified(TENANT, WRITE, put(body('1'))).await,
     );
     assert!(!first.replayed);
-    assert!(first.recorded_at_ms > 0, "the engine clock stamps the record");
-    assert!(!first.actor.is_empty(), "the verified principal is the actor");
+    assert!(
+        first.recorded_at_ms > 0,
+        "the engine clock stamps the record"
+    );
+    assert!(
+        !first.actor.is_empty(),
+        "the verified principal is the actor"
+    );
     assert!(first.node_id.starts_with("deploy_record:"));
-    assert!(!first.node_id.contains(TENANT), "no tenant name in a node id");
+    assert!(
+        !first.node_id.contains(TENANT),
+        "no tenant name in a node id"
+    );
 
     // The same body again, a day later by the engine clock, replays the first write unchanged.
     let retry: DeployRecordReceipt = ok(
@@ -136,8 +145,16 @@ async fn a_record_is_written_once_replays_on_retry_and_refuses_a_different_body(
     );
     assert!(retry.replayed);
     assert_eq!(
-        (retry.recorded_at_ms, retry.actor.as_str(), retry.seal.as_str()),
-        (first.recorded_at_ms, first.actor.as_str(), first.seal.as_str())
+        (
+            retry.recorded_at_ms,
+            retry.actor.as_str(),
+            retry.seal.as_str()
+        ),
+        (
+            first.recorded_at_ms,
+            first.actor.as_str(),
+            first.seal.as_str()
+        )
     );
 
     // The stored record reads back as written, in canonical order, with the sealed node behind it.
@@ -148,14 +165,20 @@ async fn a_record_is_written_once_replays_on_retry_and_refuses_a_different_body(
     assert_eq!(stored.record.image_digests, vec![digest('a'), digest('b')]);
     assert_eq!(stored.record.nodes[0].node, "api");
     assert_eq!(stored.seal, first.seal);
-    let node = served.properties(&first.node_id).await.expect("the record node");
+    let node = served
+        .properties(&first.node_id)
+        .await
+        .expect("the record node");
     assert_eq!(node["deploy_seal"], json!(first.seal));
 
     // A different body for the same plan digest is sealed out and changes nothing.
     let mut changed = body('1');
     changed.target = "staging".to_string();
     let refused = served.verified(TENANT, WRITE, put(changed)).await;
-    assert!(refusal_text(&refused).contains("DEPLOY_RECORD_SEALED"), "{refused:?}");
+    assert!(
+        refusal_text(&refused).contains("DEPLOY_RECORD_SEALED"),
+        "{refused:?}"
+    );
     let again: DeployRecord = ok(
         "DeployRecordGet after a refused overwrite",
         served.verified(TENANT, READ, get('1')).await,
@@ -166,7 +189,10 @@ async fn a_record_is_written_once_replays_on_retry_and_refuses_a_different_body(
     let mut bad = body('2');
     bad.plan_digest = "latest".to_string();
     let invalid = served.verified(TENANT, WRITE, put(bad)).await;
-    assert!(refusal_text(&invalid).contains("DEPLOY_RECORD_INVALID"), "{invalid:?}");
+    assert!(
+        refusal_text(&invalid).contains("DEPLOY_RECORD_INVALID"),
+        "{invalid:?}"
+    );
 }
 
 // spec: MEDULLA-SDLC-R002.8
@@ -186,7 +212,9 @@ async fn list_pages_newest_first_by_a_tenant_bound_cursor() {
     loop {
         let page: DeployRecordPage = ok(
             "DeployRecordList",
-            served.verified(TENANT, READ, list(Some(2), cursor.clone())).await,
+            served
+                .verified(TENANT, READ, list(Some(2), cursor.clone()))
+                .await,
         );
         seen.extend(page.records.iter().map(|row| row.plan_digest.clone()));
         pages += 1;
@@ -208,11 +236,22 @@ async fn list_pages_newest_first_by_a_tenant_bound_cursor() {
     .expect("two records remain");
     admit(&served, OTHER_PRINCIPAL, false).await;
     let transplanted = served
-        .verified_as(OTHER_PRINCIPAL, OTHER_TENANT, READ, list(None, Some(minted)))
+        .verified_as(
+            OTHER_PRINCIPAL,
+            OTHER_TENANT,
+            READ,
+            list(None, Some(minted)),
+        )
         .await;
-    assert!(refusal_text(&transplanted).contains("DEPLOY_RECORD_INVALID"), "{transplanted:?}");
+    assert!(
+        refusal_text(&transplanted).contains("DEPLOY_RECORD_INVALID"),
+        "{transplanted:?}"
+    );
     let zero = served.verified(TENANT, READ, list(Some(0), None)).await;
-    assert!(refusal_text(&zero).contains("DEPLOY_RECORD_INVALID"), "{zero:?}");
+    assert!(
+        refusal_text(&zero).contains("DEPLOY_RECORD_INVALID"),
+        "{zero:?}"
+    );
 }
 
 // spec: MEDULLA-SDLC-R002.8
@@ -232,7 +271,10 @@ async fn another_tenant_sees_no_record_and_refuses_exactly_like_a_missing_one() 
         .verified_as(OTHER_PRINCIPAL, OTHER_TENANT, READ, get('9'))
         .await;
     let foreign_text = refusal_text(&foreign);
-    assert!(foreign_text.contains("DEPLOY_RECORD_NOT_FOUND"), "{foreign_text}");
+    assert!(
+        foreign_text.contains("DEPLOY_RECORD_NOT_FOUND"),
+        "{foreign_text}"
+    );
     assert_eq!(
         foreign_text,
         refusal_text(&missing),
@@ -269,11 +311,20 @@ async fn another_tenant_sees_no_record_and_refuses_exactly_like_a_missing_one() 
 async fn the_write_needs_the_lifecycle_write_scope_and_the_reads_the_read_scope() {
     let served = Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "ResearchPaper")]).await;
     let by_reader = served.verified(TENANT, READ, put(body('1'))).await;
-    assert!(by_reader.error.is_some(), "a read scope must not write: {by_reader:?}");
+    assert!(
+        by_reader.error.is_some(),
+        "a read scope must not write: {by_reader:?}"
+    );
     let by_writer = served.verified(TENANT, WRITE, get('1')).await;
-    assert!(by_writer.error.is_some(), "a write scope must not read: {by_writer:?}");
+    assert!(
+        by_writer.error.is_some(),
+        "a write scope must not read: {by_writer:?}"
+    );
     let listed = served.verified(TENANT, WRITE, list(None, None)).await;
-    assert!(listed.error.is_some(), "a write scope must not list: {listed:?}");
+    assert!(
+        listed.error.is_some(),
+        "a write scope must not list: {listed:?}"
+    );
 }
 
 fn rule(id: &str, tenant: &str, operation: &str, quorum: u64, role: &str) -> serde_json::Value {
@@ -312,25 +363,49 @@ async fn the_gate_answers_from_the_rule_nodes_and_follows_a_change_to_them() {
         &served,
         "rules-1",
         json!([
-            rule("rule:promote", TENANT, "deploy.promotions.apply", 1, "release-manager"),
+            rule(
+                "rule:promote",
+                TENANT,
+                "deploy.promotions.apply",
+                1,
+                "release-manager"
+            ),
             rule("rule:filing", TENANT, "legal.filings.submit", 2, "counsel"),
             rule("rule:waived", TENANT, "notes.drafts.save", 0, "owner"),
             // A rule of another tenant never answers for this one.
-            rule("rule:foreign", OTHER_TENANT, "money.transfer", 2, "treasurer"),
+            rule(
+                "rule:foreign",
+                OTHER_TENANT,
+                "money.transfer",
+                2,
+                "treasurer"
+            ),
         ]),
     )
     .await;
     let policy = ["policy:read"];
 
-    let single = answer(served.verified(TENANT, &policy, ask("deploy.promotions.apply")).await);
+    let single = answer(
+        served
+            .verified(TENANT, &policy, ask("deploy.promotions.apply"))
+            .await,
+    );
     assert_eq!(single.gate, ApprovalGate::Single);
     assert_eq!(single.gate_class, Some(GateClass::Publishing));
     assert_eq!(single.approver_roles, vec!["release-manager".to_string()]);
     assert_eq!(single.expires_after_ms, Some(3_600_000));
     assert_eq!(single.rule_ids, vec!["rule:promote".to_string()]);
-    let two = answer(served.verified(TENANT, &policy, ask("legal.filings.submit")).await);
+    let two = answer(
+        served
+            .verified(TENANT, &policy, ask("legal.filings.submit"))
+            .await,
+    );
     assert_eq!(two.gate, ApprovalGate::TwoPerson);
-    let none = answer(served.verified(TENANT, &policy, ask("notes.drafts.save")).await);
+    let none = answer(
+        served
+            .verified(TENANT, &policy, ask("notes.drafts.save"))
+            .await,
+    );
     assert_eq!(none.gate, ApprovalGate::NoGate);
 
     // No rule covers it, or only another tenant's rule does: unresolved, never none.
@@ -344,16 +419,31 @@ async fn the_gate_answers_from_the_rule_nodes_and_follows_a_change_to_them() {
     seed(
         &served,
         "rules-2",
-        json!([rule("rule:promote", TENANT, "deploy.promotions.apply", 2, "release-manager")]),
+        json!([rule(
+            "rule:promote",
+            TENANT,
+            "deploy.promotions.apply",
+            2,
+            "release-manager"
+        )]),
     )
     .await;
-    let raised = answer(served.verified(TENANT, &policy, ask("deploy.promotions.apply")).await);
+    let raised = answer(
+        served
+            .verified(TENANT, &policy, ask("deploy.promotions.apply"))
+            .await,
+    );
     assert_eq!(raised.gate, ApprovalGate::TwoPerson);
     assert_ne!(raised.policy_digest, single.policy_digest);
 
     // A request out of bounds refuses, and so does a caller without a read scope.
     let blank = served.verified(TENANT, &policy, ask("  ")).await;
-    assert!(refusal_text(&blank).contains("APPROVAL_GATE_INVALID"), "{blank:?}");
-    let unscoped = served.verified(TENANT, &["lifecycle:write"], ask("deploy.promotions.apply")).await;
+    assert!(
+        refusal_text(&blank).contains("APPROVAL_GATE_INVALID"),
+        "{blank:?}"
+    );
+    let unscoped = served
+        .verified(TENANT, &["lifecycle:write"], ask("deploy.promotions.apply"))
+        .await;
     assert!(unscoped.error.is_some(), "{unscoped:?}");
 }

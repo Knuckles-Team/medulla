@@ -84,7 +84,9 @@ async fn refuse_replication<S>(socket: Connection<S>, value: &str) -> io::Result
     let mut parts = socket.into_parts();
     let refusal = super::replication::error_response(
         "0A000",
-        &format!("FEATURE_NOT_SUPPORTED: replication={value} is not supported; use replication=database"),
+        &format!(
+            "FEATURE_NOT_SUPPORTED: replication={value} is not supported; use replication=database"
+        ),
     );
     parts.io.write_all(&refusal).await?;
     parts.io.flush().await

@@ -20,11 +20,11 @@ use medulla_catalog_types::connector_pack::{
     ChangeRequestRef, ConnectorPackImportRequest, PackEntryKind, PackImportResult,
     PackReleaseEvidence, PackViolation, PackViolationCode,
 };
+use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::TargetScopes;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::connector_pack::ConnectorPackMemberRow;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use tokio::sync::RwLock;
 
 use super::planning::ReadyPlan;
@@ -566,9 +566,14 @@ pub(super) fn read_staged(
         )?);
     }
     let corrupt = || "CORRUPT_CONNECTOR_PACK: the staged pack stream is malformed".to_string();
-    let head: [u8; 8] = stream.get(..8).and_then(|b| b.try_into().ok()).ok_or_else(corrupt)?;
+    let head: [u8; 8] = stream
+        .get(..8)
+        .and_then(|b| b.try_into().ok())
+        .ok_or_else(corrupt)?;
     let length = usize::try_from(u64::from_be_bytes(head)).map_err(|_| corrupt())?;
-    let json = stream.get(8..8usize.saturating_add(length)).ok_or_else(corrupt)?;
+    let json = stream
+        .get(8..8usize.saturating_add(length))
+        .ok_or_else(corrupt)?;
     let request = serde_json::from_slice(json).map_err(|_| corrupt())?;
     let archive = stream[8 + length..].to_vec();
     Ok((request, archive))
@@ -696,7 +701,9 @@ pub(super) fn judge(
         )
         .map_err(|error| error.to_string())?;
         let version = next.version.version.clone();
-        history.approve(&version).map_err(|error| error.to_string())?;
+        history
+            .approve(&version)
+            .map_err(|error| error.to_string())?;
         next.version = history
             .by_version(&version)
             .map(|stored| stored.contract.version.clone())

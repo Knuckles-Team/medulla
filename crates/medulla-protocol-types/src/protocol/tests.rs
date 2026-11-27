@@ -925,14 +925,13 @@ fn a_wrapped_declared_refusal_keeps_its_code() {
 #[test]
 fn register_foreign_source_acceleration_round_trips() {
     use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
-    let source: medulla_query_types::wire::ForeignSourceSpec = serde_json::from_value(
-        serde_json::json!({"HttpJson": {
+    let source: medulla_query_types::wire::ForeignSourceSpec =
+        serde_json::from_value(serde_json::json!({"HttpJson": {
             "url": "http://example.invalid/a",
             "json_path": "data",
             "field_map": {"id": "doi"},
-        }}),
-    )
-    .unwrap();
+        }}))
+        .unwrap();
     let policy = AccelerationPolicy {
         source_supports_copy: true,
         hot_subset_predicate: "year > 2024".into(),
@@ -954,7 +953,10 @@ fn register_foreign_source_acceleration_round_trips() {
         ));
         // The absent form omits the key, so every existing request keeps its bytes.
         let json = serde_json::to_value(&method).unwrap();
-        assert_eq!(json["params"].get("acceleration").is_some(), acceleration.is_some());
+        assert_eq!(
+            json["params"].get("acceleration").is_some(),
+            acceleration.is_some()
+        );
     }
 }
 
@@ -962,7 +964,8 @@ fn register_foreign_source_acceleration_round_trips() {
 #[cfg(feature = "query")]
 #[test]
 fn uql_decodes_foreign_executions_and_refuses_the_singular_field() {
-    let execution = |id: u64| serde_json::json!({"execution_id": id, "query_digest": "0".repeat(64)});
+    let execution =
+        |id: u64| serde_json::json!({"execution_id": id, "query_digest": "0".repeat(64)});
     let uql = |extra: serde_json::Value| {
         let mut params = serde_json::json!({"text": "MATCH () |> LIMIT 1"});
         params
@@ -988,7 +991,10 @@ fn uql_decodes_foreign_executions_and_refuses_the_singular_field() {
         budget: None,
     })
     .expect("encodes");
-    assert_eq!(encoded["params"]["foreign_executions"], two["params"]["foreign_executions"]);
+    assert_eq!(
+        encoded["params"]["foreign_executions"],
+        two["params"]["foreign_executions"]
+    );
 
     let seventeen: Vec<_> = (0..17).map(execution).collect();
     assert!(serde_json::from_value::<Method>(uql(
@@ -1008,7 +1014,8 @@ fn request_trace_id_is_optional_and_omitted_when_absent() {
     let bare = serde_json::json!({
         "id": 7, "graph": "g", "auth_token": "", "agent_id": null, "method": "Health"
     });
-    let request: Request = serde_json::from_value(bare).expect("a request without trace_id decodes");
+    let request: Request =
+        serde_json::from_value(bare).expect("a request without trace_id decodes");
     assert_eq!(request.trace_id, None);
     assert!(serde_json::to_value(&request)
         .expect("encodes")
@@ -1023,5 +1030,8 @@ fn request_trace_id_is_optional_and_omitted_when_absent() {
     });
     let request: Request = serde_json::from_value(with_trace).expect("a traced request decodes");
     assert_eq!(request.trace_id.as_deref(), Some(traced));
-    assert_eq!(serde_json::to_value(&request).expect("encodes")["trace_id"], traced);
+    assert_eq!(
+        serde_json::to_value(&request).expect("encodes")["trace_id"],
+        traced
+    );
 }

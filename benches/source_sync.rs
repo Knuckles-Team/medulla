@@ -119,8 +119,16 @@ fn percentile_ms(sorted: &[Duration], p: f64) -> f64 {
 fn bench_source_sync(c: &mut Criterion) {
     let rows = rows();
     let (written, counts) = sync_all(&rows);
-    assert_eq!(counts, [RECORDS / 4; 4], "a quarter of the records per outcome");
-    assert_eq!(written, RECORDS / 4 + RECORDS, "applied writes plus one state write each");
+    assert_eq!(
+        counts,
+        [RECORDS / 4; 4],
+        "a quarter of the records per outcome"
+    );
+    assert_eq!(
+        written,
+        RECORDS / 4 + RECORDS,
+        "applied writes plus one state write each"
+    );
 
     let mut group = c.benchmark_group("source_sync");
     group.bench_function("reconcile_and_batch_10000", |b| {

@@ -4,8 +4,8 @@
 //! evaluation job (MEDULLA-UNIFIED-DATA-PLANE-R762.3) both write incidents through these
 //! functions, so there is one stored shape.
 
-use medulla_types::contract::Digest256;
 use medulla_catalog_types::incident::{AnomalyReading, IncidentRecord};
+use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
 /// The node type of a served incident.

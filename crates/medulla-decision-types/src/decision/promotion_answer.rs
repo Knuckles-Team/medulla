@@ -55,8 +55,14 @@ mod tests {
             reason: None,
         };
         let text = serde_json::to_string(&answer).unwrap();
-        assert_eq!(text, r#"{"verdict":"promote","challenger_ref":"program:b"}"#);
-        assert_eq!(serde_json::from_str::<PromotionAnswer>(&text).unwrap(), answer);
+        assert_eq!(
+            text,
+            r#"{"verdict":"promote","challenger_ref":"program:b"}"#
+        );
+        assert_eq!(
+            serde_json::from_str::<PromotionAnswer>(&text).unwrap(),
+            answer
+        );
         let refused = PromotionAnswer {
             verdict: PromotionAnswerVerdict::Abstain,
             champion_ref: Some("program:a".to_string()),
@@ -64,14 +70,20 @@ mod tests {
             reason: Some("PROMOTION_UNEVALUATED".to_string()),
         };
         let text = serde_json::to_string(&refused).unwrap();
-        assert_eq!(serde_json::from_str::<PromotionAnswer>(&text).unwrap(), refused);
+        assert_eq!(
+            serde_json::from_str::<PromotionAnswer>(&text).unwrap(),
+            refused
+        );
         for (verdict, name) in [
             (PromotionAnswerVerdict::Hold, "hold"),
             (PromotionAnswerVerdict::Rollback, "rollback"),
             (PromotionAnswerVerdict::Ramp, "ramp"),
             (PromotionAnswerVerdict::Abstain, "abstain"),
         ] {
-            assert_eq!(serde_json::to_string(&verdict).unwrap(), format!("\"{name}\""));
+            assert_eq!(
+                serde_json::to_string(&verdict).unwrap(),
+                format!("\"{name}\"")
+            );
         }
     }
 }

@@ -287,9 +287,12 @@ mod tests {
     /// while the owner stays.
     #[test]
     fn revoke_clears_grants() {
-        let shared =
-            share_transition(&state(), &grant(ShareScope::Tenant, &["usr:b", "usr:a"]), &owner())
-                .unwrap();
+        let shared = share_transition(
+            &state(),
+            &grant(ShareScope::Tenant, &["usr:b", "usr:a"]),
+            &owner(),
+        )
+        .unwrap();
         assert_eq!(shared.shared_scope, SCOPE_ORG);
         assert_eq!(shared.grants, vec!["usr:a", "usr:b"]);
         let revoked = share_transition(&shared, &revoke(), &owner()).unwrap();
@@ -330,15 +333,18 @@ mod tests {
             CommonsCopyChange::Remove(copy)
         );
         // Narrowing a promotion to the tenant also removes the copy.
-        let narrowed = share_transition(&promoted, &grant(ShareScope::Tenant, &[]), &owner())
-            .unwrap();
+        let narrowed =
+            share_transition(&promoted, &grant(ShareScope::Tenant, &[]), &owner()).unwrap();
         assert!(matches!(
             commons_copy_change(&promoted, &narrowed),
             CommonsCopyChange::Remove(_)
         ));
         // Promoting a promoted node again changes no copy.
         let again = share_transition(&promoted, &commons(), &owner()).unwrap();
-        assert_eq!(commons_copy_change(&promoted, &again), CommonsCopyChange::None);
+        assert_eq!(
+            commons_copy_change(&promoted, &again),
+            CommonsCopyChange::None
+        );
     }
 
     // spec: MEDULLA-IDENTITY-R023.13.2
@@ -401,11 +407,17 @@ mod tests {
             admin: true,
             ..steward.clone()
         };
-        assert_eq!(share_authority(&state(), &admin), Some(ShareAuthority::Admin));
+        assert_eq!(
+            share_authority(&state(), &admin),
+            Some(ShareAuthority::Admin)
+        );
         let node_owner = ShareActor {
             principal_id: "usr:owner".to_string(),
             ..steward
         };
-        assert_eq!(share_authority(&state(), &node_owner), Some(ShareAuthority::Owner));
+        assert_eq!(
+            share_authority(&state(), &node_owner),
+            Some(ShareAuthority::Owner)
+        );
     }
 }

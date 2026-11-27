@@ -654,8 +654,9 @@ pub fn validate_work_item_transitions(
     }
     cursor
         .map(|text| {
-            text.parse::<u64>()
-                .map_err(|_| "INVALID_PARAMS: ListWorkItemTransitions cursor is malformed".to_string())
+            text.parse::<u64>().map_err(|_| {
+                "INVALID_PARAMS: ListWorkItemTransitions cursor is malformed".to_string()
+            })
         })
         .transpose()
 }

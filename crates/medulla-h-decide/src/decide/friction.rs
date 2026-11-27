@@ -44,11 +44,12 @@ mod served {
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
     use medulla_decision_types::friction::{
         required_evidence, EvidenceKind, FrictionFiled, FrictionGroup, FrictionGroupView,
-        FrictionGroups, FrictionMoved, FrictionOp, FrictionReport, FrictionState,
-        FrictionStepRow, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED,
-        FRICTION_EVIDENCE_REQUIRED, FRICTION_EVIDENCE_UNKNOWN, FRICTION_GROUP_CLASS, FRICTION_GROUP_LIST_MAX,
-        FRICTION_GROUP_NOT_FOUND, FRICTION_REPORT_CLASS, FRICTION_SELF_APPROVED, FRICTION_SKILL_UNKNOWN,
-        FRICTION_STEP_CLASS, FRICTION_TEXT_TOO_LARGE, FRICTION_TRANSITION_ILLEGAL, SCOPE_APPROVE,
+        FrictionGroups, FrictionMoved, FrictionOp, FrictionReport, FrictionState, FrictionStepRow,
+        FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED, FRICTION_EVIDENCE_REQUIRED,
+        FRICTION_EVIDENCE_UNKNOWN, FRICTION_GROUP_CLASS, FRICTION_GROUP_LIST_MAX,
+        FRICTION_GROUP_NOT_FOUND, FRICTION_REPORT_CLASS, FRICTION_SELF_APPROVED,
+        FRICTION_SKILL_UNKNOWN, FRICTION_STEP_CLASS, FRICTION_TEXT_TOO_LARGE,
+        FRICTION_TRANSITION_ILLEGAL, SCOPE_APPROVE,
     };
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -75,7 +76,10 @@ mod served {
     const STEP_OF: &str = "step_of";
     const RAISED_BY: &str = "raisedBy";
 
-    fn refuse(code: medulla_types::refusal_code::RefusalCode, detail: impl std::fmt::Display) -> String {
+    fn refuse(
+        code: medulla_types::refusal_code::RefusalCode,
+        detail: impl std::fmt::Display,
+    ) -> String {
         format!("{}: {detail}", code.as_str())
     }
 
@@ -87,7 +91,9 @@ mod served {
         let graph = op.graph().to_string();
         let allowed = match &op {
             FrictionOp::Report { .. } => verified.allows_action(SCOPE_REPORT),
-            FrictionOp::Transition { transition, .. } if transition.to == FrictionState::Approved => {
+            FrictionOp::Transition { transition, .. }
+                if transition.to == FrictionState::Approved =>
+            {
                 verified.allows_action(SCOPE_APPROVE)
             }
             FrictionOp::Transition { .. } => verified.allows_action(SCOPE_TRANSITION),
@@ -117,23 +123,26 @@ mod served {
                 let revisions: BTreeSet<String> = store
                     .decision_artifacts_with_prefix(tenant, "revision:", 100_000)?
                     .into_iter()
-                    .filter_map(|(_, bytes)| decode_artifact::<RevisionRow>(&bytes, "revision").ok())
+                    .filter_map(|(_, bytes)| {
+                        decode_artifact::<RevisionRow>(&bytes, "revision").ok()
+                    })
                     .map(|row| row.id)
                     .collect();
                 // The held-out receipt and the regression verdict resolve in this tenant's
                 // decision store; a missing and a foreign reference both stay absent here.
                 let mut stored: BTreeSet<String> = BTreeSet::new();
                 if let Some(reference) = transition.evidence_ref.as_deref() {
-                    for key in [receipt_key(reference), rollouts_key(reference), record_key(reference)] {
+                    for key in [
+                        receipt_key(reference),
+                        rollouts_key(reference),
+                        record_key(reference),
+                    ] {
                         if store.decision_artifact(tenant, &key)?.is_some() {
                             stored.insert(key);
                         }
                     }
                 }
-                let known = Known {
-                    revisions,
-                    stored,
-                };
+                let known = Known { revisions, stored };
                 advance(graph, &view, verified, transition, at_ms, &known)
             }
             FrictionOp::Group {
@@ -141,7 +150,11 @@ mod served {
             } => {
                 let mut groups: Vec<FrictionGroup> = groups_of(&view, tenant)
                     .into_iter()
-                    .filter(|group| skill_ref.as_ref().is_none_or(|skill| &group.skill_ref == skill))
+                    .filter(|group| {
+                        skill_ref
+                            .as_ref()
+                            .is_none_or(|skill| &group.skill_ref == skill)
+                    })
                     .collect();
                 groups.sort_by(|a, b| {
                     b.report_count
@@ -192,7 +205,10 @@ mod served {
     }
 
     fn string(row: &Map<String, Value>, key: &str) -> String {
-        row.get(key).and_then(Value::as_str).unwrap_or_default().to_string()
+        row.get(key)
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
     }
 
     fn class_of(row: &Map<String, Value>) -> Option<&str> {
@@ -239,7 +255,11 @@ mod served {
             .collect()
     }
 
-    fn group_by_ref(view: &GraphView, tenant: &str, group_ref: &str) -> Result<FrictionGroup, String> {
+    fn group_by_ref(
+        view: &GraphView,
+        tenant: &str,
+        group_ref: &str,
+    ) -> Result<FrictionGroup, String> {
         view.node_row_object(group_ref)
             .filter(|row| {
                 class_of(row) == Some(FRICTION_GROUP_CLASS)
@@ -260,26 +280,27 @@ mod served {
     }
 
     fn step_rows(view: &GraphView, tenant: &str, group_ref: &str) -> Vec<FrictionStepRow> {
-        let mut rows: Vec<(u64, FrictionStepRow)> = rows_of_class(view, tenant, FRICTION_STEP_CLASS)
-            .into_iter()
-            .filter(|(_, row)| row.get("group_ref").and_then(Value::as_str) == Some(group_ref))
-            .filter_map(|(id, row)| {
-                let to = FrictionState::from_stored(row.get("to")?.as_str()?)?;
-                Some((
-                    row.get("ordinal").and_then(Value::as_u64).unwrap_or(0),
-                    FrictionStepRow {
-                        step_id: id,
-                        actor: string(&row, "actor"),
-                        to,
-                        evidence_ref: row
-                            .get("evidence_ref")
-                            .and_then(Value::as_str)
-                            .map(str::to_string),
-                        at_ms: row.get("at_ms").and_then(Value::as_u64).unwrap_or(0),
-                    },
-                ))
-            })
-            .collect();
+        let mut rows: Vec<(u64, FrictionStepRow)> =
+            rows_of_class(view, tenant, FRICTION_STEP_CLASS)
+                .into_iter()
+                .filter(|(_, row)| row.get("group_ref").and_then(Value::as_str) == Some(group_ref))
+                .filter_map(|(id, row)| {
+                    let to = FrictionState::from_stored(row.get("to")?.as_str()?)?;
+                    Some((
+                        row.get("ordinal").and_then(Value::as_u64).unwrap_or(0),
+                        FrictionStepRow {
+                            step_id: id,
+                            actor: string(&row, "actor"),
+                            to,
+                            evidence_ref: row
+                                .get("evidence_ref")
+                                .and_then(Value::as_str)
+                                .map(str::to_string),
+                            at_ms: row.get("at_ms").and_then(Value::as_u64).unwrap_or(0),
+                        },
+                    ))
+                })
+                .collect();
         rows.sort_by_key(|(ordinal, _)| *ordinal);
         rows.into_iter().map(|(_, step)| step).collect()
     }
@@ -328,7 +349,10 @@ mod served {
         }
         let skill_known = view.node_row_object(&report.skill_ref).is_some_and(|row| {
             class_of(&row) == Some("Skill")
-                && row.get("tenant_id").and_then(Value::as_str).is_none_or(|owner| owner == tenant)
+                && row
+                    .get("tenant_id")
+                    .and_then(Value::as_str)
+                    .is_none_or(|owner| owner == tenant)
         });
         if !skill_known {
             return Err(refuse(
@@ -447,10 +471,18 @@ mod served {
             // missing or belongs to another tenant, so the refusal is no existence oracle.
             EvidenceKind::HeldOutReceipt => {
                 let held = resolves(receipt_key(evidence)) || resolves(rollouts_key(evidence));
-                (!held).then(|| (FRICTION_EVIDENCE_UNKNOWN, "the evidence_ref names no held-out receipt".to_string()))
+                (!held).then(|| {
+                    (
+                        FRICTION_EVIDENCE_UNKNOWN,
+                        "the evidence_ref names no held-out receipt".to_string(),
+                    )
+                })
             }
             EvidenceKind::RegressionVerdict => (!resolves(record_key(evidence))).then(|| {
-                (FRICTION_EVIDENCE_UNKNOWN, "the evidence_ref names no regression verdict".to_string())
+                (
+                    FRICTION_EVIDENCE_UNKNOWN,
+                    "the evidence_ref names no regression verdict".to_string(),
+                )
             }),
             _ => {
                 let bad = match kind {
@@ -490,7 +522,11 @@ mod served {
         let Some(event) = group.state.event_to(transition.to) else {
             return Err(refuse(
                 FRICTION_TRANSITION_ILLEGAL,
-                format!("{} cannot move to {}", group.state.stored(), transition.to.stored()),
+                format!(
+                    "{} cannot move to {}",
+                    group.state.stored(),
+                    transition.to.stored()
+                ),
             ));
         };
         // Two-person approval: the approver is the verified caller, and the caller neither
@@ -566,15 +602,17 @@ mod served {
                 "properties": {"type": "Principal", "node_type": "Principal", "tenant_id": tenant},
             }));
         }
-        operations.push(edge_operation(&step_id, &moved.group_ref, STEP_OF, &receipt));
+        operations.push(edge_operation(
+            &step_id,
+            &moved.group_ref,
+            STEP_OF,
+            &receipt,
+        ));
         operations.push(edge_operation(&step_id, &principal, RAISED_BY, &receipt));
         Ok(PlannedWrite {
             graph,
             operations,
-            reply: ResultPayload::of::<FrictionReportMove>(FrictionMoved {
-                group: moved,
-                step,
-            })?,
+            reply: ResultPayload::of::<FrictionReportMove>(FrictionMoved { group: moved, step })?,
         })
     }
 }

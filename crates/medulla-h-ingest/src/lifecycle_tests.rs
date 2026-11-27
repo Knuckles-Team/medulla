@@ -96,7 +96,11 @@ fn spec_status_reads_the_chain_up_to_rev_and_filters_by_spec() {
     let view = spec_status_view(&core, "acme", "demo", &everything);
     let early = answer_spec_status("demo", "c1", Some("DEMO-A"), &view).expect("answers");
     assert_eq!(early.rows.len(), 2);
-    let second = early.rows.iter().find(|r| r.id == "DEMO-A-R002").expect("row");
+    let second = early
+        .rows
+        .iter()
+        .find(|r| r.id == "DEMO-A-R002")
+        .expect("row");
     assert_eq!(second.state, SpecState::Specified);
     assert!(early.rows.iter().all(|r| r.id.starts_with("DEMO-A-R")));
 }
@@ -144,7 +148,10 @@ fn trace_is_tenant_scoped() {
     lifecycle_node(&core, "commit:c1", "Changeset", "acme");
     lifecycle_edge(&core, "symbol:s", "implements", "requirement:d:R1");
     lifecycle_edge(&core, "commit:c1", "changes", "symbol:s");
-    let limits = TraceLimits { max_depth: 8, node_budget: 100 };
+    let limits = TraceLimits {
+        max_depth: 8,
+        node_budget: 100,
+    };
     let request = LifecycleTraceRequest::new("requirement:d:R1".into(), 2, vec![]).unwrap();
     let walk = |tenant: &str| {
         let store = lifecycle_store_around(&core, tenant, &request.anchor, 2, 100, &everything);
@@ -152,7 +159,10 @@ fn trace_is_tenant_scoped() {
     };
     let mine = walk("acme");
     assert_eq!(mine.records.len(), 3);
-    assert!(mine.edges.iter().all(|e| e.rule == "r-test" && e.rule_version == 3));
+    assert!(mine
+        .edges
+        .iter()
+        .all(|e| e.rule == "r-test" && e.rule_version == 3));
     let theirs = walk("globex");
     assert!(theirs.records.is_empty() && theirs.edges.is_empty());
 }
@@ -163,14 +173,19 @@ fn trace_refusals() {
     use medulla_source_types::lifecycle::{
         handle_lifecycle_trace, LifecycleKind, LifecycleTraceRequest, TraceLimits,
     };
-    let limits = TraceLimits { max_depth: 4, node_budget: 100 };
+    let limits = TraceLimits {
+        max_depth: 4,
+        node_budget: 100,
+    };
     let deep = LifecycleTraceRequest::new("a".into(), 5, vec![]).unwrap();
     assert_eq!(
         handle_lifecycle_trace(deep, limits).unwrap_err().code(),
         "LIFECYCLE_DEPTH_INVALID"
     );
     assert_eq!(
-        LifecycleTraceRequest::new("a".into(), 0, vec![]).unwrap_err().code(),
+        LifecycleTraceRequest::new("a".into(), 0, vec![])
+            .unwrap_err()
+            .code(),
         "LIFECYCLE_DEPTH_INVALID"
     );
     assert_eq!(

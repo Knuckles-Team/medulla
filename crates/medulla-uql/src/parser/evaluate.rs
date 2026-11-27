@@ -51,7 +51,13 @@ impl Parser<'_> {
             (None, None)
         };
         Ok(Op::EvaluateRule {
-            spec: EvaluateRuleOp { rule, as_of_ms, count, text, locale },
+            spec: EvaluateRuleOp {
+                rule,
+                as_of_ms,
+                count,
+                text,
+                locale,
+            },
         })
     }
 
@@ -141,7 +147,8 @@ mod tests {
         }
 
         // Parameters are optional and may come in any order; a channel may be derived.
-        let plan = parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE regime_hmm OF v0 TOL 0.5 STATES 3").unwrap();
+        let plan = parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE regime_hmm OF v0 TOL 0.5 STATES 3")
+            .unwrap();
         assert_eq!(
             plan.ops.last(),
             Some(&Op::Evaluate {
@@ -153,13 +160,16 @@ mod tests {
             })
         );
 
-        let unknown = parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE no_such_kernel OF v0").unwrap_err();
+        let unknown =
+            parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE no_such_kernel OF v0").unwrap_err();
         assert_eq!(unknown.code, UqlCode::EvaluateKernel);
         assert_eq!(unknown.code.as_str(), "UQL_E_EVALUATE_KERNEL");
         assert!(unknown.expected.iter().any(|e| e == "`brier`"));
 
         // A kernel missing its channels, or repeating a key, is a syntax refusal.
         assert!(parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE brier OF v0").is_err());
-        assert!(parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE adf OF v0 MAXLAG 2 MAXLAG 3").is_err());
+        assert!(
+            parse("TSSCAN ['s'] FROM 0 TO 10 |> EVALUATE adf OF v0 MAXLAG 2 MAXLAG 3").is_err()
+        );
     }
 }

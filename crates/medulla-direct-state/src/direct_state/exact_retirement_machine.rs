@@ -58,7 +58,10 @@ pub const EXACT_RETIREMENT_MACHINE: MachineDef<
     ],
     initial: ExactRetirementPhase::Live,
     terminals: &[ExactRetirementPhase::Unlinked],
-    events: &[ExactRetirementEvent::Quarantine, ExactRetirementEvent::Unlink],
+    events: &[
+        ExactRetirementEvent::Quarantine,
+        ExactRetirementEvent::Unlink,
+    ],
     guards: &[],
     edges: &[
         Edge {
@@ -81,8 +84,13 @@ pub const EXACT_RETIREMENT_MACHINE: MachineDef<
 impl ExactRetirementPhase {
     /// The one transition function: the next phase, or the typed refusal.
     pub fn apply(self, event: ExactRetirementEvent) -> Result<Self, TransitionRefused> {
-        transition(&EXACT_RETIREMENT_MACHINE, self, event, |guard| match guard {})
-            .map(|edge| edge.to)
+        transition(
+            &EXACT_RETIREMENT_MACHINE,
+            self,
+            event,
+            |guard| match guard {},
+        )
+        .map(|edge| edge.to)
     }
 }
 

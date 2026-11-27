@@ -29,11 +29,8 @@ pub(crate) fn edit_skill_source(
     use super::connector_pack::import::front_matter::front_matter_value;
     use super::connector_pack::import::validation::valid_skill_frontmatter;
 
-    let edited = medulla_catalog_types::skill_edit::apply_skill_patches(
-        base,
-        source_digest,
-        patches,
-    )?;
+    let edited =
+        medulla_catalog_types::skill_edit::apply_skill_patches(base, source_digest, patches)?;
     let name = front_matter_value(base, "name").ok_or_else(|| {
         "MALFORMED_BODY: the base skill source declares no front-matter name".to_string()
     })?;
@@ -63,7 +60,10 @@ pub(crate) async fn serve_skill_source_edit(
     #[cfg(not(feature = "blob"))]
     {
         let _ = (state, store);
-        Response::err(req_id, "AgentComponent.edit_skill_source requires the blob feature")
+        Response::err(
+            req_id,
+            "AgentComponent.edit_skill_source requires the blob feature",
+        )
     }
     #[cfg(feature = "blob")]
     {
@@ -162,7 +162,11 @@ mod tests {
         let error = edit(SOURCE, &skill_digest(SOURCE.as_bytes()), &patches)
             .expect_err("renamed skill refuses");
         assert!(error.starts_with("MALFORMED_BODY"), "{error}");
-        let patches = vec![replace(SOURCE, "description: First line", "description: &a x")];
+        let patches = vec![replace(
+            SOURCE,
+            "description: First line",
+            "description: &a x",
+        )];
         let error = edit(SOURCE, &skill_digest(SOURCE.as_bytes()), &patches)
             .expect_err("anchor syntax refuses");
         assert!(error.starts_with("MALFORMED_BODY"), "{error}");

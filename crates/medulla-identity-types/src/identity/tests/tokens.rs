@@ -556,7 +556,12 @@ fn an_assertion_id_registers_once_until_it_expires() {
 
     // Only the broker registers an assertion.
     assert_eq!(
-        apply_kept(&mut store, &register_assertion("saml-a", "_x", until), &admin(), NOW),
+        apply_kept(
+            &mut store,
+            &register_assertion("saml-a", "_x", until),
+            &admin(),
+            NOW
+        ),
         Err(IdentityRefusal::NotAuthorized)
     );
 }

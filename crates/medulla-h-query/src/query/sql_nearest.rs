@@ -61,10 +61,7 @@ pub(crate) fn plan_nearest(
         return Err(unbound("the binding does not vectorize this column"));
     }
     let live = medulla_h_retrieve::semantic_index::search::search_live(
-        &service,
-        &binding,
-        &form.text,
-        form.fetch,
+        &service, &binding, &form.text, form.fetch,
     )?;
     Ok(Some(NearestProbe {
         table: selector.table_id,

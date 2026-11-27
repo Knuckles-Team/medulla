@@ -56,10 +56,7 @@ fn half_up(n: i128, d: i128) -> i128 {
 /// The time-weighted return in ticks. `valuations` holds the window's start point, every
 /// valuation inside it and the end point, ascending by `ns`; a flow with `ns` in
 /// `(t[i-1], t[i]]` belongs to period `i` and is taken at the period's end.
-pub fn twr_ticks(
-    valuations: &[ValuationPoint],
-    flows: &[ReturnFlow],
-) -> Result<i64, ReturnError> {
+pub fn twr_ticks(valuations: &[ValuationPoint], flows: &[ReturnFlow]) -> Result<i64, ReturnError> {
     if valuations.len() < 2 || valuations.windows(2).any(|w| w[1].ns < w[0].ns) {
         return Err(ReturnError::NoPeriod);
     }
@@ -227,10 +224,7 @@ mod tests {
             xirr_ticks(point(10, 1.0), point(10, 5.0), &[]),
             Err(ReturnError::NoPeriod)
         );
-        assert_eq!(
-            twr_ticks(&[point(0, 1.0)], &[]),
-            Err(ReturnError::NoPeriod)
-        );
+        assert_eq!(twr_ticks(&[point(0, 1.0)], &[]), Err(ReturnError::NoPeriod));
         assert_eq!(
             twr_ticks(&[point(0, 0.0), point(5, 1.0)], &[]),
             Err(ReturnError::NonPositiveStartValue)

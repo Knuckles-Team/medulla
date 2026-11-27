@@ -180,15 +180,15 @@ pub mod worker {
             // MEDULLA-TYPED-PACKS-R096.2: one row's failure never ends the sweep;
             // the rows after it keep flowing.
             match resolve(
-            &store,
-            &tenant,
-            lease,
-            reason,
-            CONSUMER,
-            CONNECTOR_PACK_IMPORT_TOPIC,
-        )
-        .await
-        {
+                &store,
+                &tenant,
+                lease,
+                reason,
+                CONSUMER,
+                CONNECTOR_PACK_IMPORT_TOPIC,
+            )
+            .await
+            {
                 Ok(()) if projected => committed_graphs += 1,
                 Ok(()) => {}
                 Err(error) => tracing::warn!(

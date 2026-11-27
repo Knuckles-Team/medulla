@@ -203,14 +203,13 @@ fn run_forest(
     let seed_ids: Vec<String> = seed_scores.iter().map(|(id, _)| id.clone()).collect();
     let graph = PlanForestGraph::new(ctx.view, ctx.semantic, knobs.forest_similar_k);
     let (hops, cap) = forest_limits(Some(knobs.forest_hops), Some(knobs.forest_candidate_cap));
-    let candidates =
-        expand_candidates(&seed_scores, &graph, hops, cap).map_err(forest_refusal)?;
+    let candidates = expand_candidates(&seed_scores, &graph, hops, cap).map_err(forest_refusal)?;
     let penalty = ForestPenalty {
         redundancy_weight: knobs.forest_redundancy_weight as f32,
         conflict_weight: knobs.forest_conflict_weight as f32,
     };
-    let forest = select_forest(&candidates, &seed_ids, &graph, budget, penalty)
-        .map_err(forest_refusal)?;
+    let forest =
+        select_forest(&candidates, &seed_ids, &graph, budget, penalty).map_err(forest_refusal)?;
     let support: std::collections::BTreeMap<&str, f32> = candidates
         .iter()
         .map(|c| (c.memory_id.as_str(), c.support))

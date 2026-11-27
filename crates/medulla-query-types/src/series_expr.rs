@@ -280,23 +280,53 @@ pub struct EvaluateKernel {
 /// (MEDULLA-FINANCE-PRIMITIVES-R002.2.3.6 to R002.2.3.15). The executor and the UQL
 /// parser and printer read this one table.
 pub const EVALUATE_KERNELS: &[EvaluateKernel] = &[
-    EvaluateKernel { name: "diebold_mariano", channels: 2, params: &["HORIZON"] },
-    EvaluateKernel { name: "deflated_sharpe", channels: 1, params: &["TRIALS", "OBSERVED"] },
+    EvaluateKernel {
+        name: "diebold_mariano",
+        channels: 2,
+        params: &["HORIZON"],
+    },
+    EvaluateKernel {
+        name: "deflated_sharpe",
+        channels: 1,
+        params: &["TRIALS", "OBSERVED"],
+    },
     EvaluateKernel {
         name: "purged_cpcv",
         channels: 0,
         params: &["SAMPLES", "GROUPS", "TEST", "PURGE", "EMBARGO"],
     },
-    EvaluateKernel { name: "probability_of_backtest_overfit", channels: 2, params: &[] },
-    EvaluateKernel { name: "brier", channels: 2, params: &[] },
-    EvaluateKernel { name: "ou_calibrate", channels: 1, params: &["DT"] },
-    EvaluateKernel { name: "adf", channels: 1, params: &["MAXLAG"] },
-    EvaluateKernel { name: "regime_hmm", channels: 1, params: &["STATES", "ITER", "TOL"] },
+    EvaluateKernel {
+        name: "probability_of_backtest_overfit",
+        channels: 2,
+        params: &[],
+    },
+    EvaluateKernel {
+        name: "brier",
+        channels: 2,
+        params: &[],
+    },
+    EvaluateKernel {
+        name: "ou_calibrate",
+        channels: 1,
+        params: &["DT"],
+    },
+    EvaluateKernel {
+        name: "adf",
+        channels: 1,
+        params: &["MAXLAG"],
+    },
+    EvaluateKernel {
+        name: "regime_hmm",
+        channels: 1,
+        params: &["STATES", "ITER", "TOL"],
+    },
 ];
 
 /// The table row of `name` (ASCII case-insensitive), if it is an `EVALUATE` kernel.
 pub fn evaluate_kernel(name: &str) -> Option<&'static EvaluateKernel> {
-    EVALUATE_KERNELS.iter().find(|k| k.name.eq_ignore_ascii_case(name))
+    EVALUATE_KERNELS
+        .iter()
+        .find(|k| k.name.eq_ignore_ascii_case(name))
 }
 
 /// A UQL `MOTIF` / `DISCORD` stage (EH-529): which value channel is searched, for what,

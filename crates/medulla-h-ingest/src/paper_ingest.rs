@@ -33,7 +33,10 @@ pub(crate) struct PaperMapping {
 
 /// The node id of the paper with `canonical_id`: `paper:<lowercase hex SHA-256 of the id>`.
 pub(crate) fn paper_node_id(canonical_id: &str) -> String {
-    format!("paper:{}", Digest256::sha256(canonical_id.as_bytes()).to_hex())
+    format!(
+        "paper:{}",
+        Digest256::sha256(canonical_id.as_bytes()).to_hex()
+    )
 }
 
 type Cached = Option<(Digest256, Arc<BTreeSet<String>>)>;

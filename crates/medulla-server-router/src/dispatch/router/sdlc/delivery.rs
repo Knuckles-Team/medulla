@@ -10,41 +10,39 @@ use super::*;
 
 use std::collections::BTreeSet;
 
+use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
+use medulla_protocol_types::result_contract::ingestion::{
+    DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
+    DeliveryOpen as DeliveryOpenResult, DeliveryReport as DeliveryReportResult,
+    DeliveryRespond as DeliveryRespondResult, DeliveryRetry as DeliveryRetryResult,
+    DeliveryStatus as DeliveryStatusResult, DeliveryStop as DeliveryStopResult,
+};
 use medulla_sdlc::lifecycle::delivery::ending::{apply_proposal_event, end_if_done, EndTrigger};
-use medulla_sdlc::lifecycle::delivery::recovery::{
-    expired_by_lane_leases, recover_assignments, LaneLease, RecordedEffect,
-};
-use medulla_sdlc::lifecycle::delivery::rounds::{record_round_verdict, review_round_verdict};
-use medulla_sdlc::lifecycle::delivery::superseded::{
-    record_superseded, superseded_verdict, BranchChangeset, CandidateProposal, SupersededVerdict,
-};
 use medulla_sdlc::lifecycle::delivery::feedback::{route_feedback, FeedbackContext};
 use medulla_sdlc::lifecycle::delivery::mandate::revalidate_mandate;
 use medulla_sdlc::lifecycle::delivery::open::{
     delivery_id, shadow_or_dispatch, DispatchOutcome, OpenDelivery,
 };
+use medulla_sdlc::lifecycle::delivery::recovery::{
+    expired_by_lane_leases, recover_assignments, LaneLease, RecordedEffect,
+};
+use medulla_sdlc::lifecycle::delivery::rounds::{record_round_verdict, review_round_verdict};
 use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_answer, record_report};
+use medulla_sdlc::lifecycle::delivery::superseded::{
+    record_superseded, superseded_verdict, BranchChangeset, CandidateProposal, SupersededVerdict,
+};
 use medulla_source_types::delivery::{
     decode_delivery, AssignmentState, Delivery, DeliveryAnswer, DeliveryAssignment,
     DeliveryFeedbackReceipt, DeliveryListAnswer, DeliveryListEntry, DeliveryListRequest,
     DeliveryOpenAnswer, DeliveryOpenRequest, DeliveryRef, DeliveryReportWrite,
-    DeliveryRespondRequest, DeliveryRetryRequest, FeedbackKind, InputSource, MandateFacts, ProposalEvent, ReviewRecord,
-    ReviewerKind, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
+    DeliveryRespondRequest, DeliveryRetryRequest, FeedbackKind, InputSource, MandateFacts,
+    ProposalEvent, ReviewRecord, ReviewerKind, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
     DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION, DELIVERY_TYPE,
 };
-use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
 use medulla_source_types::gate_verdict::{
-    gate_verdict_seal, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY,
-    GATE_VERDICT_SEAL_PROPERTY,
+    gate_verdict_seal, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY, GATE_VERDICT_SEAL_PROPERTY,
 };
 use medulla_source_types::lifecycle::{DefectIntake, FileDefectRequest};
-use medulla_protocol_types::result_contract::ingestion::{
-    DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
-    DeliveryOpen as DeliveryOpenResult, DeliveryReport as DeliveryReportResult,
-    DeliveryRespond as DeliveryRespondResult, DeliveryRetry as DeliveryRetryResult,
-    DeliveryStatus as DeliveryStatusResult,
-    DeliveryStop as DeliveryStopResult,
-};
 
 const MAX_DELIVERIES_READ: usize = 100_000;
 const FEEDBACK_EVENT_TYPE: &str = "FeedbackEvent";
@@ -100,7 +98,13 @@ fn now_ms() -> i64 {
 async fn read_graph(
     state: &Arc<RwLock<ServerState>>,
     target: &SdlcTarget<'_>,
-) -> Result<(Arc<GraphCore>, medulla_server_api::carrier::GraphReadAuthority), String> {
+) -> Result<
+    (
+        Arc<GraphCore>,
+        medulla_server_api::carrier::GraphReadAuthority,
+    ),
+    String,
+> {
     ensure_graph_resident(state, target.graph).await;
     let current = timed_read(state).await;
     authorized_graph_read(
@@ -352,7 +356,12 @@ fn lease_facts(
 /// Recover the assignments of `delivery` whose lease expired (MEDULLA-SDLC-R019.13): the run
 /// trace of a replacement is derived from the ended assignment's id, so a second recovery finds
 /// the replacement already there.
-fn recovered(delivery: &Delivery, expired: &BTreeSet<String>, effects: &[RecordedEffect], now: i64) -> Delivery {
+fn recovered(
+    delivery: &Delivery,
+    expired: &BTreeSet<String>,
+    effects: &[RecordedEffect],
+    now: i64,
+) -> Delivery {
     recover_assignments(
         delivery,
         expired,
@@ -534,7 +543,12 @@ pub(super) async fn open(
         {
             DispatchOutcome::Dispatched(delivery) => {
                 if !reopened {
-                    commit(state, &target, vec![delivery_operation(&delivery, &target)?]).await?;
+                    commit(
+                        state,
+                        &target,
+                        vec![delivery_operation(&delivery, &target)?],
+                    )
+                    .await?;
                 }
                 Ok(DeliveryOpenAnswer {
                     delivery: Some(*delivery),
@@ -654,13 +668,16 @@ pub(super) async fn feedback(
         // R019.9: an automated review is one round of its proposal and reviewer; the verdict
         // joins the delivery as an input.
         if event.kind == FeedbackKind::ReviewSubmitted && event.source == InputSource::Automation {
-            let reviews: Vec<ReviewRecord> = rows_of_type(&core, &authority, &tenant, REVIEW_NODE_TYPE)
-                .into_iter()
-                .filter_map(|(_, row)| review_record(&row))
-                .collect();
+            let reviews: Vec<ReviewRecord> =
+                rows_of_type(&core, &authority, &tenant, REVIEW_NODE_TYPE)
+                    .into_iter()
+                    .filter_map(|(_, row)| review_record(&row))
+                    .collect();
             let current = rows_of_type(&core, &authority, &tenant, REVIEW_NODE_TYPE)
                 .into_iter()
-                .find(|(_, row)| string_of(row, "event_id").as_deref() == Some(event.event_id.as_str()))
+                .find(|(_, row)| {
+                    string_of(row, "event_id").as_deref() == Some(event.event_id.as_str())
+                })
                 .and_then(|(_, row)| review_record(&row));
             if let Some(current) = current {
                 let max_rounds = medulla_server_api::knob_config::knobs()
@@ -673,17 +690,17 @@ pub(super) async fn feedback(
         }
         // R019.12: a person's proposal that carries the delivery branch supersedes the delivery.
         let mut superseded: Vec<Delivery> = Vec::new();
-        if matches!(event.kind, FeedbackKind::HeadPushed | FeedbackKind::ProposalMerged) {
+        if matches!(
+            event.kind,
+            FeedbackKind::HeadPushed | FeedbackKind::ProposalMerged
+        ) {
             let changesets = rows_of_type(&core, &authority, &tenant, CHANGESET_NODE_TYPE);
             let held = changesets_of(&changesets, &[event.proposal_id.as_str()]);
             let candidate = CandidateProposal {
                 proposal_id: event.proposal_id.clone(),
                 by_person: event.source == InputSource::Person,
                 changeset_ids: held.iter().map(|c| c.id.clone()).collect(),
-                path_digests: held
-                    .iter()
-                    .flat_map(|c| c.path_digests.clone())
-                    .collect(),
+                path_digests: held.iter().flat_map(|c| c.path_digests.clone()).collect(),
             };
             for delivery in deliveries
                 .iter()
@@ -692,7 +709,11 @@ pub(super) async fn feedback(
                 let ids: Vec<&str> = delivery.proposals.iter().map(|p| p.id.as_str()).collect();
                 let branch = changesets_of(&changesets, &ids);
                 if superseded_verdict(&branch, &candidate) == SupersededVerdict::CloseSuperseded {
-                    superseded.push(record_superseded(delivery, &event.event_id, &event.proposal_id));
+                    superseded.push(record_superseded(
+                        delivery,
+                        &event.event_id,
+                        &event.proposal_id,
+                    ));
                 }
             }
         }
@@ -704,7 +725,9 @@ pub(super) async fn feedback(
         properties.insert("proposal_id".into(), event.proposal_id.clone().into());
         properties.insert(
             "record".into(),
-            serde_json::to_string(&event).map_err(|e| e.to_string())?.into(),
+            serde_json::to_string(&event)
+                .map_err(|e| e.to_string())?
+                .into(),
         );
         stamp(&mut properties, &target);
         let mut operations =
@@ -770,7 +793,10 @@ pub(super) async fn report(
         require_tenant(&target)?;
         let tenant = target.verified.tenant().to_owned();
         let (core, authority) = read_graph(state, &target).await?;
-        let delivery = find_delivery(&load_deliveries(&core, &authority, &tenant), &write.delivery_id)?;
+        let delivery = find_delivery(
+            &load_deliveries(&core, &authority, &tenant),
+            &write.delivery_id,
+        )?;
         let known_verdicts: BTreeSet<String> = sealed_gate_verdicts(&core, &authority, &tenant)
             .into_iter()
             .map(|(id, _)| id)
@@ -812,7 +838,12 @@ pub(super) async fn list(
         let (core, authority) = read_graph(state, &target).await?;
         let deliveries = load_deliveries(&core, &authority, target.verified.tenant())
             .into_iter()
-            .filter(|delivery| request.repo.as_ref().is_none_or(|repo| &delivery.repo == repo))
+            .filter(|delivery| {
+                request
+                    .repo
+                    .as_ref()
+                    .is_none_or(|repo| &delivery.repo == repo)
+            })
             .map(|delivery| DeliveryListEntry {
                 stage: derive_stage(&delivery).as_str().to_owned(),
                 id: delivery.id,
@@ -864,7 +895,12 @@ pub(super) async fn respond(
             &request.delivery_id,
         )?;
         let answered = record_answer(&delivery, &request.answer)?;
-        commit(state, &target, vec![delivery_operation(&answered, &target)?]).await?;
+        commit(
+            state,
+            &target,
+            vec![delivery_operation(&answered, &target)?],
+        )
+        .await?;
         Ok(answer(answered))
     }
     .await;
@@ -898,7 +934,12 @@ pub(super) async fn retry(
         let before = delivery.clone();
         delivery = recovered(&delivery, &expired, &effects, now);
         if delivery != before {
-            commit(state, &target, vec![delivery_operation(&delivery, &target)?]).await?;
+            commit(
+                state,
+                &target,
+                vec![delivery_operation(&delivery, &target)?],
+            )
+            .await?;
             return Ok(answer(delivery));
         }
         let busy = delivery
@@ -929,7 +970,12 @@ pub(super) async fn retry(
                 ended_reason: None,
                 recovery: None,
             });
-            commit(state, &target, vec![delivery_operation(&delivery, &target)?]).await?;
+            commit(
+                state,
+                &target,
+                vec![delivery_operation(&delivery, &target)?],
+            )
+            .await?;
         }
         Ok(answer(delivery))
     }

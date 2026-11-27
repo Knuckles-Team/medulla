@@ -107,25 +107,31 @@ pub(super) fn publish_with(
     }
     tweak(&mut draft);
     store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(
-                store,
-                TENANT,
-                &format!("seed:{id}"),
-                nonce,
-                0,
-                "agent-component:publish",
-            ),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(
+                    store,
+                    TENANT,
+                    &format!("seed:{id}"),
+                    nonce,
+                    0,
+                    "agent-component:publish",
+                ),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .expect("publishes");
 }
 
 /// One model (declaring `capabilities`), one prompt, one tool, one skill and
 /// one ontology: every slot of a runnable agent (`one:tool` is at least one).
-pub(in crate::decide) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
+pub(in crate::decide) fn seed(
+    store: &AgentLibraryStore,
+    capabilities: Option<ModelInputCapabilities>,
+) {
     seed_with(store, capabilities, |_| {});
 }
 
@@ -223,10 +229,31 @@ async fn create_request_graph(h: &Harness) {
 
 /// The tools the shared harness lets the asker run.
 const DEFAULT_ALLOWED_TOOLS: &[&str] = &[
-    "model-a", "prompt-a", "tool-a", "skill-a", "ontology-a", "p-search", "p-sink", "p-bad",
-    "r-ok", "r-kind", "r-schema", "r-caps", "r-effect", "tool-web", "tool-small", "tool-large",
-    "tool-bad", "tool-render-artifact", "tool-apply", "tool-verify", "tool:search",
-    "prompt:agent", "skill:reason", "model-profile:default", "ontology:agent",
+    "model-a",
+    "prompt-a",
+    "tool-a",
+    "skill-a",
+    "ontology-a",
+    "p-search",
+    "p-sink",
+    "p-bad",
+    "r-ok",
+    "r-kind",
+    "r-schema",
+    "r-caps",
+    "r-effect",
+    "tool-web",
+    "tool-small",
+    "tool-large",
+    "tool-bad",
+    "tool-render-artifact",
+    "tool-apply",
+    "tool-verify",
+    "tool:search",
+    "prompt:agent",
+    "skill:reason",
+    "model-profile:default",
+    "ontology:agent",
 ];
 
 /// Store the run-scope bound of `verified` in the request graph: `None` writes no policy
@@ -565,7 +592,9 @@ async fn primitive_premises_and_inactive_proposals() {
     let mut wired = request(Vec::new());
     wired.primitive_edges = BoundedVec::new(vec![edge("p-search", "p-sink")]).unwrap();
     wired.replacements = BoundedVec::new(vec![replacement("p-search", "r-ok")]).unwrap();
-    let result = assemble(&h, wired).await.expect("a legal wiring is decided");
+    let result = assemble(&h, wired)
+        .await
+        .expect("a legal wiring is decided");
     let record = &result.record;
     assert!(
         matches!(record.outcome, DecisionOutcome::Solved { .. }),
@@ -583,7 +612,9 @@ async fn primitive_premises_and_inactive_proposals() {
     let subjects: Vec<&str> = primitives.iter().map(|p| p.subject.as_str()).collect();
     for id in ["p-search", "p-sink", "r-ok"] {
         assert!(
-            subjects.iter().any(|subject| subject.starts_with(&format!("primitive:{id}@"))),
+            subjects
+                .iter()
+                .any(|subject| subject.starts_with(&format!("primitive:{id}@"))),
             "{id} missing from {subjects:?}"
         );
     }
@@ -592,8 +623,12 @@ async fn primitive_premises_and_inactive_proposals() {
         .find(|p| p.subject.starts_with("primitive:p-search@"))
         .unwrap();
     assert!(search.fact.starts_with("compatible;"), "{}", search.fact);
-    assert!(search.fact.contains(&format!("input_schema={}", digest('a'))));
-    assert!(search.fact.contains(&format!("output_schema={}", digest('b'))));
+    assert!(search
+        .fact
+        .contains(&format!("input_schema={}", digest('a'))));
+    assert!(search
+        .fact
+        .contains(&format!("output_schema={}", digest('b'))));
     assert!(primitives.iter().all(|p| p.class == PremiseClass::Proof));
 
     // The receipt names the replacement and the rule that allowed it.
@@ -602,19 +637,35 @@ async fn primitive_premises_and_inactive_proposals() {
         .iter()
         .find(|premise| premise.subject == "replacement:p-search->r-ok")
         .expect("the replacement premise");
-    assert!(replaced.fact.starts_with("allowed_by=substitutes:"), "{}", replaced.fact);
+    assert!(
+        replaced.fact.starts_with("allowed_by=substitutes:"),
+        "{}",
+        replaced.fact
+    );
 
     // A proposal is not an activation: the same wiring without the replacement
     // composes the same graph.
     let mut plain = request(Vec::new());
     plain.primitive_edges = BoundedVec::new(vec![edge("p-search", "p-sink")]).unwrap();
-    let unproposed = assemble(&h, plain).await.expect("the wiring alone is decided");
-    let (DecisionOutcome::Solved { graph_digest: with, .. }, DecisionOutcome::Solved { graph_digest: without, .. }) =
-        (&record.outcome, &unproposed.record.outcome)
+    let unproposed = assemble(&h, plain)
+        .await
+        .expect("the wiring alone is decided");
+    let (
+        DecisionOutcome::Solved {
+            graph_digest: with, ..
+        },
+        DecisionOutcome::Solved {
+            graph_digest: without,
+            ..
+        },
+    ) = (&record.outcome, &unproposed.record.outcome)
     else {
         panic!("both assemblies solve");
     };
-    assert_eq!(with, without, "a replacement proposal changes no active composition");
+    assert_eq!(
+        with, without,
+        "a replacement proposal changes no active composition"
+    );
 }
 
 const WEB: &str = "eg:capability/retrieval/web-search";

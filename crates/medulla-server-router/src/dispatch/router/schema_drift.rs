@@ -53,7 +53,13 @@ async fn read_graph(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
-) -> Result<(Arc<GraphCore>, medulla_server_api::carrier::GraphReadAuthority), String> {
+) -> Result<
+    (
+        Arc<GraphCore>,
+        medulla_server_api::carrier::GraphReadAuthority,
+    ),
+    String,
+> {
     ensure_graph_resident(state, &req.graph).await;
     let current = timed_read(state).await;
     authorized_graph_read(
@@ -121,7 +127,9 @@ fn composed_digest_of(response: &Response) -> Result<String, String> {
             .get("composed_digest")
             .and_then(Value::as_str)
             .map(str::to_owned)
-            .ok_or_else(|| "INVALID_ARGUMENT: the schema answer names no composed digest".to_string()),
+            .ok_or_else(|| {
+                "INVALID_ARGUMENT: the schema answer names no composed digest".to_string()
+            }),
         _ => Err("INVALID_ARGUMENT: the schema gateway answered no result".to_string()),
     }
 }
@@ -177,9 +185,8 @@ pub(super) async fn repair_propose(
             let (core, _) = read_graph(state, req, verified).await?;
             medulla_h_admin::graph_schema::shadow_check_summary(&core, &proposal.candidate_digest)
                 .ok_or_else(|| {
-                    "INVALID_ARGUMENT: the shadow check stored no report for the candidate"
-                        .to_string()
-                })?
+                "INVALID_ARGUMENT: the shadow check stored no report for the candidate".to_string()
+            })?
         };
         Ok(SchemaRepairPreview {
             drift_id: target.drift_id,
@@ -249,7 +256,10 @@ pub(super) async fn repair_approve(
         )
         .await
         .map_err(|refusal| {
-            if APPROVAL_REFUSALS.iter().any(|code| refusal.starts_with(code)) {
+            if APPROVAL_REFUSALS
+                .iter()
+                .any(|code| refusal.starts_with(code))
+            {
                 format!("{REPAIR_APPROVAL_MISSING}: {refusal}")
             } else {
                 refusal

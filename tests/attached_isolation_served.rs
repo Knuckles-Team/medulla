@@ -11,14 +11,14 @@ mod test_support;
 use std::sync::Arc;
 use std::time::Duration;
 
-use medulla_query_types::wire::{Op, Plan};
+use medulla_catalog_types::consolidation_isolation::SourceQuota;
 use medulla_exec::rowset::RowSet;
 use medulla_federation::federation_opt::mcp::{
     register_connector_row_source, ConnectorRowRequest, ConnectorRowSource, ConnectorRows,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
 use medulla_query_types::wire::{ForeignOperationCapabilities, ForeignSourceSpec, HttpFieldMap};
+use medulla_query_types::wire::{Op, Plan};
 
 const SECRET: &str = "attached-isolation-secret";
 

@@ -44,10 +44,7 @@ fn build_view(triples: Vec<Triple>) -> Result<medulla_graph_core::graph::GraphVi
 /// A one-row boolean result table (`ASK` over a virtual graph).
 pub(super) fn bool_result(b: bool) -> SparqlResult {
     let mut sol = HashMap::new();
-    sol.insert(
-        "_ask".to_string(),
-        medulla_rdf::sparql::Binding::boolean(b),
-    );
+    sol.insert("_ask".to_string(), medulla_rdf::sparql::Binding::boolean(b));
     SparqlResult {
         vars: vec!["_ask".to_string()],
         solutions: vec![sol],

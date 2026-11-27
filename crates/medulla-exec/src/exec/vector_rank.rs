@@ -144,9 +144,9 @@ fn rank_top(
         return rank_topic_fused(ctx, query, &candidates, limit);
     }
     let Some(k) = limit else {
-        let scored = ctx
-            .semantic
-            .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
+        let scored =
+            ctx.semantic
+                .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
         return Ok(RowSet::from_scored(scored));
     };
     // `k` above the plan's result-row budget is capped and reported, never refused.
@@ -192,9 +192,9 @@ fn rank_topic_fused(
     candidates: &HashSet<&str>,
     limit: Option<usize>,
 ) -> Result<RowSet, String> {
-    let dense = ctx
-        .semantic
-        .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
+    let dense =
+        ctx.semantic
+            .exact_rank_candidates(query, candidates.iter().copied(), candidates.len());
     let embedded = dense.len();
     let (mut fused, receipt) = super::topic::fuse_ranked(ctx, query, dense)?;
     let Some(k) = limit else {
@@ -368,10 +368,18 @@ mod tests {
         .unwrap()
     }
 
-    fn pair_result(store: &SemanticStore, query: Modality, target: Modality) -> Result<RowSet, String> {
+    fn pair_result(
+        store: &SemanticStore,
+        query: Modality,
+        target: Modality,
+    ) -> Result<RowSet, String> {
         let view = GraphCore::new().analysis_snapshot();
         let ctx = PlanCtx::new(&view, store).with_modality_pair(ModalityPair { query, target });
-        rank_op(&ctx, &[1.0, 0.0, 0.0, 0.0], RowSet::from_ids(["a".to_string()]))
+        rank_op(
+            &ctx,
+            &[1.0, 0.0, 0.0, 0.0],
+            RowSet::from_ids(["a".to_string()]),
+        )
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R039.1.2
@@ -386,7 +394,10 @@ mod tests {
                 // Oracle: every modality of a four-way space binds that space's one
                 // tuple, so all sixteen pairs rank; a space with no modality bindings
                 // and a store with no declared space rank none.
-                assert!(pair_result(&multimodal, query, target).is_ok(), "{query:?}->{target:?}");
+                assert!(
+                    pair_result(&multimodal, query, target).is_ok(),
+                    "{query:?}->{target:?}"
+                );
                 for store in [&single, &legacy] {
                     let refusal = pair_result(store, query, target).unwrap_err();
                     assert!(
@@ -412,9 +423,15 @@ mod tests {
             .unwrap();
         for query in Modality::ALL {
             for target in Modality::ALL {
-                assert!(pair_allowed(bound_tuple(&a, query), bound_tuple(&a, target)));
+                assert!(pair_allowed(
+                    bound_tuple(&a, query),
+                    bound_tuple(&a, target)
+                ));
                 for other in [&other_revision, &other_dim, &other_id] {
-                    assert!(!pair_allowed(bound_tuple(&a, query), bound_tuple(other, target)));
+                    assert!(!pair_allowed(
+                        bound_tuple(&a, query),
+                        bound_tuple(other, target)
+                    ));
                 }
             }
         }
@@ -450,7 +467,14 @@ mod tests {
         // Fewer embedded candidates than k: found, requested and the reason.
         let mut with_unembedded = all.clone();
         with_unembedded.insert("none");
-        let got = replenish_until_k(&semantic, &[1.0, 0.0], &with_unembedded, 25, EXACT_RANK_MAX, policy);
+        let got = replenish_until_k(
+            &semantic,
+            &[1.0, 0.0],
+            &with_unembedded,
+            25,
+            EXACT_RANK_MAX,
+            policy,
+        );
         assert_eq!(got.scored.len(), 20);
         assert_eq!(
             got.shortfall,
@@ -462,7 +486,10 @@ mod tests {
             })
         );
         let got = replenish_until_k(&semantic, &[1.0, 0.0], &all, 25, EXACT_RANK_MAX, policy);
-        assert_eq!(got.shortfall.map(|s| s.reason), Some(ShortfallReason::EligibleExhausted));
+        assert_eq!(
+            got.shortfall.map(|s| s.reason),
+            Some(ShortfallReason::EligibleExhausted)
+        );
         assert_eq!(got.shortfall.map(|s| s.missing), Some(0));
     }
 
@@ -562,7 +589,9 @@ mod tests {
         let mut semantic = SemanticStore::new_in_space(space.clone()).unwrap();
         // `a` is nearest the query; `c` sits on the heavier topic's centroid.
         for (id, vector) in [("a", [1.0, 0.1]), ("b", [0.9, 0.5]), ("c", [0.2, 1.0])] {
-            semantic.add_embedding(id.to_string(), vec![vector[0], vector[1]]).unwrap();
+            semantic
+                .add_embedding(id.to_string(), vec![vector[0], vector[1]])
+                .unwrap();
         }
         let view = GraphCore::new().analysis_snapshot();
         let input = || RowSet::from_ids(["a", "b", "c"].map(String::from));
@@ -574,7 +603,12 @@ mod tests {
         };
         let bound = |weight: f32, current: Option<u64>| {
             PlanCtx::new(&view, &semantic)
-                .with_topic_policy(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(weight).unwrap())
+                .with_topic_policy(
+                    TopicRankingPolicy::new(1, 0.0)
+                        .unwrap()
+                        .with_weight(weight)
+                        .unwrap(),
+                )
                 .with_topic_fusion(TopicFusion {
                     backend: std::sync::Arc::new(InMemoryTopicBackend {
                         centroids: backend.centroids.clone(),
@@ -585,7 +619,9 @@ mod tests {
                     current_corpus_revision: current,
                 })
         };
-        let order = |ctx: &PlanCtx, k: usize| rank_limit(ctx, &[1.0, 0.0], input(), k).map(|rows| rows.ids());
+        let order = |ctx: &PlanCtx, k: usize| {
+            rank_limit(ctx, &[1.0, 0.0], input(), k).map(|rows| rows.ids())
+        };
         // w = 0 is the dense order; w = 1 is the topic order, applied before the cut to k = 1.
         assert_eq!(order(&bound(0.0, Some(7)), 3).unwrap(), ["a", "b", "c"]);
         assert_eq!(order(&bound(1.0, Some(7)), 3).unwrap()[0], "c");
@@ -594,11 +630,17 @@ mod tests {
         let stale = order(&bound(0.3, Some(8)), 3).unwrap_err();
         assert!(stale.starts_with("TOPIC_CORPUS_STALE"), "{stale}");
         let unbound = order(&bound(0.3, None), 3).unwrap_err();
-        assert!(unbound.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{unbound}");
+        assert!(
+            unbound.starts_with("TOPIC_BACKEND_UNAVAILABLE"),
+            "{unbound}"
+        );
         let mut no_backend = bound(0.3, Some(7));
         no_backend.topic_fusion = None;
         let missing = order(&no_backend, 3).unwrap_err();
-        assert!(missing.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{missing}");
+        assert!(
+            missing.starts_with("TOPIC_BACKEND_UNAVAILABLE"),
+            "{missing}"
+        );
         // With no topic policy bound, the rank is the plain dense rank.
         let plain = PlanCtx::new(&view, &semantic);
         assert_eq!(order(&plain, 3).unwrap(), ["a", "b", "c"]);

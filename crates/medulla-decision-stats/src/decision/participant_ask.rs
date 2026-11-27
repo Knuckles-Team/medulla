@@ -56,7 +56,11 @@ pub fn ground(question: &str, claims: &[AskClaim], max_claims: usize) -> Vec<Ask
             .then_with(|| b.1.confidence_ppm.cmp(&a.1.confidence_ppm))
             .then_with(|| a.1.claim_id.cmp(&b.1.claim_id))
     });
-    scored.into_iter().take(max_claims).map(|(_, claim)| claim.clone()).collect()
+    scored
+        .into_iter()
+        .take(max_claims)
+        .map(|(_, claim)| claim.clone())
+        .collect()
 }
 
 /// The answer text and one citation per sentence, in the order of `grounded`.
@@ -75,7 +79,10 @@ pub fn cite(grounded: &[AskClaim]) -> (String, Vec<Citation>) {
         .join(" ");
     let citations = grounded
         .iter()
-        .map(|claim| Citation { claim_id: claim.claim_id.clone(), turn_ids: claim.turn_ids.clone() })
+        .map(|claim| Citation {
+            claim_id: claim.claim_id.clone(),
+            turn_ids: claim.turn_ids.clone(),
+        })
         .collect();
     (text, citations)
 }
@@ -99,12 +106,26 @@ mod tests {
         let claims = [
             claim("c1", "Prefers green tea", 700_000, &["m1", "m4"]),
             claim("c2", "Lives in Lisbon", 900_000, &["m2"]),
-            claim("c3", "Prefers tea over coffee in the morning", 800_000, &["m3"]),
+            claim(
+                "c3",
+                "Prefers tea over coffee in the morning",
+                800_000,
+                &["m3"],
+            ),
         ];
         let grounded = ground("what tea does she prefer", &claims, 20);
-        assert_eq!(grounded.iter().map(|c| c.claim_id.as_str()).collect::<Vec<_>>(), ["c3", "c1"]);
+        assert_eq!(
+            grounded
+                .iter()
+                .map(|c| c.claim_id.as_str())
+                .collect::<Vec<_>>(),
+            ["c3", "c1"]
+        );
         let (text, citations) = cite(&grounded);
-        assert_eq!(text, "Prefers tea over coffee in the morning. Prefers green tea.");
+        assert_eq!(
+            text,
+            "Prefers tea over coffee in the morning. Prefers green tea."
+        );
         assert_eq!(citations[0].claim_id, "c3");
         assert_eq!(citations[1].turn_ids, ["m1", "m4"]);
         // The cap keeps the best.

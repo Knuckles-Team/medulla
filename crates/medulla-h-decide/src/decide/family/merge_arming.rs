@@ -9,19 +9,18 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::merge_arming::{
     option_id, MergeArmingRefusal, KNOB_ARM_MAX_CHANGED_LINES, OWNER_APPROVAL_TYPE, PARAM_BRANCH,
     PARAM_CHANGED_LINES, PARAM_DELIVERY, PARAM_GRAPH, PARAM_HEAD_CHANGESET, PARAM_HEAD_COMMIT,
-    PARAM_PROPOSAL, PARAM_REQUIRED_CHECK, REVIEW_TYPE, ROW_AT_MS, ROW_HEAD_COMMIT,
-    ROW_PROPOSAL, ROW_REVIEWER, ROW_REVIEW_STATE, STATE_CHANGES_REQUESTED,
+    PARAM_PROPOSAL, PARAM_REQUIRED_CHECK, REVIEW_TYPE, ROW_AT_MS, ROW_HEAD_COMMIT, ROW_PROPOSAL,
+    ROW_REVIEWER, ROW_REVIEW_STATE, STATE_CHANGES_REQUESTED,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
-use medulla_types::evidence_class::EvidenceClass;
-use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_graph_core::graph::GraphView;
 use medulla_sdlc::lifecycle::delivery::arming::arming_verdict;
 use medulla_source_types::delivery::{
@@ -32,6 +31,7 @@ use medulla_source_types::gate_verdict::{
     LandingPolicy, GATE_VERDICT_RECORD_PROPERTY, GATE_VERDICT_SEAL_PROPERTY, GATE_VERDICT_TYPE,
     LANDING_POLICY_RECORD_PROPERTY, LANDING_POLICY_TYPE,
 };
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::step_verdict::VerificationVerdict;
 
 use crate::decide::stat_executor::{
@@ -144,8 +144,11 @@ pub(in crate::decide) fn facts_of(
         .ok_or_else(|| invalid("a merge_arming question requires changed_lines"))?;
 
     // The delivery: absent and another tenant's read the same, so nothing is disclosed.
-    let not_visible =
-        || invalid(format!("the delivery {delivery_id} is not visible to the caller"));
+    let not_visible = || {
+        invalid(format!(
+            "the delivery {delivery_id} is not visible to the caller"
+        ))
+    };
     let row = view
         .node_row_object(delivery_id)
         .filter(|row| text(row, "type").as_deref() == Some(DELIVERY_TYPE))
@@ -208,9 +211,9 @@ pub(in crate::decide) fn facts_of(
     }
     let changes_requested = latest.values().any(|(_, _, asks)| *asks);
 
-    let max_changed_lines = match policy.knob(
-        &medulla_decision_types::decision::lifecycle::KNOBS[KNOB_ARM_MAX_CHANGED_LINES],
-    ) {
+    let max_changed_lines = match policy
+        .knob(&medulla_decision_types::decision::lifecycle::KNOBS[KNOB_ARM_MAX_CHANGED_LINES])
+    {
         KnobValue::Integer(value) => u64::try_from(value).unwrap_or(0),
         _ => 0,
     };
@@ -244,7 +247,10 @@ fn conclude_over(
         Ok(verdict) => {
             let mut executed = advisory(vec![option_id(verdict).to_string()])?;
             executed.family_premises = vec![
-                premise(format!("merge_arming.verdict={}", option_id(verdict)), delivery),
+                premise(
+                    format!("merge_arming.verdict={}", option_id(verdict)),
+                    delivery,
+                ),
                 premise(
                     format!("merge_arming.gates_passed={}", facts.gates_passed),
                     delivery,

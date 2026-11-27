@@ -37,12 +37,15 @@ fn publish(
 ) -> Result<(), String> {
     let key = format!("guardrail:{}", draft.component_id);
     store
-        .publish_component(AgentComponentPublishRequest {
-            context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
-            evaluation_receipt_digest: None,
-            component: draft,
-            body: None,
-        }, None)
+        .publish_component(
+            AgentComponentPublishRequest {
+                context: mutation_context(store, tenant, &key, nonce, 0, "agent-component:publish"),
+                evaluation_receipt_digest: None,
+                component: draft,
+                body: None,
+            },
+            None,
+        )
         .map(|_| ())
 }
 

@@ -45,7 +45,9 @@ fn points(from: i64, n: i64) -> Vec<Point> {
 
 /// One HTTP/1.1 request over a fresh connection; answers the status code and the body.
 async fn http(addr: std::net::SocketAddr, method: &str, path: &str, body: &str) -> (u16, String) {
-    let mut stream = TcpStream::connect(addr).await.expect("connect to the catalog");
+    let mut stream = TcpStream::connect(addr)
+        .await
+        .expect("connect to the catalog");
     let request = format!(
         "{method} {path} HTTP/1.1\r\nhost: localhost\r\ncontent-type: application/json\r\n\
          content-length: {}\r\nconnection: close\r\n\r\n{body}",
@@ -56,7 +58,10 @@ async fn http(addr: std::net::SocketAddr, method: &str, path: &str, body: &str) 
         .await
         .expect("send the request");
     let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.expect("read the response");
+    stream
+        .read_to_end(&mut raw)
+        .await
+        .expect("read the response");
     let text = String::from_utf8_lossy(&raw).into_owned();
     let status = text
         .split_whitespace()
@@ -85,9 +90,8 @@ async fn snapshot_id(addr: std::net::SocketAddr) -> u64 {
 #[tokio::test(flavor = "multi_thread")]
 async fn projection_writes_are_refused_and_graph_writes_appear() {
     let chunks = unique_dir("chunks");
-    let store: Arc<dyn ChunkStore> = Arc::new(
-        RedbChunkStore::open(&chunks.to_string_lossy()).expect("open the chunk store"),
-    );
+    let store: Arc<dyn ChunkStore> =
+        Arc::new(RedbChunkStore::open(&chunks.to_string_lossy()).expect("open the chunk store"));
     let tsdb = SeriesStore::open_in_dir(
         &unique_dir("series"),
         medulla_kernel::store_authority::process_verifier(),

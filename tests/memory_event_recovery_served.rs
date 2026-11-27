@@ -34,7 +34,8 @@ async fn memory_event_nodes(state: &test_support::SharedState) -> Vec<String> {
         let current = state.read().await;
         current.registry.get(GRAPH).expect("graph").core.clone()
     };
-    core.nodes_by_property("type", "MemoryEvent").unwrap_or_default()
+    core.nodes_by_property("type", "MemoryEvent")
+        .unwrap_or_default()
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R073.6
@@ -77,8 +78,14 @@ async fn an_unpublished_claim_event_is_published_once_by_the_recovery_pass() {
     let serve = |op: ClaimOp| {
         let (state, verified) = (state.clone(), verified.clone());
         async move {
-            let served = medulla_h_decide::decide::handle_claims_planned(&state, 1, GRAPH, &verified, op).await;
-            assert!(served.response.refusal_text().is_none(), "{:?}", served.response.refusal_text());
+            let served =
+                medulla_h_decide::decide::handle_claims_planned(&state, 1, GRAPH, &verified, op)
+                    .await;
+            assert!(
+                served.response.refusal_text().is_none(),
+                "{:?}",
+                served.response.refusal_text()
+            );
             served
         }
     };
@@ -104,14 +111,23 @@ async fn an_unpublished_claim_event_is_published_once_by_the_recovery_pass() {
         proof: None,
     })
     .await;
-    let served = serve(ClaimOp::Advance { claim_id: "c-recover".to_string(), to: ClaimState::Supported }).await;
+    let served = serve(ClaimOp::Advance {
+        claim_id: "c-recover".to_string(),
+        to: ClaimState::Supported,
+    })
+    .await;
     assert_eq!(served.events.len(), 1, "the transition announced one event");
 
     // The process stopped before anything published it: the graph holds no event yet.
     assert!(memory_event_nodes(&state).await.is_empty());
 
     // The recovery pass publishes the row once.
-    assert_eq!(publish_claim_events(&state).await.expect("the pass publishes"), 1);
+    assert_eq!(
+        publish_claim_events(&state)
+            .await
+            .expect("the pass publishes"),
+        1
+    );
     let nodes = memory_event_nodes(&state).await;
     assert_eq!(nodes.len(), 1);
     let properties = core.get_node_properties(&nodes[0]).expect("the event node");
@@ -120,6 +136,11 @@ async fn an_unpublished_claim_event_is_published_once_by_the_recovery_pass() {
     assert_eq!(properties["tenant_scope"], tenant);
 
     // A second pass finds the row acknowledged and writes nothing.
-    assert_eq!(publish_claim_events(&state).await.expect("the pass is idempotent"), 0);
+    assert_eq!(
+        publish_claim_events(&state)
+            .await
+            .expect("the pass is idempotent"),
+        0
+    );
     assert_eq!(memory_event_nodes(&state).await, nodes);
 }

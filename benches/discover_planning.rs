@@ -59,16 +59,20 @@ struct FixedExpansions;
 
 impl ExpansionProvider for FixedExpansions {
     fn expand(&self, req: &ExpansionRequest) -> Result<Vec<Expansion>, ExpansionError> {
-        Ok(["a recent document", "a replicated document", "a document about replication"]
-            .into_iter()
-            .take(usize::from(req.perspectives))
-            .enumerate()
-            .map(|(i, text)| Expansion {
-                text: text.to_string(),
-                kind: ExpansionKind::Perspective,
-                digest: format!("{i:064x}"),
-            })
-            .collect())
+        Ok([
+            "a recent document",
+            "a replicated document",
+            "a document about replication",
+        ]
+        .into_iter()
+        .take(usize::from(req.perspectives))
+        .enumerate()
+        .map(|(i, text)| Expansion {
+            text: text.to_string(),
+            kind: ExpansionKind::Perspective,
+            digest: format!("{i:064x}"),
+        })
+        .collect())
     }
 
     fn provider_id(&self) -> String {

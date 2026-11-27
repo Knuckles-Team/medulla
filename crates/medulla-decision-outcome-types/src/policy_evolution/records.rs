@@ -9,8 +9,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::capture::HeldBlobRef;
-use medulla_decision_types::decision::held_out::{GraderKind, RevisionSubject};
 use super::{PolicyRefusal, MAX_HELD_OUT_TRAJECTORIES, MAX_TRAINING_INPUTS, PPM_SCALE};
+use medulla_decision_types::decision::held_out::{GraderKind, RevisionSubject};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
 };

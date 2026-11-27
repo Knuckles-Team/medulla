@@ -94,12 +94,18 @@ async fn check_resource_access_default_denies() {
     // A grant to another operation does not allow this one.
     let missing = check(&state, "delete_repo").await;
     assert!(!missing.allow);
-    assert_eq!(missing.reason_code.as_deref(), Some("RESOURCE_GRANT_MISSING"));
+    assert_eq!(
+        missing.reason_code.as_deref(),
+        Some("RESOURCE_GRANT_MISSING")
+    );
 
     // A role grant allows a member, with its scope ceiling and expiry.
     let allowed = check(&state, "create_issue").await;
     assert!(allowed.allow);
-    assert_eq!(allowed.grant_id.as_deref(), Some(role_grant.grant_id.as_str()));
+    assert_eq!(
+        allowed.grant_id.as_deref(),
+        Some(role_grant.grant_id.as_str())
+    );
     assert_eq!(allowed.scope_ceiling, vec!["kg:read".to_string()]);
     assert_eq!(allowed.expires_at_ms, Some(NOW_FAR_MS));
     assert_eq!(allowed.reason_code, None);
@@ -178,7 +184,10 @@ async fn protocol_grant_allows_only_its_protocol(protocol: ResourceProtocol, res
     };
     let refused = ask(other).await;
     assert!(!refused.allow);
-    assert_eq!(refused.reason_code.as_deref(), Some("RESOURCE_GRANT_MISSING"));
+    assert_eq!(
+        refused.reason_code.as_deref(),
+        Some("RESOURCE_GRANT_MISSING")
+    );
 }
 
 // spec: MEDULLA-IDENTITY-R704.3

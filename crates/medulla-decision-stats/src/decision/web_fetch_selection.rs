@@ -508,7 +508,12 @@ mod tests {
     #[test]
     fn the_decision_id_names_the_answer_content() {
         let candidates = vec![
-            row("https://a.example/rust-chunking", "Rust document chunking", "google", 1),
+            row(
+                "https://a.example/rust-chunking",
+                "Rust document chunking",
+                "google",
+                1,
+            ),
             row("https://b.example/other", "Unrelated", "google", 2),
         ];
         let held = BTreeMap::new();
@@ -525,8 +530,20 @@ mod tests {
         };
         let first = ask(2, NOW);
         assert!(first.decision_id.starts_with("sha256:"));
-        assert_eq!(first.decision_id, ask(2, NOW).decision_id, "a pure decision replays");
-        assert_ne!(first.decision_id, ask(1, NOW).decision_id, "the budget changes it");
-        assert_ne!(first.decision_id, ask(2, NOW + 1).decision_id, "the clock changes it");
+        assert_eq!(
+            first.decision_id,
+            ask(2, NOW).decision_id,
+            "a pure decision replays"
+        );
+        assert_ne!(
+            first.decision_id,
+            ask(1, NOW).decision_id,
+            "the budget changes it"
+        );
+        assert_ne!(
+            first.decision_id,
+            ask(2, NOW + 1).decision_id,
+            "the clock changes it"
+        );
     }
 }

@@ -44,10 +44,10 @@ mod model_input_capabilities;
 mod ontology;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod open_metadata_sync;
-#[cfg(feature = "shacl")]
-mod outbox;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod orphan_policy;
+#[cfg(feature = "shacl")]
+mod outbox;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod pack_source;
 #[cfg(all(feature = "owl", feature = "shacl"))]
@@ -60,13 +60,13 @@ mod skill_package_render;
 mod source_approval;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_sync;
-#[cfg(all(feature = "owl", feature = "shacl"))]
-mod sync_harness;
 mod sql_columns;
 mod storage_acceptance;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 #[path = "../../connector_pack_projection/surface_tests.rs"]
 mod surface_tests;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod sync_harness;
 mod undecodable;
 mod withdrawal;
 
@@ -113,7 +113,9 @@ impl Served {
     /// with schema projects into a `pack__` graph, and graph creation
     /// requires durable persistence. The returned guard holds the ambient
     /// encryption environment still while the backend is open.
-    pub(in crate::admin) async fn with_graph_persistence(&self) -> medulla_kernel::crypto::TestEnvReadGuard {
+    pub(in crate::admin) async fn with_graph_persistence(
+        &self,
+    ) -> medulla_kernel::crypto::TestEnvReadGuard {
         let guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let root = self.dir.path().join("graphs");
         std::fs::create_dir_all(&root).unwrap();
@@ -219,7 +221,12 @@ impl Served {
     }
 
     /// Send `method` as the admin against the named request `graph`.
-    pub(in crate::admin) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
+    pub(in crate::admin) async fn call_on(
+        &self,
+        graph: &str,
+        key: &str,
+        method: Method,
+    ) -> Response {
         self.call_as_on(graph, ADMIN, &["*"], key, method).await
     }
 
@@ -427,7 +434,10 @@ fn lay_out(archive: &mut Vec<u8>, content: &Content) -> PackEntry {
 
 /// A complete, digest-honest pack: its index (archive blob digest still to be
 /// filled by the upload) and its archive bytes.
-pub(in crate::admin) fn build_pack(connector: &str, entries: &[Content]) -> (ConnectorPackIndex, Vec<u8>) {
+pub(in crate::admin) fn build_pack(
+    connector: &str,
+    entries: &[Content],
+) -> (ConnectorPackIndex, Vec<u8>) {
     build_pack_with_server(connector, &server(connector), entries)
 }
 

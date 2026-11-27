@@ -2,7 +2,13 @@
 // the derivation backlog a caller may see, under the scope `participant:read`, and another tenant's
 // caller reads nothing.
 
-#[cfg(all(unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+#[cfg(all(
+    unix,
+    feature = "redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
 mod served {
     use medulla_decision_types::participant_memory::{DerivationStatus, ParticipantReadOp};
     use medulla_protocol_types::protocol::{Method, Response};
@@ -10,7 +16,9 @@ mod served {
     use medulla_work_types::memory::{
         MemoryKind, MemoryRecord, MemoryRememberRequest, MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
     };
-    use medulla_work_types::participant::{Participant, ParticipantId, ParticipantKind, ParticipantOp};
+    use medulla_work_types::participant::{
+        Participant, ParticipantId, ParticipantKind, ParticipantOp,
+    };
 
     use super::super::connector_pack_harness::{next_id, ok, Served, OTHER_TENANT, TENANT};
 
@@ -52,18 +60,21 @@ mod served {
 
     impl Served {
         async fn pr_call(&self, method: Method) -> Response {
-            self.call_on(GRAPH, &format!("participant-read:{}", next_id()), method).await
+            self.call_on(GRAPH, &format!("participant-read:{}", next_id()), method)
+                .await
         }
 
         async fn pr_read(&self, tenant: &str, scopes: &[&str], op: ParticipantReadOp) -> Response {
-            self.verified(tenant, scopes, Method::ParticipantRead { op: Box::new(op) }).await
+            self.verified(tenant, scopes, Method::ParticipantRead { op: Box::new(op) })
+                .await
         }
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R655.4
     #[tokio::test]
     async fn participant_read_is_served_and_classified() {
-        let served = Served::provisioned(GRAPH, "participant-read-source", &[("doc", "Document")]).await;
+        let served =
+            Served::provisioned(GRAPH, "participant-read-source", &[("doc", "Document")]).await;
 
         // A participant the harness administrator acts as, held by one transcript thread.
         let ada = Participant::new(
@@ -77,12 +88,21 @@ mod served {
         )
         .unwrap();
         let put = served
-            .pr_call(Method::Participant { op: Box::new(ParticipantOp::Put { participant: ada.clone() }) })
+            .pr_call(Method::Participant {
+                op: Box::new(ParticipantOp::Put {
+                    participant: ada.clone(),
+                }),
+            })
             .await;
         assert!(put.error.is_none(), "Put refused: {put:?}");
         {
             let guard = served.state.read().await;
-            let core = guard.registry.get(GRAPH).expect("the served graph").core.clone();
+            let core = guard
+                .registry
+                .get(GRAPH)
+                .expect("the served graph")
+                .core
+                .clone();
             let thread = format!("transcript-thread:{SESSION}");
             core.add_node(
                 thread.clone(),
@@ -96,7 +116,8 @@ mod served {
             core.add_edge(
                 thread,
                 ada.iri(),
-                rmp_serde::to_vec_named(&serde_json::json!({"relationship": "hasParticipant"})).unwrap(),
+                rmp_serde::to_vec_named(&serde_json::json!({"relationship": "hasParticipant"}))
+                    .unwrap(),
             )
             .unwrap();
         }
@@ -112,26 +133,43 @@ mod served {
                     }),
                 })
                 .await;
-            assert!(remembered.error.is_none(), "MemoryRemember refused: {remembered:?}");
+            assert!(
+                remembered.error.is_none(),
+                "MemoryRemember refused: {remembered:?}"
+            );
         }
 
         // Get and List answer the stored participant under the read scope.
         let got: Participant = ok(
             "Get",
             served
-                .pr_read(TENANT, &["participant:read"], ParticipantReadOp::Get { participant_id: slug("ada") })
+                .pr_read(
+                    TENANT,
+                    &["participant:read"],
+                    ParticipantReadOp::Get {
+                        participant_id: slug("ada"),
+                    },
+                )
                 .await,
         );
         assert_eq!(got.participant_id, slug("ada"));
-        let listed: Vec<Participant> =
-            ok("List", served.pr_read(TENANT, &["participant:read"], ParticipantReadOp::List).await);
+        let listed: Vec<Participant> = ok(
+            "List",
+            served
+                .pr_read(TENANT, &["participant:read"], ParticipantReadOp::List)
+                .await,
+        );
         assert_eq!(listed.len(), 1);
 
         // Status groups the waiting tasks by scope, session and subject.
         let status: Vec<DerivationStatus> = ok(
             "Status",
             served
-                .pr_read(TENANT, &["participant:read"], ParticipantReadOp::Status { memory_scope: None })
+                .pr_read(
+                    TENANT,
+                    &["participant:read"],
+                    ParticipantReadOp::Status { memory_scope: None },
+                )
                 .await,
         );
         assert_eq!(status.len(), 1, "{status:?}");
@@ -143,19 +181,36 @@ mod served {
         // The method is classified as a read behind its own scope: without it the call is denied,
         // and a caller of another tenant reads nothing of this tenant.
         let denied = served
-            .pr_read(TENANT, &["kg:read"], ParticipantReadOp::Status { memory_scope: None })
+            .pr_read(
+                TENANT,
+                &["kg:read"],
+                ParticipantReadOp::Status { memory_scope: None },
+            )
             .await;
         assert!(denied.error.expect("denied").contains("ACCESS_DENIED"));
         let foreign: Vec<DerivationStatus> = ok(
             "foreign Status",
             served
-                .pr_read(OTHER_TENANT, &["participant:read"], ParticipantReadOp::Status { memory_scope: None })
+                .pr_read(
+                    OTHER_TENANT,
+                    &["participant:read"],
+                    ParticipantReadOp::Status { memory_scope: None },
+                )
                 .await,
         );
         assert!(foreign.is_empty());
         let absent = served
-            .pr_read(OTHER_TENANT, &["participant:read"], ParticipantReadOp::Get { participant_id: slug("ada") })
+            .pr_read(
+                OTHER_TENANT,
+                &["participant:read"],
+                ParticipantReadOp::Get {
+                    participant_id: slug("ada"),
+                },
+            )
             .await;
-        assert!(absent.error.expect("absent").contains("PARTICIPANT_NOT_VISIBLE"));
+        assert!(absent
+            .error
+            .expect("absent")
+            .contains("PARTICIPANT_NOT_VISIBLE"));
     }
 }

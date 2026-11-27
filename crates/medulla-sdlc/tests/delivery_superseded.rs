@@ -44,7 +44,11 @@ fn containing_person_proposal_supersedes_and_related_does_not() {
     assert_eq!(
         superseded_verdict(
             &branch,
-            &candidate(true, &[], &[("a.rs", "d-a"), ("b.rs", "d-b"), ("z.rs", "d-z")])
+            &candidate(
+                true,
+                &[],
+                &[("a.rs", "d-a"), ("b.rs", "d-b"), ("z.rs", "d-z")]
+            )
         ),
         SupersededVerdict::CloseSuperseded
     );

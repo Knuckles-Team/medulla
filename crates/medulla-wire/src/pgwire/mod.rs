@@ -88,8 +88,8 @@ mod message_loop;
 mod plan_cache;
 mod replication;
 
-pub use plan_cache::plan_cache_hits;
 pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
+pub use plan_cache::plan_cache_hits;
 
 /// Env var: when set (and the binary is built `--features pgwire`), the pgwire
 /// listener binds this address (e.g. `127.0.0.1:5433`). Unset → no listener.
@@ -922,10 +922,7 @@ impl EngineBackend {
             .ok_or_else(|| user_err("authenticated SQL identity is required"))?;
         // A registered, active wire login acts as the principal it maps to, in the
         // tenant its record names; every other login (engine agents) acts as itself.
-        let record = self
-            .logins
-            .find(&user)
-            .filter(|record| record.is_active());
+        let record = self.logins.find(&user).filter(|record| record.is_active());
         let actor = record
             .as_ref()
             .map_or_else(|| user.clone(), |record| record.principal.clone());
@@ -2071,7 +2068,12 @@ impl EngineBackendFactory {
         logins: Arc<dyn medulla_wire_core::sql_wire_auth::WireLoginSource>,
     ) -> Self {
         Self {
-            backend: Arc::new(EngineBackend::new(state, default_graph, activity, logins.clone())),
+            backend: Arc::new(EngineBackend::new(
+                state,
+                default_graph,
+                activity,
+                logins.clone(),
+            )),
             auth_mode,
             auth_secret,
             tls_certificate_pem,
@@ -2195,12 +2197,11 @@ pub async fn serve_prepared(
     let activity = Arc::new(medulla_wire_core::wire::activity::WireActivity::default());
     // MEDULLA-ENGINE-PARITY-R007.4: one wire-login lookup per listener, the identity store behind
     // a cache of `wire_login.cache_ttl_s` seconds, shared by every connection.
-    let logins: Arc<dyn medulla_wire_core::sql_wire_auth::WireLoginSource> = Arc::new(
-        medulla_wire_core::sql_wire_auth::CachedWireLogins::new(
+    let logins: Arc<dyn medulla_wire_core::sql_wire_auth::WireLoginSource> =
+        Arc::new(medulla_wire_core::sql_wire_auth::CachedWireLogins::new(
             Arc::new(auth::IdentityStoreWireLogins::new(state.clone())),
             medulla_server_api::knob_config::knobs().wire_login_cache_ttl_s,
-        ),
-    );
+        ));
     loop {
         let (socket, peer) = listener.accept().await?;
         // A FRESH factory (and thus a fresh shared `EngineBackend`) per connection,
@@ -2650,9 +2651,12 @@ mod tests {
                 "server_version" => provider.server_version.clone(),
                 "server_encoding" => provider.server_encoding.clone(),
                 "client_encoding" => provider.client_encoding.clone().unwrap_or_default(),
-                "integer_datetimes" => {
-                    if provider.integer_datetimes { "on" } else { "off" }.to_string()
+                "integer_datetimes" => if provider.integer_datetimes {
+                    "on"
+                } else {
+                    "off"
                 }
+                .to_string(),
                 other => panic!("unexpected startup parameter {other}"),
             };
             assert_eq!(reported, value, "{name}");

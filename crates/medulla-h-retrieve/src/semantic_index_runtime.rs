@@ -13,8 +13,8 @@ mod upgrade;
 
 pub use activation::PendingRf019Activation;
 mod graph_source_registry;
-pub(crate) use graph_source_registry::record_graph_source_binding;
 pub use graph_source_registry::rebuild_graph_source_registry;
+pub(crate) use graph_source_registry::record_graph_source_binding;
 // MEDULLA-DURABLE-KERNEL-R872.1 — the upgrade phase machine, exported for the ontology check.
 pub use upgrade::{UpgradeEvent, UpgradePhase, SEMANTIC_INDEX_UPGRADE_MACHINE};
 

@@ -28,11 +28,18 @@ async fn seed_table(h: &Harness, hit_policy: &str, first: &str, second: &str) {
     let mut guard = h.state.write().await;
     guard
         .registry
-        .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Team, None)
+        .create_graph(
+            GRAPH,
+            medulla_protocol_types::protocol::GraphType::Team,
+            None,
+        )
         .unwrap();
     let core = guard.registry.get(GRAPH).unwrap().core.clone();
     let rows: Vec<(String, Vec<u8>)> = vec![
-        (DECISION.into(), node("DmnDecision", &[("name", "discount")])),
+        (
+            DECISION.into(),
+            node("DmnDecision", &[("name", "discount")]),
+        ),
         (
             TABLE.into(),
             node(
@@ -44,14 +51,22 @@ async fn seed_table(h: &Harness, hit_policy: &str, first: &str, second: &str) {
             "in0".into(),
             node(
                 "DmnInputClause",
-                &[("dmnTable", TABLE), ("dmnExpression", "tier"), ("dmnClauseIndex", "0")],
+                &[
+                    ("dmnTable", TABLE),
+                    ("dmnExpression", "tier"),
+                    ("dmnClauseIndex", "0"),
+                ],
             ),
         ),
         (
             "out0".into(),
             node(
                 "DmnOutputClause",
-                &[("dmnTable", TABLE), ("name", "discount"), ("dmnClauseIndex", "0")],
+                &[
+                    ("dmnTable", TABLE),
+                    ("name", "discount"),
+                    ("dmnClauseIndex", "0"),
+                ],
             ),
         ),
         (
@@ -164,11 +179,7 @@ async fn seal_branch_plan(h: &Harness) -> String {
     digest
 }
 
-fn branch_request(
-    schema: &ComponentDependency,
-    plan_digest: &str,
-    tier: &str,
-) -> DecideRequest {
+fn branch_request(schema: &ComponentDependency, plan_digest: &str, tier: &str) -> DecideRequest {
     request(
         schema,
         QuestionKind::BranchSelect,
@@ -189,18 +200,24 @@ async fn decide_routes_table_and_branch() {
     let pins = pins(&h, TENANT);
     seed_table(&h, "FIRST", "true", "false").await;
 
-    let gold = decide(&h, table_request(&pins.0, Some("gold"))).await.unwrap();
+    let gold = decide(&h, table_request(&pins.0, Some("gold")))
+        .await
+        .unwrap();
     let chosen = options(&gold.records.as_slice()[0]);
     assert!(chosen.contains(&"rule:r0".to_string()), "{chosen:?}");
     assert!(chosen.iter().any(|option| option.starts_with("outputs:")));
 
     let digest = seal_branch_plan(&h).await;
-    let taken = decide(&h, branch_request(&pins.0, &digest, "gold")).await.unwrap();
+    let taken = decide(&h, branch_request(&pins.0, &digest, "gold"))
+        .await
+        .unwrap();
     assert_eq!(
         options(&taken.records.as_slice()[0]),
         vec!["taken:x".to_string(), "default:false".to_string()]
     );
-    let defaulted = decide(&h, branch_request(&pins.0, &digest, "bronze")).await.unwrap();
+    let defaulted = decide(&h, branch_request(&pins.0, &digest, "bronze"))
+        .await
+        .unwrap();
     assert_eq!(
         options(&defaulted.records.as_slice()[0]),
         vec!["taken:y".to_string(), "default:true".to_string()]
@@ -214,13 +231,21 @@ async fn decision_refusals_name_the_rule() {
     let pins = pins(&h, TENANT);
     // UNIQUE with two matching rules for gold.
     seed_table(&h, "UNIQUE", "1", "2").await;
-    let batch = decide(&h, table_request(&pins.0, Some("gold"))).await.unwrap();
+    let batch = decide(&h, table_request(&pins.0, Some("gold")))
+        .await
+        .unwrap();
     let text = abstention(&batch.records.as_slice()[0]);
-    assert!(text.contains("DMN_UNIQUE_VIOLATED") && text.contains("r0"), "{text}");
+    assert!(
+        text.contains("DMN_UNIQUE_VIOLATED") && text.contains("r0"),
+        "{text}"
+    );
     // A missing input names the input.
     let batch = decide(&h, table_request(&pins.0, None)).await.unwrap();
     let text = abstention(&batch.records.as_slice()[0]);
-    assert!(text.contains("DMN_INPUT_MISSING") && text.contains("tier"), "{text}");
+    assert!(
+        text.contains("DMN_INPUT_MISSING") && text.contains("tier"),
+        "{text}"
+    );
     // An unknown plan digest.
     let batch = decide(&h, branch_request(&pins.0, "sha256:none", "gold"))
         .await
@@ -234,7 +259,9 @@ async fn premises_cite_rules_and_inputs() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let pins = pins(&h, TENANT);
     seed_table(&h, "FIRST", "true", "false").await;
-    let batch = decide(&h, table_request(&pins.0, Some("gold"))).await.unwrap();
+    let batch = decide(&h, table_request(&pins.0, Some("gold")))
+        .await
+        .unwrap();
     let record = &batch.records.as_slice()[0];
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
     assert!(
@@ -250,7 +277,9 @@ async fn premises_cite_rules_and_inputs() {
         .all(|p| p.class == PremiseClass::Observation));
 
     let digest = seal_branch_plan(&h).await;
-    let branch = decide(&h, branch_request(&pins.0, &digest, "gold")).await.unwrap();
+    let branch = decide(&h, branch_request(&pins.0, &digest, "gold"))
+        .await
+        .unwrap();
     let facts: Vec<String> = branch.records.as_slice()[0]
         .premises
         .iter()

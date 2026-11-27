@@ -6,14 +6,14 @@
 use serde::{Deserialize, Serialize};
 
 use super::gap::{GapEvidence, GapView};
+use super::gap_machine::GapEvent;
 use super::offer::{
     work_offer_utility_rate, WorkOffer, WorkOfferView, DEFAULT_COST_FLOOR_MICROUNITS,
     WORK_OFFER_UTILITY_RATE_STAGE,
 };
-use super::gap_machine::GapEvent;
 use super::{bounded, evidence_digest, GapStatus, MAX_MARKET_REF_BYTES};
-use medulla_types::transition_refused::TransitionRefused;
 use crate::work_item_read::WorkItemStatus;
+use medulla_types::transition_refused::TransitionRefused;
 
 /// How an upsert resolved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

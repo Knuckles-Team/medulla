@@ -19,8 +19,8 @@ use medulla_decision_types::decision::paper_admission::{
     PaperAdmissionAnswer, PaperAdmissionRefusal, PARAM_GRAPH_VERSION, PARAM_OBSERVED_VERSION,
     TEXT_CLAIM_IDS, TEXT_CONTENT_DIGEST,
 };
-use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::features::FeatureKind;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedParam,
     TypedValue,
@@ -34,8 +34,8 @@ use medulla_types::evidence_class::EvidenceClass;
 use tokio::sync::RwLock;
 
 use crate::decide::stat_executor::{
-    pinned_inputs, Executed, ExecutionContext, FamilyExecuted, FamilyPremise,
-    FamilyPremiseSource, Pinned,
+    pinned_inputs, Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
+    Pinned,
 };
 use crate::decide::stat_vectors::graph_vectors;
 

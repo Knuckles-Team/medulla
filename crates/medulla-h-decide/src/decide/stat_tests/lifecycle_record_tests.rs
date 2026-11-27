@@ -70,9 +70,14 @@ fn scenario_query(phase: Option<&str>) -> LifecycleRecordQuery {
 async fn a_scenario_run_is_stored_once_and_a_repeat_replays() {
     let h = Harness::new().await;
     let record = run("phase-1", "c1", ScenarioResult::Passed);
-    let first = write(&h, LifecycleRecordWrite::ScenarioRun { record: record.clone() })
-        .await
-        .unwrap();
+    let first = write(
+        &h,
+        LifecycleRecordWrite::ScenarioRun {
+            record: record.clone(),
+        },
+    )
+    .await
+    .unwrap();
     assert!(!first.replayed);
     let second = write(&h, LifecycleRecordWrite::ScenarioRun { record })
         .await
@@ -84,7 +89,10 @@ async fn a_scenario_run_is_stored_once_and_a_repeat_replays() {
     assert_eq!(found.scenario_runs.len(), 1);
     // Sorted and deduplicated lists: one canonical form.
     assert_eq!(found.scenario_runs[0].run.requirement_ids, ["R1", "R2"]);
-    assert_eq!(found.scenario_runs[0].run.evidence_digests, ["sha256:a", "sha256:b"]);
+    assert_eq!(
+        found.scenario_runs[0].run.evidence_digests,
+        ["sha256:a", "sha256:b"]
+    );
 }
 
 /// Verifies MEDULLA-SDLC-R013: a record without a commit or a phase refuses and writes nothing.
@@ -104,7 +112,10 @@ async fn an_incomplete_scenario_run_refuses_and_stores_nothing() {
             .unwrap_err();
         assert!(refused.contains("SCENARIO_RUN_INCOMPLETE"), "{refused}");
     }
-    assert!(read(&h, scenario_query(None)).await.scenario_runs.is_empty());
+    assert!(read(&h, scenario_query(None))
+        .await
+        .scenario_runs
+        .is_empty());
 }
 
 /// Verifies MEDULLA-SDLC-R013: the read filters by phase and lists the latest run first.
@@ -134,7 +145,13 @@ async fn the_read_filters_by_phase_and_branch() {
         .await
         .unwrap();
     assert_eq!(read(&h, scenario_query(None)).await.scenario_runs.len(), 3);
-    assert_eq!(read(&h, scenario_query(Some("phase-1"))).await.scenario_runs.len(), 2);
+    assert_eq!(
+        read(&h, scenario_query(Some("phase-1")))
+            .await
+            .scenario_runs
+            .len(),
+        2
+    );
     let mut main_only = scenario_query(Some("phase-1"));
     main_only.branch = Some("main".to_string());
     let found = read(&h, main_only).await;
@@ -154,12 +171,22 @@ async fn a_would_dispatch_decision_is_a_log_record() {
         dispatch_decision_id: "decision:1".to_string(),
         mode: ProjectMode::Development,
     };
-    let first = write(&h, LifecycleRecordWrite::WouldDispatch { record: record.clone() })
-        .await
-        .unwrap();
-    let again = write(&h, LifecycleRecordWrite::WouldDispatch { record: record.clone() })
-        .await
-        .unwrap();
+    let first = write(
+        &h,
+        LifecycleRecordWrite::WouldDispatch {
+            record: record.clone(),
+        },
+    )
+    .await
+    .unwrap();
+    let again = write(
+        &h,
+        LifecycleRecordWrite::WouldDispatch {
+            record: record.clone(),
+        },
+    )
+    .await
+    .unwrap();
     assert!(!first.replayed && again.replayed);
     let found = read(
         &h,

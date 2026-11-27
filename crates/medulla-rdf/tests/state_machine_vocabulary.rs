@@ -1447,7 +1447,6 @@ fn semantic_machine_matches_edge_table() {
     sm::assert_extends_core("Semantic");
 }
 
-
 // spec: MEDULLA-DURABLE-KERNEL-R874.4
 #[test]
 fn direct_state_install_machine_matches_edge_table() {
@@ -1731,7 +1730,10 @@ fn source_mapping_machine_classes_extend_core() {
 fn observe_machines_match_edge_tables() {
     // The ontology instances carry the prefix Observe: `:TaskMachine` already names the
     // lifecycle of a work-plan task, and a second instance of that name would merge the two.
-    sm::assert_matches_as(&medulla_observe::machine::task::TASK_MACHINE, "ObserveTaskMachine");
+    sm::assert_matches_as(
+        &medulla_observe::machine::task::TASK_MACHINE,
+        "ObserveTaskMachine",
+    );
     sm::assert_matches_as(
         &medulla_observe::machine::readiness::READINESS_MACHINE,
         "ObserveReadinessMachine",

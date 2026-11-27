@@ -291,7 +291,11 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
     }
 
     for (name, capabilities, projection) in [
-        ("analytics_job_records", CAP_READ | CAP_INSERT | CAP_UPDATE, false),
+        (
+            "analytics_job_records",
+            CAP_READ | CAP_INSERT | CAP_UPDATE,
+            false,
+        ),
         (
             "analytics_job_committed_results",
             CAP_READ | CAP_INSERT,
@@ -354,7 +358,11 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
             CAP_READ | CAP_INSERT | CAP_DELETE,
             true,
         ),
-        ("analytics_job_task_dead_letters", CAP_READ | CAP_INSERT | CAP_DELETE, false),
+        (
+            "analytics_job_task_dead_letters",
+            CAP_READ | CAP_INSERT | CAP_DELETE,
+            false,
+        ),
     ] {
         let table = manifest
             .tables

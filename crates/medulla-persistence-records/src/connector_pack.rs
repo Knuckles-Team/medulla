@@ -433,7 +433,7 @@ impl AgentLibraryStore {
         let entry = revisions
             .get((tenant_id, component_id, revision))
             .map_err(|error| error.to_string())?
-.ok_or_else(|| {
+            .ok_or_else(|| {
                 "COMPONENT_REVISION_UNKNOWN: the tenant has no such revision of the component"
                     .to_string()
             })?;
@@ -569,11 +569,14 @@ impl AgentLibraryStore {
             }
         };
         let wanted = canonical(class);
-        Ok(declaration.schema_mappings.as_ref().is_some_and(|mappings| {
-            mappings
-                .values()
-                .any(|mapping| canonical(&mapping.ontology_class) == wanted)
-        }))
+        Ok(declaration
+            .schema_mappings
+            .as_ref()
+            .is_some_and(|mappings| {
+                mappings
+                    .values()
+                    .any(|mapping| canonical(&mapping.ontology_class) == wanted)
+            }))
     }
 
     pub fn resolve_connector_relationship_mapping(

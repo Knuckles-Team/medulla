@@ -93,7 +93,8 @@ fn unknown_terms_and_unmapped_text_are_typed_abstentions() {
         &["acme:thing", "eg:task/review"],
     );
     request.unmapped_task_digests = bounded(vec![ONTOLOGY.to_string()]);
-    let reasons = required_capabilities(&request, &[], ONTOLOGY).expect_err("nothing here resolves");
+    let reasons =
+        required_capabilities(&request, &[], ONTOLOGY).expect_err("nothing here resolves");
     assert_eq!(
         reasons,
         vec![
@@ -142,9 +143,12 @@ fn the_coverage_chain_is_the_shortest_and_re_checks() {
 fn capability_coverage_joins_derived_library_coverage_with_self_declared_a2a_coverage() {
     // MEDULLA-DECISION-ENGINE-R126: reuses required_capabilities/coverage_chain
     // rather than any new derivation rule.
-    let required =
-        required_capabilities(&requirements(&[], &["eg:capability/retrieval"]), &[], ONTOLOGY)
-            .expect("a direct capability resolves");
+    let required = required_capabilities(
+        &requirements(&[], &["eg:capability/retrieval"]),
+        &[],
+        ONTOLOGY,
+    )
+    .expect("a direct capability resolves");
     let web = candidate("tool-web", &["eg:capability/retrieval/web-search"]);
     let unrelated = candidate("tool-unrelated", &[]);
     let a2a_cards = vec![

@@ -23,7 +23,8 @@ const PARTS: usize = 8;
 /// Each node links to the next three nodes of its cluster ring; one edge per cluster
 /// joins it to the next cluster, so the graph is connected and clustered.
 fn clustered() -> AdjacencyGraph<u32> {
-    let node = |cluster: usize, index: usize| (cluster * CLUSTER_NODES + index % CLUSTER_NODES) as u32;
+    let node =
+        |cluster: usize, index: usize| (cluster * CLUSTER_NODES + index % CLUSTER_NODES) as u32;
     let mut edges = Vec::new();
     for cluster in 0..CLUSTERS {
         for index in 0..CLUSTER_NODES {
@@ -40,7 +41,12 @@ fn clustered() -> AdjacencyGraph<u32> {
 fn labelled() -> LabeledGraph {
     const NODES: usize = 2_500;
     let nodes = (0..NODES)
-        .map(|n| (format!("n{n:05}"), if n % 2 == 0 { "left" } else { "right" }.to_string()))
+        .map(|n| {
+            (
+                format!("n{n:05}"),
+                if n % 2 == 0 { "left" } else { "right" }.to_string(),
+            )
+        })
         .collect();
     let edges = (0..NODES)
         .flat_map(|n| {
@@ -71,7 +77,14 @@ fn bench_topology(c: &mut Criterion) {
     let warm = spectral_partition(&graph, PARTS, 7).expect("spectral fixture is valid");
     assert!(warm.partitions.len() >= 2);
     c.bench_function("spectral_100k", |b| {
-        b.iter(|| black_box(spectral_partition(black_box(&graph), PARTS, 7).unwrap().partitions.len()));
+        b.iter(|| {
+            black_box(
+                spectral_partition(black_box(&graph), PARTS, 7)
+                    .unwrap()
+                    .partitions
+                    .len(),
+            )
+        });
     });
 
     let labelled = labelled();

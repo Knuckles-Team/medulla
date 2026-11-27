@@ -51,7 +51,10 @@ pub static INCIDENT_RECORD_MACHINE: MachineDef<IncidentStatus, IncidentRecordEve
         ],
         initial: IncidentStatus::Open,
         terminals: &[IncidentStatus::Resolved],
-        events: &[IncidentRecordEvent::Acknowledge, IncidentRecordEvent::Resolve],
+        events: &[
+            IncidentRecordEvent::Acknowledge,
+            IncidentRecordEvent::Resolve,
+        ],
         guards: &[],
         edges: &[
             Edge {

@@ -14,6 +14,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use crate::dispatch::graph_pipeline::dispatch_graph_op;
+use crate::dispatch::shared::{authorized_graph_read, ensure_graph_resident};
 use medulla_core::lifecycle::accept::{
     accept_changeset_edges, changed_span, unresolved_node_id, ChangesetWrites, UnresolvedReference,
     AWAITS, UNRESOLVED_TYPE,
@@ -32,8 +34,6 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_blob::blob::store::ChunkStore;
-use crate::dispatch::graph_pipeline::dispatch_graph_op;
-use crate::dispatch::shared::{authorized_graph_read, ensure_graph_resident};
 use medulla_source_types::lifecycle::{
     plan_changeset_node, ChangesetNodeWrite, LifecycleKind, StoredChangesetNode,
 };
@@ -85,7 +85,10 @@ pub struct BranchChain {
 
 impl BranchChain {
     pub fn new(registry: Arc<BranchRegistry>, reference: BranchRef) -> Self {
-        Self { registry, reference }
+        Self {
+            registry,
+            reference,
+        }
     }
 
     /// The ids of the changesets on the branch chain, oldest first (blocking).
@@ -157,7 +160,10 @@ fn code_graph_view(
     for file in files {
         if let Some(new) = &file.new {
             if let Some(span) = changed_span(&file.old, new) {
-                changed_spans.entry(file.path.clone()).or_default().push(span);
+                changed_spans
+                    .entry(file.path.clone())
+                    .or_default()
+                    .push(span);
             }
         }
         for id in core
@@ -170,12 +176,17 @@ fn code_graph_view(
             if node.get("type").and_then(Value::as_str) != Some("SYMBOL") {
                 continue;
             }
-            if let (Some(start), Some(end)) = (number(&node, "start_byte"), number(&node, "end_byte")) {
-                view.symbols.entry(file.path.clone()).or_default().push(SymbolFact {
-                    id,
-                    path: file.path.clone(),
-                    span: Span { start, end },
-                });
+            if let (Some(start), Some(end)) =
+                (number(&node, "start_byte"), number(&node, "end_byte"))
+            {
+                view.symbols
+                    .entry(file.path.clone())
+                    .or_default()
+                    .push(SymbolFact {
+                        id,
+                        path: file.path.clone(),
+                        span: Span { start, end },
+                    });
             }
         }
     }
@@ -273,7 +284,11 @@ fn releases(core: &GraphCore, authority: &GraphReadAuthority, repo: &str) -> Vec
 
 /// The defects whose bisect culprit record names this changeset: a `Defect` node of the
 /// repository holding `culprit_changeset`.
-fn culprits(core: &GraphCore, authority: &GraphReadAuthority, changeset: &Changeset) -> Vec<Culprit> {
+fn culprits(
+    core: &GraphCore,
+    authority: &GraphReadAuthority,
+    changeset: &Changeset,
+) -> Vec<Culprit> {
     let prefix = format!("defect:{}/", changeset.repo);
     core.nodes_by_property("culprit_changeset", &changeset.id)
         .unwrap_or_default()
@@ -321,8 +336,14 @@ fn operations(
         properties.insert("tenant_id".into(), verified.tenant().into());
         properties.insert("_owner".into(), verified.agent_id().into());
     }
-    let mut operations = vec![json!({"op": "upsert_node", "id": node.node_id, "properties": properties})];
-    operations.extend(writes.edges.iter().map(|edge| edge_operation(edge, verified)));
+    let mut operations =
+        vec![json!({"op": "upsert_node", "id": node.node_id, "properties": properties})];
+    operations.extend(
+        writes
+            .edges
+            .iter()
+            .map(|edge| edge_operation(edge, verified)),
+    );
     // A reference whose record is not ingested yet waits in its bucket.
     for reference in &writes.unresolved {
         let bucket = reference.bucket_id();
@@ -428,7 +449,12 @@ pub async fn resolve_waiting(
                 if properties.get("relationship").and_then(Value::as_str) != Some(AWAITS) {
                     continue;
                 }
-                let get = |key: &str| properties.get(key).and_then(Value::as_str).map(str::to_owned);
+                let get = |key: &str| {
+                    properties
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .map(str::to_owned)
+                };
                 let Some(edge) = UnresolvedReference::resolve(&get) else {
                     continue;
                 };
@@ -485,7 +511,8 @@ pub async fn accept_edges(
     let node_id = commit_node_id(&changeset.id);
     let existing = visible(&core, &authority, &node_id);
     let stored = existing.as_ref().map(stored_node);
-    let node = plan_changeset_node(changeset, seq, stored.as_ref(), true).map_err(|e| e.to_string())?;
+    let node =
+        plan_changeset_node(changeset, seq, stored.as_ref(), true).map_err(|e| e.to_string())?;
     let mut view = code_graph_view(&core, &authority, changeset, branch, &files);
     // A release range is read from the whole chain, so it is walked only when the graph holds
     // a release.
@@ -495,8 +522,14 @@ pub async fn accept_edges(
             .map_err(|error| error.to_string())??;
     }
     let known = |id: &str| visible(&core, &authority, id).as_ref().and_then(kind_of);
-    let writes = accept_changeset_edges(&mut LifecycleStore::default(), changeset, &view, node, &known)
-        .map_err(|e| e.to_string())?;
+    let writes = accept_changeset_edges(
+        &mut LifecycleStore::default(),
+        changeset,
+        &view,
+        node,
+        &known,
+    )
+    .map_err(|e| e.to_string())?;
     let operations = operations(&writes, verified, existing.is_some());
     apply(state, verified, req_id, &repo, operations).await
 }

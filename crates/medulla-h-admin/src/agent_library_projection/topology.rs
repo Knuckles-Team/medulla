@@ -62,11 +62,7 @@ pub fn project_topology(entry_iri: &str, entry: &AgentGraphEntry) -> Vec<Triple>
     let mut slots: BTreeMap<&str, NamedNode> = BTreeMap::new();
     for slot in facts.slots.iter() {
         let iri = NamedNode::new_unchecked(slot_iri(entry_iri, &slot.node_id));
-        triples.push(Triple::new(
-            template.clone(),
-            swarm("hasSlot"),
-            iri.clone(),
-        ));
+        triples.push(Triple::new(template.clone(), swarm("hasSlot"), iri.clone()));
         triples.push(Triple::new(
             iri.clone(),
             NamedNode::new_unchecked(RDF_TYPE),
@@ -112,11 +108,11 @@ pub fn project_topology(entry_iri: &str, entry: &AgentGraphEntry) -> Vec<Triple>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_agent_types::agent_fixtures::topology::{facts, slot};
     use medulla_agent_types::agent_graph::{
         AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
     };
     use medulla_agent_types::agent_library::AgentLibraryLifecycle;
-    use medulla_agent_types::agent_fixtures::topology::{facts, slot};
     use medulla_types::contract::BoundedVec;
 
     const ENTRY: &str = "https://knuckles-team.github.io/ontology/core#agentGraph/t/g";

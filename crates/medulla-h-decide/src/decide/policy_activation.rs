@@ -188,7 +188,10 @@ fn sha256_hex(text: &str) -> String {
 
 /// The candidate-set digest of R012.7.1 over the clause digests of `nodes`.
 fn set_digest(nodes: &[&CandidateNode]) -> String {
-    let mut digests: Vec<&str> = nodes.iter().map(|node| node.clause_digest.as_str()).collect();
+    let mut digests: Vec<&str> = nodes
+        .iter()
+        .map(|node| node.clause_digest.as_str())
+        .collect();
     digests.sort_unstable();
     sha256_hex(&digests.join("\n"))
 }
@@ -293,7 +296,12 @@ pub(super) fn invariant_generation(
     let mut lines: Vec<String> = store
         .published_rule_invariants(tenant)?
         .into_iter()
-        .map(|inv| format!("{}\t{}\t{}", inv.invariant_iri, inv.forbidden_rule_id, inv.on_class))
+        .map(|inv| {
+            format!(
+                "{}\t{}\t{}",
+                inv.invariant_iri, inv.forbidden_rule_id, inv.on_class
+            )
+        })
         .collect();
     lines.sort();
     Ok(format!("sha256:{}", sha256_hex(&lines.join("\n"))))
@@ -349,7 +357,9 @@ fn candidates_of_core(vectors: &GraphVectors) -> Vec<CandidateNode> {
 }
 
 /// The candidates of the caller's view of a graph, for the staleness check of a decision.
-pub(super) fn candidates_of_view(view: &medulla_graph_core::graph::GraphView) -> Vec<CandidateNode> {
+pub(super) fn candidates_of_view(
+    view: &medulla_graph_core::graph::GraphView,
+) -> Vec<CandidateNode> {
     view.node_properties
         .iter()
         .filter(|(id, _)| id.starts_with("policycandidate:"))
@@ -526,7 +536,10 @@ pub(super) fn guard_activation(
     if stored.review.binding.scope_ref() != scope_ref {
         return Err(Fault::new(
             POLICY_REVIEW_MISMATCH,
-            format!("the review is for {}, not {scope_ref}", stored.review.binding.scope_ref()),
+            format!(
+                "the review is for {}, not {scope_ref}",
+                stored.review.binding.scope_ref()
+            ),
         )
         .text());
     }
@@ -572,7 +585,11 @@ pub(super) fn active_policy(
     };
     let event_receipt = active.receipt_digest.clone().unwrap_or_default();
     let review = review_of_event(store, tenant, &event_receipt)?.ok_or_else(|| {
-        Fault::new(POLICY_REVIEW_MISSING, "no recorded review holds the active receipt").text()
+        Fault::new(
+            POLICY_REVIEW_MISSING,
+            "no recorded review holds the active receipt",
+        )
+        .text()
     })?;
     Ok(Some(ActivePolicy {
         revision: revision.to_string(),
@@ -627,7 +644,11 @@ pub(super) fn activate_policy(
     receipt_digest: &str,
 ) -> Result<PolicyActivated, String> {
     let stored = load_review(ctx.store, ctx.tenant_id, receipt_digest)?.ok_or_else(|| {
-        Fault::new(POLICY_REVIEW_MISSING, "no recorded review holds that receipt").text()
+        Fault::new(
+            POLICY_REVIEW_MISSING,
+            "no recorded review holds that receipt",
+        )
+        .text()
     })?;
     let binding = &stored.review.binding;
     let mismatch = |detail: String| Fault::new(POLICY_REVIEW_MISMATCH, detail).text();
@@ -638,13 +659,22 @@ pub(super) fn activate_policy(
         )));
     }
     let evidence = evidence_of(&stored);
-    match subject_gate(&evidence.subject, &evidence, &DecisionPolicy::engine_default()) {
+    match subject_gate(
+        &evidence.subject,
+        &evidence,
+        &DecisionPolicy::engine_default(),
+    ) {
         PromotionGate::Promote => {}
         PromotionGate::Abstain(code) => {
-            return Err(format!("{}: the review does not admit an activation", code.as_str()));
+            return Err(format!(
+                "{}: the review does not admit an activation",
+                code.as_str()
+            ));
         }
         PromotionGate::Hold { reason } => {
-            return Err(format!("{POLICY_REVIEW_MISMATCH}: the review is held ({reason})"));
+            return Err(format!(
+                "{POLICY_REVIEW_MISMATCH}: the review is held ({reason})"
+            ));
         }
     }
     let scope_ref = binding.scope_ref();
@@ -711,7 +741,11 @@ mod tests {
             repo: "org/repo".into(),
             path: "constitution.md".into(),
             status: status.into(),
-            reason: if status == "proposed" { String::new() } else { "CLAUSE_UNPARSED".into() },
+            reason: if status == "proposed" {
+                String::new()
+            } else {
+                "CLAUSE_UNPARSED".into()
+            },
             rule_id: rule.into(),
             scope: "https://example.invalid/class/Repo".into(),
             severity: "block".into(),
@@ -751,7 +785,10 @@ mod tests {
             })
             .collect();
         let rules = judge(&binding(&set), &nodes).unwrap();
-        assert_eq!(rules.iter().map(|r| r.rule_id.as_str()).collect::<Vec<_>>(), ["a", "b"]);
+        assert_eq!(
+            rules.iter().map(|r| r.rule_id.as_str()).collect::<Vec<_>>(),
+            ["a", "b"]
+        );
         // Another candidate-set digest: the source was indexed again.
         let stale = judge(&binding(&"cd".repeat(32)), &nodes).unwrap_err();
         assert_eq!(stale.code, POLICY_REVIEW_STALE);
@@ -761,7 +798,10 @@ mod tests {
         // Another blob digest than the indexed one.
         let mut other = binding(&set);
         other.blob_digest = "00".repeat(32);
-        assert_eq!(judge(&other, &nodes).unwrap_err().code, POLICY_REVIEW_MISMATCH);
+        assert_eq!(
+            judge(&other, &nodes).unwrap_err().code,
+            POLICY_REVIEW_MISMATCH
+        );
         // An inactive clause cannot be activated.
         let mut with_inactive = nodes.clone();
         with_inactive.push({

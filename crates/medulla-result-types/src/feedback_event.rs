@@ -36,7 +36,10 @@ impl FeedbackKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 // The contract already names a different `RetrievalFeedback` (the verdict feedback).
-#[cfg_attr(feature = "contract-schema", schemars(rename = "RetrievalFeedbackEvent"))]
+#[cfg_attr(
+    feature = "contract-schema",
+    schemars(rename = "RetrievalFeedbackEvent")
+)]
 #[serde(deny_unknown_fields)]
 pub struct RetrievalFeedback {
     pub tenant: String,
@@ -136,10 +139,7 @@ impl RetrievalFeedback {
             kind: serde_json::from_value(props.get("kind")?.clone()).ok()?,
             weight: props.get("weight")?.as_f64()?,
             at: props.get("at")?.as_u64()?,
-            idempotency_key: props
-                .get("idempotency_key")?
-                .as_str()?
-                .to_string(),
+            idempotency_key: props.get("idempotency_key")?.as_str()?.to_string(),
         })
     }
 }

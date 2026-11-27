@@ -10,7 +10,9 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_catalog_types::data_product::{DataContract, DataProduct, ProductPort, ProductPortKind};
+use medulla_catalog_types::data_product::{
+    DataContract, DataProduct, ProductPort, ProductPortKind,
+};
 use medulla_catalog_types::quality::QualityScore;
 use medulla_core::data_product::{check_contract, LiveContractState};
 

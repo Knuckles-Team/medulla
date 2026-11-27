@@ -94,11 +94,16 @@ fn main() {
             rmp_serde::to_vec_named(&json!({"type": "Skill", "tenant_id": TENANT})).unwrap(),
         );
         for start in (0..INVOCATIONS).step_by(BATCH) {
-            let events = (start..start + BATCH).map(|n| event(n, &pseudonyms)).collect();
+            let events = (start..start + BATCH)
+                .map(|n| event(n, &pseudonyms))
+                .collect();
             let response = send(
                 &h,
                 &["telemetry:write"],
-                SkillTelemetryOp::Ingest { graph: GRAPH.into(), events },
+                SkillTelemetryOp::Ingest {
+                    graph: GRAPH.into(),
+                    events,
+                },
             )
             .await;
             assert!(response.error.is_none(), "batch at {start}: {response:?}");
@@ -108,7 +113,10 @@ fn main() {
             let read = SkillTelemetryOp::Measures {
                 graph: GRAPH.into(),
                 skill_ref: SKILL.into(),
-                window: Window { start_ms: 0, end_ms: DAYS * DAY_MS },
+                window: Window {
+                    start_ms: 0,
+                    end_ms: DAYS * DAY_MS,
+                },
             };
             let started = Instant::now();
             let response = send(&h, &["telemetry:read"], read).await;

@@ -268,7 +268,10 @@ pub(crate) fn handle_conformance(
         intern_label(&mut ids, &label);
     }
     let known = ids.len();
-    let mut pairs = |key: &str, left: &str, right: &str| -> Vec<(process_mining::ActivityId, process_mining::ActivityId)> {
+    let mut pairs = |key: &str,
+                     left: &str,
+                     right: &str|
+     -> Vec<(process_mining::ActivityId, process_mining::ActivityId)> {
         let mut found = Vec::new();
         for item in node[key].as_array().into_iter().flatten() {
             if let (Some(a), Some(b)) = (item[left].as_str(), item[right].as_str()) {
@@ -297,7 +300,12 @@ pub(crate) fn handle_conformance(
     };
     let interned: Vec<Vec<process_mining::ActivityId>> = traces
         .iter()
-        .map(|trace| trace.iter().map(|label| intern_label(&mut ids, label)).collect())
+        .map(|trace| {
+            trace
+                .iter()
+                .map(|label| intern_label(&mut ids, label))
+                .collect()
+        })
         .collect();
     let counts = process_mining::footprint_replay(&model, &interned);
     Response::ok(

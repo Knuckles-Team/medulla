@@ -186,7 +186,10 @@ pub struct OutboxAcked {
 impl MutationOutboxOp {
     /// A rewind, a pull (it leases rows) and an ack write; the two views read a snapshot.
     pub fn is_mutation(&self) -> bool {
-        matches!(self, Self::Rewind { .. } | Self::Pull { .. } | Self::Ack { .. })
+        matches!(
+            self,
+            Self::Rewind { .. } | Self::Pull { .. } | Self::Ack { .. }
+        )
     }
 
     /// One action for the three operator operations: reading another consumer's backlog is as
@@ -488,7 +491,9 @@ mod memory_event_op_tests {
     use super::*;
 
     fn graph() -> OutboxTarget {
-        OutboxTarget::Graph { graph: "g".to_string() }
+        OutboxTarget::Graph {
+            graph: "g".to_string(),
+        }
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R073.7
@@ -504,7 +509,10 @@ mod memory_event_op_tests {
         assert_eq!(pull.authz_action(), "memory:events");
         assert!(pull.validate().is_ok());
         // The operator operations keep their action.
-        let status = MutationOutboxOp::Status { target: graph(), consumer: "c".to_string() };
+        let status = MutationOutboxOp::Status {
+            target: graph(),
+            consumer: "c".to_string(),
+        };
         assert_eq!(status.authz_action(), "admin:outbox");
         assert!(!status.is_mutation());
         // A pull needs a limit and a topic.
@@ -523,6 +531,9 @@ mod memory_event_op_tests {
         };
         assert!(no_topic.validate().is_err());
         let wire = serde_json::to_string(&pull).unwrap();
-        assert_eq!(serde_json::from_str::<MutationOutboxOp>(&wire).unwrap(), pull);
+        assert_eq!(
+            serde_json::from_str::<MutationOutboxOp>(&wire).unwrap(),
+            pull
+        );
     }
 }

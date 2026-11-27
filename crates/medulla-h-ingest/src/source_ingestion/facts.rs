@@ -18,8 +18,8 @@ use sha2::{Digest as _, Sha256};
 
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::extracted_fact::{
-    CandidateClaim, EvidenceSpan, FactChunk, ExtractedFact, FactBatch, FactOutcome, FactReport, FactUnit,
-    GroundingResult,
+    CandidateClaim, EvidenceSpan, ExtractedFact, FactBatch, FactChunk, FactOutcome, FactReport,
+    FactUnit, GroundingResult,
 };
 use medulla_ingestion_types::ingest_rules::{
     check_atom_provenance, ground_fact, infer_links, subclass_closure, FactDeduper, GroundingCache,
@@ -176,7 +176,9 @@ pub fn held_chunk(
             content_hash: chunk_content_hash(text),
             prior_claims,
         }),
-        _ => Err(invalid("source_chunk names a node that is not a stored chunk")),
+        _ => Err(invalid(
+            "source_chunk names a node that is not a stored chunk",
+        )),
     }
 }
 
@@ -324,7 +326,9 @@ fn decode_fact(value: serde_json::Value) -> Result<ExtractedFact, String> {
         || fact.predicate.trim().is_empty()
         || fact.object.trim().is_empty()
     {
-        return Err(invalid("fact subject, predicate and object must not be blank"));
+        return Err(invalid(
+            "fact subject, predicate and object must not be blank",
+        ));
     }
     Ok(fact)
 }
@@ -498,15 +502,13 @@ pub fn unit_hash(fact: &ExtractedFact) -> Result<String, String> {
 }
 
 fn entity_node_id(tenant: &str, name: &str) -> Result<String, String> {
-    let digest = Digest256::framed(
-        FACT_ENTITY_DOMAIN,
-        &[tenant.as_bytes(), name.as_bytes()],
-    )?;
+    let digest = Digest256::framed(FACT_ENTITY_DOMAIN, &[tenant.as_bytes(), name.as_bytes()])?;
     Ok(format!("fact_entity:{}", digest.to_hex()))
 }
 
 fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
-    rmp_serde::to_vec_named(value).map_err(|error| invalid(format!("fact encoding failed: {error}")))
+    rmp_serde::to_vec_named(value)
+        .map_err(|error| invalid(format!("fact encoding failed: {error}")))
 }
 
 /// Add the chunk and Document of a claim to its stored properties.
@@ -949,16 +951,25 @@ mod tests {
         let batch = DecodedFacts {
             rejected: Vec::new(),
             batch: FactBatch {
-            facts: vec![
-                // Subject and object swapped: direction repair grounds it.
-                fact("Note G", "Ada Lovelace", 10),
-                // The same triple again drops; an unknown entity stays a claim.
-                fact("Note G", "Ada Lovelace", 10),
-                fact("Somebody", "Something", 50),
-            ],
+                facts: vec![
+                    // Subject and object swapped: direction repair grounds it.
+                    fact("Note G", "Ada Lovelace", 10),
+                    // The same triple again drops; an unknown entity stays a claim.
+                    fact("Note G", "Ada Lovelace", 10),
+                    fact("Somebody", "Something", 50),
+                ],
             },
         };
-        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
+        let admission = admit_facts(
+            "t1",
+            &batch,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .unwrap();
         assert_eq!(admission.admitted, 2);
         assert_eq!(admission.duplicates, 1);
         assert_eq!(admission.grounded, 1);
@@ -978,7 +989,11 @@ mod tests {
         let ungrounded = node_properties(&admission.methods[3]);
         assert_eq!(ungrounded["grounding"]["status"], "ungrounded");
         match &admission.methods[2] {
-            Method::AddEdge { source_id, target_id, .. } => {
+            Method::AddEdge {
+                source_id,
+                target_id,
+                ..
+            } => {
                 assert_eq!(source_id, &admission.node_ids[1]);
                 assert_eq!(target_id, &admission.node_ids[0]);
             }
@@ -999,7 +1014,16 @@ mod tests {
         let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
         let first = fact("Ada Lovelace", "Note G", 10);
         let batch = decoded(vec![first.clone()]);
-        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
+        let created = admit_facts(
+            "t1",
+            &batch,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .unwrap();
         assert_eq!(created.report.created, 1);
         let unit = &created.report.entries[0];
         assert_eq!(unit.outcome, FactOutcome::Created);
@@ -1034,7 +1058,16 @@ mod tests {
         .unwrap();
         let decoded = decode_facts(&[item]).unwrap();
         let cache = GroundingCache::default();
-        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
+        let admission = admit_facts(
+            "t1",
+            &decoded,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .unwrap();
         assert_eq!(admission.report.rejected, 1);
         assert_eq!(admission.report.entries[0].outcome, FactOutcome::Rejected);
         assert!(admission.methods.is_empty());
@@ -1047,7 +1080,16 @@ mod tests {
         let mut second = fact("Ada Lovelace", "Note G", 40);
         second.predicate = "annotated".into();
         let two = decoded(vec![fact("Ada Lovelace", "Note G", 10), second]);
-        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
+        let linked = admit_facts(
+            "t1",
+            &two,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .unwrap();
         assert_eq!(linked.report.links, 1);
         let edges = linked
             .methods
@@ -1057,7 +1099,16 @@ mod tests {
         assert_eq!(edges, 2 + 1);
 
         let one = decoded(vec![fact("Somebody", "Something", 10)]);
-        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), &BTreeMap::new(), 2, None).unwrap();
+        let none = admit_facts(
+            "t1",
+            &one,
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .unwrap();
         assert_eq!(none.report.links, 0);
     }
 
@@ -1097,7 +1148,10 @@ mod tests {
             &decoded(vec![other]),
             &cache,
             &BTreeMap::new(),
-            &held_pairs, 2, None)
+            &held_pairs,
+            2,
+            None,
+        )
         .unwrap();
         assert_eq!(second.report.links, 1);
         let edge = second
@@ -1190,7 +1244,10 @@ mod tests {
         assert_eq!(record["claim_ids"], serde_json::json!([claim_id]));
         let outcome = &admission.report.chunks[0];
         assert_eq!(outcome.chunk_id, "chunk:doc:ada:0");
-        assert_eq!(outcome.content_hash, chunk_content_hash("Ada wrote Note G."));
+        assert_eq!(
+            outcome.content_hash,
+            chunk_content_hash("Ada wrote Note G.")
+        );
         assert_eq!((outcome.created, outcome.superseded), (1, 0));
     }
 
@@ -1201,7 +1258,10 @@ mod tests {
         let first_chunk = chunk(&[]);
         let first = admit_facts(
             "t1",
-            &decoded(vec![fact("Ada Lovelace", "Note G", 10), fact("Somebody", "Something", 50)]),
+            &decoded(vec![
+                fact("Ada Lovelace", "Note G", 10),
+                fact("Somebody", "Something", 50),
+            ]),
             &cache,
             &BTreeMap::new(),
             &BTreeMap::new(),
@@ -1214,8 +1274,13 @@ mod tests {
         for method in &first.methods {
             if let Some(properties) = node_properties_opt(method) {
                 if properties["type"] == CANDIDATE_CLAIM_NODE_TYPE {
-                    let Method::AddNode { node_id, .. } = method else { unreachable!() };
-                    held.insert(node_id.clone(), held_claim(&properties).expect("held claim"));
+                    let Method::AddNode { node_id, .. } = method else {
+                        unreachable!()
+                    };
+                    held.insert(
+                        node_id.clone(),
+                        held_claim(&properties).expect("held claim"),
+                    );
                     prior.push(node_id.as_str());
                 }
             }
@@ -1283,10 +1348,16 @@ mod tests {
         let first = fresh("chunk:a", "doc:a", &BTreeMap::new());
         let (claim_id, properties) = claim_of(&first);
         let mut held = BTreeMap::new();
-        held.insert(claim_id.clone(), held_claim(&properties).expect("held claim"));
+        held.insert(
+            claim_id.clone(),
+            held_claim(&properties).expect("held claim"),
+        );
         let second = fresh("chunk:b", "doc:b", &held);
         let (_, properties) = claim_of(&second);
-        assert_eq!(properties["documents"], serde_json::json!(["doc:a", "doc:b"]));
+        assert_eq!(
+            properties["documents"],
+            serde_json::json!(["doc:a", "doc:b"])
+        );
         let both = held_claim(&properties).expect("held claim");
         let mut stored = BTreeMap::new();
         stored.insert(claim_id.clone(), both);

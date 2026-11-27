@@ -258,7 +258,10 @@ impl BundleManifest {
         if self.bundle_version != BUNDLE_VERSION {
             return Err(BundleError::new(
                 BUNDLE_VERSION_UNSUPPORTED,
-                format!("bundle_version {} is not {BUNDLE_VERSION}", self.bundle_version),
+                format!(
+                    "bundle_version {} is not {BUNDLE_VERSION}",
+                    self.bundle_version
+                ),
             ));
         }
         if self.digest != self.computed_digest() {
@@ -268,9 +271,15 @@ impl BundleManifest {
             ));
         }
         if self.graphs.len() != self.parts.len()
-            || self.graphs.iter().zip(&self.parts).any(|(name, part)| name != &part.graph)
+            || self
+                .graphs
+                .iter()
+                .zip(&self.parts)
+                .any(|(name, part)| name != &part.graph)
         {
-            return Err(BundleError::malformed("the manifest graphs and parts disagree"));
+            return Err(BundleError::malformed(
+                "the manifest graphs and parts disagree",
+            ));
         }
         self.check_limits()
     }
@@ -342,20 +351,27 @@ impl Bundle {
             .cloned()
             .ok_or_else(|| BundleError::malformed("the bundle holds no entry"))?;
         if first != MANIFEST_ENTRY {
-            return Err(BundleError::malformed("the first entry is not the manifest"));
+            return Err(BundleError::malformed(
+                "the first entry is not the manifest",
+            ));
         }
         entries.remove(0);
-        let value: serde_json::Value = serde_json::from_slice(&manifest_bytes)
-            .map_err(|error| BundleError::malformed(format!("the manifest is not JSON: {error}")))?;
-        let version = value.get("bundle_version").and_then(serde_json::Value::as_u64);
+        let value: serde_json::Value =
+            serde_json::from_slice(&manifest_bytes).map_err(|error| {
+                BundleError::malformed(format!("the manifest is not JSON: {error}"))
+            })?;
+        let version = value
+            .get("bundle_version")
+            .and_then(serde_json::Value::as_u64);
         if version != Some(u64::from(BUNDLE_VERSION)) {
             return Err(BundleError::new(
                 BUNDLE_VERSION_UNSUPPORTED,
                 "the manifest names an unknown bundle_version",
             ));
         }
-        let manifest: BundleManifest = serde_json::from_value(value)
-            .map_err(|error| BundleError::malformed(format!("the manifest is malformed: {error}")))?;
+        let manifest: BundleManifest = serde_json::from_value(value).map_err(|error| {
+            BundleError::malformed(format!("the manifest is malformed: {error}"))
+        })?;
         manifest.check()?;
         let entries: BTreeMap<String, Vec<u8>> = entries.into_iter().collect();
         let bundle = Self { manifest, entries };
@@ -372,7 +388,11 @@ impl Bundle {
             ))
         };
         for part in &self.manifest.parts {
-            let named = [Some(&part.triples), part.embeddings.as_ref(), Some(&part.provenance)];
+            let named = [
+                Some(&part.triples),
+                part.embeddings.as_ref(),
+                Some(&part.provenance),
+            ];
             for reference in named.into_iter().flatten() {
                 let bytes = self.entry(&reference.entry)?;
                 if bytes.len() as u64 != reference.size || digest_text(bytes) != reference.sha256 {
@@ -614,8 +634,14 @@ mod tests {
         };
         let mut entries = BTreeMap::new();
         entries.insert("graphs/0000/triples.nq".to_string(), triples.clone());
-        entries.insert("graphs/0000/embeddings.json".to_string(), embeddings.clone());
-        entries.insert("graphs/0000/provenance.json".to_string(), provenance.clone());
+        entries.insert(
+            "graphs/0000/embeddings.json".to_string(),
+            embeddings.clone(),
+        );
+        entries.insert(
+            "graphs/0000/provenance.json".to_string(),
+            provenance.clone(),
+        );
         entries.insert(doc.entry(), document);
         let manifest = BundleManifest {
             bundle_version: BUNDLE_VERSION,
@@ -643,8 +669,9 @@ mod tests {
         let bundle = Bundle::unpack(&archive).expect("a sealed bundle unpacks");
         assert_eq!(bundle.manifest, manifest);
         assert_eq!(bundle.entries, entries);
-        let again = serde_json::from_slice::<BundleManifest>(&serde_json::to_vec(&manifest).unwrap())
-            .unwrap();
+        let again =
+            serde_json::from_slice::<BundleManifest>(&serde_json::to_vec(&manifest).unwrap())
+                .unwrap();
         assert_eq!(again, manifest);
         assert_eq!(manifest.digest, manifest.computed_digest());
 
@@ -675,9 +702,17 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R877.3
     #[test]
     fn an_import_record_round_trips_and_goes_stale_only_while_importing() {
-        let record = ImportRecord::begin("t", "cas:sha256:aa", "copy-", "k", vec!["copy-g".into()], 1_000);
+        let record = ImportRecord::begin(
+            "t",
+            "cas:sha256:aa",
+            "copy-",
+            "k",
+            vec!["copy-g".into()],
+            1_000,
+        );
         let node = record.node_operation("agent");
-        let stored = ImportRecord::from_properties(&node["properties"]).expect("the node holds the record");
+        let stored =
+            ImportRecord::from_properties(&node["properties"]).expect("the node holds the record");
         assert_eq!(stored, record);
         assert_eq!(node["id"], record.node_id());
         assert_eq!(record.state, ImportState::Importing);
@@ -687,7 +722,9 @@ mod tests {
         assert!(!renewed.lease_lapsed(2_000 + IMPORT_GRACE_MS - 1));
         assert!(renewed.lease_lapsed(2_000 + IMPORT_GRACE_MS));
         assert!(!record.with_state(ImportState::Ready).lease_lapsed(u64::MAX));
-        assert!(!record.with_state(ImportState::Aborted).lease_lapsed(u64::MAX));
+        assert!(!record
+            .with_state(ImportState::Aborted)
+            .lease_lapsed(u64::MAX));
         let other = ImportRecord::begin("t", "cas:sha256:aa", "copy-", "k2", vec![], 1_000);
         assert_ne!(other.import_id, record.import_id);
     }

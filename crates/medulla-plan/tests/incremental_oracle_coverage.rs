@@ -143,7 +143,9 @@ fn nightly_bench_gaps(workflow: &str) -> Vec<String> {
     let block = &rest[..end];
     let mut gaps = Vec::new();
     if !block.contains("if: github.event_name == 'schedule'") {
-        gaps.push(format!("{NIGHTLY_JOB}: not limited to the nightly schedule"));
+        gaps.push(format!(
+            "{NIGHTLY_JOB}: not limited to the nightly schedule"
+        ));
     }
     for command in NIGHTLY_BENCHES {
         if !block.contains(command) {

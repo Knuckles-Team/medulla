@@ -37,8 +37,12 @@ fn alt_label_search_finds_term_and_deprecated_names_replacement() {
     assert!(!label_matches(&net, "margin"));
     assert!(!label_matches(&net, "  "));
 
-    let link = bind("http://example.org/term/net", &net, "http://example.org/asset/orders")
-        .expect("an approved term binds");
+    let link = bind(
+        "http://example.org/term/net",
+        &net,
+        "http://example.org/asset/orders",
+    )
+    .expect("an approved term binds");
     assert_eq!(link.predicate, DEFINES_ASSET);
     assert_eq!(link.asset, "http://example.org/asset/orders");
 
@@ -47,7 +51,11 @@ fn alt_label_search_finds_term_and_deprecated_names_replacement() {
     assert_eq!(replacement(&old), Some("http://example.org/term/net"));
     assert_eq!(replacement(&net), None);
     assert_eq!(
-        bind("http://example.org/term/sales", &old, "http://example.org/asset/orders"),
+        bind(
+            "http://example.org/term/sales",
+            &old,
+            "http://example.org/asset/orders"
+        ),
         Err(GlossaryError::Deprecated {
             replaced_by: Some("http://example.org/term/net".into())
         })
@@ -57,9 +65,18 @@ fn alt_label_search_finds_term_and_deprecated_names_replacement() {
     let b = "http://example.org/term/b";
     let c = "http://example.org/term/c";
     let chain = vec![
-        (a.to_string(), term("A", &[], &[b], GlossaryTermStatus::Approved)),
-        (b.to_string(), term("B", &[], &[c], GlossaryTermStatus::Approved)),
-        (c.to_string(), term("C", &[], &[], GlossaryTermStatus::Approved)),
+        (
+            a.to_string(),
+            term("A", &[], &[b], GlossaryTermStatus::Approved),
+        ),
+        (
+            b.to_string(),
+            term("B", &[], &[c], GlossaryTermStatus::Approved),
+        ),
+        (
+            c.to_string(),
+            term("C", &[], &[], GlossaryTermStatus::Approved),
+        ),
     ];
     assert_eq!(check_broader_acyclic(&chain, 64), Ok(()));
     let mut cyclic = chain.clone();
@@ -95,13 +112,22 @@ fn cycle_taken_label_and_missing_review_carry_their_codes() {
     use medulla_types::contract::ServerErrorCode;
 
     let stored = vec![
-        ("t:a".to_string(), term("A", &[], &["t:b"], GlossaryTermStatus::Draft)),
-        ("t:b".to_string(), term("B", &[], &[], GlossaryTermStatus::Approved)),
+        (
+            "t:a".to_string(),
+            term("A", &[], &["t:b"], GlossaryTermStatus::Draft),
+        ),
+        (
+            "t:b".to_string(),
+            term("B", &[], &[], GlossaryTermStatus::Approved),
+        ),
     ];
     // A new `b` that points back at `a` closes a cycle through the stored term.
     let cycle = check_broader_acyclic_over(
         stored.clone(),
-        &[("t:b".to_string(), term("B", &[], &["t:a"], GlossaryTermStatus::Draft))],
+        &[(
+            "t:b".to_string(),
+            term("B", &[], &["t:a"], GlossaryTermStatus::Draft),
+        )],
     )
     .expect_err("a cycle through a stored term is refused");
     assert_eq!(cycle.code(), Some(ServerErrorCode::GlossaryCycle));
@@ -133,9 +159,24 @@ fn cycle_taken_label_and_missing_review_carry_their_codes() {
 #[test]
 fn the_label_index_answers_exactly_what_a_scan_of_label_matches_answers() {
     let terms = vec![
-        term("Net revenue", &["Net sales", "Chiffre d'affaires net"], &[], GlossaryTermStatus::Approved),
-        term("Gross margin", &["Bruto margen"], &[], GlossaryTermStatus::Approved),
-        term("Net margin", &["Neto margen", "Net profit"], &[], GlossaryTermStatus::Draft),
+        term(
+            "Net revenue",
+            &["Net sales", "Chiffre d'affaires net"],
+            &[],
+            GlossaryTermStatus::Approved,
+        ),
+        term(
+            "Gross margin",
+            &["Bruto margen"],
+            &[],
+            GlossaryTermStatus::Approved,
+        ),
+        term(
+            "Net margin",
+            &["Neto margen", "Net profit"],
+            &[],
+            GlossaryTermStatus::Draft,
+        ),
         term("Revenue growth", &[], &[], GlossaryTermStatus::Approved),
     ];
     let index = GlossaryLabelIndex::build(&terms);

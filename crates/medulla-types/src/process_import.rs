@@ -39,14 +39,16 @@ pub fn workflow_digest_of_hex(hex: &str) -> String {
 /// The 64 hex digits of a workflow digest, for the places that embed them in an identifier
 /// (an XML id, a decision IRI). A value without the prefix is returned unchanged.
 pub fn workflow_digest_hex(digest: &str) -> &str {
-    digest.strip_prefix(WORKFLOW_DIGEST_PREFIX).unwrap_or(digest)
+    digest
+        .strip_prefix(WORKFLOW_DIGEST_PREFIX)
+        .unwrap_or(digest)
 }
 
 /// Whether `stored` is a well formed stored workflow digest: the prefix and 64 hex digits.
 pub fn is_stored_workflow_digest(stored: &str) -> bool {
-    stored.strip_prefix(WORKFLOW_DIGEST_PREFIX).is_some_and(|hex| {
-        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_hexdigit())
-    })
+    stored
+        .strip_prefix(WORKFLOW_DIGEST_PREFIX)
+        .is_some_and(|hex| hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
 /// The closed step kinds, in their canonical order.
@@ -279,14 +281,28 @@ pub struct CanonicalWorkflow {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ImportError {
-    UnmappedElement { element_type: String },
-    NotCanonical { reason: String },
-    DigestMismatch { stated: String, computed: String },
-    UnknownSource { system: String },
+    UnmappedElement {
+        element_type: String,
+    },
+    NotCanonical {
+        reason: String,
+    },
+    DigestMismatch {
+        stated: String,
+        computed: String,
+    },
+    UnknownSource {
+        system: String,
+    },
     /// The workflow is invisible to the tenant.
-    UnknownModel { workflow_id: String },
+    UnknownModel {
+        workflow_id: String,
+    },
     /// More elements than `process_import_max_elements`.
-    TooLarge { elements: u64, limit: u64 },
+    TooLarge {
+        elements: u64,
+        limit: u64,
+    },
 }
 
 /// The wire code of `ImportError::UnmappedElement`.

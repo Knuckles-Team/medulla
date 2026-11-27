@@ -92,7 +92,12 @@ impl Literal {
     pub fn numeric(&self) -> Option<Numeric> {
         let local = self.datatype.strip_prefix(XSD)?;
         if INTEGER_DERIVED.contains(&local) {
-            return self.lexical.trim().parse::<i64>().ok().map(Numeric::Integer);
+            return self
+                .lexical
+                .trim()
+                .parse::<i64>()
+                .ok()
+                .map(Numeric::Integer);
         }
         match local {
             "decimal" => {

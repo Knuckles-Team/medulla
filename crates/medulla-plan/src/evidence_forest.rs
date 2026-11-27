@@ -14,11 +14,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_graph_core::graph::{edge_weight_in_view, GraphView};
-use medulla_semantic_index::semantic::SemanticStore;
 use medulla_result_types::evidence_forest::{
     check_budget, check_candidate_cap, check_seeds, EvidenceCandidate, ForestRefusal,
     ForestSelection,
 };
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// Default `knob retrieval.forest.hops`.
 pub const DEFAULT_FOREST_HOPS: u32 = 2;
@@ -186,7 +186,9 @@ pub fn select_forest(
                 continue;
             }
             if penalty.conflict_weight > 0.0
-                && chosen.iter().any(|held| relations.conflicts(id, &held.memory_id))
+                && chosen
+                    .iter()
+                    .any(|held| relations.conflicts(id, &held.memory_id))
             {
                 dropped.push(candidate.memory_id.clone());
                 dropped_ids.insert(id);
@@ -275,10 +277,11 @@ impl<'a> PlanForestGraph<'a> {
 
     /// `max(1, ceil(bytes / 4))` tokens for the target's stored blob, 1 when it has none.
     fn tokens_of(&self, target: &str) -> u32 {
-        self.view
-            .node_properties
-            .get(target)
-            .map_or(1, |blob| u32::try_from(blob.len().div_ceil(4)).unwrap_or(u32::MAX).max(1))
+        self.view.node_properties.get(target).map_or(1, |blob| {
+            u32::try_from(blob.len().div_ceil(4))
+                .unwrap_or(u32::MAX)
+                .max(1)
+        })
     }
 }
 
@@ -334,15 +337,18 @@ impl ForestGraph for PlanForestGraph<'_> {
 impl ForestRelations for PlanForestGraph<'_> {
     /// The cosine of the two stored embeddings clamped to `0..=1`; `0.0` when either has none.
     fn similarity(&self, a: &str, b: &str) -> f32 {
-        let (Some(x), Some(y)) = (self.semantic.get_embedding(a), self.semantic.get_embedding(b))
-        else {
+        let (Some(x), Some(y)) = (
+            self.semantic.get_embedding(a),
+            self.semantic.get_embedding(b),
+        ) else {
             return 0.0;
         };
         if x.len() != y.len() {
             return 0.0;
         }
         let dot: f32 = x.iter().zip(&y).map(|(p, q)| p * q).sum();
-        let norm = x.iter().map(|p| p * p).sum::<f32>().sqrt() * y.iter().map(|q| q * q).sum::<f32>().sqrt();
+        let norm = x.iter().map(|p| p * p).sum::<f32>().sqrt()
+            * y.iter().map(|q| q * q).sum::<f32>().sqrt();
         if norm == 0.0 || !norm.is_finite() {
             return 0.0;
         }
@@ -390,12 +396,24 @@ mod tests {
             core.add_node(id.into(), blob(serde_json::json!({ "type": "Doc" })));
         }
         // A weighted edge, an unweighted edge, and an over-heavy weight that clamps to 1.
-        core.add_edge("a".into(), "b".into(), blob(serde_json::json!({ "weight": 0.4 })))
-            .unwrap();
-        core.add_edge("c".into(), "a".into(), blob(serde_json::json!({ "relationship": "REL" })))
-            .unwrap();
-        core.add_edge("a".into(), "d".into(), blob(serde_json::json!({ "weight": 7.0 })))
-            .unwrap();
+        core.add_edge(
+            "a".into(),
+            "b".into(),
+            blob(serde_json::json!({ "weight": 0.4 })),
+        )
+        .unwrap();
+        core.add_edge(
+            "c".into(),
+            "a".into(),
+            blob(serde_json::json!({ "relationship": "REL" })),
+        )
+        .unwrap();
+        core.add_edge(
+            "a".into(),
+            "d".into(),
+            blob(serde_json::json!({ "weight": 7.0 })),
+        )
+        .unwrap();
         let view = core.analysis_snapshot();
 
         let mut semantic = SemanticStore::new();
@@ -416,7 +434,10 @@ mod tests {
 
         // Schema strengths: the weight, 1.0 with no weight, and a weight clamped to 1.
         let b = find("b").unwrap();
-        assert_eq!((b.kind, b.strength, b.verify_cost), (RelationKind::Schema, 0.4, 0.1));
+        assert_eq!(
+            (b.kind, b.strength, b.verify_cost),
+            (RelationKind::Schema, 0.4, 0.1)
+        );
         assert_eq!(find("c").unwrap().strength, 1.0);
         assert_eq!(find("d").unwrap().strength, 1.0);
         // No duplicate neighbour: `b` is listed once even though it is also similar.
@@ -434,8 +455,16 @@ mod tests {
 
         // `similar_k` truncates the similarity relations.
         let none = PlanForestGraph::new(&view, &semantic, 1).relations("a");
-        assert!(none.iter().filter(|r| r.kind == RelationKind::Similarity).count() <= 1);
+        assert!(
+            none.iter()
+                .filter(|r| r.kind == RelationKind::Similarity)
+                .count()
+                <= 1
+        );
         // A memory the projection does not hold reads no schema relations.
-        assert!(reader.relations("hidden").iter().all(|r| r.kind == RelationKind::Similarity));
+        assert!(reader
+            .relations("hidden")
+            .iter()
+            .all(|r| r.kind == RelationKind::Similarity));
     }
 }

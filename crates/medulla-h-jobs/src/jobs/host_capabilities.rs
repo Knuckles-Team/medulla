@@ -167,10 +167,7 @@ pub(crate) async fn refuse_uncovered(
             declared.extend(declared_for(state, &host_iri).await?);
         }
     }
-    let declared_names: BTreeSet<&str> = declared
-        .into_iter()
-        .map(heavy_capability_name)
-        .collect();
+    let declared_names: BTreeSet<&str> = declared.into_iter().map(heavy_capability_name).collect();
     match heavy.iter().find(|name| !declared_names.contains(*name)) {
         Some(missing) => Err(format!("{NO_CAPABLE_HOST}: {missing}")),
         None => Ok(()),
@@ -242,10 +239,12 @@ mod tests {
     use super::*;
 
     async fn state_with_commons(nodes: &[(&str, serde_json::Value)]) -> Arc<RwLock<ServerState>> {
-        let state = Arc::new(RwLock::new(medulla_server::seams_install::new_state_for_test(
-            "host-capabilities-test-secret",
-            ServerState::test_isolation("host-capabilities-test-issuer"),
-        )));
+        let state = Arc::new(RwLock::new(
+            medulla_server::seams_install::new_state_for_test(
+                "host-capabilities-test-secret",
+                ServerState::test_isolation("host-capabilities-test-issuer"),
+            ),
+        ));
         {
             let mut guard = state.write().await;
             guard
@@ -281,9 +280,11 @@ mod tests {
             refuse_uncovered(&state, &gpu).await.unwrap_err(),
             "NO_CAPABLE_HOST: gpu"
         );
-        assert!(medulla_decision_types::decision::statistical::placement::REFUSALS
-            .iter()
-            .any(|code| code.as_str() == NO_CAPABLE_HOST));
+        assert!(
+            medulla_decision_types::decision::statistical::placement::REFUSALS
+                .iter()
+                .any(|code| code.as_str() == NO_CAPABLE_HOST)
+        );
     }
 
     // proves R004.3: BUILD: every production claim carries the heavy capabilities its host ...
@@ -299,7 +300,10 @@ mod tests {
             declared_for(&state, "host:alpha").await.unwrap(),
             BTreeSet::from([HeavyCapability::Backtest])
         );
-        assert!(declared_for(&state, "host:absent").await.unwrap().is_empty());
+        assert!(declared_for(&state, "host:absent")
+            .await
+            .unwrap()
+            .is_empty());
         let refused = declared_for(&state, "host:odd").await.unwrap_err();
         assert!(refused.starts_with(PLACEMENT_FACTS_INVALID), "{refused}");
         assert_eq!(

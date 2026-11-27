@@ -10,8 +10,9 @@ pub mod resource_rows;
 use medulla_protocol_types::protocol::Method;
 use medulla_result_types::epistemic_operations::{
     ResourceCapacitySnapshot, ResourceHostUpdateRequest, ResourceHostUpdateRequestTargetKind,
-    ResourceHostUpdateResult, ResourceHostUpdateResultReason, ResourceHostUpdateResultSchemaVersion,
-    ResourceHostUpdateSnapshotTargetKind, ResourceRequirement, ResourceReservationHostSnapshot,
+    ResourceHostUpdateResult, ResourceHostUpdateResultReason,
+    ResourceHostUpdateResultSchemaVersion, ResourceHostUpdateSnapshotTargetKind,
+    ResourceRequirement, ResourceReservationHostSnapshot,
     ResourceReservationHostSnapshotTargetKind, ResourceReservationRecord,
     ResourceReservationRecordState, ResourceReservationRecordTargetKind,
     ResourceReservationRequest, ResourceReservationRequestTargetKind, ResourceReservationResult,

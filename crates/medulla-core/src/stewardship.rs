@@ -191,7 +191,9 @@ pub enum ReviewRefusal {
 impl std::fmt::Display for ReviewRefusal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::RoleMissing => f.write_str("the principal is not an owner or steward of the target"),
+            Self::RoleMissing => {
+                f.write_str("the principal is not an owner or steward of the target")
+            }
             Self::SelfApproval => f.write_str("the approver opened the change request"),
             Self::Stale { opened_at, now } => write!(
                 f,
@@ -215,7 +217,11 @@ pub fn authorize_review(
     opened_digest: &str,
     current_digest: &str,
 ) -> Result<(), ReviewRefusal> {
-    if !request.reviewers.iter().any(|reviewer| reviewer == principal) {
+    if !request
+        .reviewers
+        .iter()
+        .any(|reviewer| reviewer == principal)
+    {
         return Err(ReviewRefusal::RoleMissing);
     }
     if approving && opened_by == principal {

@@ -306,7 +306,11 @@ mod tests {
                     .edges
                     .iter()
                     .any(|edge| edge.from == state && edge.event == event);
-                assert_eq!(state.step(1, event).is_ok(), has_edge, "{state:?} {event:?}");
+                assert_eq!(
+                    state.step(1, event).is_ok(),
+                    has_edge,
+                    "{state:?} {event:?}"
+                );
             }
         }
         for &event in machine.events {

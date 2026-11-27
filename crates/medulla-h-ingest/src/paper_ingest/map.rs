@@ -52,7 +52,9 @@ fn is_arxiv_id(text: &str) -> bool {
         && year.bytes().all(|byte| byte.is_ascii_digit())
         && (4..=5).contains(&number.len())
         && number.bytes().all(|byte| byte.is_ascii_digit())
-        && version.map_or(true, |v| !v.is_empty() && v.bytes().all(|byte| byte.is_ascii_digit()))
+        && version.map_or(true, |v| {
+            !v.is_empty() && v.bytes().all(|byte| byte.is_ascii_digit())
+        })
 }
 
 fn doi_of(references: &[Value]) -> Option<String> {
@@ -130,7 +132,11 @@ fn provenance(payload: &Value) -> Vec<Value> {
         .map(|(field, entry)| {
             let reference = match entry.get("document_sha256").and_then(Value::as_str) {
                 Some(sha) => format!("sha256:{sha}"),
-                None => format!("{}:{}", text(entry, "provider_id"), text(entry, "source_id")),
+                None => format!(
+                    "{}:{}",
+                    text(entry, "provider_id"),
+                    text(entry, "source_id")
+                ),
             };
             serde_json::json!({
                 "field": field,
@@ -184,7 +190,10 @@ pub(crate) fn map_paper(
     if let Some(authors) = payload.get("authors").filter(|authors| !authors.is_null()) {
         properties.insert("authors".into(), compact(authors).into());
     }
-    if let Some(receipt) = payload.get("document_receipt").filter(|value| !value.is_null()) {
+    if let Some(receipt) = payload
+        .get("document_receipt")
+        .filter(|value| !value.is_null())
+    {
         properties.insert("receipt_digest".into(), receipt_digest(receipt).into());
         if let Some(sha) = receipt.get("sha256").and_then(Value::as_str) {
             properties.insert("document_digest".into(), sha.into());

@@ -300,7 +300,10 @@ async fn the_engine_records_the_critique_the_admission_then_reads() {
         "held_item_kind": "run_output_proposal",
         "content_digest": digest('d'),
     });
-    core.add_node("prop-bare".to_string(), rmp_serde::to_vec_named(&bare).unwrap());
+    core.add_node(
+        "prop-bare".to_string(),
+        rmp_serde::to_vec_named(&bare).unwrap(),
+    );
     core.add_node(
         "prog-1".to_string(),
         rmp_serde::to_vec_named(&program("compiler", Some("verifier"), 2, "active")).unwrap(),
@@ -367,15 +370,25 @@ async fn the_engine_records_the_critique_the_admission_then_reads() {
     assert_eq!(answer(&after), "admitted");
     let admitted = typed(&after);
     assert_eq!(admitted.outcome, HeldItemOutcome::Admitted);
-    assert_eq!(admitted.verification_ref.as_deref(), Some(accepted.critique_ref.as_str()));
-    assert_eq!(admitted.critique_digest.as_deref(), Some(digest('d').as_str()));
+    assert_eq!(
+        admitted.verification_ref.as_deref(),
+        Some(accepted.critique_ref.as_str())
+    );
+    assert_eq!(
+        admitted.critique_digest.as_deref(),
+        Some(digest('d').as_str())
+    );
     assert_eq!(admitted.critique_verdict.as_deref(), Some("accept"));
-    let node = rmp_serde::from_slice::<serde_json::Value>(&core.get_node_properties("prop-bare").unwrap())
-        .unwrap();
+    let node =
+        rmp_serde::from_slice::<serde_json::Value>(&core.get_node_properties("prop-bare").unwrap())
+            .unwrap();
     assert_eq!(node["critique_recorded_by"], "decider");
     assert!(node["critique_recorded_at_ms"].as_u64().unwrap() > 0);
     assert_eq!(node["critique_answer_grounded"], true);
-    assert_eq!(node["held_item_kind"], "run_output_proposal", "the node keeps its other fields");
+    assert_eq!(
+        node["held_item_kind"], "run_output_proposal",
+        "the node keeps its other fields"
+    );
 
     // A failed question records a rejecting critique.
     let plan = super::super::handle_held_item_critique(
@@ -403,17 +416,27 @@ async fn the_engine_records_the_critique_the_admission_then_reads() {
     }
     let mut stale = critique([true; 4]);
     stale.content_digest = digest('e');
-    assert!(refuse(&h, &verified, stale).await.starts_with("DIGEST_MISMATCH"));
+    assert!(refuse(&h, &verified, stale)
+        .await
+        .starts_with("DIGEST_MISMATCH"));
     let mut program = critique([true; 4]);
     program.item_ref = "prog-1".to_string();
-    assert!(refuse(&h, &verified, program).await.starts_with("HELD_ITEM_UNKNOWN"));
+    assert!(refuse(&h, &verified, program)
+        .await
+        .starts_with("HELD_ITEM_UNKNOWN"));
     let mut absent = critique([true; 4]);
     absent.item_ref = "prop-absent".to_string();
-    assert!(refuse(&h, &verified, absent).await.starts_with("HELD_ITEM_UNKNOWN"));
+    assert!(refuse(&h, &verified, absent)
+        .await
+        .starts_with("HELD_ITEM_UNKNOWN"));
     let mut incomplete = critique([true; 4]);
     incomplete.answers.pop();
-    assert!(refuse(&h, &verified, incomplete).await.starts_with("PARAMETER_INVALID"));
+    assert!(refuse(&h, &verified, incomplete)
+        .await
+        .starts_with("PARAMETER_INVALID"));
     let mut foreign = critique([true; 4]);
     foreign.tenant_id = "tenant-other".to_string();
-    assert!(refuse(&h, &verified, foreign).await.starts_with("ACCESS_DENIED"));
+    assert!(refuse(&h, &verified, foreign)
+        .await
+        .starts_with("ACCESS_DENIED"));
 }

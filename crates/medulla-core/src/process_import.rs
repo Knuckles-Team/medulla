@@ -13,13 +13,14 @@ use std::cmp::Reverse;
 use std::collections::{BTreeMap, BinaryHeap, HashMap};
 
 use medulla_types::contract::Digest256;
+use medulla_types::process_import::workflow_digest_of_hex;
 use medulla_types::process_import::{
     AllocatedProcess, AnnexEntry, CanonicalFlow, CanonicalStep, CanonicalWorkflow, GateKind,
     ImportError, KindAnnotation, LoweredFlow, LoweredProcess, LoweredStep, ProcessExportLossy,
-    ProcessLoss, ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind, ANNEX_EPC_STATE_EVENT,
-    LOSS_ANNEX_NOT_HELD, PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
+    ProcessLoss, ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind,
+    ANNEX_EPC_STATE_EVENT, LOSS_ANNEX_NOT_HELD, PROCESS_CANONICAL_SCHEMA,
+    PROCESS_IMPORT_SCHEMA_VERSION,
 };
-use medulla_types::process_import::workflow_digest_of_hex;
 use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
 

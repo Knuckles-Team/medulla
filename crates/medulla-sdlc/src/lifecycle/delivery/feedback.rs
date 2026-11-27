@@ -76,7 +76,8 @@ pub fn route_feedback(
             None => false,
             Some(DeliveryOutcome::Stopped) => continue,
             Some(_) => {
-                if event.source != InputSource::Person || !context.revalidated.contains(&delivery.id)
+                if event.source != InputSource::Person
+                    || !context.revalidated.contains(&delivery.id)
                 {
                     continue;
                 }

@@ -662,7 +662,9 @@ mod tests {
     }
 
     fn sample_job(state: crate::model::JobState) -> crate::model::AnalyticsJob {
-        use crate::model::{AlgoVersion, AnalyticsJob, InputSnapshotHandle, JobPolicy, RetryPolicy};
+        use crate::model::{
+            AlgoVersion, AnalyticsJob, InputSnapshotHandle, JobPolicy, RetryPolicy,
+        };
         AnalyticsJob {
             job_id: "job-0000000000000001".to_string(),
             input_snapshot: InputSnapshotHandle::new("g", 1),
@@ -726,7 +728,11 @@ mod tests {
         assert_eq!(refused.from, "submitted");
         assert_eq!(refused.event, "Claim");
         assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
-        assert_eq!(job.state, JobState::Submitted { checkpoint: None }, "the job is unchanged");
+        assert_eq!(
+            job.state,
+            JobState::Submitted { checkpoint: None },
+            "the job is unchanged"
+        );
         // The matching payload is applied.
         job.transition(JobEvent::Claim, &facts, 10, running.clone())
             .unwrap();

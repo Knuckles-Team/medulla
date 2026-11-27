@@ -7,8 +7,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::extracted_fact::{CandidateClaim, ExtractedFact, GroundingResult};
-use crate::knowledge_atom::KnowledgeAtom;
 use crate::ingestion_wire::{InstanceProfile, ProfileDatatypeProperty, ProfileObjectProperty};
+use crate::knowledge_atom::KnowledgeAtom;
 use crate::ontology_proposal::{
     score_proposal, OntologyProposal, ProposalCheck, ProposalProvenance, ProposalThresholds,
     ProposedClass, ProposedProperty,
@@ -421,9 +421,8 @@ pub fn draft_from_profile(
     profile: &InstanceProfile,
     provenance: ProposalProvenance,
 ) -> Result<(OntologyProposal, Vec<String>), IngestRefusal> {
-    let entries = profile.classes.len()
-        + profile.datatype_properties.len()
-        + profile.object_properties.len();
+    let entries =
+        profile.classes.len() + profile.datatype_properties.len() + profile.object_properties.len();
     if entries > MAX_PROFILE_ENTRIES {
         return Err(IngestRefusal::ProfileTooLarge(entries));
     }
@@ -450,7 +449,11 @@ pub fn draft_from_profile(
             }
         }
     }
-    let kept = |class: &str| instances.get(class).is_some_and(|n| *n >= MIN_PROFILE_COUNT);
+    let kept = |class: &str| {
+        instances
+            .get(class)
+            .is_some_and(|n| *n >= MIN_PROFILE_COUNT)
+    };
     let mut classes: BTreeMap<String, BTreeSet<String>> = instances
         .iter()
         .filter(|(_, n)| **n >= MIN_PROFILE_COUNT)

@@ -720,7 +720,9 @@ fn derived_fact_props(
 
 /// Read a stored `DerivedFact` node back as its record.
 #[cfg(all(feature = "reasoning", feature = "query"))]
-fn stored_derived_fact(blob: &[u8]) -> Option<medulla_query_types::derived_fact::DerivedFactRecord> {
+fn stored_derived_fact(
+    blob: &[u8],
+) -> Option<medulla_query_types::derived_fact::DerivedFactRecord> {
     let props = medulla_types::msgpack::decode_property_object(blob).ok()?;
     let value = serde_json::json!({
         "fact": {
@@ -1424,7 +1426,8 @@ mod tests {
         else {
             panic!("an AddNode");
         };
-        let mut forged = medulla_types::msgpack::decode_property_object(&properties_msgpack).unwrap();
+        let mut forged =
+            medulla_types::msgpack::decode_property_object(&properties_msgpack).unwrap();
         forged["content_ref"] = "blob:other".into();
         let refusal = direct_add_node(
             &Method::AddNode {
@@ -1558,16 +1561,21 @@ mod tests {
         assert!(!props(&properties_msgpack).contains_key("trust_mark"));
 
         // An unknown origin is refused.
-        let refusal = stamp(add_node(serde_json::json!({"content_origin": "telepathy"})))
-            .unwrap_err();
+        let refusal =
+            stamp(add_node(serde_json::json!({"content_origin": "telepathy"}))).unwrap_err();
         assert!(refusal.starts_with("CONTENT_ORIGIN_UNKNOWN"), "{refusal}");
 
         // An absent caller (replicated apply) passes through unchanged.
         let forged = serde_json::json!({"content_origin": "upload", "trust_mark": "x"});
         let Method::AddNode {
             properties_msgpack, ..
-        } = super::stamp_trust_mark_if_applicable(add_node(forged.clone()), &core, None, &isolation)
-            .unwrap()
+        } = super::stamp_trust_mark_if_applicable(
+            add_node(forged.clone()),
+            &core,
+            None,
+            &isolation,
+        )
+        .unwrap()
         else {
             panic!("AddNode came back");
         };
@@ -1598,7 +1606,10 @@ mod tests {
 
         // A batch create carrying a mark is refused; one with an origin is stamped.
         let refusal = stamp(create(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
-        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        assert!(
+            refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"),
+            "{refusal}"
+        );
         let Method::Batch { operations } =
             stamp(create(serde_json::json!({"content_origin": "upload"}))).unwrap()
         else {
@@ -1619,13 +1630,19 @@ mod tests {
             updates_msgpack: blob(serde_json::json!({"trust_mark": "trusted"})),
         })
         .unwrap_err();
-        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        assert!(
+            refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"),
+            "{refusal}"
+        );
         let refusal = stamp(BatchOperation::ClaimNext {
             label: "Task".into(),
             updates_msgpack: blob(serde_json::json!({"marked_by": "me"})),
         })
         .unwrap_err();
-        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        assert!(
+            refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"),
+            "{refusal}"
+        );
     }
 
     #[cfg(feature = "security")]
@@ -1668,7 +1685,10 @@ mod tests {
 
         // A lone reserved field without the mark is refused.
         let refusal = stamp(cas(serde_json::json!({"marked_by": "me"}))).unwrap_err();
-        assert!(refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"), "{refusal}");
+        assert!(
+            refusal.starts_with("TRUST_MARK_FIELDS_RESERVED"),
+            "{refusal}"
+        );
 
         // Lowering without an approval id is refused.
         let refusal = stamp(cas(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
@@ -1701,7 +1721,10 @@ mod tests {
 
         // An unmarked node counts as untrusted: the same request is refused, and the pinned
         // condition is null.
-        core.add_node("doc-1".into(), blob(serde_json::json!({"node_type": "Doc"})));
+        core.add_node(
+            "doc-1".into(),
+            blob(serde_json::json!({"node_type": "Doc"})),
+        );
         let refusal = stamp(cas(serde_json::json!({"trust_mark": "trusted"}))).unwrap_err();
         assert!(
             refusal.starts_with("TRUST_MARK_DOWNGRADE_REFUSED"),
@@ -1799,24 +1822,22 @@ mod tests {
     /// The handler's way: resolve through the readers, then admit with the result.
     fn admit(write: &Method, tenant: &str) -> Result<Method, String> {
         use medulla_server_api::walkthrough_readers::WalkthroughReaders;
-        let readers = WalkthroughReaders::new(std::sync::Arc::new(Index), std::sync::Arc::new(Blobs));
-        let checks =
-            crate::harness_admission::resolve_walkthrough_checks(
+        let readers =
+            WalkthroughReaders::new(std::sync::Arc::new(Index), std::sync::Arc::new(Blobs));
+        let checks = crate::harness_admission::resolve_walkthrough_checks(
             write,
             tenant,
-            if tenant == "tenant-a" { "owner-a" } else { "owner-b" },
+            if tenant == "tenant-a" {
+                "owner-a"
+            } else {
+                "owner-b"
+            },
             Some(&readers),
         );
         if let crate::harness_admission::WalkthroughChecks::Refused(refusal) = checks {
             return Err(refusal.code().as_str().to_string());
         }
-        crate::harness_admission::direct_add_node_checked(
-            write,
-            &GraphCore::new(),
-            7,
-            None,
-            checks,
-        )
+        crate::harness_admission::direct_add_node_checked(write, &GraphCore::new(), 7, None, checks)
     }
 
     // proves R013.7.2: Refusal: validate the manifest on write
@@ -1830,11 +1851,17 @@ mod tests {
         let mut stale = walkthrough();
         stale["repository_revision"] = "rev-1".into();
         let refusal = admit(&walkthrough_write(stale), "tenant-a").unwrap_err();
-        assert!(refusal.starts_with("WALKTHROUGH_REVISION_STALE"), "{refusal}");
+        assert!(
+            refusal.starts_with("WALKTHROUGH_REVISION_STALE"),
+            "{refusal}"
+        );
 
         // A cross-tenant manifest reads as absent.
         let refusal = admit(&walkthrough_write(walkthrough()), "tenant-b").unwrap_err();
-        assert!(refusal.starts_with("WALKTHROUGH_REVISION_STALE"), "{refusal}");
+        assert!(
+            refusal.starts_with("WALKTHROUGH_REVISION_STALE"),
+            "{refusal}"
+        );
 
         // A ref outside the pinned snapshot.
         let mut outside = walkthrough();
@@ -1847,10 +1874,8 @@ mod tests {
 
         // An unresolved or tampered artifact.
         let mut tampered = walkthrough();
-        tampered["artifact_digest"] = serde_json::to_value(
-            medulla_types::contract::Digest256::sha256(b"other"),
-        )
-        .unwrap();
+        tampered["artifact_digest"] =
+            serde_json::to_value(medulla_types::contract::Digest256::sha256(b"other")).unwrap();
         let refusal = admit(&walkthrough_write(tampered), "tenant-a").unwrap_err();
         assert!(
             refusal.starts_with("WALKTHROUGH_ARTIFACT_UNRESOLVED"),
@@ -1868,18 +1893,27 @@ mod tests {
         let mut uncited = walkthrough();
         uncited["ordered_sections"][0]["source_refs"] = serde_json::json!([]);
         let refusal = admit(&walkthrough_write(uncited), "tenant-a").unwrap_err();
-        assert!(refusal.starts_with("WALKTHROUGH_SECTION_UNCITED"), "{refusal}");
+        assert!(
+            refusal.starts_with("WALKTHROUGH_SECTION_UNCITED"),
+            "{refusal}"
+        );
 
         // A duplicate or gapped note index.
         let mut gapped = walkthrough();
         gapped["execution_notes"][0]["step_index"] = 2.into();
         let refusal = admit(&walkthrough_write(gapped), "tenant-a").unwrap_err();
-        assert!(refusal.starts_with("WALKTHROUGH_NOTE_ORDER_INVALID"), "{refusal}");
+        assert!(
+            refusal.starts_with("WALKTHROUGH_NOTE_ORDER_INVALID"),
+            "{refusal}"
+        );
 
         // A span outside the run.
         let mut other_run = walkthrough();
         other_run["execution_notes"][0]["run_id"] = "run-2".into();
         let refusal = admit(&walkthrough_write(other_run), "tenant-a").unwrap_err();
-        assert!(refusal.starts_with("WALKTHROUGH_SPAN_OUTSIDE_RUN"), "{refusal}");
+        assert!(
+            refusal.starts_with("WALKTHROUGH_SPAN_OUTSIDE_RUN"),
+            "{refusal}"
+        );
     }
 }

@@ -9,7 +9,9 @@
 //! `skill:<document digest>`, where `ProgramLookup` reads it. An incomplete draft refuses by
 //! name and compiles no partial program.
 
-use medulla_decision_plan::plan::skill_workflow::{compile_skill_workflow, COMPILER_ID, COMPILER_REVISION};
+use medulla_decision_plan::plan::skill_workflow::{
+    compile_skill_workflow, COMPILER_ID, COMPILER_REVISION,
+};
 use medulla_decision_types::decision::skill_workflow::SkillWorkflowDraft;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
@@ -59,7 +61,10 @@ fn compile(request: &DecideRequest) -> Result<Executed, String> {
     let premises = vec![
         // The harness produced the draft; the program is a pure function of it.
         premise(
-            format!("skill_workflow:document={}", draft.skill_document_digest.to_hex()),
+            format!(
+                "skill_workflow:document={}",
+                draft.skill_document_digest.to_hex()
+            ),
             PremiseClass::Claim,
         ),
         premise(

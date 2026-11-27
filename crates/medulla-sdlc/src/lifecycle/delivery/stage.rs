@@ -36,7 +36,11 @@ pub fn record_report(
                 "a ready report needs evidence".to_owned(),
             ));
         }
-        if let Some(unknown) = write.evidence.iter().find(|id| !known_verdicts.contains(*id)) {
+        if let Some(unknown) = write
+            .evidence
+            .iter()
+            .find(|id| !known_verdicts.contains(*id))
+        {
             return Err(DeliveryReportRefusal::EvidenceMissing(format!(
                 "unknown verdict {unknown}"
             )));

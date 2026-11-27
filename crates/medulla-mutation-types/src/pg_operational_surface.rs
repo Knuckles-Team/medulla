@@ -362,7 +362,10 @@ mod tests {
     fn served_matrix_declares_every_served_operational_surface() {
         let m = PgCompatibilityMatrix::with_served_forms();
         for surface in SERVED_OPERATIONAL_SURFACES {
-            assert!(m.is_supported(*surface), "{surface:?} is served but undeclared");
+            assert!(
+                m.is_supported(*surface),
+                "{surface:?} is served but undeclared"
+            );
         }
         assert!(m.is_supported(PgOperationalSurface::QueryCancellation));
         assert!(!PgCompatibilityMatrix::fail_closed()

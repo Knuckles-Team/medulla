@@ -152,7 +152,11 @@ async fn deploy_queues_one_proposal_with_the_document_digest() {
 
     // The queue id is the digest of the connection, the class and the document digest.
     let mut framed = Vec::new();
-    for part in [CONNECTION, PROCESS_MODEL_CLASS_IRI, exported.document_digest.as_str()] {
+    for part in [
+        CONNECTION,
+        PROCESS_MODEL_CLASS_IRI,
+        exported.document_digest.as_str(),
+    ] {
         framed.extend_from_slice(part.as_bytes());
         framed.push(0);
     }
@@ -162,7 +166,11 @@ async fn deploy_queues_one_proposal_with_the_document_digest() {
         report.queued,
         vec![format!("sync:{}:{MODEL_IRI}", &queue_id[..16])]
     );
-    assert_eq!(core_version(&state), before, "a deploy never writes the graph");
+    assert_eq!(
+        core_version(&state),
+        before,
+        "a deploy never writes the graph"
+    );
 
     // A second deploy of the unchanged model queues the same proposal: no duplicate.
     let again: SyncReport = payload(send(&state, 5, deploy(MODEL_IRI)).await);

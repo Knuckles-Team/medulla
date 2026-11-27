@@ -365,7 +365,9 @@ pub(super) fn eval_str_core(
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
     match f {
-        F::Str => Some(Binding::string(eval_term(ctx, args.first()?, sol)?.str_value()?)),
+        F::Str => Some(Binding::string(
+            eval_term(ctx, args.first()?, sol)?.str_value()?,
+        )),
         // `IRI`/`URI` (MEDULLA-FEDERATED-QUERY-R742.1): an IRI stays as it is, an absolute
         // string becomes that IRI, and a relative reference resolves against the query
         // `BASE` by RFC 3986. A relative reference with no `BASE` is an error value.
@@ -387,7 +389,9 @@ pub(super) fn eval_str_core(
         F::Lang => {
             let arg = eval_term(ctx, args.first()?, sol)?;
             let literal = arg.as_literal()?;
-            Some(Binding::string(literal.language.clone().unwrap_or_default()))
+            Some(Binding::string(
+                literal.language.clone().unwrap_or_default(),
+            ))
         }
         // `DATATYPE` is the datatype IRI of a literal: `xsd:string` for a plain one and
         // `rdf:langString` for a language-tagged one (section 17.4.2.7).
@@ -507,9 +511,11 @@ pub(super) fn eval_str_term_ctors(
         F::StrLang => {
             let lexical = simple_literal_arg(ctx, args.first()?, sol)?;
             let tag = string_arg(ctx, args.get(1)?, sol)?;
-            if tag.is_empty() || !tag.split('-').all(|part| {
-                !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric())
-            }) {
+            if tag.is_empty()
+                || !tag
+                    .split('-')
+                    .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric()))
+            {
                 return None;
             }
             Some(Binding::lang(lexical, &tag))
@@ -523,9 +529,7 @@ pub(super) fn eval_str_term_ctors(
 /// The lexical form of a simple (`xsd:string`, untagged) literal argument.
 pub(super) fn simple_literal_arg(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
     match eval_term(ctx, e, sol)? {
-        Binding::Literal(l) if l.datatype == XSD_STRING && l.language.is_none() => {
-            Some(l.lexical)
-        }
+        Binding::Literal(l) if l.datatype == XSD_STRING && l.language.is_none() => Some(l.lexical),
         _ => None,
     }
 }
@@ -652,7 +656,10 @@ pub(super) fn eval_str_extras(
             if re.is_match("") {
                 return None;
             }
-            Some(same_kind(&source, re.replace_all(&s, rep.as_str()).into_owned()))
+            Some(same_kind(
+                &source,
+                re.replace_all(&s, rep.as_str()).into_owned(),
+            ))
         }
         F::EncodeForUri => Some(Binding::string(encode_for_uri(&string_arg(
             ctx,
@@ -756,7 +763,9 @@ pub(super) fn eval_str_geof_buffer(
         .get(2)
         .and_then(|u| expr_str(ctx, u, sol))
         .unwrap_or_default();
-    Some(wkt_literal(crate::geosparql::eval_buffer(&g, radius, &units)?))
+    Some(wkt_literal(crate::geosparql::eval_buffer(
+        &g, radius, &units,
+    )?))
 }
 
 /// Datatype-aware `=` (CONCEPT:MEDULLA-KG.ontology.rich-filter): numerics compare by value, every other pair of
@@ -801,7 +810,9 @@ fn has_iri_scheme(text: &str) -> bool {
 /// The lexical form of a literal argument of any datatype (a dateTime, a WKT literal, a
 /// string); an IRI or blank node has none.
 pub(super) fn expr_str(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
-    eval_term(ctx, e, sol)?.as_literal().map(|l| l.lexical.clone())
+    eval_term(ctx, e, sol)?
+        .as_literal()
+        .map(|l| l.lexical.clone())
 }
 
 /// The numeric value of an expression, kept in its numeric type.

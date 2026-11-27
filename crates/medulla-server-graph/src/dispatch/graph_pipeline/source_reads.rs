@@ -10,7 +10,10 @@ use super::*;
 use medulla_source_types::source_transcript::TranscriptReadRequest;
 
 /// Route the two stored-evidence reads; hand any other method back.
-pub async fn route_source_reads(ctx: GraphOpRouting<'_>, method: Method) -> Result<Response, Method> {
+pub async fn route_source_reads(
+    ctx: GraphOpRouting<'_>,
+    method: Method,
+) -> Result<Response, Method> {
     match method {
         Method::TranscriptRead {
             connector,

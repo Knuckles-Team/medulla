@@ -75,8 +75,18 @@ pub fn proven_rows(record: &ClaimRecord) -> Vec<ProvenClaim> {
         })
         .collect();
     rows.sort_by(|a, b| {
-        (&a.claim_id, &a.declaration, &a.artifact_digest, &a.checker_id)
-            .cmp(&(&b.claim_id, &b.declaration, &b.artifact_digest, &b.checker_id))
+        (
+            &a.claim_id,
+            &a.declaration,
+            &a.artifact_digest,
+            &a.checker_id,
+        )
+            .cmp(&(
+                &b.claim_id,
+                &b.declaration,
+                &b.artifact_digest,
+                &b.checker_id,
+            ))
     });
     rows.dedup();
     rows
@@ -609,7 +619,11 @@ mod tests {
             ProofStanding::Unproven
         );
         assert_eq!(
-            proof_standing(&[receipt_evidence(&["propext", "Foo.axiom"], false, ProofVerdict::Pass)]),
+            proof_standing(&[receipt_evidence(
+                &["propext", "Foo.axiom"],
+                false,
+                ProofVerdict::Pass
+            )]),
             ProofStanding::Unproven
         );
         // Lean names are case-sensitive: lower-case `quot.sound` is not standard.
@@ -661,23 +675,47 @@ mod tests {
             }
             record
         };
-        let sessions = |names: &[&str]| -> BTreeSet<String> { names.iter().map(|n| n.to_string()).collect() };
-        let view = |observer: &ObserverRef, names: &[&str]| ReaderView::of(observer.clone(), sessions(names));
+        let sessions =
+            |names: &[&str]| -> BTreeSet<String> { names.iter().map(|n| n.to_string()).collect() };
+        let view = |observer: &ObserverRef, names: &[&str]| {
+            ReaderView::of(observer.clone(), sessions(names))
+        };
 
         // Own claim: seen with its sessions visible, hidden when one is not.
-        assert!(claim_visible_to(&claim(ada.clone(), &["s1"]), &view(&ada, &["s1"])));
-        assert!(!claim_visible_to(&claim(ada.clone(), &["s1", "s2"]), &view(&ada, &["s1"])));
+        assert!(claim_visible_to(
+            &claim(ada.clone(), &["s1"]),
+            &view(&ada, &["s1"])
+        ));
+        assert!(!claim_visible_to(
+            &claim(ada.clone(), &["s1", "s2"]),
+            &view(&ada, &["s1"])
+        ));
         // Another participant's claim is hidden even when the sessions match.
-        assert!(!claim_visible_to(&claim(bob.clone(), &["s1"]), &view(&ada, &["s1"])));
+        assert!(!claim_visible_to(
+            &claim(bob.clone(), &["s1"]),
+            &view(&ada, &["s1"])
+        ));
         // A system claim is visible to every observer, with the session rule kept.
-        assert!(claim_visible_to(&claim(ObserverRef::System, &["s1"]), &view(&ada, &["s1"])));
-        assert!(claim_visible_to(&claim(ObserverRef::System, &["s1"]), &view(&bob, &["s1"])));
-        assert!(!claim_visible_to(&claim(ObserverRef::System, &["s2"]), &view(&bob, &["s1"])));
+        assert!(claim_visible_to(
+            &claim(ObserverRef::System, &["s1"]),
+            &view(&ada, &["s1"])
+        ));
+        assert!(claim_visible_to(
+            &claim(ObserverRef::System, &["s1"]),
+            &view(&bob, &["s1"])
+        ));
+        assert!(!claim_visible_to(
+            &claim(ObserverRef::System, &["s2"]),
+            &view(&bob, &["s1"])
+        ));
         // Evidence without a session never narrows a view.
         assert!(claim_visible_to(&claim(ada.clone(), &[]), &view(&ada, &[])));
         // The system observer sees system claims, not a participant's.
         let system = view(&ObserverRef::System, &["s9"]);
-        assert!(claim_visible_to(&claim(ObserverRef::System, &["s9"]), &system));
+        assert!(claim_visible_to(
+            &claim(ObserverRef::System, &["s9"]),
+            &system
+        ));
         assert!(!claim_visible_to(&claim(ada, &["s9"]), &system));
         // A claim with no perspective keeps its present visibility.
         let mut plain = claim(bob, &["s9"]);

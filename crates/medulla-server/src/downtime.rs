@@ -21,8 +21,8 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 use medulla_jobs::downtime::{
-    select_for_window, DowntimeJobType, DowntimeTypeRefusal, DowntimeWindow, ForegroundActivity, PreconditionEval,
-    WindowContext, WindowKind,
+    select_for_window, DowntimeJobType, DowntimeTypeRefusal, DowntimeWindow, ForegroundActivity,
+    PreconditionEval, WindowContext, WindowKind,
 };
 use medulla_jobs::ResourceBudget;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
@@ -963,7 +963,8 @@ mod tests {
             record_selection(&core, &backend, &record, &catalog).await;
         }
         assert_eq!(
-            core.get_nodes_by_label_page("dw:Selection", None, 2_000).len(),
+            core.get_nodes_by_label_page("dw:Selection", None, 2_000)
+                .len(),
             SELECTIONS_KEPT
         );
     }

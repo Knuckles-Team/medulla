@@ -295,7 +295,8 @@ impl ConnectorRun {
             state: RunState::from_stored(&text("state")?)?,
             started_ms: node.get("started_ms")?.as_u64()?,
             finished_ms: node.get("finished_ms").and_then(Value::as_u64),
-            counts: serde_json::from_str(node.get(CONNECTOR_RUN_COUNTS_PROPERTY)?.as_str()?).ok()?,
+            counts: serde_json::from_str(node.get(CONNECTOR_RUN_COUNTS_PROPERTY)?.as_str()?)
+                .ok()?,
         })
     }
 }
@@ -336,7 +337,8 @@ impl ConnectorRunInput {
         if !id_ok(&self.connection_id) {
             return invalid("connection_id");
         }
-        if self.counts.len() > MAX_RUN_COUNTERS || !self.counts.keys().all(|name| counter_ok(name)) {
+        if self.counts.len() > MAX_RUN_COUNTERS || !self.counts.keys().all(|name| counter_ok(name))
+        {
             return invalid("counts");
         }
         Ok(())
@@ -519,9 +521,13 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R790
     #[test]
     fn a_run_starts_reports_progress_ends_and_is_then_sealed() {
-        let started = handle_connector_run_record(None, report("r1", "c1", RunState::Running, 0), 10)
-            .expect("start");
-        assert_eq!((started.run.started_ms, started.run.finished_ms), (10, None));
+        let started =
+            handle_connector_run_record(None, report("r1", "c1", RunState::Running, 0), 10)
+                .expect("start");
+        assert_eq!(
+            (started.run.started_ms, started.run.finished_ms),
+            (10, None)
+        );
 
         let progress = handle_connector_run_record(
             Some(&started.run),
@@ -539,7 +545,10 @@ mod tests {
             30,
         )
         .expect("end");
-        assert_eq!((ended.run.state, ended.run.finished_ms), (RunState::Succeeded, Some(30)));
+        assert_eq!(
+            (ended.run.state, ended.run.finished_ms),
+            (RunState::Succeeded, Some(30))
+        );
 
         // The same report replays; any other one refuses.
         let replay = handle_connector_run_record(
@@ -571,7 +580,10 @@ mod tests {
     fn a_run_reported_already_ended_stamps_one_instant_and_a_run_keeps_its_connection() {
         let instant = handle_connector_run_record(None, report("r1", "c1", RunState::Failed, 3), 7)
             .expect("an instant run");
-        assert_eq!((instant.run.started_ms, instant.run.finished_ms), (7, Some(7)));
+        assert_eq!(
+            (instant.run.started_ms, instant.run.finished_ms),
+            (7, Some(7))
+        );
         let moved = handle_connector_run_record(
             Some(&instant.run),
             report("r1", "c2", RunState::Failed, 3),
@@ -585,7 +597,9 @@ mod tests {
             report("r1", &"c".repeat(129), RunState::Running, 0),
         ] {
             assert_eq!(
-                handle_connector_run_record(None, bad, 1).expect_err("bad").code(),
+                handle_connector_run_record(None, bad, 1)
+                    .expect_err("bad")
+                    .code(),
                 CONNECTOR_RUN_INVALID
             );
         }
@@ -613,24 +627,46 @@ mod tests {
             run("b", "c1", RunState::Failed, 3),
             run("c", "c2", RunState::Running, 2),
         ];
-        let all = handle_connector_runs(runs.clone(), "acme", None, None, Some(2), None).expect("page");
-        assert_eq!(all.runs.iter().map(|r| r.run_id.as_str()).collect::<Vec<_>>(), ["b", "c"]);
+        let all =
+            handle_connector_runs(runs.clone(), "acme", None, None, Some(2), None).expect("page");
+        assert_eq!(
+            all.runs
+                .iter()
+                .map(|r| r.run_id.as_str())
+                .collect::<Vec<_>>(),
+            ["b", "c"]
+        );
         let cursor = all.next_cursor.expect("one remains");
         let rest = handle_connector_runs(runs.clone(), "acme", None, None, Some(2), Some(&cursor))
             .expect("page");
         assert_eq!(rest.runs.len(), 1);
         assert!(rest.next_cursor.is_none());
-        let foreign = handle_connector_runs(runs.clone(), "globex", None, None, None, Some(&cursor))
-            .expect_err("foreign cursor");
+        let foreign =
+            handle_connector_runs(runs.clone(), "globex", None, None, None, Some(&cursor))
+                .expect_err("foreign cursor");
         assert_eq!(foreign.code(), CONNECTOR_RUN_INVALID);
 
-        let one = handle_connector_runs(runs.clone(), "acme", Some("c1"), Some(RunState::Failed), None, None)
-            .expect("filtered");
+        let one = handle_connector_runs(
+            runs.clone(),
+            "acme",
+            Some("c1"),
+            Some(RunState::Failed),
+            None,
+            None,
+        )
+        .expect("filtered");
         assert_eq!(one.runs.len(), 1);
         // A state with no match on a known connection is an empty page; an unknown connection
         // refuses, whether it is absent or only another tenant's.
-        let empty = handle_connector_runs(runs.clone(), "acme", Some("c2"), Some(RunState::Failed), None, None)
-            .expect("empty");
+        let empty = handle_connector_runs(
+            runs.clone(),
+            "acme",
+            Some("c2"),
+            Some(RunState::Failed),
+            None,
+            None,
+        )
+        .expect("empty");
         assert!(empty.runs.is_empty());
         let unknown = handle_connector_runs(runs.clone(), "acme", Some("ghost"), None, None, None)
             .expect_err("unknown");
@@ -642,7 +678,10 @@ mod tests {
     #[test]
     fn get_answers_one_refusal_for_an_absent_and_a_malformed_run_id() {
         let held = run("r1", "c1", RunState::Running, 1);
-        assert_eq!(handle_connector_run_get(Some(held.clone()), "r1"), Ok(held.clone()));
+        assert_eq!(
+            handle_connector_run_get(Some(held.clone()), "r1"),
+            Ok(held.clone())
+        );
         let absent = handle_connector_run_get(None, "r1").expect_err("absent");
         assert_eq!(absent.code(), CONNECTOR_RUN_NOT_FOUND);
         assert_eq!(handle_connector_run_get(Some(held), "bad id"), Err(absent));
@@ -659,7 +698,10 @@ mod tests {
         assert_eq!((read.state, read.counts["records"]), (RunState::Running, 2));
         assert!(ConnectorRun::from_node(&node, "globex").is_none());
         assert!(!connector_run_node_id("acme", "r1").contains("acme"));
-        assert_ne!(connector_run_node_id("acme", "r1"), connector_run_node_id("globex", "r1"));
+        assert_ne!(
+            connector_run_node_id("acme", "r1"),
+            connector_run_node_id("globex", "r1")
+        );
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R790
@@ -677,7 +719,9 @@ mod tests {
                         assert_eq!(refused.machine, "ConnectorRunMachine");
                         assert_eq!(refused.from, state.stored());
                     }
-                    (None, Ok(next)) => panic!("{state:?} {event:?} must be refused, took {next:?}"),
+                    (None, Ok(next)) => {
+                        panic!("{state:?} {event:?} must be refused, took {next:?}")
+                    }
                 }
             }
         }

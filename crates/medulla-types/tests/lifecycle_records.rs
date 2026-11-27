@@ -334,7 +334,10 @@ fn proposal_kind_set_is_closed() {
     });
     let proposal: Proposal = serde_json::from_value(ok).unwrap();
     assert_eq!(proposal.kind, ProposalKind::ResolveClarification);
-    assert_eq!(proposal.marker.as_deref(), Some("NEEDS CLARIFICATION: kinds"));
+    assert_eq!(
+        proposal.marker.as_deref(),
+        Some("NEEDS CLARIFICATION: kinds")
+    );
 }
 
 // spec: MEDULLA-SDLC-R012.8
@@ -472,8 +475,7 @@ fn approval_pull_request_arguments_and_outcome_are_typed() {
     use medulla_source_types::lifecycle::{
         check_pull_request_target, pull_request_arguments, pull_request_outcome,
         resolve_source_connection, ProposalDecideReceipt, ProposalState, PullRequestError,
-        PullRequestTarget, SourceConnection, PULL_REQUEST_REPLY_INVALID,
-        SOURCE_CONNECTION_UNKNOWN,
+        PullRequestTarget, SourceConnection, PULL_REQUEST_REPLY_INVALID, SOURCE_CONNECTION_UNKNOWN,
     };
 
     // The caller names the branches only; the connection is read from the repository node.
@@ -491,7 +493,10 @@ fn approval_pull_request_arguments_and_outcome_are_typed() {
     let connection = resolve_source_connection("demo", Some(&node)).unwrap();
     assert_eq!(
         connection,
-        SourceConnection { server: "scm".into(), repo: "org/demo".into() }
+        SourceConnection {
+            server: "scm".into(),
+            repo: "org/demo".into()
+        }
     );
     // A missing node, a missing field or a blank one is never silent.
     let blank_server = serde_json::json!({
@@ -514,7 +519,14 @@ fn approval_pull_request_arguments_and_outcome_are_typed() {
         assert_eq!(refusal.code(), "INVALID_ARGUMENT");
     }
 
-    let arguments = pull_request_arguments(&connection, &target, "proposal:1", "add_row", "R1", "Add a row.");
+    let arguments = pull_request_arguments(
+        &connection,
+        &target,
+        "proposal:1",
+        "add_row",
+        "R1",
+        "Add a row.",
+    );
     assert_eq!(arguments["repo"], "org/demo");
     assert_eq!(arguments["head"], "proposal/1");
     assert_eq!(arguments["base"], "main");
@@ -612,16 +624,17 @@ fn proposal_evidence_is_required_resolved_and_matched() {
 #[test]
 fn a_decision_moves_only_an_open_proposal() {
     use medulla_source_types::lifecycle::{
-        handle_proposal_decide, ProposalDecision, ProposalDecideRequest, ProposalState, REFUSALS,
+        handle_proposal_decide, ProposalDecideRequest, ProposalDecision, ProposalState, REFUSALS,
     };
 
-    let request = |decision: ProposalDecision, reviewer: &str, reason: &str| ProposalDecideRequest {
-        id: "proposal:1".into(),
-        decision,
-        reviewer: reviewer.into(),
-        reason: reason.into(),
-        pull_request: None,
-    };
+    let request =
+        |decision: ProposalDecision, reviewer: &str, reason: &str| ProposalDecideRequest {
+            id: "proposal:1".into(),
+            decision,
+            reviewer: reviewer.into(),
+            reason: reason.into(),
+            pull_request: None,
+        };
     for code in ["PROPOSAL_NOT_FOUND", "PROPOSAL_NOT_OPEN"] {
         assert!(REFUSALS.iter().any(|c| c.as_str() == code), "{code}");
     }

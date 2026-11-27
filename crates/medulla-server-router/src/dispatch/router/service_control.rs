@@ -183,14 +183,15 @@ fn busy_health_response(req_id: u64) -> Response {
                 mem_bytes: 0,
                 version: medulla_version::VERSION.to_string(),
                 build_profile: build_profile().to_string(),
-                graph_lifecycle: medulla_protocol_types::result_contract::cluster::GraphLifecycleHealth {
-                    catalog_graphs: 0,
-                    resident_graphs: 0,
-                    complete_graphs: 0,
-                    partial_graphs: 0,
-                    failed_graphs: 0,
-                    all_resident_materializations_valid: false,
-                },
+                graph_lifecycle:
+                    medulla_protocol_types::result_contract::cluster::GraphLifecycleHealth {
+                        catalog_graphs: 0,
+                        resident_graphs: 0,
+                        complete_graphs: 0,
+                        partial_graphs: 0,
+                        failed_graphs: 0,
+                        all_resident_materializations_valid: false,
+                    },
                 ops: Vec::new(),
                 readiness: Some(medulla_observe::report::readiness_report(Some(holder))),
             },

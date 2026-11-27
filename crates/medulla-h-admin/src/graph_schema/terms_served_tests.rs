@@ -187,13 +187,15 @@ async fn a_served_class_term_carries_its_direct_superclasses() {
             .registry
             .create_graph("vocab-tree", GraphType::Global, None)
             .expect("create graph");
-        let core = guard.registry.get("vocab-tree").expect("resident").core.clone();
+        let core = guard
+            .registry
+            .get("vocab-tree")
+            .expect("resident")
+            .core
+            .clone();
         core.install_schema_sources(Arc::new(
-            GraphSchemaSources::with_dynamic(BTreeMap::from([(
-                "admin:tree".to_string(),
-                source,
-            )]))
-            .expect("composes with the core"),
+            GraphSchemaSources::with_dynamic(BTreeMap::from([("admin:tree".to_string(), source)]))
+                .expect("composes with the core"),
         ));
     }
     let method = Method::GraphSchemaClasses {
@@ -244,7 +246,10 @@ async fn get_serves_one_source_of_the_request_graph_and_refuses_the_rest() {
         .as_deref()
         .is_some_and(|ttl| ttl.contains("https://example.org/a#OnlyInA")));
     assert_eq!(found.shapes_ttl, None);
-    assert_eq!(found.source.ontology_bytes as usize, found.ontology_ttl.unwrap().len());
+    assert_eq!(
+        found.source.ontology_bytes as usize,
+        found.ontology_ttl.unwrap().len()
+    );
 
     // The list of the same graph names the same source with the same projection and digest.
     let listed: GraphSchemaSourcesView =
@@ -259,7 +264,11 @@ async fn get_serves_one_source_of_the_request_graph_and_refuses_the_rest() {
     // Another graph's key and an absent key refuse alike.
     for key in ["admin:beta", "admin:absent"] {
         let refused = call(&state, TENANT, "vocab-a", get(key)).await;
-        assert_eq!(refused.error.as_deref(), Some("SCHEMA_SOURCE_NOT_FOUND"), "{key}");
+        assert_eq!(
+            refused.error.as_deref(),
+            Some("SCHEMA_SOURCE_NOT_FOUND"),
+            "{key}"
+        );
     }
     // A core source is readable: the composition's reference vocabulary is part of the graph.
     let core_key = listed
@@ -292,7 +301,12 @@ async fn schema_reads_redact_provenance_below_security_admin() {
     let state = state_with_two_graphs().await;
     {
         let guard = state.write().await;
-        let core = guard.registry.get("vocab-a").expect("resident").core.clone();
+        let core = guard
+            .registry
+            .get("vocab-a")
+            .expect("resident")
+            .core
+            .clone();
         let approved = GraphSchemaSource::new(
             SchemaSourceOrigin::Approved {
                 name: "ap".to_string(),
@@ -323,7 +337,8 @@ async fn schema_reads_redact_provenance_below_security_admin() {
                 method,
                 trace_id: None,
             };
-            let context = VerifiedRequestContext::verified_for_test_with_scopes(AGENT, TENANT, scopes);
+            let context =
+                VerifiedRequestContext::verified_for_test_with_scopes(AGENT, TENANT, scopes);
             Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
                 &state, request, context,
             ))
@@ -340,8 +355,7 @@ async fn schema_reads_redact_provenance_below_security_admin() {
         other => panic!("expected an approved origin, got {other:?}"),
     };
 
-    let reader: GraphSchemaSourceDocumentsView =
-        raw(&read_as(&["owl:read"], get()).await);
+    let reader: GraphSchemaSourceDocumentsView = raw(&read_as(&["owl:read"], get()).await);
     assert!(reader.source.provenance_redacted);
     assert_eq!(lease_of(&reader.source.origin), "");
     assert!(reader.ontology_ttl.is_some(), "the documents stay readable");
@@ -355,11 +369,13 @@ async fn schema_reads_redact_provenance_below_security_admin() {
 
     for (scopes, expected) in [
         (&["owl:read"][..], ""),
-        (&["owl:read", "security:admin"][..], "action_approval:lease-1"),
+        (
+            &["owl:read", "security:admin"][..],
+            "action_approval:lease-1",
+        ),
     ] {
         let scopes: &'static [&'static str] = Box::leak(scopes.to_vec().into_boxed_slice());
-        let listed: GraphSchemaSourcesView =
-            raw(&read_as(scopes, Method::GraphSchemaList).await);
+        let listed: GraphSchemaSourcesView = raw(&read_as(scopes, Method::GraphSchemaList).await);
         let source = listed
             .dynamic_sources
             .as_slice()

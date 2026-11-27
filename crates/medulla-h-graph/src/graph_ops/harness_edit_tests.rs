@@ -20,7 +20,10 @@ fn put_edit(core: &GraphCore, id: &str, status: &str, tenant: Option<&str>) {
     if let Some(tenant) = tenant {
         properties["tenant_id"] = serde_json::json!(tenant);
     }
-    core.add_node(id.to_string(), rmp_serde::to_vec_named(&properties).unwrap());
+    core.add_node(
+        id.to_string(),
+        rmp_serde::to_vec_named(&properties).unwrap(),
+    );
 }
 
 fn apply(core: &GraphCore, tenant: &str, id: &str, event: EditEvent) -> Result<EditStatus, String> {
@@ -157,8 +160,12 @@ fn only_harness_edit_sets_edit_status() {
 
     // `Create` writes the edit as `proposed` with its `targetsDimension` edge, in one batch.
     let core = GraphCore::new();
-    core.add_node("dim:tokens".to_string(), rmp_serde::to_vec_named(&serde_json::json!({})).unwrap());
-    let (write, operations) = create_batch("tenant-a", "edit:new", "dim:tokens", 4, Some(2)).unwrap();
+    core.add_node(
+        "dim:tokens".to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({})).unwrap(),
+    );
+    let (write, operations) =
+        create_batch("tenant-a", "edit:new", "dim:tokens", 4, Some(2)).unwrap();
     assert!(compile_as(StatusWriter::EditMachine, vec![write.clone()]).is_ok());
     assert_eq!(
         compile_as(StatusWriter::Caller, vec![write]).unwrap_err(),

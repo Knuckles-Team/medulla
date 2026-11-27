@@ -12,9 +12,7 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use medulla_h_ingest::source_ingestion::facts::{
-    admit_facts, build_grounding_cache, DecodedFacts,
-};
+use medulla_h_ingest::source_ingestion::facts::{admit_facts, build_grounding_cache, DecodedFacts};
 use medulla_ingestion_types::extracted_fact::{ExtractedFact, FactBatch};
 
 const BATCHES: usize = 10;
@@ -84,8 +82,16 @@ fn main() {
     let mut samples = Vec::with_capacity(BATCHES);
     for _ in 0..BATCHES {
         let started = Instant::now();
-        let admission = admit_facts("tenant:bench", &decoded, &cache, &held, &BTreeMap::new(), 2, None)
-            .expect("bench facts admit");
+        let admission = admit_facts(
+            "tenant:bench",
+            &decoded,
+            &cache,
+            &held,
+            &BTreeMap::new(),
+            2,
+            None,
+        )
+        .expect("bench facts admit");
         samples.push(started.elapsed());
         assert!(admission.admitted > 0);
     }

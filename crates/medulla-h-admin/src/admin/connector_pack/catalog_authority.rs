@@ -229,12 +229,11 @@ pub(super) async fn serve_reconciliation_receipt(
         if request.tenant_id != tenant {
             return receipt_wire(&None);
         }
-        let store = match medulla_persistence_records::agent_library::shared_agent_library(state)
-            .await
-        {
-            Ok(store) => store,
-            Err(error) => return Response::err(req_id, error),
-        };
+        let store =
+            match medulla_persistence_records::agent_library::shared_agent_library(state).await {
+                Ok(store) => store,
+                Err(error) => return Response::err(req_id, error),
+            };
         let receipt = medulla_server_api::api::dispatch_support::blocking_task(
             "connector pack catalog reconciliation receipt",
             move || store.mcp_tenant_reconciliation_receipt(&tenant),

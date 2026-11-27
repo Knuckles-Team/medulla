@@ -1552,7 +1552,10 @@ mod tests {
         assert!(core.has_node(&id));
         assert_eq!(sweep_expired(&core, 1000 + ACKED_RETENTION_MS), 1);
         assert!(!core.has_node(&id));
-        assert_eq!(broker_ack(&core, "q", &id, "c", 1000 + ACKED_RETENTION_MS), Ok(false));
+        assert_eq!(
+            broker_ack(&core, "q", &id, "c", 1000 + ACKED_RETENTION_MS),
+            Ok(false)
+        );
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1825,7 +1828,10 @@ mod tests {
         assert!(stale_tag > 0 && current_tag > stale_tag);
         assert!(!core.has_node(&dtag_lookup_node_id(stale_tag)));
 
-        assert_eq!(broker_ack_tag(&core, stale_tag, "consumer-a", 112), Ok(false));
+        assert_eq!(
+            broker_ack_tag(&core, stale_tag, "consumer-a", 112),
+            Ok(false)
+        );
         assert_eq!(
             broker_nack_tag(&core, stale_tag, "consumer-a", true, 112),
             "absent"
@@ -1843,9 +1849,15 @@ mod tests {
             Some(current_tag)
         );
 
-        assert_eq!(broker_ack_tag(&core, current_tag, "consumer-a", 112), Ok(false));
+        assert_eq!(
+            broker_ack_tag(&core, current_tag, "consumer-a", 112),
+            Ok(false)
+        );
         assert!(core.has_node(&dtag_lookup_node_id(current_tag)));
-        assert_eq!(broker_ack_tag(&core, current_tag, "consumer-b", 112), Ok(true));
+        assert_eq!(
+            broker_ack_tag(&core, current_tag, "consumer-b", 112),
+            Ok(true)
+        );
     }
 
     #[test]

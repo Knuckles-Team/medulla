@@ -57,7 +57,9 @@ pub fn check_supersession_methods<'a>(
                 properties_msgpack,
             } => {
                 let properties = decode(properties_msgpack);
-                if properties.get("relationship").and_then(serde_json::Value::as_str)
+                if properties
+                    .get("relationship")
+                    .and_then(serde_json::Value::as_str)
                     != Some(SUPERSEDES)
                 {
                     continue;
@@ -91,7 +93,9 @@ pub fn check_supersession_methods<'a>(
         if !marks.contains(&(old_fact.clone(), new_fact.clone())) {
             return Err(refuse(
                 ServerErrorCode::SupersessionUnpaired,
-                format!("the supersedes edge from '{new_fact}' to '{old_fact}' has no superseded mark"),
+                format!(
+                    "the supersedes edge from '{new_fact}' to '{old_fact}' has no superseded mark"
+                ),
             ));
         }
     }
@@ -99,7 +103,9 @@ pub fn check_supersession_methods<'a>(
         if !edges.contains(&(new_fact.clone(), old_fact.clone())) {
             return Err(refuse(
                 ServerErrorCode::SupersessionUnpaired,
-                format!("the superseded mark on '{old_fact}' has no supersedes edge from '{new_fact}'"),
+                format!(
+                    "the superseded mark on '{old_fact}' has no supersedes edge from '{new_fact}'"
+                ),
             ));
         }
     }
@@ -149,7 +155,12 @@ mod tests {
         // An old fact added earlier in the same batch is known.
         let [batch_edge, batch_mark] =
             supersession_methods(&supersession("fact-batch", "fact-new")).unwrap();
-        let in_batch = [add_node("fact-batch"), add_node("fact-new"), batch_edge, batch_mark];
+        let in_batch = [
+            add_node("fact-batch"),
+            add_node("fact-new"),
+            batch_edge,
+            batch_mark,
+        ];
         assert!(check_supersession_methods(in_batch.iter(), held).is_ok());
 
         // An edge with no mark, and a mark with no edge, are unpaired.

@@ -293,20 +293,24 @@ mod tests {
         }
         // A refused document refuses the whole batch with its registered code.
         let broken = item("skills/broken", "no steps section at all");
-        let refused = admit_skill("t1", "demo", &[good.clone(), broken], &Lookup, &held).unwrap_err();
+        let refused =
+            admit_skill("t1", "demo", &[good.clone(), broken], &Lookup, &held).unwrap_err();
         assert!(refused.starts_with("SKILL_SPAN_MISSING"), "{refused}");
         let unknown = item(
             "skills/unknown",
             "## Steps\n- a: x\n  capability: nope.run\n",
         );
         let refused = admit_skill("t1", "demo", &[good, unknown], &Lookup, &held).unwrap_err();
-        assert!(refused.starts_with("SKILL_CAPABILITY_UNRESOLVED"), "{refused}");
+        assert!(
+            refused.starts_with("SKILL_CAPABILITY_UNRESOLVED"),
+            "{refused}"
+        );
 
         // Decoding refuses an empty directory_ref and an empty text.
-        let empty_dir = SourceJson::new(serde_json::json!({"directory_ref": " ", "text": "x"}))
-            .unwrap();
-        let empty_text = SourceJson::new(serde_json::json!({"directory_ref": "d", "text": ""}))
-            .unwrap();
+        let empty_dir =
+            SourceJson::new(serde_json::json!({"directory_ref": " ", "text": "x"})).unwrap();
+        let empty_text =
+            SourceJson::new(serde_json::json!({"directory_ref": "d", "text": ""})).unwrap();
         for bad in [empty_dir, empty_text] {
             let error = decode_skill_documents(&[bad]).unwrap_err();
             assert!(error.starts_with("SOURCE_BATCH_KIND_MISMATCH"), "{error}");
@@ -333,7 +337,10 @@ mod tests {
         let compilation_id = compilation_node_id("t1", "demo", "skills/inspect").unwrap();
         let directory_id = directory_node_id("t1", "demo", "skills/inspect").unwrap();
         assert!(directory_id.starts_with("skill-directory:"));
-        assert_eq!(admission.node_ids, [compilation_id.clone(), directory_id.clone()]);
+        assert_eq!(
+            admission.node_ids,
+            [compilation_id.clone(), directory_id.clone()]
+        );
         let kinds: Vec<&str> = admission
             .methods
             .iter()
@@ -411,7 +418,10 @@ mod tests {
         let third = admit_skill(
             "t1",
             "demo",
-            &[item("skills/inspect", &changed.replace("Read the node", "Read it"))],
+            &[item(
+                "skills/inspect",
+                &changed.replace("Read the node", "Read it"),
+            )],
             &Lookup,
             &held,
         )

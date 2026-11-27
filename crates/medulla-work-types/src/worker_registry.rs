@@ -297,7 +297,11 @@ mod tests {
     #[test]
     fn registration_requires_host_iri() {
         let mut registry = WorkerRegistry::default();
-        for bad in [String::new(), "  ".to_string(), "h".repeat(MAX_HOST_IRI_BYTES + 1)] {
+        for bad in [
+            String::new(),
+            "  ".to_string(),
+            "h".repeat(MAX_HOST_IRI_BYTES + 1),
+        ] {
             let mut registration = registration();
             registration.host_iri = bad;
             assert_eq!(

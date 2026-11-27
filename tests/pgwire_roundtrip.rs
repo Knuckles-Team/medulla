@@ -1931,7 +1931,11 @@ async fn matview_incremental_read_after_commit() {
         ),
     )
     .await;
-    assert_eq!(fresh, vec![vec![Some(view.clone())]], "status row of {view}");
+    assert_eq!(
+        fresh,
+        vec![vec![Some(view.clone())]],
+        "status row of {view}"
+    );
     // The view read is a table read, not a recompute: it stays far below the defining select.
     let read = std::time::Instant::now();
     cells(&client, &format!("SELECT * FROM {view}")).await;
@@ -1960,7 +1964,10 @@ async fn matview_incremental_read_after_commit() {
         &format!("SELECT name FROM medulla_catalog.matviews WHERE name = '{view}'"),
     )
     .await;
-    assert!(gone.is_empty(), "the status row of {view} outlived the drop: {gone:?}");
+    assert!(
+        gone.is_empty(),
+        "the status row of {view} outlived the drop: {gone:?}"
+    );
 }
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R012.5
@@ -2003,8 +2010,11 @@ async fn matview_min_max_distinct_after_commit() {
         .await
         .expect("delete the minimum");
     read_ordered_pairs(&client, &pairs).await;
-    let latam = cells(&client, &format!("SELECT id FROM {table} WHERE region = 'latam' LIMIT 25"))
-        .await;
+    let latam = cells(
+        &client,
+        &format!("SELECT id FROM {table} WHERE region = 'latam' LIMIT 25"),
+    )
+    .await;
     for row in latam {
         let id = row[0].clone().expect("an id");
         client
@@ -3247,7 +3257,10 @@ async fn send_raw_cancel_request(addr: &str, pid: i32, secret: i32) {
     frame.extend_from_slice(&80_877_102i32.to_be_bytes());
     frame.extend_from_slice(&pid.to_be_bytes());
     frame.extend_from_slice(&secret.to_be_bytes());
-    stream.write_all(&frame).await.expect("send the cancel request");
+    stream
+        .write_all(&frame)
+        .await
+        .expect("send the cancel request");
     let mut rest = Vec::new();
     let _ = stream.read_to_end(&mut rest).await;
 }
@@ -3593,7 +3606,9 @@ async fn view_and_matview_over_wire() {
     let matview = format!("{table}_mv");
 
     client
-        .simple_query(&format!("CREATE TABLE {table} (id BIGINT PRIMARY KEY, sku TEXT)"))
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, sku TEXT)"
+        ))
         .await
         .expect("CREATE TABLE");
     client
@@ -3601,7 +3616,9 @@ async fn view_and_matview_over_wire() {
         .await
         .expect("seed row");
     client
-        .simple_query(&format!("CREATE VIEW {view} AS SELECT id, sku FROM {table}"))
+        .simple_query(&format!(
+            "CREATE VIEW {view} AS SELECT id, sku FROM {table}"
+        ))
         .await
         .expect("CREATE VIEW");
     client
@@ -3649,7 +3666,11 @@ async fn view_and_matview_over_wire() {
         .await
         .expect_err("a second create of one name refuses");
     assert_eq!(
-        exists.as_db_error().expect("a database error").code().code(),
+        exists
+            .as_db_error()
+            .expect("a database error")
+            .code()
+            .code(),
         "42P07",
         "{}",
         error_chain(&exists)
@@ -3665,7 +3686,11 @@ async fn view_and_matview_over_wire() {
         .await
         .expect_err("a refresh of a dropped view refuses");
     assert_eq!(
-        unknown.as_db_error().expect("a database error").code().code(),
+        unknown
+            .as_db_error()
+            .expect("a database error")
+            .code()
+            .code(),
         "42P01",
         "{}",
         error_chain(&unknown)
@@ -3691,7 +3716,9 @@ async fn matview_refresh_checksum() {
     let matview = format!("{table}_mv");
 
     client
-        .simple_query(&format!("CREATE TABLE {table} (id BIGINT PRIMARY KEY, v BIGINT)"))
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, v BIGINT)"
+        ))
         .await
         .expect("CREATE TABLE");
     client
@@ -3739,10 +3766,15 @@ async fn matview_refresh_checksum() {
     let from_view = summary(matview.clone()).await;
     let from_table = summary(table.clone()).await;
     assert_eq!(from_view.0.as_deref(), Some(ROWS.to_string().as_str()));
-    assert_eq!(from_view.1.as_deref(), Some(expected_sum.to_string().as_str()));
+    assert_eq!(
+        from_view.1.as_deref(),
+        Some(expected_sum.to_string().as_str())
+    );
     assert_eq!(from_view, from_table, "the view equals its input");
 
-    let _ = client.simple_query(&format!("DROP MATERIALIZED VIEW {matview}")).await;
+    let _ = client
+        .simple_query(&format!("DROP MATERIALIZED VIEW {matview}"))
+        .await;
     let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
 }
 
@@ -3854,7 +3886,12 @@ async fn pg_dump_then_pg_restore_round_trips_two_tables() {
 
     // Dump both tables in the custom format through the real client.
     let dumped = Command::new(&pg_dump)
-        .args(["--format=custom", "--no-password", "--no-owner", "--no-privileges"])
+        .args([
+            "--format=custom",
+            "--no-password",
+            "--no-owner",
+            "--no-privileges",
+        ])
         .args(["--host", host, "--port", port])
         .args(["--username", "tester", "--dbname", "__commons__"])
         .args(["--table", "dump_alpha", "--table", "dump_beta"])
@@ -4002,14 +4039,15 @@ async fn introspection_reader() -> (String, tokio_postgres::Client) {
     use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
 
     let state = login_state(&["intro-owner", "intro-reader"]);
-    let persist_dir = state
-        .read()
-        .await
-        .persist_dir
-        .clone()
-        .expect("persist dir");
+    let persist_dir = state.read().await.persist_dir.clone().expect("persist dir");
     let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
-    register_password_login(&state, "intro-owner-login", "intro-owner", common::TEST_TENANT).await;
+    register_password_login(
+        &state,
+        "intro-owner-login",
+        "intro-owner",
+        common::TEST_TENANT,
+    )
+    .await;
     register_password_login(
         &state,
         "intro-reader-login",
@@ -4031,10 +4069,7 @@ async fn introspection_reader() -> (String, tokio_postgres::Client) {
         .expect("CREATE TABLE t_hidden");
 
     let owner_carrier = CarrierAuthority::from_verified(
-        &VerifiedRequestContext::verified_for_test_in_tenant(
-            "intro-owner",
-            common::TEST_TENANT,
-        ),
+        &VerifiedRequestContext::verified_for_test_in_tenant("intro-owner", common::TEST_TENANT),
     )
     .unwrap();
     medulla_server_auth::sql_catalog_acl::grant(
@@ -4075,7 +4110,12 @@ async fn bi_tool_introspection_queries_pass() {
     let relnames = "SELECT relname FROM pg_catalog.pg_class WHERE relkind = 'r'";
     let tables = "SELECT table_name FROM information_schema.tables";
     for query in [relnames, tables] {
-        let seen = simple_ids(reader.simple_query(query).await.expect("reader catalog read"));
+        let seen = simple_ids(
+            reader
+                .simple_query(query)
+                .await
+                .expect("reader catalog read"),
+        );
         assert!(
             seen.iter().any(|name| name == "t_visible"),
             "{query}: the grantee lists t_visible, got {seen:?}"
@@ -4197,7 +4237,10 @@ async fn compat_matrix_entries_replay_over_pgwire() {
             "matrix entry `{name}` has no entry in the statements fixture"
         );
     }
-    assert_eq!(fixture_served, served, "the fixture covers the matrix entries");
+    assert_eq!(
+        fixture_served, served,
+        "the fixture covers the matrix entries"
+    );
     let fixture_refused: Vec<String> = entries
         .iter()
         .filter(|e| e["state"] == "refused")
@@ -4310,7 +4353,9 @@ async fn compat_matrix_entries_replay_over_pgwire() {
             client
                 .simple_query(&bind(statement.clone()))
                 .await
-                .unwrap_or_else(|err| panic!("{form} cleanup `{statement}`: {}", error_chain(&err)));
+                .unwrap_or_else(|err| {
+                    panic!("{form} cleanup `{statement}`: {}", error_chain(&err))
+                });
         }
     }
 }

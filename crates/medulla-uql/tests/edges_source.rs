@@ -19,8 +19,16 @@ fn core() -> GraphCore {
         core.add_node(id.into(), blob(json!({ "type": "Doc" })));
     }
     for (from, to, props) in [
-        ("a", "b", json!({ "relationship": "dependsOn", "weight": 0.7 })),
-        ("a", "c", json!({ "relationship": "dependsOn", "weight": 0.2 })),
+        (
+            "a",
+            "b",
+            json!({ "relationship": "dependsOn", "weight": 0.7 }),
+        ),
+        (
+            "a",
+            "c",
+            json!({ "relationship": "dependsOn", "weight": 0.2 }),
+        ),
         ("b", "c", json!({ "relationship": "owns" })),
     ] {
         core.add_edge(from.into(), to.into(), blob(props)).unwrap();

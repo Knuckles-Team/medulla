@@ -276,9 +276,11 @@ pub const ADOPTION_NOT_PROVEN: RefusalCode = RefusalCode::new("ADOPTION_NOT_PROV
 /// A caller asked to promote on a delta inside the noise band (MEDULLA-DECISION-ENGINE-R712.4).
 pub const ABLATION_WITHIN_NOISE: RefusalCode = RefusalCode::new("ABLATION_WITHIN_NOISE");
 /// Fewer identical runs than `eval.ablation.identical_runs`, or none recorded for the skill.
-pub const ABLATION_NOISE_BAND_MISSING: RefusalCode = RefusalCode::new("ABLATION_NOISE_BAND_MISSING");
+pub const ABLATION_NOISE_BAND_MISSING: RefusalCode =
+    RefusalCode::new("ABLATION_NOISE_BAND_MISSING");
 /// A canary traffic share outside the bounds of `canary.traffic_ppm`.
-pub const CANARY_TRAFFIC_OUT_OF_BOUNDS: RefusalCode = RefusalCode::new("CANARY_TRAFFIC_OUT_OF_BOUNDS");
+pub const CANARY_TRAFFIC_OUT_OF_BOUNDS: RefusalCode =
+    RefusalCode::new("CANARY_TRAFFIC_OUT_OF_BOUNDS");
 /// A canary needs a champion revision and the skill has none.
 pub const CANARY_NO_CHAMPION: RefusalCode = RefusalCode::new("CANARY_NO_CHAMPION");
 /// A compiled program names a model the model catalog lacks.
@@ -541,7 +543,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         GENERATED_CODE_ADMISSION,
     ),
     (QuestionKind::CredentialReuse, CREDENTIAL_REUSE),
-    (QuestionKind::ScaleIntent, super::statistical::scale::REFUSALS),
+    (
+        QuestionKind::ScaleIntent,
+        super::statistical::scale::REFUSALS,
+    ),
     (QuestionKind::RecursionMode, RECURSION_SIGNALS),
     (QuestionKind::SubCallAdmission, super::sub_call::REFUSALS),
     (

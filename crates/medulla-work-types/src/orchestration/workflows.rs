@@ -161,7 +161,9 @@ impl WorkflowRegistrationEntry {
                 )));
             }
             if skill.component_id.trim().is_empty() || skill.definition_digest.trim().is_empty() {
-                return Err(invalid("a skill names a component and a digest".to_string()));
+                return Err(invalid(
+                    "a skill names a component and a digest".to_string(),
+                ));
             }
             if !seen.insert(skill.component_id.as_str()) {
                 return Err(invalid(format!(

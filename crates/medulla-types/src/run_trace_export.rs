@@ -201,7 +201,13 @@ mod tests {
         let decoded: RunTraceExportV1 = serde_json::from_str(request).unwrap();
         assert_eq!(decoded.schema_version, RUN_TRACE_EXPORT_SCHEMA_VERSION);
         assert_eq!(decoded.redaction_profile, RedactionProfile::StripContent);
-        assert_eq!(decoded.time_range, Some(TimeRange { from_ms: 1, to_ms: 9 }));
+        assert_eq!(
+            decoded.time_range,
+            Some(TimeRange {
+                from_ms: 1,
+                to_ms: 9
+            })
+        );
         let again: RunTraceExportV1 =
             serde_json::from_str(&serde_json::to_string(&decoded).unwrap()).unwrap();
         assert_eq!(again, decoded);
@@ -209,14 +215,22 @@ mod tests {
         let minimal: RunTraceExportV1 = serde_json::from_str(r#"{"root_run_id":"r"}"#).unwrap();
         assert_eq!(minimal.redaction_profile, RedactionProfile::DigestsOnly);
         assert!(minimal.page_size.is_none() && minimal.page_token.is_none());
-        assert!(serde_json::from_str::<RunTraceExportV1>(r#"{"root_run_id":"r","extra":1}"#).is_err());
+        assert!(
+            serde_json::from_str::<RunTraceExportV1>(r#"{"root_run_id":"r","extra":1}"#).is_err()
+        );
         assert!(serde_json::from_str::<RedactionProfile>(r#""everything""#).is_err());
 
         let page = page();
         let text = serde_json::to_string(&page).unwrap();
         assert!(text.contains(r#""kind":"parent_run""#), "{text}");
-        assert!(text.contains(r#""refusal":"EXPORT_CHILD_MISSING""#), "{text}");
-        assert!(!text.contains("properties"), "digests_only carries no content: {text}");
+        assert!(
+            text.contains(r#""refusal":"EXPORT_CHILD_MISSING""#),
+            "{text}"
+        );
+        assert!(
+            !text.contains("properties"),
+            "digests_only carries no content: {text}"
+        );
         let back: RunTraceExportPageV1 = serde_json::from_str(&text).unwrap();
         assert_eq!(back, page);
     }

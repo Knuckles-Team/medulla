@@ -14,11 +14,13 @@ use medulla_decision_outcome_types::decision::defect_triage::{
 use medulla_decision_types::decision::defect_triage::TriageAbstainReason;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome, TypedValue};
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, StatisticalOutcome, TypedValue,
+};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
-use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
 use medulla_source_types::lifecycle::DefectStatus;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
@@ -33,7 +35,10 @@ const MAX_PATH_OWNERS: usize = 64;
 /// The family of the `defect_triage` question kind.
 pub struct DefectTriageFamily;
 
-fn refused(code: &medulla_types::refusal_code::RefusalCode, detail: String) -> Result<Executed, String> {
+fn refused(
+    code: &medulla_types::refusal_code::RefusalCode,
+    detail: String,
+) -> Result<Executed, String> {
     Err(format!("{}: {detail}", code.as_str()))
 }
 

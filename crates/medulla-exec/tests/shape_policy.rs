@@ -67,9 +67,7 @@ fn set(shapes: Vec<ShapePolicy>) -> PolicySet {
 }
 
 fn all_claims() -> RowSet {
-    RowSet::from_ids(
-        ["claim-ok", "claim-draft", "claim-secret"].map(str::to_string),
-    )
+    RowSet::from_ids(["claim-ok", "claim-draft", "claim-secret"].map(str::to_string))
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R706.9
@@ -92,7 +90,11 @@ fn three_outcomes_on_a_fixed_graph() {
     );
 
     // With only the filter shape the draft leaves, the rest stay, and nothing refuses.
-    let filter_only = set(vec![shape("policy:no-drafts", "draft", ShapeEffect::Filter)]);
+    let filter_only = set(vec![shape(
+        "policy:no-drafts",
+        "draft",
+        ShapeEffect::Filter,
+    )]);
     let evaluation = apply_shape_policies(all_claims(), &filter_only, &view).unwrap();
     assert_eq!(evaluation.violated_policy, None);
     assert_eq!(
@@ -164,7 +166,11 @@ fn invalid_shape_and_violation_refuse_without_values() {
     // A violation refuses the whole request: no rows, the policy id, no node value.
     let view = graph();
     let semantic = SemanticStore::new();
-    let policies = set(vec![shape("policy:no-secrets", "secret", ShapeEffect::Refuse)]);
+    let policies = set(vec![shape(
+        "policy:no-secrets",
+        "secret",
+        ShapeEffect::Refuse,
+    )]);
     let ctx = PlanCtx::new(&view, &semantic)
         .with_policies(&policies)
         .with_principal("role:analyst");
@@ -248,15 +254,14 @@ fn rows_of_any_language_take_the_worst_outcome_of_their_nodes() {
     assert_eq!(verdicts.counts.allowed, 2);
     assert_eq!(verdicts.counts.filtered, 1);
     assert_eq!(verdicts.counts.violation, 1);
-    assert_eq!(verdicts.violated_policy.as_deref(), Some("policy:no-secrets"));
+    assert_eq!(
+        verdicts.violated_policy.as_deref(),
+        Some("policy:no-secrets")
+    );
 
     // The same nodes through UQL's row set give the same verdicts: one function judges both.
     let uql = apply_shape_policies(all_claims(), &policies, &view).unwrap();
-    let single: Vec<Vec<String>> = all_claims()
-        .ids()
-        .into_iter()
-        .map(|id| vec![id])
-        .collect();
+    let single: Vec<Vec<String>> = all_claims().ids().into_iter().map(|id| vec![id]).collect();
     let by_rows = judge_rows(&policies, &view, &single).unwrap();
     assert_eq!(uql.counts, by_rows.counts);
     assert_eq!(uql.violated_policy, by_rows.violated_policy);

@@ -81,7 +81,9 @@ pub(crate) async fn fresh_memory_ids(
     let id = request.record.memory_id.as_str();
     let stored = entry
         .core
-        .get_node_properties(&medulla_h_graph::graph_ops::memory_surface::node_id(tenant, id))
+        .get_node_properties(&medulla_h_graph::graph_ops::memory_surface::node_id(
+            tenant, id,
+        ))
         .is_some();
     if stored || request.record.speaker.is_none() {
         BTreeSet::new()
@@ -97,7 +99,10 @@ pub(crate) async fn enqueue_derivations(request: EnqueueRequest<'_>) -> DeriveOu
     let (core, persist_dir) = {
         let current = request.state.read().await;
         (
-            current.registry.get(request.graph_name).map(|entry| entry.core.clone()),
+            current
+                .registry
+                .get(request.graph_name)
+                .map(|entry| entry.core.clone()),
             current.persist_dir.clone(),
         )
     };
@@ -135,17 +140,35 @@ pub(crate) async fn enqueue_derivations(request: EnqueueRequest<'_>) -> DeriveOu
             members: &members,
             configs: &configs,
         });
-        for turn in turns.iter().filter(|turn| request.fresh.contains(&turn.memory_id)) {
+        for turn in turns
+            .iter()
+            .filter(|turn| request.fresh.contains(&turn.memory_id))
+        {
             for key in targets.iter().filter(|key| key.subject == turn.speaker) {
                 let node_id = payload_node_id(&tenant, key);
-                let pending = pending_payload(&jobs, &persist_dir, &tenant, read_payload(&core, &tenant, &node_id));
+                let pending = pending_payload(
+                    &jobs,
+                    &persist_dir,
+                    &tenant,
+                    read_payload(&core, &tenant, &node_id),
+                );
                 let payload = match pending {
                     Ok(Some(existing)) => {
                         outcome.extended += 1;
                         extend_payload(&existing, &turn.memory_id, turn.timestamp_ms, rule)
                     }
                     Ok(None) => {
-                        match start_range(&jobs, &persist_dir, &tenant, request.verified_context, key, &node_id, turn, rule, max_pending) {
+                        match start_range(
+                            &jobs,
+                            &persist_dir,
+                            &tenant,
+                            request.verified_context,
+                            key,
+                            &node_id,
+                            turn,
+                            rule,
+                            max_pending,
+                        ) {
                             Ok(Some(payload)) => {
                                 outcome.enqueued += 1;
                                 payload

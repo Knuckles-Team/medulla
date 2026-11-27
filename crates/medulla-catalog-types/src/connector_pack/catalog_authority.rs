@@ -194,15 +194,23 @@ pub fn tenant_reconciliation_receipt(
     tenant_id: &str,
     rows: &[McpCatalogAuthorityRow],
 ) -> Result<Option<McpCatalogReconciliationReceipt>, String> {
-    let mut rows: Vec<&McpCatalogAuthorityRow> =
-        rows.iter().filter(|row| row.tenant_id == tenant_id).collect();
+    let mut rows: Vec<&McpCatalogAuthorityRow> = rows
+        .iter()
+        .filter(|row| row.tenant_id == tenant_id)
+        .collect();
     let issued_at_ms = rows.iter().map(|row| row.issued_at_ms).max().unwrap_or(0);
     if rows.is_empty() || issued_at_ms == 0 {
         return Ok(None);
     }
     rows.sort_by(|a, b| {
-        (&a.server_name, a.binding.authorization_scope_digest.to_hex())
-            .cmp(&(&b.server_name, b.binding.authorization_scope_digest.to_hex()))
+        (
+            &a.server_name,
+            a.binding.authorization_scope_digest.to_hex(),
+        )
+            .cmp(&(
+                &b.server_name,
+                b.binding.authorization_scope_digest.to_hex(),
+            ))
     });
     let mut generation = 0u64;
     let mut parts: Vec<&[u8]> = vec![tenant_id.as_bytes()];
@@ -794,7 +802,9 @@ mod tests {
         assert!(tenant_reconciliation_receipt("tenant-b", &[first.clone()])
             .unwrap()
             .is_none());
-        assert!(tenant_reconciliation_receipt("tenant-a", &[]).unwrap().is_none());
+        assert!(tenant_reconciliation_receipt("tenant-a", &[])
+            .unwrap()
+            .is_none());
         // A row that predates the receipt clock names no time, so no receipt.
         first.issued_at_ms = 0;
         assert!(tenant_reconciliation_receipt("tenant-a", &[first])

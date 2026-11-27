@@ -13,7 +13,8 @@ use std::sync::Arc;
 use medulla_catalog_types::connector_pack::{
     ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp,
     McpCatalogSnapshotBinding, PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind,
-    PackHeadRef, PackImportReceipt, PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
+    PackHeadRef, PackImportReceipt, PackImportResult, PackProducer, PackSection,
+    CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_h_decide::decide::capability_feed::{shared_capability_index, sweep, Reembedder};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
@@ -215,7 +216,9 @@ impl Served {
         let key = format!(
             "connector-pack:{CONNECTOR}:import:{digest}:{head}",
             digest = index.pack_digest,
-            head = expected_head.as_ref().map_or(0, |head| head.binding_revision)
+            head = expected_head
+                .as_ref()
+                .map_or(0, |head| head.binding_revision)
         );
         let response = self
             .pack(
@@ -596,8 +599,14 @@ async fn withdrawn_pack_tool_leaves_the_tool_index() {
         .await;
     let task = "alpha lookup dispatch shipment";
     let (before, revision, digest) = tool_ranking(&served, task).await;
-    assert!(before.contains(&format!("mcp:{CONNECTOR}/tool/a")), "{before:?}");
-    assert!(before.contains(&format!("mcp:{CONNECTOR}/tool/b")), "{before:?}");
+    assert!(
+        before.contains(&format!("mcp:{CONNECTOR}/tool/a")),
+        "{before:?}"
+    );
+    assert!(
+        before.contains(&format!("mcp:{CONNECTOR}/tool/b")),
+        "{before:?}"
+    );
 
     // Re-import the pack without tool `a`: the member is withdrawn.
     served
@@ -610,8 +619,17 @@ async fn withdrawn_pack_tool_leaves_the_tool_index() {
         )
         .await;
     let (after, next_revision, next_digest) = tool_ranking(&served, task).await;
-    assert!(!after.contains(&format!("mcp:{CONNECTOR}/tool/a")), "{after:?}");
-    assert!(after.contains(&format!("mcp:{CONNECTOR}/tool/b")), "{after:?}");
-    assert_ne!(digest, next_digest, "the catalog digest left the withdrawn tool");
+    assert!(
+        !after.contains(&format!("mcp:{CONNECTOR}/tool/a")),
+        "{after:?}"
+    );
+    assert!(
+        after.contains(&format!("mcp:{CONNECTOR}/tool/b")),
+        "{after:?}"
+    );
+    assert_ne!(
+        digest, next_digest,
+        "the catalog digest left the withdrawn tool"
+    );
     assert!(next_revision > revision, "{next_revision} > {revision}");
 }

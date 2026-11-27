@@ -73,11 +73,10 @@ pub fn open_from_env() -> Result<Option<ObjectStoreBackend>, String> {
     let setting = std::env::var(STORAGE_BACKEND_ENV).ok();
     let spec = StorageBackendSpec::from_setting(setting.as_deref())
         .map_err(|refusal| format!("STORAGE_BACKEND_UNKNOWN: {refusal:?}"))?;
-    spec.admit()
-        .map_err(|refusal| match refusal.wire_code() {
-            Some(code) => format!("{code}: {refusal:?}"),
-            None => format!("storage_backend_refused: {refusal:?}"),
-        })?;
+    spec.admit().map_err(|refusal| match refusal.wire_code() {
+        Some(code) => format!("{code}: {refusal:?}"),
+        None => format!("storage_backend_refused: {refusal:?}"),
+    })?;
     if matches!(spec, StorageBackendSpec::Local) {
         return Ok(None);
     }
@@ -143,9 +142,7 @@ impl ObjectStoreOpenRefusal {
             Self::SecretUnresolved { .. } => "OBJECT_STORE_SECRET_UNRESOLVED",
             Self::PlainHttpNotLoopback => "OBJECT_STORE_PLAIN_HTTP_REFUSED",
             Self::ClientBuild { .. } => "OBJECT_STORE_CLIENT_INVALID",
-            Self::Spec(refusal) => refusal
-                .wire_code()
-                .unwrap_or("OBJECT_STORE_CLIENT_INVALID"),
+            Self::Spec(refusal) => refusal.wire_code().unwrap_or("OBJECT_STORE_CLIENT_INVALID"),
         }
     }
 }
@@ -299,7 +296,9 @@ impl ObjectStoreBackend {
                     let runtime = tokio::runtime::Builder::new_current_thread()
                         .enable_all()
                         .build()
-                        .map_err(|error| format!("OBJECT_SEGMENT_MISSING: restore runtime: {error}"))?;
+                        .map_err(|error| {
+                            format!("OBJECT_SEGMENT_MISSING: restore runtime: {error}")
+                        })?;
                     runtime.block_on(self.restore_into(redb))
                 })
                 .join()
@@ -370,8 +369,12 @@ impl ObjectStoreBackend {
             redb.register_graph(&graph_fname, &version.graph_name, version.graph_type)
                 .await?;
 
-            let mut pages = decode_row_pages(&version.snapshot.bytes)
-                .map_err(|error| format!("OBJECT_SEGMENT_MISSING: snapshot {}: {error}", version.snapshot.key))?;
+            let mut pages = decode_row_pages(&version.snapshot.bytes).map_err(|error| {
+                format!(
+                    "OBJECT_SEGMENT_MISSING: snapshot {}: {error}",
+                    version.snapshot.key
+                )
+            })?;
             let mut entries: Vec<BatchSegmentEntry> = Vec::new();
             for segment in &version.batches {
                 if segment.bytes.is_empty() {
@@ -379,7 +382,10 @@ impl ObjectStoreBackend {
                 }
                 if is_row_page_segment(&segment.bytes) {
                     pages.extend(decode_row_pages(&segment.bytes).map_err(|error| {
-                        format!("OBJECT_SEGMENT_MISSING: row segment {}: {error}", segment.key)
+                        format!(
+                            "OBJECT_SEGMENT_MISSING: row segment {}: {error}",
+                            segment.key
+                        )
                     })?);
                 } else {
                     entries.extend(

@@ -149,7 +149,10 @@ async fn decide_routes_research_next() {
     assert_eq!(record.question.kind, QuestionKind::ResearchNext);
     assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &record.outcome
+    else {
         panic!("research_next answers an advisory: {:?}", record.outcome);
     };
     assert!(!calibrated);

@@ -41,13 +41,13 @@ use medulla_sql_udfs::{
 };
 use medulla_sql_udfs::{
     udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf,
-    udfs::bm25_snippet_udf, udfs::catalog_relevance_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf,
-    udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf,
-    udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf,
-    udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf,
-    udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf,
-    udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf,
-    udfs::vector_l2_udf,
+    udfs::bm25_snippet_udf, udfs::catalog_relevance_udf, udfs::epistemic_decay_udf,
+    udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf,
+    udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf,
+    udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf,
+    udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf,
+    udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf,
+    udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf,
 };
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_table_store::tables::TableStore;
@@ -438,9 +438,8 @@ fn exec_in_graph(
     // The recursive call reuses the SAME `cancel` token, so a cancelled outer request also
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
-        let run_sql = |q: &str| {
-            exec_in_graph(view, store, graph, q, cancel, hive.clone(), sessions)
-        };
+        let run_sql =
+            |q: &str| exec_in_graph(view, store, graph, q, cancel, hive.clone(), sessions);
         if let Some(res) =
             medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)?
         {
@@ -2053,7 +2052,6 @@ mod medulla_embed_ann_pushdown_tests {
         Arc::new(MemTable::try_new(schema, vec![vec![batch]]).expect("memtable"))
     }
 }
-
 
 /// Removes the hidden `__mv_*` columns of an incremental view's result table from an eagerly
 /// materialized table, so `SELECT *` on the view returns its output columns only

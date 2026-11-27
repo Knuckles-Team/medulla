@@ -46,7 +46,10 @@ fn closure_is_monotone_bounded_and_deterministic() {
     assert!(claims.iter().all(|c| c.validate().is_ok()));
 
     // Deterministic: the same inputs give the same claims.
-    assert_eq!(claims, propagate(&graph, "source", &pci, &evidence, 64, &none));
+    assert_eq!(
+        claims,
+        propagate(&graph, "source", &pci, &evidence, 64, &none)
+    );
 
     // Bounded: one hop reaches only the direct downstream; zero hops reach nothing.
     assert_eq!(

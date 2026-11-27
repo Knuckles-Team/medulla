@@ -252,7 +252,10 @@ pub fn certify(
     let duplicate = expected.windows(2).any(|pair| pair[0] == pair[1]);
     if duplicate
         || reported.len() != expected.len()
-        || reported.iter().zip(&expected).any(|(got, want)| *got != want.as_str())
+        || reported
+            .iter()
+            .zip(&expected)
+            .any(|(got, want)| *got != want.as_str())
     {
         return Err(CertificationRefusal::CriteriaIncomplete);
     }
@@ -282,7 +285,10 @@ pub fn certify(
     };
     let digest = digest_text(LOCAL_CERTIFICATION_DIGEST_DOMAIN, &body);
     let pinned = |dependency: &ComponentDependency| {
-        format!("{}@{}", dependency.component_id, dependency.definition_digest)
+        format!(
+            "{}@{}",
+            dependency.component_id, dependency.definition_digest
+        )
     };
     let mut premises = vec![
         format!("skill:{}", pinned(&body.skill)),
@@ -391,7 +397,10 @@ mod tests {
     fn attestation_round_trip_and_digest() {
         let asked = request();
         let json = serde_json::to_string(&asked).unwrap();
-        assert_eq!(serde_json::from_str::<LocalCertificationRequest>(&json).unwrap(), asked);
+        assert_eq!(
+            serde_json::from_str::<LocalCertificationRequest>(&json).unwrap(),
+            asked
+        );
         let attested = certify(&asked).unwrap();
         let json = serde_json::to_string(&attested).unwrap();
         assert_eq!(
@@ -425,10 +434,16 @@ mod tests {
         );
         let mut missing = request();
         missing.receipt.results.pop();
-        assert_eq!(certify(&missing), Err(CertificationRefusal::CriteriaIncomplete));
+        assert_eq!(
+            certify(&missing),
+            Err(CertificationRefusal::CriteriaIncomplete)
+        );
         let mut extra = request();
         extra.receipt.results.push(result("zzz", true));
-        assert_eq!(certify(&extra), Err(CertificationRefusal::CriteriaIncomplete));
+        assert_eq!(
+            certify(&extra),
+            Err(CertificationRefusal::CriteriaIncomplete)
+        );
         let mut failing = request();
         failing.receipt.results = vec![result("format", false), result("accuracy", false)];
         assert_eq!(
@@ -439,7 +454,10 @@ mod tests {
         );
         let mut atomic = request();
         atomic.dependencies = vec![dependency("skill-b", AgentComponentKind::Tool)];
-        assert_eq!(certify(&atomic), Err(CertificationRefusal::AtomicHasDependencies));
+        assert_eq!(
+            certify(&atomic),
+            Err(CertificationRefusal::AtomicHasDependencies)
+        );
         let mut workflow = request();
         workflow.classification = SkillClassification::Workflow;
         assert_eq!(

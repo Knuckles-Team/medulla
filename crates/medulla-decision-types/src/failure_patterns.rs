@@ -132,10 +132,12 @@ impl GapStatus {
         by: impl Into<String>,
     ) -> Result<Self, medulla_types::transition_refused::TransitionRefused> {
         use medulla_types::gap_topic_machine::{GapStatusKind as K, GapTopicEvent};
-        self.kind().apply(GapTopicEvent::Address).map(|kind| match kind {
-            K::Addressed => Self::Addressed { by: by.into() },
-            K::Open => Self::Open,
-        })
+        self.kind()
+            .apply(GapTopicEvent::Address)
+            .map(|kind| match kind {
+                K::Addressed => Self::Addressed { by: by.into() },
+                K::Open => Self::Open,
+            })
     }
 }
 

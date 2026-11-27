@@ -39,8 +39,9 @@ use medulla_agent_types::{
     agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
 };
 use medulla_decision_types::{
-    decision::approval::RecommendationApproval, decision::digest, decision::CandidateFacts, decision::DecisionErrorCode,
-    decision::DecisionRecord, decision::LibraryCandidateScope, decision::MAX_ASSEMBLY_CANDIDATES,
+    decision::approval::RecommendationApproval, decision::digest, decision::CandidateFacts,
+    decision::DecisionErrorCode, decision::DecisionRecord, decision::LibraryCandidateScope,
+    decision::MAX_ASSEMBLY_CANDIDATES,
 };
 
 use super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};

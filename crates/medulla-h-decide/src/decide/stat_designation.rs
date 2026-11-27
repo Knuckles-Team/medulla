@@ -269,8 +269,10 @@ pub(super) async fn with_runtime(
 async fn pack_descriptors(
     state: &SharedState,
     verified: &VerifiedRequestContext,
-) -> BTreeMap<(String, String), medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor>
-{
+) -> BTreeMap<
+    (String, String),
+    medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor,
+> {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 
     let tenant = verified.tenant().to_string();

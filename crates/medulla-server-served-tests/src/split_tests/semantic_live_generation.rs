@@ -16,15 +16,15 @@
 
 use super::connector_pack_harness::{next_id, ok, Served, TENANT};
 use medulla_index_types::semantic_index::{
-    SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDigest, SemanticExpectedEntity,
-    SemanticGenerationAggregate, SemanticGenerationArtifact, SemanticGenerationCheckpoint,
-    SemanticGenerationCheckpointDraft, SemanticGenerationCheckpointUpdate,
-    SemanticGenerationDependency, SemanticGenerationMember, SemanticGraphProjectionManifest,
-    SemanticGraphProjectionManifestDraft, SemanticIndexOp, SemanticLexicalIndexManifest,
-    SemanticStage, SemanticStageArtifact, SemanticStageIntent, SemanticStageIntentDraft,
-    SemanticStageLeaseEntry, SemanticStageLeasePage, SemanticStageOutcome,
-    SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
-    SemanticVector,
+    SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDigest,
+    SemanticExpectedEntity, SemanticGenerationAggregate, SemanticGenerationArtifact,
+    SemanticGenerationCheckpoint, SemanticGenerationCheckpointDraft,
+    SemanticGenerationCheckpointUpdate, SemanticGenerationDependency, SemanticGenerationMember,
+    SemanticGraphProjectionManifest, SemanticGraphProjectionManifestDraft, SemanticIndexOp,
+    SemanticLexicalIndexManifest, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
+    SemanticStageIntentDraft, SemanticStageLeaseEntry, SemanticStageLeasePage,
+    SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope,
+    SemanticStageTransition, SemanticVector,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::protocol::Method;
@@ -37,14 +37,15 @@ pub(super) const DRIVER: &str = "live-generation-driver";
 pub(super) fn entity_vector(dimension: usize, source_entity_id: &str) -> Vec<f32> {
     let mut values: Vec<f32> = (0..dimension)
         .map(|axis| {
-            let byte = source_entity_id
-                .bytes()
-                .enumerate()
-                .fold(axis as u32 + 1, |acc, (at, byte)| {
-                    acc.wrapping_mul(31)
-                        .wrapping_add(u32::from(byte))
-                        .wrapping_add(at as u32)
-                });
+            let byte =
+                source_entity_id
+                    .bytes()
+                    .enumerate()
+                    .fold(axis as u32 + 1, |acc, (at, byte)| {
+                        acc.wrapping_mul(31)
+                            .wrapping_add(u32::from(byte))
+                            .wrapping_add(at as u32)
+                    });
             (byte % 997) as f32 + 1.0
         })
         .collect();
@@ -64,7 +65,11 @@ fn digest_for(tag: u8, key: &str) -> SemanticDigest {
 }
 
 fn completed_at(second: usize) -> String {
-    format!("2026-09-10T00:{:02}:{:02}Z", (second / 60) % 60, second % 60)
+    format!(
+        "2026-09-10T00:{:02}:{:02}Z",
+        (second / 60) % 60,
+        second % 60
+    )
 }
 
 /// The generation-level checkpoint one stage advances entity by entity.
@@ -165,7 +170,11 @@ impl<'a> Driver<'a> {
         }
     }
 
-    async fn dispatch<T: serde::de::DeserializeOwned>(&self, label: &str, op: SemanticIndexOp) -> T {
+    async fn dispatch<T: serde::de::DeserializeOwned>(
+        &self,
+        label: &str,
+        op: SemanticIndexOp,
+    ) -> T {
         let response = match self.target {
             Target::Served(served) => {
                 served
@@ -370,7 +379,12 @@ pub(super) async fn complete_graph_source_s1(
             .as_millis() as u64
             + 60_000
     );
-    for (at, entry) in driver.claim(SemanticStage::SourceCommit).await.iter().enumerate() {
+    for (at, entry) in driver
+        .claim(SemanticStage::SourceCommit)
+        .await
+        .iter()
+        .enumerate()
+    {
         let intent = &entry.intent;
         let mut transition = transition_of(intent, intent.input_digest, at + 1);
         transition.receipt.completed_at = completed_at.clone();
@@ -430,25 +444,30 @@ async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
     let mut expected = Vec::new();
     for entry in driver.claim(SemanticStage::GraphProjection).await {
         let intent = &entry.intent;
-        let entity = intent.scope.source_entity_id().expect("entity scope").to_string();
+        let entity = intent
+            .scope
+            .source_entity_id()
+            .expect("entity scope")
+            .to_string();
         expected.push(SemanticExpectedEntity {
             source_entity_id: entity.clone(),
             source_revision: intent.source_revision.clone(),
         });
         let completed = transition_of(intent, digest_for(13, &entity), tick());
-        let manifest = SemanticGraphProjectionManifest::create(SemanticGraphProjectionManifestDraft {
-            binding_id: intent.binding_id.clone(),
-            binding_digest: intent.binding_digest,
-            generation: intent.generation,
-            source_entity_id: entity.clone(),
-            source_revision: intent.source_revision.clone(),
-            source_manifest_digest: intent.input_digest,
-            projection_entity_digest: digest_for(14, &entity),
-            projection_content_digest: completed.receipt.output_digest,
-            completed_receipt_digest: completed.receipt.receipt_digest(),
-            completed_at: completed.receipt.completed_at.clone(),
-        })
-        .expect("the graph projection manifest");
+        let manifest =
+            SemanticGraphProjectionManifest::create(SemanticGraphProjectionManifestDraft {
+                binding_id: intent.binding_id.clone(),
+                binding_digest: intent.binding_digest,
+                generation: intent.generation,
+                source_entity_id: entity.clone(),
+                source_revision: intent.source_revision.clone(),
+                source_manifest_digest: intent.input_digest,
+                projection_entity_digest: digest_for(14, &entity),
+                projection_content_digest: completed.receipt.output_digest,
+                completed_receipt_digest: completed.receipt.receipt_digest(),
+                completed_at: completed.receipt.completed_at.clone(),
+            })
+            .expect("the graph projection manifest");
         driver
             .complete(
                 &entry,
@@ -466,7 +485,11 @@ async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
     let mut lexical = Cumulative::new(SemanticStage::LexicalIndex, &expected);
     for entry in driver.claim(SemanticStage::LexicalIndex).await {
         let intent = &entry.intent;
-        let entity = intent.scope.source_entity_id().expect("entity scope").to_string();
+        let entity = intent
+            .scope
+            .source_entity_id()
+            .expect("entity scope")
+            .to_string();
         let mut completed = transition_of(intent, digest_for(15, &entity), tick());
         let update = lexical.advance(&completed, SemanticGenerationDependency::None);
         let checkpoint = &update.successor;
@@ -502,7 +525,11 @@ async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
     let last = entries.len() - 1;
     for (at, entry) in entries.iter().enumerate() {
         let intent = &entry.intent;
-        let entity = intent.scope.source_entity_id().expect("entity scope").to_string();
+        let entity = intent
+            .scope
+            .source_entity_id()
+            .expect("entity scope")
+            .to_string();
         let vector = SemanticVector::create(
             &binding,
             entity.clone(),
@@ -553,7 +580,11 @@ async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
     let last = entries.len() - 1;
     for (at, entry) in entries.iter().enumerate() {
         let intent = &entry.intent;
-        let entity = intent.scope.source_entity_id().expect("entity scope").to_string();
+        let entity = intent
+            .scope
+            .source_entity_id()
+            .expect("entity scope")
+            .to_string();
         let mut completed = transition_of(intent, digest_for(17, &entity), tick());
         let update = ann.advance(
             &completed,

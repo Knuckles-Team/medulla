@@ -652,11 +652,11 @@ async fn promote_then_roll_back_every_subject_kind() {
 #[tokio::test]
 async fn pointer_history_replays() {
     use super::super::stat_pointer::pointer_events;
-    use medulla_persistence_records::decision_jobs::read_pointer;
     use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
     use medulla_decision_types::decision::statistical::retrieval_pointer::{
         PointerEvent, PointerState, PointerTransition,
     };
+    use medulla_persistence_records::decision_jobs::read_pointer;
 
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);
@@ -686,16 +686,23 @@ async fn pointer_history_replays() {
             .as_slice()[0]
             .clone();
         let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
-        let pinned = promoted.last().map_or("none", |(target, _)| target.as_str());
+        let pinned = promoted
+            .last()
+            .map_or("none", |(target, _)| target.as_str());
         for expected in [
             format!("promotion.subject={}", subject.pointer_key()),
             format!("promotion.receipt_digest={digest}"),
             format!("promotion.champion_at_decision={pinned}"),
         ] {
-            assert!(facts.contains(&expected.as_str()), "{expected} in {facts:?}");
+            assert!(
+                facts.contains(&expected.as_str()),
+                "{expected} in {facts:?}"
+            );
         }
         assert!(
-            facts.iter().any(|fact| fact.starts_with("promotion.delta_ppm=")),
+            facts
+                .iter()
+                .any(|fact| fact.starts_with("promotion.delta_ppm=")),
             "{facts:?}"
         );
         assert!(
@@ -732,7 +739,10 @@ async fn pointer_history_replays() {
     }
     assert_eq!(events[2].transition, PointerTransition::RolledBack);
     assert_eq!(events[2].target.as_deref(), Some(promoted[0].0.as_str()));
-    assert_eq!(events[2].receipt_digest.as_deref(), Some(promoted[0].1.as_str()));
+    assert_eq!(
+        events[2].receipt_digest.as_deref(),
+        Some(promoted[0].1.as_str())
+    );
 
     // Replay from the empty state: an activation pushes the active event on the
     // stack, a rollback pops it.
@@ -976,7 +986,11 @@ fn seed_harness_bundle(h: &Harness) -> (RevisionSubject, Vec<String>, GraphView)
         adoptions.push(id);
     }
     h.store.put_decision_artifacts(TENANT, &rows).unwrap();
-    (bundle, adoptions, graph_view(&[], &[], &[(BASELINE, 0.5, "human")]))
+    (
+        bundle,
+        adoptions,
+        graph_view(&[], &[], &[(BASELINE, 0.5, "human")]),
+    )
 }
 
 /// Verifies MEDULLA-DECISION-ENGINE-R805.12: a harness component version and a
@@ -1092,7 +1106,11 @@ async fn harness_definitions_promote_and_roll_back() {
         subject: bundle.clone(),
     };
     for target in &adoptions[..2] {
-        let record = decide_contrast(&h, &promotion_request(&pins.0, &bundle, target, target), &view);
+        let record = decide_contrast(
+            &h,
+            &promotion_request(&pins.0, &bundle, target, target),
+            &view,
+        );
         let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
         assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
         assert!(facts.contains(&"promotion.case_count=50"), "{facts:?}");
@@ -1378,10 +1396,9 @@ async fn served_promotion_journey() {
             pointer_key: subject.pointer_key(),
         };
         let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
-        let served: ChampionPointer = decode(
-            super::super::log::handle_decision_log(&h.state, 9, &verified, op).await,
-        )
-        .unwrap();
+        let served: ChampionPointer =
+            decode(super::super::log::handle_decision_log(&h.state, 9, &verified, op).await)
+                .unwrap();
         assert_eq!(served.subject, *subject);
         assert_eq!(served.revision_ref.as_str(), current, "{subject:?}");
     }

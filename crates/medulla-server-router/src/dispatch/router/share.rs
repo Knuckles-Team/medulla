@@ -57,9 +57,9 @@ pub(super) fn state_of(node_id: &str, properties: &Properties) -> ShareState {
 }
 
 fn optional_text(value: &Option<String>) -> serde_json::Value {
-    value
-        .as_ref()
-        .map_or(serde_json::Value::Null, |text| serde_json::Value::String(text.clone()))
+    value.as_ref().map_or(serde_json::Value::Null, |text| {
+        serde_json::Value::String(text.clone())
+    })
 }
 
 /// The answer for a node that does not exist, which is also the answer for a
@@ -77,7 +77,10 @@ pub(super) fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
         || state.owner_id.as_deref() == Some(actor.principal_id.as_str())
         || state.shared_scope == SCOPE_COMMONS
         || state.shared_scope == SCOPE_ORG
-        || state.grants.iter().any(|grantee| *grantee == actor.principal_id)
+        || state
+            .grants
+            .iter()
+            .any(|grantee| *grantee == actor.principal_id)
 }
 
 /// Whether a write answer means the write took effect: a failed compare-and-set
@@ -85,7 +88,8 @@ pub(super) fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
 fn took_effect(response: &Response) -> bool {
     !matches!(
         &response.result,
-        Some(ResultPayload::Bool(false)) | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
+        Some(ResultPayload::Bool(false))
+            | Some(ResultPayload::Json(serde_json::Value::Bool(false)))
     )
 }
 
@@ -218,7 +222,16 @@ async fn share_op_outcome(
         &next.grants,
     );
     record_share_event(state, req, verified_context, &event, SharePhase::Reserved).await?;
-    match commit_share(state, req, verified_context, &node_id, &properties, &current, &next).await
+    match commit_share(
+        state,
+        req,
+        verified_context,
+        &node_id,
+        &properties,
+        &current,
+        &next,
+    )
+    .await
     {
         Ok(()) => {
             record_share_event(state, req, verified_context, &event, SharePhase::Ok).await?;
@@ -226,8 +239,8 @@ async fn share_op_outcome(
         }
         Err(refusal) => {
             // The refusal stands; a failed audit append cannot change it.
-            let _ = record_share_event(state, req, verified_context, &event, SharePhase::Error)
-                .await;
+            let _ =
+                record_share_event(state, req, verified_context, &event, SharePhase::Error).await;
             Err(refusal)
         }
     }
@@ -298,7 +311,11 @@ impl ShareEvent {
             op: self.op.to_string(),
             surface: "rbac_admin".to_string(),
             params_sha256: self.grantee_digest.clone(),
-            status: if reservation { AuditStatus::Reserved } else { outcome },
+            status: if reservation {
+                AuditStatus::Reserved
+            } else {
+                outcome
+            },
             request_id: self.request_id.clone(),
             audit_class: "event".to_string(),
             subject_iri: Some(self.node_id.clone()),
@@ -336,15 +353,24 @@ pub(super) async fn record_share_event(
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified_context)?;
     use medulla_store::redb_store::audit_status::AuditStatus;
     let record = match phase {
-        SharePhase::Reserved => {
-            event.audit_record(authority.tenant_scope(), authority.actor_scope(), true, AuditStatus::Ok)
-        }
-        SharePhase::Ok => {
-            event.audit_record(authority.tenant_scope(), authority.actor_scope(), false, AuditStatus::Ok)
-        }
-        SharePhase::Error => {
-            event.audit_record(authority.tenant_scope(), authority.actor_scope(), false, AuditStatus::Error)
-        }
+        SharePhase::Reserved => event.audit_record(
+            authority.tenant_scope(),
+            authority.actor_scope(),
+            true,
+            AuditStatus::Ok,
+        ),
+        SharePhase::Ok => event.audit_record(
+            authority.tenant_scope(),
+            authority.actor_scope(),
+            false,
+            AuditStatus::Ok,
+        ),
+        SharePhase::Error => event.audit_record(
+            authority.tenant_scope(),
+            authority.actor_scope(),
+            false,
+            AuditStatus::Error,
+        ),
     };
     let response = medulla_server_graph::dispatch::graph_pipeline::dispatch_audit_append_for_graph(
         state, &req.graph, req.id, record,
@@ -399,7 +425,9 @@ pub(super) async fn commit_share(
         );
         copy.insert(
             "_created_at_ms".to_string(),
-            serde_json::Value::from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms()),
+            serde_json::Value::from(
+                medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            ),
         );
         write(
             state,
@@ -440,7 +468,10 @@ pub(super) async fn commit_share(
                 .collect(),
         ),
     );
-    updates.insert(COMMONS_COPY_KEY.to_string(), optional_text(&next.commons_copy));
+    updates.insert(
+        COMMONS_COPY_KEY.to_string(),
+        optional_text(&next.commons_copy),
+    );
     let committed = write(
         state,
         req,

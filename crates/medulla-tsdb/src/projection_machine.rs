@@ -73,18 +73,90 @@ pub static SERIES_PROJECTION_MACHINE: MachineDef<ProjectionStatus, ProjectionEve
         events: &[Append, CatchUp, Degrade],
         guards: &[],
         edges: &[
-            Edge { id: "SP01", from: Missing, event: Append, guard: None, to: Ready },
-            Edge { id: "SP02", from: CatchingUp, event: Append, guard: None, to: Ready },
-            Edge { id: "SP03", from: Ready, event: Append, guard: None, to: Ready },
-            Edge { id: "SP04", from: Degraded, event: Append, guard: None, to: Ready },
-            Edge { id: "SP05", from: Missing, event: CatchUp, guard: None, to: Ready },
-            Edge { id: "SP06", from: CatchingUp, event: CatchUp, guard: None, to: Ready },
-            Edge { id: "SP07", from: Ready, event: CatchUp, guard: None, to: Ready },
-            Edge { id: "SP08", from: Degraded, event: CatchUp, guard: None, to: Ready },
-            Edge { id: "SP09", from: Missing, event: Degrade, guard: None, to: Degraded },
-            Edge { id: "SP10", from: CatchingUp, event: Degrade, guard: None, to: Degraded },
-            Edge { id: "SP11", from: Ready, event: Degrade, guard: None, to: Degraded },
-            Edge { id: "SP12", from: Degraded, event: Degrade, guard: None, to: Degraded },
+            Edge {
+                id: "SP01",
+                from: Missing,
+                event: Append,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP02",
+                from: CatchingUp,
+                event: Append,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP03",
+                from: Ready,
+                event: Append,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP04",
+                from: Degraded,
+                event: Append,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP05",
+                from: Missing,
+                event: CatchUp,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP06",
+                from: CatchingUp,
+                event: CatchUp,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP07",
+                from: Ready,
+                event: CatchUp,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP08",
+                from: Degraded,
+                event: CatchUp,
+                guard: None,
+                to: Ready,
+            },
+            Edge {
+                id: "SP09",
+                from: Missing,
+                event: Degrade,
+                guard: None,
+                to: Degraded,
+            },
+            Edge {
+                id: "SP10",
+                from: CatchingUp,
+                event: Degrade,
+                guard: None,
+                to: Degraded,
+            },
+            Edge {
+                id: "SP11",
+                from: Ready,
+                event: Degrade,
+                guard: None,
+                to: Degraded,
+            },
+            Edge {
+                id: "SP12",
+                from: Degraded,
+                event: Degrade,
+                guard: None,
+                to: Degraded,
+            },
         ],
     };
 
@@ -165,7 +237,10 @@ mod tests {
             assert_eq!(ProjectionStatus::from_stored(status.stored()), Some(status));
             let json = serde_json::to_string(&status).unwrap();
             assert_eq!(json, format!("\"{}\"", status.stored()));
-            assert_eq!(serde_json::from_str::<ProjectionStatus>(&json).unwrap(), status);
+            assert_eq!(
+                serde_json::from_str::<ProjectionStatus>(&json).unwrap(),
+                status
+            );
         }
         assert_eq!(ProjectionStatus::from_stored("healthy"), None);
         assert!(serde_json::from_str::<ProjectionStatus>("\"healthy\"").is_err());

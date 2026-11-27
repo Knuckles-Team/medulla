@@ -449,12 +449,17 @@ async fn adjustment_evidence_binds() {
         ));
     }
     // The window it read is named, sealed as an Observation premise.
-    assert_eq!(one("run_adjustment.window_revision=").fact, "run_adjustment.window_revision=1");
+    assert_eq!(
+        one("run_adjustment.window_revision=").fact,
+        "run_adjustment.window_revision=1"
+    );
     assert!(matches!(
         one("run_adjustment.window_id=").provenance,
         PremiseProvenance::Observation { .. }
     ));
-    assert!(one("run_adjustment.window_id=").fact.starts_with("run_adjustment.window_id=noisy-w"));
+    assert!(one("run_adjustment.window_id=")
+        .fact
+        .starts_with("run_adjustment.window_id=noisy-w"));
     // The request's run and current values are Request premises.
     for (prefix, value) in [
         ("run_adjustment.run_id=", "noisy"),

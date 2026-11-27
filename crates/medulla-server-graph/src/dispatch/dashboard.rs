@@ -30,8 +30,7 @@ use medulla_core::dashboard::{
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_protocol_types::result_contract::ingestion::{
     DashboardAssetDelete, DashboardAssetGet, DashboardAssetGrant, DashboardAssetRestore,
-    DashboardAssetRevoke, DashboardAssetSave,
-    DashboardAssetShare,
+    DashboardAssetRevoke, DashboardAssetSave, DashboardAssetShare,
 };
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::ServerErrorCode;
@@ -68,9 +67,7 @@ pub async fn dispatch_dashboard(
         DashboardAssetOp::Grant { .. } => typed_response::<DashboardAssetGrant>(req_id, result),
         DashboardAssetOp::Revoke { .. } => typed_response::<DashboardAssetRevoke>(req_id, result),
         DashboardAssetOp::Delete { .. } => typed_response::<DashboardAssetDelete>(req_id, result),
-        DashboardAssetOp::Restore { .. } => {
-            typed_response::<DashboardAssetRestore>(req_id, result)
-        }
+        DashboardAssetOp::Restore { .. } => typed_response::<DashboardAssetRestore>(req_id, result),
         DashboardAssetOp::Get { .. } => typed_response::<DashboardAssetGet>(req_id, result),
     }
 }
@@ -126,7 +123,10 @@ async fn load(
         return Err(refused(DashboardRefusal::NotGranted));
     }
     let Some(stored) = state_from_properties(&properties) else {
-        return Err(invalid(format!("node '{}' is not a dashboard asset", dashboard_node_id(id))));
+        return Err(invalid(format!(
+            "node '{}' is not a dashboard asset",
+            dashboard_node_id(id)
+        )));
     };
     Ok(Some((stored, properties)))
 }
@@ -168,7 +168,12 @@ async fn serve(
             );
             properties.insert("grants_by".into(), caller.principal.into());
             properties.insert("grants_at_ms".into(), now_ms.into());
-            commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
+            commit(
+                state,
+                target,
+                vec![operation(&dashboard_node_id(id), properties)],
+            )
+            .await?;
             Ok(receipt(&next))
         }
         DashboardAssetOp::Grant { id, grant: one } => {
@@ -191,8 +196,7 @@ async fn serve(
             expected_revision,
         } => {
             let (stored, _) = required(load(state, target, id).await?, id)?;
-            let removed =
-                delete(&stored, &caller, now_ms, *expected_revision).map_err(refused)?;
+            let removed = delete(&stored, &caller, now_ms, *expected_revision).map_err(refused)?;
             let mut next = stored.clone();
             next.removed_at_ms = Some(removed);
             let mut properties = node_properties(&next, Some(&body_text(&next)?), tenant);
@@ -201,7 +205,12 @@ async fn serve(
                 retention_ends_ms(removed, dashboard_retention_days()).into(),
             );
             properties.insert("removed_by".into(), caller.principal.into());
-            commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
+            commit(
+                state,
+                target,
+                vec![operation(&dashboard_node_id(id), properties)],
+            )
+            .await?;
             Ok(receipt(&next))
         }
         DashboardAssetOp::Restore { id } => {
@@ -212,7 +221,12 @@ async fn serve(
             let mut properties = node_properties(&next, Some(&body_text(&next)?), tenant);
             properties.insert("retention_ends_ms".into(), Value::Null);
             properties.insert("removed_by".into(), Value::Null);
-            commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
+            commit(
+                state,
+                target,
+                vec![operation(&dashboard_node_id(id), properties)],
+            )
+            .await?;
             Ok(receipt(&next))
         }
         DashboardAssetOp::Get { id } => {
@@ -221,7 +235,12 @@ async fn serve(
             let mut properties = Properties::new();
             properties.insert("usage_count".into(), usage_count.into());
             properties.insert("last_viewed_ms".into(), viewed_ms.into());
-            commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
+            commit(
+                state,
+                target,
+                vec![operation(&dashboard_node_id(id), properties)],
+            )
+            .await?;
             let mut next = stored;
             next.usage_count = usage_count;
             next.last_viewed_ms = Some(viewed_ms);
@@ -330,14 +349,18 @@ async fn save_dashboard(
         asset: plan.asset.clone(),
         removed_at_ms: None,
         usage_count: current.as_ref().map_or(0, |(stored, _)| stored.usage_count),
-        last_viewed_ms: current.as_ref().and_then(|(stored, _)| stored.last_viewed_ms),
+        last_viewed_ms: current
+            .as_ref()
+            .and_then(|(stored, _)| stored.last_viewed_ms),
         purged: false,
     };
 
     // The links this save rebuilds: only the sources and terms the graph holds as nodes.
-    let (old_sources, old_terms) = current.as_ref().map_or((Vec::new(), Vec::new()), |(_, props)| {
-        (text_list(props, LINK_SOURCES), text_list(props, LINK_TERMS))
-    });
+    let (old_sources, old_terms) = current
+        .as_ref()
+        .map_or((Vec::new(), Vec::new()), |(_, props)| {
+            (text_list(props, LINK_SOURCES), text_list(props, LINK_TERMS))
+        });
     let mut linked_sources = Vec::new();
     for source in &plan.links.sources {
         if read_node(state, target, source).await?.is_some() {
@@ -347,7 +370,8 @@ async fn save_dashboard(
     let mut linked_terms = Vec::new();
     let mut term_edges = Vec::new();
     for term in &plan.links.terms {
-        if let Ok(Some((stored_term, _))) = super::glossary::stored_term(state, target, term).await {
+        if let Ok(Some((stored_term, _))) = super::glossary::stored_term(state, target, term).await
+        {
             if let Ok(link) = medulla_core::glossary::bind(term, &stored_term, &asset_node) {
                 linked_terms.push(term.clone());
                 term_edges.push((link.term, link.predicate));
@@ -367,11 +391,15 @@ async fn save_dashboard(
     let mut asset = node_properties(&next, Some(&plan.body_json), tenant);
     asset.insert(
         LINK_SOURCES.into(),
-        serde_json::to_string(&linked_sources).map_err(invalid)?.into(),
+        serde_json::to_string(&linked_sources)
+            .map_err(invalid)?
+            .into(),
     );
     asset.insert(
         LINK_TERMS.into(),
-        serde_json::to_string(&linked_terms).map_err(invalid)?.into(),
+        serde_json::to_string(&linked_terms)
+            .map_err(invalid)?
+            .into(),
     );
     asset.insert("saved_by".into(), plan.saved_by.clone().into());
     asset.insert("saved_at_ms".into(), plan.saved_at_ms.into());
@@ -390,7 +418,10 @@ async fn save_dashboard(
     revision.insert("saved_by".into(), plan.saved_by.clone().into());
     revision.insert("saved_at_ms".into(), plan.saved_at_ms.into());
     revision.insert("body".into(), plan.body_json.clone().into());
-    operations.push(operation(&dashboard_revision_node_id(id, plan.asset.revision), revision));
+    operations.push(operation(
+        &dashboard_revision_node_id(id, plan.asset.revision),
+        revision,
+    ));
 
     for source in &linked_sources {
         let mut edge = Properties::new();

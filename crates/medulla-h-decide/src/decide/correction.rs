@@ -51,9 +51,10 @@ mod served {
         candidate_outcomes, commit_correction, nearest_corrections, OutcomeRow,
     };
     use medulla_decision_types::correction::{
-        task_class_of, CandidateOutcomes, Correction, CorrectionEffect, CorrectionInput, CorrectionNearest,
-        CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead, CorrectionRecorded, CorrectionSource,
-        EvalCase, OutcomeTag, RuleCandidate, ACTION_RECORD_CLASS, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
+        task_class_of, CandidateOutcomes, Correction, CorrectionEffect, CorrectionInput,
+        CorrectionNearest, CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead,
+        CorrectionRecorded, CorrectionSource, EvalCase, OutcomeTag, RuleCandidate,
+        ACTION_RECORD_CLASS, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
         OUTCOME_SELF_REPORTED,
     };
     use medulla_decision_types::decision::knobs::KnobValue;
@@ -61,17 +62,14 @@ mod served {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
-        CorrectionRecordGet, CorrectionRecordNearest, CorrectionRecordOutcomes,
-        CorrectionRecordRun,
+        CorrectionRecordGet, CorrectionRecordNearest, CorrectionRecordOutcomes, CorrectionRecordRun,
     };
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use serde_json::{json, Map, Value};
 
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::program_embedding::{embed_texts, SpacedEmbedder};
-    use crate::decide::stat_support::{
-        filtered_view_versioned, invalid_parameter, resolve_policy,
-    };
+    use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter, resolve_policy};
     use crate::decide::stat_vectors::graph_vectors;
     use crate::decide::SharedState;
 
@@ -167,8 +165,7 @@ mod served {
         // the corrector is the verified principal. The caller supplies neither.
         let (produced_by, task_class) = {
             let (view, _) = filtered_view_versioned(state, verified.agent_id(), graph).await?;
-            action_of(&view, verified.tenant(), &input.target)
-                .ok_or_else(target_not_found)?
+            action_of(&view, verified.tenant(), &input.target).ok_or_else(target_not_found)?
         };
         let actor = verified.agent_id().to_string();
         if is_self_report(verified, &produced_by)? {
@@ -367,7 +364,9 @@ mod served {
         Ok(PlannedWrite {
             graph: graph.to_string(),
             operations: Vec::new(),
-            reply: ResultPayload::of::<CorrectionRecordOutcomes>(CorrectionOutcomes { candidates })?,
+            reply: ResultPayload::of::<CorrectionRecordOutcomes>(CorrectionOutcomes {
+                candidates,
+            })?,
         })
     }
 
@@ -403,8 +402,13 @@ mod served {
             ) else {
                 continue;
             };
-            let Some(rule) = row(view, &format!("rule:{receipt}"), "RuleCandidate", tenant, &receipt)
-            else {
+            let Some(rule) = row(
+                view,
+                &format!("rule:{receipt}"),
+                "RuleCandidate",
+                tenant,
+                &receipt,
+            ) else {
                 continue;
             };
             let (Some(rule_id), Some(task_class)) =

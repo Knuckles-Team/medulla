@@ -179,9 +179,11 @@ mod tests {
     fn stale_overlapping_unanchored_and_foreign_ending_edits_refuse() {
         let digest = skill_digest(SOURCE.as_bytes());
         let one = patch(SOURCE, "first", "1st");
-        assert!(apply_skill_patches(SOURCE.as_bytes(), &skill_digest(b"other"), &[one.clone()])
-            .unwrap_err()
-            .starts_with(SKILL_SOURCE_STALE));
+        assert!(
+            apply_skill_patches(SOURCE.as_bytes(), &skill_digest(b"other"), &[one.clone()])
+                .unwrap_err()
+                .starts_with(SKILL_SOURCE_STALE)
+        );
         let overlapping = [
             SkillSourcePatch {
                 range_start: 10,
@@ -194,9 +196,11 @@ mod tests {
                 replacement: "b".into(),
             },
         ];
-        assert!(apply_skill_patches(SOURCE.as_bytes(), &digest, &overlapping)
-            .unwrap_err()
-            .starts_with(SKILL_PATCH_OVERLAP));
+        assert!(
+            apply_skill_patches(SOURCE.as_bytes(), &digest, &overlapping)
+                .unwrap_err()
+                .starts_with(SKILL_PATCH_OVERLAP)
+        );
         let two_inserts = [
             SkillSourcePatch {
                 range_start: 5,
@@ -209,9 +213,11 @@ mod tests {
                 replacement: "b".into(),
             },
         ];
-        assert!(apply_skill_patches(SOURCE.as_bytes(), &digest, &two_inserts)
-            .unwrap_err()
-            .starts_with(SKILL_PATCH_OVERLAP));
+        assert!(
+            apply_skill_patches(SOURCE.as_bytes(), &digest, &two_inserts)
+                .unwrap_err()
+                .starts_with(SKILL_PATCH_OVERLAP)
+        );
         let outside = [SkillSourcePatch {
             range_start: 0,
             range_end: SOURCE.len() as u64 + 1,
@@ -233,8 +239,10 @@ mod tests {
             range_end: accented.find('\u{e9}').unwrap() as u64 + 2,
             replacement: "e".into(),
         }];
-        assert!(apply_skill_patches(accented.as_bytes(), &accent_digest, &inside)
-            .unwrap_err()
-            .starts_with(SKILL_PATCH_ANCHOR_INVALID));
+        assert!(
+            apply_skill_patches(accented.as_bytes(), &accent_digest, &inside)
+                .unwrap_err()
+                .starts_with(SKILL_PATCH_ANCHOR_INVALID)
+        );
     }
 }

@@ -33,7 +33,10 @@ fn evaluated_revision_carries_held_out_evidence() {
             let state = program_job_support::redb_state(directory.path());
             let journey = evaluated_journey(&state).await;
             let evidence = &journey.revision["held_out"];
-            assert!(evidence.is_object(), "the revision has no held_out: {evidence}");
+            assert!(
+                evidence.is_object(),
+                "the revision has no held_out: {evidence}"
+            );
             assert_eq!(evidence["receipt_kind"], "program_evaluation");
             assert_eq!(evidence["challenger_ref"], journey.revision_ref.as_str());
             assert!(evidence.get("champion_ref").is_none() || evidence["champion_ref"].is_null());
@@ -50,7 +53,13 @@ fn evaluated_revision_carries_held_out_evidence() {
                     &test_example_refs()
                 )
             );
-            assert_eq!(evidence["receipt_digest"].as_str().expect("receipt digest").len(), 64);
+            assert_eq!(
+                evidence["receipt_digest"]
+                    .as_str()
+                    .expect("receipt digest")
+                    .len(),
+                64
+            );
             assert_eq!(evidence["subject"]["kind"], "program");
             assert_eq!(
                 evidence["subject"]["program_ref"],

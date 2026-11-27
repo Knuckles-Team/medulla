@@ -10,12 +10,12 @@
 
 use std::sync::Arc;
 
+use medulla_kernel::kernel::dispatch_support::EngineClock;
 use medulla_persistence::scheduler_config_store::shared_scheduler_config_store;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination as contract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-use medulla_kernel::kernel::dispatch_support::EngineClock;
 use medulla_types::clock::Clock;
 use medulla_types::contract::Digest256;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
@@ -35,9 +35,7 @@ pub fn refusal_code(error: &OwnedWorkerError) -> &'static str {
             }
             WorkerRegistryError::UnknownWorker => ServerErrorCode::WorkerUnknown.as_str(),
             WorkerRegistryError::ExpiredWorker => ServerErrorCode::WorkerExpired.as_str(),
-            WorkerRegistryError::ClockRegression => {
-                ServerErrorCode::WorkerClockRegression.as_str()
-            }
+            WorkerRegistryError::ClockRegression => ServerErrorCode::WorkerClockRegression.as_str(),
             WorkerRegistryError::ZeroTtl | WorkerRegistryError::DeadlineOverflow => {
                 ServerErrorCode::WorkerTtlInvalid.as_str()
             }
@@ -140,8 +138,12 @@ async fn admit(
         Ok(store) => store,
         Err(error) => return Response::err(req_id, error),
     };
-    let inputs = match crate::worker_admission::admission_inputs(state, verified_context, &job_store)
-        .await
+    let inputs = match crate::worker_admission::admission_inputs(
+        state,
+        verified_context,
+        &job_store,
+    )
+    .await
     {
         Ok(inputs) => inputs,
         Err(error) => return Response::err(req_id, error),

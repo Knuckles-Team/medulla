@@ -55,7 +55,8 @@ impl TextEncoderIdentity {
         dimensions: usize,
         revision: impl Into<String>,
     ) -> Self {
-        let (encoder_id, space_id, revision) = (encoder_id.into(), space_id.into(), revision.into());
+        let (encoder_id, space_id, revision) =
+            (encoder_id.into(), space_id.into(), revision.into());
         let model_hash = identity_hash(&[
             "text-model",
             &encoder_id,
@@ -331,9 +332,13 @@ pub fn execute_ranked(
             .collect();
         // MEDULLA-FEDERATED-QUERY-R040.2.7: the assignments follow the same rows, each row's
         // kept topics in the order the fusion recorded them (topic id ascending).
-        let mut traces: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+        let mut traces: std::collections::HashMap<String, Vec<_>> =
+            std::collections::HashMap::new();
         for trace in receipt.assignments.drain(..) {
-            traces.entry(trace.candidate_id.clone()).or_default().push(trace);
+            traces
+                .entry(trace.candidate_id.clone())
+                .or_default()
+                .push(trace);
         }
         receipt.assignments = result
             .rows()
@@ -487,12 +492,14 @@ pub fn plan_foreign_names(ops: &[medulla_query_types::wire::Op]) -> Vec<String> 
         for op in ops {
             let name = match op {
                 medulla_query_types::wire::Op::Foreign { name } => Some(name.as_str()),
-                medulla_query_types::wire::Op::ForeignScan { source, .. } => match source.as_ref() {
-                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
-                        Some(name.as_str())
+                medulla_query_types::wire::Op::ForeignScan { source, .. } => {
+                    match source.as_ref() {
+                        medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
+                            Some(name.as_str())
+                        }
+                        _ => None,
                     }
-                    _ => None,
-                },
+                }
                 medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
                     for branch in branches {
                         collect(branch, names);

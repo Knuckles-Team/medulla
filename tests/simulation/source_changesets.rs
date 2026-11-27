@@ -15,7 +15,12 @@
 //! "export" check materializes the head tree through `ReadTree` and compares it
 //! with the replay of every landed changeset, the same listing an export packs.
 
-#![cfg(all(feature = "server", feature = "security", feature = "redb", feature = "blob"))]
+#![cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "redb",
+    feature = "blob"
+))]
 
 #[path = "../common/mod.rs"]
 mod common;
@@ -30,12 +35,12 @@ use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, Res
 use medulla_server_auth::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server_blob::blob::{BlobCursors, BlobStateExt};
-use medulla_source_types::source_path_grant::SetPathGrantRequest;
 use medulla_source_types::source_changeset::{
-    Changeset, PathOp, ReadPathHistoryRequest, ReadPathHistoryReceipt, ReadTreeReceipt,
+    Changeset, PathOp, ReadPathHistoryReceipt, ReadPathHistoryRequest, ReadTreeReceipt,
     ReadTreeRequest, SubmitChangesetReceipt, SubmitChangesetRequest, SubmittedBlobRef,
     SubmittedPath, TreeEntry,
 };
+use medulla_source_types::source_path_grant::SetPathGrantRequest;
 
 const SECRET: &str = "scm-r011-simulation-secret";
 const ENCRYPTION_KEY: &str = "scm-r011-simulation-encryption-key-0123456789";
@@ -455,9 +460,7 @@ impl Sim {
             let token = format!("w{writer}t{tick}");
             let (entry, lines) = self.edit(&seen, path, line, &token).await;
             let key = self.fresh_key("writer");
-            let outcome = self
-                .submit(&key, base.clone(), vec![entry], drop_ack)
-                .await;
+            let outcome = self.submit(&key, base.clone(), vec![entry], drop_ack).await;
             match (prior, outcome) {
                 (None, Outcome::Landed(receipt)) => {
                     let mut contents = self.model.current();
@@ -490,12 +493,13 @@ impl Sim {
                             .new_blob
                             .clone()
                             .expect("a landed modify names its blob");
-                        assert_eq!(landed_blob, expected.digest, "the landed bytes are the merge");
-                        let text = String::from_utf8(merged).expect("merged text");
-                        contents.insert(
-                            path.to_string(),
-                            text.lines().map(str::to_string).collect(),
+                        assert_eq!(
+                            landed_blob, expected.digest,
+                            "the landed bytes are the merge"
                         );
+                        let text = String::from_utf8(merged).expect("merged text");
+                        contents
+                            .insert(path.to_string(), text.lines().map(str::to_string).collect());
                     } else {
                         contents.insert(path.to_string(), lines);
                     }
@@ -505,7 +509,10 @@ impl Sim {
                 (Some((first, theirs)), Outcome::Refused(error)) => {
                     // Only an overlap on one path may refuse, and only as a conflict.
                     assert_eq!(first, path, "a disjoint writer must land: {error}");
-                    assert!(error.contains("SOURCE_CONFLICT"), "unexpected refusal: {error}");
+                    assert!(
+                        error.contains("SOURCE_CONFLICT"),
+                        "unexpected refusal: {error}"
+                    );
                     assert!(
                         error.contains(&format!("paths=[{path}]")),
                         "the conflict names the path: {error}"

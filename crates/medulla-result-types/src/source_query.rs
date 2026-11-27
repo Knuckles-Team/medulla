@@ -388,7 +388,12 @@ impl SourceQueryRequest {
     /// MEDULLA-FEDERATED-QUERY-R085.2 (3) to (5): whether the request names the approved
     /// contract digest, the approved committed revision and the approved snapshot. Admission
     /// and verification both ask this one question; `false` refuses `stale_source`.
-    pub fn is_pinned_to(&self, contract_digest: &str, committed_version: u64, snapshot_ref: &str) -> bool {
+    pub fn is_pinned_to(
+        &self,
+        contract_digest: &str,
+        committed_version: u64,
+        snapshot_ref: &str,
+    ) -> bool {
         self.schema_digest == contract_digest
             && self.source_revision == committed_version.to_string()
             && self.snapshot_ref == snapshot_ref
@@ -452,8 +457,12 @@ impl ApprovedSourceQuery {
     /// `query_digest`; the request is bound through `operation_digest`.
     pub fn compute_query_digest(&self) -> Result<String, SourceQueryError> {
         let version = self.schema_version.to_be_bytes();
-        let times = [self.issued_at_ms, self.expires_at_ms, self.hard_expires_at_ms]
-            .map(u64::to_be_bytes);
+        let times = [
+            self.issued_at_ms,
+            self.expires_at_ms,
+            self.hard_expires_at_ms,
+        ]
+        .map(u64::to_be_bytes);
         let mut fields: Vec<&[u8]> = vec![
             &version[..],
             self.approval_id.as_bytes(),
@@ -467,7 +476,11 @@ impl ApprovedSourceQuery {
             self.policy_digest.as_bytes(),
             self.identity_digest.as_bytes(),
         ];
-        fields.extend(self.allowed_operations.iter().map(|op| op.name().as_bytes()));
+        fields.extend(
+            self.allowed_operations
+                .iter()
+                .map(|op| op.name().as_bytes()),
+        );
         fields.extend(times.iter().map(|bytes| bytes.as_slice()));
         digest_of(b"eg/source-query-approval/v1", &fields)
     }

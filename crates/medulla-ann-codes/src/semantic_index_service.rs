@@ -854,10 +854,10 @@ mod importance;
 pub use importance::{regularize, RegularizeError};
 
 mod operator;
+mod s6_worker;
 mod source_scan;
 mod source_turn;
 mod source_types;
-mod s6_worker;
 pub use s6_worker::ENGINE_S6_WORKER;
 mod stage_lifecycle;
 #[cfg(test)]

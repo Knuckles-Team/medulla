@@ -35,11 +35,8 @@ pub(super) async fn downtime_worker_loop(
     store: Arc<JobStore>,
     timing: AnalyticsWorkerTiming,
 ) {
-    let worker_ref = medulla_server_api::batch_compile::opaque_coordinator_key(
-        "downtime-worker",
-        "native",
-        "0",
-    );
+    let worker_ref =
+        medulla_server_api::batch_compile::opaque_coordinator_key("downtime-worker", "native", "0");
     let capabilities = vec![opaque_worker_capability(DOWNTIME_CAPABILITY)];
     let quota = TenantJobQuota {
         max_active: usize::MAX,
@@ -220,8 +217,13 @@ mod tests {
 
     impl DowntimeBody for SteppedBody {
         fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
-            self.clock.fetch_add(30, std::sync::atomic::Ordering::SeqCst);
-            let before = input.state_blob.and_then(|blob| blob.first()).copied().unwrap_or(0);
+            self.clock
+                .fetch_add(30, std::sync::atomic::Ordering::SeqCst);
+            let before = input
+                .state_blob
+                .and_then(|blob| blob.first())
+                .copied()
+                .unwrap_or(0);
             let after = before + 1;
             self.done.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             if after >= self.total {
@@ -257,9 +259,7 @@ mod tests {
                         ..medulla_jobs::ResourceBudget::default()
                     },
                     placement: JobPlacement {
-                        required_capabilities: vec![opaque_worker_capability(
-                            DOWNTIME_CAPABILITY,
-                        )],
+                        required_capabilities: vec![opaque_worker_capability(DOWNTIME_CAPABILITY)],
                         ..JobPlacement::default()
                     },
                     ..JobPolicy::default()
@@ -337,8 +337,14 @@ mod tests {
         .await
         .unwrap();
         let yielded = store.get(&job_id).unwrap();
-        let JobState::Submitted { checkpoint: Some(checkpoint) } = &yielded.state else {
-            panic!("a yield leaves the job claimable with its checkpoint: {:?}", yielded.state)
+        let JobState::Submitted {
+            checkpoint: Some(checkpoint),
+        } = &yielded.state
+        else {
+            panic!(
+                "a yield leaves the job claimable with its checkpoint: {:?}",
+                yielded.state
+            )
         };
         assert_eq!(checkpoint.state_blob.as_deref(), Some(&[2u8][..]));
         assert_eq!(yielded.retry.attempts_made, 0);

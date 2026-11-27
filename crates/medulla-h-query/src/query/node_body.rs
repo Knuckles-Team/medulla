@@ -15,7 +15,10 @@ pub(crate) fn handle_node_body(ctx: &QueryHandlerCtx<'_>, request: NodeBodyReque
         .read_authority
         .and_then(|authority| authority.carrier().map(|carrier| (authority, carrier)))
     else {
-        return Response::err(ctx.req_id, "ACCESS_DENIED: a node body read needs a verified caller");
+        return Response::err(
+            ctx.req_id,
+            "ACCESS_DENIED: a node body read needs a verified caller",
+        );
     };
     if let Err(error) = request.validate() {
         return Response::err(ctx.req_id, error);

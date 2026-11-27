@@ -40,6 +40,9 @@ fn main() -> ExitCode {
         serde_json::to_string_pretty(&file).expect("the vectors serialise") + "\n",
     )
     .expect("the vector file writes");
-    println!("wrote {output}: {count} vectors ({} omitted)", omitted.len());
+    println!(
+        "wrote {output}: {count} vectors ({} omitted)",
+        omitted.len()
+    );
     ExitCode::SUCCESS
 }

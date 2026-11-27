@@ -4,10 +4,9 @@ use std::collections::BTreeSet;
 
 use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_answer, record_report};
 use medulla_source_types::delivery::{
-    decode_delivery, AssignmentReport, AssignmentState, Delivery, DeliveryInput,
-    DeliveryOutcome, DeliveryProposal, DeliveryQuestion, DeliveryReportRefusal,
-    DeliveryReportState, DeliveryReportWrite, DeliveryStage, FeedbackKind, InputSource,
-    ProposalState,
+    decode_delivery, AssignmentReport, AssignmentState, Delivery, DeliveryInput, DeliveryOutcome,
+    DeliveryProposal, DeliveryQuestion, DeliveryReportRefusal, DeliveryReportState,
+    DeliveryReportWrite, DeliveryStage, FeedbackKind, InputSource, ProposalState,
 };
 use serde_json::json;
 
@@ -188,7 +187,10 @@ fn report_refusals_and_sequence_order() {
     let mut unknown = write(DeliveryReportState::Progress);
     unknown.assignment_id = "nope".into();
     let refusal = record_report(&d, &unknown, &known).unwrap_err();
-    assert!(matches!(refusal, DeliveryReportRefusal::AssignmentUnknown(_)));
+    assert!(matches!(
+        refusal,
+        DeliveryReportRefusal::AssignmentUnknown(_)
+    ));
     assert_eq!(refusal.code(), "ASSIGNMENT_UNKNOWN");
 
     let mut ended = base();
@@ -318,16 +320,24 @@ fn a_person_answer_clears_the_open_question_and_is_recorded_as_a_person_input() 
 #[test]
 fn an_answer_without_a_question_or_out_of_bounds_is_refused() {
     let quiet = base();
-    assert!(record_answer(&quiet, "x").unwrap_err().starts_with("DELIVERY_NO_QUESTION"));
+    assert!(record_answer(&quiet, "x")
+        .unwrap_err()
+        .starts_with("DELIVERY_NO_QUESTION"));
     let mut waiting = base();
     waiting.attention = Some(DeliveryQuestion {
         text: "q".into(),
         raised_by: None,
         seq: 1,
     });
-    assert!(record_answer(&waiting, "  ").unwrap_err().starts_with("ANSWER_INVALID"));
+    assert!(record_answer(&waiting, "  ")
+        .unwrap_err()
+        .starts_with("ANSWER_INVALID"));
     let long = "a".repeat(2001);
-    assert!(record_answer(&waiting, &long).unwrap_err().starts_with("ANSWER_INVALID"));
+    assert!(record_answer(&waiting, &long)
+        .unwrap_err()
+        .starts_with("ANSWER_INVALID"));
     waiting.ended = Some(DeliveryOutcome::Stopped);
-    assert!(record_answer(&waiting, "x").unwrap_err().starts_with("DELIVERY_NO_QUESTION"));
+    assert!(record_answer(&waiting, "x")
+        .unwrap_err()
+        .starts_with("DELIVERY_NO_QUESTION"));
 }

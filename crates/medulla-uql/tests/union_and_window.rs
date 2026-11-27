@@ -41,10 +41,17 @@ fn union_and_valid_as_of_window_compile_into_one_plan() {
             _ => None,
         })
         .expect("the window lowers to a valid-time AsOf");
-    assert_eq!(window, NOW_SECS - 3_600.0, "the instant is exactly one hour before the query time");
-    assert!(
-        parse_statement_at("MATCH (:A) |> VALID AS OF 1 parsecs", &Params::new(), NOW_SECS).is_err()
+    assert_eq!(
+        window,
+        NOW_SECS - 3_600.0,
+        "the instant is exactly one hour before the query time"
     );
+    assert!(parse_statement_at(
+        "MATCH (:A) |> VALID AS OF 1 parsecs",
+        &Params::new(),
+        NOW_SECS
+    )
+    .is_err());
     // A parse without a query time refuses the duration form instead of reading a clock.
     assert!(parse_statement("MATCH (:A) |> VALID AS OF 1 h", &Params::new()).is_err());
     assert!(matches!(plan.ops.last(), Some(Op::Limit { .. })));

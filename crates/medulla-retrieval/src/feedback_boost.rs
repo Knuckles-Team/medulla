@@ -187,6 +187,8 @@ mod tests {
                 ("c", FeedbackKind::Ignored, -0.02),
             ]
         );
-        assert!(events.iter().all(|e| e.at == 9 && e.tenant == "t1" && e.principal == "producer"));
+        assert!(events
+            .iter()
+            .all(|e| e.at == 9 && e.tenant == "t1" && e.principal == "producer"));
     }
 }

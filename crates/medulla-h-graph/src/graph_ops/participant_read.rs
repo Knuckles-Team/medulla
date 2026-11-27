@@ -6,16 +6,16 @@
 //! caller does not act as is the same `PARTICIPANT_NOT_VISIBLE` envelope, so a reader cannot tell
 //! which of the three it hit.
 
-use super::terminal::GraphOpsContext;
 use super::participant_surface::{
     participant_unavailable, readable_participants, resolve_scope_ref, sessions_visible_to,
 };
+use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_types::participant_memory::{DerivationStatus, ParticipantReadOp};
+use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::coordination::{
     ParticipantReadDeriveInput, ParticipantReadGet, ParticipantReadList, ParticipantReadStatus,
 };
-use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_work_types::memory_scope::ScopeRef;
 use std::collections::BTreeMap;
 
@@ -38,7 +38,10 @@ pub(super) async fn try_handle_participant_read(
     else {
         return ControlFlow::Break(Response::err(
             ctx.req_id,
-            refuse("ACCESS_DENIED", "a participant read needs a verified tenant"),
+            refuse(
+                "ACCESS_DENIED",
+                "a participant read needs a verified tenant",
+            ),
         ));
     };
     let agent_id = match ctx.read_authority.verified_actor() {
@@ -60,21 +63,25 @@ async fn serve(
     op: &ParticipantReadOp,
 ) -> Result<ResultPayload, String> {
     match op {
-        ParticipantReadOp::Get { participant_id } => readable_participants(ctx.core, tenant, agent_id)
-            .into_iter()
-            .find(|participant| &participant.participant_id == participant_id)
-            .ok_or_else(|| participant_unavailable(participant_id.as_str()))
-            .and_then(ResultPayload::of::<ParticipantReadGet>),
-        ParticipantReadOp::List => {
-            ResultPayload::of::<ParticipantReadList>(readable_participants(ctx.core, tenant, agent_id))
+        ParticipantReadOp::Get { participant_id } => {
+            readable_participants(ctx.core, tenant, agent_id)
+                .into_iter()
+                .find(|participant| &participant.participant_id == participant_id)
+                .ok_or_else(|| participant_unavailable(participant_id.as_str()))
+                .and_then(ResultPayload::of::<ParticipantReadGet>)
         }
+        ParticipantReadOp::List => ResultPayload::of::<ParticipantReadList>(readable_participants(
+            ctx.core, tenant, agent_id,
+        )),
         ParticipantReadOp::DeriveInput { payload_ref } => {
             super::participant_derive::derive_input(ctx.core, tenant, payload_ref)
                 .and_then(ResultPayload::of::<ParticipantReadDeriveInput>)
         }
-        ParticipantReadOp::Status { memory_scope } => status(ctx, tenant, agent_id, memory_scope.as_ref())
-            .await
-            .and_then(ResultPayload::of::<ParticipantReadStatus>),
+        ParticipantReadOp::Status { memory_scope } => {
+            status(ctx, tenant, agent_id, memory_scope.as_ref())
+                .await
+                .and_then(ResultPayload::of::<ParticipantReadStatus>)
+        }
         // A question and a card read the claim store, which the decide handler holds; the router
         // answers them before a method reaches this chain.
         ParticipantReadOp::Ask { .. } | ParticipantReadOp::Card { .. } => Err(refuse(
@@ -106,11 +113,17 @@ async fn status(
     let mut groups: BTreeMap<(String, String, String), (u32, u64)> = BTreeMap::new();
     for payload in super::participant_derive::stored_payloads(ctx.core, tenant) {
         let key = &payload.key;
-        if !sessions.contains(&key.session_id) || !jobs.task_pending(&persist_dir, tenant, &payload.task_id)? {
+        if !sessions.contains(&key.session_id)
+            || !jobs.task_pending(&persist_dir, tenant, &payload.task_id)?
+        {
             continue;
         }
         let group = groups
-            .entry((key.scope_id.clone(), key.session_id.clone(), key.subject.as_str().to_string()))
+            .entry((
+                key.scope_id.clone(),
+                key.session_id.clone(),
+                key.subject.as_str().to_string(),
+            ))
             .or_insert((0, u64::MAX));
         group.0 += 1;
         group.1 = group.1.min(payload.last_turn_ms);
@@ -121,7 +134,8 @@ async fn status(
             Ok(DerivationStatus {
                 scope_id,
                 session_id,
-                subject: medulla_work_types::participant::ParticipantId::new(subject).map_err(|e| e.to_string())?,
+                subject: medulla_work_types::participant::ParticipantId::new(subject)
+                    .map_err(|e| e.to_string())?,
                 pending,
                 oldest_pending_age_ms: now_ms.saturating_sub(oldest_ms),
             })

@@ -85,7 +85,9 @@ async fn blob_store(
             None => return Err("Blob substrate disabled (no persist dir configured)".to_string()),
         }
     };
-    let owner = CarrierAuthority::from_verified(verified)?.owner_scope().to_string();
+    let owner = CarrierAuthority::from_verified(verified)?
+        .owner_scope()
+        .to_string();
     Ok((store, owner))
 }
 
@@ -94,7 +96,11 @@ fn collect_cas_refs(value: &Value, out: &mut BTreeSet<String>) {
     match value {
         Value::String(text) => {
             if let Some(hex) = text.strip_prefix(CAS_PREFIX) {
-                if hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+                if hex.len() == 64
+                    && hex
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                {
                     out.insert(text.clone());
                 }
             }
@@ -108,7 +114,10 @@ fn collect_cas_refs(value: &Value, out: &mut BTreeSet<String>) {
 /// Canonical N-Quads of `triples`: one statement per line, sorted and without repeats.
 fn canonical_nquads(triples: &[medulla_rdf::oxrdf::Triple]) -> Result<(Vec<u8>, u64), String> {
     let text = medulla_rdf::mapping::to_nquads(triples, None)?;
-    let mut lines: Vec<&str> = text.lines().filter(|line| !line.trim().is_empty()).collect();
+    let mut lines: Vec<&str> = text
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
     lines.sort_unstable();
     lines.dedup();
     let count = lines.len() as u64;
@@ -218,7 +227,15 @@ pub async fn handle_bundle_export(
     include_embeddings: bool,
     include_documents: bool,
 ) -> Response {
-    match export_bundle(state, verified, graphs, include_embeddings, include_documents).await {
+    match export_bundle(
+        state,
+        verified,
+        graphs,
+        include_embeddings,
+        include_documents,
+    )
+    .await
+    {
         Ok(receipt) => {
             match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BundleExport>(
                 receipt,
@@ -240,12 +257,18 @@ pub async fn export_bundle(
     include_documents: bool,
 ) -> Result<BundleExportReceipt, String> {
     if graphs.is_empty() {
-        return Err(refusal("PARAMETER_INVALID", "a bundle export names at least one graph"));
+        return Err(refusal(
+            "PARAMETER_INVALID",
+            "a bundle export names at least one graph",
+        ));
     }
     if graphs.len() > BUNDLE_GRAPHS_MAX {
         return Err(refusal(
             BUNDLE_TOO_LARGE,
-            format!("{} graphs are more than the {BUNDLE_GRAPHS_MAX} one bundle holds", graphs.len()),
+            format!(
+                "{} graphs are more than the {BUNDLE_GRAPHS_MAX} one bundle holds",
+                graphs.len()
+            ),
         ));
     }
     if graphs.iter().collect::<BTreeSet<_>>().len() != graphs.len() {
@@ -400,7 +423,9 @@ fn rewrite_refs(value: &mut Value, remap: &BTreeMap<String, String>) {
             }
         }
         Value::Array(items) => items.iter_mut().for_each(|item| rewrite_refs(item, remap)),
-        Value::Object(fields) => fields.values_mut().for_each(|item| rewrite_refs(item, remap)),
+        Value::Object(fields) => fields
+            .values_mut()
+            .for_each(|item| rewrite_refs(item, remap)),
         _ => {}
     }
 }
@@ -415,12 +440,13 @@ pub async fn plan_import(
     on_conflict: BundleOnConflict,
 ) -> Result<ImportPlan, String> {
     let (store, owner) = blob_store(state, verified).await?;
-    let bytes = read_owned_blob(&*store, &owner, bundle_ref, BUNDLE_BLOB_MAX).map_err(|error| {
-        match error.strip_prefix("BODY_MISSING: ") {
-            Some(detail) => refusal("BLOB_NOT_FOUND", detail),
-            None => error,
-        }
-    })?;
+    let bytes =
+        read_owned_blob(&*store, &owner, bundle_ref, BUNDLE_BLOB_MAX).map_err(
+            |error| match error.strip_prefix("BODY_MISSING: ") {
+                Some(detail) => refusal("BLOB_NOT_FOUND", detail),
+                None => error,
+            },
+        )?;
     let bundle = Bundle::unpack(&bytes).map_err(bundle_refusal)?;
     drop(bytes);
 
@@ -443,37 +469,59 @@ pub async fn plan_import(
         let triples = bundle.entry(&part.triples.entry).map_err(bundle_refusal)?;
         let ntriples = String::from_utf8(triples.to_vec())
             .map_err(|_| refusal("PARAMETER_INVALID", "the triples part is not UTF-8"))?;
-        let counted = ntriples.lines().filter(|line| !line.trim().is_empty()).count() as u64;
+        let counted = ntriples
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .count() as u64;
         if counted != part.triple_count {
             return Err(refusal(
                 BUNDLE_DIGEST_MISMATCH,
-                format!("the triples part of {} holds {counted} triples, not {}", part.graph, part.triple_count),
+                format!(
+                    "the triples part of {} holds {counted} triples, not {}",
+                    part.graph, part.triple_count
+                ),
             ));
         }
         let mut operations: Vec<Value> = Vec::new();
         let provenance: Vec<Value> = serde_json::from_slice(
-            bundle.entry(&part.provenance.entry).map_err(bundle_refusal)?,
+            bundle
+                .entry(&part.provenance.entry)
+                .map_err(bundle_refusal)?,
         )
-        .map_err(|error| refusal("PARAMETER_INVALID", format!("the provenance part is malformed: {error}")))?;
+        .map_err(|error| {
+            refusal(
+                "PARAMETER_INVALID",
+                format!("the provenance part is malformed: {error}"),
+            )
+        })?;
         for row in &provenance {
             operations.push(match row.get("kind").and_then(Value::as_str) {
-                Some("node") => json!({"op": "upsert_node", "id": row["id"], "properties": row["properties"]}),
+                Some("node") => {
+                    json!({"op": "upsert_node", "id": row["id"], "properties": row["properties"]})
+                }
                 Some("edge") => json!({
                     "op": "upsert_edge", "source": row["source"], "target": row["target"],
                     "properties": row["properties"],
                 }),
-                _ => return Err(refusal("PARAMETER_INVALID", "a provenance row is neither a node nor an edge")),
+                _ => {
+                    return Err(refusal(
+                        "PARAMETER_INVALID",
+                        "a provenance row is neither a node nor an edge",
+                    ))
+                }
             });
         }
         let provenance_count = provenance.len() as u64;
         let (space, embedding_count) = match &part.embeddings {
             Some(reference) => {
-                let embeddings: EmbeddingsPart = serde_json::from_slice(
-                    bundle.entry(&reference.entry).map_err(bundle_refusal)?,
-                )
-                .map_err(|error| {
-                    refusal("PARAMETER_INVALID", format!("the embeddings part is malformed: {error}"))
-                })?;
+                let embeddings: EmbeddingsPart =
+                    serde_json::from_slice(bundle.entry(&reference.entry).map_err(bundle_refusal)?)
+                        .map_err(|error| {
+                            refusal(
+                                "PARAMETER_INVALID",
+                                format!("the embeddings part is malformed: {error}"),
+                            )
+                        })?;
                 let known = embeddings
                     .space
                     .as_ref()
@@ -494,7 +542,10 @@ pub async fn plan_import(
                     if record.values.len() != record.dimension as usize {
                         return Err(refusal(
                             "PARAMETER_INVALID",
-                            format!("the embedding of {} is not {} wide", record.vector_id, record.dimension),
+                            format!(
+                                "the embedding of {} is not {} wide",
+                                record.vector_id, record.dimension
+                            ),
                         ));
                     }
                     operations.push(json!({
@@ -508,7 +559,10 @@ pub async fn plan_import(
         if !exists {
             for document in &part.documents {
                 if seen_documents.insert(document.cas_ref.clone()) {
-                    let bytes = bundle.entry(&document.entry()).map_err(bundle_refusal)?.to_vec();
+                    let bytes = bundle
+                        .entry(&document.entry())
+                        .map_err(bundle_refusal)?
+                        .to_vec();
                     documents.push((document.clone(), bytes));
                 }
             }
@@ -529,7 +583,10 @@ pub async fn plan_import(
     let mut remap: BTreeMap<String, String> = BTreeMap::new();
     for (document, bytes) in &documents {
         let blob = stream_blob_put_owned(&*store, Cursor::new(bytes.as_slice()), 0, &owner)?;
-        remap.insert(document.cas_ref.clone(), format!("{CAS_PREFIX}{}", blob.digest));
+        remap.insert(
+            document.cas_ref.clone(),
+            format!("{CAS_PREFIX}{}", blob.digest),
+        );
     }
     if !remap.is_empty() {
         for graph in graphs.iter_mut().filter(|graph| !graph.skip) {
@@ -571,9 +628,7 @@ impl ImportPlan {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::knowledge_bundle::{
-        BUNDLE_VERSION_UNSUPPORTED, MANIFEST_ENTRY,
-    };
+    use medulla_types::knowledge_bundle::{BUNDLE_VERSION_UNSUPPORTED, MANIFEST_ENTRY};
 
     const TENANT: &str = "tenant-bundle";
     const SOURCE: &str = "__commons__";
@@ -600,7 +655,14 @@ mod tests {
 
     /// The source graph: two RDF triples, one embedding, one property-graph document node.
     async fn seed(state: &Arc<RwLock<ServerState>>, document_ref: &str) {
-        let core = state.read().await.registry.get(SOURCE).unwrap().core.clone();
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(SOURCE)
+            .unwrap()
+            .core
+            .clone();
         let triples = medulla_rdf::mapping::parse_ntriples(
             "<urn:bundle:a> <urn:bundle:title> \"alpha\" .\n\
              <urn:bundle:a> <urn:bundle:next> <urn:bundle:b> .\n",
@@ -635,16 +697,27 @@ mod tests {
     async fn export_then_plan_carries_every_part_and_remaps_documents() {
         let (state, _dir) = served().await;
         let (store, owner) = blob_store(&state, &verified()).await.unwrap();
-        let blob = stream_blob_put_owned(&*store, Cursor::new(b"source document".as_slice()), 0, &owner)
-            .unwrap();
+        let blob = stream_blob_put_owned(
+            &*store,
+            Cursor::new(b"source document".as_slice()),
+            0,
+            &owner,
+        )
+        .unwrap();
         let document_ref = format!("{CAS_PREFIX}{}", blob.digest);
         seed(&state, &document_ref).await;
 
         let receipt = export(&state).await;
         assert!(receipt.bundle_ref.starts_with(CAS_PREFIX));
-        let plan = plan_import(&state, &verified(), &receipt.bundle_ref, "copy-", BundleOnConflict::Refuse)
-            .await
-            .expect("a fresh export plans");
+        let plan = plan_import(
+            &state,
+            &verified(),
+            &receipt.bundle_ref,
+            "copy-",
+            BundleOnConflict::Refuse,
+        )
+        .await
+        .expect("a fresh export plans");
         let graph = &plan.graphs[0];
         assert_eq!(graph.target, format!("copy-{SOURCE}"));
         assert!(!graph.skip);
@@ -683,10 +756,16 @@ mod tests {
         let archive = read_owned_blob(&*store, &owner, &receipt.bundle_ref, 1 << 24).unwrap();
 
         // BUNDLE_GRAPH_EXISTS: the target already holds the graph and on_conflict is refuse.
-        let error = plan(receipt.bundle_ref.clone(), "", BundleOnConflict::Refuse).await.err().unwrap();
+        let error = plan(receipt.bundle_ref.clone(), "", BundleOnConflict::Refuse)
+            .await
+            .err()
+            .unwrap();
         assert!(error.starts_with(BUNDLE_GRAPH_EXISTS), "{error}");
         // With skip the graph is left alone and nothing is stored.
-        let skipped = plan(receipt.bundle_ref.clone(), "", BundleOnConflict::Skip).await.ok().unwrap();
+        let skipped = plan(receipt.bundle_ref.clone(), "", BundleOnConflict::Skip)
+            .await
+            .ok()
+            .unwrap();
         assert!(skipped.graphs[0].skip);
         assert_eq!(skipped.documents_stored, 0);
 
@@ -696,26 +775,36 @@ mod tests {
         let triples = &bundle.manifest.parts[0].triples.entry;
         entries.get_mut(triples).unwrap()[0] ^= 1;
         let corrupt = put(Bundle::pack(&bundle.manifest, &entries));
-        let error = plan(corrupt, "x-", BundleOnConflict::Refuse).await.err().unwrap();
+        let error = plan(corrupt, "x-", BundleOnConflict::Refuse)
+            .await
+            .err()
+            .unwrap();
         assert!(error.starts_with(BUNDLE_DIGEST_MISMATCH), "{error}");
 
         // BUNDLE_VERSION_UNSUPPORTED: a manifest of another version.
         let mut future = bundle.manifest.clone();
         future.bundle_version = BUNDLE_VERSION + 1;
         let unknown = put(Bundle::pack(&future, &bundle.entries));
-        let error = plan(unknown, "x-", BundleOnConflict::Refuse).await.err().unwrap();
+        let error = plan(unknown, "x-", BundleOnConflict::Refuse)
+            .await
+            .err()
+            .unwrap();
         assert!(error.starts_with(BUNDLE_VERSION_UNSUPPORTED), "{error}");
 
         // BUNDLE_TOO_LARGE: more triples than one bundle holds.
         let mut large = bundle.manifest.clone();
         large.parts[0].triple_count = BUNDLE_TRIPLES_MAX + 1;
         let large = put(Bundle::pack(&large.seal(), &bundle.entries));
-        let error = plan(large, "x-", BundleOnConflict::Refuse).await.err().unwrap();
+        let error = plan(large, "x-", BundleOnConflict::Refuse)
+            .await
+            .err()
+            .unwrap();
         assert!(error.starts_with(BUNDLE_TOO_LARGE), "{error}");
 
         // BUNDLE_EMBEDDING_MODEL_UNKNOWN: a vector whose model is not the graph's declared one.
         let embeddings = bundle.manifest.parts[0].embeddings.clone().unwrap();
-        let mut part: EmbeddingsPart = serde_json::from_slice(&bundle.entries[&embeddings.entry]).unwrap();
+        let mut part: EmbeddingsPart =
+            serde_json::from_slice(&bundle.entries[&embeddings.entry]).unwrap();
         part.records[0].model_id = "another-model".to_string();
         let bytes = serde_json::to_vec(&part).unwrap();
         let mut manifest = bundle.manifest.clone();
@@ -723,17 +812,29 @@ mod tests {
         let mut entries = bundle.entries.clone();
         entries.insert(embeddings.entry.clone(), bytes);
         let foreign = put(Bundle::pack(&manifest.seal(), &entries));
-        let error = plan(foreign, "x-", BundleOnConflict::Refuse).await.err().unwrap();
-        assert!(error.starts_with(BUNDLE_EMBEDDING_MODEL_UNKNOWN), "{error}");
-
-        // An export of an unknown graph, or of too many, writes no blob.
-        let error = export_bundle(&state, &verified(), vec!["absent".to_string()], false, false)
+        let error = plan(foreign, "x-", BundleOnConflict::Refuse)
             .await
             .err()
             .unwrap();
+        assert!(error.starts_with(BUNDLE_EMBEDDING_MODEL_UNKNOWN), "{error}");
+
+        // An export of an unknown graph, or of too many, writes no blob.
+        let error = export_bundle(
+            &state,
+            &verified(),
+            vec!["absent".to_string()],
+            false,
+            false,
+        )
+        .await
+        .err()
+        .unwrap();
         assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
         let many: Vec<String> = (0..=BUNDLE_GRAPHS_MAX).map(|n| format!("g{n}")).collect();
-        let error = export_bundle(&state, &verified(), many, false, false).await.err().unwrap();
+        let error = export_bundle(&state, &verified(), many, false, false)
+            .await
+            .err()
+            .unwrap();
         assert!(error.starts_with(BUNDLE_TOO_LARGE), "{error}");
         assert_eq!(MANIFEST_ENTRY, "manifest.json");
     }
@@ -757,8 +858,16 @@ mod tests {
     #[tokio::test]
     async fn export_hides_rls_nodes_and_import_is_atomic() {
         let (state, _dir) = served_with(limited_isolation("limited-agent")).await;
-        let caller = VerifiedRequestContext::verified_for_test_with_scopes("limited-agent", TENANT, &["*"]);
-        let core = state.read().await.registry.get(SOURCE).unwrap().core.clone();
+        let caller =
+            VerifiedRequestContext::verified_for_test_with_scopes("limited-agent", TENANT, &["*"]);
+        let core = state
+            .read()
+            .await
+            .registry
+            .get(SOURCE)
+            .unwrap()
+            .core
+            .clone();
         let row = |owner: &str, visibility: &str| {
             rmp_serde::to_vec_named(&json!({
                 "type": "Note", "_owner": owner, "_visibility": visibility, "text": "row",
@@ -769,8 +878,12 @@ mod tests {
         core.add_node("note-theirs".to_string(), row("another-agent", "private"));
         {
             let mut store = core.semantic_store.write();
-            store.add_embedding("note-mine".to_string(), vec![1.0, 0.0]).unwrap();
-            store.add_embedding("note-theirs".to_string(), vec![0.0, 1.0]).unwrap();
+            store
+                .add_embedding("note-mine".to_string(), vec![1.0, 0.0])
+                .unwrap();
+            store
+                .add_embedding("note-theirs".to_string(), vec![0.0, 1.0])
+                .unwrap();
         }
 
         let receipt = export_bundle(&state, &caller, vec![SOURCE.to_string()], true, true)
@@ -785,8 +898,13 @@ mod tests {
         assert!(provenance.contains("note-mine"), "{provenance}");
         assert!(!provenance.contains("note-theirs"), "{provenance}");
         let embeddings: EmbeddingsPart =
-            serde_json::from_slice(&bundle.entries[&part.embeddings.as_ref().unwrap().entry]).unwrap();
-        let ids: Vec<&str> = embeddings.records.iter().map(|r| r.vector_id.as_str()).collect();
+            serde_json::from_slice(&bundle.entries[&part.embeddings.as_ref().unwrap().entry])
+                .unwrap();
+        let ids: Vec<&str> = embeddings
+            .records
+            .iter()
+            .map(|r| r.vector_id.as_str())
+            .collect();
         assert_eq!(ids, ["note-mine"]);
 
         // The import is atomic: a bundle with one bad part plans nothing, and no target graph
@@ -799,8 +917,13 @@ mod tests {
         manifest.parts[0].embeddings = Some(part_ref(&reference.entry, &bytes));
         let mut entries = bundle.entries.clone();
         entries.insert(reference.entry.clone(), bytes);
-        let blob = stream_blob_put_owned(&*store, Cursor::new(Bundle::pack(&manifest.seal(), &entries)), 0, &owner)
-            .unwrap();
+        let blob = stream_blob_put_owned(
+            &*store,
+            Cursor::new(Bundle::pack(&manifest.seal(), &entries)),
+            0,
+            &owner,
+        )
+        .unwrap();
         let error = plan_import(
             &state,
             &caller,
@@ -812,7 +935,11 @@ mod tests {
         .err()
         .expect("a bad part refuses the whole import");
         assert!(error.starts_with(BUNDLE_EMBEDDING_MODEL_UNKNOWN), "{error}");
-        assert!(!state.read().await.registry.exists(&format!("atomic-{SOURCE}")));
+        assert!(!state
+            .read()
+            .await
+            .registry
+            .exists(&format!("atomic-{SOURCE}")));
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R877.2
@@ -825,6 +952,9 @@ mod tests {
         });
         let mut found = BTreeSet::new();
         collect_cas_refs(&row, &mut found);
-        assert_eq!(found.into_iter().collect::<Vec<_>>(), [format!("{CAS_PREFIX}{digest}")]);
+        assert_eq!(
+            found.into_iter().collect::<Vec<_>>(),
+            [format!("{CAS_PREFIX}{digest}")]
+        );
     }
 }

@@ -56,9 +56,9 @@ pub mod rule_expr;
 // refusal. Pure data; the registered `ForeignSourceSpec::Warehouse` carries its config.
 pub mod warehouse_federation;
 // MEDULLA-FEDERATED-QUERY-R738.17 — the lifecycle of one EXPLAIN/PROFILE stage report.
+pub mod indexless_cost;
 #[cfg(feature = "query")]
 pub mod uql_machine;
-pub mod indexless_cost;
 // The query plan AST and wire DTOs embedded in feature-gated `protocol::Method` variants.
 // Domain-specific DTOs sit in private child modules and are re-exported by `wire` itself.
 pub mod wire;

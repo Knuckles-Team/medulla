@@ -35,7 +35,10 @@ impl BuildInfo {
                 .ok()
                 .and_then(|image| elf_build_id(&image)),
             profile: env!("MEDULLA_BUILD_PROFILE"),
-            features: features.split(',').filter(|name| !name.is_empty()).collect(),
+            features: features
+                .split(',')
+                .filter(|name| !name.is_empty())
+                .collect(),
         }
     }
 }
@@ -109,7 +112,10 @@ mod tests {
             info.git_sha
         );
         assert!(matches!(info.profile, "debug" | "release") || !info.profile.is_empty());
-        assert!(info.features.windows(2).all(|pair| pair[0] < pair[1]), "features ascend");
+        assert!(
+            info.features.windows(2).all(|pair| pair[0] < pair[1]),
+            "features ascend"
+        );
     }
 
     // spec: MEDULLA-OBSERVE-R009.1

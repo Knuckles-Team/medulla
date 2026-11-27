@@ -185,7 +185,10 @@ async fn a_totp_confirmation_verified_before_secret_replacement_is_refused() {
     let replaced = send(&state, broker(), enroll_totp()).await;
     assert!(replaced.error.is_none(), "{:?}", replaced.error);
     let replacement_secret = engine_secret(&state).await;
-    assert_ne!(replacement_secret, original, "each enrolment draws a new secret");
+    assert_ne!(
+        replacement_secret, original,
+        "each enrolment draws a new secret"
+    );
     let before =
         serde_json::to_value(state.read().await.isolation.rbac().identity_store()).unwrap();
     held.release();

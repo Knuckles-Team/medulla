@@ -65,8 +65,14 @@ fn frames_carry_build_id_and_offset() {
         .iter()
         .filter(|stack| stack.thread == "prof-spin")
         .collect();
-    assert!(!spinning.is_empty(), "the spinners' stacks are listed by thread name");
-    assert!(report.stacks.windows(2).all(|pair| pair[0].count >= pair[1].count));
+    assert!(
+        !spinning.is_empty(),
+        "the spinners' stacks are listed by thread name"
+    );
+    assert!(report
+        .stacks
+        .windows(2)
+        .all(|pair| pair[0].count >= pair[1].count));
 
     let executable = std::env::current_exe().expect("the test executable");
     let own_build_id = medulla_version::BUILD_INFO.build_id.clone();
@@ -100,17 +106,20 @@ fn frames_carry_build_id_and_offset() {
 // spec: MEDULLA-OBSERVE-R010.1
 #[test]
 fn one_profile_runs_at_a_time_and_a_duration_is_bounded() {
-    assert_eq!(profile::check_seconds(0), Err(ProfileError::DurationInvalid));
+    assert_eq!(
+        profile::check_seconds(0),
+        Err(ProfileError::DurationInvalid)
+    );
     assert_eq!(
         profile::check_seconds(profile::MAX_PROFILE_SECONDS + 1),
         Err(ProfileError::DurationInvalid)
     );
     assert_eq!(profile::check_seconds(1), Ok(()));
+    assert_eq!(profile::check_seconds(profile::MAX_PROFILE_SECONDS), Ok(()));
     assert_eq!(
-        profile::check_seconds(profile::MAX_PROFILE_SECONDS),
-        Ok(())
+        profile::stacks(0, 99).unwrap_err(),
+        ProfileError::DurationInvalid
     );
-    assert_eq!(profile::stacks(0, 99).unwrap_err(), ProfileError::DurationInvalid);
     if !profile::available() {
         return;
     }
@@ -129,5 +138,8 @@ fn one_profile_runs_at_a_time_and_a_duration_is_bounded() {
         ProfileError::DurationInvalid.code().as_str(),
         "PROFILE_DURATION_INVALID"
     );
-    assert_eq!(ProfileError::Unavailable.code().as_str(), "PROFILE_UNAVAILABLE");
+    assert_eq!(
+        ProfileError::Unavailable.code().as_str(),
+        "PROFILE_UNAVAILABLE"
+    );
 }

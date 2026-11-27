@@ -310,10 +310,7 @@ impl OracleSubject for ViewSubject {
     }
 
     fn maintained(&self) -> Vec<(String, i64)> {
-        multiset(
-            &self.store,
-            &format!("SELECT {} FROM mv", self.columns),
-        )
+        multiset(&self.store, &format!("SELECT {} FROM mv", self.columns))
     }
 
     fn recomputed(&self) -> Vec<(String, i64)> {
@@ -361,11 +358,7 @@ fn supported_shapes_agree_after_every_commit() {
 // spec: MEDULLA-INCREMENTAL-VIEWS-R012.4
 #[test]
 fn extremes_and_distinct_agree_after_every_commit() {
-    run_shape(
-        "distinct",
-        "SELECT DISTINCT region FROM orders",
-        "region",
-    );
+    run_shape("distinct", "SELECT DISTINCT region FROM orders", "region");
     run_shape(
         "grouped min",
         "SELECT region, min(qty) AS lo FROM orders GROUP BY region",
@@ -395,9 +388,18 @@ enum CustomerChange {
 
 #[derive(Clone, Debug)]
 enum SaleChange {
-    Insert { sid: i64, customer_id: Value, amount: Value },
-    Move { sid: i64, customer_id: Value },
-    Delete { sid: i64 },
+    Insert {
+        sid: i64,
+        customer_id: Value,
+        amount: Value,
+    },
+    Move {
+        sid: i64,
+        customer_id: Value,
+    },
+    Delete {
+        sid: i64,
+    },
 }
 
 fn join_steps(seed: u64) -> Vec<JoinStep> {
@@ -411,7 +413,9 @@ fn join_steps(seed: u64) -> Vec<JoinStep> {
                 next_customer += 1;
                 Some(CustomerChange::Insert {
                     cid,
-                    area: rng.pick(&[json!("north"), json!("south"), Value::Null]).clone(),
+                    area: rng
+                        .pick(&[json!("north"), json!("south"), Value::Null])
+                        .clone(),
                 })
             }
             2 => Some(CustomerChange::Delete {

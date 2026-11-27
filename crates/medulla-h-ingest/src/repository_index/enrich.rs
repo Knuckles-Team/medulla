@@ -613,7 +613,10 @@ pub fn run_after_commit(
         .input
         .edges
         .retain(|edge| !dropped.contains(&edge.from) && !dropped.contains(&edge.to));
-    facts.input.communities.retain(|id, _| !dropped.contains(id));
+    facts
+        .input
+        .communities
+        .retain(|id, _| !dropped.contains(id));
     let (output, report) =
         medulla_enrich::code::enrich_repository(&facts.input, &TestQualityThresholds::default())
             .map_err(|error| error.to_string())?;
@@ -624,12 +627,7 @@ pub fn run_after_commit(
             print,
         )?);
     }
-    methods.extend(hooks::run_hooks(
-        &rows,
-        &item.run_id(),
-        stored,
-        history,
-    )?);
+    methods.extend(hooks::run_hooks(&rows, &item.run_id(), stored, history)?);
     IndexWriteSet::with_digest(ENVELOPE_PREFIX, &item.index_digest, methods)
 }
 

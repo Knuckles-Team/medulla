@@ -149,7 +149,10 @@ mod tests {
         ] {
             let mut p = proposal();
             mutate(&mut p);
-            assert!(p.validate().unwrap_err().starts_with(PROPOSAL_SELF_APPROVED));
+            assert!(p
+                .validate()
+                .unwrap_err()
+                .starts_with(PROPOSAL_SELF_APPROVED));
         }
     }
 }

@@ -71,7 +71,9 @@ fn search(assets: &[AssetDoc], page: usize) -> Vec<(usize, f64)> {
         })
         .collect();
     let order = |a: &(usize, f64), b: &(usize, f64)| {
-        b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal).then(a.0.cmp(&b.0))
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(Ordering::Equal)
+            .then(a.0.cmp(&b.0))
     };
     if hits.len() > page {
         hits.select_nth_unstable_by(page, order);
@@ -116,7 +118,11 @@ fn bench_catalog_search(c: &mut Criterion) {
         first.windows(2).all(|pair| pair[0].1 >= pair[1].1),
         "the page is ordered best score first"
     );
-    assert_eq!(first, search(&assets, page), "the page is stable across searches");
+    assert_eq!(
+        first,
+        search(&assets, page),
+        "the page is stable across searches"
+    );
 
     let mut group = c.benchmark_group("catalog");
     group.sample_size(10);

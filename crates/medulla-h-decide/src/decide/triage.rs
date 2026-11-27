@@ -11,8 +11,8 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion,
-    TypedParam, TypedValue,
+    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion, TypedParam,
+    TypedValue,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
@@ -121,9 +121,7 @@ pub async fn handle_triage_defect(
     .await?
     .defect
     {
-        Some(defect) => {
-            medulla_source_types::lifecycle::defect_node_id(&defect.repo, &defect.id)
-        }
+        Some(defect) => medulla_source_types::lifecycle::defect_node_id(&defect.repo, &defect.id),
         None => return Err("DEFECT_UNKNOWN: the tenant graph holds no such defect".to_string()),
     };
     let committed = super::stat_log::handle_log(

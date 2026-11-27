@@ -262,7 +262,9 @@ impl RankingClass {
     fn of(is_clifford: bool, noise: Option<&NoiseRequest>) -> RankingClass {
         match (is_clifford, noise) {
             (true, None) => RankingClass::CliffordNoiseless,
-            (true, Some(noise)) if noise.non_clifford => RankingClass::CliffordUnderNonCliffordNoise,
+            (true, Some(noise)) if noise.non_clifford => {
+                RankingClass::CliffordUnderNonCliffordNoise
+            }
             (true, Some(_)) => RankingClass::CliffordUnderCliffordNoise,
             (false, None) => RankingClass::GeneralNoiseless,
             (false, Some(_)) => RankingClass::GeneralNoisy,
@@ -398,7 +400,7 @@ fn forbidden_families(
 mod tests {
     use super::*;
     use crate::ir::{
-        ControlQubit, ControlPolarity, GateInstruction, GateKind, ParamValue, IR_VERSION,
+        ControlPolarity, ControlQubit, GateInstruction, GateKind, ParamValue, IR_VERSION,
     };
 
     fn gate(kind: GateKind, qubits: &[u32], controls: &[u32]) -> Instruction {
@@ -580,7 +582,10 @@ mod tests {
             ..Default::default()
         };
 
-        assert_eq!(RankingClass::of(true, None), RankingClass::CliffordNoiseless);
+        assert_eq!(
+            RankingClass::of(true, None),
+            RankingClass::CliffordNoiseless
+        );
         assert_eq!(
             estimate(&bell, &EstimateOptions::default()).preferred,
             vec![BackendFamily::Stabilizer]
@@ -615,7 +620,10 @@ mod tests {
             vec![BackendFamily::Trajectory]
         );
 
-        assert_eq!(RankingClass::of(false, None), RankingClass::GeneralNoiseless);
+        assert_eq!(
+            RankingClass::of(false, None),
+            RankingClass::GeneralNoiseless
+        );
         assert_eq!(
             estimate(&dense, &EstimateOptions::default()).preferred,
             vec![

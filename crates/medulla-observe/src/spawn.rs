@@ -41,9 +41,9 @@ impl FailureCode for String {
         match self.split_once(':') {
             Some((code, _))
                 if !code.is_empty()
-                    && code
-                        .bytes()
-                        .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_') =>
+                    && code.bytes().all(|byte| {
+                        byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_'
+                    }) =>
             {
                 code.to_string()
             }
@@ -201,7 +201,8 @@ pub fn heartbeat() -> bool {
 /// sleeps longer than the stall threshold does not read as stalled. A job that stops reaching
 /// this call still goes stale and is flagged.
 pub async fn idle(duration: std::time::Duration) {
-    let slice = std::time::Duration::from_millis((crate::settings::task_stall_after_ms() / 2).max(1));
+    let slice =
+        std::time::Duration::from_millis((crate::settings::task_stall_after_ms() / 2).max(1));
     let mut left = duration;
     loop {
         heartbeat();

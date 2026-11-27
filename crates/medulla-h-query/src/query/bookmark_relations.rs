@@ -20,7 +20,7 @@ use medulla_protocol_types::result_contract::query::BookmarkRelations;
 use medulla_query_types::wire::{PredLiteral, UqlParam, UqlResult};
 use medulla_types::bookmark_query::{
     BookmarkBinding, BookmarkEdge, BookmarkRelationsRequest, BookmarkRelationsResult,
-    BOOKMARK_LIMIT_EXCEEDED, BOOKMARK_REVISION_MISMATCH, BOOKMARK_RESPONSE_TOO_LARGE,
+    BOOKMARK_LIMIT_EXCEEDED, BOOKMARK_RESPONSE_TOO_LARGE, BOOKMARK_REVISION_MISMATCH,
 };
 use std::collections::BTreeSet;
 
@@ -116,9 +116,16 @@ async fn relations(
                 .collect(),
         ),
     );
-    let response = handle_uql(ctx, statement(window), params, false, Default::default(), None)
-        .await
-        .map_err(|_| "ENGINE_UNAVAILABLE: UQL is not served in this build".to_string())?;
+    let response = handle_uql(
+        ctx,
+        statement(window),
+        params,
+        false,
+        Default::default(),
+        None,
+    )
+    .await
+    .map_err(|_| "ENGINE_UNAVAILABLE: UQL is not served in this build".to_string())?;
     let rows = match response_body::<UqlResult>(response)? {
         UqlResult::Rows {
             rows,
@@ -263,7 +270,15 @@ pub(crate) async fn handle_bookmark_relations(
         Ok(revision) => revision,
         Err(error) => return Response::err(ctx.req_id, error),
     };
-    match relations(ctx, &request, &tenant, index_revision, authorization_revision).await {
+    match relations(
+        ctx,
+        &request,
+        &tenant,
+        index_revision,
+        authorization_revision,
+    )
+    .await
+    {
         Err(error) => Response::err(ctx.req_id, error),
         Ok(answer) => served_response::<BookmarkRelations>(
             ctx.req_id,

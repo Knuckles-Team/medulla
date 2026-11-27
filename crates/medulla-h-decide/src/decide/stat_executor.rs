@@ -469,7 +469,11 @@ pub(super) fn best_candidate_ids(
         return Ok(leading());
     };
     let mut order: Vec<usize> = (0..matrix.candidate_ids.len()).collect();
-    order.sort_by(|&a, &b| evaluated.logits[b].total_cmp(&evaluated.logits[a]).then(a.cmp(&b)));
+    order.sort_by(|&a, &b| {
+        evaluated.logits[b]
+            .total_cmp(&evaluated.logits[a])
+            .then(a.cmp(&b))
+    });
     order.truncate(limit);
     order.sort_unstable();
     Ok(order

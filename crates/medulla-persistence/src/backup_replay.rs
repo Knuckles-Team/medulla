@@ -116,7 +116,10 @@ fn rfc3339_to_ms(text: &str) -> Result<u64, String> {
 /// largest `last - 1` over every scope, and the RFC3339 form of the largest
 /// `committed_at_ms` in the last segment of any scope. Reads the manifests and
 /// the last segment of each scope only.
-pub async fn archive_bounds(archive: &ObjectArchive, tenant: &str) -> Result<ArchiveBounds, String> {
+pub async fn archive_bounds(
+    archive: &ObjectArchive,
+    tenant: &str,
+) -> Result<ArchiveBounds, String> {
     let mut end_sequence = 0u64;
     let mut end_ms = 0u64;
     for scope in archive
@@ -166,11 +169,8 @@ pub async fn replay_archive(
         ReplayTarget::Time(time) => Some(rfc3339_to_ms(time)?),
         ReplayTarget::Sequence(_) => None,
     };
-    let backend = RedbBackend::open_with_shards(
-        persist_dir.to_string_lossy().into_owned(),
-        1024,
-        shards,
-    )?;
+    let backend =
+        RedbBackend::open_with_shards(persist_dir.to_string_lossy().into_owned(), 1024, shards)?;
     let restored = backend.last_committed_sequences()?;
     let mut report = ReplayReport::default();
     let scopes = archive
@@ -192,7 +192,9 @@ pub async fn replay_archive(
             let bytes = archive
                 .get_segment(tenant, &scope, entry.first, entry.last)
                 .await
-                .map_err(|refusal| segment_unavailable(&scope, entry.first, entry.last, &refusal))?;
+                .map_err(|refusal| {
+                    segment_unavailable(&scope, entry.first, entry.last, &refusal)
+                })?;
             let segment = decode_segment(&scope, entry.first, entry.last, &bytes)?;
             report.segments_replayed += 1;
             for stored in &segment.records {

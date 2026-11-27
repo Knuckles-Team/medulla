@@ -83,7 +83,11 @@ fn rows_of(view: &GraphView) -> BTreeMap<String, Row> {
 }
 
 /// The overlap candidates: clusters of the row and term graph whose rows span repositories.
-fn overlaps(view: &GraphView, rows: &BTreeMap<String, Row>, query: &SpecReportQuery) -> Vec<OverlapCandidate> {
+fn overlaps(
+    view: &GraphView,
+    rows: &BTreeMap<String, Row>,
+    query: &SpecReportQuery,
+) -> Vec<OverlapCandidate> {
     let core = medulla_graph_core::graph::GraphCore::new();
     let put = |id: &str, properties: serde_json::Value| {
         if let Ok(blob) = rmp_serde::to_vec_named(&properties) {
@@ -92,7 +96,10 @@ fn overlaps(view: &GraphView, rows: &BTreeMap<String, Row>, query: &SpecReportQu
     };
     let mut terms: BTreeSet<&str> = BTreeSet::new();
     for row in rows.values() {
-        put(&row.id, serde_json::json!({"type": REQUIREMENT_TYPE, "rowId": row.row_id, "repo": row.repo}));
+        put(
+            &row.id,
+            serde_json::json!({"type": REQUIREMENT_TYPE, "rowId": row.row_id, "repo": row.repo}),
+        );
         for (target, relationship) in &row.edges {
             if relationship == "usesTerm" {
                 terms.insert(target.as_str());
@@ -101,7 +108,10 @@ fn overlaps(view: &GraphView, rows: &BTreeMap<String, Row>, query: &SpecReportQu
     }
     for term in &terms {
         if let Some(props) = view.node_row_object(term) {
-            put(term, serde_json::json!({"type": TERM_TYPE, "name": text(&props, "name")}));
+            put(
+                term,
+                serde_json::json!({"type": TERM_TYPE, "name": text(&props, "name")}),
+            );
         }
     }
     for row in rows.values() {
@@ -109,7 +119,9 @@ fn overlaps(view: &GraphView, rows: &BTreeMap<String, Row>, query: &SpecReportQu
             let wanted = relationship == "usesTerm" || relationship == "dependsOnRow";
             let known = rows.contains_key(target) || terms.contains(target.as_str());
             if wanted && known {
-                if let Ok(blob) = rmp_serde::to_vec_named(&serde_json::json!({"relationship": relationship})) {
+                if let Ok(blob) =
+                    rmp_serde::to_vec_named(&serde_json::json!({"relationship": relationship}))
+                {
                     let _ = core.add_edge(row.id.clone(), target.clone(), blob);
                 }
             }
@@ -161,9 +173,18 @@ fn iri(node_id: &str) -> String {
     let mut out = String::from(SPEC_IRI_PREFIX);
     for byte in node_id.bytes() {
         match byte {
-            b' ' | b'<' | b'>' | b'"' | b'{' | b'}' | b'|' | b'\\' | b'^' | b'`' | 0..=31 | 127.. => {
-                out.push_str(&format!("%{byte:02X}"))
-            }
+            b' '
+            | b'<'
+            | b'>'
+            | b'"'
+            | b'{'
+            | b'}'
+            | b'|'
+            | b'\\'
+            | b'^'
+            | b'`'
+            | 0..=31
+            | 127.. => out.push_str(&format!("%{byte:02X}")),
             other => out.push(other as char),
         }
     }
@@ -197,7 +218,11 @@ fn turtle(rows: &BTreeMap<String, Row>) -> String {
     };
     let mut statuses: BTreeSet<(&str, &str)> = BTreeSet::new();
     for row in rows.values() {
-        out.push_str(&format!("<{}> a :Requirement ; :rowId {}", iri(&row.id), literal(&row.row_id)));
+        out.push_str(&format!(
+            "<{}> a :Requirement ; :rowId {}",
+            iri(&row.id),
+            literal(&row.row_id)
+        ));
         if let Some((class, name)) = status_class(&row.status) {
             out.push_str(&format!(" ; :rowStatus <urn:medulla:status:{name}>"));
             statuses.insert((class, name));
@@ -223,7 +248,10 @@ fn code_of(message: &str) -> Option<&str> {
 }
 
 #[cfg(feature = "shacl")]
-fn violations(view: &GraphView, rows: &BTreeMap<String, Row>) -> Result<Vec<ShapeViolation>, String> {
+fn violations(
+    view: &GraphView,
+    rows: &BTreeMap<String, Row>,
+) -> Result<Vec<ShapeViolation>, String> {
     let shapes = view
         .schema_sources
         .shapes()
@@ -252,7 +280,10 @@ fn violations(view: &GraphView, rows: &BTreeMap<String, Row>) -> Result<Vec<Shap
 }
 
 #[cfg(not(feature = "shacl"))]
-fn violations(_view: &GraphView, _rows: &BTreeMap<String, Row>) -> Result<Vec<ShapeViolation>, String> {
+fn violations(
+    _view: &GraphView,
+    _rows: &BTreeMap<String, Row>,
+) -> Result<Vec<ShapeViolation>, String> {
     Err("INTERNAL: the spec report needs the `shacl` feature to check the row shapes".to_string())
 }
 
@@ -282,7 +313,9 @@ pub(super) async fn serve(
     if alongside || !plan.ops.is_empty() {
         return Response::err(
             req_id,
-            format!("{REPORT_READ_ONLY}: a spec_report request carries an empty plan and no other body"),
+            format!(
+                "{REPORT_READ_ONLY}: a spec_report request carries an empty plan and no other body"
+            ),
         );
     }
     if let Err(refusal) = query.validate() {
@@ -335,9 +368,18 @@ mod tests {
     // spec: MEDULLA-SDLC-R014.13
     #[test]
     fn a_shape_message_names_its_code_and_a_prose_message_names_none() {
-        assert_eq!(code_of("ROW_TEST_UNBOUND: the row has no bound test."), Some("ROW_TEST_UNBOUND"));
-        assert_eq!(code_of("LANDED_WITHOUT_COMMIT"), Some("LANDED_WITHOUT_COMMIT"));
-        assert_eq!(code_of("commitHash is one 40-character hexadecimal hash."), None);
+        assert_eq!(
+            code_of("ROW_TEST_UNBOUND: the row has no bound test."),
+            Some("ROW_TEST_UNBOUND")
+        );
+        assert_eq!(
+            code_of("LANDED_WITHOUT_COMMIT"),
+            Some("LANDED_WITHOUT_COMMIT")
+        );
+        assert_eq!(
+            code_of("commitHash is one 40-character hexadecimal hash."),
+            None
+        );
         assert_eq!(code_of(""), None);
     }
 
@@ -350,7 +392,10 @@ mod tests {
                 "requirement:a:A-R001",
                 "a",
                 "LANDED",
-                &[("testfile:a:t.py", "boundTest"), ("requirement:a:A-R002", "dependsOnRow")],
+                &[
+                    ("testfile:a:t.py", "boundTest"),
+                    ("requirement:a:A-R002", "dependsOnRow"),
+                ],
                 &[],
             ),
             row("requirement:a:A-R002", "a", "SPECIFIED", &[], &[]),
@@ -358,7 +403,9 @@ mod tests {
             rows.insert(row.id.clone(), row);
         }
         let ttl = turtle(&rows);
-        assert!(ttl.contains("<urn:medulla:spec:requirement:a:A-R001> a :Requirement ; :rowId \"A-R001\""));
+        assert!(ttl.contains(
+            "<urn:medulla:spec:requirement:a:A-R001> a :Requirement ; :rowId \"A-R001\""
+        ));
         assert!(ttl.contains(":rowStatus <urn:medulla:status:LANDED>"));
         assert!(ttl.contains(":boundTest <urn:medulla:spec:testfile:a:t.py>"));
         assert!(ttl.contains(":dependsOnRow <urn:medulla:spec:requirement:a:A-R002>"));
@@ -375,7 +422,10 @@ mod tests {
         use medulla_graph_core::graph::GraphCore;
         let core = GraphCore::new();
         let put = |id: &str, value: serde_json::Value| {
-            core.put_node(id.to_string(), rmp_serde::to_vec_named(&value).expect("encodes"));
+            core.put_node(
+                id.to_string(),
+                rmp_serde::to_vec_named(&value).expect("encodes"),
+            );
         };
         put(
             "requirement:a:A-R001",
@@ -387,7 +437,8 @@ mod tests {
             core.add_edge(
                 source.to_string(),
                 target.to_string(),
-                rmp_serde::to_vec_named(&serde_json::json!({"relationship": relationship})).expect("encodes"),
+                rmp_serde::to_vec_named(&serde_json::json!({"relationship": relationship}))
+                    .expect("encodes"),
             )
             .expect("endpoints exist");
         };
@@ -402,7 +453,10 @@ mod tests {
             .collect();
         assert_eq!(
             codes,
-            [("A-R001", "LANDED_WITHOUT_COMMIT"), ("A-R001", "SEAM_SIDE_MISSING")]
+            [
+                ("A-R001", "LANDED_WITHOUT_COMMIT"),
+                ("A-R001", "SEAM_SIDE_MISSING")
+            ]
         );
     }
 }

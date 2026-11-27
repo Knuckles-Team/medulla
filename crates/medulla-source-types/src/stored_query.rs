@@ -668,10 +668,7 @@ mod tests {
         assert!(serde_json::from_str::<RefreshPolicy>(r#"{"kind":"hourly"}"#).is_err());
         let mut unnamed = query(RefreshPolicy::OnChange);
         unnamed.name = String::new();
-        assert_eq!(
-            unnamed.validate(60).unwrap_err().code,
-            STORED_QUERY_INVALID
-        );
+        assert_eq!(unnamed.validate(60).unwrap_err().code, STORED_QUERY_INVALID);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R708.11
@@ -685,7 +682,10 @@ mod tests {
         period(300).validate(300).unwrap();
         // Under a floor of 60, 60 passes.
         period(60).validate(60).unwrap();
-        assert_eq!(period(59).validate(60).unwrap_err().code, STORED_QUERY_INVALID);
+        assert_eq!(
+            period(59).validate(60).unwrap_err().code,
+            STORED_QUERY_INVALID
+        );
         // OnChange has no period, so any floor passes.
         for floor in [60, 300, 86_400] {
             query(RefreshPolicy::OnChange).validate(floor).unwrap();
@@ -816,7 +816,11 @@ mod tests {
     #[test]
     fn a_deprecated_reference_warns_once_and_a_clean_query_does_not() {
         let deprecated: BTreeSet<String> = ["orders".to_string()].into();
-        let references = vec!["orders".to_string(), "users".to_string(), "orders".to_string()];
+        let references = vec![
+            "orders".to_string(),
+            "users".to_string(),
+            "orders".to_string(),
+        ];
         let warnings = lint_stored_query(&references, &deprecated);
         assert_eq!(
             warnings,

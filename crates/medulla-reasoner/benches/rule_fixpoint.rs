@@ -31,7 +31,10 @@ fn facts() -> Vec<(String, Vec<String>, f64)> {
             (0..FACTS_PER_RULE).map(move |n| {
                 (
                     format!("<http://example.org/p{i}>"),
-                    vec![format!("<http://example.org/a{n}>"), format!("<http://example.org/b{n}>")],
+                    vec![
+                        format!("<http://example.org/a{n}>"),
+                        format!("<http://example.org/b{n}>"),
+                    ],
                     1.0,
                 )
             })
@@ -45,10 +48,19 @@ fn bench_fixpoint(c: &mut Criterion) {
     let facts = facts();
     assert_eq!(facts.len(), 1_000_000);
     let warm = reason_facts(&ontology, &facts, &rules);
-    assert!(warm.complete, "the fixpoint converges within the default step bound");
+    assert!(
+        warm.complete,
+        "the fixpoint converges within the default step bound"
+    );
     assert_eq!(warm.derived.len(), RULES * FACTS_PER_RULE);
     c.bench_function("rule_fixpoint_1m", |b| {
-        b.iter(|| black_box(reason_facts(&ontology, black_box(&facts), &rules).derived.len()));
+        b.iter(|| {
+            black_box(
+                reason_facts(&ontology, black_box(&facts), &rules)
+                    .derived
+                    .len(),
+            )
+        });
     });
 }
 

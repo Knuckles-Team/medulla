@@ -36,8 +36,8 @@ use std::io::Write;
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
 use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put_owned};
 use medulla_source_types::source_changeset::{
-    ChangedPath, Changeset, ChangesetRefusal, FileMerger, GitOrigin, PathOp, SubmitChangesetRequest,
-    SubmitRefusal, SubmittedBlobRef, SubmittedPath, Trailers,
+    ChangedPath, Changeset, ChangesetRefusal, FileMerger, GitOrigin, PathOp,
+    SubmitChangesetRequest, SubmitRefusal, SubmittedBlobRef, SubmittedPath, Trailers,
 };
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
 use sha2::{Digest, Sha256};
@@ -430,7 +430,10 @@ fn check_row_edit_conflicts(
             .map(|p| p.new_blob.clone())
     };
     let mut conflicts: Vec<String> = Vec::new();
-    for entry in paths.iter().filter(|e| is_spec_markdown(&e.path) && e.op == PathOp::Modify) {
+    for entry in paths
+        .iter()
+        .filter(|e| is_spec_markdown(&e.path) && e.op == PathOp::Modify)
+    {
         let (Some(Some(base)), Some(Some(theirs)), Some(ours)) = (
             blob_in(older, &entry.path),
             blob_in(newer, &entry.path),
@@ -453,7 +456,11 @@ fn check_row_edit_conflicts(
         };
         let (base, ours, theirs) = (read(&base)?, read(&ours)?, read(&theirs)?);
         let theirs_rows = edited_row_ids(&base, &theirs);
-        conflicts.extend(edited_row_ids(&base, &ours).intersection(&theirs_rows).cloned());
+        conflicts.extend(
+            edited_row_ids(&base, &ours)
+                .intersection(&theirs_rows)
+                .cloned(),
+        );
     }
     if conflicts.is_empty() {
         return Ok(());
@@ -519,7 +526,12 @@ pub fn accept(
             .map(|(_, c)| c.changed_paths.iter().map(|p| p.path.clone()).collect())
             .collect();
         if !path_set_disjoint(&touched, &since) {
-            check_row_edit_conflicts(&request.paths, &walked[..behind], &walked[behind..], ctx.blobs)?;
+            check_row_edit_conflicts(
+                &request.paths,
+                &walked[..behind],
+                &walked[behind..],
+                ctx.blobs,
+            )?;
             submitted_paths =
                 merge_overlaps(&request.paths, &walked[..behind], &walked[behind..], ctx)?;
         }
@@ -997,7 +1009,10 @@ mod tests {
 
     impl BlobIo for MapBlobs {
         fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
-            self.0.get(digest).cloned().ok_or_else(|| format!("no blob {digest}"))
+            self.0
+                .get(digest)
+                .cloned()
+                .ok_or_else(|| format!("no blob {digest}"))
         }
         fn store(&self, _bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
             Ok(SubmittedBlobRef {

@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use super::bars::{BarRecord, FinalityFilter, SeriesPoint, Timeframe, TradingCalendar};
 use super::chart::DecimateRequest;
+use super::corporate_action::CorporateAction;
 use super::evidence::{BacktestRunDraft, FlipConfidenceRequest};
 use super::liquidity::LiquidityPanelRequest;
 use super::scan::ScanRequest;
 use super::signal::{IndicatorSpec, SignalCheckpoint, SignalReplayRequest};
-use super::corporate_action::CorporateAction;
 use super::snapshot::AnalysisSnapshotDraft;
 use super::strategy::StrategySpec;
 

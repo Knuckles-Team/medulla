@@ -7,8 +7,8 @@
 //! (`table_ref`, `row_ref`, `version`, `evidence_digest`). All references are opaque. The member
 //! is consumed here and never mapped. Admission is O(1) per record plus one node read.
 
-use medulla_types::contract::Digest256;
 use medulla_ingestion_types::ingest_rules::{check_row_version, IngestRefusal, RowVersionDecision};
+use medulla_types::contract::Digest256;
 
 /// The payload member that carries a record's row version.
 pub const ROW_VERSION_MEMBER: &str = "_row_version";
@@ -240,7 +240,10 @@ mod tests {
         assert!(matches!(outcome, RowVersionOutcome::Supersedes(_)));
         let second = written(outcome);
         assert_eq!(second.row_version["version"], 2);
-        assert_eq!(second.superseded_digest.as_deref(), Some(digest_one.as_str()));
+        assert_eq!(
+            second.superseded_digest.as_deref(),
+            Some(digest_one.as_str())
+        );
         assert_eq!(
             first.row_version["table_ref"],
             second.row_version["table_ref"]

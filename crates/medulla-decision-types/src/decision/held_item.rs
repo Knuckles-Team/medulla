@@ -252,7 +252,11 @@ pub fn derive_critique(request: &HeldItemCritiqueRequest) -> Result<DerivedCriti
         let mut matching = request.answers.iter().filter(|answer| answer.id == *id);
         match (matching.next(), matching.next()) {
             (Some(answer), None) => answers.push(answer.clone()),
-            _ => return Err(format!("the critique answers the question `{id}` exactly once")),
+            _ => {
+                return Err(format!(
+                    "the critique answers the question `{id}` exactly once"
+                ))
+            }
         }
     }
     if request.answers.len() != answers.len() {

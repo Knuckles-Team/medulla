@@ -423,7 +423,8 @@ mod tests {
     #[test]
     fn eg267_geotask_serde_round_trip() {
         // A task persists via serde (the caller owns storage) and reloads identically.
-        let mut t = GeoTask::new(7, Point::new(1.5, -2.5)).with_service_area(Geometry::Polygon(Polygon::new(
+        let mut t = GeoTask::new(7, Point::new(1.5, -2.5)).with_service_area(Geometry::Polygon(
+            Polygon::new(
                 LineString::new(vec![
                     Point::new(0.0, 0.0),
                     Point::new(3.0, 0.0),
@@ -431,7 +432,8 @@ mod tests {
                     Point::new(0.0, 0.0),
                 ]),
                 Vec::new(),
-            )));
+            ),
+        ));
         t.apply(TaskEvent::Assign).unwrap();
         t.apply(TaskEvent::Start).unwrap();
         let s = serde_json::to_string(&t).unwrap();

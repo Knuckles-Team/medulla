@@ -196,10 +196,10 @@ fn matview_tokens(sql: &str) -> Vec<String> {
 
 /// Whether `toks[from..from + words.len()]` spells `words`, ignoring case.
 fn matview_words_at(toks: &[String], from: usize, words: &[&str]) -> bool {
-    words
-        .iter()
-        .enumerate()
-        .all(|(i, w)| toks.get(from + i).is_some_and(|t| t.eq_ignore_ascii_case(w)))
+    words.iter().enumerate().all(|(i, w)| {
+        toks.get(from + i)
+            .is_some_and(|t| t.eq_ignore_ascii_case(w))
+    })
 }
 
 /// The one name token that must end a matview statement, unquoted.
@@ -214,9 +214,7 @@ fn matview_name_at(toks: &[String], at: usize) -> Result<String, String> {
                 Ok(leaf.to_string())
             }
         }
-        _ => Err(
-            "FEATURE_NOT_SUPPORTED: expected exactly one materialized view name".to_string(),
-        ),
+        _ => Err("FEATURE_NOT_SUPPORTED: expected exactly one materialized view name".to_string()),
     }
 }
 

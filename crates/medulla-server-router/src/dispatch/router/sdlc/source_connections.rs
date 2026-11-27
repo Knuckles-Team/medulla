@@ -14,8 +14,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     SourceConnectionControl as SourceConnectionControlResult,
     SourceConnectionGet as SourceConnectionGetResult,
     SourceConnectionList as SourceConnectionListResult,
-    SourceMappingControl as SourceMappingControlResult,
-    SourceMappingGet as SourceMappingGetResult,
+    SourceMappingControl as SourceMappingControlResult, SourceMappingGet as SourceMappingGetResult,
 };
 use medulla_source_types::source_connection::{
     connection_node_id, handle_connection_control, handle_connection_get, handle_connection_list,
@@ -71,11 +70,17 @@ fn connection_properties(
         .map_err(|_| "connection encoding failed".to_string())?;
     let mut properties = Map::new();
     properties.insert("type".into(), SOURCE_CONNECTION_TYPE.into());
-    properties.insert("connection_id".into(), connection.connection_id.clone().into());
+    properties.insert(
+        "connection_id".into(),
+        connection.connection_id.clone().into(),
+    );
     properties.insert("provider".into(), connection.provider.clone().into());
     properties.insert("label".into(), connection.label.clone().into());
     properties.insert("settings".into(), settings.into());
-    properties.insert("credential_ref".into(), connection.credential_ref.clone().into());
+    properties.insert(
+        "credential_ref".into(),
+        connection.credential_ref.clone().into(),
+    );
     properties.insert("state".into(), connection.state.as_str().into());
     stamp(&mut properties, target);
     Ok(properties)
@@ -146,8 +151,8 @@ pub(super) async fn control(
         validate_connection_id(op.connection_id()).map_err(|e| e.to_string())?;
         let connection_id = op.connection_id().to_owned();
         let stored = stored_connection(state, &target, tenant, &connection_id).await?;
-        let write = handle_connection_control(tenant, stored.as_ref(), op)
-            .map_err(|e| e.to_string())?;
+        let write =
+            handle_connection_control(tenant, stored.as_ref(), op).map_err(|e| e.to_string())?;
         if !write.replayed {
             let operations = match &write.connection {
                 Some(connection) => vec![json!({
@@ -160,7 +165,10 @@ pub(super) async fn control(
                         "op": "remove_node",
                         "id": connection_node_id(tenant, &connection_id),
                     })];
-                    if stored_mapping(state, &target, tenant, &connection_id).await?.is_some() {
+                    if stored_mapping(state, &target, tenant, &connection_id)
+                        .await?
+                        .is_some()
+                    {
                         operations.push(json!({
                             "op": "remove_node",
                             "id": mapping_node_id(tenant, &connection_id),
@@ -205,8 +213,8 @@ pub(super) async fn mapping_control(
         let connection_id = op.connection_id().to_owned();
         let connection = stored_connection(state, &target, tenant, &connection_id).await?;
         let stored = stored_mapping(state, &target, tenant, &connection_id).await?;
-        let write = handle_mapping_control(connection.as_ref(), stored, op)
-            .map_err(|e| e.to_string())?;
+        let write =
+            handle_mapping_control(connection.as_ref(), stored, op).map_err(|e| e.to_string())?;
         if !write.replayed {
             let operations = bounded(vec![json!({
                 "op": "upsert_node",

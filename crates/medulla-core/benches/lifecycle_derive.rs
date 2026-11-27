@@ -103,5 +103,8 @@ fn main() {
         "lifecycle/derive p99 = {p99:?} (budget {BUDGET_P99:?}), peak growth = {growth} bytes (budget {BUDGET_PEAK_BYTES})"
     );
     assert!(p99 < BUDGET_P99, "p99 {p99:?} exceeds {BUDGET_P99:?}");
-    assert!(growth < BUDGET_PEAK_BYTES, "peak growth {growth} exceeds {BUDGET_PEAK_BYTES}");
+    assert!(
+        growth < BUDGET_PEAK_BYTES,
+        "peak growth {growth} exceeds {BUDGET_PEAK_BYTES}"
+    );
 }

@@ -614,35 +614,38 @@ pub(crate) fn seed_component_for_test(
             let policy_digest =
                 super::agent_library::current_agent_library_policy_digest().unwrap();
             store
-                .publish_component(AgentComponentPublishRequest {
-                    context: AgentLibraryMutationContext {
-                        request_id: 80_000 + u64::from(nonce_index),
-                        principal: store.owner_principal().to_string(),
-                        caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
-                        attempt_nonce: medulla_types::contract::Nonce::from_bytes(nonce_bytes),
-                        tenant_id: tenant_id.to_string(),
-                        actor_scope: "action-scope:component-seed".to_string(),
-                        purpose_id: "agent-component:publish".to_string(),
-                        policy_revision: "policy-v1".to_string(),
-                        policy_digest: policy_digest.clone(),
-                        policy_decision_id: "agent-component:decision:policy-v1".to_string(),
-                        idempotency_key: format!("component-seed:{tenant_id}:{component_id}"),
-                        expected_revision: Some(0),
-                        trace_id: None,
-                        created_at_ms: 5,
+                .publish_component(
+                    AgentComponentPublishRequest {
+                        context: AgentLibraryMutationContext {
+                            request_id: 80_000 + u64::from(nonce_index),
+                            principal: store.owner_principal().to_string(),
+                            caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
+                            attempt_nonce: medulla_types::contract::Nonce::from_bytes(nonce_bytes),
+                            tenant_id: tenant_id.to_string(),
+                            actor_scope: "action-scope:component-seed".to_string(),
+                            purpose_id: "agent-component:publish".to_string(),
+                            policy_revision: "policy-v1".to_string(),
+                            policy_digest: policy_digest.clone(),
+                            policy_decision_id: "agent-component:decision:policy-v1".to_string(),
+                            idempotency_key: format!("component-seed:{tenant_id}:{component_id}"),
+                            expected_revision: Some(0),
+                            trace_id: None,
+                            created_at_ms: 5,
+                        },
+                        evaluation_receipt_digest: None,
+                        component: AgentComponentDraft {
+                            kind,
+                            facts,
+                            summary: format!("seeded {component_id}"),
+                            actor_scope: "action-scope:component-seed".to_string(),
+                            policy_digest,
+                            source_revision: "component-seed:1".to_string(),
+                            ..test_component_draft(tenant_id, component_id)
+                        },
+                        body: None,
                     },
-                    evaluation_receipt_digest: None,
-                    component: AgentComponentDraft {
-                        kind,
-                        facts,
-                        summary: format!("seeded {component_id}"),
-                        actor_scope: "action-scope:component-seed".to_string(),
-                        policy_digest,
-                        source_revision: "component-seed:1".to_string(),
-                        ..test_component_draft(tenant_id, component_id)
-                    },
-                    body: None,
-                }, None)
+                    None,
+                )
                 .expect("the fixture's component publishes")
                 .result
                 .component
@@ -700,8 +703,8 @@ pub mod tests {
     use super::super::agent_fixtures::mutation_context;
     use super::*;
     use medulla_agent_types::{
-        agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
-        agent_component::AgentComponentFacts, agent_component::AgentComponentSearchRequest,
+        agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
+        agent_component::AgentComponentKind, agent_component::AgentComponentSearchRequest,
         agent_component::ComponentDependency, agent_component::ComponentProvenance,
         agent_component::ToolEffect,
     };
@@ -745,19 +748,22 @@ pub mod tests {
 
     fn seed_mcp_server(store: &AgentLibraryStore, tenant_id: &str, nonce: u8) {
         store
-            .publish_component(AgentComponentPublishRequest {
-                context: mutation_context(
-                    store,
-                    tenant_id,
-                    &format!("{tenant_id}-mcp-server-seed"),
-                    nonce,
-                    0,
-                    "agent-component:publish",
-                ),
-                evaluation_receipt_digest: None,
-                component: mcp_server_draft(tenant_id),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: mutation_context(
+                        store,
+                        tenant_id,
+                        &format!("{tenant_id}-mcp-server-seed"),
+                        nonce,
+                        0,
+                        "agent-component:publish",
+                    ),
+                    evaluation_receipt_digest: None,
+                    component: mcp_server_draft(tenant_id),
+                    body: None,
+                },
+                None,
+            )
             .expect("the fixture mcp server seeds");
     }
 
@@ -807,16 +813,19 @@ pub mod tests {
     fn a_published_component_is_durable_and_reads_back() {
         let (_dir, store) = open_store();
         let published = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: tool(
-                    "tool:web-search",
-                    "eg:capability/retrieval/web-search",
-                    ToolEffect::Read,
-                ),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: tool(
+                        "tool:web-search",
+                        "eg:capability/retrieval/web-search",
+                        ToolEffect::Read,
+                    ),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         assert!(!published.replayed);
         assert_eq!(published.result.component.entry_revision, 1);
@@ -886,7 +895,8 @@ pub mod tests {
         // A pinned draft with no holder, and a holder for another revision, refuse.
         let missing = store.publish_component(request("key-a", 1, 0), None);
         assert!(missing.unwrap_err().contains("PROMPT_SCHEMA_INVALID"));
-        let wrong = store.publish_component(request("key-b", 2, 0), Some(staged_holder(&hex, id, 2)));
+        let wrong =
+            store.publish_component(request("key-b", 2, 0), Some(staged_holder(&hex, id, 2)));
         assert!(wrong.unwrap_err().contains("PROMPT_SCHEMA_INVALID"));
         assert_eq!(holder_rows(&store), 0);
         assert!(store.current_component("tenant-a", id).unwrap().is_none());
@@ -905,7 +915,8 @@ pub mod tests {
         assert_eq!(pointer.body_sha256.to_hex(), hex);
 
         // A stale expected revision refuses and leaves one row and the head at 1.
-        let stale = store.publish_component(request("key-d", 4, 0), Some(staged_holder(&hex, id, 1)));
+        let stale =
+            store.publish_component(request("key-d", 4, 0), Some(staged_holder(&hex, id, 1)));
         assert!(stale.unwrap_err().contains("STALE_AGENT_LIBRARY_REVISION"));
         assert_eq!(holder_rows(&store), 1);
         assert_eq!(
@@ -922,30 +933,36 @@ pub mod tests {
     fn a_byte_identical_retry_replays_rather_than_publishing_twice() {
         let (_dir, store) = open_store();
         let first = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: tool(
-                    "tool:a",
-                    "eg:capability/retrieval/web-search",
-                    ToolEffect::Read,
-                ),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: tool(
+                        "tool:a",
+                        "eg:capability/retrieval/web-search",
+                        ToolEffect::Read,
+                    ),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         let mut retry = context(&store, "key-1", 2, 0, "agent-component:publish");
         retry.created_at_ms = 99;
         let replayed = store
-            .publish_component(AgentComponentPublishRequest {
-                context: retry,
-                evaluation_receipt_digest: None,
-                component: tool(
-                    "tool:a",
-                    "eg:capability/retrieval/web-search",
-                    ToolEffect::Read,
-                ),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: retry,
+                    evaluation_receipt_digest: None,
+                    component: tool(
+                        "tool:a",
+                        "eg:capability/retrieval/web-search",
+                        ToolEffect::Read,
+                    ),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         assert!(replayed.replayed);
         assert_eq!(replayed.result, first.result);
@@ -967,31 +984,40 @@ pub mod tests {
             ToolEffect::Read,
         );
         store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: component.clone(),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: component.clone(),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
 
         let replayed = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 2, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: component.clone(),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 2, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: component.clone(),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         assert!(replayed.replayed);
 
         let error = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 2, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component,
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 2, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component,
+                    body: None,
+                },
+                None,
+            )
             .expect_err("a replay nonce must be consumed before the replay returns");
         assert!(error.contains("REPLAY_NONCE_CONSUMED"), "got: {error}");
         assert_eq!(
@@ -1009,16 +1035,19 @@ pub mod tests {
         // pair shared a key space, publishing one would overwrite another.
         let (_dir, store) = open_store();
         store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: tool(
-                    "same-id",
-                    "eg:capability/retrieval/web-search",
-                    ToolEffect::Read,
-                ),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: tool(
+                        "same-id",
+                        "eg:capability/retrieval/web-search",
+                        ToolEffect::Read,
+                    ),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         assert_eq!(
             super::super::agent_fixtures::layers_holding(&store, "tenant-a", "same-id"),
@@ -1035,16 +1064,19 @@ pub mod tests {
             let store = AgentLibraryStore::open(path).unwrap();
             seed_mcp_server(&store, "tenant-a", SEED_NONCE);
             store
-                .publish_component(AgentComponentPublishRequest {
-                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                    evaluation_receipt_digest: None,
-                    component: tool(
-                        "tool:a",
-                        "eg:capability/retrieval/web-search",
-                        ToolEffect::Read,
-                    ),
-                    body: None,
-                }, None)
+                .publish_component(
+                    AgentComponentPublishRequest {
+                        context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                        evaluation_receipt_digest: None,
+                        component: tool(
+                            "tool:a",
+                            "eg:capability/retrieval/web-search",
+                            ToolEffect::Read,
+                        ),
+                        body: None,
+                    },
+                    None,
+                )
                 .unwrap();
         }
         let reopened = AgentLibraryStore::open(path).expect("owner reopens");
@@ -1073,12 +1105,15 @@ pub mod tests {
             component.kind = AgentComponentKind::ModelProfile;
             component.facts = expected_facts.clone();
             store
-                .publish_component(AgentComponentPublishRequest {
-                    context: context(&store, "model-media", 1, 0, "agent-component:publish"),
-                    evaluation_receipt_digest: None,
-                    component,
-                    body: None,
-                }, None)
+                .publish_component(
+                    AgentComponentPublishRequest {
+                        context: context(&store, "model-media", 1, 0, "agent-component:publish"),
+                        evaluation_receipt_digest: None,
+                        component,
+                        body: None,
+                    },
+                    None,
+                )
                 .unwrap();
             expected_digest = store
                 .current_component("tenant-a", "model:media")
@@ -1121,12 +1156,15 @@ pub mod tests {
             upstream_name: "search".to_string(),
         };
         let error = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: orphan,
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: orphan,
+                    body: None,
+                },
+                None,
+            )
             .expect_err("an unresolvable provenance pin must be refused");
         assert!(
             error.contains("which does not exist in this tenant"),
@@ -1157,12 +1195,15 @@ pub mod tests {
             upstream_name: "search".to_string(),
         };
         let error = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: stale,
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: stale,
+                    body: None,
+                },
+                None,
+            )
             .expect_err("a digest no server revision carries must be refused");
         assert!(error.contains("that was never published"), "got: {error}");
     }
@@ -1196,12 +1237,15 @@ pub mod tests {
             upstream_name: "search".to_string(),
         };
         let error = store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: mislabelled,
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: mislabelled,
+                    body: None,
+                },
+                None,
+            )
             .expect_err("a provenance naming a non-server must be refused");
         assert!(error.contains("but it is a toolset"), "got: {error}");
     }
@@ -1234,18 +1278,21 @@ pub mod tests {
         for (index, (id, capability, effect)) in corpus.iter().enumerate() {
             let nonce = u8::try_from(index + 1).unwrap();
             store
-                .publish_component(AgentComponentPublishRequest {
-                    context: context(
-                        store,
-                        &format!("key-{index}"),
-                        nonce,
-                        0,
-                        "agent-component:publish",
-                    ),
-                    evaluation_receipt_digest: None,
-                    component: tool(id, capability, *effect),
-                    body: None,
-                }, None)
+                .publish_component(
+                    AgentComponentPublishRequest {
+                        context: context(
+                            store,
+                            &format!("key-{index}"),
+                            nonce,
+                            0,
+                            "agent-component:publish",
+                        ),
+                        evaluation_receipt_digest: None,
+                        component: tool(id, capability, *effect),
+                        body: None,
+                    },
+                    None,
+                )
                 .unwrap();
         }
     }
@@ -1255,19 +1302,22 @@ pub mod tests {
         for (index, (id, capability)) in tools.iter().enumerate() {
             let nonce = u8::try_from(index + 100).unwrap();
             store
-                .publish_component(AgentComponentPublishRequest {
-                    context: mutation_context(
-                        store,
-                        "tenant-b",
-                        &format!("tenant-b-key-{index}"),
-                        nonce,
-                        0,
-                        "agent-component:publish",
-                    ),
-                    evaluation_receipt_digest: None,
-                    component: tool_for("tenant-b", id, capability, ToolEffect::Read),
-                    body: None,
-                }, None)
+                .publish_component(
+                    AgentComponentPublishRequest {
+                        context: mutation_context(
+                            store,
+                            "tenant-b",
+                            &format!("tenant-b-key-{index}"),
+                            nonce,
+                            0,
+                            "agent-component:publish",
+                        ),
+                        evaluation_receipt_digest: None,
+                        component: tool_for("tenant-b", id, capability, ToolEffect::Read),
+                        body: None,
+                    },
+                    None,
+                )
                 .unwrap();
         }
     }
@@ -1301,7 +1351,11 @@ pub mod tests {
         // No pack owns these ids, so they belong to no server.
         request.upstream_name = None;
         request.server_name = Some("demo".to_string());
-        assert!(store.search_components(&request).unwrap().entries.is_empty());
+        assert!(store
+            .search_components(&request)
+            .unwrap()
+            .entries
+            .is_empty());
         request.server_name = Some(String::new());
         assert!(store.search_components(&request).is_err());
     }
@@ -1414,16 +1468,19 @@ pub mod tests {
         // agent that pinned it needs to.
         let (_dir, store) = open_store();
         store
-            .publish_component(AgentComponentPublishRequest {
-                context: context(&store, "key-1", 1, 0, "agent-component:publish"),
-                evaluation_receipt_digest: None,
-                component: tool(
-                    "tool:web",
-                    "eg:capability/retrieval/web-search",
-                    ToolEffect::Read,
-                ),
-                body: None,
-            }, None)
+            .publish_component(
+                AgentComponentPublishRequest {
+                    context: context(&store, "key-1", 1, 0, "agent-component:publish"),
+                    evaluation_receipt_digest: None,
+                    component: tool(
+                        "tool:web",
+                        "eg:capability/retrieval/web-search",
+                        ToolEffect::Read,
+                    ),
+                    body: None,
+                },
+                None,
+            )
             .unwrap();
         assert_eq!(
             store

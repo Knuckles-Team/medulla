@@ -4,15 +4,17 @@
 
 use std::collections::BTreeSet;
 
-use super::assemble_tests::{assemble_with_policy, harness, publish_with, request, seed, Harness, ASKER, TENANT};
+use super::assemble_tests::{
+    assemble_with_policy, harness, publish_with, request, seed, Harness, ASKER, TENANT,
+};
 use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind, PromptMode};
-use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_types::contract::BoundedVec;
 use medulla_compute::assemble::prompt::select_system_prompt;
 use medulla_decision_outcome_types::decision::prompt_candidate::{PromptCandidate, PromptRole};
 use medulla_decision_types::decision::knob_families::prompt_candidate::KNOBS;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::record::outcome::AbstainReason;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::contract::BoundedVec;
 
 const ONE: i64 = 1 << 32;
 
@@ -67,7 +69,16 @@ const UNBOUND: &str = "mcp:prompt-pack-c/prompt/loose-system";
 
 /// The ids the asker's run scope admits for this test's scope.
 const ALLOWED: &[&str] = &[
-    "model-a", "prompt-a", "tool-a", "tool-web", "tool-code", "skill-a", "ontology-a", PROMPT_A, PROMPT_B, UNBOUND,
+    "model-a",
+    "prompt-a",
+    "tool-a",
+    "tool-web",
+    "tool-code",
+    "skill-a",
+    "ontology-a",
+    PROMPT_A,
+    PROMPT_B,
+    UNBOUND,
 ];
 
 fn system_prompt_facts(digest: char) -> AgentComponentFacts {
@@ -88,8 +99,20 @@ fn publish_prompt_scope(h: &Harness) {
             draft.classification = vec![iri.to_string()];
         }
     };
-    publish_with(&h.store, 10, ("tool-web", AgentComponentKind::Tool), None, provides(WEB));
-    publish_with(&h.store, 11, ("tool-code", AgentComponentKind::Tool), None, provides(CODE));
+    publish_with(
+        &h.store,
+        10,
+        ("tool-web", AgentComponentKind::Tool),
+        None,
+        provides(WEB),
+    );
+    publish_with(
+        &h.store,
+        11,
+        ("tool-code", AgentComponentKind::Tool),
+        None,
+        provides(CODE),
+    );
     publish_with(
         &h.store,
         12,
@@ -134,9 +157,15 @@ async fn system_prompt_slot_narrows_to_the_selected_candidate() {
 
     // Two connector prompts are in scope; the solved agent pins the one that covers the need.
     let for_web = assembled(&h, WEB).await.expect("assembles");
-    assert_eq!(for_web.agents.as_slice()[0].system_prompt.component_id, PROMPT_A);
+    assert_eq!(
+        for_web.agents.as_slice()[0].system_prompt.component_id,
+        PROMPT_A
+    );
     let for_code = assembled(&h, CODE).await.expect("assembles");
-    assert_eq!(for_code.agents.as_slice()[0].system_prompt.component_id, PROMPT_B);
+    assert_eq!(
+        for_code.agents.as_slice()[0].system_prompt.component_id,
+        PROMPT_B
+    );
 
     // With no legal candidate the scope is unchanged: the plain prompt of the seed stays.
     let generic = assembled(&h, "eg:capability/generation/text").await;
@@ -162,9 +191,10 @@ async fn system_prompt_slot_narrows_to_the_selected_candidate() {
         .await
         .map(|result| result.agents.as_slice().first().cloned());
     assert!(
-        refused.is_err() || refused.is_ok_and(|agent| agent.is_none_or(|agent| {
-            ![PROMPT_A, PROMPT_B].contains(&agent.system_prompt.component_id.as_str())
-        })),
+        refused.is_err()
+            || refused.is_ok_and(|agent| agent.is_none_or(|agent| {
+                ![PROMPT_A, PROMPT_B].contains(&agent.system_prompt.component_id.as_str())
+            })),
         "another tenant never receives this tenant's connector prompts"
     );
 }
@@ -176,12 +206,33 @@ async fn solved_record_names_the_prompt_connector_digest_and_capability() {
     publish_prompt_scope(&h);
     let result = assembled(&h, WEB).await.expect("assembles");
     let facts = facts_of(&result);
-    assert!(facts.contains(&format!("prompt_component_id={PROMPT_A}")), "{facts:?}");
-    assert!(facts.contains(&"connector=prompt-pack-a".to_string()), "{facts:?}");
-    assert!(facts.contains(&format!("covered_capability={WEB}")), "{facts:?}");
-    assert!(facts.contains(&format!("digest={}", "a".repeat(64))) || facts.iter().any(|fact| fact.starts_with("digest=")), "{facts:?}");
-    assert!(facts.iter().any(|fact| fact.starts_with("prompt_score_q32=")), "{facts:?}");
-    assert!(!facts.iter().any(|fact| fact.contains(PROMPT_B)), "{facts:?}");
+    assert!(
+        facts.contains(&format!("prompt_component_id={PROMPT_A}")),
+        "{facts:?}"
+    );
+    assert!(
+        facts.contains(&"connector=prompt-pack-a".to_string()),
+        "{facts:?}"
+    );
+    assert!(
+        facts.contains(&format!("covered_capability={WEB}")),
+        "{facts:?}"
+    );
+    assert!(
+        facts.contains(&format!("digest={}", "a".repeat(64)))
+            || facts.iter().any(|fact| fact.starts_with("digest=")),
+        "{facts:?}"
+    );
+    assert!(
+        facts
+            .iter()
+            .any(|fact| fact.starts_with("prompt_score_q32=")),
+        "{facts:?}"
+    );
+    assert!(
+        !facts.iter().any(|fact| fact.contains(PROMPT_B)),
+        "{facts:?}"
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R814.4
@@ -200,7 +251,10 @@ async fn unbound_prompt_refuses_and_rejected_connector_is_excluded() {
         |_| {},
     );
     let result = assembled(&h, WEB).await.expect("assembles");
-    assert_eq!(result.agents.as_slice()[0].system_prompt.component_id, PROMPT_A);
+    assert_eq!(
+        result.agents.as_slice()[0].system_prompt.component_id,
+        PROMPT_A
+    );
 
     // The registered code is the closed one the projection check raises.
     assert_eq!(
@@ -214,9 +268,10 @@ async fn unbound_prompt_refuses_and_rejected_connector_is_excluded() {
 async fn prompt_candidate_journey() {
     let h = harness().await;
     publish_prompt_scope(&h);
-    for (capability, expected, connector) in
-        [(WEB, PROMPT_A, "prompt-pack-a"), (CODE, PROMPT_B, "prompt-pack-b")]
-    {
+    for (capability, expected, connector) in [
+        (WEB, PROMPT_A, "prompt-pack-a"),
+        (CODE, PROMPT_B, "prompt-pack-b"),
+    ] {
         let result = assembled(&h, capability).await.expect("assembles");
         assert!(
             matches!(
@@ -225,7 +280,10 @@ async fn prompt_candidate_journey() {
             ),
             "{capability}"
         );
-        assert_eq!(result.agents.as_slice()[0].system_prompt.component_id, expected);
+        assert_eq!(
+            result.agents.as_slice()[0].system_prompt.component_id,
+            expected
+        );
         assert!(facts_of(&result).contains(&format!("connector={connector}")));
     }
 }

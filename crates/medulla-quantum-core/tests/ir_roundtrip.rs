@@ -6,7 +6,7 @@
 mod common;
 
 use medulla_quantum_core::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, IrValidationError, ParamValue, Parameter, ProgramMetadata, QuantumProgram,
     IR_VERSION,
 };

@@ -28,6 +28,12 @@ use crate::quality_rule::{
     tenant_node_id, QUALITY_RULE_LABEL, RULE_BODY_PROPERTY, RULE_FAILURES_PROPERTY,
     RULE_STATE_PROPERTY,
 };
+use medulla_catalog_types::data_product::{
+    product_schema_digest, ContractPromise, ContractViolation, DataContract, DataProduct,
+};
+use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
+use medulla_catalog_types::quality::{QualityRule, QualityScore, RuleState};
+use medulla_core::data_product::{check_contract, LiveContractState};
 use medulla_core::quality::{
     compile_rule, evaluate_rule, track_failure, CompiledRule, Evaluation, IncidentSink,
     Measurement, QualityAnomaly,
@@ -37,12 +43,6 @@ use medulla_stream::telemetry::incident_authority::IncidentAuthority;
 use medulla_stream::telemetry::incident_nodes::{
     incident_operations, incident_record, INCIDENT_TYPE,
 };
-use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
-use medulla_catalog_types::data_product::{
-    product_schema_digest, ContractPromise, ContractViolation, DataContract, DataProduct,
-};
-use medulla_catalog_types::quality::{QualityRule, QualityScore, RuleState};
-use medulla_core::data_product::{check_contract, LiveContractState};
 use serde_json::{Map, Value};
 
 /// The node type of one quality score.
@@ -469,7 +469,8 @@ impl IncidentSink for AnomalySink {
 /// The node type of one broken data contract promise (MEDULLA-TYPED-PACKS-R805.3).
 pub(super) const CONTRACT_VIOLATION_LABEL: &str = "ContractViolation";
 /// The property catalog ingest writes the schema digest under (`cat:schemaDigest`).
-const SCHEMA_DIGEST_PROPERTY: &str = "https://knuckles-team.github.io/ontology/catalog#schemaDigest";
+const SCHEMA_DIGEST_PROPERTY: &str =
+    "https://knuckles-team.github.io/ontology/catalog#schemaDigest";
 
 /// One broken promise with the reading that anomaly detection sees.
 struct ProductViolation {
@@ -493,7 +494,9 @@ fn promise_kind(promise: &ContractPromise) -> &'static str {
 fn dataset_schema_digest(core: &medulla_graph_core::graph::GraphCore, id: &str) -> Option<String> {
     let bytes = core.get_node_properties(id)?;
     let node = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
-    node.get(SCHEMA_DIGEST_PROPERTY)?.as_str().map(str::to_string)
+    node.get(SCHEMA_DIGEST_PROPERTY)?
+        .as_str()
+        .map(str::to_string)
 }
 
 /// The newest score of `rule`: this run's evaluation, else the newest stored `QualityScore`.
@@ -524,7 +527,10 @@ fn latest_score(
                     .and_then(Value::as_str)
                     .unwrap_or_default()
                     .to_string(),
-                rows_checked: node.get("rows_checked").and_then(Value::as_u64).unwrap_or(0),
+                rows_checked: node
+                    .get("rows_checked")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
                 rows_failed: node.get("rows_failed").and_then(Value::as_u64).unwrap_or(0),
                 checker: node
                     .get("checker")
@@ -1224,19 +1230,32 @@ mod tests {
             freshness_s: 60,
         };
         let broken = product_violations(&core, "acme", &product, &contract, &[], Some(120_000), 9);
-        assert_eq!(broken.len(), 2, "freshness is broken and the missing schema digest is unverifiable");
+        assert_eq!(
+            broken.len(),
+            2,
+            "freshness is broken and the missing schema digest is unverifiable"
+        );
         assert_eq!(broken[0].violation.promise, ContractPromise::Freshness);
         assert_eq!(broken[0].violation.observed, "120");
         assert_eq!(
             broken[1].violation.promise,
-            ContractPromise::Unverifiable { of: "schema".into() }
+            ContractPromise::Unverifiable {
+                of: "schema".into()
+            }
         );
         let unseen = product_violations(&core, "acme", &product, &contract, &[], None, 9);
         assert_eq!(
-            unseen.iter().map(|b| b.violation.promise.clone()).collect::<Vec<_>>(),
+            unseen
+                .iter()
+                .map(|b| b.violation.promise.clone())
+                .collect::<Vec<_>>(),
             vec![
-                ContractPromise::Unverifiable { of: "schema".into() },
-                ContractPromise::Unverifiable { of: "freshness".into() },
+                ContractPromise::Unverifiable {
+                    of: "schema".into()
+                },
+                ContractPromise::Unverifiable {
+                    of: "freshness".into()
+                },
             ]
         );
         let outcome = quality_outcome(&core, &target(), &[], Vec::new(), &broken, 9).unwrap();
@@ -1244,11 +1263,13 @@ mod tests {
         let violation_nodes = outcome
             .methods
             .iter()
-            .filter(|method| matches!(method, Method::AddNode { properties_msgpack, .. }
+            .filter(|method| {
+                matches!(method, Method::AddNode { properties_msgpack, .. }
                 if medulla_types::msgpack::decode_property_value(properties_msgpack)
                     .ok()
                     .and_then(|node| node.get("type").and_then(Value::as_str).map(str::to_string))
-                    == Some(CONTRACT_VIOLATION_LABEL.to_string())))
+                    == Some(CONTRACT_VIOLATION_LABEL.to_string()))
+            })
             .count();
         assert_eq!(violation_nodes, 2);
     }

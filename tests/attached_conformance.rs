@@ -292,14 +292,18 @@ fn manifest_pins_every_image_digest() {
         pinned_digest(postgres, &duplicate),
         Err("IMAGE_UNPINNED: postgres:16".to_string())
     );
-    let upper = vec![pin("postgres:16", &good.to_uppercase().replace("SHA256", "sha256"))];
+    let upper = vec![pin(
+        "postgres:16",
+        &good.to_uppercase().replace("SHA256", "sha256"),
+    )];
     assert_eq!(
         pinned_digest(postgres, &upper),
         Err("IMAGE_UNPINNED: postgres:16".to_string())
     );
     assert_eq!(pinned_digest(sqlite, &[]), Ok(None));
 
-    let dsn_set = |name: &str| (name == "MEDULLA_CONFORMANCE_POSTGRES_DSN").then(|| "dsn".to_string());
+    let dsn_set =
+        |name: &str| (name == "MEDULLA_CONFORMANCE_POSTGRES_DSN").then(|| "dsn".to_string());
     let dsn_empty = |_: &str| Some(String::new());
     let none = |_: &str| None;
     assert_eq!(

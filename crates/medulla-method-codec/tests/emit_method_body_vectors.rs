@@ -19,7 +19,10 @@ fn unhex(text: &str) -> Vec<u8> {
 fn emits_one_deterministic_vector_per_typed_sample() {
     let first = method_vectors::method_body_vectors();
     let second = method_vectors::method_body_vectors();
-    assert_eq!(first, second, "the output is a pure function of the codec and the samples");
+    assert_eq!(
+        first, second,
+        "the output is a pure function of the codec and the samples"
+    );
 
     let (vectors, omitted) = first;
     for (name, _) in typed_samples() {
@@ -27,7 +30,10 @@ fn emits_one_deterministic_vector_per_typed_sample() {
             .iter()
             .filter(|vector| vector["name"] == name)
             .count();
-        let in_omitted = omitted.iter().filter(|(omitted, _)| omitted == name).count();
+        let in_omitted = omitted
+            .iter()
+            .filter(|(omitted, _)| omitted == name)
+            .count();
         assert_eq!(
             in_vectors + in_omitted,
             1,

@@ -55,8 +55,9 @@ pub(super) fn validate_external_schemas(
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::ExternalSchema)
     {
-        let value = section_bytes(archive, &entry.body)
-            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(bytes).map_err(|e| e.to_string()));
+        let value = section_bytes(archive, &entry.body).and_then(|bytes| {
+            serde_json::from_slice::<serde_json::Value>(bytes).map_err(|e| e.to_string())
+        });
         let value = match value {
             Ok(value) => value,
             Err(error) => {
@@ -90,7 +91,11 @@ pub(super) fn validate_external_schemas(
                 }
             }
             Err((refusal, detail)) => {
-                violations.push(violation(violation_code(refusal), Some(&entry.uri), &detail));
+                violations.push(violation(
+                    violation_code(refusal),
+                    Some(&entry.uri),
+                    &detail,
+                ));
             }
         }
     }

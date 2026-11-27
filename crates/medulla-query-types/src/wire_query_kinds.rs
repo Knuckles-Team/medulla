@@ -358,7 +358,9 @@ impl OpKind {
             OpKind::Cep => None,
             // DERIVE and SKILL write named value channels, not a fixed score channel.
             #[cfg(feature = "timeseries")]
-            OpKind::Derive | OpKind::Skill | OpKind::Evaluate | OpKind::Motif | OpKind::Events => None,
+            OpKind::Derive | OpKind::Skill | OpKind::Evaluate | OpKind::Motif | OpKind::Events => {
+                None
+            }
             #[cfg(feature = "epistemic")]
             OpKind::EvidenceFor
             | OpKind::EvidenceForEach

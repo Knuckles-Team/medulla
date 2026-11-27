@@ -35,10 +35,10 @@ use medulla_decision_types::{
     decision::statistical::features::FeatureSchemaBody,
 };
 use medulla_decision_types::{
-    decision::statistical::log::DecisionLogCommitted, decision::statistical::log::DecisionLogEntry,
-    decision::statistical::log::DecisionLogOp,
+    decision::statistical::log::CorrectionLabel, decision::statistical::log::DecisionLogCommitted,
+    decision::statistical::log::DecisionLogEntry, decision::statistical::log::DecisionLogOp,
     decision::statistical::log::DecisionOutcomeEvaluation, decision::statistical::log::EntryInputs,
-    decision::statistical::log::CorrectionLabel, decision::statistical::log::OutcomeAggregate,
+    decision::statistical::log::OutcomeAggregate,
     decision::statistical::log::OutcomeAggregateRequest,
     decision::statistical::log::RecordVisibility, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::DECISION_LOG_SCHEMA_VERSION,
@@ -301,7 +301,8 @@ fn commit(
     // MEDULLA-DECISION-ENGINE-R019.100.2: the receipt names the digest the reviewer saw (the
     // submitted record's, before the seed reveal) and is checked before the idempotency read,
     // so a refusal writes nothing and a retry carries its approval again.
-    let resolved = super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.inputs.policy)?;
+    let resolved =
+        super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.inputs.policy)?;
     if resolved.policy.approval_required {
         medulla_decision_types::decision::approval::check_approval(
             approval,
@@ -572,19 +573,18 @@ async fn correction_labels_of(
     let (view, _) =
         super::stat_support::filtered_view_versioned(state, verified.agent_id(), &asked.graph)
             .await?;
-    Ok(super::correction::independent_outcomes(
-        &view,
-        verified.tenant(),
-        asked.rule_id.as_deref(),
+    Ok(
+        super::correction::independent_outcomes(&view, verified.tenant(), asked.rule_id.as_deref())
+            .into_iter()
+            .map(|candidate| CorrectionLabel {
+                rule_id: candidate.rule_id,
+                task_class: candidate.task_class,
+                independent: candidate.independent,
+                mean_value_micros: (candidate.mean_value.clamp(0.0, 1.0) * 1_000_000.0).round()
+                    as u64,
+            })
+            .collect(),
     )
-    .into_iter()
-    .map(|candidate| CorrectionLabel {
-        rule_id: candidate.rule_id,
-        task_class: candidate.task_class,
-        independent: candidate.independent,
-        mean_value_micros: (candidate.mean_value.clamp(0.0, 1.0) * 1_000_000.0).round() as u64,
-    })
-    .collect())
 }
 
 /// The latest `n` outcomes of `option_id` that count as labels (independent,
@@ -950,31 +950,24 @@ fn dispatch(
             record,
             evaluator,
             approval,
-        } => {
-            ResultPayload::of::<DecisionLogCommit>(commit(
-                ctx,
-                reader,
-                &record,
-                evaluator.as_ref(),
-                approval.as_ref(),
-                read.replay,
-                read.snapshots,
-            )?)
-        }
+        } => ResultPayload::of::<DecisionLogCommit>(commit(
+            ctx,
+            reader,
+            &record,
+            evaluator.as_ref(),
+            approval.as_ref(),
+            read.replay,
+            read.snapshots,
+        )?),
         DecisionLogOp::Evaluate { evaluation, .. } => {
             ResultPayload::of::<DecisionLogEvaluate>(evaluate(ctx, reader, evaluation)?)
         }
         DecisionLogOp::Get { record_id, .. } => {
             ResultPayload::of::<DecisionLogGet>(visible_entry(ctx.store, reader, &record_id)?)
         }
-        DecisionLogOp::Aggregate { request } => {
-            ResultPayload::of::<DecisionLogAggregate>(aggregate_log(
-                ctx.store,
-                reader,
-                &request,
-                read.correction_labels,
-            )?)
-        }
+        DecisionLogOp::Aggregate { request } => ResultPayload::of::<DecisionLogAggregate>(
+            aggregate_log(ctx.store, reader, &request, read.correction_labels)?,
+        ),
         DecisionLogOp::Compact { policy, limit, .. } => ResultPayload::of::<DecisionLogCompact>(
             compact(ctx, &reader.retention, &policy, limit)?,
         ),
@@ -1112,26 +1105,26 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessAdoption,
             >(super::stat_harness_adoption::adopt(ctx, reader, &write)?)
         }
-        DecisionLogOp::LifecycleRecord { record, .. } => ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecord,
-        >(super::stat_lifecycle_record::write(ctx, record)?),
-        DecisionLogOp::LifecycleRecords { query, .. } => ResultPayload::of::<
-            medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecords,
-        >(super::stat_lifecycle_record::read(ctx, &query)?),
+        DecisionLogOp::LifecycleRecord { record, .. } => {
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecord,
+            >(super::stat_lifecycle_record::write(ctx, record)?)
+        }
+        DecisionLogOp::LifecycleRecords { query, .. } => {
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecords,
+            >(super::stat_lifecycle_record::read(ctx, &query)?)
+        }
         DecisionLogOp::HarnessLessons { query, .. } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessLessons,
             >(super::stat_harness_adoption::lessons(ctx, &query)?)
         }
-        DecisionLogOp::Pointer { pointer_key, .. } => {
-            ResultPayload::of::<
-                medulla_protocol_types::result_contract::coordination::DecisionLogPointer,
-            >(super::stat_pointer::champion_pointer(
-                ctx.store,
-                ctx.tenant_id,
-                &pointer_key,
-            )?)
-        }
+        DecisionLogOp::Pointer { pointer_key, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogPointer,
+        >(
+            super::stat_pointer::champion_pointer(ctx.store, ctx.tenant_id, &pointer_key)?,
+        ),
         DecisionLogOp::List {
             question_kind,
             resolution_kind,
@@ -1156,12 +1149,9 @@ fn dispatch(
         )?),
         DecisionLogOp::Provenance { record_id, .. } => ResultPayload::of::<
             medulla_protocol_types::result_contract::coordination::DecisionLogProvenance,
-        >(super::stat_decision_reads::provenance(
-            ctx.store,
-            reader,
-            &record_id,
-            read.provenance,
-        )?),
+        >(
+            super::stat_decision_reads::provenance(ctx.store, reader, &record_id, read.provenance)?,
+        ),
         DecisionLogOp::WhyNot {
             record_id,
             option_id,
@@ -1242,8 +1232,12 @@ async fn serve(
     };
     let blocking_graph = run_graph.clone();
     let breach = breach_link(state, verified, &op).await?;
-    let refresh_link = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_link));
-    let refresh_apply = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_apply));
+    let refresh_link = inputs
+        .as_ref()
+        .map(|i| std::sync::Arc::clone(&i.refresh_link));
+    let refresh_apply = inputs
+        .as_ref()
+        .map(|i| std::sync::Arc::clone(&i.refresh_apply));
     let principal = verified.agent_id().to_string();
     let graphs = commit_graphs(state, verified, &op).await?;
     let correction_labels = correction_labels_of(state, verified, &op).await?;
@@ -1310,10 +1304,13 @@ async fn serve(
                 Some(slot) => slot.lock().ok().and_then(|mut held| held.take()),
                 None => None,
             };
-            let apply = refresh_apply.and_then(|slot| slot.lock().ok().and_then(|mut held| held.take()));
+            let apply =
+                refresh_apply.and_then(|slot| slot.lock().ok().and_then(|mut held| held.take()));
             match staged {
                 Some(link) => {
-                    let committed = commit_staged_link(state, req_id, verified, link, "freshness-refresh").await;
+                    let committed =
+                        commit_staged_link(state, req_id, verified, link, "freshness-refresh")
+                            .await;
                     // Durable first: the in-memory swap runs only after the commit succeeded.
                     if committed.is_ok() {
                         if let Some(apply) = apply {
@@ -1407,10 +1404,15 @@ async fn breach_link(
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         return Ok(None);
     };
-    let Some(graph) = record.inputs.params.iter().find_map(|param| match &param.value {
-        TypedValue::Text(graph) if param.name == "limit.graph" => Some(graph.clone()),
-        _ => None,
-    }) else {
+    let Some(graph) = record
+        .inputs
+        .params
+        .iter()
+        .find_map(|param| match &param.value {
+            TypedValue::Text(graph) if param.name == "limit.graph" => Some(graph.clone()),
+            _ => None,
+        })
+    else {
         return Ok(None);
     };
     let (core, _isolation) = super::stat_support::graph_at_level(
@@ -1476,11 +1478,13 @@ async fn breach_link(
             }))?,
         });
     }
-    Ok((!methods.is_empty()).then_some(super::run_record::StagedLink {
-        graph,
-        core,
-        methods,
-    }))
+    Ok(
+        (!methods.is_empty()).then_some(super::run_record::StagedLink {
+            graph,
+            core,
+            methods,
+        }),
+    )
 }
 
 /// Commit a staged run record's graph link (the program node and its

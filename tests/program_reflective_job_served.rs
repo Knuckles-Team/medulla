@@ -25,7 +25,7 @@ mod test_support;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use program_job_support::{
-    evaluation_of, front_evaluation_of, node_properties, refused_submit, reflective_request,
+    evaluation_of, front_evaluation_of, node_properties, reflective_request, refused_submit,
     result_rows, run_program_job, sized_program_request, strings_with_prefix,
 };
 use serde_json::Value;
@@ -152,10 +152,14 @@ fn reflective_job_reports_front_and_next_parent() {
     let rows = &observed().evaluated_rows;
     let digest = digest_of(rows);
     assert_eq!(digest.len(), 64);
-    assert!(digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+    assert!(digest
+        .bytes()
+        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
     let candidates = candidate_rows(rows);
     assert!(
-        candidates.iter().all(|row| row["front_digest"] == digest.as_str()),
+        candidates
+            .iter()
+            .all(|row| row["front_digest"] == digest.as_str()),
         "every candidate row carries the one front digest"
     );
 
@@ -164,7 +168,10 @@ fn reflective_job_reports_front_and_next_parent() {
         .filter_map(|row| row["front_rank"].as_u64().map(|rank| (rank, *row)))
         .collect();
     ranked.sort_by_key(|(rank, _)| *rank);
-    assert!(!ranked.is_empty(), "an evaluated candidate sits on the front");
+    assert!(
+        !ranked.is_empty(),
+        "an evaluated candidate sits on the front"
+    );
     for (position, (rank, row)) in ranked.iter().enumerate() {
         assert_eq!(*rank, position as u64, "the scoreboard ranks run from 0");
         assert!(row["front_score"].is_f64());
@@ -175,7 +182,10 @@ fn reflective_job_reports_front_and_next_parent() {
         .filter(|row| row["front_next_parent"] == true)
         .collect();
     assert_eq!(parents.len(), 1, "the tournament names exactly one parent");
-    assert!(parents[0]["front_rank"].is_u64(), "the parent is on the front");
+    assert!(
+        parents[0]["front_rank"].is_u64(),
+        "the parent is on the front"
+    );
 }
 
 /// The published revision stores the digest of its front, the result carries
@@ -284,7 +294,10 @@ fn front_inputs_refuse_with_stable_codes() {
 #[test]
 fn served_reflective_job_journey() {
     let observed = observed();
-    assert_eq!(observed.candidate_count, program_job_support::REFLECTIVE_CANDIDATES);
+    assert_eq!(
+        observed.candidate_count,
+        program_job_support::REFLECTIVE_CANDIDATES
+    );
     assert!(observed.evaluated_job.get("Succeeded").is_some());
     let candidates = candidate_rows(&observed.evaluated_rows);
     assert_eq!(candidates.len(), observed.candidate_count);

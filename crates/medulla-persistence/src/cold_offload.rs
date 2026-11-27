@@ -582,7 +582,12 @@ async fn page_in_remaining(
         .await
         {
             Ok(Some(page)) => page,
-            Ok(None) => return Err(paging_failed(ticket.name(), "the page fetch returned no page")),
+            Ok(None) => {
+                return Err(paging_failed(
+                    ticket.name(),
+                    "the page fetch returned no page",
+                ))
+            }
             Err(error) => {
                 return Err(paging_failed(
                     ticket.name(),
@@ -620,7 +625,11 @@ async fn page_in_remaining(
                     if let Ok(mut manifest) = manifest.write() {
                         manifest.fail(true);
                     }
-                    state.write().await.registry.evict_resident_if_current(&handle);
+                    state
+                        .write()
+                        .await
+                        .registry
+                        .evict_resident_if_current(&handle);
                     degrade_readiness(
                         ticket.name(),
                         medulla_observe::machine::readiness::NO_PROGRESS,

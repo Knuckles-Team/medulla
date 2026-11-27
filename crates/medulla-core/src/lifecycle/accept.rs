@@ -71,7 +71,9 @@ impl UnresolvedReference {
     /// property is missing or names no lifecycle edge kind.
     pub fn resolve(get: &dyn Fn(&str) -> Option<String>) -> Option<DerivedEdge> {
         let name = get("edge_kind")?;
-        let kind = LifecycleEdgeKind::ALL.into_iter().find(|k| k.name() == name)?;
+        let kind = LifecycleEdgeKind::ALL
+            .into_iter()
+            .find(|k| k.name() == name)?;
         Some(DerivedEdge {
             kind,
             from: get("edge_from")?,
@@ -118,7 +120,10 @@ pub fn graph_endpoint(
     };
     // A defect is graph-unique by repository: `defect:<repo>/<id>`.
     let defect = from_side
-        && matches!(kind, LifecycleEdgeKind::FixedBy | LifecycleEdgeKind::IntroducedBy);
+        && matches!(
+            kind,
+            LifecycleEdgeKind::FixedBy | LifecycleEdgeKind::IntroducedBy
+        );
     if requirement {
         format!("requirement:{}:{raw}", changeset.repo)
     } else if defect {

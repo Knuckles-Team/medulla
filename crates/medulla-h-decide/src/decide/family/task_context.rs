@@ -181,9 +181,7 @@ pub fn read_task_context(
             }
         }
     }
-    contracts.sort_by(|a, b| {
-        (&a.0, line_of(&a.2), &a.1).cmp(&(&b.0, line_of(&b.2), &b.1))
-    });
+    contracts.sort_by(|a, b| (&a.0, line_of(&a.2), &a.1).cmp(&(&b.0, line_of(&b.2), &b.1)));
     // The code neighbourhood: the symbols the row is implemented by and one hop around.
     let mut neighbourhood: BTreeSet<String> = BTreeSet::new();
     for symbol in core.get_successors(&requirement).unwrap_or_default() {
@@ -219,8 +217,8 @@ pub fn read_task_context(
         .into_iter()
         .filter_map(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated))
         .collect();
-    let data_model =
-        data_model.and_then(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated));
+    let data_model = data_model
+        .and_then(|(_, id, props)| fit(section_of(id, &props), &mut room, &mut truncated));
     Ok(TaskContext {
         row_id,
         row_text,
@@ -267,15 +265,15 @@ pub(in crate::decide) async fn with_task_context(
         .ok_or_else(|| {
             invalid_parameter(format!("{ROW_PARAM} needs the text param {REPO_PARAM}"))
         })?;
-    let max_bytes = usize::try_from(medulla_server_api::knob_config::knobs().sdlc_task_context_max_bytes)
-        .unwrap_or(usize::MAX);
+    let max_bytes =
+        usize::try_from(medulla_server_api::knob_config::knobs().sdlc_task_context_max_bytes)
+            .unwrap_or(usize::MAX);
     let graph = text_param(&request, GRAPH_PARAM)
         .map(str::to_string)
         .ok_or_else(|| {
             invalid_parameter(format!("{ROW_PARAM} needs the text param {GRAPH_PARAM}"))
         })?;
-    let context =
-        assemble_task_context(state, &graph, verified, &repo, &row, max_bytes).await?;
+    let context = assemble_task_context(state, &graph, verified, &repo, &row, max_bytes).await?;
     let mut params = request.params.as_slice().to_vec();
     params.push(TypedParam {
         name: DIGEST_PARAM.to_string(),

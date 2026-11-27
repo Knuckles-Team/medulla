@@ -253,8 +253,10 @@ pub(crate) async fn component_publish(
 async fn stage_component_body(
     state: &Arc<RwLock<ServerState>>,
     request: &mut medulla_agent_types::agent_component::AgentComponentPublishRequest,
-) -> Result<Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>, String>
-{
+) -> Result<
+    Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>,
+    String,
+> {
     use medulla_agent_types::agent_component::facts::PROMPT_SCHEMA_INVALID;
     use medulla_agent_types::agent_component::{
         AgentComponentFacts, AgentComponentKind, ComponentBody, MAX_COMPONENT_BODY_BYTES,
@@ -267,10 +269,9 @@ async fn stage_component_body(
         } => Some(hex.clone()),
         _ => None,
     };
-    let expected_revision = request
-        .context
-        .expected_revision
-        .ok_or_else(|| "agent component writes require an explicit expected_revision".to_string())?;
+    let expected_revision = request.context.expected_revision.ok_or_else(|| {
+        "agent component writes require an explicit expected_revision".to_string()
+    })?;
     let entry_revision = expected_revision + 1;
     match (pin, request.body.clone()) {
         (None, None) => Ok(None),
@@ -330,8 +331,10 @@ async fn stage_prompt_body(
     entry_revision: u64,
     pin: &str,
     blueprint: String,
-) -> Result<Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>, String>
-{
+) -> Result<
+    Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>,
+    String,
+> {
     use medulla_agent_types::agent_component::facts::{
         validate_prompt_blueprint, PromptLimits, PROMPT_SCHEMA_INVALID,
     };
@@ -1166,17 +1169,19 @@ fn library_list(
         // The tool library is the component library's tool heads, paged by the one component
         // scan (MEDULLA-TYPED-PACKS-R011.2).
         AgentLibraryKind::Tool => store
-            .search_components(&medulla_agent_types::agent_component::AgentComponentSearchRequest {
-                tenant_id: tenant_id.to_string(),
-                task: None,
-                capabilities: Vec::new(),
-                kinds: vec![medulla_agent_types::agent_component::AgentComponentKind::Tool],
-                read_only: false,
-                limit,
-                cursor: cursor.map(str::to_string),
-                server_name: None,
-                upstream_name: None,
-            })
+            .search_components(
+                &medulla_agent_types::agent_component::AgentComponentSearchRequest {
+                    tenant_id: tenant_id.to_string(),
+                    task: None,
+                    capabilities: Vec::new(),
+                    kinds: vec![medulla_agent_types::agent_component::AgentComponentKind::Tool],
+                    read_only: false,
+                    limit,
+                    cursor: cursor.map(str::to_string),
+                    server_name: None,
+                    upstream_name: None,
+                },
+            )
             .map(|found| AgentLibraryPage {
                 entries: found
                     .entries

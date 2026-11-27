@@ -209,7 +209,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // definition are refused with their own codes.
     (
         "Statechart",
-        &["INSTANCE_DEFINITION_UNREGISTERED", "STATECHART_NO_TRANSITION"],
+        &[
+            "INSTANCE_DEFINITION_UNREGISTERED",
+            "STATECHART_NO_TRANSITION",
+        ],
     ),
     // MEDULLA-ORCH-VOCAB-R006.5: a graph template whose topology facts break a publish
     // shape rule is refused with the rule's detail.
@@ -222,10 +225,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-OBSERVE-R006.1: the runtime introspection read's refusals.
     (
         "Introspect",
-        &[
-            "INTROSPECT_LIMIT_INVALID",
-            "INTROSPECT_CURSOR_INVALID",
-        ],
+        &["INTROSPECT_LIMIT_INVALID", "INTROSPECT_CURSOR_INVALID"],
     ),
     // MEDULLA-OBSERVE-R010.1: the on-demand profile's refusals.
     (
@@ -344,12 +344,22 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R765: an invisible source and a non-owner share.
     ("GetForeignSource", &["SOURCE_NOT_FOUND"]),
     ("ProbeForeignSource", &["SOURCE_NOT_FOUND"]),
-    ("ShareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
-    ("UnshareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
+    (
+        "ShareForeignSource",
+        &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"],
+    ),
+    (
+        "UnshareForeignSource",
+        &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R770: an invisible source and a malformed parity request.
     (
         "ForeignSourceParity",
-        &["SOURCE_NOT_FOUND", "PARITY_TABLES_INVALID", "PARITY_SAMPLE_INVALID"],
+        &[
+            "SOURCE_NOT_FOUND",
+            "PARITY_TABLES_INVALID",
+            "PARITY_SAMPLE_INVALID",
+        ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: a DuckDB file outside its allowlist is refused at
     // registration; a warehouse read refuses a kind the engine does not serve, an unreadable
@@ -836,7 +846,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-INGEST-WORKER-R913.2: a graph with no admitted ontology refuses the slice.
-    ("OntologySlice", &["ONTOLOGY_HIERARCHY_CYCLE", "ONTOLOGY_NOT_ADMITTED"]),
+    (
+        "OntologySlice",
+        &["ONTOLOGY_HIERARCHY_CYCLE", "ONTOLOGY_NOT_ADMITTED"],
+    ),
     (
         "SelectWebPages",
         &[
@@ -877,7 +890,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // (MEDULLA-DURABLE-KERNEL-R082.9).
     ("AnalyticsJob", &["SCHEDULER_CONFIG_INVALID"]),
     // MEDULLA-FEDERATED-QUERY-R091.4: the plan-evolution refusals a downtime job's result carries.
-    ("AnalyticsJob", &["PLAN_RESULT_MISMATCH", "PLAN_AUTHORITY_EXPIRED"]),
+    (
+        "AnalyticsJob",
+        &["PLAN_RESULT_MISMATCH", "PLAN_AUTHORITY_EXPIRED"],
+    ),
     // MEDULLA-DECISION-ENGINE-R144.4: the refusals of an indexless retrieval. A denied
     // document answers as an absent one; budget exhaustion reports the counts.
     (
@@ -1038,7 +1054,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-INGEST-WORKER-R003.21: an empty node id, a bodiless or unreadable node, a stale revision.
     (
         "NodeBody",
-        &["INVALID_ARGUMENT", "NODE_BODY_UNAVAILABLE", "NODE_BODY_STALE"],
+        &[
+            "INVALID_ARGUMENT",
+            "NODE_BODY_UNAVAILABLE",
+            "NODE_BODY_STALE",
+        ],
     ),
     ("Diagnose", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
     (
@@ -1732,14 +1752,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-FINANCE-PRIMITIVES-R011.4, R011.5: an empty receipt idempotency key, or a new
     // receipt that does not start due at attempt 1.
-    ("CreateNodeIfAbsent", &["RECEIPT_KEY_INVALID", "RECEIPT_STATE_INVALID"]),
+    (
+        "CreateNodeIfAbsent",
+        &["RECEIPT_KEY_INVALID", "RECEIPT_STATE_INVALID"],
+    ),
     // MEDULLA-FINANCE-PRIMITIVES-R011.5: the receipt transition's refusals (its machine's own
     // `TRANSITION_REFUSED` is added through `MACHINE_METHODS`).
     (
         "FinanceReceiptTransition",
         &["RECEIPT_NOT_FOUND", "RECEIPT_STATE_INVALID"],
     ),
-
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
@@ -2078,21 +2100,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TENANT_SCOPE_REQUIRED", "APPROVAL_GATE_INVALID"],
     ),
     // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
-    (
-        "GoalList",
-        &["TENANT_SCOPE_REQUIRED", "GOAL_INVALID"],
-    ),
+    ("GoalList", &["TENANT_SCOPE_REQUIRED", "GOAL_INVALID"]),
     (
         "GoalIterations",
         &["TENANT_SCOPE_REQUIRED", "GOAL_NOT_FOUND"],
     ),
     (
         "GoalControl",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "GOAL_INVALID",
-            "GOAL_NOT_FOUND",
-        ],
+        &["TENANT_SCOPE_REQUIRED", "GOAL_INVALID", "GOAL_NOT_FOUND"],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
     (
@@ -2144,10 +2159,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     (
         "ConnectorRunRecord",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "CONNECTOR_RUN_INVALID",
-        ],
+        &["TENANT_SCOPE_REQUIRED", "CONNECTOR_RUN_INVALID"],
     ),
     // MEDULLA-SCM-R008: the gate verdict record's refusals.
     (
@@ -2200,13 +2212,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "LANDING_POLICY_APPROVAL_REQUIRED",
         ],
     ),
-    (
-        "FileDefect",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "INVALID_ARGUMENT",
-        ],
-    ),
+    ("FileDefect", &["TENANT_SCOPE_REQUIRED", "INVALID_ARGUMENT"]),
     (
         "TransitionDefect",
         &[
@@ -2270,23 +2276,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     (
         "DeliveryStatus",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "DELIVERY_NOT_FOUND",
-        ],
+        &["TENANT_SCOPE_REQUIRED", "DELIVERY_NOT_FOUND"],
     ),
-    (
-        "DeliveryList",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-        ],
-    ),
+    ("DeliveryList", &["TENANT_SCOPE_REQUIRED"]),
     (
         "DeliveryStop",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "DELIVERY_NOT_FOUND",
-        ],
+        &["TENANT_SCOPE_REQUIRED", "DELIVERY_NOT_FOUND"],
     ),
     // MEDULLA-SDLC-R019.17: a person's answer to the open question.
     (
@@ -2299,10 +2294,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-TYPED-PACKS-R806: the served schema drift methods.
-    (
-        "SchemaDriftList",
-        &["TENANT_SCOPE_REQUIRED"],
-    ),
+    ("SchemaDriftList", &["TENANT_SCOPE_REQUIRED"]),
     (
         "SchemaDriftGet",
         &["TENANT_SCOPE_REQUIRED", "DRIFT_NOT_FOUND"],

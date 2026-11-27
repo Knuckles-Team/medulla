@@ -116,7 +116,6 @@ async fn discover_applies_the_resolved_adapter() {
 
 use super::super::stat_adapter::scoped_adapter_pointer;
 use super::super::stat_pointer::{PointerMove, Qualified};
-use medulla_persistence_records::decision_jobs::read_pointer;
 use super::learning_tests::{q16, space_of};
 use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, outcome, template,
@@ -126,6 +125,7 @@ use medulla_decision_types::decision::statistical::retrieval::QueryVector;
 use medulla_decision_types::decision::statistical::retrieval_adapter::{
     AdapterFitRequest, AdapterMonitorRequest, AdapterSide, AdapterVerdict, OutcomeSource,
 };
+use medulla_persistence_records::decision_jobs::read_pointer;
 
 /// The corpus class the template plan anchors on.
 const CORPUS: &str = "Incident";
@@ -750,7 +750,7 @@ async fn discovered_for(
             perspectives: None,
             capability: capability.map(str::to_string),
             document_set_ids: Vec::new(),
-                agent_ref: None,
+            agent_ref: None,
             seed_ids: Vec::new(),
             hop_filter: None,
         },
@@ -853,7 +853,11 @@ async fn fit_and_rollback_receipts_and_verdict_field() {
         LearningRecorded::Monitored(monitored) => *monitored,
         other => panic!("monitor: {other:?}"),
     };
-    assert_eq!(monitored.verdict, AdapterVerdict::RolledBack, "{monitored:?}");
+    assert_eq!(
+        monitored.verdict,
+        AdapterVerdict::RolledBack,
+        "{monitored:?}"
+    );
     let prefix = format!("adapter-monitor:{}:", fitted.adapter_digest);
     let stored = h
         .store
@@ -942,7 +946,11 @@ async fn outcome_adapter_lifts_and_reverts() {
         LearningRecorded::Monitored(monitored) => *monitored,
         other => panic!("monitor: {other:?}"),
     };
-    assert_eq!(monitored.verdict, AdapterVerdict::RolledBack, "{monitored:?}");
+    assert_eq!(
+        monitored.verdict,
+        AdapterVerdict::RolledBack,
+        "{monitored:?}"
+    );
     let (reverted_digest, reverted_rows) = discovered(&h, &core).await;
     assert_eq!(reverted_digest, "base");
     assert_eq!(reverted_rows, base_rows);
@@ -1018,7 +1026,11 @@ async fn capability_outcome_adapter_lifts_and_reverts() {
         LearningRecorded::Monitored(monitored) => *monitored,
         other => panic!("monitor: {other:?}"),
     };
-    assert_eq!(monitored.verdict, AdapterVerdict::RolledBack, "{monitored:?}");
+    assert_eq!(
+        monitored.verdict,
+        AdapterVerdict::RolledBack,
+        "{monitored:?}"
+    );
     assert_eq!(
         discovered_for(&h, &core, Some(&capability)).await,
         (base_digest, base_rows)

@@ -83,7 +83,10 @@ fn branch_node(repository_id: &str, item: &IndexRef) -> ExtractedNode {
             ("repository_id".to_string(), repository_id.to_string()),
             ("ref_name".to_string(), item.ref_name.clone()),
             ("revision_id".to_string(), item.revision_id.clone()),
-            ("status".to_string(), status_label(item.presence).to_string()),
+            (
+                "status".to_string(),
+                status_label(item.presence).to_string(),
+            ),
         ]),
     }
 }

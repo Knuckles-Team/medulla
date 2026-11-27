@@ -93,11 +93,16 @@ mod tests {
         let back: IdentityStore = serde_json::from_slice(&image).unwrap();
         assert_eq!(back, store);
         assert_eq!(serde_json::to_vec(&back).unwrap(), image);
-        assert_eq!(back.ownership_record("g", "d1"), Some(&record("g", "d1", 10)));
+        assert_eq!(
+            back.ownership_record("g", "d1"),
+            Some(&record("g", "d1", 10))
+        );
         // An empty map leaves the image without the field.
-        assert!(!String::from_utf8(serde_json::to_vec(&IdentityStore::default()).unwrap())
-            .unwrap()
-            .contains("ownership_records"));
+        assert!(
+            !String::from_utf8(serde_json::to_vec(&IdentityStore::default()).unwrap())
+                .unwrap()
+                .contains("ownership_records")
+        );
     }
 
     // spec: MEDULLA-IDENTITY-R700.5
@@ -115,7 +120,10 @@ mod tests {
         );
         // An existing key is replaced, not refused.
         store.record_ownership(record("g", "d0", 5000)).unwrap();
-        assert_eq!(store.latest_ownership_record("g").unwrap().plan_digest, "d0");
+        assert_eq!(
+            store.latest_ownership_record("g").unwrap().plan_digest,
+            "d0"
+        );
         assert!(store.mark_ownership_rolled_back("g", "d0"));
         assert!(store.ownership_record("g", "d0").unwrap().rolled_back);
         assert!(!store.mark_ownership_rolled_back("g", "absent"));

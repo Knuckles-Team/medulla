@@ -531,8 +531,15 @@ mod tests {
         };
         let route = route_ingest_graph(&all).unwrap();
         assert_eq!((route.graph(), route.scope()), ("src", RouteScope::Source));
-        let route = route_ingest_graph(&RouteInputs { source: None, ..all }).unwrap();
-        assert_eq!((route.graph(), route.scope()), ("repo", RouteScope::Repository));
+        let route = route_ingest_graph(&RouteInputs {
+            source: None,
+            ..all
+        })
+        .unwrap();
+        assert_eq!(
+            (route.graph(), route.scope()),
+            ("repo", RouteScope::Repository)
+        );
         let route = route_ingest_graph(&RouteInputs {
             source: Some(" "),
             repository: None,
@@ -547,7 +554,10 @@ mod tests {
             default: "main",
         })
         .unwrap();
-        assert_eq!((route.graph(), route.scope()), ("main", RouteScope::Default));
+        assert_eq!(
+            (route.graph(), route.scope()),
+            ("main", RouteScope::Default)
+        );
         assert_eq!(
             route_ingest_graph(&RouteInputs {
                 source: Some("bad name"),
@@ -566,15 +576,24 @@ mod tests {
             profile: vec![profile(IngestStage::Fetch, 5)],
         };
         let one = record().after_ack(0, &ack, 500, 10).unwrap();
-        assert_eq!((one.page_index, one.cursor.as_str(), one.pages, one.items), (1, "c1", 1, 40));
+        assert_eq!(
+            (one.page_index, one.cursor.as_str(), one.pages, one.items),
+            (1, "c1", 1, 40)
+        );
         assert_eq!(one.state, DrainState::Running);
         let last = DrainAck {
             items: 2,
             next_cursor: None,
-            profile: vec![profile(IngestStage::Fetch, 7), profile(IngestStage::Embed, 3)],
+            profile: vec![
+                profile(IngestStage::Fetch, 7),
+                profile(IngestStage::Embed, 3),
+            ],
         };
         let two = one.after_ack(1, &last, 500, 20).unwrap();
-        assert_eq!((two.pages, two.items, two.state), (2, 42, DrainState::Complete));
+        assert_eq!(
+            (two.pages, two.items, two.state),
+            (2, 42, DrainState::Complete)
+        );
         assert_eq!(two.profile.len(), 2);
         assert_eq!(two.profile[0].stage, IngestStage::Fetch);
         assert_eq!(two.profile[0].wall_ms, 12);
@@ -592,7 +611,10 @@ mod tests {
         let advanced = record().after_ack(0, &ack, 500, 10).unwrap();
         assert_eq!(
             advanced.after_ack(0, &ack, 500, 11),
-            Err(DrainAckError::Stale { page_index: 0, stored: 1 })
+            Err(DrainAckError::Stale {
+                page_index: 0,
+                stored: 1
+            })
         );
         let closed = advanced
             .after_ack(1, &DrainAck::default(), 500, 12)
@@ -602,8 +624,19 @@ mod tests {
             Err(DrainAckError::Stale { .. })
         ));
         assert!(matches!(
-            record().after_ack(0, &DrainAck { items: 501, ..ack.clone() }, 500, 1),
-            Err(DrainAckError::PageTooLarge { items: 501, max: 500 })
+            record().after_ack(
+                0,
+                &DrainAck {
+                    items: 501,
+                    ..ack.clone()
+                },
+                500,
+                1
+            ),
+            Err(DrainAckError::PageTooLarge {
+                items: 501,
+                max: 500
+            })
         ));
         let long = DrainAck {
             next_cursor: Some("c".repeat(4097)),

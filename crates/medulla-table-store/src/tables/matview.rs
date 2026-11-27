@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::matview_incremental::{
-    mv_nonnull_column, mv_sum_column, ExactAgg, IncrementalViewProgram, Row, ViewOutput,
-    MV_COUNT, MV_KEY,
+    mv_nonnull_column, mv_sum_column, ExactAgg, IncrementalViewProgram, Row, ViewOutput, MV_COUNT,
+    MV_KEY,
 };
 use super::store::{TableStore, TableTxn, TxnOp};
 
@@ -138,7 +138,14 @@ pub fn written_tables(txn: &TableTxn) -> Vec<&str> {
 pub fn mark_matviews_stale(specs: Vec<MatViewSpec>, written: &[&str]) -> Vec<MatViewSpec> {
     specs
         .into_iter()
-        .filter(|spec| !spec.stale && spec.program.is_none() && spec.inputs.iter().any(|input| written.contains(&input.as_str())))
+        .filter(|spec| {
+            !spec.stale
+                && spec.program.is_none()
+                && spec
+                    .inputs
+                    .iter()
+                    .any(|input| written.contains(&input.as_str()))
+        })
         .map(|mut spec| {
             spec.stale = true;
             spec
@@ -179,8 +186,18 @@ pub fn incremental_result_schema(
     }
     for (name, agg) in &aggs {
         if matches!(agg, ExactAgg::Sum(_) | ExactAgg::Avg(_)) {
-            columns.push(Column::new(mv_sum_column(name), ColumnType::Text, false, false));
-            columns.push(Column::new(mv_nonnull_column(name), ColumnType::BigInt, false, false));
+            columns.push(Column::new(
+                mv_sum_column(name),
+                ColumnType::Text,
+                false,
+                false,
+            ));
+            columns.push(Column::new(
+                mv_nonnull_column(name),
+                ColumnType::BigInt,
+                false,
+                false,
+            ));
         }
     }
     columns.push(Column::new(MV_KEY, ColumnType::Text, false, true));
@@ -206,7 +223,10 @@ pub fn create_incremental_matview_txn(
         for cells in store.scan(table)? {
             let mut row = Row::new();
             for (index, column) in schema.columns().iter().enumerate() {
-                let cell = cells.get(index).cloned().unwrap_or(medulla_tables::schema::Cell::Null);
+                let cell = cells
+                    .get(index)
+                    .cloned()
+                    .unwrap_or(medulla_tables::schema::Cell::Null);
                 row.insert(column.name.clone(), cell.to_typed_json(column.ty));
             }
             rows.push((super::matview_incremental::row_key_text(&pk, &row), row));

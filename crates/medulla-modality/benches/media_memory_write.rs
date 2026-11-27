@@ -42,8 +42,14 @@ fn media_memory_write() {
     millis.sort_by(f64::total_cmp);
     let (p50, p99) = (percentile(&millis, 0.50), percentile(&millis, 0.99));
     println!("decide/media_memory_write: p50 {p50:.4} ms, p99 {p99:.4} ms over {CALLS} calls");
-    assert!(p50 <= P50_BUDGET_MS, "p50 {p50} ms is above {P50_BUDGET_MS} ms");
-    assert!(p99 <= P99_BUDGET_MS, "p99 {p99} ms is above {P99_BUDGET_MS} ms");
+    assert!(
+        p50 <= P50_BUDGET_MS,
+        "p50 {p50} ms is above {P50_BUDGET_MS} ms"
+    );
+    assert!(
+        p99 <= P99_BUDGET_MS,
+        "p99 {p99} ms is above {P99_BUDGET_MS} ms"
+    );
 }
 
 // spec: MEDULLA-MEDIA-VOCAB-R650.6

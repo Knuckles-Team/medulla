@@ -4,12 +4,12 @@
 //! Pure over [`RecordLookup`], so every refusal is unit-testable without a
 //! server. Structural checks on one body already ran in `medulla-types`.
 
-use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_outcome_types::policy_evolution::{
     CaptureEligibility, ModelPolicyVersion, OpenWeightPolicyCapability, PolicyCapture,
     PolicyEvaluation, PolicyEvolutionRecord, PolicyEvolutionRecordBody, PolicyRefusal, TrainingRun,
     TrainingRunOutcome, VersionOrigin,
 };
+use medulla_decision_types::decision::held_out::RevisionSubject;
 
 /// What admission may read from the request graph.
 pub trait RecordLookup {
@@ -179,7 +179,10 @@ fn admit_evaluation(
             let revisions =
                 std::iter::once(&evaluation.revision_ref).chain(&evaluation.champion_revision_ref);
             for revision_ref in revisions {
-                if !published.iter().any(|digest| digest == revision_ref.as_str()) {
+                if !published
+                    .iter()
+                    .any(|digest| digest == revision_ref.as_str())
+                {
                     return Err(record_missing(revision_ref.as_str()));
                 }
             }

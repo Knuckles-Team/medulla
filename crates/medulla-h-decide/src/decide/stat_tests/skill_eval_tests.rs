@@ -66,7 +66,11 @@ fn runs(cases: &[SkillEvalCase], failing: usize) -> Vec<SkillEvalRun> {
             let ok = index >= failing;
             SkillEvalRun {
                 case_id: case.case_id.clone(),
-                actual_digest: if ok { format!("out-{index}") } else { "wrong".into() },
+                actual_digest: if ok {
+                    format!("out-{index}")
+                } else {
+                    "wrong".into()
+                },
                 actual_trajectory: if ok { trajectory() } else { Vec::new() },
                 judged_passed: Some(ok),
                 attestation: attestation(0),
@@ -93,7 +97,9 @@ fn request(failing: usize, kappa_ppm: u64) -> SkillEvalRequest {
     }
 }
 
-async fn store(h: &Harness) -> std::sync::Arc<medulla_persistence_records::agent_library::AgentLibraryStore> {
+async fn store(
+    h: &Harness,
+) -> std::sync::Arc<medulla_persistence_records::agent_library::AgentLibraryStore> {
     h.state.write().await.ensure_agent_library().unwrap()
 }
 
@@ -110,7 +116,10 @@ async fn job_stores_results_and_report() {
     assert_eq!(outcome.results.len(), 20);
     // Outcome and trajectory scores are separate fields; the golden case has no trajectory.
     assert_eq!(outcome.results[0].result.trajectory_score_ppm, None);
-    assert_eq!(outcome.results[5].result.trajectory_score_ppm, Some(1_000_000));
+    assert_eq!(
+        outcome.results[5].result.trajectory_score_ppm,
+        Some(1_000_000)
+    );
     // Each result links to its run trace and is stored with the report.
     assert_eq!(outcome.results[7].run_trace_id.as_deref(), Some("trace-7"));
     let rows = store
@@ -172,17 +181,26 @@ async fn saturation_is_flagged_not_trusted() {
     assert!(healthy.premises.contains(&"eval:band=healthy".to_string()));
     assert!(healthy.premises.contains(&"eval:pass=16/20".to_string()));
     assert!(healthy.premises.contains(&"eval:mix=1/16/3".to_string()));
-    assert!(healthy.premises.contains(&"eval:judge_kappa=700000".to_string()));
-    assert!(!healthy.premises.contains(&"eval:suspicious_saturation".to_string()));
+    assert!(healthy
+        .premises
+        .contains(&"eval:judge_kappa=700000".to_string()));
+    assert!(!healthy
+        .premises
+        .contains(&"eval:suspicious_saturation".to_string()));
 
     // Every case passing is saturation: it is flagged and never a verdict by itself.
     let saturated = run(&store, &request(0, 700_000)).expect("reruns");
     assert_eq!(saturated.report.band, SuiteBand::Saturated);
-    assert!(saturated.premises.contains(&"eval:band=saturated".to_string()));
+    assert!(saturated
+        .premises
+        .contains(&"eval:band=saturated".to_string()));
     assert!(saturated
         .premises
         .contains(&"eval:suspicious_saturation".to_string()));
-    assert!(saturated.premises.iter().all(|premise| !premise.contains("promote")));
+    assert!(saturated
+        .premises
+        .iter()
+        .all(|premise| !premise.contains("promote")));
 
     // A mix far from the wanted shares is flagged too.
     let mut skewed = request(4, 700_000);
@@ -191,7 +209,9 @@ async fn saturation_is_flagged_not_trusted() {
         case.expected_trajectory.clear();
     }
     let flagged = run(&store, &skewed).expect("runs");
-    assert!(flagged.premises.contains(&"eval:mix_out_of_band".to_string()));
+    assert!(flagged
+        .premises
+        .contains(&"eval:mix_out_of_band".to_string()));
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R711.3
@@ -211,7 +231,8 @@ async fn report_is_a_graph_node_with_counts_and_a_receipt_digest() {
         .clone();
     core.add_node(
         SKILL.to_string(),
-        rmp_serde::to_vec_named(&serde_json::json!({"type": "Skill", "tenant_id": TENANT})).unwrap(),
+        rmp_serde::to_vec_named(&serde_json::json!({"type": "Skill", "tenant_id": TENANT}))
+            .unwrap(),
     );
     let who = VerifiedRequestContext::verified_for_test_with_scopes("agent-7", TENANT, &["*"]);
     let req = request(4, 700_000);
@@ -227,7 +248,10 @@ async fn report_is_a_graph_node_with_counts_and_a_receipt_digest() {
     assert_eq!(props["pass_count"], 16);
     assert_eq!(props["fail_count"], 4);
     assert_eq!(props["evaluated_ms"], 77);
-    assert!(props["receipt_digest"].as_str().unwrap().starts_with("sha256:"));
+    assert!(props["receipt_digest"]
+        .as_str()
+        .unwrap()
+        .starts_with("sha256:"));
     assert!(props["suite"].as_str().unwrap().starts_with("sha256:"));
     // The report links to the skill revision it evaluated.
     assert_eq!(operations[1]["op"], "upsert_edge");
@@ -263,7 +287,8 @@ async fn a_case_is_added_checked_and_scoped_to_its_tenant() {
 
     // A valid case plans one tenant-namespaced node that carries the vocabulary properties.
     let good = case(1, EvalCaseKind::RealPrompt);
-    let (operations, added) = case_add_operations(&author, &add(good.clone(), TENANT)).expect("plans");
+    let (operations, added) =
+        case_add_operations(&author, &add(good.clone(), TENANT)).expect("plans");
     assert_eq!(added.node_id, case_node_id(TENANT, "case-1"));
     let props = &operations[0]["properties"];
     assert_eq!(operations[0]["id"], added.node_id);
@@ -308,7 +333,10 @@ async fn report_and_calibration_are_read_and_recorded_per_tenant() {
     // No suite yet: the answer is empty, and the same for another tenant and for a skill that
     // does not exist, so it says nothing about what exists.
     let empty = report_answer(&store, &ask(TENANT)).expect("reads");
-    assert_eq!((empty.report.clone(), empty.calibration.clone()), (None, None));
+    assert_eq!(
+        (empty.report.clone(), empty.calibration.clone()),
+        (None, None)
+    );
 
     // Calibrate below the bound: recorded, not admitted. At the bound and enough items: admitted.
     let record = |kappa_ppm: u64, n: u64| SkillEvalCalibrateRequest {
@@ -321,8 +349,16 @@ async fn report_and_calibration_are_read_and_recorded_per_tenant() {
             n,
         },
     };
-    assert!(!calibrate(&store, &record(100_000, 60)).expect("records").admitted);
-    assert!(!calibrate(&store, &record(900_000, 10)).expect("records").admitted);
+    assert!(
+        !calibrate(&store, &record(100_000, 60))
+            .expect("records")
+            .admitted
+    );
+    assert!(
+        !calibrate(&store, &record(900_000, 10))
+            .expect("records")
+            .admitted
+    );
     let admitted = calibrate(&store, &record(900_000, 60)).expect("records");
     assert!(admitted.admitted);
 
@@ -331,7 +367,9 @@ async fn report_and_calibration_are_read_and_recorded_per_tenant() {
     req.calibration = None;
     let outcome = run(&store, &req).expect("runs with the recorded calibration");
     assert!(outcome.refused.is_empty(), "{:?}", outcome.refused);
-    assert!(outcome.premises.contains(&"eval:judge_kappa=900000".to_string()));
+    assert!(outcome
+        .premises
+        .contains(&"eval:judge_kappa=900000".to_string()));
 
     // The report read returns the stored report and calibration; another tenant sees none.
     let mine = report_answer(&store, &ask(TENANT)).expect("reads");

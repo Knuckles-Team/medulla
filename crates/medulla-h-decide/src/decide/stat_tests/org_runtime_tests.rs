@@ -18,8 +18,7 @@ use medulla_work_types::orchestration::org::{
 };
 use medulla_work_types::work_market::selection::{MarketFacts, OfferExclusion};
 use medulla_work_types::work_market::{
-    BlastRadius, GapEvidenceInput, GapUpsertRequest, GapView, GapWorkSpec, WorkOffer,
-    WorkOfferView,
+    BlastRadius, GapEvidenceInput, GapUpsertRequest, GapView, GapWorkSpec, WorkOffer, WorkOfferView,
 };
 
 const CODE: &str = "eg:capability/code";
@@ -172,7 +171,13 @@ fn ranked(result: &RecruitResult) -> Vec<(&str, &str, u32)> {
     result
         .ranked
         .iter()
-        .map(|e| (e.agent_ref.as_str(), e.definition_revision.as_str(), e.covered))
+        .map(|e| {
+            (
+                e.agent_ref.as_str(),
+                e.definition_revision.as_str(),
+                e.covered,
+            )
+        })
         .collect()
 }
 
@@ -313,9 +318,7 @@ async fn pinless_twin_refuses_and_excluded_offer_has_no_top() {
         .records
         .as_slice()[0]
         .clone();
-    let allocation = result_of(&record)
-        .allocation
-        .expect("a market was given");
+    let allocation = result_of(&record).allocation.expect("a market was given");
     assert!(allocation.top().is_none());
     assert_eq!(
         allocation.excluded,

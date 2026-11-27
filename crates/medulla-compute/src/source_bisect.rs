@@ -6,7 +6,9 @@
 
 use std::collections::BTreeMap;
 
-use medulla_source_types::source_bisect::{BisectLink, BisectOutcome, BisectRefusal, BisectStepReceipt};
+use medulla_source_types::source_bisect::{
+    BisectLink, BisectOutcome, BisectRefusal, BisectStepReceipt,
+};
 use medulla_work_types::step_verdict::VerificationVerdict;
 
 /// The next step of a bisect.
@@ -23,7 +25,9 @@ pub fn next_step(
     good: Option<usize>,
 ) -> Result<BisectStepReceipt, BisectRefusal> {
     let Some(bad_index) = chain.len().checked_sub(1) else {
-        return Err(BisectRefusal::InvalidArgument("the chain is empty".to_string()));
+        return Err(BisectRefusal::InvalidArgument(
+            "the chain is empty".to_string(),
+        ));
     };
     let verdict_at = |index: usize| verdicts.get(&chain[index].changeset).copied();
     if verdict_at(bad_index) == Some(VerificationVerdict::Pass) {
@@ -35,7 +39,9 @@ pub fn next_step(
         BisectRefusal::VerdictCoverage("no changeset below bad has a passing verdict".to_string())
     };
     let mut low = match good {
-        Some(index) if index < bad_index && verdict_at(index) == Some(VerificationVerdict::Pass) => {
+        Some(index)
+            if index < bad_index && verdict_at(index) == Some(VerificationVerdict::Pass) =>
+        {
             index
         }
         Some(_) => return Err(coverage()),
@@ -104,7 +110,10 @@ mod tests {
                 }
                 BisectOutcome::NeedsVerdict => {
                     let n: usize = answer.link.commit[1..].parse().expect("index");
-                    known.insert(answer.link.changeset, if n >= first_bad { Fail } else { Pass });
+                    known.insert(
+                        answer.link.changeset,
+                        if n >= first_bad { Fail } else { Pass },
+                    );
                 }
             }
         }

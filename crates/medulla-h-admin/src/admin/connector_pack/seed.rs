@@ -176,7 +176,10 @@ pub(crate) fn current_seed_content(
             },
         );
     }
-    let digests = parts.iter().map(|(key, part)| (*key, part.digest)).collect();
+    let digests = parts
+        .iter()
+        .map(|(key, part)| (*key, part.digest))
+        .collect();
     Ok(SeedGraphContent {
         content_digest: seed_content_digest(&digests),
         parts,

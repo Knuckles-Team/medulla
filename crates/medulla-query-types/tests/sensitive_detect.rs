@@ -90,7 +90,8 @@ fn detector_rules_round_trip_and_validate() {
     }
 
     // An unknown rule kind and an unknown field are refused.
-    let unknown_kind = r#"{"id":"d","category":"c","method":"pattern","rule":{"kind":"fuzzy"},"threshold":0.5}"#;
+    let unknown_kind =
+        r#"{"id":"d","category":"c","method":"pattern","rule":{"kind":"fuzzy"},"threshold":0.5}"#;
     assert!(serde_json::from_str::<SensitiveDetector>(unknown_kind).is_err());
     let unknown_field = r#"{"id":"d","category":"c","method":"pattern","rule":{"kind":"pattern","regex":"a","flags":"i"},"threshold":0.5}"#;
     assert!(serde_json::from_str::<SensitiveDetector>(unknown_field).is_err());
@@ -99,7 +100,10 @@ fn detector_rules_round_trip_and_validate() {
         regex: "^a+$".into(),
     };
     assert_eq!(
-        detector(pattern.clone(), 1.5).validate().unwrap_err().code(),
+        detector(pattern.clone(), 1.5)
+            .validate()
+            .unwrap_err()
+            .code(),
         "DETECTOR_THRESHOLD_INVALID"
     );
     assert_eq!(
@@ -120,12 +124,20 @@ fn detector_rules_round_trip_and_validate() {
         mismatched.validate().unwrap_err().code(),
         "DETECTOR_RULE_MISMATCH"
     );
-    let empty = detector(DetectorRule::Pattern { regex: String::new() }, 0.5)
-        .validate()
-        .unwrap_err();
+    let empty = detector(
+        DetectorRule::Pattern {
+            regex: String::new(),
+        },
+        0.5,
+    )
+    .validate()
+    .unwrap_err();
     assert!(matches!(empty, InvalidDetector::PatternInvalid { .. }));
     assert_eq!(empty.code(), "DETECTOR_PATTERN_INVALID");
-    assert_eq!(empty.to_string(), "DETECTOR_PATTERN_INVALID: detector:probe");
+    assert_eq!(
+        empty.to_string(),
+        "DETECTOR_PATTERN_INVALID: detector:probe"
+    );
 
     let ids: Vec<String> = builtin_detectors().into_iter().map(|d| d.id).collect();
     assert_eq!(

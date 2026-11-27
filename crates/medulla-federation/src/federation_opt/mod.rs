@@ -34,16 +34,16 @@ pub mod mcp;
 mod obda_snapshot;
 pub(crate) mod oq2;
 pub mod plan_evolution;
-pub mod remote;
 mod raw;
+pub mod remote;
 mod run;
 mod search;
 mod session;
-mod stream;
 mod snapshot;
 mod sql;
 mod stats;
 mod strategy;
+mod stream;
 mod trace;
 pub mod web;
 

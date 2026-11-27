@@ -29,7 +29,12 @@ fn bare_spawns(file: &Path) -> Vec<String> {
         }
         let code = line.split("//").next().unwrap_or("");
         if code.contains("tokio::spawn(") || code.contains("task::spawn(") {
-            found.push(format!("{}:{}: {}", file.display(), number + 1, line.trim()));
+            found.push(format!(
+                "{}:{}: {}",
+                file.display(),
+                number + 1,
+                line.trim()
+            ));
         }
     }
     found
@@ -59,7 +64,12 @@ fn registered_job_crates_hold_no_bare_tokio_spawn() {
             for (number, line) in fs::read_to_string(&file).unwrap().lines().enumerate() {
                 let code = line.split("//").next().unwrap_or("");
                 if code.contains("tokio::spawn(") || code.contains("task::spawn(") {
-                    found.push(format!("{}:{}: {}", file.display(), number + 1, line.trim()));
+                    found.push(format!(
+                        "{}:{}: {}",
+                        file.display(),
+                        number + 1,
+                        line.trim()
+                    ));
                 }
             }
         }
@@ -79,7 +89,10 @@ fn registered_job_files_hold_no_bare_tokio_spawn() {
     let mut found = Vec::new();
     for relative in JOB_FILES {
         let file = crates.join(relative);
-        assert!(file.is_file(), "{relative} moved or was deleted: update JOB_FILES");
+        assert!(
+            file.is_file(),
+            "{relative} moved or was deleted: update JOB_FILES"
+        );
         found.extend(bare_spawns(&file));
         // A file on the list registers at least one job: an empty list is a drifted scan.
         let source = fs::read_to_string(&file).unwrap();

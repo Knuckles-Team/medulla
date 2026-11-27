@@ -207,7 +207,10 @@ fn governing_names_the_owners_and_stewards_of_the_most_specific_level() {
         domain: Some("finance".into()),
     });
     let (owners, stewards) = governing(&all, &target);
-    assert!(owners.is_empty(), "the asset level holds no owner and shadows the domain");
+    assert!(
+        owners.is_empty(),
+        "the asset level holds no owner and shadows the domain"
+    );
     assert_eq!(stewards, ["amy", "zed"]);
 
     let domain_only = TargetScopes::of_target(&StewardshipTarget {
@@ -215,5 +218,8 @@ fn governing_names_the_owners_and_stewards_of_the_most_specific_level() {
         concept_scheme: None,
         domain: Some("finance".into()),
     });
-    assert_eq!(governing(&all, &domain_only), (vec!["domain-owner".to_string()], vec![]));
+    assert_eq!(
+        governing(&all, &domain_only),
+        (vec!["domain-owner".to_string()], vec![])
+    );
 }

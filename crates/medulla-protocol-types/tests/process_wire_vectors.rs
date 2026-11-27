@@ -4,9 +4,7 @@
 //! test (`tests/test_process_wire_vectors.py`) reads the same file.
 
 use medulla_protocol_types::protocol::Method;
-use medulla_types::process_import::{
-    ProcessCompiled, ProcessModelExported, ProcessModelImported,
-};
+use medulla_types::process_import::{ProcessCompiled, ProcessModelExported, ProcessModelImported};
 
 const VECTORS: &str = include_str!("../../../tests/fixtures/process_wire_vectors.json");
 

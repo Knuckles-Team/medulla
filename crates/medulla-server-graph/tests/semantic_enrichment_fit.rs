@@ -86,13 +86,18 @@ fn fit_writes_topics_and_classify_reads_floor() {
     let node = medulla_types::msgpack::decode_property_value(&node).unwrap();
     assert_eq!(node["type"], "Topic");
     assert_eq!(node["taxonomy"], "subjects");
-    assert_eq!(node["holdout_precision_bp"], first.topics[1].holdout_precision_bp);
+    assert_eq!(
+        node["holdout_precision_bp"],
+        first.topics[1].holdout_precision_bp
+    );
     assert!(stored(&core, "another-taxonomy").is_empty());
 
     // A document on the storage centroid classifies, and its confidence reaches the stored floor.
     let doc = id("doc:1");
     let centroid = first.topics[1].centroid.clone();
-    let hit = classify_with_floor(&doc, &centroid, &topics, 0).unwrap().unwrap();
+    let hit = classify_with_floor(&doc, &centroid, &topics, 0)
+        .unwrap()
+        .unwrap();
     assert_eq!(hit.topic.as_str(), "topic:storage");
     assert!(hit.confidence.basis_points() >= first.topics[1].floor_bp);
 
@@ -102,7 +107,11 @@ fn fit_writes_topics_and_classify_reads_floor() {
     let refit = lower_fit(&second, "subjects", "record:2").unwrap().unwrap();
     apply(&core, refit.methods());
     let after = stored(&core, "subjects");
-    assert_eq!(after.len(), 2, "the refit replaced the nodes, it added none");
+    assert_eq!(
+        after.len(),
+        2,
+        "the refit replaced the nodes, it added none"
+    );
     for (stored, fitted) in after.iter().zip(&second.topics) {
         assert_eq!(stored.centroid, fitted.centroid);
         assert_eq!(stored.floor_bp, Some(fitted.floor_bp));
@@ -111,10 +120,14 @@ fn fit_writes_topics_and_classify_reads_floor() {
     // it is dropped; the same topics without their stored floors keep it under a zero cut.
     assert!(after.iter().all(|t| t.floor_bp == Some(10_000)));
     let near = [0.9, 0.1];
-    assert!(classify_with_floor(&doc, &near, &after, 0).unwrap().is_none());
+    assert!(classify_with_floor(&doc, &near, &after, 0)
+        .unwrap()
+        .is_none());
     let mut unfloored = after.clone();
     for topic in &mut unfloored {
         topic.floor_bp = None;
     }
-    assert!(classify_with_floor(&doc, &near, &unfloored, 0).unwrap().is_some());
+    assert!(classify_with_floor(&doc, &near, &unfloored, 0)
+        .unwrap()
+        .is_some());
 }

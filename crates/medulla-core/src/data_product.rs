@@ -45,7 +45,8 @@ pub fn check_contract(
     }
     // The first failing score of each rule, found once, so the check is linear in the rules and
     // the scores rather than their product.
-    let mut failing: std::collections::HashMap<&str, &QualityScore> = std::collections::HashMap::new();
+    let mut failing: std::collections::HashMap<&str, &QualityScore> =
+        std::collections::HashMap::new();
     for score in live.quality.iter().filter(|score| !score.passed) {
         failing.entry(score.rule.as_str()).or_insert(score);
     }
@@ -200,8 +201,16 @@ mod tests {
         let elapsed = started.elapsed();
         // One violation per broken promise, in contract order.
         assert_eq!(violations.len(), RULES);
-        assert_eq!(violations[RULES - 1].promise, ContractPromise::Quality { rule: "rule:19999".into() });
+        assert_eq!(
+            violations[RULES - 1].promise,
+            ContractPromise::Quality {
+                rule: "rule:19999".into()
+            }
+        );
         // A product of the rules and the scores (4e8 steps) would not finish inside this bound.
-        assert!(elapsed < std::time::Duration::from_secs(1), "took {elapsed:?}");
+        assert!(
+            elapsed < std::time::Duration::from_secs(1),
+            "took {elapsed:?}"
+        );
     }
 }

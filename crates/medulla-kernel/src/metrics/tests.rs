@@ -224,10 +224,22 @@ fn lane_gauges_after_success_and_refusal() {
         out.contains("medulla_lane_depth{lane=\"general\",queue_class=\"fast\"} 3"),
         "{out}"
     );
-    assert!(out.contains("medulla_lane_oldest_age_seconds{lane=\"general\"} 42"), "{out}");
-    assert!(out.contains("medulla_lane_inflight{lane=\"general\"} 1"), "{out}");
-    assert!(out.contains("medulla_admit_refused_total{lane=\"hydration\"} 1"), "{out}");
-    assert!(!out.contains("medulla_admit_refused_total{lane=\"general\"}"), "{out}");
+    assert!(
+        out.contains("medulla_lane_oldest_age_seconds{lane=\"general\"} 42"),
+        "{out}"
+    );
+    assert!(
+        out.contains("medulla_lane_inflight{lane=\"general\"} 1"),
+        "{out}"
+    );
+    assert!(
+        out.contains("medulla_admit_refused_total{lane=\"hydration\"} 1"),
+        "{out}"
+    );
+    assert!(
+        !out.contains("medulla_admit_refused_total{lane=\"general\"}"),
+        "{out}"
+    );
 }
 
 // spec: MEDULLA-INGEST-WORKER-R001.18
@@ -257,15 +269,28 @@ fn the_ingest_status_answers_the_ingest_series_the_registry_holds() {
             })
             .map(|sample| sample.value)
     };
-    assert_eq!(value("medulla_ingest_jobs_total", "outcome", "enqueued"), Some(1.0));
     assert_eq!(
-        value("medulla_ingest_dead_letter_total", "queue", "ingest-hydration"),
+        value("medulla_ingest_jobs_total", "outcome", "enqueued"),
+        Some(1.0)
+    );
+    assert_eq!(
+        value(
+            "medulla_ingest_dead_letter_total",
+            "queue",
+            "ingest-hydration"
+        ),
         Some(1.0)
     );
     assert_eq!(value("medulla_lane_depth", "lane", "general"), Some(3.0));
-    assert_eq!(value("medulla_lane_oldest_age_seconds", "lane", "general"), Some(42.0));
+    assert_eq!(
+        value("medulla_lane_oldest_age_seconds", "lane", "general"),
+        Some(42.0)
+    );
     assert_eq!(value("medulla_lane_inflight", "lane", "general"), Some(1.0));
-    assert_eq!(value("medulla_admit_refused_total", "lane", "hydration"), Some(1.0));
+    assert_eq!(
+        value("medulla_admit_refused_total", "lane", "hydration"),
+        Some(1.0)
+    );
     // Only the ingest series are answered.
     assert!(status
         .series

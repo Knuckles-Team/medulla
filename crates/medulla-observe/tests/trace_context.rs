@@ -9,7 +9,10 @@ const GOOD: &str = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 fn traceparent_parses_and_malformed_is_dropped() {
     let context = TraceContext::parse(GOOD).expect("a W3C example parses");
     assert_eq!(context.trace_id_hex(), "4bf92f3577b34da6a3ce929d0e0e4736");
-    assert_eq!(context.parent, [0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7]);
+    assert_eq!(
+        context.parent,
+        [0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7]
+    );
     assert_eq!(context.flags, 1);
     assert_eq!(context.to_string(), GOOD, "the text round-trips");
     assert_eq!(trace_id_of(Some(GOOD)), "4bf92f3577b34da6a3ce929d0e0e4736");

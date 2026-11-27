@@ -401,8 +401,7 @@ impl ErrorDetail {
             "TOPIC_CORPUS_STALE" => {
                 // The inverse of `the topic centroids describe corpus revision {topics},
                 // the corpus is at {current}`.
-                let rest =
-                    detail.strip_prefix("the topic centroids describe corpus revision ")?;
+                let rest = detail.strip_prefix("the topic centroids describe corpus revision ")?;
                 let (topics, current) = rest.split_once(", the corpus is at ")?;
                 Some(Self::TopicCorpusStale {
                     topics: topics.parse().ok()?,

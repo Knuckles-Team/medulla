@@ -281,7 +281,12 @@ impl Engine<'_> {
         self.call_keyed(key, graph, method).await
     }
 
-    async fn call_keyed(&self, key: String, graph: &str, method: Method) -> Result<Response, String> {
+    async fn call_keyed(
+        &self,
+        key: String,
+        graph: &str,
+        method: Method,
+    ) -> Result<Response, String> {
         let context = service_context(self.anonymous, &self.server, key)?;
         let request = Request {
             id: 0,
@@ -291,9 +296,10 @@ impl Engine<'_> {
             trace_id: None,
             method,
         };
-        let response =
-            medulla_server_api::api::reentry::dispatch_verified_request(self.state, request, context)
-                .await;
+        let response = medulla_server_api::api::reentry::dispatch_verified_request(
+            self.state, request, context,
+        )
+        .await;
         match response.refusal_text() {
             Some(refusal) => Err(refusal),
             None => Ok(response),
@@ -311,7 +317,8 @@ fn decode<T: serde::de::DeserializeOwned>(response: Response) -> Result<T, Strin
 }
 
 fn opaque(value: &str) -> Result<OpaqueId, String> {
-    OpaqueId::new(value.to_string()).map_err(|_| format!("planner promotion: `{value}` is not an id"))
+    OpaqueId::new(value.to_string())
+        .map_err(|_| format!("planner promotion: `{value}` is not an id"))
 }
 
 /// The one subject the planner revisions, the evaluation and the pointer name.
@@ -411,7 +418,9 @@ impl Engine<'_> {
             .rev()
             .find(|entry| entry.content_digest == content)
             .map(|entry| entry.definition_digest)
-            .ok_or_else(|| format!("planner promotion: the published revision of {id} is unreadable"))
+            .ok_or_else(|| {
+                format!("planner promotion: the published revision of {id} is unreadable")
+            })
     }
 
     /// Publish a cost-head revision as a `PlannerCostHead` component revision.
@@ -419,7 +428,8 @@ impl Engine<'_> {
         let body = serde_json::to_string(revision)
             .map_err(|error| format!("planner promotion: {error}"))?;
         let digest = revision_ref(revision);
-        let policy_digest = medulla_persistence_records::agent_library::current_agent_library_policy_digest()?;
+        let policy_digest =
+            medulla_persistence_records::agent_library::current_agent_library_policy_digest()?;
         let attributes = BTreeMap::from([(PLANNER_COST_HEAD_ATTRIBUTE.to_string(), body)]);
         self.publish(draft(
             &self.tenant,
@@ -448,7 +458,8 @@ impl Engine<'_> {
             .map_err(|_| "planner promotion: the schema has too many features".to_string())?,
         };
         let encoded = encode_body(&body)?;
-        let policy_digest = medulla_persistence_records::agent_library::current_agent_library_policy_digest()?;
+        let policy_digest =
+            medulla_persistence_records::agent_library::current_agent_library_policy_digest()?;
         let definition_digest = self
             .publish(draft(
                 &self.tenant,
@@ -479,8 +490,8 @@ fn promotion_request(
         name: name.to_string(),
         value: TypedValue::Text(value),
     };
-    let subject = serde_json::to_string(&subject())
-        .map_err(|error| format!("planner promotion: {error}"))?;
+    let subject =
+        serde_json::to_string(&subject()).map_err(|error| format!("planner promotion: {error}"))?;
     let invalid = |_| "planner promotion: a request bound is exceeded".to_string();
     Ok(DecideRequest {
         tenant_id: tenant.to_string(),
@@ -538,8 +549,14 @@ pub async fn promote_on_shadow_evidence(
         champion: Some(champion_ref.clone()),
         comparisons: assessment.comparisons,
         mismatches: assessment.mismatches,
-        p95_error: Some((assessment.champion_p95_error, assessment.challenger_p95_error)),
-        p95_cost_us: Some((assessment.champion_p95_cost_us, assessment.challenger_p95_cost_us)),
+        p95_error: Some((
+            assessment.champion_p95_error,
+            assessment.challenger_p95_error,
+        )),
+        p95_cost_us: Some((
+            assessment.champion_p95_cost_us,
+            assessment.challenger_p95_cost_us,
+        )),
         ..PromotionReceipt::bare("commons_unavailable")
     };
     let (resident, anonymous, server) = {
@@ -600,7 +617,9 @@ pub async fn promote_on_shadow_evidence(
                 "evaluate",
                 PLANNER_GRAPH,
                 Method::PolicyEvolution {
-                    op: Box::new(PolicyEvolutionOp::CommitPolicyEvaluation { request: evaluation }),
+                    op: Box::new(PolicyEvolutionOp::CommitPolicyEvaluation {
+                        request: evaluation,
+                    }),
                 },
             )
             .await?,
@@ -699,7 +718,9 @@ pub async fn restore_champion(
         .component_revisions(&tenant, PLANNER_POLICY_ID)?
         .into_iter()
         .rev()
-        .find(|entry| entry.kind == AgentComponentKind::PlannerCostHead && entry.content_digest == target)
+        .find(|entry| {
+            entry.kind == AgentComponentKind::PlannerCostHead && entry.content_digest == target
+        })
     else {
         return Err(format!(
             "planner promotion: the champion pointer names {target}, which is not a retained revision"
@@ -764,7 +785,10 @@ mod tests {
         assert_eq!(assessment.comparisons, 64);
         assert!(assessment.challenger_p95_error < assessment.champion_p95_error);
         assert_eq!(
-            (assessment.champion_p95_cost_us, assessment.challenger_p95_cost_us),
+            (
+                assessment.champion_p95_cost_us,
+                assessment.challenger_p95_cost_us
+            ),
             (100, 80)
         );
         // The metric mapping: mean estimate accuracy, agreement rate, p95 cost.
@@ -774,7 +798,10 @@ mod tests {
         assert_eq!(assessment.metrics.unsupported_replay_mass_ppm, 0);
         assert_eq!(assessment.metrics.cost_micros, 80);
         assert_eq!(assessment.held_out_ids.len(), 64);
-        assert!(assessment.held_out_ids.iter().all(|id| id.starts_with("shadow:")));
+        assert!(assessment
+            .held_out_ids
+            .iter()
+            .all(|id| id.starts_with("shadow:")));
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R732.5
@@ -811,7 +838,11 @@ mod tests {
         let mut scopes = PLANNER_SCOPES.to_vec();
         scopes.sort_unstable();
         scopes.dedup();
-        assert_eq!(scopes.len(), PLANNER_SCOPES.len(), "no scope is listed twice");
+        assert_eq!(
+            scopes.len(),
+            PLANNER_SCOPES.len(),
+            "no scope is listed twice"
+        );
         assert_eq!(PLANNER_ACTOR, PLANNER_EVALUATOR);
         // Every step of the path names the scope that checks it.
         assert_eq!(

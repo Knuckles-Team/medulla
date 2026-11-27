@@ -1,10 +1,6 @@
 //! The cold open restores the object root into an empty local store
 //! (MEDULLA-OBJECT-STORAGE-BACKEND-R002.5).
-#![cfg(all(
-    feature = "redb",
-    feature = "object-store",
-    feature = "test-support"
-))]
+#![cfg(all(feature = "redb", feature = "object-store", feature = "test-support"))]
 
 use std::sync::Arc;
 
@@ -83,7 +79,10 @@ async fn restore_materializes_head_into_an_empty_local_store() {
     }
     // The graph is registered under the name and type its manifest records.
     assert_eq!(
-        fresh.graph_identity(GRAPH).unwrap().map(|(name, kind, _)| (name, kind)),
+        fresh
+            .graph_identity(GRAPH)
+            .unwrap()
+            .map(|(name, kind, _)| (name, kind)),
         Some((GRAPH.to_string(), GraphType::Global))
     );
 
@@ -106,5 +105,8 @@ async fn restore_materializes_head_into_an_empty_local_store() {
         .restore_into(&other)
         .await
         .unwrap_err();
-    assert!(error.starts_with("OBJECT_SEGMENT_DIGEST_MISMATCH"), "{error}");
+    assert!(
+        error.starts_with("OBJECT_SEGMENT_DIGEST_MISMATCH"),
+        "{error}"
+    );
 }

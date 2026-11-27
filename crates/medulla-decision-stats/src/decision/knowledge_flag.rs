@@ -8,9 +8,8 @@
 
 use medulla_decision_types::knowledge_flag::{
     evidence_digest, flag_id_of, flag_key, target_form, FlagEvent, FlagResolution, FlagState,
-    KnowledgeFlag, RaiseOutcome, FLAG_RUN_QUOTA_EXCEEDED, FLAG_STATE_ILLEGAL,
-    FLAG_TARGET_INVALID, FLAG_TEXT_TOO_LARGE, SUGGESTED_CORRECTION_MAX_BYTES,
-    WHAT_OBSERVED_MAX_BYTES,
+    KnowledgeFlag, RaiseOutcome, FLAG_RUN_QUOTA_EXCEEDED, FLAG_STATE_ILLEGAL, FLAG_TARGET_INVALID,
+    FLAG_TEXT_TOO_LARGE, SUGGESTED_CORRECTION_MAX_BYTES, WHAT_OBSERVED_MAX_BYTES,
 };
 use medulla_types::refusal_code::RefusalCode;
 
@@ -139,8 +138,8 @@ pub fn raise(
             })
         }
         FlagState::Dismissed => {
-            let changed = evidence_digest(&flag.what_observed)
-                != evidence_digest(&existing.what_observed);
+            let changed =
+                evidence_digest(&flag.what_observed) != evidence_digest(&existing.what_observed);
             if !changed {
                 return Ok(RaiseDecision {
                     flag: next,
@@ -213,7 +212,9 @@ mod tests {
     fn dedup_key_and_machine_are_total() {
         let key = flag_key(&flag("a"));
         assert_eq!(key.len(), 64);
-        assert!(key.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+        assert!(key
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
         // The key digests the suggestion when there is one, so a new observation keeps it.
         assert_eq!(key, flag_key(&flag("b")));
         let mut no_suggestion = flag("a");
@@ -238,10 +239,16 @@ mod tests {
 
         // Text bounds and the target forms.
         let big = flag(&"x".repeat(WHAT_OBSERVED_MAX_BYTES + 1));
-        assert_eq!(raise(&big, None, 0, &KNOBS).unwrap_err().code, FLAG_TEXT_TOO_LARGE);
+        assert_eq!(
+            raise(&big, None, 0, &KNOBS).unwrap_err().code,
+            FLAG_TEXT_TOO_LARGE
+        );
         let mut bad = flag("a");
         bad.target_ref = "nowhere".into();
-        assert_eq!(raise(&bad, None, 0, &KNOBS).unwrap_err().code, FLAG_TARGET_INVALID);
+        assert_eq!(
+            raise(&bad, None, 0, &KNOBS).unwrap_err().code,
+            FLAG_TARGET_INVALID
+        );
 
         // The machine is total: every state and event pair is either an edge or refused.
         let curated = resolve(&created.flag, FlagResolution::Adopt).expect("adopt");

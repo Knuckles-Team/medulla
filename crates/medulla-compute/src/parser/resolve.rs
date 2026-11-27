@@ -68,9 +68,11 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     // one path names the file node and its symbols alike, and the import modules that
     // bound to no file of the batch (MEDULLA-SCM-R006).
     let unresolved = unresolved_imports(files, &results);
-    indexed
-        .nodes
-        .extend(files.iter().map(|(path, _)| file_node(path, unresolved.get(path))));
+    indexed.nodes.extend(
+        files
+            .iter()
+            .map(|(path, _)| file_node(path, unresolved.get(path))),
+    );
     indexed.files_parsed = file_outcomes
         .iter()
         .filter(|outcome| {
@@ -289,7 +291,10 @@ pub fn unresolved_buckets(
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
-        let kinds = [(UNRESOLVED_CALL_EDGE, calls), (UNRESOLVED_IMPORT_EDGE, imports)];
+        let kinds = [
+            (UNRESOLVED_CALL_EDGE, calls),
+            (UNRESOLVED_IMPORT_EDGE, imports),
+        ];
         for (edge_type, names) in kinds {
             for name in names.into_iter().collect::<BTreeSet<_>>() {
                 let bucket = unresolved_bucket_id(repo, &name);
@@ -362,8 +367,10 @@ pub fn resolve(files: &[(String, Vec<u8>)], results: &[ParseResult]) -> IndexRes
         n.properties.remove("call_sites");
         n.properties.remove(UNRESOLVED_CALLS);
         if let Some(sites) = unresolved_sites.get(&n.node_id) {
-            n.properties
-                .insert(UNRESOLVED_CALLS.to_string(), sites.iter().cloned().collect::<Vec<_>>().join(";"));
+            n.properties.insert(
+                UNRESOLVED_CALLS.to_string(),
+                sites.iter().cloned().collect::<Vec<_>>().join(";"),
+            );
         }
         if n.node_type == "SYMBOL" {
             for (key, value) in similarity_bands(n).into_iter().flatten() {
@@ -687,9 +694,10 @@ fn record_call_resolution(
     if let Some((at, sites)) = state.seen.get_mut(&key) {
         if !sites.contains(&site_json) {
             sites.push(site_json);
-            state.edges[*at]
-                .properties
-                .insert(CALL_SITES.to_string(), serde_json::Value::Array(sites.clone()).to_string());
+            state.edges[*at].properties.insert(
+                CALL_SITES.to_string(),
+                serde_json::Value::Array(sites.clone()).to_string(),
+            );
         }
     } else {
         let sites = vec![site_json];
@@ -1317,7 +1325,12 @@ mod tests {
             .iter()
             .filter(|e| e.edge_type == "calls" && e.source == go && e.target == make)
             .collect();
-        assert_eq!(edges.len(), 1, "one calls edge per caller and callee: {:?}", r.edges);
+        assert_eq!(
+            edges.len(),
+            1,
+            "one calls edge per caller and callee: {:?}",
+            r.edges
+        );
         let sites: Vec<serde_json::Value> =
             serde_json::from_str(&edges[0].properties[CALL_SITES]).expect("sites json");
         let mut argcs: Vec<u64> = sites.iter().filter_map(|s| s["argc"].as_u64()).collect();
@@ -1491,10 +1504,7 @@ mod tests {
             .all(|n| (0..BANDS).all(|band| n
                 .properties
                 .contains_key(&format!("{BAND_KEY_PREFIX}{band}")))));
-        assert!(r
-            .nodes
-            .iter()
-            .any(|n| n.properties.contains_key("minhash")));
+        assert!(r.nodes.iter().any(|n| n.properties.contains_key("minhash")));
     }
 
     // spec: MEDULLA-SCM-R006
@@ -1525,7 +1535,10 @@ mod tests {
         assert!(!helper.properties.contains_key(UNRESOLVED_CALLS));
         let module = r.nodes.iter().find(|n| n.node_id == "file:m.py").unwrap();
         assert_eq!(
-            module.properties.get(UNRESOLVED_IMPORTS).map(String::as_str),
+            module
+                .properties
+                .get(UNRESOLVED_IMPORTS)
+                .map(String::as_str),
             Some("os")
         );
         let other = r.nodes.iter().find(|n| n.node_id == "file:n.py").unwrap();

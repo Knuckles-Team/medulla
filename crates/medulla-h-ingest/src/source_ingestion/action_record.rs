@@ -52,9 +52,7 @@ fn invalid(detail: impl std::fmt::Display) -> String {
 pub fn decode_action_items(items: &[SourceJson]) -> Result<Vec<ActionRecordItem>, String> {
     items
         .iter()
-        .map(|item| {
-            serde_json::from_value::<ActionRecordItem>(item.value()?).map_err(invalid)
-        })
+        .map(|item| serde_json::from_value::<ActionRecordItem>(item.value()?).map_err(invalid))
         .collect()
 }
 
@@ -106,9 +104,11 @@ pub fn first_read_ids(
 pub fn decision_request(core: &GraphCore, gate: &str) -> Option<String> {
     core.get_successors(gate).ok()?.into_iter().find(|target| {
         core.get_edge_properties(gate, target).iter().any(|bytes| {
-            rmp_serde::from_slice::<Value>(bytes).ok().is_some_and(|edge| {
-                edge.get("relationship").and_then(Value::as_str) == Some("decisionRequest")
-            })
+            rmp_serde::from_slice::<Value>(bytes)
+                .ok()
+                .is_some_and(|edge| {
+                    edge.get("relationship").and_then(Value::as_str) == Some("decisionRequest")
+                })
         })
     })
 }
@@ -131,9 +131,14 @@ fn type_of(node: &Value) -> Option<&str> {
 
 fn check_shape(item: &ActionRecordItem, held: &BTreeMap<String, Value>) -> Result<(), String> {
     if item.idempotency_key.is_empty() || item.actor.is_empty() {
-        return Err(invalid("an action record needs an idempotency key and an actor"));
+        return Err(invalid(
+            "an action record needs an idempotency key and an actor",
+        ));
     }
-    let no_inputs = item.no_inputs.as_deref().is_some_and(|reason| !reason.is_empty());
+    let no_inputs = item
+        .no_inputs
+        .as_deref()
+        .is_some_and(|reason| !reason.is_empty());
     if item.used_facts.is_empty() && !no_inputs {
         return Err(invalid("a record with no used fact states no_inputs"));
     }
@@ -155,7 +160,9 @@ fn check_shape(item: &ActionRecordItem, held: &BTreeMap<String, Value>) -> Resul
     }
     if let Some(cause) = &item.caused_by {
         if held.get(cause).and_then(type_of) != Some("ActionRecord") {
-            return Err(invalid(format!("caused_by {cause} names no held ActionRecord")));
+            return Err(invalid(format!(
+                "caused_by {cause} names no held ActionRecord"
+            )));
         }
     }
     Ok(())
@@ -177,8 +184,12 @@ fn check_facts(core: &GraphCore, facts: &[FactUseItem]) -> Result<(), String> {
                 }
             }
             Ok(None) => return Err(unknown("the node did not exist")),
-            Err(NodeHistoryError::Future { .. }) => return Err(unknown("the revision is in the future")),
-            Err(NodeHistoryError::Retired { .. }) => return Err(unknown("the revision is retired")),
+            Err(NodeHistoryError::Future { .. }) => {
+                return Err(unknown("the revision is in the future"))
+            }
+            Err(NodeHistoryError::Retired { .. }) => {
+                return Err(unknown("the revision is retired"))
+            }
         }
     }
     Ok(())
@@ -195,7 +206,10 @@ fn check_approval(
     let required = |why: &str| {
         refuse(
             ServerErrorCode::ActionApprovalRequired,
-            format!("{} needs an approved gate decision: {why}", item.action_kind.as_str()),
+            format!(
+                "{} needs an approved gate decision: {why}",
+                item.action_kind.as_str()
+            ),
         )
     };
     let gate = item
@@ -212,7 +226,9 @@ fn check_approval(
         .and_then(|id| held.get(&id))
         .filter(|node| type_of(node) == Some("ApprovalRequest"))
         .ok_or_else(|| required("the decision names no held ApprovalRequest"))?;
-    if request.get("requestStatus").and_then(Value::as_str) != Some(ApprovalStatus::Approved.stored()) {
+    if request.get("requestStatus").and_then(Value::as_str)
+        != Some(ApprovalStatus::Approved.stored())
+    {
         return Err(required("the request is not approved"));
     }
     if request.get("requestActionKind").and_then(Value::as_str) != Some(item.action_kind.as_str()) {
@@ -334,7 +350,12 @@ pub fn admit_actions(
         let held_digest = reads
             .held
             .get(&id)
-            .map(|node| node.get("content_digest").and_then(Value::as_str).unwrap_or_default().to_string())
+            .map(|node| {
+                node.get("content_digest")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string()
+            })
             .or_else(|| seen.get(&id).cloned());
         admission.record_ids.push(id.clone());
         match held_digest {

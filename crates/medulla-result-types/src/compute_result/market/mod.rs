@@ -44,11 +44,11 @@ pub use signal::{
     IndicatorSpec, IndicatorValue, SeriesIdentity, SignalAdvanced, SignalCheckpoint, SignalKey,
     SignalReplay, SignalReplayRequest, SuperTrendCheckpoint, TrendFlip,
 };
-pub use strategy::{OrderSide, ProposedAction, StrategyKind, StrategySpec, STRATEGY_SPEC_VERSION};
 pub use snapshot::{
     AnalysisSnapshot, AnalysisSnapshotDraft, BarWindow, ClaimAuthor, ClaimSource, SnapshotClaim,
     SnapshotNotices,
 };
+pub use strategy::{OrderSide, ProposedAction, StrategyKind, StrategySpec, STRATEGY_SPEC_VERSION};
 
 /// Indicator values are integer milli-ticks: one price tick is this many units.
 pub const MILLI_TICKS_PER_TICK: i64 = 1_000;

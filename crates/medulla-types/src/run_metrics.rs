@@ -266,13 +266,13 @@ pub fn aggregate(
                 RunMetricsQuery::Cost => {
                     (tally.cost_measured > 0).then(|| tally.cost / tally.solved as f64)?
                 }
-                RunMetricsQuery::Tokens => {
-                    (tally.tokens_measured > 0).then(|| tally.tokens as f64 / tally.solved as f64)?
-                }
+                RunMetricsQuery::Tokens => (tally.tokens_measured > 0)
+                    .then(|| tally.tokens as f64 / tally.solved as f64)?,
                 RunMetricsQuery::Latency => (tally.latency_measured > 0)
                     .then(|| tally.latency / tally.latency_measured as f64)?,
-                RunMetricsQuery::Score => (tally.score_measured > 0)
-                    .then(|| tally.score / tally.score_measured as f64)?,
+                RunMetricsQuery::Score => {
+                    (tally.score_measured > 0).then(|| tally.score / tally.score_measured as f64)?
+                }
             };
             Some(RunMetricsGroup {
                 key,
@@ -291,7 +291,13 @@ pub fn aggregate(
 mod tests {
     use super::*;
 
-    fn sample(agent: &str, termination: &str, at: u64, cost: Option<f64>, tokens: Option<u64>) -> RunSample {
+    fn sample(
+        agent: &str,
+        termination: &str,
+        at: u64,
+        cost: Option<f64>,
+        tokens: Option<u64>,
+    ) -> RunSample {
         RunSample {
             agent: agent.into(),
             project: "p".into(),
@@ -333,14 +339,26 @@ mod tests {
         // Agent a: (1 + 3) / 2 solved; its failed run's cost is not charged to a solve.
         assert_eq!(
             cost.groups,
-            [RunMetricsGroup { key: "a".into(), value: 2.0, trace_count: 3 }]
+            [RunMetricsGroup {
+                key: "a".into(),
+                value: 2.0,
+                trace_count: 3
+            }]
         );
         let tokens = aggregate(&request(RunMetricsQuery::Tokens), population());
         assert_eq!(
             tokens.groups,
             [
-                RunMetricsGroup { key: "a".into(), value: 200.0, trace_count: 3 },
-                RunMetricsGroup { key: "b".into(), value: 50.0, trace_count: 1 },
+                RunMetricsGroup {
+                    key: "a".into(),
+                    value: 200.0,
+                    trace_count: 3
+                },
+                RunMetricsGroup {
+                    key: "b".into(),
+                    value: 50.0,
+                    trace_count: 1
+                },
             ]
         );
         let solved = aggregate(&request(RunMetricsQuery::Solved), population());
@@ -354,13 +372,19 @@ mod tests {
     #[test]
     fn a_population_without_a_solved_run_abstains_and_never_reports_a_zero_cost() {
         let only_failures = vec![sample("a", "error", 10, Some(5.0), Some(5))];
-        for query in [RunMetricsQuery::Cost, RunMetricsQuery::Tokens, RunMetricsQuery::Solved] {
+        for query in [
+            RunMetricsQuery::Cost,
+            RunMetricsQuery::Tokens,
+            RunMetricsQuery::Solved,
+        ] {
             let answer = aggregate(&request(query), only_failures.clone());
             assert!(answer.groups.is_empty());
             assert_eq!(answer.abstained.as_deref(), Some(ABSTAIN_NO_SOLVED_RUNS));
         }
         assert_eq!(
-            aggregate(&request(RunMetricsQuery::Solved), Vec::new()).abstained.as_deref(),
+            aggregate(&request(RunMetricsQuery::Solved), Vec::new())
+                .abstained
+                .as_deref(),
             Some(ABSTAIN_NO_SOLVED_RUNS)
         );
         // Solved runs that report no cost abstain rather than answer zero.
@@ -374,14 +398,27 @@ mod tests {
     #[test]
     fn the_window_keeps_only_runs_completed_inside_it_and_an_empty_one_is_refused() {
         let mut windowed = request(RunMetricsQuery::Solved);
-        windowed.window = Some(RunMetricsWindow { start_ms: 15, end_ms: 45 });
+        windowed.window = Some(RunMetricsWindow {
+            start_ms: 15,
+            end_ms: 45,
+        });
         let answer = aggregate(&windowed, population());
         assert_eq!(
-            answer.groups.iter().map(|g| (g.key.as_str(), g.trace_count)).collect::<Vec<_>>(),
+            answer
+                .groups
+                .iter()
+                .map(|g| (g.key.as_str(), g.trace_count))
+                .collect::<Vec<_>>(),
             [("a", 2), ("b", 1)]
         );
-        windowed.window = Some(RunMetricsWindow { start_ms: 5, end_ms: 5 });
-        assert!(windowed.validate().unwrap_err().starts_with("INVALID_ARGUMENT"));
+        windowed.window = Some(RunMetricsWindow {
+            start_ms: 5,
+            end_ms: 5,
+        });
+        assert!(windowed
+            .validate()
+            .unwrap_err()
+            .starts_with("INVALID_ARGUMENT"));
         let wire = serde_json::json!({"tenant": "t", "query": "cost", "group_by": "agent"});
         let parsed: RunMetricsRequest = serde_json::from_value(wire).unwrap();
         assert_eq!(parsed.query, RunMetricsQuery::Cost);
@@ -453,6 +490,9 @@ mod tests {
         // A filter outside its bounds is refused.
         let mut empty = ask(RunMetricsQuery::Latency);
         empty.technique = Some(String::new());
-        assert!(empty.validate().unwrap_err().starts_with("INVALID_ARGUMENT"));
+        assert!(empty
+            .validate()
+            .unwrap_err()
+            .starts_with("INVALID_ARGUMENT"));
     }
 }

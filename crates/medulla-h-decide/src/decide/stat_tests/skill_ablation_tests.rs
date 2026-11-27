@@ -42,24 +42,40 @@ fn skill_set(challenger: &str, champion: &str, gain_ppm: u32) -> RolloutSet {
 }
 
 async fn record_set(h: &Harness, set: &RolloutSet) -> String {
-    learn(h, "decider", LearningWrite::RecordRollouts { set: Box::new(set.clone()) })
-        .await
-        .unwrap();
+    learn(
+        h,
+        "decider",
+        LearningWrite::RecordRollouts {
+            set: Box::new(set.clone()),
+        },
+    )
+    .await
+    .unwrap();
     rollout_set_digest(set)
 }
 
 /// Make `revision:one` the champion of the skill through a committed `promote` record.
-async fn champion(h: &Harness, schema: &medulla_decision_types::decision::ComponentDependency) -> String {
+async fn champion(
+    h: &Harness,
+    schema: &medulla_decision_types::decision::ComponentDependency,
+) -> String {
     let set = skill_set("revision:one", "revision:zero", 150_000);
     let digest = record_set(h, &set).await;
-    let batch = decide(h, promotion_request(schema, &subject(), &digest, "revision:one"))
-        .await
-        .unwrap();
+    let batch = decide(
+        h,
+        promotion_request(schema, &subject(), &digest, "revision:one"),
+    )
+    .await
+    .unwrap();
     let record = batch.records.as_slice()[0].clone();
     commit(h, &record).await;
-    pointer_state(h, PointerRef::Champion { subject: subject() }, activate("revision:one", &record.record_id))
-        .await
-        .unwrap();
+    pointer_state(
+        h,
+        PointerRef::Champion { subject: subject() },
+        activate("revision:one", &record.record_id),
+    )
+    .await
+    .unwrap();
     digest
 }
 
@@ -93,16 +109,19 @@ fn canary_request(
 fn ablation(identical: Vec<u64>, gain: u64) -> LearningWrite {
     let runs = (0..60u64)
         .flat_map(|index| {
-            [(AblationArm::With, 600_000 + gain), (AblationArm::Without, 600_000)]
-                .into_iter()
-                .map(move |(arm, score)| AblationRun {
-                    skill_ref: SKILL.into(),
-                    prompt_digest: format!("prompt-{index}"),
-                    arm,
-                    blind_id: format!("blind-{index}-{score}"),
-                    outcome_score_ppm: score,
-                    seed: index % 3,
-                })
+            [
+                (AblationArm::With, 600_000 + gain),
+                (AblationArm::Without, 600_000),
+            ]
+            .into_iter()
+            .map(move |(arm, score)| AblationRun {
+                skill_ref: SKILL.into(),
+                prompt_digest: format!("prompt-{index}"),
+                arm,
+                blind_id: format!("blind-{index}-{score}"),
+                outcome_score_ppm: score,
+                seed: index % 3,
+            })
         })
         .collect();
     LearningWrite::RecordAblation {
@@ -115,7 +134,11 @@ fn ablation(identical: Vec<u64>, gain: u64) -> LearningWrite {
 }
 
 fn facts(batch: &DecisionBatch) -> Vec<String> {
-    batch.records.as_slice()[0].premises.iter().map(|p| p.fact.clone()).collect()
+    batch.records.as_slice()[0]
+        .premises
+        .iter()
+        .map(|p| p.fact.clone())
+        .collect()
 }
 
 fn abstain_code(batch: &DecisionBatch) -> String {
@@ -132,19 +155,36 @@ async fn canary_decides_ramp_hold_or_rollback() {
     let pins = pins(&h, TENANT);
     champion(&h, &pins.0).await;
     // Five identical runs spread by a few thousand ppm; the paired runs gain 100k.
-    let recorded = learn(&h, "decider", ablation(vec![700_000, 702_000, 698_000, 701_000, 699_000], 100_000))
-        .await
-        .unwrap();
-    let LearningRecorded::Ablation(recorded) = recorded else { panic!("ablation answers") };
+    let recorded = learn(
+        &h,
+        "decider",
+        ablation(vec![700_000, 702_000, 698_000, 701_000, 699_000], 100_000),
+    )
+    .await
+    .unwrap();
+    let LearningRecorded::Ablation(recorded) = recorded else {
+        panic!("ablation answers")
+    };
     assert_eq!(recorded.noise.identical_runs, 5);
-    assert_eq!(recorded.verdict, AblationVerdict::Effect { delta_ppm: 100_000 });
+    assert_eq!(
+        recorded.verdict,
+        AblationVerdict::Effect { delta_ppm: 100_000 }
+    );
 
     // A challenger far outside the band ramps, one inside it holds.
     let winning = record_set(&h, &skill_set("revision:two", "revision:one", 150_000)).await;
-    let ramp = decide(&h, canary_request(&pins.0, &winning, &[])).await.unwrap();
-    assert!(facts(&ramp).contains(&"canary:verdict=ramp".to_owned()), "{:?}", facts(&ramp));
+    let ramp = decide(&h, canary_request(&pins.0, &winning, &[]))
+        .await
+        .unwrap();
+    assert!(
+        facts(&ramp).contains(&"canary:verdict=ramp".to_owned()),
+        "{:?}",
+        facts(&ramp)
+    );
     let flat = record_set(&h, &skill_set("revision:two", "revision:one", 0)).await;
-    let hold = decide(&h, canary_request(&pins.0, &flat, &[])).await.unwrap();
+    let hold = decide(&h, canary_request(&pins.0, &flat, &[]))
+        .await
+        .unwrap();
     assert!(facts(&hold).contains(&"canary:verdict=hold".to_owned()));
 
     // The ramp puts a canary in force, and the champion pointer read returns the split.
@@ -155,30 +195,51 @@ async fn canary_decides_ramp_hold_or_rollback() {
         traffic_ppm: 50_000,
         window_ms: 3_600_000,
     };
-    learn(&h, "decider", LearningWrite::RecordCanary { canary: Box::new(canary.clone()), verdict: CanaryVerdict::Ramp })
-        .await
-        .unwrap();
-    let pointer = super::super::stat_pointer::champion_pointer(
-        &h.store,
-        TENANT,
-        &subject().pointer_key(),
+    learn(
+        &h,
+        "decider",
+        LearningWrite::RecordCanary {
+            canary: Box::new(canary.clone()),
+            verdict: CanaryVerdict::Ramp,
+        },
     )
+    .await
     .unwrap();
+    let pointer =
+        super::super::stat_pointer::champion_pointer(&h.store, TENANT, &subject().pointer_key())
+            .unwrap();
     assert_eq!(pointer.canary, Some(canary.clone()));
 
     // A later measurement of the champion that fell below its promotion rolls the canary back.
     let later = record_set(&h, &skill_set("revision:one", "revision:zero", 0)).await;
     let rollback = decide(
         &h,
-        canary_request(&pins.0, &winning, &[("regression_receipt", TypedValue::Text(later))]),
+        canary_request(
+            &pins.0,
+            &winning,
+            &[("regression_receipt", TypedValue::Text(later))],
+        ),
     )
     .await
     .unwrap();
-    assert!(facts(&rollback).contains(&"canary:verdict=rollback".to_owned()), "{:?}", facts(&rollback));
-    learn(&h, "decider", LearningWrite::RecordCanary { canary: Box::new(canary), verdict: CanaryVerdict::Rollback })
-        .await
-        .unwrap();
-    let cleared = super::super::stat_pointer::champion_pointer(&h.store, TENANT, &subject().pointer_key()).unwrap();
+    assert!(
+        facts(&rollback).contains(&"canary:verdict=rollback".to_owned()),
+        "{:?}",
+        facts(&rollback)
+    );
+    learn(
+        &h,
+        "decider",
+        LearningWrite::RecordCanary {
+            canary: Box::new(canary),
+            verdict: CanaryVerdict::Rollback,
+        },
+    )
+    .await
+    .unwrap();
+    let cleared =
+        super::super::stat_pointer::champion_pointer(&h.store, TENANT, &subject().pointer_key())
+            .unwrap();
     assert_eq!(cleared.canary, None);
 }
 
@@ -190,30 +251,49 @@ async fn refusal_codes() {
     let receipt = record_set(&h, &skill_set("revision:two", "revision:one", 150_000)).await;
 
     // No champion yet.
-    let none = decide(&h, canary_request(&pins.0, &receipt, &[])).await.unwrap();
+    let none = decide(&h, canary_request(&pins.0, &receipt, &[]))
+        .await
+        .unwrap();
     assert_eq!(abstain_code(&none), CANARY_NO_CHAMPION.as_str());
 
     champion(&h, &pins.0).await;
     // No identical runs recorded.
-    let missing = decide(&h, canary_request(&pins.0, &receipt, &[])).await.unwrap();
+    let missing = decide(&h, canary_request(&pins.0, &receipt, &[]))
+        .await
+        .unwrap();
     assert_eq!(abstain_code(&missing), ABLATION_NOISE_BAND_MISSING.as_str());
     // Fewer identical runs than the knob.
-    let few = learn(&h, "decider", ablation(vec![1, 2, 3], 0)).await.unwrap_err();
-    assert!(few.starts_with(ABLATION_NOISE_BAND_MISSING.as_str()), "{few}");
+    let few = learn(&h, "decider", ablation(vec![1, 2, 3], 0))
+        .await
+        .unwrap_err();
+    assert!(
+        few.starts_with(ABLATION_NOISE_BAND_MISSING.as_str()),
+        "{few}"
+    );
 
     // A widely spread band: a promotion on a small delta is refused.
-    learn(&h, "decider", ablation(vec![500_000, 700_000, 600_000, 800_000, 550_000], 200_000))
-        .await
-        .unwrap();
+    learn(
+        &h,
+        "decider",
+        ablation(vec![500_000, 700_000, 600_000, 800_000, 550_000], 200_000),
+    )
+    .await
+    .unwrap();
     let small = record_set(&h, &skill_set("revision:three", "revision:one", 5_000)).await;
-    let within = decide(&h, promotion_request(&pins.0, &subject(), &small, "revision:three"))
-        .await
-        .unwrap();
+    let within = decide(
+        &h,
+        promotion_request(&pins.0, &subject(), &small, "revision:three"),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&within), ABLATION_WITHIN_NOISE.as_str());
     // A traffic share below its bound.
-    let low = decide(&h, canary_request(&pins.0, &receipt, &[("traffic_ppm", TypedValue::Int(500))]))
-        .await
-        .unwrap();
+    let low = decide(
+        &h,
+        canary_request(&pins.0, &receipt, &[("traffic_ppm", TypedValue::Int(500))]),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&low), CANARY_TRAFFIC_OUT_OF_BOUNDS.as_str());
 
     // A model the catalog lacks.
@@ -234,7 +314,10 @@ async fn refusal_codes() {
     )
     .await
     .unwrap_err();
-    assert!(unknown.starts_with(COMPILE_MODEL_UNKNOWN.as_str()), "{unknown}");
+    assert!(
+        unknown.starts_with(COMPILE_MODEL_UNKNOWN.as_str()),
+        "{unknown}"
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R712.5
@@ -243,9 +326,13 @@ async fn premises_name_band_and_split() {
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);
     champion(&h, &pins.0).await;
-    learn(&h, "decider", ablation(vec![700_000, 702_000, 698_000, 701_000, 699_000], 100_000))
-        .await
-        .unwrap();
+    learn(
+        &h,
+        "decider",
+        ablation(vec![700_000, 702_000, 698_000, 701_000, 699_000], 100_000),
+    )
+    .await
+    .unwrap();
     let receipt = record_set(&h, &skill_set("revision:two", "revision:one", 150_000)).await;
 
     // A model revision change marks the other compiled rows of the model stale.
@@ -254,7 +341,11 @@ async fn premises_name_band_and_split() {
         "model:m1".to_string(),
         rmp_serde::to_vec_named(&serde_json::json!({"type": "Model"})).unwrap(),
     );
-    for (skill, revision) in [(SKILL, "r1"), ("skill:other@1", "r1"), ("skill:third@1", "r2")] {
+    for (skill, revision) in [
+        (SKILL, "r1"),
+        ("skill:other@1", "r1"),
+        ("skill:third@1", "r2"),
+    ] {
         let recorded = learn(
             &h,
             "decider",
@@ -271,7 +362,9 @@ async fn premises_name_band_and_split() {
         )
         .await
         .unwrap();
-        let LearningRecorded::ModelCompile(recorded) = recorded else { panic!("compile answers") };
+        let LearningRecorded::ModelCompile(recorded) = recorded else {
+            panic!("compile answers")
+        };
         assert_eq!(recorded.compile.state, CompileState::Current);
         if revision == "r2" {
             // The two rows of revision r1 are now stale, each with one draft proposal.
@@ -280,7 +373,9 @@ async fn premises_name_band_and_split() {
         }
     }
 
-    let batch = decide(&h, canary_request(&pins.0, &receipt, &[])).await.unwrap();
+    let batch = decide(&h, canary_request(&pins.0, &receipt, &[]))
+        .await
+        .unwrap();
     let facts = facts(&batch);
     for wanted in [
         "ablation:band=",
@@ -289,8 +384,13 @@ async fn premises_name_band_and_split() {
         "canary:verdict=ramp",
         "compile:stale=1",
     ] {
-        assert!(facts.iter().any(|fact| fact.starts_with(wanted)), "{wanted} in {facts:?}");
+        assert!(
+            facts.iter().any(|fact| fact.starts_with(wanted)),
+            "{wanted} in {facts:?}"
+        );
     }
     // No premise names the arm of a blind run.
-    assert!(facts.iter().all(|fact| !fact.contains("without") && !fact.contains("blind")));
+    assert!(facts
+        .iter()
+        .all(|fact| !fact.contains("without") && !fact.contains("blind")));
 }

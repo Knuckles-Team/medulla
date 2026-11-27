@@ -16,7 +16,9 @@ use super::finance_accounting::{
 use super::terminal::GraphOpsContext;
 use super::*;
 
-use medulla_finance::golden_fixture::{check_figure_provenance, ticks_to_decimal, GoldenFixtureFigure};
+use medulla_finance::golden_fixture::{
+    check_figure_provenance, ticks_to_decimal, GoldenFixtureFigure,
+};
 use medulla_finance::lot_accounting::SCALE;
 use medulla_finance::returns::{
     mwr_ticks, twr_ticks, xirr_ticks, ReturnError, ReturnFlow, ValuationPoint,
@@ -37,7 +39,10 @@ const YEAR_NS: f64 = 365.0 * 86_400.0 * 1e9;
 
 /// Whether `kind` is one of the four record kinds the return engine reads.
 pub(super) fn is_performance_kind(kind: &str) -> bool {
-    matches!(kind, "valuation" | "deposit" | "withdrawal" | "benchmark_level")
+    matches!(
+        kind,
+        "valuation" | "deposit" | "withdrawal" | "benchmark_level"
+    )
 }
 
 /// The eligible records of `account`: those with `ns <= as_of` and `known_ns <= known_at`
@@ -151,11 +156,13 @@ fn window_start_ns(
     let months_back = |back: i64| -> i64 {
         let index = year * 12 + (month - 1) - back;
         let (target_year, target_month) = (index.div_euclid(12), index.rem_euclid(12) + 1);
-        let last_day = civil_from_days(days_from_civil(
-            target_year + i64::from(target_month == 12),
-            target_month % 12 + 1,
-            1,
-        ) - 1)
+        let last_day = civil_from_days(
+            days_from_civil(
+                target_year + i64::from(target_month == 12),
+                target_month % 12 + 1,
+                1,
+            ) - 1,
+        )
         .2;
         days_from_civil(target_year, target_month, day.min(last_day)) * NS_PER_DAY + time_of_day
     };
@@ -202,8 +209,8 @@ fn benchmark_figure(
         scaled as i64
     } else {
         let scale = i128::from(SCALE);
-        let growth = (2 * i128::from(end) * scale + i128::from(start))
-            .div_euclid(2 * i128::from(start));
+        let growth =
+            (2 * i128::from(end) * scale + i128::from(start)).div_euclid(2 * i128::from(start));
         match i64::try_from(growth - scale) {
             Ok(ticks) => ticks,
             Err(_) => return unavailable("NO_SOLUTION"),
@@ -271,7 +278,11 @@ fn build_card(
         card.input_digest = hex::encode(digest.finalize());
         return Ok(unavailable(card, "NO_VALUATION"));
     };
-    let start_ns = window_start_ns(request.range, request.as_ns, valuations.first().map(|p| p.ns))?;
+    let start_ns = window_start_ns(
+        request.range,
+        request.as_ns,
+        valuations.first().map(|p| p.ns),
+    )?;
     let start = valuations.iter().rev().find(|p| p.ns <= start_ns).copied();
     let Some(start) = start else {
         card.input_digest = hex::encode(digest.finalize());
@@ -498,8 +509,14 @@ mod tests {
     ) {
         let mut fields: BTreeMap<&str, String> = BTreeMap::new();
         fields.insert("activityKind", format!("\"{kind}\""));
-        fields.insert("activityPosition", format!("<http://example.org/m#{position}>"));
-        fields.insert("activityAccount", format!("<http://example.org/m#{account}>"));
+        fields.insert(
+            "activityPosition",
+            format!("<http://example.org/m#{position}>"),
+        );
+        fields.insert(
+            "activityAccount",
+            format!("<http://example.org/m#{account}>"),
+        );
         fields.insert("activityTradeDate", format!("\"{date}\"^^xsd:dateTime"));
         fields.insert("recordSource", "\"broker\"".to_string());
         fields.insert("activitySession", "\"regular\"".to_string());
@@ -534,11 +551,41 @@ mod tests {
                 extra.push(("recordKnownAt", format!("\"{known}\"^^xsd:dateTime")));
             }
             let extra: Vec<(&str, &str)> = extra.iter().map(|(a, b)| (*a, b.as_str())).collect();
-            seed(&core, id, scope, "acct", kind, "account-value", date, &extra);
+            seed(
+                &core,
+                id,
+                scope,
+                "acct",
+                kind,
+                "account-value",
+                date,
+                &extra,
+            );
         };
-        put("v1", SCOPE, "valuation", "2026-01-02T00:00:00Z", "100", None);
-        put("v2", SCOPE, "valuation", "2026-02-01T00:00:00Z", "110", None);
-        put("late", SCOPE, "valuation", "2026-04-01T00:00:00Z", "999", None);
+        put(
+            "v1",
+            SCOPE,
+            "valuation",
+            "2026-01-02T00:00:00Z",
+            "100",
+            None,
+        );
+        put(
+            "v2",
+            SCOPE,
+            "valuation",
+            "2026-02-01T00:00:00Z",
+            "110",
+            None,
+        );
+        put(
+            "late",
+            SCOPE,
+            "valuation",
+            "2026-04-01T00:00:00Z",
+            "999",
+            None,
+        );
         put(
             "known-late",
             SCOPE,
@@ -547,12 +594,22 @@ mod tests {
             "998",
             Some("2026-03-01T00:00:00Z"),
         );
-        put("other", "tenant-b", "valuation", "2026-01-10T00:00:00Z", "997", None);
+        put(
+            "other",
+            "tenant-b",
+            "valuation",
+            "2026-01-10T00:00:00Z",
+            "997",
+            None,
+        );
         let as_ns = ns("2026-03-01T00:00:00Z");
         let events = eligible_events(&core, SCOPE, "acct", as_ns, as_ns);
         let series = valuation_series(&events, "USD").expect("one currency");
         assert_eq!(
-            series.iter().map(|p| p.value_ticks / SCALE).collect::<Vec<_>>(),
+            series
+                .iter()
+                .map(|p| p.value_ticks / SCALE)
+                .collect::<Vec<_>>(),
             vec![100, 110],
             "after as_of, known after known_at and another tenant's records are excluded"
         );
@@ -571,28 +628,60 @@ mod tests {
                 extra.push(("recordKnownAt", format!("\"{known}\"^^xsd:dateTime")));
             }
             let extra: Vec<(&str, &str)> = extra.iter().map(|(a, b)| (*a, b.as_str())).collect();
-            seed(&core, id, SCOPE, "account-benchmark", "benchmark_level", "spx", date, &extra);
+            seed(
+                &core,
+                id,
+                SCOPE,
+                "account-benchmark",
+                "benchmark_level",
+                "spx",
+                date,
+                &extra,
+            );
         };
         put("b1", "2026-01-02T00:00:00Z", "100", None);
-        put("b2", "2026-02-01T00:00:00Z", "110", Some("2026-05-01T00:00:00Z"));
+        put(
+            "b2",
+            "2026-02-01T00:00:00Z",
+            "110",
+            Some("2026-05-01T00:00:00Z"),
+        );
         let known = ns("2026-03-01T00:00:00Z");
         assert_eq!(
             benchmark_levels(&core, SCOPE, "spx", known),
             vec![(ns("2026-01-02T00:00:00Z"), 100 * SCALE)],
             "a level recorded after known_at is invisible"
         );
-        assert_eq!(benchmark_levels(&core, SCOPE, "spx", ns("2026-06-01T00:00:00Z")).len(), 2);
+        assert_eq!(
+            benchmark_levels(&core, SCOPE, "spx", ns("2026-06-01T00:00:00Z")).len(),
+            2
+        );
     }
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.3
     #[test]
     fn ranges_window_the_series_and_clamp_month_ends() {
         let as_of = ns("2026-03-31T12:00:00Z");
-        assert_eq!(window_start_ns("1M", as_of, None), Ok(ns("2026-02-28T12:00:00Z")));
-        assert_eq!(window_start_ns("YTD", as_of, None), Ok(ns("2026-01-01T00:00:00Z")));
-        assert_eq!(window_start_ns("1Y", as_of, None), Ok(ns("2025-03-31T12:00:00Z")));
-        assert_eq!(window_start_ns("5Y", as_of, None), Ok(ns("2021-03-31T12:00:00Z")));
-        assert_eq!(window_start_ns("1D", as_of, None), Ok(ns("2026-03-30T12:00:00Z")));
+        assert_eq!(
+            window_start_ns("1M", as_of, None),
+            Ok(ns("2026-02-28T12:00:00Z"))
+        );
+        assert_eq!(
+            window_start_ns("YTD", as_of, None),
+            Ok(ns("2026-01-01T00:00:00Z"))
+        );
+        assert_eq!(
+            window_start_ns("1Y", as_of, None),
+            Ok(ns("2025-03-31T12:00:00Z"))
+        );
+        assert_eq!(
+            window_start_ns("5Y", as_of, None),
+            Ok(ns("2021-03-31T12:00:00Z"))
+        );
+        assert_eq!(
+            window_start_ns("1D", as_of, None),
+            Ok(ns("2026-03-30T12:00:00Z"))
+        );
         assert_eq!(window_start_ns("ALL", as_of, Some(7)), Ok(7));
         assert!(window_start_ns("ALL", as_of, None).is_err());
         assert_eq!(

@@ -112,14 +112,27 @@ fn tiered_request(
 }
 
 async fn record_set(h: &Harness, set: &RolloutSet) -> String {
-    learn(h, "decider", LearningWrite::RecordRollouts { set: Box::new(set.clone()) })
-        .await
-        .unwrap();
+    learn(
+        h,
+        "decider",
+        LearningWrite::RecordRollouts {
+            set: Box::new(set.clone()),
+        },
+    )
+    .await
+    .unwrap();
     rollout_set_digest(set)
 }
 
 async fn graph_core(h: &Harness) -> std::sync::Arc<medulla_graph_core::graph::GraphCore> {
-    h.state.read().await.registry.get(GRAPH).expect("graph exists").core.clone()
+    h.state
+        .read()
+        .await
+        .registry
+        .get(GRAPH)
+        .expect("graph exists")
+        .core
+        .clone()
 }
 
 fn member(core: &medulla_graph_core::graph::GraphCore, principal: &str, team: &str) {
@@ -138,12 +151,19 @@ fn member(core: &medulla_graph_core::graph::GraphCore, principal: &str, team: &s
 }
 
 fn facts(batch: &DecisionBatch) -> Vec<String> {
-    batch.records.as_slice()[0].premises.iter().map(|p| p.fact.clone()).collect()
+    batch.records.as_slice()[0]
+        .premises
+        .iter()
+        .map(|p| p.fact.clone())
+        .collect()
 }
 
 fn abstain_code(batch: &DecisionBatch) -> String {
     let StatisticalOutcome::Abstained { reasons } = &batch.records.as_slice()[0].outcome else {
-        panic!("expected an abstention, got {:?}", batch.records.as_slice()[0].outcome)
+        panic!(
+            "expected an abstention, got {:?}",
+            batch.records.as_slice()[0].outcome
+        )
     };
     reasons.as_slice()[0].code().as_str().to_owned()
 }
@@ -158,14 +178,23 @@ async fn promote_to(
     review: &TierReview,
 ) -> DecisionBatch {
     let digest = record_set(h, &skill_set(challenger, champion)).await;
-    let batch = decide(h, tiered_request(schema, tier, &digest, challenger, Some(review)))
-        .await
-        .unwrap();
+    let batch = decide(
+        h,
+        tiered_request(schema, tier, &digest, challenger, Some(review)),
+    )
+    .await
+    .unwrap();
     let record = batch.records.as_slice()[0].clone();
     commit(h, &record).await;
-    pointer_state(h, PointerRef::Champion { subject: subject(None) }, activate(challenger, &record.record_id))
-        .await
-        .unwrap();
+    pointer_state(
+        h,
+        PointerRef::Champion {
+            subject: subject(None),
+        },
+        activate(challenger, &record.record_id),
+    )
+    .await
+    .unwrap();
     batch
 }
 
@@ -181,16 +210,40 @@ async fn a_skill_climbs_domain_core_and_always_on() {
 
     // Domain: a team approver.
     let domain = review(SkillTier::Domain, "support", "principal:ana");
-    let batch = promote_to(&h, &pins.0, SkillTier::Domain, "revision:one", "revision:zero", &domain).await;
-    assert!(facts(&batch).contains(&"tier:target=domain".to_owned()), "{:?}", facts(&batch));
-    assert_eq!(read_tier(&store, TENANT, SKILL).unwrap(), Some(SkillTier::Domain));
+    let batch = promote_to(
+        &h,
+        &pins.0,
+        SkillTier::Domain,
+        "revision:one",
+        "revision:zero",
+        &domain,
+    )
+    .await;
+    assert!(
+        facts(&batch).contains(&"tier:target=domain".to_owned()),
+        "{:?}",
+        facts(&batch)
+    );
+    assert_eq!(
+        read_tier(&store, TENANT, SKILL).unwrap(),
+        Some(SkillTier::Domain)
+    );
 
     // Core: the platform team and a healthy suite report of enough cases.
     let core_review = review(SkillTier::Core, "platform", "principal:root");
     let digest = record_set(&h, &skill_set("revision:two", "revision:one")).await;
-    let missing_report = decide(&h, tiered_request(&pins.0, SkillTier::Core, &digest, "revision:two", Some(&core_review)))
-        .await
-        .unwrap();
+    let missing_report = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Core,
+            &digest,
+            "revision:two",
+            Some(&core_review),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&missing_report), TIER_REVIEW_MISSING.as_str());
     let report = |cases: u64| SuiteReport {
         golden_ppm: 50_000,
@@ -204,31 +257,86 @@ async fn a_skill_climbs_domain_core_and_always_on() {
         let key = format!("skill-eval-report:{SKILL}");
         let current = store.decision_artifact(TENANT, &key).unwrap();
         store
-            .swap_decision_artifact(TENANT, &key, current, encode_artifact(&report(cases)).unwrap())
+            .swap_decision_artifact(
+                TENANT,
+                &key,
+                current,
+                encode_artifact(&report(cases)).unwrap(),
+            )
             .unwrap();
     };
     put_report(5);
-    let small = decide(&h, tiered_request(&pins.0, SkillTier::Core, &digest, "revision:two", Some(&core_review)))
-        .await
-        .unwrap();
+    let small = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Core,
+            &digest,
+            "revision:two",
+            Some(&core_review),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&small), PROMOTION_EVAL_TOO_SMALL.as_str());
     put_report(40);
-    promote_to(&h, &pins.0, SkillTier::Core, "revision:two", "revision:one", &core_review).await;
-    assert_eq!(read_tier(&store, TENANT, SKILL).unwrap(), Some(SkillTier::Core));
+    promote_to(
+        &h,
+        &pins.0,
+        SkillTier::Core,
+        "revision:two",
+        "revision:one",
+        &core_review,
+    )
+    .await;
+    assert_eq!(
+        read_tier(&store, TENANT, SKILL).unwrap(),
+        Some(SkillTier::Core)
+    );
 
     // AlwaysOn at count 99, then at 100.
     for n in 0..99 {
-        write_tier(&store, TENANT, &format!("skill:other-{n}"), SkillTier::AlwaysOn).unwrap();
+        write_tier(
+            &store,
+            TENANT,
+            &format!("skill:other-{n}"),
+            SkillTier::AlwaysOn,
+        )
+        .unwrap();
     }
     let always_on = review(SkillTier::AlwaysOn, "platform", "principal:root");
-    let batch = promote_to(&h, &pins.0, SkillTier::AlwaysOn, "revision:three", "revision:two", &always_on).await;
-    assert!(facts(&batch).contains(&"tier:always_on=99/100".to_owned()), "{:?}", facts(&batch));
-    assert_eq!(read_tier(&store, TENANT, SKILL).unwrap(), Some(SkillTier::AlwaysOn));
+    let batch = promote_to(
+        &h,
+        &pins.0,
+        SkillTier::AlwaysOn,
+        "revision:three",
+        "revision:two",
+        &always_on,
+    )
+    .await;
+    assert!(
+        facts(&batch).contains(&"tier:always_on=99/100".to_owned()),
+        "{:?}",
+        facts(&batch)
+    );
+    assert_eq!(
+        read_tier(&store, TENANT, SKILL).unwrap(),
+        Some(SkillTier::AlwaysOn)
+    );
     write_tier(&store, TENANT, "skill:other-99", SkillTier::AlwaysOn).unwrap();
     let digest = record_set(&h, &skill_set("revision:four", "revision:three")).await;
-    let full = decide(&h, tiered_request(&pins.0, SkillTier::AlwaysOn, &digest, "revision:four", Some(&always_on)))
-        .await
-        .unwrap();
+    let full = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::AlwaysOn,
+            &digest,
+            "revision:four",
+            Some(&always_on),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&full), ALWAYS_ON_CAPACITY_REACHED.as_str());
 }
 
@@ -242,27 +350,51 @@ async fn a_review_that_does_not_qualify_is_refused_and_a_downgrade_needs_an_appr
     let digest = record_set(&h, &skill_set("revision:one", "revision:zero")).await;
 
     // No review, and a reviewer who is in no team, both lack the receipt.
-    let none = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", None))
-        .await
-        .unwrap();
+    let none = decide(
+        &h,
+        tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", None),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&none), TIER_REVIEW_MISSING.as_str());
     let stranger = review(SkillTier::Domain, "support", "principal:eve");
-    let outsider = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&stranger)))
-        .await
-        .unwrap();
+    let outsider = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&stranger),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&outsider), TIER_REVIEW_MISSING.as_str());
 
     // A skill that holds Core moves down to Domain only with an approver.
     member(&core, REVIEWER, "support");
     write_tier(&store, TENANT, SKILL, SkillTier::Core).unwrap();
-    let down = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", None))
-        .await
-        .unwrap();
+    let down = decide(
+        &h,
+        tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", None),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&down), TIER_DOWNGRADE_NEEDS_REVIEW.as_str());
     let approved = review(SkillTier::Domain, "support", "principal:ana");
-    let down = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&approved)))
-        .await
-        .unwrap();
+    let down = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&approved),
+        ),
+    )
+    .await
+    .unwrap();
     assert!(facts(&down).contains(&"tier:target=domain".to_owned()));
 }
 
@@ -281,7 +413,13 @@ async fn a_tiered_promotion_needs_the_review_scope_and_the_reviewer_is_the_verif
     let refused = decide_as(
         &h,
         &verified(),
-        tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&domain)),
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&domain),
+        ),
     )
     .await
     .expect_err("the review scope is required");
@@ -336,24 +474,55 @@ async fn platform_or_team_review_is_decided_by_the_reviewers_graph_role() {
     // A team member claims the platform team for a Core review: the claim decides nothing.
     member(&core, REVIEWER, "support");
     let claim = review(SkillTier::Core, "platform", "principal:ana");
-    let team_only = decide(&h, tiered_request(&pins.0, SkillTier::Core, &digest, "revision:one", Some(&claim)))
-        .await
-        .unwrap();
+    let team_only = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Core,
+            &digest,
+            "revision:one",
+            Some(&claim),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&team_only), TIER_REVIEW_MISSING.as_str());
 
     // The same team member reviews for a Domain skill by its team and the review is accepted.
     let domain = review(SkillTier::Domain, "platform", "principal:ana");
-    let team_review = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&domain)))
-        .await
-        .unwrap();
+    let team_review = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&domain),
+        ),
+    )
+    .await
+    .unwrap();
     assert!(facts(&team_review).contains(&"tier:target=domain".to_owned()));
 
     // Once the graph shows the reviewer in the platform team, the Core review is accepted.
     member(&core, REVIEWER, "platform");
-    let platform = decide(&h, tiered_request(&pins.0, SkillTier::Core, &digest, "revision:one", Some(&claim)))
-        .await
-        .unwrap();
-    assert!(facts(&platform).contains(&"tier:target=core".to_owned()), "{:?}", facts(&platform));
+    let platform = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Core,
+            &digest,
+            "revision:one",
+            Some(&claim),
+        ),
+    )
+    .await
+    .unwrap();
+    assert!(
+        facts(&platform).contains(&"tier:target=core".to_owned()),
+        "{:?}",
+        facts(&platform)
+    );
 }
 
 // spec: MEDULLA-IDENTITY-R739
@@ -377,15 +546,33 @@ async fn the_author_cannot_review_its_own_revision_and_another_reviewer_can() {
 
     // The reviewer wrote the revision: refused, with the code of the two-person rule.
     put_skill(REVIEWER);
-    let own = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&domain)))
-        .await
-        .unwrap();
+    let own = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&domain),
+        ),
+    )
+    .await
+    .unwrap();
     assert_eq!(abstain_code(&own), TIER_SELF_REVIEW.as_str());
 
     // Another principal wrote it: the same reviewer is accepted.
     put_skill("someone-else");
-    let other = decide(&h, tiered_request(&pins.0, SkillTier::Domain, &digest, "revision:one", Some(&domain)))
-        .await
-        .unwrap();
+    let other = decide(
+        &h,
+        tiered_request(
+            &pins.0,
+            SkillTier::Domain,
+            &digest,
+            "revision:one",
+            Some(&domain),
+        ),
+    )
+    .await
+    .unwrap();
     assert!(facts(&other).contains(&"tier:target=domain".to_owned()));
 }

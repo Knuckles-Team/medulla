@@ -167,8 +167,9 @@ async fn gap_links_back_to_its_member_runs() {
         .filter(|op| op["op"] == "upsert_edge")
         .collect();
     assert_eq!(edges.len(), 3);
-    assert!(edges.iter().all(|edge| edge["source"] == gap
-        && edge["properties"]["relationship"] == "DERIVED_FROM"));
+    assert!(edges
+        .iter()
+        .all(|edge| edge["source"] == gap && edge["properties"]["relationship"] == "DERIVED_FROM"));
     assert_eq!(write.operations[0]["op"], "upsert_node");
     let properties = &write.operations[0]["properties"];
     assert_eq!(properties["count"], 3);
@@ -270,7 +271,10 @@ async fn failures_cluster_and_gap_is_idempotent() {
     let marked = plan(&h, TENANT, mark()).await.ok().expect("marks");
     assert_eq!(marked.operations.len(), 1);
     assert_eq!(marked.operations[0]["properties"]["status"], "addressed");
-    assert_eq!(marked.operations[0]["properties"]["addressed_by"], "doc:fix");
+    assert_eq!(
+        marked.operations[0]["properties"]["addressed_by"],
+        "doc:fix"
+    );
     commit(&core, &marked);
 
     // An addressed gap is never reopened by a later ingest.

@@ -37,8 +37,8 @@ use medulla_types::process_import::{workflow_node_id, CanonicalWorkflow};
 use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
-use crate::decide::SharedState;
 use crate::decide::stat_task_plan::{PlanNotes, Planned};
+use crate::decide::SharedState;
 
 use super::support::{invalid, json_param, single_option, text_param};
 use super::DecisionFamily;
@@ -148,17 +148,17 @@ impl Binder<'_> {
     }
 }
 
-fn refused(
-    request: &ProcessPlanRequest,
-    refusal: ProcessPlanRefusal,
-) -> Result<Planned, String> {
+fn refused(request: &ProcessPlanRequest, refusal: ProcessPlanRefusal) -> Result<Planned, String> {
     let Some(code) = PROCESS_PLAN_REFUSALS
         .iter()
         .find(|code| code.as_str() == refusal.code)
         .copied()
     else {
         // A refusal of the task plan engine keeps its own code.
-        return Err(format!("{}: workflow={}", refusal.code, request.workflow_id));
+        return Err(format!(
+            "{}: workflow={}",
+            refusal.code, request.workflow_id
+        ));
     };
     Ok(abstain(request, code, &refusal.steps))
 }
@@ -169,7 +169,11 @@ fn abstain(request: &ProcessPlanRequest, code: RefusalCode, steps: &[String]) ->
         code,
         premise: PremiseRef {
             subject: request.workflow_id.clone(),
-            fact: format!("process_plan_refusal:code={};steps={}", code.as_str(), steps.join(",")),
+            fact: format!(
+                "process_plan_refusal:code={};steps={}",
+                code.as_str(),
+                steps.join(",")
+            ),
             class: PremiseClass::Claim,
             provenance: PremiseProvenance::Request {
                 field: format!("params.{PARAM_REQUEST}"),
@@ -187,7 +191,9 @@ fn target_text(target: &BindingTarget) -> String {
         BindingTarget::Tool { server, tool, .. } => format!("tool:{server}/{tool}"),
         BindingTarget::Prompt { prompt_iri, .. } => format!("prompt:{prompt_iri}"),
         BindingTarget::Decision { decision_iri } => format!("decision:{decision_iri}"),
-        BindingTarget::Approval { approver_role } => format!("approval:{role}", role = approver_role),
+        BindingTarget::Approval { approver_role } => {
+            format!("approval:{role}", role = approver_role)
+        }
     }
 }
 
@@ -276,7 +282,8 @@ pub(in crate::decide) fn plan(
             &[],
         )
     };
-    let Some((node, workflow)) = stored_workflow(view, ctx.tenant_id, &asked.workflow_id, asked.version)
+    let Some((node, workflow)) =
+        stored_workflow(view, ctx.tenant_id, &asked.workflow_id, asked.version)
     else {
         return Ok(unknown());
     };
@@ -295,12 +302,18 @@ pub(in crate::decide) fn plan(
         let (bindings, _) = binder.bind(&node, &workflow);
         Some(Callee { workflow, bindings })
     };
-    let planned = plan_from_workflow(&workflow, &bindings, &callee, knobs.max_call_depth, knobs.approval_timeout_s)
-        .and_then(|drafted| {
-            plan_explicit_tasks(&drafted.proposal)
-                .map(|plan| (plan, drafted.questions))
-                .map_err(|message| engine_refusal(&message))
-        });
+    let planned = plan_from_workflow(
+        &workflow,
+        &bindings,
+        &callee,
+        knobs.max_call_depth,
+        knobs.approval_timeout_s,
+    )
+    .and_then(|drafted| {
+        plan_explicit_tasks(&drafted.proposal)
+            .map(|plan| (plan, drafted.questions))
+            .map_err(|message| engine_refusal(&message))
+    });
     if let Some(detail) = binder.failure.take() {
         return Err(detail);
     }
@@ -308,7 +321,9 @@ pub(in crate::decide) fn plan(
         Ok((plan, questions)) => {
             let graph = text_param(request, PARAM_GRAPH)?.unwrap_or_default();
             let notes = PlanNotes {
-                process_premises: premises(graph, &asked, &workflow, &bindings, &dropped, &questions),
+                process_premises: premises(
+                    graph, &asked, &workflow, &bindings, &dropped, &questions,
+                ),
                 process_ranked: bindings
                     .iter()
                     .any(|b| matches!(b.source, BindingSource::Ranked { .. })),
@@ -336,32 +351,32 @@ impl DecisionFamily for ProcessPlanFamily {
         policy: &DecisionPolicy,
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
-        Some(plan(ctx, request, policy, graph_view).map(|planned| match planned {
-            // Any ranked binding makes the plan a claim; bound by the graph alone it is an
-            // observation.
-            Planned::Plan(plan, notes) => {
-                let mut done = executed(crate::decide::stat_task_plan::outcome(&plan));
-                done.family = Some(FamilyExecuted {
-                    answer: None,
-                    premises: Vec::new(),
-                    resolution: None,
-                    evidence: Some(if notes.process_ranked {
-                        EvidenceClass::Claim
-                    } else {
-                        EvidenceClass::Observation
-                    }),
-                });
-                done
-            }
-            Planned::Abstain { code, detail, .. } => {
-                executed(StatisticalOutcome::Abstained {
+        Some(plan(ctx, request, policy, graph_view).map(|planned| {
+            match planned {
+                // Any ranked binding makes the plan a claim; bound by the graph alone it is an
+                // observation.
+                Planned::Plan(plan, notes) => {
+                    let mut done = executed(crate::decide::stat_task_plan::outcome(&plan));
+                    done.family = Some(FamilyExecuted {
+                        answer: None,
+                        premises: Vec::new(),
+                        resolution: None,
+                        evidence: Some(if notes.process_ranked {
+                            EvidenceClass::Claim
+                        } else {
+                            EvidenceClass::Observation
+                        }),
+                    });
+                    done
+                }
+                Planned::Abstain { code, detail, .. } => executed(StatisticalOutcome::Abstained {
                     reasons: BoundedVec::new(vec![AbstainReason::Family {
                         family: QuestionKind::ProcessPlan,
                         code,
                         detail,
                     }])
                     .expect("one reason fits the bound"),
-                })
+                }),
             }
         }))
     }

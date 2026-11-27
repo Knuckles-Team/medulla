@@ -94,7 +94,9 @@ fn selected(record: &StatisticalDecisionRecord) -> CouncilResult {
     match &record.outcome {
         StatisticalOutcome::Advisory { scores, .. } => {
             let answer = &scores.as_slice()[0].option_id;
-            let json = answer.strip_prefix("council_result:").expect("a result answer");
+            let json = answer
+                .strip_prefix("council_result:")
+                .expect("a result answer");
             serde_json::from_str(json).unwrap()
         }
         other => panic!("a selection is advisory, got {other:?}"),
@@ -133,7 +135,11 @@ async fn council_quorum_conflict_and_refusals() {
     assert_eq!(result.input_position_ids, ["p1", "p2", "p3"]);
     assert_eq!(result.accepted_position_ids, ["p1", "p2"]);
     assert_eq!(result.rejected_position_ids, ["p3"]);
-    for prefix in ["position:p1", "evidence:e1@4", "council_policy:council-policy@2"] {
+    for prefix in [
+        "position:p1",
+        "evidence:e1@4",
+        "council_policy:council-policy@2",
+    ] {
         assert!(
             record.premises.iter().any(|p| p.fact == prefix),
             "missing premise {prefix}"

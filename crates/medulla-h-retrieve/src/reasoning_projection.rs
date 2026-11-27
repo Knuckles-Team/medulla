@@ -409,8 +409,7 @@ async fn initialize_index(
         match load_index(persist_dir.as_deref(), &graph_fname) {
             Ok(Some(_)) => Ok(true),
             Ok(None) => {
-                let index =
-                    IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot())?;
+                let index = IncrementalReasoningIndex::from_graph_view(&core.analysis_snapshot())?;
                 persist_index(persist_dir.as_deref(), &graph_fname, &index)?;
                 Ok(true)
             }
@@ -669,7 +668,10 @@ fn snapshot_path(persist_dir: Option<&str>, graph_fname: &str) -> Option<PathBuf
     Some(
         Path::new(root)
             .join("reasoning-projections")
-            .join(format!("v{}", medulla_epistemic::REASONING_PROJECTION_VERSION))
+            .join(format!(
+                "v{}",
+                medulla_epistemic::REASONING_PROJECTION_VERSION
+            ))
             .join(format!("{digest}.msgpack")),
     )
 }
@@ -836,10 +838,7 @@ pub async fn stale_materializations(
         .position
         .as_ref()
         .map_or(0, |position| position.source_graph_version);
-    Ok((
-        index.stale_materialization_refs(),
-        source_graph_version,
-    ))
+    Ok((index.stale_materialization_refs(), source_graph_version))
 }
 
 /// Fenced recompute/writeback against the exact durable projection watermark.
@@ -1189,8 +1188,8 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{Condvar, Mutex as StdMutex};
 
-    use medulla_types::materialization_status_machine::MaterializationStatus;
     use medulla_protocol_types::protocol::Method;
+    use medulla_types::materialization_status_machine::MaterializationStatus;
 
     #[cfg(feature = "redb")]
     use medulla_server_api::api::persistence::PersistenceBackend;
@@ -1626,10 +1625,7 @@ mod tests {
             recompute_materialization(Some(&root_str), "graph", view, 2, "derived", 2)
                 .await
                 .unwrap();
-        assert_eq!(
-            materialization.status,
-            MaterializationStatus::Fresh
-        );
+        assert_eq!(materialization.status, MaterializationStatus::Fresh);
         assert_eq!(fence_epoch, 1);
         assert_eq!(
             read_index(Some(&root_str), "graph")

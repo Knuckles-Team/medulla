@@ -47,27 +47,27 @@ impl MachineEvent for CapabilityEvent {
 }
 
 /// `CapabilityMachine`: the closed edge table. Every other pair is refused.
-pub static CAPABILITY_MACHINE: MachineDef<CapabilityStatusKind, CapabilityEvent, &'static str> = MachineDef {
-    name: "CapabilityMachine",
-    states: &[CapabilityStatusKind::Planned, CapabilityStatusKind::Shipped],
-    initial: CapabilityStatusKind::Planned,
-    terminals: &[CapabilityStatusKind::Shipped],
-    events: &[CapabilityEvent::Ship],
-    guards: &[],
-    edges: &[
-        Edge {
+pub static CAPABILITY_MACHINE: MachineDef<CapabilityStatusKind, CapabilityEvent, &'static str> =
+    MachineDef {
+        name: "CapabilityMachine",
+        states: &[CapabilityStatusKind::Planned, CapabilityStatusKind::Shipped],
+        initial: CapabilityStatusKind::Planned,
+        terminals: &[CapabilityStatusKind::Shipped],
+        events: &[CapabilityEvent::Ship],
+        guards: &[],
+        edges: &[Edge {
             id: "CS01",
             from: CapabilityStatusKind::Planned,
             event: CapabilityEvent::Ship,
             guard: None,
             to: CapabilityStatusKind::Shipped,
-        },
-    ],
-};
+        }],
+    };
 
 impl CapabilityStatusKind {
     /// Every state, in declaration order.
-    pub const ALL: [CapabilityStatusKind; 2] = [CapabilityStatusKind::Planned, CapabilityStatusKind::Shipped];
+    pub const ALL: [CapabilityStatusKind; 2] =
+        [CapabilityStatusKind::Planned, CapabilityStatusKind::Shipped];
 
     /// The state a new record takes.
     pub const fn initial() -> Self {
@@ -130,7 +130,11 @@ mod tests {
         let machine = &CAPABILITY_MACHINE;
         for &state in machine.states {
             for &event in machine.events {
-                if machine.edges.iter().any(|e| e.from == state && e.event == event) {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == state && e.event == event)
+                {
                     continue;
                 }
                 let refused = state.apply(event).unwrap_err();
@@ -146,7 +150,10 @@ mod tests {
             }
         }
         for state in CapabilityStatusKind::ALL {
-            assert_eq!(CapabilityStatusKind::from_stored(state.stored()), Some(state));
+            assert_eq!(
+                CapabilityStatusKind::from_stored(state.stored()),
+                Some(state)
+            );
         }
         assert_eq!(CapabilityStatusKind::from_stored("weather"), None);
     }
@@ -155,7 +162,13 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         let source = include_str!("../../medulla-h-compute/src/viz.rs");
-        assert!(source.contains("CapabilityStatusKind::from_stored"), "the writer routes through the machine");
-        assert!(!source.contains("status: \""), "a writer sets the status outside apply: status: \"");
+        assert!(
+            source.contains("CapabilityStatusKind::from_stored"),
+            "the writer routes through the machine"
+        );
+        assert!(
+            !source.contains("status: \""),
+            "a writer sets the status outside apply: status: \""
+        );
     }
 }

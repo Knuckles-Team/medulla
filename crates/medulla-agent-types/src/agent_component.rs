@@ -67,16 +67,16 @@ pub mod input_capabilities;
 pub mod proposal;
 pub mod red_team;
 pub mod search;
-pub mod skill_edit;
 pub mod skill_admission;
+pub mod skill_edit;
 pub mod source_effect;
 
 mod validation;
 
 pub use content::{
-    AgentComponentBlueprintExportRequest, BlueprintExport, BlueprintImportRequest,
-    BLUEPRINT_EXPORT_SCHEMA_VERSION,
-    AgentComponentContentRequest, AgentComponentContentResult, COMPONENT_CONTENT_SCHEMA_VERSION,
+    AgentComponentBlueprintExportRequest, AgentComponentContentRequest,
+    AgentComponentContentResult, BlueprintExport, BlueprintImportRequest,
+    BLUEPRINT_EXPORT_SCHEMA_VERSION, COMPONENT_CONTENT_SCHEMA_VERSION,
     COMPONENT_MEDIA_TYPE_ATTRIBUTE, DEFAULT_COMPONENT_MEDIA_TYPE, MAX_COMPONENT_BODY_BYTES,
 };
 pub use facts::{
@@ -93,17 +93,17 @@ pub use search::{
     decode_search_cursor, encode_search_cursor, AgentComponentSearchPage,
     AgentComponentSearchRequest, AgentComponentStatusRequest,
 };
-pub use source_effect::{
-    SourceEffectReceipt, SourceEffectRecordResult, RECEIPT_DIGEST_INVALID, RECEIPT_DIGEST_REUSED,
-    RECEIPT_REVISION_UNKNOWN,
+pub use skill_admission::{
+    SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire, MAX_SKILL_ADMISSION_COHORT,
+    MAX_SKILL_ADMISSION_CONTRACT_FIELDS,
 };
 pub use skill_edit::{
     SkillSourceEditRequest, SkillSourcePatch, MAX_SKILL_PATCHES, SKILL_PATCH_ANCHOR_INVALID,
     SKILL_PATCH_OVERLAP, SKILL_SOURCE_STALE, SKILL_SPAN_UNKNOWN,
 };
-pub use skill_admission::{
-    SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire, MAX_SKILL_ADMISSION_COHORT,
-    MAX_SKILL_ADMISSION_CONTRACT_FIELDS,
+pub use source_effect::{
+    SourceEffectReceipt, SourceEffectRecordResult, RECEIPT_DIGEST_INVALID, RECEIPT_DIGEST_REUSED,
+    RECEIPT_REVISION_UNKNOWN,
 };
 
 /// Advanced to 2 by the pre-freeze contract review.
@@ -1435,17 +1435,23 @@ pub enum AgentComponentOp {
     /// Edit one skill's SKILL.md by byte-range patches over its original bytes and publish
     /// the result as the next revision (MEDULLA-TYPED-PACKS-R100.100). Boxed like the import
     /// carrier.
-    EditSkillSource { request: Box<SkillSourceEditRequest> },
+    EditSkillSource {
+        request: Box<SkillSourceEditRequest>,
+    },
     /// Export one pinned revision as a native blueprint (MEDULLA-TYPED-PACKS-R094.2).
     ExportBlueprint {
         request: AgentComponentBlueprintExportRequest,
     },
     /// Import one edited blueprint as the next revision of a native prompt
     /// (MEDULLA-TYPED-PACKS-R094.3). Boxed: the envelope carries a whole entry and a body.
-    ImportBlueprint { request: Box<BlueprintImportRequest> },
+    ImportBlueprint {
+        request: Box<BlueprintImportRequest>,
+    },
     /// Store one optimization proposal against a component, with no authority
     /// (MEDULLA-TYPED-PACKS-R094.6). Boxed like the import carrier.
-    StoreProposal { request: Box<BlueprintProposalRequest> },
+    StoreProposal {
+        request: Box<BlueprintProposalRequest>,
+    },
     /// Render one pinned prompt revision with its variables and return the bytes with a
     /// receipt (MEDULLA-TYPED-PACKS-R002.9).
     Render { request: PromptRenderRequest },
@@ -1576,7 +1582,11 @@ impl AgentComponentOp {
                 request.context.validate()?;
                 validate_text("component_id", &request.envelope.entry.component_id)?;
                 refuse_reserved_id(&request.envelope.entry.component_id)?;
-                if request.context.expected_revision.is_none_or(|base| base == 0) {
+                if request
+                    .context
+                    .expected_revision
+                    .is_none_or(|base| base == 0)
+                {
                     return Err(
                         "INVALID_ARGUMENT: a blueprint import names its base revision (\
                          expected_revision of at least 1)"

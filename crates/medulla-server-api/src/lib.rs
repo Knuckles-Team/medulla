@@ -22,9 +22,9 @@ pub mod batch_compile;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod carrier;
+pub mod catalog_usage;
 #[allow(missing_docs)]
 pub mod source_query_authority;
-pub mod catalog_usage;
 
 /// `ClientSession` record admission (MEDULLA-IDENTITY-R705).
 pub mod client_session;

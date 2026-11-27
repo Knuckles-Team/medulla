@@ -362,7 +362,10 @@ fn diff_refusals() {
         ),
     )
     .unwrap_err();
-    assert!(mismatch.starts_with("ONTOLOGY_DIFF_IRI_MISMATCH"), "{mismatch}");
+    assert!(
+        mismatch.starts_with("ONTOLOGY_DIFF_IRI_MISMATCH"),
+        "{mismatch}"
+    );
 
     // A candidate that declares the named IRI is a revision of it.
     diff_ontology(
@@ -381,10 +384,16 @@ fn diff_refusals() {
     // A named revision that is absent, as the base or as the target.
     let unknown_from =
         diff_ontology(&core, "g", "tenant-a", &diff_op(9, DiffTarget::Revision(1))).unwrap_err();
-    assert!(unknown_from.starts_with("ONTOLOGY_REVISION_UNKNOWN"), "{unknown_from}");
+    assert!(
+        unknown_from.starts_with("ONTOLOGY_REVISION_UNKNOWN"),
+        "{unknown_from}"
+    );
     let unknown_to =
         diff_ontology(&core, "g", "tenant-a", &diff_op(1, DiffTarget::Revision(9))).unwrap_err();
-    assert!(unknown_to.starts_with("ONTOLOGY_REVISION_UNKNOWN"), "{unknown_to}");
+    assert!(
+        unknown_to.starts_with("ONTOLOGY_REVISION_UNKNOWN"),
+        "{unknown_to}"
+    );
 
     // A tenant that cannot be named.
     let denied = diff_ontology(&core, "g", "", &diff_op(1, DiffTarget::Revision(1))).unwrap_err();

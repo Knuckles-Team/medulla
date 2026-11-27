@@ -6,7 +6,6 @@
 //! the admitted write against the durable binding, reconciliation checkpoint,
 //! prior progress and the retained receipt that completed it.
 
-use medulla_index_types::semantic_index::SemanticSourceRevision;
 use super::batch::MetadataMutation;
 use super::persist::replace_bytes;
 use super::reconciliation::{
@@ -26,6 +25,7 @@ use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,
 };
+use medulla_index_types::semantic_index::SemanticSourceRevision;
 use medulla_index_types::{
     semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation,
     semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceManifest,
@@ -242,9 +242,10 @@ impl SemanticCodeStore {
         })?;
         let old: SemanticSourceProgress = decode_valid(&raw)?;
         validate_sql_source_revision(&old.source_revision)?;
-        let old_revision = SemanticSourceRevision::parse(&old.source_revision).ok_or_else(|| {
-            corrupt("semantic source progress has a non-canonical SQL source revision")
-        })?;
+        let old_revision =
+            SemanticSourceRevision::parse(&old.source_revision).ok_or_else(|| {
+                corrupt("semantic source progress has a non-canonical SQL source revision")
+            })?;
         if old_revision.authority != authority {
             return Err(corrupt(
                 "semantic source progress belongs to another source authority",

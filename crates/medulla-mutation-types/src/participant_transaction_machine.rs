@@ -166,9 +166,12 @@ pub const PARTICIPANT_TRANSACTION_MACHINE: MachineDef<
 impl ParticipantTransactionKind {
     /// The one transition function: the next kind, or the typed refusal.
     pub fn apply(self, event: ParticipantTransactionEvent) -> Result<Self, TransitionRefused> {
-        transition(&PARTICIPANT_TRANSACTION_MACHINE, self, event, |guard| {
-            match guard {}
-        })
+        transition(
+            &PARTICIPANT_TRANSACTION_MACHINE,
+            self,
+            event,
+            |guard| match guard {},
+        )
         .map(|edge| edge.to)
     }
 }

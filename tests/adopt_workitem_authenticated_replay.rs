@@ -1315,7 +1315,8 @@ async fn stale_holder_cannot_read_the_checkpoint_head() {
         &test_support::dispatch(&state, signed_run_request(951, submission, "admit-fence")).await,
         "admit fence run",
     );
-    let claimed = claim_admitted_run(&state, &admitted, 952, "claim-fence", "claim fence run").await;
+    let claimed =
+        claim_admitted_run(&state, &admitted, 952, "claim-fence", "claim fence run").await;
     let content = r#"{"phase":"step_inflight","next_step":0,"messages":[]}"#.to_string();
     let request = PublishRunCheckpointRequest {
         tenant: TENANT.into(),
@@ -1368,8 +1369,11 @@ async fn stale_holder_cannot_read_the_checkpoint_head() {
         )
     };
     let current: Option<RunCheckpointRead> = decode_raw(
-        &test_support::dispatch(&state, read_as(954, "fence-read-live", request.fencing_token))
-            .await,
+        &test_support::dispatch(
+            &state,
+            read_as(954, "fence-read-live", request.fencing_token),
+        )
+        .await,
         "live holder read",
     );
     assert_eq!(current.expect("live holder reads").snapshot.revision, 1);
@@ -1444,7 +1448,10 @@ async fn cross_tenant_memory_ref_is_indistinguishable_from_absent() {
     // A document that was never written here and one that exists only under
     // another tenant's graph are the same case for this graph: no row.
     let mut refusals = Vec::new();
-    for (index, doc) in ["notes/absent.md", "tenant-b/notes/a.md"].into_iter().enumerate() {
+    for (index, doc) in ["notes/absent.md", "tenant-b/notes/a.md"]
+        .into_iter()
+        .enumerate()
+    {
         let refused = test_support::dispatch(
             &state,
             signed_run_request(

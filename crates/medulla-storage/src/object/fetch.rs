@@ -11,9 +11,9 @@
 //! `OBJECT_SEGMENT_DIGEST_MISMATCH`, version and key each) and stay within the
 //! one `object_store` trait that the S3 clients already use.
 
+use medulla_protocol_types::protocol::GraphType;
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt};
-use medulla_protocol_types::protocol::GraphType;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

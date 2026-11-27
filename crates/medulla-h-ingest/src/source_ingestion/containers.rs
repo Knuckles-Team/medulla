@@ -176,7 +176,9 @@ mod tests {
             .methods
             .iter()
             .find_map(|m| match m {
-                Method::AddNode { properties_msgpack, .. } => {
+                Method::AddNode {
+                    properties_msgpack, ..
+                } => {
                     let node: Value = rmp_serde::from_slice(properties_msgpack).unwrap();
                     (node["container_id"] == "api").then_some(node)
                 }
@@ -195,8 +197,9 @@ mod tests {
         let api = source_hierarchy::container_node_id("t1", "wiki", "api").unwrap();
         let guide = source_hierarchy::container_node_id("t1", "wiki", "guide").unwrap();
         assert!(ids.contains(&docs) && ids.contains(&api));
-        let refused = admit_containers("t1", &[container("api", Some("docs"))], &BTreeMap::new(), 0)
-            .expect_err("docs is neither in the batch nor held");
+        let refused =
+            admit_containers("t1", &[container("api", Some("docs"))], &BTreeMap::new(), 0)
+                .expect_err("docs is neither in the batch nor held");
         assert!(refused.starts_with("SOURCE_CONTAINER_INVALID"), "{refused}");
         let held = BTreeMap::from([
             (docs, json!({ "source_path": "docs" })),

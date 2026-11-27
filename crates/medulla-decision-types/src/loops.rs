@@ -506,7 +506,10 @@ mod tests {
         for state in LoopState::ALL {
             let stored = state.stored();
             assert_eq!(LoopState::from_stored(stored), Some(state));
-            assert_eq!(serde_json::to_value(state).unwrap(), serde_json::json!(stored));
+            assert_eq!(
+                serde_json::to_value(state).unwrap(),
+                serde_json::json!(stored)
+            );
             assert_eq!(
                 serde_json::from_value::<LoopState>(serde_json::json!(stored)).unwrap(),
                 state

@@ -9,9 +9,9 @@ use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::retrieval_plan::{
     is_prefixed_sha256, RetrievalPlanKind, RetrievalProviderBinding, COMMAND_CONFIG_DIGEST_PARAM,
-    INFERENCE_MODE_BINDING_INCOMPLETE, INFERENCE_MODE_DIGEST_INVALID,
-    INFERENCE_MODE_DIGEST_PARAM, PROVIDER_PARAM, REASONING_MODEL_PARAM,
-    RETRIEVAL_PROVIDER_STALE, RETRIEVAL_PROVIDER_UNAVAILABLE,
+    INFERENCE_MODE_BINDING_INCOMPLETE, INFERENCE_MODE_DIGEST_INVALID, INFERENCE_MODE_DIGEST_PARAM,
+    PROVIDER_PARAM, REASONING_MODEL_PARAM, RETRIEVAL_PROVIDER_STALE,
+    RETRIEVAL_PROVIDER_UNAVAILABLE,
 };
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalErrorCode, TypedValue,

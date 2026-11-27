@@ -262,7 +262,10 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_process_model_import, Route::ProcessModelImport),
     (is_process_document_import, Route::ProcessDocumentImport),
     (is_process_model_deploy, Route::ProcessModelDeploy),
-    (is_index_harness_session_batch, Route::IndexHarnessSessionBatch),
+    (
+        is_index_harness_session_batch,
+        Route::IndexHarnessSessionBatch,
+    ),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
     (is_participant, Route::Participant),
@@ -394,8 +397,7 @@ async fn try_handle_admin(
             super::super::process_compile::handle_process_compile(ctx, tenant_id, method).await
         }
         Route::ProcessModelImport => {
-            super::super::process_compile::handle_process_model_import(ctx, tenant_id, method)
-                .await
+            super::super::process_compile::handle_process_model_import(ctx, tenant_id, method).await
         }
         Route::ProcessDocumentImport => {
             super::super::process_document::handle_process_document_import(ctx, tenant_id, method)
@@ -477,17 +479,21 @@ async fn try_handle_node_state(
         } => {
             // MEDULLA-FINANCE-PRIMITIVES-R011.4, R011.5: a receipt is admitted in its initial
             // state with the tenant scope stamped; the stamped write is what is logged.
-            let stamped = match super::super::finance_receipts::admit_create(ctx.tenant_scope, method)
-            {
-                Some(Err(refusal)) => return Some(Response::err(ctx.req_id, refusal)),
-                Some(Ok(write)) => Some(write),
-                None => None,
-            };
+            let stamped =
+                match super::super::finance_receipts::admit_create(ctx.tenant_scope, method) {
+                    Some(Err(refusal)) => return Some(Response::err(ctx.req_id, refusal)),
+                    Some(Ok(write)) => Some(write),
+                    None => None,
+                };
             let (method, node_id, properties_msgpack) = match &stamped {
                 Some(Method::CreateNodeIfAbsent {
                     node_id,
                     properties_msgpack,
-                }) => (stamped.as_ref().unwrap_or(method), node_id.clone(), properties_msgpack.clone()),
+                }) => (
+                    stamped.as_ref().unwrap_or(method),
+                    node_id.clone(),
+                    properties_msgpack.clone(),
+                ),
                 _ => (method, node_id.clone(), properties_msgpack.clone()),
             };
             commit_gateway(ctx, plan, method, move |core| {
@@ -588,7 +594,9 @@ async fn try_handle_bus(
             participant,
             principal,
         } => bus::register(ctx, plan, tenant_id, participant, principal).await,
-        Method::SyncMemorySnapshotStore { .. } => super::memory_snapshot::sync(ctx, plan, method).await,
+        Method::SyncMemorySnapshotStore { .. } => {
+            super::memory_snapshot::sync(ctx, plan, method).await
+        }
         Method::BusHeartbeat {
             session_ref,
             now_ms,

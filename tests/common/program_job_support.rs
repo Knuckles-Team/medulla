@@ -54,7 +54,11 @@ fn policy() -> PolicyEnvelope {
 /// The refs of the test-split examples of the fixture corpus, sorted.
 pub fn test_example_refs() -> Vec<String> {
     let mut refs: Vec<String> = (6..(6 + TEST_EXAMPLES as usize))
-        .map(|index| opaque("example", &format!("example:{index}")).as_str().to_owned())
+        .map(|index| {
+            opaque("example", &format!("example:{index}"))
+                .as_str()
+                .to_owned()
+        })
         .collect();
     refs.sort();
     refs
@@ -202,10 +206,7 @@ pub const REFLECTIVE_CANDIDATES: usize = 64;
 /// [`FRONT_TEST_EXAMPLES`] examples: it names [`REFLECTIVE_CANDIDATES`]
 /// reflection artifacts, so the optimizer materializes one candidate from each
 /// (MEDULLA-DECISION-ENGINE-R800.3).
-pub fn reflective_request(
-    label: &str,
-    evaluations: Vec<EvaluationSummary>,
-) -> OptimizationRequest {
+pub fn reflective_request(label: &str, evaluations: Vec<EvaluationSummary>) -> OptimizationRequest {
     let mut request = sized_program_request(
         label,
         evaluations,
@@ -252,13 +253,21 @@ pub fn front_evaluation_of(
 
 /// Every distinct string under `value` that starts with `prefix`, sorted.
 pub fn strings_with_prefix(value: &serde_json::Value, prefix: &str) -> Vec<String> {
-    fn walk(value: &serde_json::Value, prefix: &str, found: &mut std::collections::BTreeSet<String>) {
+    fn walk(
+        value: &serde_json::Value,
+        prefix: &str,
+        found: &mut std::collections::BTreeSet<String>,
+    ) {
         match value {
             serde_json::Value::String(text) if text.starts_with(prefix) => {
                 found.insert(text.clone());
             }
-            serde_json::Value::Array(items) => items.iter().for_each(|item| walk(item, prefix, found)),
-            serde_json::Value::Object(map) => map.values().for_each(|item| walk(item, prefix, found)),
+            serde_json::Value::Array(items) => {
+                items.iter().for_each(|item| walk(item, prefix, found))
+            }
+            serde_json::Value::Object(map) => {
+                map.values().for_each(|item| walk(item, prefix, found))
+            }
             _ => {}
         }
     }
@@ -306,7 +315,10 @@ pub fn redb_state(dir: &std::path::Path) -> crate::test_support::SharedState {
 }
 
 fn submit_request(id: u64, request: &OptimizationRequest) -> Request {
-    submit_request_bytes(id, rmp_serde::to_vec_named(request).expect("encode request"))
+    submit_request_bytes(
+        id,
+        rmp_serde::to_vec_named(request).expect("encode request"),
+    )
 }
 
 fn submit_request_bytes(id: u64, request_msgpack: Vec<u8>) -> Request {
@@ -344,8 +356,11 @@ pub async fn refused_submit(
     id: u64,
     request: &OptimizationRequest,
 ) -> String {
-    let response =
-        Box::pin(crate::test_support::dispatch(state, submit_request(id, request))).await;
+    let response = Box::pin(crate::test_support::dispatch(
+        state,
+        submit_request(id, request),
+    ))
+    .await;
     response
         .refusal_text()
         .unwrap_or_else(|| panic!("the submit must be refused: {response:?}"))
@@ -387,8 +402,13 @@ pub async fn run_program_job(
     id: u64,
     request: &OptimizationRequest,
 ) -> serde_json::Value {
-    let submitted =
-        json_of(Box::pin(crate::test_support::dispatch(state, submit_request(id, request))).await);
+    let submitted = json_of(
+        Box::pin(crate::test_support::dispatch(
+            state,
+            submit_request(id, request),
+        ))
+        .await,
+    );
     let job_id = submitted
         .get("job_id")
         .and_then(serde_json::Value::as_str)
@@ -564,12 +584,7 @@ pub fn score_source_request(label: &str) -> OptimizationRequest {
     request
 }
 
-fn scoped_request(
-    state_secret: &str,
-    id: u64,
-    tenant: Option<&str>,
-    method: Method,
-) -> Request {
+fn scoped_request(state_secret: &str, id: u64, tenant: Option<&str>, method: Method) -> Request {
     match tenant {
         None => crate::test_support::request(state_secret, id, GRAPH, method),
         Some(tenant) => {
@@ -602,7 +617,11 @@ pub async fn put_node_as(
         ),
     ))
     .await;
-    assert!(response.error.is_none(), "seed node failed: {:?}", response.error);
+    assert!(
+        response.error.is_none(),
+        "seed node failed: {:?}",
+        response.error
+    );
 }
 
 /// Link `score` to the run it evaluates, as [`put_node_as`] writes.
@@ -630,7 +649,11 @@ pub async fn link_score_run_as(
         ),
     ))
     .await;
-    assert!(response.error.is_none(), "seed edge failed: {:?}", response.error);
+    assert!(
+        response.error.is_none(),
+        "seed edge failed: {:?}",
+        response.error
+    );
 }
 
 /// One stored score and the run it evaluates: a `:Score` node valued `value` on
@@ -646,7 +669,14 @@ pub async fn seed_score(
     split: &str,
 ) {
     let run = format!("run-{name}");
-    put_node_as(state, id, tenant, &run, serde_json::json!({"type": "ExperimentRun"})).await;
+    put_node_as(
+        state,
+        id,
+        tenant,
+        &run,
+        serde_json::json!({"type": "ExperimentRun"}),
+    )
+    .await;
     put_node_as(
         state,
         id + 1,

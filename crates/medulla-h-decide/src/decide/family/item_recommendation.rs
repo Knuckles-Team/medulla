@@ -34,7 +34,9 @@ use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 use crate::decide::stat_recommend::PARAM_RECOMMEND;
 
 use super::support::{abstained, advisory_scored, invalid, json_param, single_option};
@@ -118,7 +120,10 @@ fn recommend(
             return abstain(EMPTY_CATALOG, "the catalog graph holds no embedded item")
         }
         Err(RecommendError::DimensionMismatch) => {
-            return abstain(DIMENSION_MISMATCH, "a vector's width differs from the encoder's")
+            return abstain(
+                DIMENSION_MISMATCH,
+                "a vector's width differs from the encoder's",
+            )
         }
         Err(RecommendError::KnobOutOfRange) => {
             return Err(invalid("a recommend knob is outside its range"))
@@ -132,7 +137,10 @@ fn recommend(
         source: FamilyPremiseSource::Observation(key.clone()),
     };
     let mut premises = vec![
-        observed("item_recommendation.encoder", format!("encoder:{encoder_digest}")),
+        observed(
+            "item_recommendation.encoder",
+            format!("encoder:{encoder_digest}"),
+        ),
         observed("item_recommendation.catalog", format!("catalog:{digest}")),
         observed(
             "item_recommendation.pause_steps",

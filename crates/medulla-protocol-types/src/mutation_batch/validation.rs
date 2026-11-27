@@ -221,9 +221,7 @@ impl MutationBatchRecord {
         self.batch.validate()?;
         self.validate_identity()?;
         match self.status {
-            MutationBatchStatus::Prepared
-                if self.committed_version == CommittedVersion::None =>
-            {
+            MutationBatchStatus::Prepared if self.committed_version == CommittedVersion::None => {
                 Ok(())
             }
             MutationBatchStatus::Committed => validate_committed_expectation(

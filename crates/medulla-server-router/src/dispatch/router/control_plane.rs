@@ -603,9 +603,7 @@ pub async fn dispatch_compute_and_media_methods(
             #[cfg(feature = "jobs")]
             method @ (Method::WorkerRegister { .. }
             | Method::WorkerHeartbeat { .. }
-            | Method::AdmitWorkerTask { .. }) => {
-                dispatch_worker_registry_arm(ctx, method).await
-            }
+            | Method::AdmitWorkerTask { .. }) => dispatch_worker_registry_arm(ctx, method).await,
 
             // ── Native statechart engine (CONCEPT:INT-P2-2, feature `statechart`) ───────
             // NOT graph-scoped (own `statecharts.redb`, keyed by def_id/instance_id) —

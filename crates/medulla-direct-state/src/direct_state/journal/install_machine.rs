@@ -67,9 +67,12 @@ pub const DIRECT_STATE_INSTALL_MACHINE: MachineDef<
 impl DirectStateInstallPhase {
     /// The one transition function: the next phase, or the typed refusal.
     pub fn apply(self, event: DirectStateInstallEvent) -> Result<Self, TransitionRefused> {
-        transition(&DIRECT_STATE_INSTALL_MACHINE, self, event, |guard| {
-            match guard {}
-        })
+        transition(
+            &DIRECT_STATE_INSTALL_MACHINE,
+            self,
+            event,
+            |guard| match guard {},
+        )
         .map(|edge| edge.to)
     }
 }
@@ -126,7 +129,10 @@ mod tests {
                 "registry/publication.rs",
                 include_str!("../registry/publication.rs"),
             ),
-            ("registry/recovery.rs", include_str!("../registry/recovery.rs")),
+            (
+                "registry/recovery.rs",
+                include_str!("../registry/recovery.rs"),
+            ),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();
             let writes: Vec<&str> = production

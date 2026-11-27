@@ -77,7 +77,9 @@ impl ApprovalRefusal {
         let detail = match self {
             Self::Missing => "the pinned policy requires an approval receipt for this commit",
             Self::DigestMismatch => "the approval names another record id or digest",
-            Self::Stale => "the approval is dated after the clock or older than commit.approval_max_age",
+            Self::Stale => {
+                "the approval is dated after the clock or older than commit.approval_max_age"
+            }
         };
         format!("{}: {detail}", self.code())
     }
@@ -146,6 +148,8 @@ mod tests {
             check_approval(Some(&receipt(now)), "r", "sha256:other", now, 60),
             Err(ApprovalRefusal::DigestMismatch)
         );
-        assert!(ApprovalRefusal::Missing.message().starts_with("APPROVAL_MISSING: "));
+        assert!(ApprovalRefusal::Missing
+            .message()
+            .starts_with("APPROVAL_MISSING: "));
     }
 }

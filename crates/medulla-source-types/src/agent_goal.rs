@@ -586,7 +586,11 @@ pub fn handle_goal_control(
         } => (GoalEvent::Fail, IterationOutcome::Failed),
         GoalControlOp::Create { .. } => return invalid("operation"),
     };
-    let next = held.goal.state.apply(event).map_err(GoalRefusal::Transition)?;
+    let next = held
+        .goal
+        .state
+        .apply(event)
+        .map_err(GoalRefusal::Transition)?;
     let mut goal = held.goal;
     goal.state = next;
     if event == GoalEvent::Run {
@@ -720,12 +724,22 @@ mod tests {
         assert!(!made.replayed && made.iteration.is_none());
 
         let run = |stored: &GoalWrite, now| {
-            control(stored, None, GoalControlOp::Run { goal_id: "g1".into() }, now)
+            control(
+                stored,
+                None,
+                GoalControlOp::Run {
+                    goal_id: "g1".into(),
+                },
+                now,
+            )
         };
         let first = run(&made, 200).expect("run");
         assert_eq!(first.goal.state, GoalState::Running);
         let one = first.iteration.clone().expect("an iteration opens");
-        assert_eq!((one.iteration, one.outcome, one.started_ms), (1, IterationOutcome::Running, 200));
+        assert_eq!(
+            (one.iteration, one.outcome, one.started_ms),
+            (1, IterationOutcome::Running, 200)
+        );
         assert_eq!(first.goal.run_id.as_deref(), Some(one.run_id.as_str()));
         assert_eq!(first.receipt().iteration, Some(1));
 
@@ -734,13 +748,19 @@ mod tests {
         let failed = control(
             &first,
             Some(one.clone()),
-            GoalControlOp::Finish { goal_id: "g1".into(), outcome: GoalFinish::Failed },
+            GoalControlOp::Finish {
+                goal_id: "g1".into(),
+                outcome: GoalFinish::Failed,
+            },
             300,
         )
         .expect("finish");
         assert_eq!(failed.goal.state, GoalState::Failed);
         let closed = failed.iteration.clone().expect("the open iteration closes");
-        assert_eq!((closed.outcome, closed.ended_ms), (IterationOutcome::Failed, Some(300)));
+        assert_eq!(
+            (closed.outcome, closed.ended_ms),
+            (IterationOutcome::Failed, Some(300))
+        );
 
         // A failed goal retries: iteration 2 with a new run id.
         let second = run(&failed, 400).expect("retry");
@@ -750,7 +770,10 @@ mod tests {
         let done = control(
             &second,
             Some(two),
-            GoalControlOp::Finish { goal_id: "g1".into(), outcome: GoalFinish::Succeeded },
+            GoalControlOp::Finish {
+                goal_id: "g1".into(),
+                outcome: GoalFinish::Succeeded,
+            },
             500,
         )
         .expect("finish");
@@ -764,33 +787,61 @@ mod tests {
     #[test]
     fn cancel_stops_a_queued_or_running_goal_and_closes_the_open_iteration() {
         let made = handle_goal_control("acme", None, None, create("g1"), 1).expect("created");
-        let cancel = GoalControlOp::Cancel { goal_id: "g1".into() };
+        let cancel = GoalControlOp::Cancel {
+            goal_id: "g1".into(),
+        };
         let queued = control(&made, None, cancel.clone(), 2).expect("cancel a queued goal");
         assert_eq!(queued.goal.state, GoalState::Cancelled);
         assert!(queued.iteration.is_none());
-        assert!(control(&queued, None, cancel.clone(), 3).is_err(), "cancelled is terminal");
+        assert!(
+            control(&queued, None, cancel.clone(), 3).is_err(),
+            "cancelled is terminal"
+        );
 
-        let running = control(&made, None, GoalControlOp::Run { goal_id: "g1".into() }, 5).expect("run");
+        let running = control(
+            &made,
+            None,
+            GoalControlOp::Run {
+                goal_id: "g1".into(),
+            },
+            5,
+        )
+        .expect("run");
         let open = running.iteration.clone();
         let stopped = control(&running, open, cancel, 9).expect("cancel a running goal");
         let closed = stopped.iteration.expect("the iteration closes");
-        assert_eq!((closed.outcome, closed.ended_ms), (IterationOutcome::Cancelled, Some(9)));
+        assert_eq!(
+            (closed.outcome, closed.ended_ms),
+            (IterationOutcome::Cancelled, Some(9))
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R901
     #[test]
     fn create_replays_the_same_title_refuses_another_and_every_other_control_needs_the_goal() {
         let made = handle_goal_control("acme", None, None, create("g1"), 1).expect("created");
-        let again = handle_goal_control("acme", Some(held(&made)), None, create("g1"), 99).expect("replay");
+        let again =
+            handle_goal_control("acme", Some(held(&made)), None, create("g1"), 99).expect("replay");
         assert!(again.replayed);
         assert_eq!(again.goal.created_ms, 1, "the first time stays");
-        let other = GoalControlOp::Create { goal_id: "g1".into(), title: "something else".into() };
-        let taken = handle_goal_control("acme", Some(held(&made)), None, other, 99).expect_err("taken");
+        let other = GoalControlOp::Create {
+            goal_id: "g1".into(),
+            title: "something else".into(),
+        };
+        let taken =
+            handle_goal_control("acme", Some(held(&made)), None, other, 99).expect_err("taken");
         assert_eq!(taken.code(), GOAL_INVALID);
         for op in [
-            GoalControlOp::Run { goal_id: "ghost".into() },
-            GoalControlOp::Cancel { goal_id: "ghost".into() },
-            GoalControlOp::Finish { goal_id: "ghost".into(), outcome: GoalFinish::Failed },
+            GoalControlOp::Run {
+                goal_id: "ghost".into(),
+            },
+            GoalControlOp::Cancel {
+                goal_id: "ghost".into(),
+            },
+            GoalControlOp::Finish {
+                goal_id: "ghost".into(),
+                outcome: GoalFinish::Failed,
+            },
         ] {
             let refused = handle_goal_control("acme", None, None, op, 5).expect_err("absent goal");
             assert_eq!(refused, GoalRefusal::not_found());
@@ -798,7 +849,9 @@ mod tests {
         let too_long = "x".repeat(129);
         for bad in ["", "has space", "a:b", too_long.as_str()] {
             assert_eq!(
-                handle_goal_control("acme", None, None, create(bad), 1).expect_err("bad id").code(),
+                handle_goal_control("acme", None, None, create(bad), 1)
+                    .expect_err("bad id")
+                    .code(),
                 GOAL_INVALID,
                 "{bad:?}"
             );
@@ -822,14 +875,19 @@ mod tests {
         let goals = vec![goal("a", 1), goal("b", 3), goal("c", 2)];
         let first = handle_goal_list(goals.clone(), "acme", Some(2), None).expect("page");
         assert_eq!(
-            first.goals.iter().map(|g| g.goal_id.as_str()).collect::<Vec<_>>(),
+            first
+                .goals
+                .iter()
+                .map(|g| g.goal_id.as_str())
+                .collect::<Vec<_>>(),
             ["b", "c"]
         );
         let cursor = first.next_cursor.expect("more remain");
         let rest = handle_goal_list(goals.clone(), "acme", Some(2), Some(&cursor)).expect("page");
         assert_eq!(rest.goals.len(), 1);
         assert!(rest.next_cursor.is_none());
-        let foreign = handle_goal_list(goals.clone(), "globex", None, Some(&cursor)).expect_err("foreign");
+        let foreign =
+            handle_goal_list(goals.clone(), "globex", None, Some(&cursor)).expect_err("foreign");
         assert_eq!(foreign.code(), GOAL_INVALID);
         for limit in [0, MAX_GOAL_LIST_LIMIT + 1] {
             assert!(handle_goal_list(goals.clone(), "acme", Some(limit), None).is_err());
@@ -849,8 +907,17 @@ mod tests {
             ended_ms: Some(u64::from(n) + 1),
         };
         let read = handle_goal_iterations(Some(held(&made)), vec![mk(2), mk(1)]).expect("read");
-        assert_eq!(read.iterations.iter().map(|i| i.iteration).collect::<Vec<_>>(), [1, 2]);
-        assert_eq!(handle_goal_iterations(None, vec![mk(1)]), Err(GoalRefusal::not_found()));
+        assert_eq!(
+            read.iterations
+                .iter()
+                .map(|i| i.iteration)
+                .collect::<Vec<_>>(),
+            [1, 2]
+        );
+        assert_eq!(
+            handle_goal_iterations(None, vec![mk(1)]),
+            Err(GoalRefusal::not_found())
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R901
@@ -892,10 +959,16 @@ mod tests {
                         let terminal = GOAL_MACHINE.is_terminal(state);
                         assert_eq!(
                             refused.reason,
-                            if terminal { Reason::TerminalState } else { Reason::IllegalTransition }
+                            if terminal {
+                                Reason::TerminalState
+                            } else {
+                                Reason::IllegalTransition
+                            }
                         );
                     }
-                    (None, Ok(next)) => panic!("{state:?} {event:?} must be refused, took {next:?}"),
+                    (None, Ok(next)) => {
+                        panic!("{state:?} {event:?} must be refused, took {next:?}")
+                    }
                 }
             }
         }

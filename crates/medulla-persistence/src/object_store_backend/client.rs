@@ -35,7 +35,9 @@ fn resolve_secret(
 fn scheme_and_host(endpoint: &str) -> Option<(String, String)> {
     let (scheme, rest) = endpoint.trim().split_once("://")?;
     let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
-    let authority = authority.rsplit_once('@').map_or(authority, |(_, host)| host);
+    let authority = authority
+        .rsplit_once('@')
+        .map_or(authority, |(_, host)| host);
     let host = if let Some(bracketed) = authority.strip_prefix('[') {
         bracketed.split(']').next().unwrap_or("")
     } else {
@@ -70,11 +72,10 @@ pub fn resolve_object_store_client(
     let root = resolve_secret("root", root)?;
     spec.check_endpoint_scheme(&endpoint)
         .map_err(ObjectStoreOpenRefusal::Spec)?;
-    let (scheme, host) = scheme_and_host(&endpoint).ok_or_else(|| {
-        ObjectStoreOpenRefusal::ClientBuild {
+    let (scheme, host) =
+        scheme_and_host(&endpoint).ok_or_else(|| ObjectStoreOpenRefusal::ClientBuild {
             reason: "endpoint is not an http or https url".to_string(),
-        }
-    })?;
+        })?;
     let allow_http = match scheme.as_str() {
         "https" => false,
         "http" if is_loopback_host(&host) => true,

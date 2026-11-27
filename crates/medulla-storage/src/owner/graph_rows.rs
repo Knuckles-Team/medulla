@@ -17,10 +17,10 @@
 
 use redb::{TableDefinition, TableHandle};
 
+use crate::capability::ScopedRead;
 use crate::owner::domain::GraphShardOwner;
 use crate::owner::graph_shard as shard;
 use crate::owner::row_key::{OwnerRowScope, OwnerRowScopeStart};
-use crate::capability::ScopedRead;
 
 /// One graph-scoped owner table's rows of one graph, as stored: the encoded key
 /// and the encoded value of each row, in key order. A sealed value stays sealed,

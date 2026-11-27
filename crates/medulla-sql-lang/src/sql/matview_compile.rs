@@ -23,8 +23,9 @@
 //! `SELECT *` has no column list here and is refused.
 
 use datafusion::sql::sqlparser::ast::{
-    BinaryOperator, Distinct, Expr, JoinConstraint, JoinOperator, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr, Query,
-    SelectItem, SetExpr, TableFactor, UnaryOperator, Value as SqlValue,
+    BinaryOperator, Distinct, Expr, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr,
+    JoinConstraint, JoinOperator, Query, SelectItem, SetExpr, TableFactor, UnaryOperator,
+    Value as SqlValue,
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
@@ -139,7 +140,12 @@ pub fn compile_incremental(
     }
     // (2) A window function, DISTINCT, ORDER BY, LIMIT or HAVING.
     for expr in &exprs {
-        if find(expr, &|e| matches!(e, Expr::Function(f) if f.over.is_some())).is_some() {
+        if find(
+            expr,
+            &|e| matches!(e, Expr::Function(f) if f.over.is_some()),
+        )
+        .is_some()
+        {
             return Err(Refusal::new("window function"));
         }
     }
@@ -158,10 +164,14 @@ pub fn compile_incremental(
     }
     // (3) A volatile function.
     for expr in &exprs {
-        if let Some(Expr::Function(f)) = find(expr, &|e| {
-            matches!(e, Expr::Function(f) if VOLATILE_FUNCTIONS.contains(&function_name(f).as_str()))
-        }) {
-            return Err(Refusal::new(format!("volatile function {}", function_name(f))));
+        if let Some(Expr::Function(f)) = find(
+            expr,
+            &|e| matches!(e, Expr::Function(f) if VOLATILE_FUNCTIONS.contains(&function_name(f).as_str())),
+        ) {
+            return Err(Refusal::new(format!(
+                "volatile function {}",
+                function_name(f)
+            )));
         }
     }
     // (5) The shapes the program has no node for, and float columns.
@@ -277,7 +287,9 @@ fn all_exprs(select: &datafusion::sql::sqlparser::ast::Select) -> Vec<&Expr> {
     }
     for item in &select.projection {
         match item {
-            SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => out.push(expr),
+            SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
+                out.push(expr)
+            }
             _ => {}
         }
     }
@@ -368,14 +380,24 @@ fn boxed(expr: RowExpr) -> Box<RowExpr> {
 impl Ctx<'_> {
     /// The table a column reference names: a qualifier by alias or table name, a bare name by
     /// the one table that has the column.
-    fn resolve(&self, qualifier: Option<&str>, column: &str) -> Result<(String, ColumnType), Refusal> {
+    fn resolve(
+        &self,
+        qualifier: Option<&str>,
+        column: &str,
+    ) -> Result<(String, ColumnType), Refusal> {
         let candidates: Vec<&(String, String)> = match qualifier {
-            Some(q) => self.tables.iter().filter(|(alias, table)| alias == q || table == q).collect(),
+            Some(q) => self
+                .tables
+                .iter()
+                .filter(|(alias, table)| alias == q || table == q)
+                .collect(),
             None => self.tables.iter().collect(),
         };
         let found: Vec<(String, ColumnType)> = candidates
             .iter()
-            .filter_map(|(_, table)| (self.column_type)(table, column).map(|ty| (table.clone(), ty)))
+            .filter_map(|(_, table)| {
+                (self.column_type)(table, column).map(|ty| (table.clone(), ty))
+            })
             .collect();
         match found.as_slice() {
             [one] => Ok(one.clone()),
@@ -395,7 +417,11 @@ impl Ctx<'_> {
         aggregate: Option<&str>,
     ) -> Result<RowExpr, Refusal> {
         let (table, ty) = self.resolve(qualifier, column)?;
-        let name = if self.qualify { format!("{table}.{column}") } else { column.to_string() };
+        let name = if self.qualify {
+            format!("{table}.{column}")
+        } else {
+            column.to_string()
+        };
         match ty {
             ColumnType::Numeric(_) => Ok(RowExpr::Decimal(boxed(RowExpr::Column(name)))),
             ColumnType::Int
@@ -416,9 +442,9 @@ impl Ctx<'_> {
     /// The `(table, column)` one side of an `ON` equality names.
     fn join_side(&self, expr: &Expr) -> Result<(String, String), Refusal> {
         match expr {
-            Expr::Identifier(ident) => {
-                self.resolve(None, &ident.value).map(|(table, _)| (table, ident.value.clone()))
-            }
+            Expr::Identifier(ident) => self
+                .resolve(None, &ident.value)
+                .map(|(table, _)| (table, ident.value.clone())),
             Expr::CompoundIdentifier(parts) => match parts.as_slice() {
                 [qualifier, column] => self
                     .resolve(Some(&qualifier.value), &column.value)
@@ -436,7 +462,12 @@ impl Ctx<'_> {
         join: &JoinSource,
         indexed: &dyn Fn(&str, &str) -> bool,
     ) -> Result<EquiJoin, Refusal> {
-        let Expr::BinaryOp { left, op: BinaryOperator::Eq, right } = &join.on else {
+        let Expr::BinaryOp {
+            left,
+            op: BinaryOperator::Eq,
+            right,
+        } = &join.on
+        else {
             return Err(Refusal::new("non-equality join"));
         };
         let (a, b) = (self.join_side(left)?, self.join_side(right)?);
@@ -450,7 +481,9 @@ impl Ctx<'_> {
         };
         for (table, column) in [&left_key, &right_key] {
             if !indexed(table, column) {
-                return Err(Refusal::new(format!("join key not indexed: {table}.{column}")));
+                return Err(Refusal::new(format!(
+                    "join key not indexed: {table}.{column}"
+                )));
             }
         }
         Ok(EquiJoin {
@@ -513,7 +546,10 @@ impl Ctx<'_> {
     }
 
     /// The view's output: `Rows`, or `Groups` when there is an aggregate or a `GROUP BY`.
-    fn output(&self, select: &datafusion::sql::sqlparser::ast::Select) -> Result<ViewOutput, Refusal> {
+    fn output(
+        &self,
+        select: &datafusion::sql::sqlparser::ast::Select,
+    ) -> Result<ViewOutput, Refusal> {
         let group_keys: &[Expr] = match &select.group_by {
             GroupByExpr::Expressions(keys, modifiers) if modifiers.is_empty() => keys,
             GroupByExpr::Expressions(..) | GroupByExpr::All(_) => {
@@ -530,9 +566,7 @@ impl Ctx<'_> {
                 _ => return Err(Refusal::new("wildcard projection")),
             }
         }
-        let is_aggregate = |expr: &Expr| {
-            matches!(expr, Expr::Function(f) if matches!(function_name(f).as_str(), "count" | "sum" | "avg" | "min" | "max"))
-        };
+        let is_aggregate = |expr: &Expr| matches!(expr, Expr::Function(f) if matches!(function_name(f).as_str(), "count" | "sum" | "avg" | "min" | "max"));
         let grouped = !group_keys.is_empty() || items.iter().any(|(expr, _)| is_aggregate(expr));
         if !grouped {
             let mut columns = Vec::new();
@@ -555,7 +589,10 @@ impl Ctx<'_> {
             if !aggs.is_empty() {
                 return Err(Refusal::new("group key after an aggregate"));
             }
-            if !group_keys.iter().any(|key| key.to_string() == expr.to_string()) {
+            if !group_keys
+                .iter()
+                .any(|key| key.to_string() == expr.to_string())
+            {
                 return Err(Refusal::new(format!(
                     "projection {expr} that is neither an aggregate nor a GROUP BY expression"
                 )));
@@ -596,7 +633,11 @@ impl Ctx<'_> {
         };
         let (table, ty) = self.resolve(None, &name).ok()?;
         matches!(ty, ColumnType::Float | ColumnType::Double).then(|| {
-            RowExpr::Column(if self.qualify { format!("{table}.{name}") } else { name })
+            RowExpr::Column(if self.qualify {
+                format!("{table}.{name}")
+            } else {
+                name
+            })
         })
     }
 
@@ -640,7 +681,10 @@ impl Ctx<'_> {
                     ExactAgg::Avg(arg)
                 })
             }
-            _ => Err(Refusal::new(format!("{name} with {} arguments", args.len()))),
+            _ => Err(Refusal::new(format!(
+                "{name} with {} arguments",
+                args.len()
+            ))),
         }
     }
 }
@@ -681,9 +725,15 @@ fn number(text: &str, negate: bool) -> Result<RowExpr, Refusal> {
     if text.contains(['e', 'E']) {
         return Err(Refusal::new(format!("float literal {text}")));
     }
-    let signed = if negate { format!("-{text}") } else { text.to_string() };
+    let signed = if negate {
+        format!("-{text}")
+    } else {
+        text.to_string()
+    };
     if text.contains('.') {
-        return Ok(RowExpr::Decimal(boxed(RowExpr::Literal(Value::String(signed)))));
+        return Ok(RowExpr::Decimal(boxed(RowExpr::Literal(Value::String(
+            signed,
+        )))));
     }
     signed
         .parse::<i64>()
@@ -717,7 +767,10 @@ mod tests {
 
     /// Indexed join keys: `orders.id` and `customers.id`; `customers.region` is not indexed.
     fn indexed(table: &str, column: &str) -> bool {
-        matches!((table, column), ("orders", "id" | "qty") | ("customers", "id"))
+        matches!(
+            (table, column),
+            ("orders", "id" | "qty") | ("customers", "id")
+        )
     }
 
     fn compile(sql: &str) -> Result<IncrementalViewProgram, String> {
@@ -760,7 +813,10 @@ mod tests {
             "SELECT region, count(*) FROM orders GROUP BY region HAVING count(*) > 1",
             "HAVING",
         );
-        refused("SELECT id FROM orders WHERE now() > now()", "volatile function now");
+        refused(
+            "SELECT id FROM orders WHERE now() > now()",
+            "volatile function now",
+        );
         refused(
             "SELECT region, sum(ratio) FROM orders GROUP BY region",
             "sum over a float column",
@@ -778,7 +834,8 @@ mod tests {
             "DISTINCT with an aggregate or GROUP BY",
         );
         // The code and text of the refusal.
-        let error = compile_incremental_sql("v", "SELECT id FROM orders LIMIT 1", &types, &indexed).unwrap_err();
+        let error = compile_incremental_sql("v", "SELECT id FROM orders LIMIT 1", &types, &indexed)
+            .unwrap_err();
         assert_eq!(error.code(), ServerErrorCode::MatviewNotIncremental);
         assert_eq!(error.to_string(), "MATVIEW_NOT_INCREMENTAL: LIMIT");
     }
@@ -786,7 +843,9 @@ mod tests {
     // spec: MEDULLA-INCREMENTAL-VIEWS-R009.2
     #[test]
     fn supported_shapes_compile_with_typed_columns() {
-        let program = compile("SELECT id, amount * 2 AS twice FROM orders WHERE qty > 1 AND region = 'eu'").unwrap();
+        let program =
+            compile("SELECT id, amount * 2 AS twice FROM orders WHERE qty > 1 AND region = 'eu'")
+                .unwrap();
         assert_eq!(program.table, "orders");
         let Some(RowExpr::And(..)) = program.filter else {
             panic!("the filter is an AND: {:?}", program.filter);
@@ -812,7 +871,10 @@ mod tests {
         let ViewOutput::Groups { keys, aggs } = &grouped.output else {
             panic!("an aggregate is a Groups view");
         };
-        assert_eq!(keys, &[("region".to_string(), RowExpr::Column("region".into()))]);
+        assert_eq!(
+            keys,
+            &[("region".to_string(), RowExpr::Column("region".into()))]
+        );
         let amount = || RowExpr::Decimal(boxed(RowExpr::Column("amount".into())));
         assert_eq!(
             aggs,
@@ -830,7 +892,10 @@ mod tests {
         let distinct = compile("SELECT DISTINCT region FROM orders").unwrap();
         assert_eq!(
             distinct.output,
-            ViewOutput::Distinct(vec![("region".to_string(), RowExpr::Column("region".into()))])
+            ViewOutput::Distinct(vec![(
+                "region".to_string(),
+                RowExpr::Column("region".into())
+            )])
         );
         let extremes = compile(
             "SELECT region, min(amount) AS lo, max(ratio) AS hi FROM orders GROUP BY region",
@@ -846,7 +911,10 @@ mod tests {
                     "lo".to_string(),
                     ExactAgg::Min(RowExpr::Decimal(boxed(RowExpr::Column("amount".into()))))
                 ),
-                ("hi".to_string(), ExactAgg::Max(RowExpr::Column("ratio".into()))),
+                (
+                    "hi".to_string(),
+                    ExactAgg::Max(RowExpr::Column("ratio".into()))
+                ),
             ]
         );
     }
@@ -872,8 +940,7 @@ mod tests {
         };
         assert_eq!(columns[1].1, RowExpr::Column("customers.area".into()));
         // The same equality written the other way round names the same sides.
-        let flipped =
-            compile("SELECT o.id FROM orders o JOIN customers c ON c.id = o.id").unwrap();
+        let flipped = compile("SELECT o.id FROM orders o JOIN customers c ON c.id = o.id").unwrap();
         assert_eq!(flipped.join, program.join);
         // A join key without an index on one side is refused with its name.
         assert_eq!(

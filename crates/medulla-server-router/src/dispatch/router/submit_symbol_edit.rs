@@ -25,7 +25,9 @@ mod served {
     use medulla_mutation_types::branch::BranchRef;
     use medulla_server_auth::access::path_grant;
     use medulla_server_blob::blob::BlobStateExt;
-    use medulla_server_graph::dispatch::shared::{authorized_graph_read, ensure_graph_resident, timed_read};
+    use medulla_server_graph::dispatch::shared::{
+        authorized_graph_read, ensure_graph_resident, timed_read,
+    };
     use medulla_source_types::source_changeset::ReadTreeRequest;
     use medulla_source_types::source_path_grant::PathAccess;
     use serde_json::Value;
@@ -106,7 +108,10 @@ mod served {
         }
         // The tree of `base_rev` under read grants: the blob and mode of each edited file.
         let paths: BTreeSet<String> = located.values().map(|(path, _, _)| path.clone()).collect();
-        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
+        let (tenant, principal) = (
+            verified.tenant().to_string(),
+            verified.agent_id().to_string(),
+        );
         let (repo, base_rev) = (edit.repo.clone(), edit.base_rev.clone());
         let wanted = paths.clone();
         let tree = target
@@ -114,8 +119,13 @@ mod served {
                 let grants = registry.path_grants(&tenant, &repo, &principal)?;
                 let mut files = BTreeMap::new();
                 for path in &wanted {
-                    if let Err(refusal) = path_grant::check(&grants, &[path.as_str()], PathAccess::Read) {
-                        return Ok(Err(format!("{}: no read grant covers the path", refusal.code())));
+                    if let Err(refusal) =
+                        path_grant::check(&grants, &[path.as_str()], PathAccess::Read)
+                    {
+                        return Ok(Err(format!(
+                            "{}: no read grant covers the path",
+                            refusal.code()
+                        )));
                     }
                     let request = ReadTreeRequest {
                         repo: repo.clone(),
@@ -128,7 +138,11 @@ mod served {
                         Ok(receipt) => receipt,
                         Err(refusal) => return Ok(Err(refusal.message())),
                     };
-                    if let Some(entry) = receipt.entries.into_iter().find(|entry| &entry.path == path) {
+                    if let Some(entry) = receipt
+                        .entries
+                        .into_iter()
+                        .find(|entry| &entry.path == path)
+                    {
                         files.insert(path.clone(), (entry.blob_digest, entry.mode));
                     }
                 }
@@ -161,7 +175,12 @@ mod served {
             let s = state.read().await;
             match s.blob_cursors() {
                 Some(cursors) => Arc::clone(&cursors.store),
-                None => return Response::err(req.id, "Blob substrate disabled (no persist dir configured)"),
+                None => {
+                    return Response::err(
+                        req.id,
+                        "Blob substrate disabled (no persist dir configured)",
+                    )
+                }
             }
         };
         let owner = match medulla_server_api::carrier::CarrierAuthority::from_verified(verified) {
@@ -205,5 +224,8 @@ pub async fn handle_submit_symbol_edit(
     _verified: &VerifiedRequestContext,
     _fields: SubmitSymbolEditFields,
 ) -> Response {
-    Response::err(req.id, "SubmitSymbolEdit requires the `redb` and `blob` features")
+    Response::err(
+        req.id,
+        "SubmitSymbolEdit requires the `redb` and `blob` features",
+    )
 }

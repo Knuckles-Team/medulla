@@ -622,9 +622,8 @@ fn bench_defect_triage(
         DEFECT_RECORD_PROPERTY,
     };
 
-    let h = rt.block_on(async {
-        Harness::with_isolation(ServerState::test_isolation("decider")).await
-    });
+    let h = rt
+        .block_on(async { Harness::with_isolation(ServerState::test_isolation("decider")).await });
     let (pin, _) = publish_route_schema(&h);
     let defect = Defect {
         id: "d1".to_string(),
@@ -2270,7 +2269,10 @@ fn bench_entry_trust(
         decode(decide(rt, &h, &asked)).expect("the entry-trust question is answered");
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.refused_entries.as_slice().len(), 1);
-    assert_eq!(record.refused_entries.as_slice()[0].entry_id, "e-unverified");
+    assert_eq!(
+        record.refused_entries.as_slice()[0].entry_id,
+        "e-unverified"
+    );
     let group_name = "decide/entry_trust".to_string();
     let mut group = c.benchmark_group(format!("{group_name}/served"));
     group.bench_function("served", |b| b.iter(|| black_box(decide(rt, &h, &asked))));
@@ -2294,7 +2296,9 @@ fn bench_failure_patterns(
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
     use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
-    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
+        "decider",
+    )));
     let call = |method: Method| -> Response {
         rt.block_on(Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
@@ -2317,12 +2321,14 @@ fn bench_failure_patterns(
         let run = format!("run-{index}");
         let plan = format!("{run}-plan");
         let step = format!("{run}-call");
-        operations.push(serde_json::json!({"op": "upsert_node", "id": run, "properties": {
-            "node_type": "RunTrace",
-            "run_trace_id": format!("trace-{index}"),
-            "terminationReason": "max_steps",
-            "endMs": 1_700_000_000_000u64 + index,
-        }}));
+        operations.push(
+            serde_json::json!({"op": "upsert_node", "id": run, "properties": {
+                "node_type": "RunTrace",
+                "run_trace_id": format!("trace-{index}"),
+                "terminationReason": "max_steps",
+                "endMs": 1_700_000_000_000u64 + index,
+            }}),
+        );
         operations.push(serde_json::json!({"op": "upsert_node", "id": plan,
                                            "properties": {"kind": "plan"}}));
         operations.push(serde_json::json!({"op": "upsert_node", "id": step,
@@ -2340,7 +2346,11 @@ fn bench_failure_patterns(
     let seeded = call(Method::BatchUpdate {
         operations_msgpack: rmp_serde::to_vec_named(&operations).expect("failure bench batch"),
     });
-    assert!(seeded.refusal_text().is_none(), "{:?}", seeded.refusal_text());
+    assert!(
+        seeded.refusal_text().is_none(),
+        "{:?}",
+        seeded.refusal_text()
+    );
     let ingest = || {
         call(Method::FailureIngest {
             op: Box::new(FailureOp::Ingest {
@@ -2389,7 +2399,9 @@ fn bench_correction(
     use medulla_decision_types::correction::{
         CorrectionInput, CorrectionNearest, CorrectionOp, CorrectionRecorded,
     };
-    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
+        "decider",
+    )));
     // The corrected action: the correction target must name a stored action record.
     rt.block_on(async {
         let properties = serde_json::json!({
@@ -2491,7 +2503,9 @@ fn bench_memory_consolidate(
         MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest, MemoryTier,
         MEMORY_RECORD_SCHEMA_VERSION,
     };
-    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
+        "decider",
+    )));
     let call = |method: Method| -> Response {
         rt.block_on(Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
@@ -2526,7 +2540,11 @@ fn bench_memory_consolidate(
             memory_id: ResourceId::new(format!("m:{n:05}")).unwrap(),
             tenant: TenantId::new(TENANT).unwrap(),
             kind: MemoryKind::Fact,
-            tier: if episodic { MemoryTier::Episodic } else { MemoryTier::Semantic },
+            tier: if episodic {
+                MemoryTier::Episodic
+            } else {
+                MemoryTier::Semantic
+            },
             text: format!("memory entry {n} about topic {}", n % 97),
             provenance_key: None,
             session_id: None,
@@ -2553,7 +2571,11 @@ fn bench_memory_consolidate(
                 episode: None,
             }),
         });
-        assert!(stored.refusal_text().is_none(), "{:?}", stored.refusal_text());
+        assert!(
+            stored.refusal_text().is_none(),
+            "{:?}",
+            stored.refusal_text()
+        );
     }
     let plan = || {
         call(Method::MemoryRecall {
@@ -2964,7 +2986,10 @@ async fn dispatch_policy_json(h: &Harness, method: serde_json::Value) -> serde_j
         ),
     )
     .await;
-    assert!(response.error.is_none(), "policy bench refused: {response:?}");
+    assert!(
+        response.error.is_none(),
+        "policy bench refused: {response:?}"
+    );
     match response.result {
         Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice(&bytes).expect("a msgpack result")
@@ -3002,9 +3027,7 @@ async fn policy_blob(h: &Harness, bytes: &[u8]) -> String {
 fn bench_policy_evolution(rt: &Runtime, report: &mut BTreeMap<String, serde_json::Value>) {
     use serde_json::json;
     let hex = |byte: u8| format!("{byte:02x}").repeat(32);
-    let op = |name: &str, request: serde_json::Value| {
-        json!({"method": "PolicyEvolution", "params": {"op": {"op": name, "request": request}}})
-    };
+    let op = |name: &str, request: serde_json::Value| json!({"method": "PolicyEvolution", "params": {"op": {"op": name, "request": request}}});
     let before = high_water_mib();
     let started = Instant::now();
     rt.block_on(async {
@@ -3811,12 +3834,10 @@ fn bench_process_plan(c: &mut Criterion, report: &mut BTreeMap<String, serde_jso
         annex: Vec::new(),
         losses: Vec::new(),
     };
-    let no_callee =
-        |_: &str| -> Option<medulla_compute::process_plan::plan::Callee> { None };
+    let no_callee = |_: &str| -> Option<medulla_compute::process_plan::plan::Callee> { None };
     let plan = || {
-        let drafted =
-            plan_from_workflow(black_box(&workflow), &bindings, &no_callee, 4, 86_400)
-                .expect("the bench workflow plans");
+        let drafted = plan_from_workflow(black_box(&workflow), &bindings, &no_callee, 4, 86_400)
+            .expect("the bench workflow plans");
         black_box(plan_explicit_tasks(&drafted.proposal).expect("the proposal seals"));
     };
     plan();

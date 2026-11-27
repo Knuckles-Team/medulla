@@ -2476,7 +2476,9 @@ mod tests {
                 s.edges[1].condition = Some(predicate("predicate:other", 'e'))
             }),
             ("edge.condition presence", |s| s.edges[1].condition = None),
-            ("edge.kind", |s| s.edges[4].kind = AgentGraphEdgeKind::LoopsBack),
+            ("edge.kind", |s| {
+                s.edges[4].kind = AgentGraphEdgeKind::LoopsBack
+            }),
         ];
 
         let baseline = rich_shape().shape_digest();

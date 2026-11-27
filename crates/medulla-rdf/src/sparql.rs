@@ -39,8 +39,8 @@ use spargebra::{Query, SparqlParser};
 
 use crate::mapping::RDF_MULTI_VALUE_KEY;
 
-mod term;
 mod graph_result;
+mod term;
 use self::graph_result::*;
 mod algebra;
 use self::algebra::*;
@@ -452,10 +452,7 @@ impl QueryOutcome {
                             "predicate".to_string(),
                             Binding::iri(triple.predicate.as_str()),
                         );
-                        solution.insert(
-                            "object".to_string(),
-                            Binding::from_term(&triple.object)?,
-                        );
+                        solution.insert("object".to_string(), Binding::from_term(&triple.object)?);
                         Some(solution)
                     })
                     .collect();

@@ -50,8 +50,7 @@ use std::sync::Arc;
 
 use super::multi::MultiRaft;
 use super::placement::{
-    MoveStage, MoveStageEvent, PartitionMoveJournal, PartitionState, PlacementEntry,
-    PlacementFence,
+    MoveStage, MoveStageEvent, PartitionMoveJournal, PartitionState, PlacementEntry, PlacementFence,
 };
 use super::GroupId;
 use medulla_persistence::redb_backend::rehydrate_core_from_dump;

@@ -12,7 +12,9 @@ use medulla_compute::ast::symbol::ParseResult;
 use medulla_compute::source_symbol_edit::{
     project_symbol_edit, BlobAccess, ProjectionRefusal, SymbolResolver,
 };
-use medulla_enrich::symbol_edit_verify::{parse_clean, verify_roundtrip, OpVerdict, RoundtripRefusal};
+use medulla_enrich::symbol_edit_verify::{
+    parse_clean, verify_roundtrip, OpVerdict, RoundtripRefusal,
+};
 use medulla_source_types::lifecycle::sha256_hex;
 use medulla_source_types::source_changeset::{
     PathOp, SubmitChangesetRequest, SubmittedBlobRef, SubmittedPath,
@@ -119,15 +121,16 @@ pub fn prepare(
     let mut new_files: Vec<(String, Vec<u8>)> = Vec::new();
     for changed in &projected.changed_paths {
         let old_digest = changed.old_blob.as_deref().unwrap_or_default();
-        let old_bytes = staged
-            .read(old_digest)
-            .ok_or_else(|| SymbolEditRefusal::Projection(ProjectionRefusal::BlobUnreadable(old_digest.to_owned())))?;
+        let old_bytes = staged.read(old_digest).ok_or_else(|| {
+            SymbolEditRefusal::Projection(ProjectionRefusal::BlobUnreadable(old_digest.to_owned()))
+        })?;
         old.push(parse_clean(&changed.path, &old_bytes).map_err(SymbolEditRefusal::Roundtrip)?);
         let new_digest = changed.new_blob.as_deref().unwrap_or_default();
         let new_bytes = staged.staged.get(new_digest).cloned().unwrap_or_default();
         new_files.push((changed.path.clone(), new_bytes));
     }
-    let verdicts = verify_roundtrip(edit, &old, &new_files).map_err(SymbolEditRefusal::Roundtrip)?;
+    let verdicts =
+        verify_roundtrip(edit, &old, &new_files).map_err(SymbolEditRefusal::Roundtrip)?;
     // The check held: the new bytes are written now, and only now.
     let mut paths = Vec::with_capacity(projected.changed_paths.len());
     for (changed, (_, bytes)) in projected.changed_paths.iter().zip(&new_files) {
@@ -187,12 +190,19 @@ mod tests {
 
     impl BlobIo for Mem {
         fn read(&self, digest: &str) -> Result<Vec<u8>, String> {
-            self.0.borrow().get(digest).cloned().ok_or_else(|| "absent".to_string())
+            self.0
+                .borrow()
+                .get(digest)
+                .cloned()
+                .ok_or_else(|| "absent".to_string())
         }
         fn store(&self, bytes: &[u8]) -> Result<SubmittedBlobRef, String> {
             let digest = sha256_hex(bytes);
             self.0.borrow_mut().insert(digest.clone(), bytes.to_vec());
-            Ok(SubmittedBlobRef { digest, size: bytes.len() as u64 })
+            Ok(SubmittedBlobRef {
+                digest,
+                size: bytes.len() as u64,
+            })
         }
     }
 
@@ -208,7 +218,11 @@ mod tests {
 
     fn fixture(new_text: &str) -> (SymbolEdit, One, Mem) {
         let parsed = parse_file(SOURCE, "a.py", SourceLanguage::Python);
-        let alpha = parsed.symbols.iter().find(|s| s.name == "alpha").expect("alpha");
+        let alpha = parsed
+            .symbols
+            .iter()
+            .find(|s| s.name == "alpha")
+            .expect("alpha");
         let (start, end) = (alpha.byte_start as usize, alpha.byte_end as usize);
         let blobs = Mem::default();
         let stored = blobs.store(SOURCE.as_bytes()).expect("seed");
@@ -232,7 +246,11 @@ mod tests {
             body_span: None,
             mode: 0o100644,
         };
-        (edit.clone(), One(edit.ops[0].symbol_id.clone(), resolved), blobs)
+        (
+            edit.clone(),
+            One(edit.ops[0].symbol_id.clone(), resolved),
+            blobs,
+        )
     }
 
     // spec: MEDULLA-SCM-R013.4

@@ -23,8 +23,8 @@ use medulla_decision_types::decision::{
     QuantisedValue, UnitRationalWire,
 };
 use medulla_decision_types::{
-    decision::jobs::DatasetSource, decision::jobs::DecisionJobOutput,
-    decision::jobs::DecisionJobOutcome, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
+    decision::jobs::DatasetSource, decision::jobs::DecisionJobOutcome,
+    decision::jobs::DecisionJobOutput, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
     decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec, decision::jobs::RecordWindow,
 };
 use medulla_decision_types::{
@@ -1079,8 +1079,8 @@ mod feedback_tests;
 // MEDULLA-DECISION-ENGINE-R132.3: retrieved entries admitted by trust tier.
 mod entry_trust_tests;
 // MEDULLA-DECISION-ENGINE-R823, R825: reasoning paradigm and model capacity questions.
-mod reasoning_paradigm_tests;
 mod model_capacity_tests;
+mod reasoning_paradigm_tests;
 // MEDULLA-DECISION-ENGINE-R163.3, R163.4: graph intake served through Decide.
 mod graph_intake_tests;
 // MEDULLA-DECISION-ENGINE-R701.4, R701.5: failure refusals and gap evidence.
@@ -1153,10 +1153,10 @@ mod resolve_conflict_tests;
 mod council_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
-mod tool_relevance_tests;
 mod policy_activation_tests;
 mod promotion_tests;
 mod tool_necessity_tests;
+mod tool_relevance_tests;
 // MEDULLA-DECISION-ENGINE-R156.3 to R156.5: skill documents compile to programs, served.
 mod skill_workflow_tests;
 // MEDULLA-DECISION-ENGINE-R134.100: the served fan-out aggregation.
@@ -1258,12 +1258,12 @@ mod held_item_admission_tests;
 // MEDULLA-DECISION-ENGINE-R826: the serving, process and ingest families.
 #[cfg(feature = "redb")]
 mod capacity_tests;
+mod ingest_shortfall_tests;
 mod item_recommendation_tests;
 mod process_decision_tests;
-mod prompt_candidate_tests;
-mod ingest_shortfall_tests;
 mod process_plan_tests;
 mod process_remediation_tests;
+mod prompt_candidate_tests;
 mod serving_technique_tests;
 
 // MEDULLA-DECISION-ENGINE-R151.1: feature-importance model on the fit request.
@@ -1285,13 +1285,13 @@ mod replay_tests;
 mod comparative_analysis_tests;
 mod concentration_tests;
 mod defect_triage_tests;
-mod merge_arming_tests;
-mod revert_family_tests;
 mod memory_change_tests;
+mod merge_arming_tests;
 mod planning_admission_tests;
 mod probe_verdict_tests;
 mod rank_tests;
 mod registry_tests;
+mod revert_family_tests;
 mod task_plan_tests;
 
 // MEDULLA-DECISION-ENGINE-R818: probe selection, served.
@@ -1355,18 +1355,18 @@ mod curriculum_promotion_tests;
 #[cfg(feature = "statechart")]
 mod feature_match_tests;
 // MEDULLA-ORCH-VOCAB-R750.751: recruit, allocate, twin replay and the instance chart.
+mod kernel_family_support;
 #[cfg(feature = "statechart")]
 mod org_runtime_tests;
-mod kernel_family_support;
 // MEDULLA-DECISION-ENGINE-R100.100.2: served pinned ranking evaluation.
 mod retrieval_eval_tests;
 // MEDULLA-DECISION-ENGINE-R142.101: the served local-skill certification.
 mod certification_tests;
 
+mod limit_guard_tests;
 mod population_tests;
 mod research_voi_tests;
 mod reward_decomposition_tests;
-mod limit_guard_tests;
 mod safety_bound_tests;
 mod step_verification_tests;
 mod trajectory_join_tests;

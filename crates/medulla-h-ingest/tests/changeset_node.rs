@@ -1,6 +1,8 @@
 //! The changeset node of an accept (MEDULLA-SDLC-R001.3).
 
-use medulla_core::lifecycle::accept::{accept_changeset_edges, graph_endpoint, UnresolvedReference};
+use medulla_core::lifecycle::accept::{
+    accept_changeset_edges, graph_endpoint, UnresolvedReference,
+};
 use medulla_core::lifecycle::derive::CodeGraphView;
 use medulla_core::lifecycle::store::LifecycleStore;
 use medulla_source_types::lifecycle::{
@@ -64,10 +66,19 @@ fn changeset_node_is_written_once_with_edges_and_reindex_is_idempotent() {
         .collect();
     assert_eq!(
         cites,
-        vec![(LifecycleEdgeKind::CitesRequirement, "commit:c1", requirement)]
+        vec![(
+            LifecycleEdgeKind::CitesRequirement,
+            "commit:c1",
+            requirement
+        )]
     );
     assert_eq!(
-        graph_endpoint(&changeset, LifecycleEdgeKind::CitesRequirement, false, "DEMO-R001"),
+        graph_endpoint(
+            &changeset,
+            LifecycleEdgeKind::CitesRequirement,
+            false,
+            "DEMO-R001"
+        ),
         requirement
     );
 

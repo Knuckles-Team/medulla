@@ -80,8 +80,7 @@ pub(crate) fn convert_row(
         return Err(disagrees(graph, reservation_id));
     }
     record.remove("tombstone");
-    let rewritten =
-        rmp_serde::to_vec_named(&row).map_err(|_| unreadable(graph, reservation_id))?;
+    let rewritten = rmp_serde::to_vec_named(&row).map_err(|_| unreadable(graph, reservation_id))?;
     Ok(Some(match cipher {
         Some(cipher) => cipher.seal(&rewritten),
         None => rewritten,
@@ -118,7 +117,9 @@ mod tests {
     use super::*;
     use crate::owner::identity::PhysicalStoreIdentity;
     use crate::owner::lineage::GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL;
-    use crate::owner::offline_upgrade::{registered_offline_upgrade, OfflineUpgradeInspectionOptions};
+    use crate::owner::offline_upgrade::{
+        registered_offline_upgrade, OfflineUpgradeInspectionOptions,
+    };
     use crate::owner::persisted_layout::create_predecessor_owner_file;
     use redb::{ReadableDatabase, ReadableTable};
     use serde_json::json;
@@ -130,7 +131,9 @@ mod tests {
 
     fn options(path: &Path) -> OfflineUpgradeInspectionOptions {
         OfflineUpgradeInspectionOptions::new(
-            path.parent().unwrap().join("reservation-tombstone-inspection"),
+            path.parent()
+                .unwrap()
+                .join("reservation-tombstone-inspection"),
             256 * 1024 * 1024,
         )
         .unwrap()
@@ -161,10 +164,7 @@ mod tests {
         upgrade_with(path, options(path))
     }
 
-    fn upgrade_with(
-        path: &Path,
-        options: OfflineUpgradeInspectionOptions,
-    ) -> Result<(), String> {
+    fn upgrade_with(path: &Path, options: OfflineUpgradeInspectionOptions) -> Result<(), String> {
         registered_offline_upgrade(&GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL)
             .expect("the predecessor has a registered upgrade")
             .inspect(path, identity(), None, options)?
@@ -244,13 +244,10 @@ mod tests {
         let error = upgrade(&path).unwrap_err();
         assert_eq!(error, "RESERVATION_TOMBSTONE_DISAGREES: graph-a/bad");
         // The file is untouched: it still refuses an ordinary open as the predecessor.
-        let refused = crate::StorageKernel::open_owner::<crate::GraphShardOwner>(
-            &path,
-            identity(),
-            None,
-        )
-        .err()
-        .expect("a failed upgrade leaves the predecessor layout");
+        let refused =
+            crate::StorageKernel::open_owner::<crate::GraphShardOwner>(&path, identity(), None)
+                .err()
+                .expect("a failed upgrade leaves the predecessor layout");
         assert!(
             refused.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"),
             "{refused}"
@@ -271,8 +268,16 @@ mod tests {
         seed(
             &path,
             &[
-                ("graph-a", "live", MarkerCipher.seal(&old_row("reserved", false))),
-                ("graph-a", "done", MarkerCipher.seal(&old_row("released", true))),
+                (
+                    "graph-a",
+                    "live",
+                    MarkerCipher.seal(&old_row("reserved", false)),
+                ),
+                (
+                    "graph-a",
+                    "done",
+                    MarkerCipher.seal(&old_row("released", true)),
+                ),
             ],
         );
         upgrade_with(
@@ -310,7 +315,11 @@ mod tests {
         .unwrap();
         seed(
             &path,
-            &[("graph-a", "live", MarkerCipher.seal(&old_row("reserved", false)))],
+            &[(
+                "graph-a",
+                "live",
+                MarkerCipher.seal(&old_row("reserved", false)),
+            )],
         );
         assert_eq!(
             upgrade(&path).unwrap_err(),

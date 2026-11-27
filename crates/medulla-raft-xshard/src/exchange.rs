@@ -62,8 +62,8 @@ use medulla_exec::{
     dag::PlanDag, dag_exec::execute_dag, dag_exec::execute_dag_with, exec::PlanCtx, rowset::RowSet,
 };
 
-use medulla_raft::raft::multi::GroupRouter;
 use medulla_direct_state::direct_state::GroupId;
+use medulla_raft::raft::multi::GroupRouter;
 
 // ── 1. the exchange marker (kept OUTSIDE PlanDag/PlanNode) ─────────────────────────
 

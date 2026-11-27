@@ -13,8 +13,7 @@
 //! code (a sealed `Abstained` record). `Decide` writes nothing.
 
 use medulla_decision_types::decision::graph_intake::{
-    GraphReference, GraphResolutionError, IntakeSource, ResolvedSource, PARAM_GRAPH,
-    PARAM_SOURCES,
+    GraphReference, GraphResolutionError, IntakeSource, ResolvedSource, PARAM_GRAPH, PARAM_SOURCES,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -187,11 +186,7 @@ impl DecisionFamily for GraphIntakeFamily {
 
 /// The properties of one node the caller can see, or `None` when the node is
 /// absent from the caller's visible snapshot or its blob does not decode.
-fn visible_properties(
-    tenant: &str,
-    view: &GraphView,
-    node_id: &str,
-) -> Option<serde_json::Value> {
+fn visible_properties(tenant: &str, view: &GraphView, node_id: &str) -> Option<serde_json::Value> {
     let blob = view.node_properties.get(node_id)?;
     let properties = medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()?;
     // A node of another tenant reads as absent.

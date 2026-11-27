@@ -1111,9 +1111,15 @@ mod tests {
     #[test]
     fn a_store_below_the_build_threshold_exports_a_flat_exact_image() {
         let mut store = SemanticStore::new();
-        store.add_embedding("a".to_string(), vec![1.0, 0.0, 0.0]).unwrap();
-        store.add_embedding("b".to_string(), vec![0.0, 1.0, 0.0]).unwrap();
-        store.add_embedding("c".to_string(), vec![0.9, 0.1, 0.0]).unwrap();
+        store
+            .add_embedding("a".to_string(), vec![1.0, 0.0, 0.0])
+            .unwrap();
+        store
+            .add_embedding("b".to_string(), vec![0.0, 1.0, 0.0])
+            .unwrap();
+        store
+            .add_embedding("c".to_string(), vec![0.9, 0.1, 0.0])
+            .unwrap();
         let image = store.export_generation().unwrap();
         assert_eq!(image.kind().unwrap(), GenerationImageKind::Flat);
         assert_eq!(image.identity().unwrap().0, 3);

@@ -70,8 +70,16 @@ pub fn rank_card(claims: &[CardInput], budget: CardBudget) -> Vec<CardClaim> {
         .iter()
         .map(|claim| {
             let confidence = confidence_ppm(claim.log_odds_micro);
-            let recency = recency_ppm(budget.now_ms.saturating_sub(claim.updated_ms), budget.half_life_ms);
-            (u64::from(confidence) * u64::from(recency) / PPM, claim, confidence, recency)
+            let recency = recency_ppm(
+                budget.now_ms.saturating_sub(claim.updated_ms),
+                budget.half_life_ms,
+            );
+            (
+                u64::from(confidence) * u64::from(recency) / PPM,
+                claim,
+                confidence,
+                recency,
+            )
         })
         .collect();
     scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.claim_id.cmp(&b.1.claim_id)));
@@ -104,7 +112,14 @@ pub fn card_digest(claims: &[CardClaim]) -> String {
         hasher.update(claim.confidence_ppm.to_be_bytes());
         hasher.update(claim.recency_ppm.to_be_bytes());
     }
-    format!("sha256:{}", hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect::<String>())
+    format!(
+        "sha256:{}",
+        hasher
+            .finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    )
 }
 
 #[cfg(test)]
@@ -124,7 +139,11 @@ mod tests {
     }
 
     fn budget(tokens: u32) -> CardBudget {
-        CardBudget { tokens, half_life_ms: 30 * DAY, now_ms: 100 * DAY as i64 }
+        CardBudget {
+            tokens,
+            half_life_ms: 30 * DAY,
+            now_ms: 100 * DAY as i64,
+        }
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R655.3
@@ -142,15 +161,28 @@ mod tests {
         assert_eq!(tiny[0].claim_id, "c-strong");
         // Rank orders by confidence times recency: the old strong claim ranks below the fresh weak one.
         let wide = rank_card(&claims, budget(4_000));
-        assert_eq!(wide.iter().map(|c| c.claim_id.as_str()).collect::<Vec<_>>(), ["c-strong", "c-weak", "c-old"]);
+        assert_eq!(
+            wide.iter().map(|c| c.claim_id.as_str()).collect::<Vec<_>>(),
+            ["c-strong", "c-weak", "c-old"]
+        );
         // A budget that cannot hold the first claim gives an empty card, never a larger one.
-        assert!(rank_card(&[input("big", &"w".repeat(400), 0, 100 * DAY as i64)], budget(64)).is_empty());
+        assert!(rank_card(
+            &[input("big", &"w".repeat(400), 0, 100 * DAY as i64)],
+            budget(64)
+        )
+        .is_empty());
         // A tie breaks by the lowest claim id.
         let tie = rank_card(
-            &[input("b", "same", 1_000_000, 100 * DAY as i64), input("a", "same", 1_000_000, 100 * DAY as i64)],
+            &[
+                input("b", "same", 1_000_000, 100 * DAY as i64),
+                input("a", "same", 1_000_000, 100 * DAY as i64),
+            ],
             budget(400),
         );
-        assert_eq!(tie.iter().map(|c| c.claim_id.as_str()).collect::<Vec<_>>(), ["a", "b"]);
+        assert_eq!(
+            tie.iter().map(|c| c.claim_id.as_str()).collect::<Vec<_>>(),
+            ["a", "b"]
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R655.3
@@ -171,9 +203,15 @@ mod tests {
     fn the_digest_changes_only_when_the_card_changes() {
         let claims = [input("c1", "prefers tea", 1_000_000, 100 * DAY as i64)];
         let card = rank_card(&claims, budget(400));
-        assert_eq!(card_digest(&card), card_digest(&rank_card(&claims, budget(400))));
+        assert_eq!(
+            card_digest(&card),
+            card_digest(&rank_card(&claims, budget(400)))
+        );
         assert!(card_digest(&card).starts_with("sha256:"));
-        let changed = rank_card(&[input("c1", "prefers coffee", 1_000_000, 100 * DAY as i64)], budget(400));
+        let changed = rank_card(
+            &[input("c1", "prefers coffee", 1_000_000, 100 * DAY as i64)],
+            budget(400),
+        );
         assert_ne!(card_digest(&card), card_digest(&changed));
         assert_eq!(card_digest(&[]), card_digest(&[]));
     }

@@ -354,7 +354,10 @@ mod tests {
         let text = serde_json::to_string(&op).expect("encode op");
         assert_eq!(serde_json::from_str::<CurationOp>(&text).unwrap(), op);
         assert!(!op.is_mutation());
-        let unknown = GOLDEN_PROPOSAL.replace("\"evidence_digest\":\"e\"", "\"evidence_digest\":\"e\",\"x\":1");
+        let unknown = GOLDEN_PROPOSAL.replace(
+            "\"evidence_digest\":\"e\"",
+            "\"evidence_digest\":\"e\",\"x\":1",
+        );
         assert!(serde_json::from_str::<CurationProposal>(&unknown).is_err());
         let inputs = CurationInputs {
             flags: Vec::new(),
@@ -370,6 +373,9 @@ mod tests {
             next_cursor: None,
         };
         let text = serde_json::to_string(&inputs).expect("encode inputs");
-        assert_eq!(serde_json::from_str::<CurationInputs>(&text).unwrap(), inputs);
+        assert_eq!(
+            serde_json::from_str::<CurationInputs>(&text).unwrap(),
+            inputs
+        );
     }
 }

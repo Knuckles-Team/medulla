@@ -134,7 +134,12 @@ mod tests {
     fn every_legal_transition_applies() {
         assert_eq!(APPLICATION_ADMISSION_MACHINE.edges.len(), 5);
         for (id, from, event, to) in [
-            ("A01", AdmissionStage::Pending, AdmissionEvent::Admit, AdmissionStage::Admitted),
+            (
+                "A01",
+                AdmissionStage::Pending,
+                AdmissionEvent::Admit,
+                AdmissionStage::Admitted,
+            ),
             (
                 "A02",
                 AdmissionStage::Admitted,
@@ -147,7 +152,12 @@ mod tests {
                 AdmissionEvent::RetireConnector,
                 AdmissionStage::ConnectorRetired,
             ),
-            ("A04", AdmissionStage::Admitted, AdmissionEvent::RollBack, AdmissionStage::RolledBack),
+            (
+                "A04",
+                AdmissionStage::Admitted,
+                AdmissionEvent::RollBack,
+                AdmissionStage::RolledBack,
+            ),
             (
                 "A05",
                 AdmissionStage::ParityConfirmed,
@@ -157,7 +167,10 @@ mod tests {
         ] {
             assert_eq!(from.apply(event), Ok(to), "edge {id}");
         }
-        assert_eq!(AdmissionStage::Pending, APPLICATION_ADMISSION_MACHINE.initial);
+        assert_eq!(
+            AdmissionStage::Pending,
+            APPLICATION_ADMISSION_MACHINE.initial
+        );
     }
 
     // spec: MEDULLA-IDENTITY-R724.1

@@ -227,10 +227,16 @@ mod tests {
         }
         // A complete image is never paged in again, and a finish needs valid indexes.
         assert!(MaterializationPhase::Complete
-            .apply(MaterializationEvent::AdvancePartialManifest, MaterializationFacts::default())
+            .apply(
+                MaterializationEvent::AdvancePartialManifest,
+                MaterializationFacts::default()
+            )
             .is_err());
         assert!(MaterializationPhase::Partial
-            .apply(MaterializationEvent::FinishMaterialization, MaterializationFacts::default())
+            .apply(
+                MaterializationEvent::FinishMaterialization,
+                MaterializationFacts::default()
+            )
             .is_err());
     }
 

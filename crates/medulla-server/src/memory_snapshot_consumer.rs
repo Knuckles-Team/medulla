@@ -76,7 +76,10 @@ mod worker {
         }
     }
 
-    async fn sweep(state: &Arc<RwLock<ServerState>>, next_graph: &mut usize) -> Result<bool, String> {
+    async fn sweep(
+        state: &Arc<RwLock<ServerState>>,
+        next_graph: &mut usize,
+    ) -> Result<bool, String> {
         let mut graphs: Vec<String> = state
             .read()
             .await
@@ -188,7 +191,12 @@ mod worker {
             .map(|(name, _)| name)
             .collect();
         for graph in graphs {
-            let core = state.read().await.registry.get(&graph).map(|entry| entry.core.clone());
+            let core = state
+                .read()
+                .await
+                .registry
+                .get(&graph)
+                .map(|entry| entry.core.clone());
             let Some(core) = core else { continue };
             for head in store::list_heads(&core, "") {
                 reconcile(state, &graph, &head.doc_id, "retention-tick", false).await?;
@@ -215,15 +223,15 @@ mod worker {
         let (Some(core), Some(blob)) = (core, blob) else {
             return Err("CONFLICT: memory snapshot graph or CAS is unavailable".into());
         };
-        let context = service_context(
-            anonymous,
-            &server,
-            format!("memory-snapshot:{graph}:{key}"),
-        )?;
+        let context =
+            service_context(anonymous, &server, format!("memory-snapshot:{graph}:{key}"))?;
         let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&context)?;
         // The holder is registered under the document owner's scope, the row the
         // router registered, never under the service actor's own scope.
-        let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant(), doc.as_str());
+        let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(
+            context.tenant(),
+            doc.as_str(),
+        );
         // A revision releases past its retention deadline or beyond the newest
         // `max_revisions_per_doc`, oldest first; a resolved candidate releases
         // past its deadline; an unresolved conflict candidate never releases.
@@ -239,21 +247,15 @@ mod worker {
         let released = plan.released;
         for (slot, content) in held {
             let (digest, _was_new) = blob.put_chunk(content.as_bytes())?;
-            let holder = HolderChange::acquire(
-                &digest,
-                HolderId::new(&slot.holder_id(doc))?,
-                &owner_scope,
-            )?;
+            let holder =
+                HolderChange::acquire(&digest, HolderId::new(&slot.holder_id(doc))?, &owner_scope)?;
             let method = medulla_protocol_types::protocol::Method::BlobRef {
                 digest: digest.clone(),
             };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;
         }
         for (slot, digest) in released {
-            let holder = HolderChange::release(
-                &digest,
-                HolderId::new(&slot.holder_id(doc))?,
-            )?;
+            let holder = HolderChange::release(&digest, HolderId::new(&slot.holder_id(doc))?)?;
             let method = medulla_protocol_types::protocol::Method::BlobRef { digest };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;
         }

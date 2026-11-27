@@ -927,6 +927,8 @@ mod tests {
         let refusal = request.validate().expect_err("a native gitlink refuses");
         assert_eq!(refusal.refusal, ChangesetRefusal::ChangesetInvalid);
         assert!(refusal.message().contains("paths.mode for vendor/lib"));
-        request.validate_import().expect("an imported gitlink validates");
+        request
+            .validate_import()
+            .expect("an imported gitlink validates");
     }
 }

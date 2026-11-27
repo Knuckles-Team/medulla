@@ -98,7 +98,8 @@ pub(super) async fn assemble_for(
         .map_err(|refused| refused.message())?;
         // The step shield is declared before anything is read: a stale schema sends nothing
         // (MEDULLA-ORCH-VOCAB-R005.100).
-        let shields = super::assemble_shield::shield_step_schema(request.step_contracts.as_slice())?;
+        let shields =
+            super::assemble_shield::shield_step_schema(request.step_contracts.as_slice())?;
         let store = state.write().await.ensure_agent_library()?;
         let policy = resolve_policy(&store, &request)?;
         Ok::<_, String>((store, policy, shields))
@@ -150,11 +151,8 @@ pub(super) async fn assemble_for(
         // (MEDULLA-DECISION-ENGINE-R814.4).
         let (entries, hidden) =
             super::prompt_candidates::exclude_failed_connectors(entries, &store, tenant);
-        let (entries, selected) = super::prompt_candidates::narrow_system_prompts(
-            entries,
-            &required,
-            min_match_micros,
-        );
+        let (entries, selected) =
+            super::prompt_candidates::narrow_system_prompts(entries, &required, min_match_micros);
         let selection = super::prompt_candidates::prompt_selection(
             selected.as_ref(),
             hidden,

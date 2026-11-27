@@ -212,8 +212,8 @@ impl PartitionMoveJournal {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{PartitionKey, PartitionState, PlacementEntry};
+    use super::*;
 
     fn journal() -> PartitionMoveJournal {
         let entry = PlacementEntry {

@@ -71,8 +71,15 @@ fn scan_values_counts_hits_without_values() {
     // An email column matches the email pattern whole.
     let emails = ["ada@example.org", "bob@example.org", "not an email"];
     let email_column: Vec<Option<&str>> = emails.iter().map(|v| Some(*v)).collect();
-    let found = scan_values("column:users.email", &email_column, &detectors, &limits, &NoResources, now_ms)
-        .unwrap();
+    let found = scan_values(
+        "column:users.email",
+        &email_column,
+        &detectors,
+        &limits,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap();
     let email = found
         .iter()
         .find(|d| d.detector == "detector:email_address")
@@ -81,11 +88,25 @@ fn scan_values_counts_hits_without_values() {
 
     // A valid IBAN hits and a one-digit-changed one does not.
     let iban_only = [detectors[2].clone()];
-    let valid = scan_values("column:a", &[Some(VALID_IBAN)], &iban_only, &limits, &NoResources, now_ms)
-        .unwrap();
+    let valid = scan_values(
+        "column:a",
+        &[Some(VALID_IBAN)],
+        &iban_only,
+        &limits,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap();
     assert_eq!(valid[0].sample_hits, 1);
-    let changed = scan_values("column:a", &[Some(CHANGED_IBAN)], &iban_only, &limits, &NoResources, now_ms)
-        .unwrap();
+    let changed = scan_values(
+        "column:a",
+        &[Some(CHANGED_IBAN)],
+        &iban_only,
+        &limits,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap();
     assert_eq!(changed[0].sample_hits, 0);
 
     // The sample is bounded by max_sample_values.
@@ -94,7 +115,15 @@ fn scan_values_counts_hits_without_values() {
         max_sample_values: 100,
         ..ScanLimits::default()
     };
-    let capped = scan_values("column:a", &many, &detectors, &bounded, &NoResources, now_ms).unwrap();
+    let capped = scan_values(
+        "column:a",
+        &many,
+        &detectors,
+        &bounded,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap();
     assert!(capped.iter().all(|d| d.sample_size == 100));
 
     // A dictionary with no resources and an unparsable regex refuse before any detection.
@@ -104,22 +133,49 @@ fn scan_values_counts_hits_without_values() {
             terms_digest: "sha256:terms".into(),
         },
     );
-    let refused = scan_values("column:a", &card_column, &[dictionary], &limits, &NoResources, now_ms)
-        .unwrap_err();
+    let refused = scan_values(
+        "column:a",
+        &card_column,
+        &[dictionary],
+        &limits,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap_err();
     assert!(matches!(refused, ScanError::ResourceMissing { .. }));
     assert_eq!(refused.code(), "DETECTOR_RESOURCE_MISSING");
-    let broken = detector("detector:broken", DetectorRule::Pattern { regex: "(".into() });
-    let refused = scan_values("column:a", &card_column, &[broken], &limits, &NoResources, now_ms)
-        .unwrap_err();
+    let broken = detector(
+        "detector:broken",
+        DetectorRule::Pattern { regex: "(".into() },
+    );
+    let refused = scan_values(
+        "column:a",
+        &card_column,
+        &[broken],
+        &limits,
+        &NoResources,
+        now_ms,
+    )
+    .unwrap_err();
     assert_eq!(refused.code(), "DETECTOR_PATTERN_INVALID");
     let mismatched = SensitiveDetector {
         method: SensitiveDetectionMethod::Checksum,
-        ..detector("detector:mismatch", DetectorRule::Pattern { regex: "a".into() })
+        ..detector(
+            "detector:mismatch",
+            DetectorRule::Pattern { regex: "a".into() },
+        )
     };
     assert_eq!(
-        scan_values("column:a", &card_column, &[mismatched], &limits, &NoResources, now_ms)
-            .unwrap_err()
-            .code(),
+        scan_values(
+            "column:a",
+            &card_column,
+            &[mismatched],
+            &limits,
+            &NoResources,
+            now_ms
+        )
+        .unwrap_err()
+        .code(),
         "DETECTOR_RULE_MISMATCH"
     );
     let bad_limits = ScanLimits {
@@ -127,9 +183,16 @@ fn scan_values_counts_hits_without_values() {
         ..ScanLimits::default()
     };
     assert_eq!(
-        scan_values("column:a", &card_column, &detectors, &bad_limits, &NoResources, now_ms)
-            .unwrap_err()
-            .code(),
+        scan_values(
+            "column:a",
+            &card_column,
+            &detectors,
+            &bad_limits,
+            &NoResources,
+            now_ms
+        )
+        .unwrap_err()
+        .code(),
         "SCAN_LIMITS_INVALID"
     );
 
@@ -162,7 +225,8 @@ fn chunk_scan_counts_hit_chunks_over_candidates_without_values() {
         "second order card 4111111111111111.",
         "also nothing here",
     ];
-    let detections = scan_chunks("doc:1", &chunks, &detectors, &limits, 500, &NoResources, 7).unwrap();
+    let detections =
+        scan_chunks("doc:1", &chunks, &detectors, &limits, 500, &NoResources, 7).unwrap();
     let card = detections
         .iter()
         .find(|detection| passing(std::slice::from_ref(detection), &detectors).len() == 1)

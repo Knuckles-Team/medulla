@@ -8,13 +8,13 @@ pub use current::{
     CurrentCleanupRecovery, CurrentDurabilityRecovery, CurrentPromotion,
     DirectStateRecoveryCompletion, DurableCurrentImage, PendingAbandonRecovery, PendingAbandonment,
 };
-pub use install_machine::{
-    DirectStateInstallEvent, DirectStateInstallGuard, DIRECT_STATE_INSTALL_MACHINE,
-};
 pub use install::{
     DurablePreparedJournal, DurablePublishedJournal, PreparedGenerationRecovery,
     PreparedJournalPublication, PreparedJournalRecovery, PublishedJournalPublication,
     PublishedJournalRecovery,
+};
+pub use install_machine::{
+    DirectStateInstallEvent, DirectStateInstallGuard, DIRECT_STATE_INSTALL_MACHINE,
 };
 // The registry drives the install journal through these entry points; they keep the
 // `pub(in crate::direct_state)` visibility they are declared with, and are re-exported

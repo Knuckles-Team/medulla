@@ -10,9 +10,7 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 use super::extracted::{extracted_fragments, ExtractedUnit};
-use super::{
-    is_compound_file, ReaderLimits, READER_CORRUPT, READER_ENCRYPTED, READER_TOO_LARGE,
-};
+use super::{is_compound_file, ReaderLimits, READER_CORRUPT, READER_ENCRYPTED, READER_TOO_LARGE};
 use crate::fragment::{Fragment, Reader, ReaderError};
 
 const WORD_TYPE: &str = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -151,7 +149,13 @@ fn paragraphs(part: &[u8], prefix: &str) -> Result<Vec<String>, ReaderError> {
             }
             Event::Empty(start) => {
                 if let Some(open) = current.as_mut() {
-                    add_break(start.name().as_ref(), &tab, &line_break, in_properties, open);
+                    add_break(
+                        start.name().as_ref(),
+                        &tab,
+                        &line_break,
+                        in_properties,
+                        open,
+                    );
                 }
             }
             Event::End(end) => {
@@ -167,12 +171,20 @@ fn paragraphs(part: &[u8], prefix: &str) -> Result<Vec<String>, ReaderError> {
             }
             Event::Text(content) if in_text => {
                 if let Some(open) = current.as_mut() {
-                    open.push_str(&content.decode().map_err(|error| corrupt(error.to_string()))?);
+                    open.push_str(
+                        &content
+                            .decode()
+                            .map_err(|error| corrupt(error.to_string()))?,
+                    );
                 }
             }
             Event::CData(content) if in_text => {
                 if let Some(open) = current.as_mut() {
-                    open.push_str(&content.decode().map_err(|error| corrupt(error.to_string()))?);
+                    open.push_str(
+                        &content
+                            .decode()
+                            .map_err(|error| corrupt(error.to_string()))?,
+                    );
                 }
             }
             Event::GeneralRef(reference) if in_text => {

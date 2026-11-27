@@ -21,7 +21,11 @@ impl NeighborhoodSource for GraphCore {
             (petgraph::Direction::Incoming, false),
         ] {
             for edge in topo.graph.edges_directed(idx, direction) {
-                let far = if outgoing { edge.target() } else { edge.source() };
+                let far = if outgoing {
+                    edge.target()
+                } else {
+                    edge.source()
+                };
                 links.insert((topo.graph[far].clone(), outgoing), ());
             }
         }
@@ -37,8 +41,7 @@ impl NeighborhoodSource for GraphCore {
                     .edge_properties
                     .get(&key)
                     .map(|blobs| {
-                        crate::index::EdgeRels::from_blobs(blobs.iter().map(|b| b.as_slice()))
-                            .types
+                        crate::index::EdgeRels::from_blobs(blobs.iter().map(|b| b.as_slice())).types
                     })
                     .unwrap_or_default();
                 NeighborLink {

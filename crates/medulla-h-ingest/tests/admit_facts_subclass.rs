@@ -52,7 +52,10 @@ fn is_grounded(cache: &medulla_ingestion_types::ingest_rules::GroundingCache) ->
 fn batch_cache_reads_reasoner_closure() {
     let flat = build_grounding_cache(&[FLAT_ONTOLOGY]).unwrap();
     assert!(flat.subclass_of.is_empty());
-    assert!(!is_grounded(&flat), "no hierarchy, so a Dog is not an Animal");
+    assert!(
+        !is_grounded(&flat),
+        "no hierarchy, so a Dog is not an Animal"
+    );
 
     let class = |name: &str| format!("http://example.org/o#{name}");
     let closure: BTreeMap<String, BTreeSet<String>> = BTreeMap::from([(
@@ -67,7 +70,10 @@ fn batch_cache_reads_reasoner_closure() {
 
     let from_ontology = build_grounding_cache(&[HIERARCHY_ONTOLOGY]).unwrap();
     assert!(is_grounded(&from_ontology));
-    assert_eq!(from_ontology.subclass_of[&class("Dog")], closure[&class("Dog")]);
+    assert_eq!(
+        from_ontology.subclass_of[&class("Dog")],
+        closure[&class("Dog")]
+    );
 }
 
 // spec: MEDULLA-INGEST-WORKER-R701.8

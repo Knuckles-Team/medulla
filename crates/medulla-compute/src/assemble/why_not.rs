@@ -132,21 +132,28 @@ pub fn explain_option(
     let ladder = match conclude::prepare(inputs)? {
         conclude::Prepared::Ready(ladder) => ladder,
         conclude::Prepared::Done(decided) => {
-            return Ok(match decided.eliminated.iter().find(|e| e.component_id == component_id) {
-                Some(elimination) => used(
-                    vec![eliminated_reason(&elimination.violation)],
-                    WhyNotVerdict::Eliminated,
-                    false,
-                ),
-                None => used(
-                    vec![WhyNotReason {
-                        kind: "abstained".to_string(),
-                        detail: "the decision abstained before any option was solved".to_string(),
-                    }],
-                    WhyNotVerdict::Unresolved,
-                    false,
-                ),
-            });
+            return Ok(
+                match decided
+                    .eliminated
+                    .iter()
+                    .find(|e| e.component_id == component_id)
+                {
+                    Some(elimination) => used(
+                        vec![eliminated_reason(&elimination.violation)],
+                        WhyNotVerdict::Eliminated,
+                        false,
+                    ),
+                    None => used(
+                        vec![WhyNotReason {
+                            kind: "abstained".to_string(),
+                            detail: "the decision abstained before any option was solved"
+                                .to_string(),
+                        }],
+                        WhyNotVerdict::Unresolved,
+                        false,
+                    ),
+                },
+            );
         }
     };
     if let Some(elimination) = ladder
@@ -226,7 +233,10 @@ pub fn explain_option(
             WhyNotVerdict::Worse,
             WhyNotReason {
                 kind: "forced_objective".to_string(),
-                detail: format!("forcing the option in costs objective scalar {}", String::from(objective.scalar)),
+                detail: format!(
+                    "forcing the option in costs objective scalar {}",
+                    String::from(objective.scalar)
+                ),
             },
         ),
         (None, None) => (

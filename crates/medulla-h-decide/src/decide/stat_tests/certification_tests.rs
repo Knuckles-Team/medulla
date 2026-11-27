@@ -29,7 +29,11 @@ fn pins(model_digest: &str) -> LocalSkillPins {
             revision: 1,
             digest: "c".repeat(64),
         },
-        criteria_policy: pin("criteria-a", AgentComponentKind::DecisionPolicy, "sha256:cc"),
+        criteria_policy: pin(
+            "criteria-a",
+            AgentComponentKind::DecisionPolicy,
+            "sha256:cc",
+        ),
     }
 }
 
@@ -95,10 +99,22 @@ fn code_of(job: &DecisionJobRecord) -> &str {
 async fn attests_atomic_and_gates_workflow() {
     let h = Harness::new().await;
     let atomic = h
-        .publish_test_component("skill-atomic", AgentComponentKind::Skill, "atomic skill", None::<&String>, None)
+        .publish_test_component(
+            "skill-atomic",
+            AgentComponentKind::Skill,
+            "atomic skill",
+            None::<&String>,
+            None,
+        )
         .unwrap();
     let other = h
-        .publish_test_component("skill-other", AgentComponentKind::Skill, "unattested skill", None::<&String>, None)
+        .publish_test_component(
+            "skill-other",
+            AgentComponentKind::Skill,
+            "unattested skill",
+            None::<&String>,
+            None,
+        )
         .unwrap();
     let workflow_skill = pin("skill-workflow", AgentComponentKind::Skill, "sha256:dd");
 
@@ -106,22 +122,48 @@ async fn attests_atomic_and_gates_workflow() {
     let early = certify(
         &h,
         "decider",
-        request(TENANT, "wf-0", &workflow_skill, vec![atomic.clone()], pins("sha256:aa")),
+        request(
+            TENANT,
+            "wf-0",
+            &workflow_skill,
+            vec![atomic.clone()],
+            pins("sha256:aa"),
+        ),
     )
     .await;
-    assert!(code_of(&early).starts_with("CERT_DEPENDENCY_MISSING"), "{}", code_of(&early));
+    assert!(
+        code_of(&early).starts_with("CERT_DEPENDENCY_MISSING"),
+        "{}",
+        code_of(&early)
+    );
     assert_eq!(stored_count(&h, TENANT), 0, "a refusal stores nothing");
 
     // The atomic skill is attested, listing its evidence, and stored by digest.
-    let job = certify(&h, "decider", request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa"))).await;
+    let job = certify(
+        &h,
+        "decider",
+        request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa")),
+    )
+    .await;
     let DecisionJobOutput::Certification { attestation } = succeeded(&job).clone() else {
         panic!("a certification output");
     };
-    assert!(attestation.premises.iter().any(|p| p == "criterion:accuracy"));
-    assert!(attestation.premises.iter().any(|p| p.starts_with("skill:skill-atomic@")));
+    assert!(attestation
+        .premises
+        .iter()
+        .any(|p| p == "criterion:accuracy"));
+    assert!(attestation
+        .premises
+        .iter()
+        .any(|p| p.starts_with("skill:skill-atomic@")));
     assert_eq!(stored_count(&h, TENANT), 1);
     // The same request again replays the stored job and writes nothing more.
-    let again = certify(&h, "decider", request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa"))).await;
+    let again = certify(
+        &h,
+        "decider",
+        request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa")),
+    )
+    .await;
     assert_eq!(again.job_id, job.job_id);
     assert_eq!(stored_count(&h, TENANT), 1);
 
@@ -130,25 +172,51 @@ async fn attests_atomic_and_gates_workflow() {
     let ok = certify(
         &h,
         "decider",
-        request(TENANT, "wf-1", &workflow_skill, vec![atomic.clone()], pins("sha256:aa")),
+        request(
+            TENANT,
+            "wf-1",
+            &workflow_skill,
+            vec![atomic.clone()],
+            pins("sha256:aa"),
+        ),
     )
     .await;
     succeeded(&ok);
     let stale = certify(
         &h,
         "decider",
-        request(TENANT, "wf-2", &workflow_skill, vec![atomic.clone()], pins("sha256:bb")),
+        request(
+            TENANT,
+            "wf-2",
+            &workflow_skill,
+            vec![atomic.clone()],
+            pins("sha256:bb"),
+        ),
     )
     .await;
-    assert!(code_of(&stale).starts_with("CERT_DEPENDENCY_STALE"), "{}", code_of(&stale));
+    assert!(
+        code_of(&stale).starts_with("CERT_DEPENDENCY_STALE"),
+        "{}",
+        code_of(&stale)
+    );
     let missing = certify(
         &h,
         "decider",
-        request(TENANT, "wf-3", &workflow_skill, vec![other], pins("sha256:aa")),
+        request(
+            TENANT,
+            "wf-3",
+            &workflow_skill,
+            vec![other],
+            pins("sha256:aa"),
+        ),
     )
     .await;
     assert!(code_of(&missing).starts_with("CERT_DEPENDENCY_MISSING"));
-    assert_eq!(stored_count(&h, TENANT), 2, "the atomic and the passing workflow only");
+    assert_eq!(
+        stored_count(&h, TENANT),
+        2,
+        "the atomic and the passing workflow only"
+    );
 
     // A receipt that fails a criterion is refused by the pure rule before any store check.
     let mut failing = request(TENANT, "atomic-2", &atomic, vec![], pins("sha256:aa"));
@@ -160,7 +228,13 @@ async fn attests_atomic_and_gates_workflow() {
     let foreign = certify(
         &h,
         "decider",
-        request(FOREIGN, "wf-f", &workflow_skill, vec![atomic.clone()], pins("sha256:aa")),
+        request(
+            FOREIGN,
+            "wf-f",
+            &workflow_skill,
+            vec![atomic.clone()],
+            pins("sha256:aa"),
+        ),
     )
     .await;
     assert!(code_of(&foreign).starts_with("CERT_DEPENDENCY_MISSING"));
@@ -175,7 +249,13 @@ async fn the_certification_read_answers_the_current_attestation_or_none() {
     };
     let h = Harness::new().await;
     let atomic = h
-        .publish_test_component("skill-atomic", AgentComponentKind::Skill, "atomic skill", None::<&String>, None)
+        .publish_test_component(
+            "skill-atomic",
+            AgentComponentKind::Skill,
+            "atomic skill",
+            None::<&String>,
+            None,
+        )
         .unwrap();
     let ask = |tenant: &str, skill: &ComponentDependency| CertificationReadRequest {
         tenant_id: tenant.into(),
@@ -197,7 +277,12 @@ async fn the_certification_read_answers_the_current_attestation_or_none() {
     // Nothing is attested yet: the answer is none.
     assert_eq!(read(TENANT, ask(TENANT, &atomic)).await.attestation, None);
 
-    let job = certify(&h, "decider", request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa"))).await;
+    let job = certify(
+        &h,
+        "decider",
+        request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa")),
+    )
+    .await;
     let DecisionJobOutput::Certification { attestation } = succeeded(&job).clone() else {
         panic!("a certification output");
     };
@@ -208,7 +293,10 @@ async fn the_certification_read_answers_the_current_attestation_or_none() {
     let mut later = request(TENANT, "atomic-2", &atomic, vec![], pins("sha256:aa"));
     later.receipt.completion_revision = 2;
     let later_job = certify(&h, "decider", later).await;
-    let DecisionJobOutput::Certification { attestation: newest } = succeeded(&later_job).clone() else {
+    let DecisionJobOutput::Certification {
+        attestation: newest,
+    } = succeeded(&later_job).clone()
+    else {
         panic!("a certification output");
     };
     let answered = read(TENANT, ask(TENANT, &atomic)).await;
@@ -217,7 +305,10 @@ async fn the_certification_read_answers_the_current_attestation_or_none() {
     // Another revision, another tenant and an unknown skill answer none alike.
     let mut other_revision = atomic.clone();
     other_revision.definition_digest = "sha256:other".into();
-    assert_eq!(read(TENANT, ask(TENANT, &other_revision)).await.attestation, None);
+    assert_eq!(
+        read(TENANT, ask(TENANT, &other_revision)).await.attestation,
+        None
+    );
     assert_eq!(read(FOREIGN, ask(FOREIGN, &atomic)).await.attestation, None);
     let unknown = pin("skill-unknown", AgentComponentKind::Skill, "sha256:zz");
     assert_eq!(read(TENANT, ask(TENANT, &unknown)).await.attestation, None);

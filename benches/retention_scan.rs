@@ -106,15 +106,25 @@ async fn seed(backend: &Arc<dyn PersistenceBackend>, core: &Arc<GraphCore>) {
 }
 
 async fn measure(backend: &Arc<dyn PersistenceBackend>, core: &Arc<GraphCore>) -> Vec<f64> {
-    let policy = RetentionPolicy::new(1_000, STEP, vec![HoldCheck::LiveReference, HoldCheck::LegalHold])
-        .expect("policy");
+    let policy = RetentionPolicy::new(
+        1_000,
+        STEP,
+        vec![HoldCheck::LiveReference, HoldCheck::LegalHold],
+    )
+    .expect("policy");
     let mut cursor = RetentionCursor::default();
     let mut samples = Vec::with_capacity(STEPS);
     for step in 0..STEPS {
         let started = Instant::now();
         let report = cleanup_graph(core, &policy, &cursor, NOW_MS);
         if let Some(removal) = report.removal_batch().expect("removal batch") {
-            commit(backend, core, &format!("retention-scan-step-{step:04}"), removal).await;
+            commit(
+                backend,
+                core,
+                &format!("retention-scan-step-{step:04}"),
+                removal,
+            )
+            .await;
         }
         samples.push(started.elapsed().as_secs_f64() * 1_000.0);
         cursor = report.next_cursor;

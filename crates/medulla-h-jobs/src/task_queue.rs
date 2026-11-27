@@ -13,11 +13,11 @@
 
 use std::sync::Arc;
 
+use crate::worker_admission::{admission_inputs, AdmissionInputs};
 use medulla_jobs::{
     JobError, JobStore, TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome,
     TASK_FAMILY_PREFIX,
 };
-use crate::worker_admission::{admission_inputs, AdmissionInputs};
 use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination as contract;
@@ -27,12 +27,12 @@ use medulla_source_types::ingest_job::{
     ingest_lane_of_queue, on_ingest_ack, on_ingest_claim, IngestAckDecision, IngestRetryPolicy,
 };
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
-use medulla_work_types::worker_registry::{
-    admit_reserved_worker_task, WorkerAdmission, WorkerAdmissionRefusal, WorkerSizingInput,
-};
 use medulla_work_types::task_queue::{
     ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome, TaskRenew,
     TaskRenewed,
+};
+use medulla_work_types::worker_registry::{
+    admit_reserved_worker_task, WorkerAdmission, WorkerAdmissionRefusal, WorkerSizingInput,
 };
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
@@ -106,10 +106,7 @@ pub fn enqueue(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskEnqueue)
     if medulla_source_types::ingest_job::ingest_lane_of_queue(&request.queue).is_some() {
         return invalid(
             req_id,
-            &format!(
-                "queue '{}' is written only by IngestEnqueue",
-                request.queue
-            ),
+            &format!("queue '{}' is written only by IngestEnqueue", request.queue),
         );
     }
     let spec = TaskSubmit {
@@ -624,7 +621,10 @@ pub async fn try_handle(
 fn dead_letter_invalid(req_id: u64, detail: &str) -> Response {
     Response::err(
         req_id,
-        format!("{}: {detail}", ServerErrorCode::DeadLetterRequestInvalid.as_str()),
+        format!(
+            "{}: {detail}",
+            ServerErrorCode::DeadLetterRequestInvalid.as_str()
+        ),
     )
 }
 
@@ -724,44 +724,44 @@ mod tests {
         AdmissionInputs {
             registry,
             config: SchedulerConfig {
-            total_workers,
-            lane_floors: BTreeMap::new(),
-            cores_per_mille: 1000,
-            memory_per_worker_bytes: 1024 * 1024 * 1024,
-            max_queue_depth: 64,
-            analytics_workers: 1,
-            analytics_lease_ms: 60_000,
-            analytics_poll_ms: 250,
-            task_lease_ms: 60_000,
-            retry_after_ms: 250,
-            worker_ttl_ms: 30_000,
-            analytics_slots: 1,
-            hydration_scope_cap: 10_000,
-            hydration_split_target_files: 2_000,
-            architecture_view_max_containers: 512,
-            enrich_timeout_ms: 5_000,
-            history_max_commits: 100_000,
-            history_support_floor: 3,
-            history_confidence_floor_milli: 300,
-            history_max_files_per_commit: 200,
-            process_import_max_elements: 100_000,
-            process_compile_max_nodes: 100_000,
-            document_max_bytes: 67_108_864,
-            process_document_max_bytes: 16 * 1024 * 1024,
-            process_document_max_depth: 64,
-            changeset_max_blob_bytes:
-                medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
-            tree_checkpoint_interval:
-                medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
-            index_max_working_bytes:
-                medulla_work_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
-            ann_storage_ceiling_bytes:
-                medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
-            ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
-            orchestration_limits: Default::default(),
-            ingest_retry: Default::default(),
-            admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
-        },
+                total_workers,
+                lane_floors: BTreeMap::new(),
+                cores_per_mille: 1000,
+                memory_per_worker_bytes: 1024 * 1024 * 1024,
+                max_queue_depth: 64,
+                analytics_workers: 1,
+                analytics_lease_ms: 60_000,
+                analytics_poll_ms: 250,
+                task_lease_ms: 60_000,
+                retry_after_ms: 250,
+                worker_ttl_ms: 30_000,
+                analytics_slots: 1,
+                hydration_scope_cap: 10_000,
+                hydration_split_target_files: 2_000,
+                architecture_view_max_containers: 512,
+                enrich_timeout_ms: 5_000,
+                history_max_commits: 100_000,
+                history_support_floor: 3,
+                history_confidence_floor_milli: 300,
+                history_max_files_per_commit: 200,
+                process_import_max_elements: 100_000,
+                process_compile_max_nodes: 100_000,
+                document_max_bytes: 67_108_864,
+                process_document_max_bytes: 16 * 1024 * 1024,
+                process_document_max_depth: 64,
+                changeset_max_blob_bytes:
+                    medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
+                tree_checkpoint_interval:
+                    medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
+                index_max_working_bytes:
+                    medulla_work_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
+                ann_storage_ceiling_bytes:
+                    medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
+                ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
+                orchestration_limits: Default::default(),
+                ingest_retry: Default::default(),
+                admit_retry_ms: medulla_work_types::scheduler_config::DEFAULT_ADMIT_RETRY_MS,
+            },
             lane_load: BTreeMap::new(),
             shard_writer_width: 4,
         }
@@ -814,16 +814,31 @@ mod tests {
             lease_ms: 30_000,
         };
         // An unregistered worker is refused and the task stays ready.
-        let refused = claim(&store, &call(2_000), request(), &admission(&[]), &Ok(default_policy()));
+        let refused = claim(
+            &store,
+            &call(2_000),
+            request(),
+            &admission(&[]),
+            &Ok(default_policy()),
+        );
         assert!(
-            refused.error.as_deref().is_some_and(|e| e.contains("WORKER_UNKNOWN")),
+            refused
+                .error
+                .as_deref()
+                .is_some_and(|e| e.contains("WORKER_UNKNOWN")),
             "{:?}",
             refused.error
         );
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (1, 0));
         // A registered worker is admitted and leases the task.
-        let leased = claim(&store, &call(3_000), request(), &admission(&["worker-1"]), &Ok(default_policy()));
+        let leased = claim(
+            &store,
+            &call(3_000),
+            request(),
+            &admission(&["worker-1"]),
+            &Ok(default_policy()),
+        );
         assert!(leased.error.is_none(), "{:?}", leased.error);
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (0, 1));
@@ -868,7 +883,11 @@ mod tests {
                 &admission(&["worker-1"]),
                 &Ok(default_policy()),
             );
-            assert!(claimed.error.is_none(), "attempt {attempt}: {:?}", claimed.error);
+            assert!(
+                claimed.error.is_none(),
+                "attempt {attempt}: {:?}",
+                claimed.error
+            );
             let acked = ack(
                 &store,
                 &call(now + 1),
@@ -880,7 +899,11 @@ mod tests {
                 },
                 &policy,
             );
-            assert!(acked.error.is_none(), "attempt {attempt}: {:?}", acked.error);
+            assert!(
+                acked.error.is_none(),
+                "attempt {attempt}: {:?}",
+                acked.error
+            );
             let job = store.get(&digest).unwrap();
             if attempt < 5 {
                 // Redelivery waits inside the next_delay bounds of this attempt.
@@ -968,7 +991,11 @@ mod tests {
             &admission(&["worker-1"]),
             &Ok(default_policy()),
         );
-        assert!(claimed.error.is_none(), "claim refused: {:?}", claimed.error);
+        assert!(
+            claimed.error.is_none(),
+            "claim refused: {:?}",
+            claimed.error
+        );
         let leased = store
             .task_queue_load("acme", "ingest")
             .expect("queue load readable");

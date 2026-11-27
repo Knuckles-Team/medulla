@@ -10,14 +10,14 @@ use super::*;
 use medulla_mutation_types::evolution_metrics::{
     evolution_trace_metrics, EvolutionTraceQuery, EVOLUTION_TRACE_METRICS,
 };
+use medulla_mutation_types::harness_metrics::{
+    capability_gaps_by_task_class, harness_config_evidence, price_table_from_node,
+    run_harness_query, run_trace_usage, task_class_closure, CapabilityGapQuery,
+    ConfigEvidenceQuery, HarnessQuery, RunTraceUsageQuery, TraceSufficiency,
+    CAPABILITY_GAPS_BY_TASK_CLASS, HARNESS_CONFIG_EVIDENCE, RUN_TRACE_USAGE, SUB_TASK_CLASS_OF,
+};
 use medulla_mutation_types::harness_session_search::{
     harness_session_search, SessionSearchQuery, HARNESS_SESSION_SEARCH,
-};
-use medulla_mutation_types::harness_metrics::{
-    capability_gaps_by_task_class, harness_config_evidence, task_class_closure,
-    CapabilityGapQuery, CAPABILITY_GAPS_BY_TASK_CLASS, SUB_TASK_CLASS_OF, price_table_from_node, run_harness_query, run_trace_usage,
-    ConfigEvidenceQuery, HarnessQuery, RunTraceUsageQuery, TraceSufficiency,
-    HARNESS_CONFIG_EVIDENCE, RUN_TRACE_USAGE,
 };
 
 /// Answer one harness statement over the caller's visible `RunTrace` nodes.
@@ -282,7 +282,10 @@ fn handle_harness_config_evidence(
         .filter_map(|id| snap.node_row_object(id).map(|props| (id.clone(), props)))
         .filter(|(_, props)| props.get("node_type").and_then(|v| v.as_str()) == Some("RunTrace"))
         .collect();
-    let traces: Vec<_> = nodes.iter().map(|(id, props)| (id.clone(), props)).collect();
+    let traces: Vec<_> = nodes
+        .iter()
+        .map(|(id, props)| (id.clone(), props))
+        .collect();
     let answered = harness_config_evidence(&evidence, &traces);
     let warnings = answered
         .iter()
@@ -392,7 +395,10 @@ fn handle_capability_gaps(
         let Some(props) = snap.node_row_object(id) else {
             continue;
         };
-        if let Some(revision) = props.get("taxonomy_revision").and_then(|value| value.as_u64()) {
+        if let Some(revision) = props
+            .get("taxonomy_revision")
+            .and_then(|value| value.as_u64())
+        {
             current_revision = current_revision.max(revision);
         }
         nodes.push((id.clone(), props));

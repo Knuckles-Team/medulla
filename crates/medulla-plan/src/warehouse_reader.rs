@@ -15,10 +15,10 @@ use medulla_federation::warehouse_foreign::{
     register_warehouse_reader, WarehouseRead, WarehouseReader, CAPABILITY_UNSUPPORTED,
     SCHEMA_DRIFT, SOURCE_UNAVAILABLE,
 };
+use medulla_query_types::warehouse_federation::WarehouseSourceKind;
 use medulla_sql::sql::{
     read_iceberg_table, IcebergCompare, IcebergFilter, IcebergReadError, IcebergReadRequest,
 };
-use medulla_query_types::warehouse_federation::WarehouseSourceKind;
 
 use crate::warehouse_pushdown::{
     plan_pushdown, WarehousePushdownRefusal, WarehousePushdownRequest,

@@ -8,8 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::knowledge_curation::{
     ContradictionFinding, CurationEditOp, CurationProposal, LoopMetrics,
-    CONTRADICTS_ACTIVE_DEFINITION, CONTRADICTS_INVARIANT, REFERENCE_UNRESOLVED,
-    UPDATE_BASE_STALE,
+    CONTRADICTS_ACTIVE_DEFINITION, CONTRADICTS_INVARIANT, REFERENCE_UNRESOLVED, UPDATE_BASE_STALE,
 };
 use medulla_decision_types::knowledge_flag::FlagState;
 
@@ -36,7 +35,10 @@ pub struct Invariant {
     pub forbidden_ops: Vec<CurationEditOp>,
 }
 
-fn finding(code: medulla_types::refusal_code::RefusalCode, other: Option<String>) -> ContradictionFinding {
+fn finding(
+    code: medulla_types::refusal_code::RefusalCode,
+    other: Option<String>,
+) -> ContradictionFinding {
     ContradictionFinding {
         code: code.as_str().to_string(),
         other_ref: other,
@@ -75,7 +77,8 @@ pub fn check_contradictions(
     let mut gates: Vec<&Invariant> = invariants
         .iter()
         .filter(|invariant| {
-            target.starts_with(&invariant.target_prefix) && invariant.forbidden_ops.contains(&edit.op)
+            target.starts_with(&invariant.target_prefix)
+                && invariant.forbidden_ops.contains(&edit.op)
         })
         .collect();
     gates.sort_by(|a, b| a.invariant_id.cmp(&b.invariant_id));
@@ -103,7 +106,8 @@ pub fn check_contradictions(
 
 /// Whether a curation cycle is due: no cycle ran yet, or the cadence has elapsed since the last.
 pub fn is_due(last_cycle_ms: Option<u64>, now_ms: u64, cadence_seconds: u64) -> bool {
-    last_cycle_ms.is_none_or(|last| now_ms >= last.saturating_add(cadence_seconds.saturating_mul(1000)))
+    last_cycle_ms
+        .is_none_or(|last| now_ms >= last.saturating_add(cadence_seconds.saturating_mul(1000)))
 }
 
 /// What the measures read from one stored flag.
@@ -142,7 +146,11 @@ pub fn loop_metrics(flags: &[FlagMeasure], from_ms: u64, to_ms: u64) -> LoopMetr
     let median = match spans.len() {
         0 => 0,
         n if n % 2 == 1 => spans[n / 2],
-        n => (spans[n / 2 - 1] / 2) + (spans[n / 2] / 2) + ((spans[n / 2 - 1] % 2 + spans[n / 2] % 2) / 2),
+        n => {
+            (spans[n / 2 - 1] / 2)
+                + (spans[n / 2] / 2)
+                + ((spans[n / 2 - 1] % 2 + spans[n / 2] % 2) / 2)
+        }
     };
     let ever_curated = window.iter().filter(|flag| flag.curated_times > 0).count() as u64;
     let came_back = window

@@ -12,13 +12,14 @@
 //! `medulla_graph_core::memory_snapshot`, shared with the decide handler.
 
 use super::memory_cursor;
+use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::memory_snapshot as store;
 use medulla_graph_core::memory_snapshot::{AckRow, CandidateRow, RevisionRow, SnapshotSlot};
-use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
     decide, revision_node_id, Decision, DocId, ListCursor, MemoryDocKind, MemorySnapshotHead,
-    MemorySnapshotList, MemorySnapshotRead, MemorySyncError, SearchStateEvidence, MemorySyncRefusal, Resolution, SnapshotPlan, SnapshotProvenance,
-    SnapshotRowWrite, SyncAction, SyncOutcome, SyncReceipt, SyncRequest, SyncStamp, SyncStanding,
+    MemorySnapshotList, MemorySnapshotRead, MemorySyncError, MemorySyncRefusal, Resolution,
+    SearchStateEvidence, SnapshotPlan, SnapshotProvenance, SnapshotRowWrite, SyncAction,
+    SyncOutcome, SyncReceipt, SyncRequest, SyncStamp, SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::graph as results;
@@ -352,7 +353,9 @@ fn plan_acknowledge(
         return (refused(MemorySyncRefusal::VersionMalformed), Vec::new());
     };
     let doc = &request.doc_id;
-    let unresolved = store::candidates(core, doc).iter().any(|(_, c)| !c.resolved);
+    let unresolved = store::candidates(core, doc)
+        .iter()
+        .any(|(_, c)| !c.resolved);
     let stale = store::load_row::<AckRow>(core, &store::ack_node_id(doc))
         .is_some_and(|held| held.observation_generation > *observation_generation);
     let standing = match (unresolved, stale, standing) {
@@ -411,8 +414,14 @@ pub fn decide_sync(
             content,
             content_digest,
         } => {
-            let (head, writes) =
-                revision_writes(request, stamp, revision, parent_revision, content, content_digest);
+            let (head, writes) = revision_writes(
+                request,
+                stamp,
+                revision,
+                parent_revision,
+                content,
+                content_digest,
+            );
             (SyncOutcome::Accepted { head }, writes)
         }
         Decision::RetainCandidate {
@@ -501,7 +510,11 @@ pub fn content_change(
         (SyncAction::Resolve { .. }, SyncOutcome::Resolved { head })
             if head.revision > head_revision =>
         {
-            Some((ContentChange::Consolidate, head.content_digest, head_revision))
+            Some((
+                ContentChange::Consolidate,
+                head.content_digest,
+                head_revision,
+            ))
         }
         _ => None,
     }
@@ -526,7 +539,8 @@ pub fn planned_content(
     match outcome {
         SyncOutcome::Accepted { head } | SyncOutcome::Resolved { head } => {
             let bytes = written(revision_node_id(doc, head.revision))?;
-            store::decode_row::<RevisionRow>(bytes).map(|row| (SnapshotSlot::Revision(head.revision), row.content))
+            store::decode_row::<RevisionRow>(bytes)
+                .map(|row| (SnapshotSlot::Revision(head.revision), row.content))
         }
         SyncOutcome::ConflictRetained {
             candidate_revision, ..
@@ -535,7 +549,8 @@ pub fn planned_content(
                 "{}{candidate_revision}",
                 store::candidate_prefix(doc)
             ))?;
-            store::decode_row::<CandidateRow>(bytes).map(|row| (SnapshotSlot::Candidate(*candidate_revision), row.content))
+            store::decode_row::<CandidateRow>(bytes)
+                .map(|row| (SnapshotSlot::Candidate(*candidate_revision), row.content))
         }
         _ => None,
     }
@@ -557,8 +572,9 @@ pub fn exceeds_capacity(
     };
     let incoming = content.len() as u64;
     let replaced = match outcome {
-        SyncOutcome::Accepted { .. } | SyncOutcome::Resolved { .. } => store::load_head(core, doc)
-            .map_or(0, |head| u64::from(head.content_len)),
+        SyncOutcome::Accepted { .. } | SyncOutcome::Resolved { .. } => {
+            store::load_head(core, doc).map_or(0, |head| u64::from(head.content_len))
+        }
         _ => 0,
     };
     store::exceeds_capacity(
@@ -579,11 +595,7 @@ pub enum ContentChange {
 /// ran the receipt gate before it named `SyncMemorySnapshotStore`. The plan
 /// applies only over the pre-image it was decided against, so a head that moved
 /// between plan and commit answers `BUSY` and the router plans again.
-pub(crate) async fn sync(
-    ctx: &MutationCtx<'_>,
-    plan: &MutationPlan,
-    method: &Method,
-) -> Response {
+pub(crate) async fn sync(ctx: &MutationCtx<'_>, plan: &MutationPlan, method: &Method) -> Response {
     let Method::SyncMemorySnapshotStore {
         request,
         plan: snapshot,

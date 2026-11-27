@@ -290,13 +290,7 @@ async fn only_own_rows_return() {
         ("plan-scope-a", vec!["a-1", "a-2"]),
         ("plan-scope-b", vec!["b-1", "b-2", "b-3"]),
     ] {
-        let scan = send_in(
-            &state,
-            graph,
-            60,
-            test_support::uql("MATCH (:Doc)"),
-        )
-        .await;
+        let scan = send_in(&state, graph, 60, test_support::uql("MATCH (:Doc)")).await;
         assert_eq!(row_ids(&scan), expected, "graph scan of {graph}: {scan:?}");
 
         let ranked = send_in(

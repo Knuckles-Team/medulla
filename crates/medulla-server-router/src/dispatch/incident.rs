@@ -159,7 +159,11 @@ async fn incident_defect_operations(
 ) -> Result<Vec<Value>, String> {
     let filings: Vec<(String, AnomalyReading)> = authority
         .changes()
-        .flat_map(|(record, added)| added.iter().map(move |reading| (record.id.clone(), reading.clone())))
+        .flat_map(|(record, added)| {
+            added
+                .iter()
+                .map(move |reading| (record.id.clone(), reading.clone()))
+        })
         .collect();
     if filings.is_empty() {
         return Ok(Vec::new());
@@ -168,7 +172,10 @@ async fn incident_defect_operations(
     let graph = loaded.read.project_core(&loaded.core);
     let index = medulla_source_types::stack_frame::SymbolIndex::new(
         graph
-            .get_nodes_by_label(medulla_source_types::stack_frame::SYMBOL_TYPE, MAX_SYMBOLS_READ)
+            .get_nodes_by_label(
+                medulla_source_types::stack_frame::SYMBOL_TYPE,
+                MAX_SYMBOLS_READ,
+            )
             .into_iter()
             .filter_map(|(id, blob)| {
                 let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
@@ -183,7 +190,8 @@ async fn incident_defect_operations(
     let seam = medulla_server_ops::api::ingest::ingest_seam(state)
         .await
         .ok_or_else(|| "INGEST_SEAM_UNAVAILABLE: the defect book is not installed".to_string())?;
-    let mut stored = std::collections::BTreeMap::<String, Vec<medulla_source_types::lifecycle::Defect>>::new();
+    let mut stored =
+        std::collections::BTreeMap::<String, Vec<medulla_source_types::lifecycle::Defect>>::new();
     let mut operations = Vec::new();
     for (incident_id, reading) in filings {
         let Some(symbol) = index
@@ -208,7 +216,10 @@ async fn incident_defect_operations(
         if !stored.contains_key(&repo) {
             let mut defects: Vec<medulla_source_types::lifecycle::Defect> = loaded
                 .core
-                .get_nodes_by_label(medulla_source_types::lifecycle::DEFECT_TYPE, MAX_INCIDENTS_READ)
+                .get_nodes_by_label(
+                    medulla_source_types::lifecycle::DEFECT_TYPE,
+                    MAX_INCIDENTS_READ,
+                )
                 .into_iter()
                 .filter_map(|(_, blob)| {
                     let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;

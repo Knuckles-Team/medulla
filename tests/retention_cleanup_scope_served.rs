@@ -69,10 +69,20 @@ async fn retention_run_without_the_scope_is_access_denied() {
             ),
         )
         .await;
-        assert!(refused.result.is_none(), "an unscoped caller ran a cleanup step");
+        assert!(
+            refused.result.is_none(),
+            "an unscoped caller ran a cleanup step"
+        );
         let error = refused.error.expect("an unscoped caller is refused");
-        assert!(error.contains("ACCESS_DENIED"), "unexpected refusal: {error}");
+        assert!(
+            error.contains("ACCESS_DENIED"),
+            "unexpected refusal: {error}"
+        );
     }
 
-    assert_eq!(node_listing(&state, 5).await, before, "a refusal leaves the graph unchanged");
+    assert_eq!(
+        node_listing(&state, 5).await,
+        before,
+        "a refusal leaves the graph unchanged"
+    );
 }

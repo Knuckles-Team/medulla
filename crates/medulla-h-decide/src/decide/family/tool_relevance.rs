@@ -16,8 +16,8 @@ use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::tool_relevance::{
-    max_tools_from_policy, rrf_k_from_policy, AssignedTool, ToolAssignmentRequest, ToolRankingKnobs,
-    ToolRelevanceRefusal, CATALOG_TOO_LARGE, UNKNOWN_ROLE,
+    max_tools_from_policy, rrf_k_from_policy, AssignedTool, ToolAssignmentRequest,
+    ToolRankingKnobs, ToolRelevanceRefusal, CATALOG_TOO_LARGE, UNKNOWN_ROLE,
 };
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;

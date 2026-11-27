@@ -92,9 +92,9 @@ impl ShardCommitPublisher {
                     node_offset: 0,
                     edge_offset: 0,
                     node_after: node_after.as_deref(),
-                    edge_after: edge_after
-                        .as_ref()
-                        .map(|(source, target, ordinal)| (source.as_str(), target.as_str(), *ordinal)),
+                    edge_after: edge_after.as_ref().map(|(source, target, ordinal)| {
+                        (source.as_str(), target.as_str(), *ordinal)
+                    }),
                     page_size: BATCH_ROWS,
                 },
             )?
@@ -130,7 +130,10 @@ impl CommitPublisher for ShardCommitPublisher {
     fn publish(&self, commit: &PublishedCommit<'_>) -> Result<(), String> {
         let snapshot = || self.graph_snapshot(commit.graph_fname);
         #[cfg(feature = "security")]
-        let seal_key_id = self.cipher.as_ref().map(|cipher| cipher.key_ref().id.clone());
+        let seal_key_id = self
+            .cipher
+            .as_ref()
+            .map(|cipher| cipher.key_ref().id.clone());
         #[cfg(not(feature = "security"))]
         let seal_key_id = None;
         self.runtime

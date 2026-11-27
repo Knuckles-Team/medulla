@@ -66,7 +66,8 @@ pub fn nearest_calls(sql: &str) -> usize {
             continue;
         }
         let word_start = c.is_alphabetic() || c == '_';
-        if word_start && (index == 0 || !(bytes[index - 1].is_alphanumeric() || bytes[index - 1] == '_'))
+        if word_start
+            && (index == 0 || !(bytes[index - 1].is_alphanumeric() || bytes[index - 1] == '_'))
         {
             let end = bytes[index..]
                 .iter()
@@ -238,7 +239,9 @@ struct NearestUdf {
 
 impl std::fmt::Debug for NearestUdf {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NearestUdf").field("name", &NEAREST_FN).finish()
+        f.debug_struct("NearestUdf")
+            .field("name", &NEAREST_FN)
+            .finish()
     }
 }
 
@@ -377,16 +380,15 @@ mod tests {
             .collect();
         assert_eq!(ids, ["d1", "d2"]);
 
-        let explained = crate::sql::exec_sql_typed_with_tables(
-            &view,
-            &ranked,
-            &format!("EXPLAIN {sql}"),
-        )
-        .unwrap();
+        let explained =
+            crate::sql::exec_sql_typed_with_tables(&view, &ranked, &format!("EXPLAIN {sql}"))
+                .unwrap();
         assert!(
             explained.rows.iter().any(|row| {
                 row[0].as_str() == Some("vector_scan")
-                    && row[1].as_str().is_some_and(|plan| plan.contains("binding=binding:docs.body"))
+                    && row[1]
+                        .as_str()
+                        .is_some_and(|plan| plan.contains("binding=binding:docs.body"))
             }),
             "{:?}",
             explained.rows
@@ -411,9 +413,10 @@ mod tests {
                 explain: false,
             }
         );
-        let explained = nearest_form("EXPLAIN SELECT body FROM docs ORDER BY nearest(body, 'x') LIMIT 1")
-            .unwrap()
-            .unwrap();
+        let explained =
+            nearest_form("EXPLAIN SELECT body FROM docs ORDER BY nearest(body, 'x') LIMIT 1")
+                .unwrap()
+                .unwrap();
         assert!(explained.explain);
         assert_eq!(nearest_form("SELECT * FROM docs LIMIT 2").unwrap(), None);
         assert_eq!(

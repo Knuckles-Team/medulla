@@ -207,10 +207,7 @@ async fn stored_steps_keep_source_ids() {
     let imported: ProcessModelImported = payload(import(&state, 2, EPC_SIDE, Some(0)).await);
 
     let node = node_properties(&state, &imported.workflow_id);
-    assert_eq!(
-        node["workflowDigest"],
-        stated.digest.clone()
-    );
+    assert_eq!(node["workflowDigest"], stated.digest.clone());
     assert_eq!(node["importedFrom"], stated.source.model_id);
     let annex: serde_json::Value =
         serde_json::from_str(node["processAnnex"].as_str().unwrap()).unwrap();

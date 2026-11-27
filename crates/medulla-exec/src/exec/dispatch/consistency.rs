@@ -228,8 +228,7 @@ pub(super) fn collect(
                     .get(&(property.as_str(), id.as_str()))
                     .map(|group| group.iter().copied().filter(|e| e.from.is_none()).collect())
                     .unwrap_or_default();
-                let targets: BTreeSet<&str> =
-                    undated.iter().map(|e| e.target.as_str()).collect();
+                let targets: BTreeSet<&str> = undated.iter().map(|e| e.target.as_str()).collect();
                 let observed = u32::try_from(targets.len()).unwrap_or(u32::MAX);
                 let below = bounds.min.is_some_and(|min| observed < min);
                 let above = bounds.max.is_some_and(|max| observed > max);
@@ -577,20 +576,19 @@ ex:B a owl:Class .
             if let (Some(map), Some(extra)) = (value.as_object_mut(), extra.as_object()) {
                 map.extend(extra.clone());
             }
-            self.core
-                .add_edge(id(from), id(to), props(value))
-                .unwrap();
+            self.core.add_edge(id(from), id(to), props(value)).unwrap();
         }
 
         fn typed(&self, name: &str, class: &str) {
-            self.core.add_edge(
-                id(name),
-                id(class),
-                props(serde_json::json!({
-                    "relationship": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-                })),
-            )
-            .unwrap();
+            self.core
+                .add_edge(
+                    id(name),
+                    id(class),
+                    props(serde_json::json!({
+                        "relationship": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                    })),
+                )
+                .unwrap();
         }
 
         fn view(&self) -> GraphView {
@@ -647,10 +645,30 @@ ex:B a owl:Class .
         fx.edge("b1", "asym", "a1", none.clone());
         fx.edge("a2", "asym", "b2", none.clone());
         // temporal conflict: overlapping intervals, and a back-to-back control
-        fx.edge("x", "func", "t1", serde_json::json!({"valid_from": 1, "valid_until": 10}));
-        fx.edge("x", "func", "t2", serde_json::json!({"valid_from": 5, "valid_until": 20}));
-        fx.edge("y", "func", "t1", serde_json::json!({"valid_from": 1, "valid_until": 4}));
-        fx.edge("y", "func", "t2", serde_json::json!({"valid_from": 4, "valid_until": 9}));
+        fx.edge(
+            "x",
+            "func",
+            "t1",
+            serde_json::json!({"valid_from": 1, "valid_until": 10}),
+        );
+        fx.edge(
+            "x",
+            "func",
+            "t2",
+            serde_json::json!({"valid_from": 5, "valid_until": 20}),
+        );
+        fx.edge(
+            "y",
+            "func",
+            "t1",
+            serde_json::json!({"valid_from": 1, "valid_until": 4}),
+        );
+        fx.edge(
+            "y",
+            "func",
+            "t2",
+            serde_json::json!({"valid_from": 4, "valid_until": 9}),
+        );
         // cardinality: a Team with no member violates, one with a member is the control
         fx.typed("empty", "Team");
         fx.typed("full", "Team");
@@ -711,10 +729,16 @@ ex:B a owl:Class .
                 affected_terms: vec!["http://ex/A".to_string(), "http://ex/B".to_string()],
             }
         );
-        assert_eq!(found[&id("bad")][0].axiom_id, "disjoint:http://ex/A:http://ex/B");
+        assert_eq!(
+            found[&id("bad")][0].axiom_id,
+            "disjoint:http://ex/A:http://ex/B"
+        );
 
         // Reading is not writing: the snapshot is unchanged by validation.
-        assert_eq!(view.node_map.len(), fx.core.analysis_snapshot().node_map.len());
+        assert_eq!(
+            view.node_map.len(),
+            fx.core.analysis_snapshot().node_map.len()
+        );
         assert_eq!(
             view.edge_properties.len(),
             fx.core.analysis_snapshot().edge_properties.len()
@@ -739,9 +763,14 @@ ex:B a owl:Class .
         let stale = IntegrityShape::parse(&format!("integrity:consistency:{}", "0".repeat(64)))
             .unwrap()
             .unwrap();
-        let refused =
-            super::super::shape_integrity::run_named_shapes(&ctx, input(), &stale, "", ShapeKeep::Violating)
-                .unwrap_err();
+        let refused = super::super::shape_integrity::run_named_shapes(
+            &ctx,
+            input(),
+            &stale,
+            "",
+            ShapeKeep::Violating,
+        )
+        .unwrap_err();
         assert!(refused.starts_with("ONTOLOGY_REVISION_STALE"), "{refused}");
 
         let current = IntegrityShape::parse(&format!(
@@ -750,9 +779,14 @@ ex:B a owl:Class .
         ))
         .unwrap()
         .unwrap();
-        let rows =
-            super::super::shape_integrity::run_named_shapes(&ctx, input(), &current, "", ShapeKeep::Violating)
-                .unwrap();
+        let rows = super::super::shape_integrity::run_named_shapes(
+            &ctx,
+            input(),
+            &current,
+            "",
+            ShapeKeep::Violating,
+        )
+        .unwrap();
         assert_eq!(rows.len(), 1);
         let violations = rows.text(&id("loop"), "shape.violations").unwrap();
         let decoded: Vec<Violation> = serde_json::from_str(violations).unwrap();

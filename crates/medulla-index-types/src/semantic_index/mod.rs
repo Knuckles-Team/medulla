@@ -23,8 +23,8 @@ mod provenance;
 mod request;
 mod response;
 mod selector;
-mod semantic_machine;
 mod selector_ref;
+mod semantic_machine;
 mod source_dirty;
 mod source_kind;
 mod source_manifest;
@@ -65,6 +65,10 @@ pub use generation::{
     SemanticGenerationCheckpointDraft, SemanticGenerationCheckpointUpdate,
     SemanticGenerationDependency, SemanticGenerationMember, SemanticStageScope,
 };
+pub use graph_source::{
+    bind_graph_source, bound_graph_sources, GraphSourceCoordinates,
+    SEMANTIC_GRAPH_SOURCE_ACL_REVISION,
+};
 pub use identity::{
     SemanticAnnIndexIdentity, SemanticBinding, SemanticBindingDraft, SemanticLexicalIndexIdentity,
     SemanticVector, SEMANTIC_ANN_INDEX_SCHEMA, SEMANTIC_BINDING_SCHEMA,
@@ -102,10 +106,6 @@ pub use selector_ref::{
     SEMANTIC_GRAPH_SCHEMA_ID, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
 pub use semantic_machine::{SemanticEvent, SemanticGuard, SEMANTIC_MACHINE};
-pub use graph_source::{
-    bind_graph_source, bound_graph_sources, GraphSourceCoordinates,
-    SEMANTIC_GRAPH_SOURCE_ACL_REVISION,
-};
 pub use source_dirty::SemanticSourceDirtyIntent;
 pub use source_kind::{SemanticSourceKind, SemanticSourceRevision};
 pub use source_manifest::{

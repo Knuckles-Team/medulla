@@ -70,7 +70,13 @@ fn action_record_terms_and_shape() {
     parse_turtle(SHAPES).expect("the action shapes parse");
 
     // A complete record conforms: every kind, with used facts or a stated reason.
-    for kind in ["tool_call", "approval", "filing", "money_movement", "publish"] {
+    for kind in [
+        "tool_call",
+        "approval",
+        "filing",
+        "money_movement",
+        "publish",
+    ] {
         let data = format!("{}{}", record(Some(kind), true, USES_FACT), fact(DIGEST));
         assert_eq!(conforms(&data), (true, vec![]), "{kind}");
     }
@@ -83,7 +89,11 @@ fn action_record_terms_and_shape() {
 
     // No kind, an unknown kind, no actor, and neither input nor reason all fail.
     for (name, data, path) in [
-        ("no kind", record(None, true, USES_FACT) + &fact(DIGEST), "actionKind"),
+        (
+            "no kind",
+            record(None, true, USES_FACT) + &fact(DIGEST),
+            "actionKind",
+        ),
         (
             "unknown kind",
             record(Some("telepathy"), true, USES_FACT) + &fact(DIGEST),
@@ -111,7 +121,10 @@ fn action_record_terms_and_shape() {
         fact(&DIGEST.replace("sha256:", ""))
     );
     let (ok, paths) = conforms(&bad_digest);
-    assert!(!ok && paths.iter().any(|p| p.ends_with("factDigest")), "{paths:?}");
+    assert!(
+        !ok && paths.iter().any(|p| p.ends_with("factDigest")),
+        "{paths:?}"
+    );
     let negative = format!(
         "{}ex:f1 a :FactUse ; :factNode \"n\" ; :factRevision -1 ; :factDigest \"{DIGEST}\" .\n",
         record(Some("filing"), true, USES_FACT)

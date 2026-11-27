@@ -6,7 +6,7 @@
 
 use medulla_quantum_core::qasm::{from_qasm2, to_qasm2, QasmError};
 use medulla_quantum_core::{
-    ClassicalBitRef, ClassicalRegister, ControlQubit, ControlPolarity, GateInstruction, GateKind,
+    ClassicalBitRef, ClassicalRegister, ControlPolarity, ControlQubit, GateInstruction, GateKind,
     Instruction, ParamValue, QuantumProgram, IR_VERSION,
 };
 

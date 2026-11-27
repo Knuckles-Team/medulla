@@ -96,7 +96,11 @@ pub enum CircuitGuard {
 pub static CIRCUIT_BREAKER_MACHINE: MachineDef<CircuitKind, CircuitEvent, CircuitGuard> =
     MachineDef {
         name: "CircuitBreakerMachine",
-        states: &[CircuitKind::Closed, CircuitKind::Open, CircuitKind::HalfOpen],
+        states: &[
+            CircuitKind::Closed,
+            CircuitKind::Open,
+            CircuitKind::HalfOpen,
+        ],
         initial: CircuitKind::Closed,
         terminals: &[],
         events: &[CircuitEvent::Tick, CircuitEvent::Observe],
@@ -198,7 +202,12 @@ pub(crate) fn next_state(
             outcome == Some(Outcome::Failure) && failures.saturating_add(1) >= failure_threshold
         }
     };
-    let edge = transition(&CIRCUIT_BREAKER_MACHINE, state.kind(), step.event(), guard_holds)?;
+    let edge = transition(
+        &CIRCUIT_BREAKER_MACHINE,
+        state.kind(),
+        step.event(),
+        guard_holds,
+    )?;
     Ok(match edge.to {
         CircuitKind::Closed => CircuitState::Closed {
             consecutive_failures: match edge.guard {
@@ -237,13 +246,73 @@ mod tests {
         use CircuitStep::{Observe, Tick};
         use Outcome::{Failure, Success};
         let legal = [
-            ("CB01", Closed { consecutive_failures: 2 }, Observe { outcome: Success, now_ms: 10 }, Closed { consecutive_failures: 0 }),
-            ("CB02", Closed { consecutive_failures: 1 }, Observe { outcome: Failure, now_ms: 10 }, Closed { consecutive_failures: 2 }),
-            ("CB03", Closed { consecutive_failures: 2 }, Observe { outcome: Failure, now_ms: 10 }, Open { since_ms: 10 }),
-            ("CB04", Open { since_ms: 5 }, Observe { outcome: Failure, now_ms: 10 }, Open { since_ms: 5 }),
+            (
+                "CB01",
+                Closed {
+                    consecutive_failures: 2,
+                },
+                Observe {
+                    outcome: Success,
+                    now_ms: 10,
+                },
+                Closed {
+                    consecutive_failures: 0,
+                },
+            ),
+            (
+                "CB02",
+                Closed {
+                    consecutive_failures: 1,
+                },
+                Observe {
+                    outcome: Failure,
+                    now_ms: 10,
+                },
+                Closed {
+                    consecutive_failures: 2,
+                },
+            ),
+            (
+                "CB03",
+                Closed {
+                    consecutive_failures: 2,
+                },
+                Observe {
+                    outcome: Failure,
+                    now_ms: 10,
+                },
+                Open { since_ms: 10 },
+            ),
+            (
+                "CB04",
+                Open { since_ms: 5 },
+                Observe {
+                    outcome: Failure,
+                    now_ms: 10,
+                },
+                Open { since_ms: 5 },
+            ),
             ("CB05", Open { since_ms: 5 }, Tick { now_ms: 105 }, HalfOpen),
-            ("CB06", HalfOpen, Observe { outcome: Success, now_ms: 10 }, Closed { consecutive_failures: 0 }),
-            ("CB07", HalfOpen, Observe { outcome: Failure, now_ms: 10 }, Open { since_ms: 10 }),
+            (
+                "CB06",
+                HalfOpen,
+                Observe {
+                    outcome: Success,
+                    now_ms: 10,
+                },
+                Closed {
+                    consecutive_failures: 0,
+                },
+            ),
+            (
+                "CB07",
+                HalfOpen,
+                Observe {
+                    outcome: Failure,
+                    now_ms: 10,
+                },
+                Open { since_ms: 10 },
+            ),
         ];
         assert_eq!(legal.len(), CIRCUIT_BREAKER_MACHINE.edges.len());
         for (id, from, step, to) in legal {
@@ -274,10 +343,24 @@ mod tests {
         use CircuitStep::{Observe, Tick};
         let refused = [
             // The cooldown has not elapsed.
-            (Open { since_ms: 5 }, Tick { now_ms: 50 }, TransitionRefusalReason::GuardFailed),
+            (
+                Open { since_ms: 5 },
+                Tick { now_ms: 50 },
+                TransitionRefusalReason::GuardFailed,
+            ),
             // No edge leaves these kinds on a tick.
-            (Closed { consecutive_failures: 0 }, Tick { now_ms: 500 }, TransitionRefusalReason::IllegalTransition),
-            (HalfOpen, Tick { now_ms: 500 }, TransitionRefusalReason::IllegalTransition),
+            (
+                Closed {
+                    consecutive_failures: 0,
+                },
+                Tick { now_ms: 500 },
+                TransitionRefusalReason::IllegalTransition,
+            ),
+            (
+                HalfOpen,
+                Tick { now_ms: 500 },
+                TransitionRefusalReason::IllegalTransition,
+            ),
         ];
         for (state, step, reason) in refused {
             let mut breaker = breaker_in(state);
@@ -296,13 +379,18 @@ mod tests {
                     .iter()
                     .any(|edge| edge.from == kind && edge.event == event);
                 let state = match kind {
-                    CircuitKind::Closed => Closed { consecutive_failures: 0 },
+                    CircuitKind::Closed => Closed {
+                        consecutive_failures: 0,
+                    },
                     CircuitKind::Open => Open { since_ms: 0 },
                     CircuitKind::HalfOpen => HalfOpen,
                 };
                 let step = match event {
                     CircuitEvent::Tick => Tick { now_ms: 0 },
-                    CircuitEvent::Observe => Observe { outcome: Outcome::Success, now_ms: 0 },
+                    CircuitEvent::Observe => Observe {
+                        outcome: Outcome::Success,
+                        now_ms: 0,
+                    },
                 };
                 if !has_edge {
                     let error = breaker_in(state).apply(step).expect_err("no edge");
@@ -315,11 +403,18 @@ mod tests {
         assert!(breaker.observe(Some(Outcome::Failure), 1).is_ok());
         assert_eq!(breaker.state, Open { since_ms: 1 });
         breaker.tick(5);
-        assert_eq!(breaker.state, Open { since_ms: 1 }, "an early tick is absorbed");
+        assert_eq!(
+            breaker.state,
+            Open { since_ms: 1 },
+            "an early tick is absorbed"
+        );
         breaker.tick(11);
         assert_eq!(breaker.state, HalfOpen);
         breaker.tick(500);
-        assert_eq!(breaker.state, HalfOpen, "a tick of a half-open breaker is absorbed");
+        assert_eq!(
+            breaker.state, HalfOpen,
+            "a tick of a half-open breaker is absorbed"
+        );
     }
 
     // spec: MEDULLA-PLACEMENT-R784.1
@@ -346,7 +441,11 @@ mod tests {
             }
             offset += line.len();
         }
-        assert_eq!(assignments.len(), 1, "state is assigned in one place: {assignments:?}");
+        assert_eq!(
+            assignments.len(),
+            1,
+            "state is assigned in one place: {assignments:?}"
+        );
         assert!(
             (apply_start..apply_end).contains(&assignments[0]),
             "the only assignment to `.state` is in `apply`"

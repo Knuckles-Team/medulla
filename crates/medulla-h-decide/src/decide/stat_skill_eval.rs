@@ -92,10 +92,17 @@ pub(super) fn calibrate(
 ) -> Result<SkillEvalCalibrated, String> {
     let knobs = knobs();
     if request.skill_ref.is_empty() || request.calibration.judge_ref.is_empty() {
-        return Err(invalid_parameter("a calibration names its skill and its judge"));
+        return Err(invalid_parameter(
+            "a calibration names its skill and its judge",
+        ));
     }
     let key = format!("{CALIBRATION_PREFIX}{}", request.skill_ref);
-    swap(store, &request.tenant_id, &key, encode_artifact(&request.calibration)?)?;
+    swap(
+        store,
+        &request.tenant_id,
+        &key,
+        encode_artifact(&request.calibration)?,
+    )?;
     Ok(SkillEvalCalibrated {
         skill_ref: request.skill_ref.clone(),
         admitted: request.calibration.kappa_ppm >= knobs.judge_min_kappa_ppm
@@ -120,16 +127,24 @@ pub(super) fn case_add_operations(
 ) -> Result<(Vec<Value>, SkillEvalCaseAdded), String> {
     let case = &request.case;
     if case.case_id.is_empty() || case.skill_ref.is_empty() || case.input_digest.is_empty() {
-        return Err(invalid_parameter("a case names its id, its skill and its input digest"));
+        return Err(invalid_parameter(
+            "a case names its id, its skill and its input digest",
+        ));
     }
     let tools: BTreeSet<String> = request.known_tools.iter().cloned().collect();
-    check_case(case, &tools).map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.reason))?;
+    check_case(case, &tools)
+        .map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.reason))?;
     let node_id = case_node_id(&request.tenant_id, &case.case_id);
     let mut properties = match serde_json::to_value(case) {
         Ok(Value::Object(fields)) => fields,
         _ => return Err(invalid_parameter("the case does not encode")),
     };
-    let text = |value: Option<&Value>| value.and_then(Value::as_str).unwrap_or_default().to_string();
+    let text = |value: Option<&Value>| {
+        value
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
     let kind = text(properties.get("kind"));
     let source = text(properties.get("source"));
     properties.insert("type".into(), SKILL_EVAL_CASE_CLASS.into());
@@ -157,7 +172,9 @@ pub(super) fn read_report(
 ) -> Result<Option<SuiteReport>, String> {
     store
         .decision_artifact(tenant, &format!("{REPORT_PREFIX}{skill_ref}"))?
-        .map(|bytes| medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "suite report"))
+        .map(|bytes| {
+            medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "suite report")
+        })
         .transpose()
 }
 
@@ -184,7 +201,11 @@ pub(super) fn run(
     if request.cases.is_empty() {
         return Err(invalid_parameter("a suite holds at least one case"));
     }
-    if let Some(stray) = request.cases.iter().find(|case| case.skill_ref != request.skill_ref) {
+    if let Some(stray) = request
+        .cases
+        .iter()
+        .find(|case| case.skill_ref != request.skill_ref)
+    {
         return Err(invalid_parameter(format!(
             "case {} tests {}, not {}",
             stray.case_id, stray.skill_ref, request.skill_ref
@@ -292,7 +313,10 @@ pub(super) fn run(
     // One owner write per row; each replaces the row of an earlier run of the same case.
     let tenant = &request.tenant_id;
     for row in &stored {
-        let key = format!("{RESULT_PREFIX}{}:{}", request.skill_ref, row.result.case_id);
+        let key = format!(
+            "{RESULT_PREFIX}{}:{}",
+            request.skill_ref, row.result.case_id
+        );
         swap(store, tenant, &key, encode_artifact(row)?)?;
     }
     let report_key = format!("{REPORT_PREFIX}{}", request.skill_ref);
@@ -317,12 +341,7 @@ fn admit(
     check_judge(case, calibration, knobs)
 }
 
-fn swap(
-    store: &AgentLibraryStore,
-    tenant: &str,
-    key: &str,
-    bytes: Vec<u8>,
-) -> Result<(), String> {
+fn swap(store: &AgentLibraryStore, tenant: &str, key: &str, bytes: Vec<u8>) -> Result<(), String> {
     let current = store.decision_artifact(tenant, key)?;
     if current.as_deref() == Some(bytes.as_slice()) {
         return Ok(());
@@ -353,14 +372,22 @@ pub(super) async fn report_operations(
     outcome: &SkillEvalOutcome,
     now_ms: u64,
 ) -> Result<Vec<Value>, String> {
-    let mut case_ids: Vec<&str> = request.cases.iter().map(|case| case.case_id.as_str()).collect();
+    let mut case_ids: Vec<&str> = request
+        .cases
+        .iter()
+        .map(|case| case.case_id.as_str())
+        .collect();
     case_ids.sort_unstable();
     let ids: Vec<&[u8]> = case_ids.iter().map(|id| id.as_bytes()).collect();
     let suite = format!(
         "sha256:{}",
         Digest256::framed(b"medulla.skill_eval.suite.v1", &ids)?.to_hex()
     );
-    let passed = outcome.results.iter().filter(|row| row.result.passed).count() as u64;
+    let passed = outcome
+        .results
+        .iter()
+        .filter(|row| row.result.passed)
+        .count() as u64;
     let admitted = outcome.results.len() as u64;
     let report_bytes = encode_artifact(&outcome.report)?;
     let receipt_digest = format!(
@@ -375,7 +402,11 @@ pub(super) async fn report_operations(
         )?
         .to_hex()
     );
-    let node = format!("skill-eval-report:{}:{}", request.skill_ref, &receipt_digest[7..23]);
+    let node = format!(
+        "skill-eval-report:{}:{}",
+        request.skill_ref,
+        &receipt_digest[7..23]
+    );
     let mut operations = vec![json!({
         "op": "upsert_node",
         "id": node,
@@ -404,7 +435,12 @@ pub(super) async fn report_operations(
                 .is_none_or(|owner| owner == request.tenant_id)
     });
     if skill_known {
-        operations.push(edge_operation(&node, &request.skill_ref, EVALUATES, &receipt_digest));
+        operations.push(edge_operation(
+            &node,
+            &request.skill_ref,
+            EVALUATES,
+            &receipt_digest,
+        ));
     }
     Ok(operations)
 }

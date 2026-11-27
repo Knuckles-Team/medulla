@@ -43,11 +43,7 @@ AND tx_from >= $from AND tx_from < $to \
 |> ORDER BY label, tx_from \
 |> RETURN label, tx_from, valid_from";
 
-fn digest_query(
-    name: &str,
-    text: &str,
-    params: &[(&str, StoredParamType)],
-) -> StoredQuery {
+fn digest_query(name: &str, text: &str, params: &[(&str, StoredParamType)]) -> StoredQuery {
     StoredQuery {
         name: name.to_string(),
         version: 1,

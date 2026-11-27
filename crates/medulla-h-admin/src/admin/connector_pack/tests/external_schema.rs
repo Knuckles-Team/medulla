@@ -51,7 +51,10 @@ fn body() -> Value {
 async fn import_body(served: &Served, connector: &str, body: &Value) -> PackImportResult {
     let pack = build_pack(
         connector,
-        &[tool(connector, "a", "Tool a."), external_schema(connector, body)],
+        &[
+            tool(connector, "a", "Tool a."),
+            external_schema(connector, body),
+        ],
     );
     ok("Import", import(served, &pack, None).await)
 }

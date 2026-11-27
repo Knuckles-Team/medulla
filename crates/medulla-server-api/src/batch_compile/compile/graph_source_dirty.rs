@@ -118,9 +118,9 @@ fn is_source_node(bound: &[(String, String)], properties_msgpack: &[u8]) -> bool
 fn updates_bound_property(bound: &[(String, String)], updates_msgpack: &[u8]) -> bool {
     medulla_types::msgpack::decode_property_object(updates_msgpack).is_ok_and(|updates| {
         updates.contains_key(TYPE_KEY)
-            || bound.iter().any(|(_, property_id)| {
-                updates.keys().any(|key| names(key, property_id))
-            })
+            || bound
+                .iter()
+                .any(|(_, property_id)| updates.keys().any(|key| names(key, property_id)))
     })
 }
 
@@ -132,9 +132,9 @@ fn writes_bound_node(bound: &[(String, String)], method: &Method) -> bool {
         | Method::CreateNodeIfAbsent {
             properties_msgpack, ..
         } => is_source_node(bound, properties_msgpack),
-        Method::CompareAndSetNodeFields { updates_msgpack, .. } => {
-            updates_bound_property(bound, updates_msgpack)
-        }
+        Method::CompareAndSetNodeFields {
+            updates_msgpack, ..
+        } => updates_bound_property(bound, updates_msgpack),
         Method::RemoveNode { .. } => true,
         Method::BatchUpdate { operations_msgpack } => decode_batch_operations(operations_msgpack)
             .map(|operations| {
@@ -183,8 +183,14 @@ mod tests {
     #[test]
     fn a_commit_of_a_bound_node_wakes_the_source() {
         bind("dirty-t", "dirty-g");
-        let wake = |methods: Vec<Method>| graph_source_dirty_input("dirty-t", "dirty-g", &methods, &SourceDirtyBasis::Methods);
-        assert!(wake(vec![add("bookmark:1", &[("type", "Bookmark"), ("text", "hello")])]).is_some());
+        let wake = |methods: Vec<Method>| {
+            graph_source_dirty_input("dirty-t", "dirty-g", &methods, &SourceDirtyBasis::Methods)
+        };
+        assert!(wake(vec![add(
+            "bookmark:1",
+            &[("type", "Bookmark"), ("text", "hello")]
+        )])
+        .is_some());
         let removal = Method::RemoveNode {
             node_id: "bookmark:1".into(),
         };
@@ -229,7 +235,9 @@ mod tests {
         let wake = |graph: &str, methods: &[Method]| {
             graph_source_dirty_input("dirty-t7", graph, methods, &SourceDirtyBasis::Methods)
         };
-        let removal = Method::RemoveNode { node_id: "doc:anything".into() };
+        let removal = Method::RemoveNode {
+            node_id: "doc:anything".into(),
+        };
         assert!(wake("dirty-g7", &[removal.clone()]).is_some());
         // A removal in a graph with no bound source wakes nothing.
         assert!(wake("unbound-graph", &[removal]).is_none());
@@ -251,7 +259,9 @@ mod tests {
         };
         assert!(wake("dirty-g7", &[other]).is_none());
         // The same holds through a staged row delta.
-        let delta = [Method::RemoveNode { node_id: "bookmark:1".into() }];
+        let delta = [Method::RemoveNode {
+            node_id: "bookmark:1".into(),
+        }];
         assert!(row_delta_wake("dirty-t7", "dirty-g7", &delta).is_some());
     }
 
@@ -317,14 +327,18 @@ mod tests {
              <https://knuckles-team.github.io/ontology/core#text> \"hello\" .",
         );
         assert!(row_delta_wake("dirty-t3", "dirty-g3", &other).is_none());
-        let untexted = load("<urn:bookmark:2> a <https://knuckles-team.github.io/ontology/core#Bookmark> .");
+        let untexted =
+            load("<urn:bookmark:2> a <https://knuckles-team.github.io/ontology/core#Bookmark> .");
         assert!(row_delta_wake("dirty-t3", "dirty-g3", &untexted).is_none());
     }
 
     #[test]
     fn an_add_node_row_of_a_bound_node_wakes_the_source_through_the_row_delta() {
         bind("dirty-t4", "dirty-g4");
-        let bookmark = [add("bookmark:9", &[("type", "Bookmark"), ("text", "hello")])];
+        let bookmark = [add(
+            "bookmark:9",
+            &[("type", "Bookmark"), ("text", "hello")],
+        )];
         assert!(row_delta_wake("dirty-t4", "dirty-g4", &bookmark).is_some());
         let other = [add("doc:9", &[("type", "Document"), ("text", "hello")])];
         assert!(row_delta_wake("dirty-t4", "dirty-g4", &other).is_none());
@@ -380,7 +394,10 @@ mod tests {
         let wake = |basis: SourceDirtyBasis<'_>| {
             graph_source_dirty_input("dirty-t5", "dirty-g5", &[], &basis)
         };
-        assert_eq!(wake(SourceDirtyBasis::Recorded(Some(recorded))), Some(recorded));
+        assert_eq!(
+            wake(SourceDirtyBasis::Recorded(Some(recorded))),
+            Some(recorded)
+        );
         assert_eq!(wake(SourceDirtyBasis::Recorded(None)), None);
     }
 }
