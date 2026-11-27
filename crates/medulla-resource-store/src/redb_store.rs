@@ -7,5 +7,19 @@ pub mod resource;
 #[allow(missing_docs)]
 pub mod resource_rows;
 
+use medulla_protocol_types::protocol::Method;
+use medulla_result_types::epistemic_operations::{
+    ResourceCapacitySnapshot, ResourceHostUpdateRequest, ResourceHostUpdateRequestTargetKind,
+    ResourceHostUpdateResult, ResourceHostUpdateResultReason, ResourceHostUpdateResultSchemaVersion,
+    ResourceHostUpdateSnapshotTargetKind, ResourceRequirement, ResourceReservationHostSnapshot,
+    ResourceReservationHostSnapshotTargetKind, ResourceReservationRecord,
+    ResourceReservationRecordState, ResourceReservationRecordTargetKind,
+    ResourceReservationRequest, ResourceReservationRequestTargetKind, ResourceReservationResult,
+    ResourceReservationResultDecision, ResourceReservationResultSchemaVersion,
+    ResourceReservationResultState, ResourceReservationStatusRequest,
+    ResourceReservationStatusResult, ResourceReservationStatusResultSchemaVersion,
+    ResourceReservationSummary, ResourceReservationSummaryState, ResourceTargetSnapshot,
+    ResourceTargetSnapshotKind,
+};
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
