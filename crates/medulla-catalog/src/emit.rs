@@ -662,6 +662,7 @@ mod tests {
             owner_scope: "tenant:1".into(),
             lifecycle: WorkflowLifecycle::Active,
             steps: Vec::new(),
+            skills: Vec::new(),
         }
     }
 

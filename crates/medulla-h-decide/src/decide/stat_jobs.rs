@@ -870,6 +870,16 @@ async fn serve_eval(
             .await?;
             ResultPayload::of::<DecisionEvalCertifyLocalSkill>(job)
         }
+        DecisionEvalOp::Certification { request } => {
+            let answer = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || super::stat_certification::read(&store, &request),
+            )
+            .await?;
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionEvalCertification,
+            >(answer)
+        }
         DecisionEvalOp::Receipt { request } => serve_eval_receipt(&store, &request),
         DecisionEvalOp::Receipts { request } => serve_eval_receipts(&store, &request),
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),

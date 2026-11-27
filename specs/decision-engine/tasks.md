@@ -1046,3 +1046,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1038 [US7] MEDULLA-DECISION-ENGINE-R614.2.7 Hot-path proof: fit then classify through the served method.
 - [ ] T1041 MEDULLA-DECISION-ENGINE-R829.4 Canonical feature schema of the catalog rank points
 - [ ] T1042 MEDULLA-DECISION-ENGINE-R029.3 Typed retrieval-plan request for an engine-backed retriever
+- [ ] T1043 MEDULLA-DECISION-ENGINE-R142.103 DecisionEval certification read of the current attestation of a skill revision
+- [ ] T1044 MEDULLA-DECISION-ENGINE-R166.7 Workflow registration declares and reads back its skills

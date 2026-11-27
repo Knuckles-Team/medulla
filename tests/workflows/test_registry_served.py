@@ -24,6 +24,42 @@ IDENTITY = {
 }
 
 
+SKILL = {
+    "component_id": "skill-triage",
+    "kind": "skill",
+    "definition_digest": "sha256:" + "b" * 64,
+}
+
+
+async def _skills_journey() -> dict[str, Any]:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        identity = dict(IDENTITY, workflow_id="wf-with-skills")
+        await gen.send_workflow_registry(
+            client,
+            {
+                "op": {
+                    "op": "register",
+                    "registration": {
+                        "identity": identity,
+                        "owner_scope": "",
+                        "lifecycle": "active",
+                        "skills": [SKILL],
+                    },
+                }
+            },
+        )
+        read = await gen.send_workflow_registry(
+            client, {"op": {"op": "read", "identity": identity}}
+        )
+        return read.payload
+    finally:
+        await client.close()
+
+
 async def _journey() -> tuple[dict[str, Any], dict[str, Any], str]:
     client = await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
@@ -67,3 +103,10 @@ def test_register_read_and_unknown_refusal(clean_graph):
     assert read["identity"] == IDENTITY
     assert read["lifecycle"] == "active"
     assert "WORKFLOW_IDENTITY_UNKNOWN" in refusal
+
+
+# spec: MEDULLA-DECISION-ENGINE-R166.7
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R166.7")
+def test_read_answers_the_declared_skills(clean_graph):
+    read = asyncio.run(_skills_journey())
+    assert read["skills"] == [SKILL]

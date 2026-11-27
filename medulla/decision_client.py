@@ -1058,6 +1058,23 @@ def certify_local_skill_op(request: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "certify_local_skill", "request": dict(request)}
 
 
+def certification_op(
+    tenant_id: str, component_id: str, definition_digest: str
+) -> dict[str, Any]:
+    """Read the current attestation of one skill revision (R142.103) as a
+    ``DecisionEval`` op. Needs the scope ``admin:decision-eval``; the answer's
+    ``attestation`` is ``null`` for a revision the tenant never attested, whether the
+    skill exists or not."""
+    return {
+        "op": "certification",
+        "request": {
+            "tenant_id": tenant_id,
+            "component_id": component_id,
+            "definition_digest": definition_digest,
+        },
+    }
+
+
 def delegation_quality_op(request: Mapping[str, Any]) -> dict[str, Any]:
     """Judge one window of a delegate's observations (R157.3) as a
     ``DecisionEval`` job."""
@@ -2335,6 +2352,14 @@ class DecisionClient:
             skill_eval_case_add_op(request), idempotency_key
         )
 
+    async def certification(
+        self, tenant_id: str, component_id: str, definition_digest: str
+    ) -> Any:
+        """Send ``DecisionEval`` op ``certification`` (``admin:decision-eval``)."""
+        return await self._skill_eval_send(
+            certification_op(tenant_id, component_id, definition_digest), None
+        )
+
     async def skill_eval_report(self, tenant_id: str, skill_ref: str) -> Any:
         """Send ``DecisionEval`` op ``skill_eval_report`` (scope ``skills:eval``)."""
         return await self._skill_eval_send(
@@ -2783,6 +2808,7 @@ __all__ = [
     "record_measured_fact",
     "record_outcome_op",
     "resolve_op",
+    "certification_op",
     "certify_local_skill_op",
     "promote_rule_op",
     "propose_rule_op",

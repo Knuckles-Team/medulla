@@ -166,3 +166,59 @@ async fn attests_atomic_and_gates_workflow() {
     assert!(code_of(&foreign).starts_with("CERT_DEPENDENCY_MISSING"));
     assert_eq!(stored_count(&h, FOREIGN), 0);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R142.103
+#[tokio::test]
+async fn the_certification_read_answers_the_current_attestation_or_none() {
+    use medulla_decision_types::decision::local_certification::{
+        CertificationReadAnswer, CertificationReadRequest,
+    };
+    let h = Harness::new().await;
+    let atomic = h
+        .publish_test_component("skill-atomic", AgentComponentKind::Skill, "atomic skill", None::<&String>, None)
+        .unwrap();
+    let ask = |tenant: &str, skill: &ComponentDependency| CertificationReadRequest {
+        tenant_id: tenant.into(),
+        component_id: skill.component_id.clone(),
+        definition_digest: skill.definition_digest.clone(),
+    };
+    let read = |tenant: &'static str, request: CertificationReadRequest| {
+        let state = h.state.clone();
+        async move {
+            let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", tenant);
+            let op = DecisionEvalOp::Certification { request };
+            decode::<CertificationReadAnswer>(
+                super::super::jobs::handle_decision_eval(&state, 72, &verified, op).await,
+            )
+            .unwrap()
+        }
+    };
+
+    // Nothing is attested yet: the answer is none.
+    assert_eq!(read(TENANT, ask(TENANT, &atomic)).await.attestation, None);
+
+    let job = certify(&h, "decider", request(TENANT, "atomic-1", &atomic, vec![], pins("sha256:aa"))).await;
+    let DecisionJobOutput::Certification { attestation } = succeeded(&job).clone() else {
+        panic!("a certification output");
+    };
+    let answered = read(TENANT, ask(TENANT, &atomic)).await;
+    assert_eq!(answered.attestation.as_ref(), Some(&*attestation));
+
+    // A later completion of the same revision becomes the current attestation.
+    let mut later = request(TENANT, "atomic-2", &atomic, vec![], pins("sha256:aa"));
+    later.receipt.completion_revision = 2;
+    let later_job = certify(&h, "decider", later).await;
+    let DecisionJobOutput::Certification { attestation: newest } = succeeded(&later_job).clone() else {
+        panic!("a certification output");
+    };
+    let answered = read(TENANT, ask(TENANT, &atomic)).await;
+    assert_eq!(answered.attestation.as_ref(), Some(&*newest));
+
+    // Another revision, another tenant and an unknown skill answer none alike.
+    let mut other_revision = atomic.clone();
+    other_revision.definition_digest = "sha256:other".into();
+    assert_eq!(read(TENANT, ask(TENANT, &other_revision)).await.attestation, None);
+    assert_eq!(read(FOREIGN, ask(FOREIGN, &atomic)).await.attestation, None);
+    let unknown = pin("skill-unknown", AgentComponentKind::Skill, "sha256:zz");
+    assert_eq!(read(TENANT, ask(TENANT, &unknown)).await.attestation, None);
+}

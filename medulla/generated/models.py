@@ -4352,6 +4352,27 @@ class DecisionEvalOpCertifyLocalSkill(BaseModel):
     request: LocalCertificationRequest
 
 
+class CertificationReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    definition_digest: str
+    tenant_id: str
+
+
+class CertificationReadAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attestation: LocalCertificationAttestation | None = None
+
+
+class DecisionEvalOpCertification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["certification"]
+    request: CertificationReadRequest
+
+
 class DelegationQualityRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4504,6 +4525,7 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpMemoryChangeBenchmarkSubmit
     | DecisionEvalOpMemoryRewriteSubmit
     | DecisionEvalOpCertifyLocalSkill
+    | DecisionEvalOpCertification
     | DecisionEvalOpRetrievalRankingSubmit
     | DecisionEvalOpGroundedAnswerSubmit,
     Field(discriminator="op"),
@@ -38303,12 +38325,21 @@ class WorkflowStep(BaseModel):
     step_id: str
 
 
+class WorkflowSkill(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    definition_digest: str
+    kind: str
+
+
 class WorkflowRegistrationEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     identity: WorkflowIdentity
     lifecycle: WorkflowLifecycle
     owner_scope: str
+    skills: list[WorkflowSkill] = Field(default_factory=list)
     steps: list[WorkflowStep] = Field(default_factory=list)
 
 
@@ -51839,6 +51870,7 @@ __all__ = [
     "WorkflowRegistryOp",
     "WorkflowRegistryOpRead",
     "WorkflowRegistryOpRegister",
+    "WorkflowSkill",
     "WorkflowStep",
     "WorldTransformResult",
     "WritebackApproval",
@@ -52029,6 +52061,9 @@ __all__ = [
     "CurriculumRequest",
     "CurriculumStage",
     "DayRollup",
+    "CertificationReadAnswer",
+    "CertificationReadRequest",
+    "DecisionEvalOpCertification",
     "DecisionEvalOpCertifyLocalSkill",
     "DecisionEvalOpDelegationQuality",
     "DecisionEvalOpMemoryChangeBenchmarkSubmit",

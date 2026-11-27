@@ -25,6 +25,7 @@ fn registration(identity: WorkflowIdentity) -> WorkflowRegistrationEntry {
         owner_scope: String::new(),
         lifecycle: WorkflowLifecycle::Active,
         steps: Vec::new(),
+        skills: Vec::new(),
     }
 }
 
@@ -161,4 +162,76 @@ fn codes_are_unique_and_stable() {
             "{code} is not a ServerErrorCode"
         );
     }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R166.7
+#[test]
+fn declared_skills_are_stored_and_read_back_and_a_bad_declaration_refuses() {
+    use medulla_work_types::orchestration::workflows::WorkflowSkill;
+    let skill = |id: &str| WorkflowSkill {
+        component_id: id.into(),
+        kind: "skill".into(),
+        definition_digest: format!("sha256:{id}"),
+    };
+    let core = GraphCore::new();
+    let mut request = registration(identity());
+    request.skills = vec![skill("skill-a"), skill("skill-b")];
+    let Admitted::Write(write, entry) =
+        admit_registration(&core, TENANT, "scope-a", &request).unwrap()
+    else {
+        panic!("a first registration writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+    let read =
+        read_registration(stored(&core, &identity()).as_ref(), "scope-a", &identity()).unwrap();
+    assert_eq!(read.skills, request.skills);
+    assert_eq!(read, entry);
+
+    // The same declaration again commits nothing; another declaration updates the node.
+    assert!(matches!(
+        admit_registration(&core, TENANT, "scope-a", &request).unwrap(),
+        Admitted::Same(_)
+    ));
+    request.skills = vec![skill("skill-a")];
+    let Admitted::Write(write, _) =
+        admit_registration(&core, TENANT, "scope-a", &request).unwrap()
+    else {
+        panic!("another skill list writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+    let read =
+        read_registration(stored(&core, &identity()).as_ref(), "scope-a", &identity()).unwrap();
+    assert_eq!(read.skills, vec![skill("skill-a")]);
+
+    // A registration declaring no skills reads none.
+    let other = GraphCore::new();
+    let Admitted::Write(write, _) =
+        admit_registration(&other, TENANT, "scope-a", &registration(identity())).unwrap()
+    else {
+        panic!("a first registration writes");
+    };
+    apply_coalescable_write(&other, &write).unwrap();
+    let read = read_registration(stored(&other, &identity()).as_ref(), "scope-a", &identity())
+        .unwrap();
+    assert!(read.skills.is_empty());
+
+    // A foreign kind, a duplicate and an empty digest refuse and write nothing.
+    let fresh = GraphCore::new();
+    let mut wrong_kind = registration(identity());
+    wrong_kind.skills = vec![WorkflowSkill {
+        kind: "tool".into(),
+        ..skill("skill-a")
+    }];
+    let mut twice = registration(identity());
+    twice.skills = vec![skill("skill-a"), skill("skill-a")];
+    let mut undigested = registration(identity());
+    undigested.skills = vec![WorkflowSkill {
+        definition_digest: " ".into(),
+        ..skill("skill-a")
+    }];
+    for bad in [wrong_kind, twice, undigested] {
+        let refused = admit_registration(&fresh, TENANT, "scope-a", &bad).unwrap_err();
+        assert!(refused.starts_with("INVALID_ARGUMENT: workflow skills"), "{refused}");
+    }
+    assert_eq!(fresh.node_count(), 0);
 }

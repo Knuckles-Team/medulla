@@ -50,6 +50,7 @@ pub(super) fn admit_registration(
 ) -> Result<Admitted, String> {
     let identity = &registration.identity;
     registration.validate_steps()?;
+    registration.validate_skills()?;
     WorkflowRegistry::default()
         .register(identity.clone())
         .map_err(|error| refuse(error, "invalid workflow identity"))?;
@@ -64,6 +65,7 @@ pub(super) fn admit_registration(
         owner_scope: tenant_scope.to_string(),
         lifecycle: registration.lifecycle,
         steps: registration.steps.clone(),
+        skills: registration.skills.clone(),
     };
     let node_id = WorkflowRegistrationEntry::node_id(identity);
     let stored = core
@@ -80,15 +82,18 @@ pub(super) fn admit_registration(
                     format!("{node_id} belongs to another scope"),
                 ));
             }
-            if stored.lifecycle == entry.lifecycle {
+            if stored.lifecycle == entry.lifecycle && stored.skills == entry.skills {
                 return Ok(Admitted::Same(entry));
             }
             // MEDULLA-ORCH-VOCAB-R815.9: a changed lifecycle fires the event of the
-            // requested state on the stored one; `Reactivate` has no edge.
-            stored
-                .lifecycle
-                .apply(WorkflowLifecycle::event_to(entry.lifecycle))
-                .map_err(|refused| refused.to_string())?;
+            // requested state on the stored one; `Reactivate` has no edge. Declaring other
+            // skills for the stored state is an update of the same node (R166.7).
+            if stored.lifecycle != entry.lifecycle {
+                stored
+                    .lifecycle
+                    .apply(WorkflowLifecycle::event_to(entry.lifecycle))
+                    .map_err(|refused| refused.to_string())?;
+            }
         }
         None if entry.lifecycle != WORKFLOW_MACHINE.initial => {
             return Err("INVALID_ARGUMENT: a first registration is active".to_string());

@@ -21,6 +21,7 @@ fn seeded(scope: &str) -> GraphCore {
         owner_scope: scope.into(),
         lifecycle: WorkflowLifecycle::Active,
         steps: Vec::new(),
+        skills: Vec::new(),
     };
     core.add_node(
         WorkflowRegistrationEntry::node_id(&entry.identity),

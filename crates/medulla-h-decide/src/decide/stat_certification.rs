@@ -8,7 +8,8 @@
 //! stores nothing.
 
 use medulla_decision_types::decision::local_certification::{
-    certify, LocalCertificationAttestation, LocalCertificationRequest, SkillClassification,
+    certify, current_attestation, CertificationReadAnswer, CertificationReadRequest,
+    LocalCertificationAttestation, LocalCertificationRequest, SkillClassification,
     CERT_DEPENDENCY_MISSING, CERT_DEPENDENCY_STALE,
 };
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
@@ -100,4 +101,18 @@ pub(super) fn run(store: &AgentLibraryStore, request: &LocalCertificationRequest
         },
         rows,
     ))
+}
+
+/// The current attestation of one skill revision of the request's tenant: the stored attestation
+/// whose skill is the asked component at the asked digest, with the highest completion revision.
+/// Another tenant's attestation is never read, and an absent one answers `None` like any other
+/// miss.
+pub(super) fn read(
+    store: &AgentLibraryStore,
+    request: &CertificationReadRequest,
+) -> Result<CertificationReadAnswer, String> {
+    let stored = stored_attestations(store, &request.tenant_id)?;
+    Ok(CertificationReadAnswer {
+        attestation: current_attestation(stored, request),
+    })
 }

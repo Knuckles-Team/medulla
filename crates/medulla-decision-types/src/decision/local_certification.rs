@@ -144,6 +144,48 @@ pub struct LocalCertificationAttestation {
     pub premises: Vec<String>,
 }
 
+/// The body of `DecisionEval` op `certification`: read the current attestation of one skill
+/// revision (MEDULLA-DECISION-ENGINE-R142.103). Scope `admin:decision-eval`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CertificationReadRequest {
+    /// The tenant that owns the attestations; checked against the verified tenant.
+    pub tenant_id: String,
+    /// The skill component.
+    pub component_id: String,
+    /// The definition digest of the skill revision the caller runs.
+    pub definition_digest: String,
+}
+
+/// What `certification` answers: the attestation of the asked skill revision with the highest
+/// completion revision, or `None` when the tenant stores none. An unknown skill, a foreign
+/// tenant's skill and a revision never attested answer alike, so the read is no existence oracle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CertificationReadAnswer {
+    pub attestation: Option<LocalCertificationAttestation>,
+}
+
+/// The attestation `request` asks for among `stored`: the one whose skill is the asked
+/// component at the asked definition digest, taking the highest completion revision and, on a
+/// tie, the greater digest so the answer is deterministic.
+pub fn current_attestation(
+    stored: Vec<LocalCertificationAttestation>,
+    request: &CertificationReadRequest,
+) -> Option<LocalCertificationAttestation> {
+    stored
+        .into_iter()
+        .filter(|attested| {
+            attested.body.skill.component_id == request.component_id
+                && attested.body.skill.definition_digest == request.definition_digest
+        })
+        .max_by(|a, b| {
+            (a.body.completion_revision, &a.digest).cmp(&(b.body.completion_revision, &b.digest))
+        })
+}
+
 /// Why a certification was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CertificationRefusal {
@@ -313,6 +355,35 @@ mod tests {
                 completion_revision: 3,
             },
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R142.103
+    #[test]
+    fn current_attestation_is_the_latest_of_the_asked_revision() {
+        let first = certify(&request()).unwrap();
+        let mut later_request = request();
+        later_request.receipt.completion_revision = 4;
+        let later = certify(&later_request).unwrap();
+        let mut other_request = request();
+        other_request.skill.definition_digest = format!("sha256:{}", "f".repeat(64));
+        other_request.receipt.skill = other_request.skill.clone();
+        let other = certify(&other_request).unwrap();
+        let ask = CertificationReadRequest {
+            tenant_id: "tenant-a".to_string(),
+            component_id: "skill-a".to_string(),
+            definition_digest: format!("sha256:{}", "a".repeat(64)),
+        };
+        let stored = vec![first.clone(), other, later.clone()];
+        assert_eq!(current_attestation(stored.clone(), &ask), Some(later));
+        let mut unknown = ask.clone();
+        unknown.definition_digest = "sha256:none".to_string();
+        assert_eq!(current_attestation(stored, &unknown), None);
+        assert_eq!(current_attestation(Vec::new(), &ask), None);
+        let json = serde_json::to_string(&CertificationReadAnswer {
+            attestation: Some(first),
+        })
+        .unwrap();
+        assert!(serde_json::from_str::<CertificationReadAnswer>(&json).is_ok());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R142.100

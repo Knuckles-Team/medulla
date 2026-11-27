@@ -105,6 +105,25 @@ pub struct WorkflowStep {
     pub served_by: Vec<String>,
 }
 
+/// Most skills one registration may declare.
+pub const MAX_WORKFLOW_SKILLS: usize = 256;
+/// The only `kind` of a declared skill, the wire name of the skill component kind.
+pub const WORKFLOW_SKILL_KIND: &str = "skill";
+
+/// One skill the workflow runs, pinned by the definition digest of its revision
+/// (MEDULLA-DECISION-ENGINE-R166.7). The three fields are those of a
+/// `ComponentDependency` of kind `skill`, so a caller reads a registration's skills and
+/// an agent library entry's skills the same way.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WorkflowSkill {
+    pub component_id: String,
+    /// Always `skill`.
+    pub kind: String,
+    pub definition_digest: String,
+}
+
 /// One served registration: the immutable identity, the scope that owns it and
 /// its lifecycle state.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,9 +139,40 @@ pub struct WorkflowRegistrationEntry {
     /// registration node: the catalog emitter reads them when the registration commits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub steps: Vec<WorkflowStep>,
+    /// The skills the workflow runs, stored on the registration node and answered by
+    /// `Read` (R166.7). A run's attestation gate reads them from here.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skills: Vec<WorkflowSkill>,
 }
 
 impl WorkflowRegistrationEntry {
+    /// The declared skills are bounded, of kind `skill`, named and unique.
+    pub fn validate_skills(&self) -> Result<(), String> {
+        let invalid = |detail: String| format!("INVALID_ARGUMENT: workflow skills: {detail}");
+        if self.skills.len() > MAX_WORKFLOW_SKILLS {
+            return Err(invalid(format!("at most {MAX_WORKFLOW_SKILLS} skills")));
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for skill in &self.skills {
+            if skill.kind != WORKFLOW_SKILL_KIND {
+                return Err(invalid(format!(
+                    "skill {} has kind {}, not {WORKFLOW_SKILL_KIND}",
+                    skill.component_id, skill.kind
+                )));
+            }
+            if skill.component_id.trim().is_empty() || skill.definition_digest.trim().is_empty() {
+                return Err(invalid("a skill names a component and a digest".to_string()));
+            }
+            if !seen.insert(skill.component_id.as_str()) {
+                return Err(invalid(format!(
+                    "skill {} is declared twice",
+                    skill.component_id
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// The declared steps are bounded, named and unique; each served-by reference is
     /// non-empty. IRI shape is checked by the catalog emitter, which owns the links.
     pub fn validate_steps(&self) -> Result<(), String> {
@@ -168,6 +218,7 @@ impl WorkflowRegistrationEntry {
             "owner_scope": self.owner_scope,
             "lifecycle": self.lifecycle.as_str(),
             "tenant": tenant_id,
+            "skills": self.skills,
         })
     }
 
@@ -190,6 +241,10 @@ impl WorkflowRegistrationEntry {
             lifecycle: super::workflow_machine::WORKFLOW_MACHINE
                 .state_from_stored(&text("lifecycle")?)?,
             steps: Vec::new(),
+            skills: match properties.get("skills") {
+                Some(value) => serde_json::from_value(value.clone()).ok()?,
+                None => Vec::new(),
+            },
         })
     }
 }
