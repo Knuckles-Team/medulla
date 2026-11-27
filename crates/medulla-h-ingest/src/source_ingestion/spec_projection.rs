@@ -366,15 +366,13 @@ fn parse_contract(text: &str) -> ContractParts {
                     );
                 }
             }
-            "test vectors" => {
-                if line.starts_with("- ") {
-                    parts.vectors.extend(
-                        ticked(line)
-                            .into_iter()
-                            .filter(|s| s.contains("::"))
-                            .map(str::to_string),
-                    );
-                }
+            "test vectors" if line.starts_with("- ") => {
+                parts.vectors.extend(
+                    ticked(line)
+                        .into_iter()
+                        .filter(|s| s.contains("::"))
+                        .map(str::to_string),
+                );
             }
             _ => {}
         }
@@ -1967,8 +1965,7 @@ pub fn project_spec_artifacts(
     stored: &BTreeMap<String, StoredArtifact>,
     chain: &[Changeset],
     changesets: &[Changeset],
-    branch: &str,
-    commit: &str,
+    (branch, commit): (&str, &str),
     result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
 ) -> Result<ReingestPlan, String> {
     let mut seen = BTreeSet::new();
@@ -2137,14 +2134,13 @@ pub fn project_spec_artifacts(
     let mut kept: Vec<serde_json::Value> = Vec::new();
     let mut referenced: BTreeSet<String> = BTreeSet::new();
     for op in &history.operations {
-        if op["op"] == "upsert_edge" {
-            if op["source"]
+        if op["op"] == "upsert_edge"
+            && op["source"]
                 .as_str()
                 .is_some_and(|source| touched.contains(source))
-            {
-                referenced.extend(op["target"].as_str().map(str::to_string));
-                kept.push(op.clone());
-            }
+        {
+            referenced.extend(op["target"].as_str().map(str::to_string));
+            kept.push(op.clone());
         }
     }
     let mut history_ops: Vec<serde_json::Value> = Vec::new();
@@ -2733,8 +2729,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &BTreeMap::new(),
             &[],
             &[],
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut first,
         )
         .expect("first batch");
@@ -2759,8 +2754,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &stored,
             &[],
             &[],
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut again,
         )
         .expect("idle");
@@ -3255,8 +3249,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &BTreeMap::new(),
             &first_chain,
             &first_chain,
-            "main",
-            "head1",
+            ("main", "head1"),
             &mut first,
         )
         .expect("first ingest");
@@ -3278,8 +3271,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &stored,
             &chain,
             &chain[1..],
-            "main",
-            "head2",
+            ("main", "head2"),
             &mut delta,
         )
         .expect("delta");
@@ -3376,8 +3368,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &BTreeMap::new(),
             &changesets,
             &changesets,
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut first,
         )
         .expect("first batch");
@@ -3410,8 +3401,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &stored,
             &changesets,
             &[],
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut again,
         )
         .expect("idle");
@@ -3426,8 +3416,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &stored,
             &unknown,
             &unknown,
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut refused,
         )
         .unwrap_err();
@@ -3525,8 +3514,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &BTreeMap::new(),
             &[],
             &[],
-            "main",
-            "c0ffee",
+            ("main", "c0ffee"),
             &mut result,
         )
         .expect("projects");

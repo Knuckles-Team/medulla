@@ -221,6 +221,15 @@ pub fn read_quarantine(
     })
 }
 
+/// What normalizing one document needs beyond its record: the atom budget, the LSH layout, the
+/// blob readers and the blob source.
+pub(super) struct NormalizeEnv<'a> {
+    pub atom_max_tokens: usize,
+    pub layout: &'a LshIndex,
+    pub readers: &'a ReaderRegistry,
+    pub read_blob: &'a dyn Fn(&str) -> Result<Vec<u8>, String>,
+}
+
 /// Normalize every document-class record of `batch`. Records of other classes
 /// are untouched. The first record that fails `complete_document` fails the
 /// batch.
@@ -229,10 +238,7 @@ pub(super) fn normalize_documents(
     batch: &SourceIngestionBatch,
     resolved: &ResolvedIngestionMappings,
     classes: &BTreeSet<String>,
-    atom_max_tokens: usize,
-    layout: &LshIndex,
-    readers: &ReaderRegistry,
-    read_blob: &dyn Fn(&str) -> Result<Vec<u8>, String>,
+    env: &NormalizeEnv<'_>,
 ) -> Result<Vec<DocumentOutput>, DocumentIngestError> {
     let mut outputs = Vec::new();
     for record in &batch.records {
@@ -253,10 +259,7 @@ pub(super) fn normalize_documents(
             record,
             &mapping.schema_mapping.fields,
             mapping.entry_revision,
-            atom_max_tokens,
-            layout,
-            readers,
-            read_blob,
+            env,
         )? {
             outputs.push(output);
         }
@@ -272,11 +275,14 @@ pub(super) fn normalize_record(
     record: &SourceRecord,
     fields: &BTreeMap<String, String>,
     mapping_revision: u64,
-    atom_max_tokens: usize,
-    layout: &LshIndex,
-    readers: &ReaderRegistry,
-    read_blob: &dyn Fn(&str) -> Result<Vec<u8>, String>,
+    env: &NormalizeEnv<'_>,
 ) -> Result<Option<DocumentOutput>, DocumentIngestError> {
+    let NormalizeEnv {
+        atom_max_tokens,
+        layout,
+        readers,
+        read_blob,
+    } = *env;
     let payload = record.payload.value().map_err(normalization_failed)?;
     let source = payload
         .as_object()
@@ -490,8 +496,6 @@ pub(super) struct DedupPlan {
     pub methods: Vec<Method>,
     /// The bucket nodes written: each takes one policy record.
     pub node_ids: Vec<String>,
-    /// Near duplicates linked.
-    pub duplicates: u64,
 }
 
 /// `(atoms_emitted, atoms_refused)` of a deduplicated batch (MEDULLA-INGEST-WORKER-R003.5):
@@ -575,7 +579,6 @@ pub(super) fn dedup_documents(
     }
     let mut buckets: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let mut edges = Vec::new();
-    let mut duplicates = 0u64;
     for (position, document) in documents.iter_mut().enumerate() {
         let own = document.record_node_id.clone();
         let sketch = MinHashSketch::from_signature(document.signature.clone());
@@ -622,7 +625,6 @@ pub(super) fn dedup_documents(
                     }))?,
                 });
                 document.dedup = DedupOutcome::NearDuplicate { of, jaccard };
-                duplicates += 1;
             }
         }
     }
@@ -647,7 +649,6 @@ pub(super) fn dedup_documents(
         documents,
         methods,
         node_ids,
-        duplicates,
     })
 }
 
@@ -730,10 +731,12 @@ mod tests {
             &rec,
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap()
         .unwrap();
@@ -743,10 +746,12 @@ mod tests {
             &rec,
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap()
         .unwrap();
@@ -766,10 +771,12 @@ mod tests {
             &rec,
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap()
         .unwrap();
@@ -784,10 +791,12 @@ mod tests {
             &changed,
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap()
         .unwrap();
@@ -804,10 +813,12 @@ mod tests {
                 &record(payload),
                 &fields(),
                 4,
-                200,
-                &layout(),
-                &readers(),
-                &no_blob,
+                &NormalizeEnv {
+                    atom_max_tokens: 200,
+                    layout: &layout(),
+                    readers: &readers(),
+                    read_blob: &no_blob,
+                },
             )
             .unwrap_err();
             let error = error.to_string();
@@ -825,10 +836,12 @@ mod tests {
             &blob,
             &blob_fields,
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap_err()
         .to_string();
@@ -939,10 +952,12 @@ mod tests {
             &record(serde_json::json!({"text": "  "})),
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap_err();
         assert_eq!(
@@ -977,10 +992,12 @@ mod tests {
             &rec,
             &fields(),
             4,
-            200,
-            &layout(),
-            &readers(),
-            &no_blob,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &no_blob,
+            },
         )
         .unwrap()
         .unwrap()
@@ -1022,7 +1039,13 @@ mod tests {
             other => panic!("expected a near duplicate, got {other:?}"),
         }
         assert_eq!(plan.documents[2].dedup, DedupOutcome::Original);
-        assert_eq!(plan.duplicates, 1);
+        assert_eq!(
+            plan.documents
+                .iter()
+                .filter(|document| matches!(document.dedup, DedupOutcome::NearDuplicate { .. }))
+                .count(),
+            1
+        );
         let nodes = plan
             .methods
             .iter()

@@ -297,17 +297,21 @@ fn admit_kind(
         | SourceBatchKind::SkillDocuments
         | SourceBatchKind::Transcripts
         | SourceBatchKind::ActionRecords => Ok(()),
-        #[cfg(all(
-            feature = "redb",
-            feature = "blob",
-            feature = "query",
-            feature = "modality-serving"
-        ))]
-        SourceBatchKind::Enumeration => Ok(()),
-        _ => Err(format!(
-            "{}: batch kind {kind:?} has no admission path",
-            medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
-        )),
+        SourceBatchKind::Enumeration => {
+            if cfg!(all(
+                feature = "redb",
+                feature = "blob",
+                feature = "query",
+                feature = "modality-serving"
+            )) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "{}: batch kind {kind:?} has no admission path",
+                    medulla_types::contract::ServerErrorCode::SourceBatchKindUnavailable.as_str()
+                ))
+            }
+        }
     }
 }
 
@@ -516,10 +520,13 @@ pub async fn prepare(
         batch,
         &resolved,
         &classes,
-        medulla_server_api::knob_config::knobs().ingest_atom_max_tokens as usize,
-        &layout,
-        &readers,
-        &read_blob,
+        &documents::NormalizeEnv {
+            atom_max_tokens: medulla_server_api::knob_config::knobs().ingest_atom_max_tokens
+                as usize,
+            layout: &layout,
+            readers: &readers,
+            read_blob: &read_blob,
+        },
     );
     // A document that does not normalize quarantines the whole batch: restricted
     // evidence commits, no projection and no checkpoint advance
@@ -730,13 +737,15 @@ pub async fn prepare(
             records: &admitted.raw_admissions,
             relationships: &admitted.relationship_raw_admissions,
         },
-        admitted.governance,
-        admitted.row_versions,
-        &admitted.papers,
-        medulla_source_types::source_document::DocumentReport {
-            duplicates,
-            atoms_emitted,
-            atoms_refused,
+        ReceiptReports {
+            governance: admitted.governance,
+            row_versions: admitted.row_versions,
+            papers: &admitted.papers,
+            documents: medulla_source_types::source_document::DocumentReport {
+                duplicates,
+                atoms_emitted,
+                atoms_refused,
+            },
         },
         &embedding_set,
     )?);
@@ -1159,11 +1168,13 @@ async fn prepare_extension_batch(
         applied,
         &proposal_items,
         &action_records,
-        access,
-        reconcile.as_ref(),
-        container_report.as_ref(),
-        transcript_receipt.as_ref(),
-        &fact_report,
+        PermissionReports {
+            access,
+            reconcile: reconcile.as_ref(),
+            containers: container_report.as_ref(),
+            transcript: transcript_receipt.as_ref(),
+            facts: &fact_report,
+        },
     )?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
     let mutation = compile_mutation(&ctx, &batch_id, methods)?;
@@ -1512,6 +1523,16 @@ fn permission_clock_ms() -> u64 {
         })
 }
 
+/// The reports a permission batch receipt carries.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct PermissionReports<'a> {
+    access: Option<medulla_ingestion_types::source_governance::AccessReport>,
+    reconcile: Option<&'a medulla_ingestion_types::source_governance::ReconcileReport>,
+    containers: Option<&'a medulla_ingestion_types::source_governance::ContainerReport>,
+    transcript: Option<&'a medulla_source_types::source_transcript::TranscriptReceipt>,
+    facts: &'a medulla_ingestion_types::extracted_fact::FactReport,
+}
+
 /// The receipt node of a permission batch; it carries the replay fields of a record
 /// receipt with empty record sections.
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -1521,12 +1542,15 @@ fn permission_receipt_method(
     applied: u64,
     proposal_items: &[proposals::ProposalItemReceipt],
     action_records: &[String],
-    access: Option<medulla_ingestion_types::source_governance::AccessReport>,
-    reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
-    containers: Option<&medulla_ingestion_types::source_governance::ContainerReport>,
-    transcript: Option<&medulla_source_types::source_transcript::TranscriptReceipt>,
-    facts: &medulla_ingestion_types::extracted_fact::FactReport,
+    reports: PermissionReports<'_>,
 ) -> Result<Method, String> {
+    let PermissionReports {
+        access,
+        reconcile,
+        containers,
+        transcript,
+        facts,
+    } = reports;
     let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
         "connector": batch.connector.as_str(),
@@ -2313,9 +2337,19 @@ struct PaperLookups {
     known: BTreeSet<String>,
 }
 
+/// The reports one record admission adds to.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct AdmissionSinks<'a> {
+    report: &'a mut medulla_ingestion_types::source_governance::GovernanceReport,
+    row_versions: &'a mut medulla_ingestion_types::source_governance::RowVersionReport,
+    papers: &'a mut medulla_types::paper_ingest::PaperReport,
+}
+
 /// [`RecordContext`] keyed for the per-record lookups of `admit_record`.
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct RecordLookups<'a> {
+    resolved: &'a ResolvedIngestionMappings,
+    policy_subject: &'a str,
     documents: &'a BTreeMap<&'a str, &'a documents::DocumentOutput>,
     held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
     receipt_id: &'a str,
@@ -2382,6 +2416,8 @@ fn admit_records(
         .map(|document| (document.record_node_id.as_str(), document))
         .collect();
     let context = RecordLookups {
+        resolved,
+        policy_subject,
         documents: &documents,
         held_row_versions: context.held_row_versions,
         receipt_id: context.receipt_id,
@@ -2412,12 +2448,12 @@ fn admit_records(
             batch,
             record,
             &target,
-            resolved,
-            policy_subject,
             &context,
-            &mut admitted.governance,
-            &mut admitted.row_versions,
-            &mut admitted.papers,
+            AdmissionSinks {
+                report: &mut admitted.governance,
+                row_versions: &mut admitted.row_versions,
+                papers: &mut admitted.papers,
+            },
         )?
         else {
             // Governance or a paper check refused this record: it writes nothing.
@@ -3000,13 +3036,15 @@ fn admit_record(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     record: &medulla_source_types::source_ingestion::SourceRecord,
     target: &BlobTarget<'_>,
-    resolved: &ResolvedIngestionMappings,
-    policy_subject: &str,
     lookups: &RecordLookups<'_>,
-    report: &mut medulla_ingestion_types::source_governance::GovernanceReport,
-    row_versions: &mut medulla_ingestion_types::source_governance::RowVersionReport,
-    papers: &mut medulla_types::paper_ingest::PaperReport,
+    sinks: AdmissionSinks<'_>,
 ) -> Result<Option<AdmittedRecord>, String> {
+    let (resolved, policy_subject) = (lookups.resolved, lookups.policy_subject);
+    let AdmissionSinks {
+        report,
+        row_versions,
+        papers,
+    } = sinks;
     // Governance parses before anything is written or the node is built
     // (MEDULLA-INGEST-WORKER-R900.2): a refused record leaves no state.
     let governance = {
@@ -3384,6 +3422,14 @@ fn raw_blob_reference(
 
 /// The raw admissions a batch's receipt reports: its records and its relationships.
 #[cfg(all(feature = "redb", feature = "blob"))]
+struct ReceiptReports<'a> {
+    governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
+    papers: &'a medulla_types::paper_ingest::PaperReport,
+    documents: medulla_source_types::source_document::DocumentReport,
+}
+
+#[cfg(all(feature = "redb", feature = "blob"))]
 struct RawAdmissions<'a> {
     records: &'a [RawAdmissionReceipt],
     relationships: &'a [RawRelationshipAdmissionReceipt],
@@ -3396,12 +3442,15 @@ fn receipt_method(
     resolved: &ResolvedIngestionMappings,
     reconciliation: &ReconciliationPlan,
     admissions: &RawAdmissions<'_>,
-    governance: medulla_ingestion_types::source_governance::GovernanceReport,
-    row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
-    papers: &medulla_types::paper_ingest::PaperReport,
-    documents: medulla_source_types::source_document::DocumentReport,
+    reports: ReceiptReports<'_>,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
+    let ReceiptReports {
+        governance,
+        row_versions,
+        papers,
+        documents,
+    } = reports;
     let RawAdmissions {
         records: raw_admissions,
         relationships: relationship_raw_admissions,

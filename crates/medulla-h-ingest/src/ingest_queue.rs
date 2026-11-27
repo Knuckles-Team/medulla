@@ -157,15 +157,15 @@ fn enqueue_unrecorded(
 }
 
 /// The depth report of the reserved ingest queues (MEDULLA-INGEST-WORKER-R001.11). Each load is
+/// One queue's load: `(queue, (queued, running, oldest_enqueued_at_ms, dead_letters))`.
+pub type QueueLoad = (&'static str, (u64, u64, Option<i64>, u64));
+
 /// `(queue, (queued, running, oldest_enqueued_at_ms, dead_letters))`: the first three as
 /// `JobsApi::task_queue_load` answers them, the one depth count the enqueue refusal reads too,
 /// and the dead-letter count of `JobsApi::task_queue_dead_letters`. Rows keep the order of `loads`. `depth` is
 /// queued plus running; `oldest_age_ms` is `now_ms - oldest_enqueued_at_ms` saturated at 0, and 0
 /// for a queue with no pending task.
-pub fn queue_depth_report(
-    loads: &[(&'static str, (u64, u64, Option<i64>, u64))],
-    now_ms: i64,
-) -> IngestQueueDepthReport {
+pub fn queue_depth_report(loads: &[QueueLoad], now_ms: i64) -> IngestQueueDepthReport {
     IngestQueueDepthReport {
         queues: loads
             .iter()

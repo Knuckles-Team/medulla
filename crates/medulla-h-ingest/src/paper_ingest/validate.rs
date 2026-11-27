@@ -10,7 +10,7 @@ use serde_json::Value;
 fn blank(value: Option<&Value>) -> bool {
     value
         .and_then(Value::as_str)
-        .map_or(true, |text| text.trim().is_empty())
+        .is_none_or(|text| text.trim().is_empty())
 }
 
 /// `id` is the lowercase hex SHA-256 of the compact JSON `[canonical_id, revision]`, `null` for an

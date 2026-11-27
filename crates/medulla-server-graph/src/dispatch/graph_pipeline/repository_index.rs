@@ -273,8 +273,7 @@ async fn index_scoped(
                 &stored_specs,
                 &chain,
                 &changesets,
-                &branch_name,
-                &commit,
+                (&branch_name, &commit),
                 &mut result,
             )?;
             // MEDULLA-SCM-R006: a full index is the baseline of the changeset chain.

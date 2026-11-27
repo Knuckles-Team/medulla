@@ -100,11 +100,13 @@ pub fn admit_containers(
 ) -> Result<ContainerAdmission, String> {
     let plan =
         source_hierarchy::plan_containers(tenant, containers, held, synced_at).map_err(wire)?;
-    let mut admission = ContainerAdmission::default();
-    admission.report = medulla_ingestion_types::source_governance::ContainerReport {
-        containers_upserted: plan.nodes.len() as u64,
-        edges_written: plan.edges.len() as u64,
-        edges_removed: plan.removed_edges.len() as u64,
+    let mut admission = ContainerAdmission {
+        report: medulla_ingestion_types::source_governance::ContainerReport {
+            containers_upserted: plan.nodes.len() as u64,
+            edges_written: plan.edges.len() as u64,
+            edges_removed: plan.removed_edges.len() as u64,
+        },
+        ..ContainerAdmission::default()
     };
     for node in &plan.nodes {
         admission.methods.push(Method::AddNode {

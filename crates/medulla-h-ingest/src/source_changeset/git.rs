@@ -461,13 +461,16 @@ fn emit_dir(
     Ok(id)
 }
 
+/// The root tree id and every tree object as `(id, body)`.
+pub type TreeObjects = (String, Vec<(String, Vec<u8>)>);
+
 /// Build the tree objects of a flat file map (path to mode and object id)
 /// bottom-up, one tree per directory. Returns the root tree id and every tree
 /// as `(id, body)`.
 pub fn build_tree_objects(
     format: GitObjectFormat,
     files: &BTreeMap<String, (u32, String)>,
-) -> Result<(String, Vec<(String, Vec<u8>)>), GitObjectError> {
+) -> Result<TreeObjects, GitObjectError> {
     let mut root = Dir::default();
     for (path, (mode, id)) in files {
         let parts: Vec<&str> = path.split('/').collect();

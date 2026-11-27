@@ -25,9 +25,12 @@ pub const FINGERPRINT_NODE_TYPE: &str = "RepositoryFileFingerprint";
 /// The digest domain of a fingerprint node id.
 const FINGERPRINT_DOMAIN: &[u8] = b"eg/repository-fingerprint/v1";
 
+/// The symbols of one file: each node id with its stored properties.
+type FileSymbols<'a> = Vec<(&'a str, &'a BTreeMap<String, String>)>;
+
 /// The fingerprint of every file that has committed `SYMBOL` rows, in path order.
 pub(super) fn file_fingerprints(rows: &[Row]) -> Vec<StructuralFingerprint> {
-    let mut files: BTreeMap<&str, Vec<(&str, &BTreeMap<String, String>)>> = BTreeMap::new();
+    let mut files: BTreeMap<&str, FileSymbols<'_>> = BTreeMap::new();
     for row in rows {
         let Row::Node { id, properties } = row else {
             continue;

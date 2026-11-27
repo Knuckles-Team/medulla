@@ -760,7 +760,7 @@ pub fn admit_facts(
         restated.insert(claim_id.clone());
         let stored_claim = held.get(&claim_id);
         let new_to_chunk = chunk.is_some_and(|chunk| {
-            stored_claim.map_or(true, |stored| !stored.chunks.contains(&chunk.chunk_id))
+            stored_claim.is_none_or(|stored| !stored.chunks.contains(&chunk.chunk_id))
         });
         if outcome == FactOutcome::Unchanged {
             if let (Some(chunk), Some(stored), true) = (chunk, stored_claim, new_to_chunk) {

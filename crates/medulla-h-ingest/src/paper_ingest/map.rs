@@ -52,9 +52,7 @@ fn is_arxiv_id(text: &str) -> bool {
         && year.bytes().all(|byte| byte.is_ascii_digit())
         && (4..=5).contains(&number.len())
         && number.bytes().all(|byte| byte.is_ascii_digit())
-        && version.map_or(true, |v| {
-            !v.is_empty() && v.bytes().all(|byte| byte.is_ascii_digit())
-        })
+        && version.is_none_or(|v| !v.is_empty() && v.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
 fn doi_of(references: &[Value]) -> Option<String> {

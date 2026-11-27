@@ -38,7 +38,6 @@ const QUALITY_SCORE_INVALID: &str = "QUALITY_RULE_INVALID";
 
 /// The stored node types and properties the native `QualityEvaluate` job writes; an
 /// outside score is stored in the same shape.
-const QUALITY_RULE_LABEL: &str = "QualityRule";
 const RULE_BODY_PROPERTY: &str = "rule";
 const RULE_STATE_PROPERTY: &str = "state";
 const RULE_FAILURES_PROPERTY: &str = "consecutive_failures";
