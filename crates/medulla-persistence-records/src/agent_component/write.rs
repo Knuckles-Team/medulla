@@ -230,11 +230,10 @@ impl AgentLibraryStore {
         let revision_exists = {
             let read = self.read()?;
             let revisions = read.open_owner_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
-            let found = revisions
+            revisions
                 .get((tenant_id, component_id, proposal.source_revision))
                 .map_err(|error| error.to_string())?
-                .is_some();
-            found
+                .is_some()
         };
         if !revision_exists {
             return Err(

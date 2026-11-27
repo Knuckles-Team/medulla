@@ -253,7 +253,6 @@ fn priced(record: &UsageRecord, catalog: &PriceCatalog) -> Option<(u64, String)>
 }
 
 /// Running sums of one group of a grouped rollup.
-#[derive(Default)]
 struct GroupAcc {
     calls: u64,
     tokens_in: u64,
@@ -267,14 +266,24 @@ struct GroupAcc {
     latencies: Vec<u64>,
 }
 
-impl GroupAcc {
-    fn new() -> Self {
+impl Default for GroupAcc {
+    /// An empty group: no calls yet, and the cost is known until a call breaks it.
+    fn default() -> Self {
         Self {
+            calls: 0,
+            tokens_in: 0,
+            tokens_out: 0,
+            tokens_cached: 0,
+            errors: 0,
+            cost: 0,
             cost_known: true,
-            ..Self::default()
+            currency: None,
+            latencies: Vec::new(),
         }
     }
+}
 
+impl GroupAcc {
     fn add(&mut self, record: &UsageRecord, priced: Option<(u64, String)>) {
         self.calls += 1;
         self.tokens_in += record.tokens_in;
@@ -470,7 +479,7 @@ impl AgentLibraryStore {
             let newest = rows.iter().map(|row| row.0).max();
             if let Some(newest) = newest.filter(|_| !legacy) {
                 let key = mark_key.as_str();
-                if held.map_or(true, |held| newest > held) {
+                if held.is_none_or(|held| newest > held) {
                     let bytes = match encode(&newest) {
                         Ok(bytes) => bytes,
                         Err(refusal) => {
@@ -757,10 +766,7 @@ impl AgentLibraryStore {
                     UsageGroupBy::Agent => record.agent_id.clone(),
                 };
                 let priced = priced(&record, catalog);
-                groups
-                    .entry(key)
-                    .or_insert_with(GroupAcc::new)
-                    .add(&record, priced);
+                groups.entry(key).or_default().add(&record, priced);
             }
             if !full {
                 break;

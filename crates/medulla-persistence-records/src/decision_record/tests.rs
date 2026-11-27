@@ -724,10 +724,12 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
         .expect("the fence holder commits");
 }
 
+#[cfg(test)]
 use super::retry_allowance::{
     denial_allowance_transition, DenialAllowanceEvent, DenialAllowanceRequest,
     DenialAllowanceState, RetryAllowanceError,
 };
+#[cfg(test)]
 fn allowance_context(
     store: &AgentLibraryStore,
     tenant: &str,
