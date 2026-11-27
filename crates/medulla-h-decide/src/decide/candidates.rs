@@ -560,6 +560,18 @@ pub(super) fn declared_candidates(
     })
 }
 
+/// What a candidate read needs beyond the store and the source: the caller's filtered graph
+/// snapshot, the asking principal, and the question's family, params and pinned policy.
+#[derive(Clone, Copy)]
+pub(super) struct CandidateRead<'a> {
+    pub graph_view: Option<&'a medulla_graph_core::graph::GraphView>,
+    pub graph_version: u64,
+    pub principal: &'a str,
+    pub family: &'a dyn DecisionFamily,
+    pub params: &'a [TypedParam],
+    pub policy: &'a medulla_decision_types::decision::policy::DecisionPolicy,
+}
+
 /// Read the options `source` names. Graph candidates need the caller's
 /// filtered snapshot, which [`super::stat_decide`] takes under the state lock.
 /// `family` is the question's family, whose `validate_candidates` hook
@@ -568,13 +580,16 @@ pub(super) fn read_candidates(
     store: &AgentLibraryStore,
     tenant_id: &str,
     source: &CandidateSource,
-    graph_view: Option<&medulla_graph_core::graph::GraphView>,
-    graph_version: u64,
-    principal: &str,
-    family: &dyn DecisionFamily,
-    params: &[TypedParam],
-    policy: &medulla_decision_types::decision::policy::DecisionPolicy,
+    read: &CandidateRead<'_>,
 ) -> Result<ReadCandidates, String> {
+    let CandidateRead {
+        graph_view,
+        graph_version,
+        principal,
+        family,
+        params,
+        policy,
+    } = *read;
     match source {
         CandidateSource::AgentLibrary { scope } => library_candidates(store, tenant_id, scope),
         CandidateSource::Declared { options } => {

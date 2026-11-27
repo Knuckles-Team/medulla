@@ -50,9 +50,11 @@ pub mod drift_registry;
 #[cfg(feature = "decide")]
 mod family;
 #[cfg(feature = "decide")]
-mod features;
+pub mod features;
 #[cfg(feature = "decide")]
 mod prompt_candidates;
+#[cfg(feature = "decide")]
+pub use family::process_decision::{process_control_feature_schema, PROCESS_CONTROL_QUESTION_IDS};
 #[cfg(feature = "decide")]
 pub use family::task_context::read_task_context;
 #[cfg(feature = "decide")]

@@ -343,7 +343,7 @@ mod served {
                         .and_then(|row| row.get(key).cloned())
                         .is_some_and(|stored| match stored {
                             Value::String(text) => text == value,
-                            other => other.to_string() == value,
+                            other => format!("{other}") == value,
                         })
                 })
                 .collect()

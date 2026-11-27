@@ -652,12 +652,14 @@ pub(super) fn decide_blocking(
             ctx.store,
             ctx.tenant_id,
             &request.candidates,
-            graph_view,
-            graph_version,
-            &principal,
-            registry,
-            request.params.as_slice(),
-            &policy.policy,
+            &super::candidates::CandidateRead {
+                graph_view,
+                graph_version,
+                principal: &principal,
+                family: registry,
+                params: request.params.as_slice(),
+                policy: &policy.policy,
+            },
         )
     })?;
     let (pinned, provider_binding) = telemetry::stage(Stage::Constraints, family, tenant, || {

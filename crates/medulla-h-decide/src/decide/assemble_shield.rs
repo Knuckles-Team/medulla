@@ -175,8 +175,7 @@ pub(crate) fn shield_step_schema(contracts: &[StepContract]) -> Result<Vec<StepS
         shields.push(StepShield {
             step_id: contract.step_id.clone(),
             schema_digest: digest,
-            declared_paths: BoundedVec::new(declared.into_iter().collect())
-                .map_err(|error| invalid(error))?,
+            declared_paths: BoundedVec::new(declared.into_iter().collect()).map_err(invalid)?,
             projected_digest: format!("sha256:{}", projected.to_hex()),
         });
     }

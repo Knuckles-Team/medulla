@@ -7,7 +7,7 @@
 
 use super::SharedState;
 use medulla_decision_stats::decision::participant_card::{
-    card_digest, confidence_ppm, rank_card, token_estimate, CardBudget, CardInput,
+    card_digest, rank_card, token_estimate, CardBudget, CardInput,
 };
 use medulla_decision_types::claims::{ClaimRecord, ObserverRef};
 use medulla_decision_types::decision::knob_families::participant::default_u64;

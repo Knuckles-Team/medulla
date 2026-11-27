@@ -274,7 +274,7 @@ pub(super) fn run(
 
     let n = stored.len() as u64;
     let passed = stored.iter().filter(|row| row.result.passed).count() as u64;
-    let pass_rate_ppm = if n == 0 { 0 } else { passed * PPM / n };
+    let pass_rate_ppm = (passed * PPM).checked_div(n).unwrap_or(0);
     let owned: Vec<SkillEvalCase> = admitted_cases.iter().map(|case| (*case).clone()).collect();
     let mix = suite_mix(&owned);
     let band = pass_band(pass_rate_ppm, n, &knobs);

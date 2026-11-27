@@ -58,7 +58,7 @@ pub(super) async fn read(
     })
     .await
     .map_err(|error| format!("assembly step read task failed: {error}"))??;
-    BoundedVec::new(steps).map_err(|error| invalid(error))
+    BoundedVec::new(steps).map_err(invalid)
 }
 
 /// The ordered steps `facts` state for `tasks`.
@@ -111,8 +111,8 @@ fn steps_of(facts: &[Fact], tasks: &[String]) -> Result<Vec<AssemblyStep>, Strin
                     .unwrap_or_default()
                     .to_string(),
                 step: step.clone(),
-                position: u16::try_from(index).map_err(|error| invalid(error))?,
-                capabilities: BoundedVec::new(held).map_err(|error| invalid(error))?,
+                position: u16::try_from(index).map_err(invalid)?,
+                capabilities: BoundedVec::new(held).map_err(invalid)?,
             })
         })
         .collect()

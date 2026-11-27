@@ -299,7 +299,7 @@ pub(super) mod served {
                         gap.state = gap
                             .state
                             .apply(GapEvent::Offer)
-                            .map_err(|refused| refuse(refused.code(), &refused.to_string()))?;
+                            .map_err(|refused| refuse(refused.code(), refused.to_string()))?;
                         view.offers.push(OfferEvidence {
                             gap_id,
                             rate_ppm: offer_rate(severity_ppm, open_offers, &knobs),

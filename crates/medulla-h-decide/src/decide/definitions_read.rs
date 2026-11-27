@@ -23,7 +23,6 @@ pub(super) const MAX_BODY_BYTES: usize = 16384;
 
 /// The definitions an assembly request names, read and validated.
 pub(super) struct ReadDefinitions {
-    pub patterns: Vec<WorkflowPattern>,
     /// Each template with its body, in the order of the assignments.
     pub templates: Vec<(PromptTemplate, String)>,
 }
@@ -174,24 +173,21 @@ pub(super) async fn read_definitions(
 ) -> Result<ReadDefinitions, String> {
     if patterns.is_empty() && prompts.is_empty() {
         return Ok(ReadDefinitions {
-            patterns: Vec::new(),
             templates: Vec::new(),
         });
     }
     let core = topology_read::graph_core(state, graph, verified).await?;
     let tenant = verified.tenant();
-    let patterns = patterns
-        .iter()
-        .map(|id| read_pattern(&core, tenant, id))
-        .collect::<Result<Vec<_>, String>>()?;
+    // A named pattern is read to prove it exists and is well formed; assembly consumes
+    // only the templates, so the validated patterns are not kept.
+    for id in patterns {
+        read_pattern(&core, tenant, id)?;
+    }
     let templates = prompts
         .iter()
         .map(|assignment| read_template(&core, tenant, &assignment.template_id))
         .collect::<Result<Vec<_>, String>>()?;
-    Ok(ReadDefinitions {
-        patterns,
-        templates,
-    })
+    Ok(ReadDefinitions { templates })
 }
 
 #[cfg(test)]

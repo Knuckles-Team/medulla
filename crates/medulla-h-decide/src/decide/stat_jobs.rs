@@ -888,9 +888,7 @@ async fn serve_eval(
         DecisionEvalOp::SkillEval { .. }
         | DecisionEvalOp::SkillEvalCaseAdd { .. }
         | DecisionEvalOp::HeldItemCritique { .. } => {
-            return Err(
-                "INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string(),
-            )
+            Err("INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string())
         }
         DecisionEvalOp::SkillEvalReport { request } => {
             super::stat_skill_eval::require_scope(

@@ -610,7 +610,7 @@ mod served {
                 proposal.edit.body_digest.as_bytes(),
             ],
         )
-        .map_err(|error| invalid_parameter(error))?
+        .map_err(invalid_parameter)?
         .to_hex();
         let record = ProposalRecord {
             revision_key: revision.key(),

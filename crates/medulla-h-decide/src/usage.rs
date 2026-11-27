@@ -164,8 +164,8 @@ mod served {
                     ));
                 }
                 if let Some(entry) = entries.iter().find(|e| {
-                    !e.currency.is_empty()
-                        && !(e.currency.len() == 3
+                    !(e.currency.is_empty()
+                        || e.currency.len() == 3
                             && e.currency.bytes().all(|b| b.is_ascii_uppercase()))
                 }) {
                     return Err(format!(

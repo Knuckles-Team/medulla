@@ -482,16 +482,16 @@ pub(super) fn check_activation(
     let (_, state) = read_pointer(store, tenant, &pointer).map_err(store_fault)?;
     let active = state.target();
     // The set already active replays; any other move must start from the revision reviewed.
-    if target.is_none() || active != target {
-        if active != binding.expected_policy_revision.as_deref() {
-            return Err(Fault::new(
-                medulla_decision_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str(),
-                format!(
-                    "the review was made against {:?}, the active revision is {:?}",
-                    binding.expected_policy_revision, active
-                ),
-            ));
-        }
+    if (target.is_none() || active != target)
+        && active != binding.expected_policy_revision.as_deref()
+    {
+        return Err(Fault::new(
+            medulla_decision_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str(),
+            format!(
+                "the review was made against {:?}, the active revision is {:?}",
+                binding.expected_policy_revision, active
+            ),
+        ));
     }
     if target.is_none() {
         return Ok(());

@@ -440,7 +440,7 @@ fn policy_evidence(
     let row = sources
         .graph
         .and_then(|graph| graph.node_row_object(record_id))
-        .filter(|row| is_policy_evolution_row(row))
+        .filter(is_policy_evolution_row)
         .ok_or_else(unevaluated)?;
     let stored = StoredPolicyRecord::from_row(&row).ok_or_else(unevaluated)?;
     if stored.tenant_id != sources.tenant

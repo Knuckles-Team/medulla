@@ -212,6 +212,7 @@ pub(super) mod served {
         contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, proven_rows,
         verify_seal, ClaimKnobs, ReaderView,
     };
+    use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         ClaimsAdvance, ClaimsCompileArtifact, ClaimsGet, ClaimsPropose, ClaimsProvenClaims,
@@ -354,6 +355,18 @@ pub(super) mod served {
         events: std::sync::Mutex<Vec<medulla_decision_types::memory_events::MemoryEvent>>,
     }
 
+    /// The fields of one evidence record as a caller sent them, before they are validated.
+    struct EvidenceDraft {
+        evidence_id: String,
+        claim_id: String,
+        channel: Option<medulla_decision_types::claims::EvidenceChannel>,
+        supports: bool,
+        weight_ppm: u32,
+        source_digest: String,
+        session_id: Option<String>,
+        proof: Option<medulla_decision_types::claims::ProofReceipt>,
+    }
+
     impl ClaimStore {
         /// Open the shared statechart store and register both charts.
         pub(in crate::decide) fn open(
@@ -390,12 +403,7 @@ pub(super) mod served {
         pub(in crate::decide) fn take_events(
             &self,
         ) -> Vec<medulla_decision_types::memory_events::MemoryEvent> {
-            std::mem::take(
-                &mut *self
-                    .events
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner()),
-            )
+            std::mem::take(&mut *self.events.lock_recovering("claim memory events"))
         }
 
         /// Run one operation to its typed result.
@@ -424,7 +432,7 @@ pub(super) mod served {
                     feed,
                     proof,
                 } => {
-                    let evidence = self.evidence_of(
+                    let evidence = self.evidence_of(EvidenceDraft {
                         evidence_id,
                         claim_id,
                         channel,
@@ -433,7 +441,7 @@ pub(super) mod served {
                         source_digest,
                         session_id,
                         proof,
-                    )?;
+                    })?;
                     payload_of::<ClaimsRecordEvidence>(
                         self.record_evidence(evidence, stances, feed)?,
                     )
@@ -638,24 +646,23 @@ pub(super) mod served {
             let advanced = record_of(&self.send_with_outbox(&instance, event, &intents)?)?;
             if let Some(changed) = changed {
                 self.events
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .lock_recovering("claim memory events")
                     .push(changed);
             }
             Ok(advanced)
         }
 
-        fn evidence_of(
-            &self,
-            evidence_id: String,
-            claim_id: String,
-            channel: Option<medulla_decision_types::claims::EvidenceChannel>,
-            supports: bool,
-            weight_ppm: u32,
-            source_digest: String,
-            session_id: Option<String>,
-            proof: Option<medulla_decision_types::claims::ProofReceipt>,
-        ) -> Result<Evidence, String> {
+        fn evidence_of(&self, draft: EvidenceDraft) -> Result<Evidence, String> {
+            let EvidenceDraft {
+                evidence_id,
+                claim_id,
+                channel,
+                supports,
+                weight_ppm,
+                source_digest,
+                session_id,
+                proof,
+            } = draft;
             let Some(channel) = channel else {
                 return Err(refuse(ServerErrorCode::EvidenceNoChannel, &evidence_id));
             };

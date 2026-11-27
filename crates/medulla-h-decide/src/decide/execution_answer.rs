@@ -555,11 +555,14 @@ fn connector_of(contract: &str) -> String {
 /// Run one SELECT for `task_iri` over the caller's view: its variables and its rows,
 /// sorted so the same graph answers the same bytes.
 #[cfg(feature = "decide")]
+type SelectedRows = (Vec<String>, Vec<Vec<Option<String>>>);
+
+#[cfg(feature = "decide")]
 fn select_rows(
     view: &medulla_graph_core::graph::GraphView,
     query: &str,
     task_iri: &str,
-) -> Result<(Vec<String>, Vec<Vec<Option<String>>>), String> {
+) -> Result<SelectedRows, String> {
     use medulla_rdf::sparql::{Dataset, Projection, QueryOutcome};
 
     let text = query.replace("<TASK>", &format!("<{task_iri}>"));
