@@ -7,9 +7,10 @@
 use std::collections::BTreeSet;
 
 use medulla_source_types::delivery::{
-    AssignmentReport, AssignmentState, Delivery, DeliveryProposal, DeliveryQuestion,
-    DeliveryReportRefusal, DeliveryReportState, DeliveryReportWrite, DeliveryStage, InputSource,
-    ProposalState, QUESTION_MAX_CHARS,
+    AssignmentReport, AssignmentState, Delivery, DeliveryInput, DeliveryProposal, DeliveryQuestion,
+    DeliveryReportRefusal, DeliveryReportState, DeliveryReportWrite, DeliveryStage, FeedbackKind,
+    InputSource, ProposalState, ANSWER_INVALID, ANSWER_MAX_CHARS, DELIVERY_NO_QUESTION,
+    QUESTION_MAX_CHARS,
 };
 
 /// Apply one report to `delivery`. `known_verdicts` is the set of gate verdict IDs of the
@@ -106,6 +107,38 @@ pub fn set_attention(delivery: &mut Delivery, write: &DeliveryReportWrite, seq: 
         raised_by,
         seq,
     });
+}
+
+/// Record a person's answer to the open question of `delivery` (MEDULLA-SDLC-R019.17).
+///
+/// The answer becomes one person input of the delivery (`conversation_comment`, the answer text
+/// in `detail`, the event id derived from the delivery id and the new sequence number) and the
+/// open question is cleared, so the derived stage leaves `person_answer`. A delivery with no
+/// open question refuses `DELIVERY_NO_QUESTION`; a blank answer, or one over
+/// [`ANSWER_MAX_CHARS`], refuses `ANSWER_INVALID`. Pure: the caller writes the returned record.
+pub fn record_answer(delivery: &Delivery, answer: &str) -> Result<Delivery, String> {
+    let length = answer.chars().count();
+    if answer.trim().is_empty() || length > ANSWER_MAX_CHARS {
+        return Err(format!(
+            "{ANSWER_INVALID}: an answer has 1 to {ANSWER_MAX_CHARS} characters"
+        ));
+    }
+    if delivery.attention.is_none() || delivery.ended.is_some() {
+        return Err(format!(
+            "{DELIVERY_NO_QUESTION}: the delivery has no open question"
+        ));
+    }
+    let mut next = delivery.clone();
+    let seq = next.next_seq();
+    next.inputs.push(DeliveryInput {
+        event_id: format!("answer:{}:{seq}", delivery.id),
+        kind: FeedbackKind::ConversationComment,
+        source: InputSource::Person,
+        seq,
+        detail: Some(answer.to_string()),
+    });
+    next.attention = None;
+    Ok(next)
 }
 
 /// The report with the highest `seq` over every assignment of the delivery.

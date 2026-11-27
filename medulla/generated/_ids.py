@@ -40,6 +40,7 @@ METHOD_IDS = frozenset(
         "DeliveryReport",
         "DeliveryStop",
         "DeliveryRetry",
+        "DeliveryRespond",
         "DeliveryStatus",
         "DeliveryList",
         "SchemaDriftList",

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_report};
+use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_answer, record_report};
 use medulla_source_types::delivery::{
     decode_delivery, AssignmentReport, AssignmentState, Delivery, DeliveryInput,
     DeliveryOutcome, DeliveryProposal, DeliveryQuestion, DeliveryReportRefusal,
@@ -288,4 +288,46 @@ fn one_question_replaced_or_cleared() {
     let too_long = "é".repeat(601);
     let refusal = record_report(&d, &ask(&too_long), &known).unwrap_err();
     assert_eq!(refusal.code(), "QUESTION_TOO_LONG");
+}
+
+// spec: MEDULLA-SDLC-R019.17
+#[test]
+fn a_person_answer_clears_the_open_question_and_is_recorded_as_a_person_input() {
+    let mut waiting = base();
+    waiting.attention = Some(DeliveryQuestion {
+        text: "which branch?".into(),
+        raised_by: None,
+        seq: 1,
+    });
+    waiting.seq = 1;
+    assert_eq!(derive_stage(&waiting), DeliveryStage::PersonAnswer);
+    let answered = record_answer(&waiting, "use main").unwrap();
+    assert_eq!(answered.attention, None);
+    assert_ne!(derive_stage(&answered), DeliveryStage::PersonAnswer);
+    let input = answered.inputs.last().expect("the answer is an input");
+    assert_eq!(input.source, InputSource::Person);
+    assert_eq!(input.kind, FeedbackKind::ConversationComment);
+    assert_eq!(input.detail.as_deref(), Some("use main"));
+    assert_eq!(input.seq, 2);
+    assert_eq!(input.event_id, "answer:d1:2");
+    // The record the caller read is untouched.
+    assert!(waiting.attention.is_some() && waiting.inputs.is_empty());
+}
+
+// spec: MEDULLA-SDLC-R019.17
+#[test]
+fn an_answer_without_a_question_or_out_of_bounds_is_refused() {
+    let quiet = base();
+    assert!(record_answer(&quiet, "x").unwrap_err().starts_with("DELIVERY_NO_QUESTION"));
+    let mut waiting = base();
+    waiting.attention = Some(DeliveryQuestion {
+        text: "q".into(),
+        raised_by: None,
+        seq: 1,
+    });
+    assert!(record_answer(&waiting, "  ").unwrap_err().starts_with("ANSWER_INVALID"));
+    let long = "a".repeat(2001);
+    assert!(record_answer(&waiting, &long).unwrap_err().starts_with("ANSWER_INVALID"));
+    waiting.ended = Some(DeliveryOutcome::Stopped);
+    assert!(record_answer(&waiting, "x").unwrap_err().starts_with("DELIVERY_NO_QUESTION"));
 }

@@ -23,12 +23,12 @@ use medulla_sdlc::lifecycle::delivery::mandate::revalidate_mandate;
 use medulla_sdlc::lifecycle::delivery::open::{
     delivery_id, shadow_or_dispatch, DispatchOutcome, OpenDelivery,
 };
-use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_report};
+use medulla_sdlc::lifecycle::delivery::stage::{derive_stage, record_answer, record_report};
 use medulla_source_types::delivery::{
     decode_delivery, AssignmentState, Delivery, DeliveryAnswer, DeliveryAssignment,
     DeliveryFeedbackReceipt, DeliveryListAnswer, DeliveryListEntry, DeliveryListRequest,
     DeliveryOpenAnswer, DeliveryOpenRequest, DeliveryRef, DeliveryReportWrite,
-    DeliveryRetryRequest, FeedbackKind, InputSource, MandateFacts, ProposalEvent, ReviewRecord,
+    DeliveryRespondRequest, DeliveryRetryRequest, FeedbackKind, InputSource, MandateFacts, ProposalEvent, ReviewRecord,
     ReviewerKind, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
     DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION, DELIVERY_TYPE,
 };
@@ -41,7 +41,8 @@ use medulla_source_types::lifecycle::{DefectIntake, FileDefectRequest};
 use medulla_protocol_types::result_contract::ingestion::{
     DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
     DeliveryOpen as DeliveryOpenResult, DeliveryReport as DeliveryReportResult,
-    DeliveryRetry as DeliveryRetryResult, DeliveryStatus as DeliveryStatusResult,
+    DeliveryRespond as DeliveryRespondResult, DeliveryRetry as DeliveryRetryResult,
+    DeliveryStatus as DeliveryStatusResult,
     DeliveryStop as DeliveryStopResult,
 };
 
@@ -843,6 +844,27 @@ pub(super) async fn stop(
     }
     .await;
     typed_response::<DeliveryStopResult>(target.req_id, result)
+}
+
+/// `DeliveryRespond` (MEDULLA-SDLC-R019.17): a person's answer to the open question.
+pub(super) async fn respond(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: DeliveryRespondRequest,
+) -> Response {
+    let result = async {
+        require_tenant(&target)?;
+        let (core, authority) = read_graph(state, &target).await?;
+        let delivery = find_delivery(
+            &load_deliveries(&core, &authority, target.verified.tenant()),
+            &request.delivery_id,
+        )?;
+        let answered = record_answer(&delivery, &request.answer)?;
+        commit(state, &target, vec![delivery_operation(&answered, &target)?]).await?;
+        Ok(answer(answered))
+    }
+    .await;
+    typed_response::<DeliveryRespondResult>(target.req_id, result)
 }
 
 /// `DeliveryRetry`: a new pending assignment on a live delivery whose assignments all ended.

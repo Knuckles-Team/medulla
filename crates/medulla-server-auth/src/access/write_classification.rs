@@ -513,6 +513,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DeliveryReport { .. }
                 | Method::DeliveryStop { .. }
                 | Method::DeliveryRetry { .. }
+                | Method::DeliveryRespond { .. }
                 | Method::TriageDefect { .. }
                 | Method::SchemaRepairPropose { .. }
                 | Method::SchemaRepairApprove { .. }

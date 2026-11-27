@@ -362,3 +362,40 @@ def test_slice_to_merged_proposal_through_feedback():
         assert status["stage"] == "ended"
 
     asyncio.run(_with_graph(seed, body))
+
+
+# spec: MEDULLA-SDLC-R019.17
+@pytest.mark.spec("MEDULLA-SDLC-R019.17")
+def test_a_person_answer_clears_the_open_question():
+    async def body(client, graph):
+        await _set_mode(client, graph, "development")
+        opened = _body(await client.delivery_open(_open_request(), graph))
+        delivery_id = opened["delivery"]["id"]
+        assignment = opened["delivery"]["assignments"][0]["id"]
+        with pytest.raises(Exception, match="DELIVERY_NO_QUESTION"):
+            await client.delivery_respond(delivery_id, "anything", graph)
+        asked = _body(
+            await client.delivery_report(
+                {
+                    "delivery_id": delivery_id,
+                    "assignment_id": assignment,
+                    "state": "waiting",
+                    "summary": "need input",
+                    "proposal": None,
+                    "question": "which branch?",
+                    "evidence": [],
+                },
+                graph,
+            )
+        )
+        assert asked["stage"] == "person/answer"
+        with pytest.raises(Exception, match="ANSWER_INVALID"):
+            await client.delivery_respond(delivery_id, "  ", graph)
+        answered = _body(await client.delivery_respond(delivery_id, "use main", graph))
+        assert answered["delivery"]["attention"] is None
+        assert answered["stage"] != "person/answer"
+        assert answered["delivery"]["inputs"][-1]["source"] == "person"
+        with pytest.raises(Exception, match="DELIVERY_NOT_FOUND"):
+            await client.delivery_respond("delivery:unknown", "x", graph)
+
+    asyncio.run(_with_graph([], body))

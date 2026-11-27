@@ -654,6 +654,12 @@ $($variants)*
     DeliveryRetry {
         request: medulla_source_types::delivery::DeliveryRetryRequest,
     },
+    /// Answer the one open question of a delivery (MEDULLA-SDLC-R019.17): the answer is
+    /// recorded as a person input of the verified caller and the question is cleared. Refuses
+    /// `DELIVERY_NO_QUESTION`, `ANSWER_INVALID` and `DELIVERY_NOT_FOUND`.
+    DeliveryRespond {
+        request: medulla_source_types::delivery::DeliveryRespondRequest,
+    },
     /// Triage one defect of the tenant graph (MEDULLA-SDLC-R004.3): the engine reads the defect,
     /// its stack frames, their symbols and blame, decides through the `defect_triage` question
     /// family, commits the sealed record through `DecisionLog` and writes the `affects` edges.

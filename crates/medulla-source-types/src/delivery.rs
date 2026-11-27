@@ -55,6 +55,15 @@ pub const ARMING_HEAD_MISMATCH: &str = "ARMING_HEAD_MISMATCH";
 /// tenant's delivery refuses the same way.
 pub const DELIVERY_NOT_FOUND: &str = "DELIVERY_NOT_FOUND";
 
+/// A person's answer is blank, over [`ANSWER_MAX_CHARS`] or names a delivery that is not waiting.
+pub const ANSWER_INVALID: &str = "ANSWER_INVALID";
+
+/// The delivery has no open question to answer (R019.17).
+pub const DELIVERY_NO_QUESTION: &str = "DELIVERY_NO_QUESTION";
+
+/// The longest answer a person may give to a delivery question, in characters.
+pub const ANSWER_MAX_CHARS: usize = 2000;
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(DELIVERY_NOT_FOUND),
@@ -69,6 +78,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(ASSIGNMENT_ENDED),
     RefusalCode::new(REPORT_EVIDENCE_MISSING),
     RefusalCode::new(QUESTION_TOO_LONG),
+    RefusalCode::new(ANSWER_INVALID),
+    RefusalCode::new(DELIVERY_NO_QUESTION),
 ];
 
 /// How strongly the delivery was mandated.
@@ -691,6 +702,15 @@ pub struct DeliveryAnswer {
 #[serde(deny_unknown_fields)]
 pub struct DeliveryRef {
     pub delivery_id: String,
+}
+
+/// `DeliveryRespond` (R019.17): a person's answer to the one open question of a delivery. The
+/// answering principal is the verified caller, never a request field.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryRespondRequest {
+    pub delivery_id: String,
+    pub answer: String,
 }
 
 /// `DeliveryRetry`: a new pending assignment on a live delivery whose assignments all ended.

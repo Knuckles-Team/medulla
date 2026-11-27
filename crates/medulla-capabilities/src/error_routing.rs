@@ -2279,6 +2279,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DELIVERY_NOT_FOUND",
         ],
     ),
+    // MEDULLA-SDLC-R019.17: a person's answer to the open question.
+    (
+        "DeliveryRespond",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DELIVERY_NOT_FOUND",
+            "DELIVERY_NO_QUESTION",
+            "ANSWER_INVALID",
+        ],
+    ),
     // MEDULLA-TYPED-PACKS-R806: the served schema drift methods.
     (
         "SchemaDriftList",

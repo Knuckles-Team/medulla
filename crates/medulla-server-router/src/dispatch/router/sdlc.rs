@@ -233,6 +233,9 @@ pub async fn dispatch_sdlc_methods(
         Method::DeliveryRetry { request } => {
             dispatch_boxed(delivery::retry(state, target, request)).await
         }
+        Method::DeliveryRespond { request } => {
+            dispatch_boxed(delivery::respond(state, target, request)).await
+        }
         Method::LifecycleTrace { request } => {
             dispatch_boxed(lifecycle_trace(state, target, request)).await
         }

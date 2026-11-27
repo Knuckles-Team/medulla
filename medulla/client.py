@@ -20373,6 +20373,18 @@ class MedullaClient:
         request = {"delivery_id": delivery_id}
         return await self._delivery("DeliveryStop", {"request": request}, graph)
 
+    async def delivery_respond(
+        self, delivery_id: str, answer: str, graph: str
+    ) -> dict[str, Any]:
+        """Answer the one open question of a delivery (MEDULLA-SDLC-R019.17).
+
+        The answer is recorded as a person input of the verified caller, never of
+        a name in the request, and the question is cleared. Refuses
+        ``DELIVERY_NO_QUESTION``, ``ANSWER_INVALID`` and ``DELIVERY_NOT_FOUND``.
+        """
+        request = {"delivery_id": delivery_id, "answer": answer}
+        return await self._delivery("DeliveryRespond", {"request": request}, graph)
+
     async def delivery_retry(
         self, delivery_id: str, run_trace_id: str, graph: str
     ) -> dict[str, Any]:
