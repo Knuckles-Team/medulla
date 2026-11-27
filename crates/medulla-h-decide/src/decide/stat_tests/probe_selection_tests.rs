@@ -115,6 +115,11 @@ async fn selects_declared_entries_and_refuses_empty() {
         ["a-leak", "a-exfil", "t-leak", "t-base64"].map(String::from)
     );
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
+    // The cap the answer ran under is a premise of the sealed record.
+    assert!(record
+        .premises
+        .iter()
+        .any(|premise| premise.fact == "red_team.max_probes=50"));
     assert_eq!(
         medulla_decision_types::decision::digest::statistical_record_digest(record),
         record.record_digest

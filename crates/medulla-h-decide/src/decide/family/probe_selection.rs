@@ -141,6 +141,14 @@ fn conclude_selection(ctx: &ExecutionContext, request: &DecideRequest) -> Result
         class: PremiseClass::Claim,
         source: FamilyPremiseSource::Request("params"),
     });
+    // The cap the selection ran under, readable from the sealed record: the knob is
+    // startup configuration, with no method that reads it.
+    premises.push(FamilyPremise {
+        subject: "probe_selection".into(),
+        fact: format!("red_team.max_probes={cap}"),
+        class: PremiseClass::Definition,
+        source: FamilyPremiseSource::Policy,
+    });
     executed.family_premises = premises;
     Ok(executed)
 }
