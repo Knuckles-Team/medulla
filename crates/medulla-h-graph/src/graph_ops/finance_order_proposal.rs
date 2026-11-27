@@ -18,11 +18,13 @@ use super::finance_order_limit_check::{
     payload_sha256, reasons_of, verify_proposal, Refusal, TENANT_SCOPE_KEY,
 };
 #[cfg(feature = "finance")]
+use super::terminal::GraphOpsContext;
+#[cfg(feature = "finance")]
 use medulla_finance_market::market::digest;
 #[cfg(feature = "finance")]
 use medulla_finance_types::finance_order::{
     EvidenceRef, OrderAdmissionReceipt, OrderProposalSnapshot, OrderPromoteRequest,
-    OrderPromoteResult, OrderStageResult, ORDER_LIMIT_BREACH, ORDER_PROMOTION_VETOED,
+    OrderPromoteResult, OrderReceiptGetRequest, OrderStageResult, ORDER_RECEIPT_NOT_FOUND, ORDER_LIMIT_BREACH, ORDER_PROMOTION_VETOED,
     PROMOTE_EVIDENCE_MISMATCH, PROMOTE_GATE_FAILED, PROMOTE_GATE_UNAVAILABLE, PROMOTE_HEAD_STALE,
     PROMOTE_RECEIPT_INCOMPLETE, PROMOTE_WRITE_FAILED, PROPOSAL_EVIDENCE_MISSING,
     PROPOSAL_HEAD_STALE, PROPOSAL_REVISION_CONFLICT,
@@ -702,5 +704,142 @@ pub(super) async fn record(
             ctx.req_id,
             "METHOD_NOT_YET_SERVED: the order proposal methods need the finance feature",
         ))
+    }
+}
+
+/// The stored node `node_id` when it belongs to `scope`; an absent node and another tenant's
+/// node are the same `None`, so a caller cannot tell them apart.
+#[cfg(feature = "finance")]
+fn own_node(core: &GraphCore, node_id: &str, scope: &str) -> Option<Props> {
+    stored(core, node_id)
+        .filter(|props| props.get(TENANT_SCOPE_KEY).and_then(|v| v.as_str()) == Some(scope))
+}
+
+/// The promoted admission receipt of one proposal (MEDULLA-FINANCE-PRIMITIVES-R015.1.4): the
+/// promotion pointer names the promoted revision, and that revision's sealed receipt node
+/// holds the receipt and its digest.
+#[cfg(feature = "finance")]
+pub(super) fn read_promoted_receipt(
+    core: &GraphCore,
+    scope: &str,
+    request: &OrderReceiptGetRequest,
+) -> Result<OrderPromoteResult, Refusal> {
+    let missing = || {
+        (
+            ORDER_RECEIPT_NOT_FOUND,
+            "the proposal has no promoted admission receipt".to_owned(),
+        )
+    };
+    let pointer =
+        own_node(core, &pointer_node_id(&request.proposal_id), scope).ok_or_else(missing)?;
+    let revision = pointer
+        .get("promotedRevision")
+        .and_then(|value| value.as_u64())
+        .ok_or_else(missing)?;
+    let receipt_id = receipt_node_id(&request.proposal_id, revision);
+    let node = own_node(core, &receipt_id, scope).ok_or_else(missing)?;
+    let receipt: OrderAdmissionReceipt = node
+        .get("receipt")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+        .ok_or_else(missing)?;
+    let receipt_digest = node
+        .get("receiptDigest")
+        .and_then(|value| value.as_str())
+        .map(str::to_owned)
+        .ok_or_else(missing)?;
+    Ok(OrderPromoteResult {
+        receipt_id,
+        receipt_digest,
+        receipt,
+    })
+}
+
+/// Route `FinanceOrderReceiptGet` from the graph terminal read chain.
+#[cfg(feature = "finance")]
+pub(super) async fn handle_receipt_get(
+    ctx: GraphOpsContext<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let Method::FinanceOrderReceiptGet { request } = &method else {
+        return ControlFlow::Continue(method);
+    };
+    let Some(scope) = ctx
+        .read_authority
+        .carrier()
+        .map(|carrier| carrier.tenant_scope().to_owned())
+    else {
+        return ControlFlow::Break(Response::err(ctx.req_id, "ACCESS_DENIED: no verified tenant"));
+    };
+    ControlFlow::Break(match read_promoted_receipt(ctx.core, &scope, request) {
+        Ok(result) => Response::ok(
+            ctx.req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::graph::FinanceOrderReceiptGet,
+            >(&result),
+        ),
+        Err((code, detail)) => Response::err(ctx.req_id, format!("{code}: {detail}")),
+    })
+}
+
+#[cfg(all(test, feature = "finance"))]
+mod receipt_get_tests {
+    use super::*;
+
+    fn write(core: &GraphCore, id: &str, props: serde_json::Value) {
+        let operations = vec![serde_json::json!({
+            "op": "upsert_node", "id": id, "properties": props,
+        })];
+        let bytes = encode(&operations).expect("encodes");
+        medulla_graph_algos::algorithms::batch_update(core, &bytes).expect("writes");
+    }
+
+    fn receipt() -> OrderAdmissionReceipt {
+        OrderAdmissionReceipt {
+            proposal_id: "p1".into(),
+            revision: 2,
+            snapshot_digest: "sha256:aa".into(),
+            decision_digest: "sha256:bb".into(),
+            policy_id: "policy".into(),
+            policy_revision: 1,
+            policy_digest: "sha256:cc".into(),
+            gate_manifest_digest: "sha256:dd".into(),
+            gate_receipt_digests: vec!["sha256:ee".into()],
+            transaction_revision: 9,
+        }
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R015.1.4
+    #[test]
+    fn the_promoted_receipt_reads_back_and_a_foreign_scope_reads_as_absent() {
+        let core = GraphCore::new();
+        write(
+            &core,
+            &pointer_node_id("p1"),
+            serde_json::json!({TENANT_SCOPE_KEY: "scope-a", "promotedRevision": 2}),
+        );
+        write(
+            &core,
+            &receipt_node_id("p1", 2),
+            serde_json::json!({
+                TENANT_SCOPE_KEY: "scope-a",
+                "receiptDigest": "sha256:ff",
+                "receipt": receipt(),
+            }),
+        );
+        let request = OrderReceiptGetRequest { proposal_id: "p1".into() };
+        let read = read_promoted_receipt(&core, "scope-a", &request).expect("reads");
+        assert_eq!(read.receipt, receipt());
+        assert_eq!(read.receipt_digest, "sha256:ff");
+        assert_eq!(read.receipt_id, receipt_node_id("p1", 2));
+        let foreign = read_promoted_receipt(&core, "scope-b", &request).unwrap_err();
+        let absent = read_promoted_receipt(
+            &core,
+            "scope-a",
+            &OrderReceiptGetRequest { proposal_id: "nope".into() },
+        )
+        .unwrap_err();
+        assert_eq!(foreign, absent);
+        assert_eq!(foreign.0, ORDER_RECEIPT_NOT_FOUND);
     }
 }

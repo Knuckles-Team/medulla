@@ -65,6 +65,7 @@ pub(super) async fn try_handle_graph_domains(
         method = super::finance_performance::handle_performance(ctx, method).await?;
         method = super::finance_regime::handle_regime(ctx, method).await?;
         method = super::finance_order_limit_check::handle_check(ctx, method).await?;
+        method = super::finance_order_proposal::handle_receipt_get(ctx, method).await?;
     }
     method = super::union::try_handle_cross_graph_union(ctx, method).await?;
     let _ = super::union::try_handle_subgraph_comparison(ctx, method).await?;

@@ -16953,6 +16953,13 @@ class MethodFinanceOrderPromote(BaseModel):
     params: MethodFinanceOrderPromoteParams
 
 
+class MethodFinanceOrderReceiptGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceOrderReceiptGet"]
+    params: MethodFinanceOrderReceiptGetParams
+
+
 class MethodFinanceOrderLimitCheck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18843,6 +18850,7 @@ Method = Annotated[
         MethodFinanceAlertRaise,
         MethodFinanceFactorRecord,
         MethodFinanceOrderLimitCheck,
+        MethodFinanceOrderReceiptGet,
         MethodFinanceOrderPromote,
         MethodFinanceOrderStage,
         MethodFinancePatternClassify,
@@ -37558,6 +37566,18 @@ class MethodFinanceOrderPromoteParams(BaseModel):
     request: OrderPromoteRequest
 
 
+class OrderReceiptGetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposal_id: str
+
+
+class MethodFinanceOrderReceiptGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: OrderReceiptGetRequest
+
+
 class MethodFinanceOrderLimitCheckParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -49471,6 +49491,9 @@ __all__ = [
     "MethodFinanceFactorRecordParams",
     "MethodFinanceOrderLimitCheck",
     "MethodFinanceOrderLimitCheckParams",
+    "MethodFinanceOrderReceiptGet",
+    "MethodFinanceOrderReceiptGetParams",
+    "OrderReceiptGetRequest",
     "MethodFinanceOrderPromote",
     "MethodFinanceOrderPromoteParams",
     "MethodFinanceOrderStage",

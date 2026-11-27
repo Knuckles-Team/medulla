@@ -742,6 +742,16 @@ $($variants)*
         request: Box<medulla_finance_types::finance_order::OrderPromoteRequest>,
     },
 
+    /// Read the admission receipt of the promoted revision of one proposal
+    /// (MEDULLA-FINANCE-PRIMITIVES-R015.1.4): the answer of `FinanceOrderPromote` as stored,
+    /// `{receipt_id, receipt_digest, receipt}`, where `receipt_digest` is the admission digest.
+    /// A proposal that is unknown, never promoted or another tenant's refuses the one code
+    /// `ORDER_RECEIPT_NOT_FOUND`. Reads only.
+    #[cfg(feature = "finance")]
+    FinanceOrderReceiptGet {
+        request: Box<medulla_finance_types::finance_order::OrderReceiptGetRequest>,
+    },
+
     /// Verify one proposal against the pinned `TradingPolicy` risk limits through
     /// the decision limit guard: `Passed`, or `Abstained` with one `LimitBreach`
     /// reason per breach. Reads only.

@@ -173,6 +173,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "FinanceRecordGet",
     "FinanceReceiptList",
     "FinanceOrderLimitCheck",
+    "FinanceOrderReceiptGet",
     "FindCycle",
     "FiredTriggers",
     "Fork",

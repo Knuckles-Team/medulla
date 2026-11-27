@@ -458,3 +458,39 @@ async fn admission_receipt_is_atomic_and_effect_free() {
         .await;
     assert!(overwrite.error.is_some());
 }
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R015.1.4
+#[tokio::test]
+async fn promoted_receipt_reads_back_and_an_unpromoted_proposal_is_not_found() {
+    let mut served = Served::new().await;
+    let first = snapshot(&served.decision, 1, None, &order(100, 20_000));
+    let digest_1 = seal(&first);
+    assert!(served.stage(first, None, None).await.error.is_none());
+    let read_request = |proposal_id: &str| Method::FinanceOrderReceiptGet {
+        request: Box::new(medulla_finance_types::finance_order::OrderReceiptGetRequest {
+            proposal_id: proposal_id.to_string(),
+        }),
+    };
+    let before_promotion = served.call(read_request("prop1")).await;
+    assert!(
+        before_promotion
+            .error_detail
+            .clone()
+            .unwrap_or_default()
+            .contains("ORDER_RECEIPT_NOT_FOUND"),
+        "{:?}",
+        before_promotion.error_detail
+    );
+    let promoted = served.promote(promote_request(1, &digest_1, None)).await;
+    assert!(promoted.error.is_none(), "{:?}", promoted.error_detail);
+    let written: OrderPromoteResult = body(&promoted);
+    let read = served.call(read_request("prop1")).await;
+    assert!(read.error.is_none(), "{:?}", read.error_detail);
+    let answered: OrderPromoteResult = body(&read);
+    assert_eq!(answered, written);
+    let unknown = served.call(read_request("nope")).await;
+    assert!(unknown
+        .error_detail
+        .unwrap_or_default()
+        .contains("ORDER_RECEIPT_NOT_FOUND"));
+}

@@ -211,6 +211,19 @@ pub struct OrderAdmissionReceipt {
     pub transaction_revision: u64,
 }
 
+/// The request of `FinanceOrderReceiptGet` (MEDULLA-FINANCE-PRIMITIVES-R015.1.4): the proposal
+/// whose promoted admission receipt is read. The tenant is the verified tenant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OrderReceiptGetRequest {
+    pub proposal_id: String,
+}
+
+/// The proposal has no promoted admission receipt for the caller. An unknown proposal, one
+/// never promoted and another tenant's proposal all answer this one code.
+pub const ORDER_RECEIPT_NOT_FOUND: &str = "ORDER_RECEIPT_NOT_FOUND";
+
 /// The answer of `FinanceOrderPromote`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

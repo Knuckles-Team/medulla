@@ -126,6 +126,7 @@ method_results! {
     FinanceOrderPromote(FinanceOrderPromote) => Json<medulla_finance_types::finance_order::OrderPromoteResult>;
     // The limit verdict of an order proposal.
     #[cfg(feature = "finance")]
+    FinanceOrderReceiptGet(FinanceOrderReceiptGet) => Json<medulla_finance_types::finance_order::OrderPromoteResult>;
     FinanceOrderLimitCheck(FinanceOrderLimitCheck) => Json<medulla_finance_types::finance_order::OrderLimitCheckResult>;
     // `(decayed count, evicted ids, ids a live node still references)`.
     Maintain(Maintain) => Raw<(usize, Vec<String>, Vec<String>, Vec<String>)>;

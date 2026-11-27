@@ -1071,6 +1071,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROMOTE_WRITE_FAILED",
         ],
     ),
+    // MEDULLA-FINANCE-PRIMITIVES-R015.1.4: one code for absent, unpromoted and foreign.
+    ("FinanceOrderReceiptGet", &["ORDER_RECEIPT_NOT_FOUND"]),
     // MEDULLA-FINANCE-PRIMITIVES-R010.2: the limit verdict is a result, not a refusal.
     (
         "FinanceOrderLimitCheck",
