@@ -381,19 +381,7 @@ pub(super) fn ground_term_binding(gt: &GroundTerm) -> Binding {
         GroundTerm::Literal(l) => Binding::from_query_literal(l),
         #[cfg(feature = "sparql-star")]
         GroundTerm::Triple(t) => Binding::Triple(Box::new([
-            ground_subject_binding(&t.subject),
-            Binding::iri(t.predicate.as_str()),
-            ground_term_binding(&t.object),
-        ])),
-    }
-}
-
-#[cfg(feature = "sparql-star")]
-fn ground_subject_binding(subject: &spargebra::term::GroundSubject) -> Binding {
-    match subject {
-        spargebra::term::GroundSubject::NamedNode(n) => Binding::iri(n.as_str()),
-        spargebra::term::GroundSubject::Triple(t) => Binding::Triple(Box::new([
-            ground_subject_binding(&t.subject),
+            Binding::iri(t.subject.as_str()),
             Binding::iri(t.predicate.as_str()),
             ground_term_binding(&t.object),
         ])),
