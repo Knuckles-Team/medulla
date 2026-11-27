@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn an_unknown_changeset_or_a_missing_blob_refuses_with_its_code() {
         let target = changeset("c1", "x", &[("a.rs", PathOp::Delete, Some("gone"), None)]);
-        let missing = plan_revert(&[target.clone()], "c1", &sizes).unwrap_err();
+        let missing = plan_revert(std::slice::from_ref(&target), "c1", &sizes).unwrap_err();
         assert!(missing.message().starts_with("CHANGESET_INVALID: "));
         let unknown = plan_revert(&[target], "c9", &sizes).unwrap_err();
         assert!(unknown.message().starts_with("REVISION_NOT_ON_CHAIN: "));

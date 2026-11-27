@@ -1411,6 +1411,11 @@ mod tests {
         edges: BTreeMap<(String, String, String), BTreeMap<String, String>>,
     }
 
+    /// Node properties by node id.
+    type CodeNodes = BTreeMap<String, BTreeMap<String, String>>;
+    /// Edge properties by `(source, target, relationship)`.
+    type CodeEdges = BTreeMap<(String, String, String), BTreeMap<String, String>>;
+
     impl Graph {
         fn apply(&mut self, outcome: &ReindexOutcome) {
             for method in &outcome.write_set.methods {
@@ -1527,7 +1532,7 @@ mod tests {
             let mut queue: VecDeque<String> = component.iter().cloned().collect();
             let mut calls = BTreeSet::new();
             while let Some(node) = queue.pop_front() {
-                for ((source, target, relationship), _) in &self.edges {
+                for (source, target, relationship) in self.edges.keys() {
                     if relationship == "calls" && (source == &node || target == &node) {
                         calls.insert((source.clone(), target.clone()));
                         let far = if source == &node { target } else { source };
@@ -1548,12 +1553,7 @@ mod tests {
 
         /// The code graph: everything but the generation record and the communities,
         /// which the changeset recomputes on the affected subgraph only.
-        fn code(
-            &self,
-        ) -> (
-            BTreeMap<String, BTreeMap<String, String>>,
-            BTreeMap<(String, String, String), BTreeMap<String, String>>,
-        ) {
+        fn code(&self) -> (CodeNodes, CodeEdges) {
             let nodes = self
                 .nodes
                 .iter()

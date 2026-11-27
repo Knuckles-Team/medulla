@@ -1067,7 +1067,8 @@ mod tests {
             }
             // Connectivity: everything the head commit reaches is in the pack,
             // including the whole side branch.
-            let reached = closure(format, &read, &[head.clone()], &BTreeSet::new()).unwrap();
+            let reached =
+                closure(format, &read, std::slice::from_ref(&head), &BTreeSet::new()).unwrap();
             for name in ["s1", "s2", "s3", "m", "c1", "c17"] {
                 assert!(reached.contains(&fx.ids[name]), "{name} is reachable");
             }

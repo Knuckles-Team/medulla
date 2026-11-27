@@ -5,7 +5,7 @@
 //! the sync plan digest of the connection and class; `SourceSync` takes its rows exactly once.
 //! Every served sync test (architecture, open metadata, process model) builds its engine here.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 

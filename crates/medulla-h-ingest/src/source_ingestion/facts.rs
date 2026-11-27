@@ -1131,8 +1131,7 @@ mod tests {
         let pair = first
             .methods
             .iter()
-            .map(node_properties_opt)
-            .flatten()
+            .filter_map(node_properties_opt)
             .find(|properties| properties["type"] == FACT_PAIR_NODE_TYPE)
             .expect("pair node");
         let mut held_pairs = BTreeMap::new();

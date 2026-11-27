@@ -3187,8 +3187,8 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ["testfile:demo:tests/demo/test_third.py"]
         );
         assert!(edges_of(&p, &r3, "verifiedBy").is_empty());
-        assert_eq!(edges_of(&p, &r3, "dependsOnRow"), [r1.clone()]);
-        assert_eq!(edges_of(&p, &r2, "dependsOnRow"), [r1.clone()]);
+        assert_eq!(edges_of(&p, &r3, "dependsOnRow"), std::slice::from_ref(&r1));
+        assert_eq!(edges_of(&p, &r2, "dependsOnRow"), std::slice::from_ref(&r1));
         assert_eq!(
             edges_of(&p, &r1, "seamProvider"),
             ["seam:demo:specs/a/contracts/seam.md"]
@@ -3498,11 +3498,13 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             parser_capability_digest: String::new(),
             diagnostics: BoundedVec::new(Vec::new()).unwrap(),
         };
-        let mut result = IndexResult::default();
-        result.file_outcomes = vec![
-            outcome("specs/x/notes.md"),
-            outcome(".specify/memory/constitution.md"),
-        ];
+        let mut result = IndexResult {
+            file_outcomes: vec![
+                outcome("specs/x/notes.md"),
+                outcome(".specify/memory/constitution.md"),
+            ],
+            ..IndexResult::default()
+        };
         let batch: Vec<(String, Vec<u8>)> = files
             .iter()
             .filter(|(path, _)| path == "specs/x/notes.md" || path.starts_with(".specify/"))
