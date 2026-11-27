@@ -105,7 +105,7 @@ async fn asset_evidence(
     graph: &str,
     record: &medulla_catalog::emit::AssetRecord<'_>,
 ) -> AssetEvidence {
-    use medulla_catalog_types::stewardship::StewardRole;
+    use medulla_catalog_source_types::stewardship::StewardRole;
     use medulla_server_graph::dispatch::graph_client::GraphTarget;
 
     let changed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();

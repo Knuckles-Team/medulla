@@ -10,7 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::shared_db_platform::SharedPlatformEngine;
+use medulla_catalog_source_types::shared_db_platform::SharedPlatformEngine;
 
 /// How continuously changes are archived to object storage between full
 /// base backups.

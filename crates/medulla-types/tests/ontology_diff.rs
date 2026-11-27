@@ -1,6 +1,10 @@
 use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
-use medulla_catalog_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiff};
 use medulla_types::contract::ResourceId;
+use {
+    medulla_catalog_source_types::ontology_diff::ChangeImpact,
+    medulla_catalog_source_types::ontology_diff::ImpactItems,
+    medulla_catalog_source_types::ontology_diff::OntologyDiff,
+};
 
 // spec: MEDULLA-TYPED-PACKS-R804.1
 #[test]

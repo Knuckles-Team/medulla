@@ -180,11 +180,11 @@ impl SchemaContextCatalog {
     /// catalog; the ontology class and the change impact are filled by the caller that knows
     /// them, so they start as `None` and empty.
     pub fn from_attached(
-        graph: &crate::attached_catalog::AttachedCatalogGraph,
+        graph: &medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
         application: &str,
         owner: &str,
     ) -> Self {
-        use crate::attached_catalog::CatalogConstraintKind;
+        use medulla_catalog_source_types::attached_catalog::CatalogConstraintKind;
         let mut tables = BTreeMap::new();
         for table in &graph.tables {
             let name = qualified_name(&table.schema, &table.name);
@@ -360,9 +360,13 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R029.2
     #[test]
     fn attached_catalog_answers_carry_columns_and_both_join_directions() {
-        use crate::attached_catalog::{
-            AttachedCatalogGraph, CatalogColumn, CatalogConstraint, CatalogConstraintKind,
-            CatalogReference, CatalogTable,
+        use {
+            medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
+            medulla_catalog_source_types::attached_catalog::CatalogColumn,
+            medulla_catalog_source_types::attached_catalog::CatalogConstraint,
+            medulla_catalog_source_types::attached_catalog::CatalogConstraintKind,
+            medulla_catalog_source_types::attached_catalog::CatalogReference,
+            medulla_catalog_source_types::attached_catalog::CatalogTable,
         };
         let column = |name: &str| CatalogColumn {
             name: name.to_string(),

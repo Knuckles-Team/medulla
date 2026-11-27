@@ -72,11 +72,11 @@ Authenticated Iceberg catalog (R039): a valid token lists and loads its own tabl
 
 ### MEDULLA-UNIFIED-DATA-PLANE-R040 tests
 
-- `MEDULLA-UNIFIED-DATA-PLANE-R040.1`: `crates/medulla-catalog-types/src/embedding_promotion.rs::tests::checks_round_trip`.
-- `MEDULLA-UNIFIED-DATA-PLANE-R040.2`: `crates/medulla-catalog-types/src/embedding_promotion.rs::tests::one_regression_blocks_promotion`.
+- `MEDULLA-UNIFIED-DATA-PLANE-R040.1`: `crates/medulla-catalog-source-types/src/embedding_promotion.rs::tests::checks_round_trip`.
+- `MEDULLA-UNIFIED-DATA-PLANE-R040.2`: `crates/medulla-catalog-source-types/src/embedding_promotion.rs::tests::one_regression_blocks_promotion`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.3`: `crates/medulla-ann/src/version.rs::tests::tag_requires_passing_verdict`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.4`: `crates/medulla-ann/src/version.rs::tests::blocked_promotion_tags_nothing`.
-- `MEDULLA-UNIFIED-DATA-PLANE-R040.5`: `crates/medulla-catalog-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries`.
+- `MEDULLA-UNIFIED-DATA-PLANE-R040.5`: `crates/medulla-catalog-source-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries`.
 - `MEDULLA-UNIFIED-DATA-PLANE-R040.6`: `crates/medulla-ann-codes/src/semantic_ann_codes/promotion_tests.rs::regressed_image_blocks_promotion_and_keeps_prior_live`, `crates/medulla-server-served-tests/src/split_tests/medulla_h_retrieve_promotion_ops_tests.rs::model_config_and_probe_measurement_are_served`.
 
 ## Planned acceptance: graph-backed projections
@@ -96,7 +96,7 @@ These bullets define future acceptance targets. They are not test evidence or re
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.1` | `crates/medulla-catalog-types/src/metadata_acceleration.rs::tests::snapshot_semantics_round_trip`: A serde round trip keeps every field and rejects an unknown category or isolation. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.1` | `crates/medulla-catalog-source-types/src/metadata_acceleration.rs::tests::snapshot_semantics_round_trip`: A serde round trip keeps every field and rejects an unknown category or isolation. |
 
 | Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.3.2` | `crates/medulla-federation/src/federation_opt/tests.rs::fragments_share_snapshot`: Two fragments of one query read one snapshot while a concurrent writer commits. |
 
@@ -157,7 +157,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.5`: `tests/federation/test_s
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.1` | `crates/medulla-catalog-types/src/virtual_graph_view.rs::tests::graph_view_round_trips`: A serde round trip keeps every field and rejects an unmapped label. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.1` | `crates/medulla-catalog-source-types/src/virtual_graph_view.rs::tests::graph_view_round_trips`: A serde round trip keeps every field and rejects an unmapped label. |
 
 | Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.6.2` | `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::pattern_pushes_join`: One pattern renders one pushed SQL statement per same-source join. |
 
@@ -176,14 +176,14 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.6`: `tests/federation/test_g
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R022.4` | `crates/medulla-catalog-types/src/dialect_conformance.rs::tests::matrix_covers_every_source_category`: A unit test fails when a category lacks a row. It reports `unproven` for a category without a passing proof. |
+| Evidence | `MEDULLA-UNIFIED-DATA-PLANE-R022.4` | `crates/medulla-catalog-source-types/src/dialect_conformance.rs::tests::matrix_covers_every_source_category`: A unit test fails when a category lacks a row. It reports `unproven` for a category without a passing proof. |
 
 ## MEDULLA-UNIFIED-DATA-PLANE-R038.7 acceptance
 
 | Case | Row | Proving test and observation |
 |---|---|---|
 
-| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.1` | `crates/medulla-catalog-types/src/web_source.rs::tests::web_result_round_trips`: A serde round trip keeps every field and rejects a result without a URL. |
+| Model | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.1` | `crates/medulla-catalog-source-types/src/web_source.rs::tests::web_result_round_trips`: A serde round trip keeps every field and rejects a result without a URL. |
 
 | Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.2` | `crates/medulla-federation/src/federation_opt/tests.rs::web_search_pushdown_and_ttl`: A repeated pattern within the time-to-live sends one connector query. |
 
@@ -202,7 +202,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R038.7`: `tests/federation/test_w
 
 | Case | Row | Proving test and observation |
 |---|---|---|
-| Matrix | `MEDULLA-UNIFIED-DATA-PLANE-R022.4.1` | `crates/medulla-catalog-types/src/dialect_conformance.rs::tests::matrix_states_residency`: The test fails when a category row has no residency value. |
+| Matrix | `MEDULLA-UNIFIED-DATA-PLANE-R022.4.1` | `crates/medulla-catalog-source-types/src/dialect_conformance.rs::tests::matrix_states_residency`: The test fails when a category row has no residency value. |
 | Candidates | `MEDULLA-UNIFIED-DATA-PLANE-R038.7.7` | `crates/medulla-federation/src/federation_opt/tests.rs::web_candidates_carry_query_provenance`: Candidates carry query provenance, and the store holds no result rows. |
 | Model | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.1` | `web_document.rs::tests::web_provenance_round_trips`: A serde round trip keeps every field and rejects a missing Document ID or an unknown backend. |
 | Behavior | `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_web_ingest_tests.rs::links_chunks_vectors_and_facts`: One Document links its chunks and vectors; an equal digest is a no-op, and a new digest supersedes. |
@@ -294,7 +294,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.6.5:** `crates/medulla-cypher/src/cypher/tests/virtual_view.rs::explain_names_mapping` (planned). Proves the row: Evidence: EXPLAIN names the pushed statement and mapping digest per fragment.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.6.6:** `tests/federation/test_graph_language_virtual_served.py::test_cypher_matches_sparql_over_sql_source` (planned). Proves the row: Hot-path proof: openCypher and SPARQL agree over one relational source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.7:** `tests/federation/test_web_metasearch_served.py::test_pattern_pushes_to_connector_with_ttl_cache` (planned). Proves the row: Web metasearch sources answer at query time through a cached connector query (rollup).
-- **MEDULLA-UNIFIED-DATA-PLANE-R038.7.1:** `crates/medulla-catalog-types/src/web_source.rs::tests::web_result_round_trips` (planned). Proves the row: Model: `WebSearchCapability` and `WebResult`.
+- **MEDULLA-UNIFIED-DATA-PLANE-R038.7.1:** `crates/medulla-catalog-source-types/src/web_source.rs::tests::web_result_round_trips` (planned). Proves the row: Model: `WebSearchCapability` and `WebResult`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.7.1:** `tests/federation/test_web_metasearch_served.py::test_pattern_pushes_to_connector_with_ttl_cache` (planned). Proves the row: Model: `WebSearchCapability` and `WebResult`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.7.2:** `crates/medulla-federation/src/federation_opt/tests.rs::web_search_pushdown_and_ttl` (planned). Proves the row: Behavior: push query arguments and cache by argument digest with a time-to-live.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.7.3:** `crates/medulla-federation/src/federation_opt/tests.rs::served_web_search_reaches_cache` (planned). Proves the row: Wiring: web search reaches the connector call and the shared cache.
@@ -313,7 +313,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R040.3:** `crates/medulla-ann/src/version.rs::tests::tag_requires_passing_verdict` (planned). Proves the row: Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R040.3:** `crates/medulla-ann-codes/src/semantic_ann_codes/promotion.rs::tests::activation_runs_gate` (planned). Proves the row: Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`; recall comes from the `probe_set` of `SemanticModelConfig` through `recall_at_k` and the baseline is the prior `Live` generation's `StageReceipt` recall.
 - **MEDULLA-UNIFIED-DATA-PLANE-R040.4:** `crates/medulla-ann/src/version.rs::tests::blocked_promotion_tags_nothing` (planned). Proves the row: Refusal: a blocked promotion leaves the prior version active.
-- **MEDULLA-UNIFIED-DATA-PLANE-R040.5:** `crates/medulla-catalog-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries` (planned). Proves the row: Evidence: each `PromotionVerdict` is a graph node linked to the model and version.
+- **MEDULLA-UNIFIED-DATA-PLANE-R040.5:** `crates/medulla-catalog-source-types/src/embedding_promotion.rs::tests::verdict_is_stored_with_modality_entries` (planned). Proves the row: Evidence: each `PromotionVerdict` is a graph node linked to the model and version.
 - **MEDULLA-UNIFIED-DATA-PLANE-R040.5:** `tests/embedding/test_promotion_gate_served.py::test_verdict_readable_by_query` (planned). Proves the row: Evidence: each `PromotionVerdict` is a graph node linked to the model and version.
 - **MEDULLA-UNIFIED-DATA-PLANE-R040.6:** `crates/medulla-ann-codes/src/semantic_ann_codes/promotion_tests.rs::regressed_image_blocks_promotion_and_keeps_prior_live` and `crates/medulla-server-served-tests/src/split_tests/medulla_h_retrieve_promotion_ops_tests.rs::model_config_and_probe_measurement_are_served`. Proves the row: a regressed image check blocks the promotion, and the model config and probe measurement are served.
 - **MEDULLA-UNIFIED-DATA-PLANE-R026.4:** `tests/projection_read_served.rs::projected_table_read_binds_revisions_and_refuses_writes` (planned). Proves the row: Graph-backed relational projections, read-only (rollup).
@@ -353,7 +353,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.1:** `crates/medulla-protocol-types/src/protocol/method/tests/` `register_foreign_source_acceleration_round_trips` (planned, L1).
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2:** `tests/federation/test_acceleration_served.py::test_copy_policy_without_capability_is_refused` (planned, L4).
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3:** `crates/medulla-federation/src/federation_opt/tests.rs::registered_policy_reaches_the_resolved_remote` (planned, L2).
-- **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `crates/medulla-catalog-types/src/metadata_acceleration.rs::tests::expired_watermark_falls_back_to_live` (L1). `resolve_mode(now_ms = valid_through_ms + 1, valid_through_ms)` gives `Live`, `now_ms == valid_through_ms` gives `Copy`, and `copy_admitted(policy, max + 1, max)` refuses `COPY_ROW_CAP_EXCEEDED`.
+- **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `crates/medulla-catalog-source-types/src/metadata_acceleration.rs::tests::expired_watermark_falls_back_to_live` (L1). `resolve_mode(now_ms = valid_through_ms + 1, valid_through_ms)` gives `Live`, `now_ms == valid_through_ms` gives `Copy`, and `copy_admitted(policy, max + 1, max)` refuses `COPY_ROW_CAP_EXCEEDED`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `tests/federation/test_acceleration_served.py::test_stale_watermark_reads_live` (L4), using the `clean_graph` and `pg_source` fixtures of that file. The test registers the source with `acceleration = {source_supports_copy: true, hot_subset_predicate: "id < 10", freshness_watermark: "2000-01-01T00:00:00Z"}`, runs a `UnifiedQuery`, and asserts that the rows equal the source's, including a row the source gained after registration. The Python client has no trace surface, so the live read is observed by its rows. Registering `{source_supports_copy: false, hot_subset_predicate: "id < 10"}` refuses `COPY_CAPABILITY_MISSING` and writes no source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.3:** `crates/medulla-federation/src/federation_opt/tests.rs::trace_names_route_per_fragment` (planned). Proves the row: EXPLAIN states whether each fragment ran live or from a copy.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.3:** `tests/federation/test_acceleration_served.py::test_explain_names_live_and_copy` (planned). Proves the row: EXPLAIN states whether each fragment ran live or from a copy.
@@ -385,7 +385,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R763.4:** `tests/data_plane/test_column_lineage_served.py::test_unparseable_sql_quarantines` (planned). Proves the row: Quarantine SQL that does not parse.
 - **MEDULLA-UNIFIED-DATA-PLANE-R763.5:** `tests/data_plane/test_column_lineage_served.py::test_edge_evidence_reads_back` (planned). Proves the row: Record query digest and parser version on each column edge.
 - **MEDULLA-UNIFIED-DATA-PLANE-R763.6:** `tests/data_plane/test_column_lineage_served.py::test_thousand_views_derive` (planned). Proves the row: Hot-path proof for column lineage.
-- **MEDULLA-UNIFIED-DATA-PLANE-R763.7:** `crates/medulla-catalog-types/src/attached_catalog.rs::tests::view_order_does_not_change_hash`. Proves the row: Catalog carries view definitions.
+- **MEDULLA-UNIFIED-DATA-PLANE-R763.7:** `crates/medulla-catalog-source-types/src/attached_catalog.rs::tests::view_order_does_not_change_hash`. Proves the row: Catalog carries view definitions.
 - **MEDULLA-UNIFIED-DATA-PLANE-R763.7:** `tests/data_plane/test_column_lineage_served.py::test_view_lineage_and_impact` (planned). Proves the row: Catalog carries view definitions.
 - **MEDULLA-UNIFIED-DATA-PLANE-R764:** `tests/data_plane/test_catalog_search_served.py::test_search_ranks_used_asset_higher` (planned). Proves the row: Asset usage statistics and catalog search (rollup).
 - **MEDULLA-UNIFIED-DATA-PLANE-R764.3.1:** `tests/data_plane/test_catalog_search_served.py::test_usage_counts_come_from_served_queries` (planned). Proves the row: Record asset usage from the server's own query dispatch.
@@ -400,9 +400,9 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R770:** `crates/medulla-server-ops/src/api/query_txn/foreign_parity.rs::tests::a_source_and_its_prior_connector_over_the_same_rows_agree` and `tests/federation/test_foreign_source_catalog_served.py::test_parity_refusals_are_typed_and_reveal_nothing`. Proves the row: Parity read of a registered foreign source.
 
 - `MEDULLA-UNIFIED-DATA-PLANE-R002.1`: `crates/medulla-server-ops/src/api/query_txn/foreign_catalog.rs::an_inline_secret_dsn_is_refused_and_never_persisted` (planned). A `Sql` spec whose DSN carries `user:password@` returns `CONNECTION_SECRET_INLINE` and leaves the catalog empty; a secret-reference DSN registers.
-- `MEDULLA-UNIFIED-DATA-PLANE-R003.1`: `crates/medulla-catalog-types/src/attached_catalog.rs::content_hash_matches_golden_value` (planned). A fixed three-table catalog hashes to a literal pinned value, so a hasher or field-order change is caught.
+- `MEDULLA-UNIFIED-DATA-PLANE-R003.1`: `crates/medulla-catalog-source-types/src/attached_catalog.rs::content_hash_matches_golden_value` (planned). A fixed three-table catalog hashes to a literal pinned value, so a hasher or field-order change is caught.
 - `MEDULLA-UNIFIED-DATA-PLANE-R013`: `tests/attached_postgres_served.rs::postgres_types_and_capture_match_native` (planned). Runs against the `postgres:16` container of the nightly lane and asserts equal rows and one change envelope per committed change for each covered type.
-- **MEDULLA-UNIFIED-DATA-PLANE-R014.2.3:** `crates/medulla-catalog-types/src/probe_machine.rs::tests::every_legal_transition_applies_and_every_illegal_one_is_refused`. Proves the row at its entry point; no receipt is asserted.
+- **MEDULLA-UNIFIED-DATA-PLANE-R014.2.3:** `crates/medulla-catalog-source-types/src/probe_machine.rs::tests::every_legal_transition_applies_and_every_illegal_one_is_refused`. Proves the row at its entry point; no receipt is asserted.
 - `MEDULLA-UNIFIED-DATA-PLANE-R013.1`: `crates/medulla-plan/src/postgres_catalog.rs::tests::the_catalog_holds_tables_keys_and_view_definitions` (L1), `crates/medulla-federation/src/pg_introspect.rs::tests::an_unreachable_server_is_an_error_without_the_dsn` (L2) and the live `tests/data_plane/test_column_lineage_served.py::test_view_lineage_and_impact` (L3).
 - `MEDULLA-UNIFIED-DATA-PLANE-R014.2.2`: `tests/attached_mysql_served.rs::catalog_and_types_match_native`. L3 test in the nightly lane against `mysql:8.4` and `mariadb:11.4`: catalog hash and each mapped type equal the native result.
 - `MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1`: `crates/medulla-sqlite-format/tests/wal_snapshot.rs::snapshot_sees_last_commit_and_survives_checkpoint_race` (planned). L2: builds a WAL with a torn tail frame and a racing checkpoint; asserts the last committed rows and the `SQLITE_SNAPSHOT_UNSTABLE` refusal after the timeout.

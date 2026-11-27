@@ -12,8 +12,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
 use medulla_types::contract::EngineErrorCode;
+use {
+    medulla_catalog_source_types::ontology_inspection::RdfObject,
+    medulla_catalog_source_types::ontology_inspection::RdfTriple,
+};
 
 /// Namespace of the spec-driven development vocabulary.
 pub const SDD_NS: &str = "urn:medulla:sdd:";

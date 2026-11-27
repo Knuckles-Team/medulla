@@ -28,11 +28,7 @@ use crate::quality_rule::{
     tenant_node_id, QUALITY_RULE_LABEL, RULE_BODY_PROPERTY, RULE_FAILURES_PROPERTY,
     RULE_STATE_PROPERTY,
 };
-use medulla_catalog_types::data_product::{
-    product_schema_digest, ContractPromise, ContractViolation, DataContract, DataProduct,
-};
 use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
-use medulla_catalog_types::quality::{QualityRule, QualityScore, RuleState};
 use medulla_core::data_product::{check_contract, LiveContractState};
 use medulla_core::quality::{
     compile_rule, evaluate_rule, track_failure, CompiledRule, Evaluation, IncidentSink,
@@ -44,6 +40,18 @@ use medulla_stream::telemetry::incident_nodes::{
     incident_operations, incident_record, INCIDENT_TYPE,
 };
 use serde_json::{Map, Value};
+use {
+    medulla_catalog_source_types::data_product::product_schema_digest,
+    medulla_catalog_source_types::data_product::ContractPromise,
+    medulla_catalog_source_types::data_product::ContractViolation,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+};
+use {
+    medulla_catalog_source_types::quality::QualityRule,
+    medulla_catalog_source_types::quality::QualityScore,
+    medulla_catalog_source_types::quality::RuleState,
+};
 
 /// The node type of one quality score.
 pub(super) const QUALITY_SCORE_LABEL: &str = "QualityScore";
@@ -1061,7 +1069,10 @@ fn typed_quality_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
+    use {
+        medulla_catalog_source_types::quality::QualityDimension,
+        medulla_catalog_source_types::quality::QualitySeverity,
+    };
 
     fn target() -> QualityTarget {
         QualityTarget {
@@ -1213,7 +1224,10 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R805.3
     #[test]
     fn a_broken_contract_writes_an_observation_node_and_an_incident_reading() {
-        use medulla_catalog_types::data_product::{DataContract, DataProduct};
+        use {
+            medulla_catalog_source_types::data_product::DataContract,
+            medulla_catalog_source_types::data_product::DataProduct,
+        };
         let core = medulla_graph_core::graph::GraphCore::new();
         let product = DataProduct {
             id: "orders".into(),

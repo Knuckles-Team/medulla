@@ -479,8 +479,11 @@ async fn relint_stored_queries(
     now_ms: u64,
     poll_s: u64,
 ) -> Result<(), String> {
-    use medulla_catalog_types::stewardship::{deprecated_assets, TRUST_FLAG_LABEL};
     use medulla_source_types::stored_query::{lint_stored_query, StoredQueryWarning};
+    use {
+        medulla_catalog_source_types::stewardship::deprecated_assets,
+        medulla_catalog_source_types::stewardship::TRUST_FLAG_LABEL,
+    };
     let period_ms = medulla_server_api::knob_config::knobs()
         .stored_query_relint_period_s
         .saturating_mul(1_000);

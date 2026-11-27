@@ -12,14 +12,22 @@ use medulla_catalog_types::graph_schema::{
     ontology_source_key, DiffTarget, GraphSchemaCommitted, GraphSchemaOp,
     GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
 };
-use medulla_catalog_types::ontology_diff::{ChangeImpact, ImpactItems, OntologyDiffReport};
-use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::{open_change_request, TargetScopes};
 use medulla_graph_core::graph::{GraphCore, SchemaSourceOrigin};
 use medulla_types::contract::{Digest256, ServerErrorCode, TenantId};
 use serde_json::json;
 #[cfg(test)]
 use serde_json::Value;
+use {
+    medulla_catalog_source_types::ontology_diff::ChangeImpact,
+    medulla_catalog_source_types::ontology_diff::ImpactItems,
+    medulla_catalog_source_types::ontology_diff::OntologyDiffReport,
+};
+use {
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+};
 
 use super::edits;
 use super::ontology_diff::{diff_axioms, impact, snapshot_from_core, SchemaSide};

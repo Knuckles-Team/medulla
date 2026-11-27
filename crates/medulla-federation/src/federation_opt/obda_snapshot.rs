@@ -53,8 +53,9 @@ impl ObdaSnapshotReader {
             == Some(medulla_exec::sql_text::SqlDialect::Postgres)
         {
             use super::snapshot::{SnapshotConn, SnapshotHandle};
-            use medulla_catalog_types::metadata_acceleration::{
-                SnapshotIsolation, SnapshotSemantics,
+            use {
+                medulla_catalog_source_types::metadata_acceleration::SnapshotIsolation,
+                medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics,
             };
             let bound = self.session.snapshot_bound();
             let (conn, token) = crate::federation::PgSnapshot::open(dsn, "id", None, &bound)?;

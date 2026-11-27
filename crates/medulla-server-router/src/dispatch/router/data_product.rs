@@ -15,10 +15,6 @@ use super::share::{
     ShareEvent, SharePhase, ADMIN_SCOPE,
 };
 use super::*;
-use medulla_catalog_types::data_product::{
-    parse_product_version, AccessRequest, DataProductError, DataProductRegistered,
-    ACCESS_PURPOSE_MISSING,
-};
 use medulla_core::stewardship::{reviewers, TargetScopes};
 use medulla_identity_types::acl::ShareGrant;
 use medulla_identity_types::identity::ShareScope;
@@ -34,6 +30,13 @@ use medulla_server_graph::dispatch::shared::typed_response;
 use medulla_types::access_request_machine::AccessRequestEvent;
 use medulla_types::access_request_machine::AccessRequestState;
 use medulla_types::contract::ServerErrorCode;
+use {
+    medulla_catalog_source_types::data_product::parse_product_version,
+    medulla_catalog_source_types::data_product::AccessRequest,
+    medulla_catalog_source_types::data_product::DataProductError,
+    medulla_catalog_source_types::data_product::DataProductRegistered,
+    medulla_catalog_source_types::data_product::ACCESS_PURPOSE_MISSING,
+};
 
 /// Serve one data product method; hands any other method back.
 pub async fn dispatch_data_product_methods(
@@ -175,8 +178,8 @@ async fn register(
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
     tenant: &str,
-    product: medulla_catalog_types::data_product::DataProduct,
-    contract: medulla_catalog_types::data_product::DataContract,
+    product: medulla_catalog_source_types::data_product::DataProduct,
+    contract: medulla_catalog_source_types::data_product::DataContract,
 ) -> Result<DataProductRegistered, String> {
     require_tenant(verified, tenant)?;
     product.validate().map_err(invalid)?;
@@ -300,7 +303,7 @@ async fn decider_role(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
-    product: &medulla_catalog_types::data_product::DataProduct,
+    product: &medulla_catalog_source_types::data_product::DataProduct,
 ) -> Result<ShareDelegation, String> {
     let caller = verified.agent_id();
     if product.owner == caller {

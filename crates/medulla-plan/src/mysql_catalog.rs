@@ -15,15 +15,23 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use medulla_catalog_types::attached_catalog::{
-    AttachedCatalogGraph, CatalogColumn, CatalogConstraint, CatalogConstraintKind,
-    CatalogReference, CatalogTable, CatalogView,
-};
-use medulla_catalog_types::attached_source_dialect::{
-    DialectDeclarationRefused, SqlEngineCaptureSupport, SqlEngineDialectEntry, SqlEngineKind,
-};
-use medulla_catalog_types::lineage::LineageDialect;
+use medulla_catalog_source_types::lineage::LineageDialect;
 use medulla_federation::mysql_introspect::{read_information_schema, InformationSchema};
+use {
+    medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
+    medulla_catalog_source_types::attached_catalog::CatalogColumn,
+    medulla_catalog_source_types::attached_catalog::CatalogConstraint,
+    medulla_catalog_source_types::attached_catalog::CatalogConstraintKind,
+    medulla_catalog_source_types::attached_catalog::CatalogReference,
+    medulla_catalog_source_types::attached_catalog::CatalogTable,
+    medulla_catalog_source_types::attached_catalog::CatalogView,
+};
+use {
+    medulla_catalog_source_types::attached_source_dialect::DialectDeclarationRefused,
+    medulla_catalog_source_types::attached_source_dialect::SqlEngineCaptureSupport,
+    medulla_catalog_source_types::attached_source_dialect::SqlEngineDialectEntry,
+    medulla_catalog_source_types::attached_source_dialect::SqlEngineKind,
+};
 
 /// The source cannot be reached or its catalog cannot be read.
 pub const SOURCE_UNAVAILABLE: &str = "SOURCE_UNAVAILABLE";

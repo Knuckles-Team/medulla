@@ -251,8 +251,9 @@ pub struct SemanticCodeStore {
     binding: String,
     /// The engine-owned model config the promotion gate reads
     /// (MEDULLA-UNIFIED-DATA-PLANE-R040.3).
-    model_config:
-        std::sync::RwLock<Option<medulla_catalog_types::embedding_promotion::SemanticModelConfig>>,
+    model_config: std::sync::RwLock<
+        Option<medulla_catalog_source_types::embedding_promotion::SemanticModelConfig>,
+    >,
 }
 
 impl std::fmt::Debug for SemanticCodeStore {

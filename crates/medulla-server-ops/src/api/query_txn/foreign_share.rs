@@ -255,7 +255,7 @@ mod tests {
                 &carrier("agent-a"),
                 "src".into(),
                 spec(),
-                medulla_catalog_types::consolidation_isolation::SourceQuota {
+                medulla_catalog_source_types::consolidation_isolation::SourceQuota {
                     max_concurrent: 8,
                     max_rows: 250_000,
                     max_wall_ms: 60_000,

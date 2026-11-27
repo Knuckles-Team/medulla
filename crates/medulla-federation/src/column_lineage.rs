@@ -7,15 +7,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::ControlFlow;
 
-use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
-use medulla_catalog_types::lineage::{
-    ColumnLineageEdge, ColumnTransform, LineageError, LineageGap, LineageResult,
-};
+use medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph;
 use medulla_exec::sql_text::SqlDialect;
 use sha2::{Digest, Sha256};
 use sqlparser::ast::{
     visit_expressions, Expr, GroupByExpr, Ident, ObjectNamePart, Query, SelectItem,
     SelectItemQualifiedWildcardKind, SetExpr, Statement, TableAlias, TableFactor,
+};
+use {
+    medulla_catalog_source_types::lineage::ColumnLineageEdge,
+    medulla_catalog_source_types::lineage::ColumnTransform,
+    medulla_catalog_source_types::lineage::LineageError,
+    medulla_catalog_source_types::lineage::LineageGap,
+    medulla_catalog_source_types::lineage::LineageResult,
 };
 
 use crate::sql_analysis::parse_one_statement;
@@ -505,7 +509,10 @@ pub fn derive_column_lineage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::attached_catalog::{CatalogColumn, CatalogTable};
+    use {
+        medulla_catalog_source_types::attached_catalog::CatalogColumn,
+        medulla_catalog_source_types::attached_catalog::CatalogTable,
+    };
 
     fn table(schema: &str, name: &str, cols: &[&str]) -> CatalogTable {
         CatalogTable {

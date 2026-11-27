@@ -9,9 +9,9 @@ use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilit
 use super::snapshot::{SnapshotBound, SnapshotConn};
 use super::stats::{fingerprint, short, Fingerprint};
 use crate::federation::{ForeignSource, ForeignSourceRegistry, SharedForeignSource};
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
-use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
-use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
+use medulla_catalog_source_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy;
+use medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
 

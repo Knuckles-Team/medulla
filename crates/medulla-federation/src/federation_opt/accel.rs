@@ -2,8 +2,10 @@
 //! only while the source's acceleration policy resolves to `Copy`, and only within the copy row
 //! bound. Everything else runs live.
 
-use medulla_catalog_types::metadata_acceleration::{
-    copy_admitted, AccelerationPolicy, FragmentExecutionMode,
+use {
+    medulla_catalog_source_types::metadata_acceleration::copy_admitted,
+    medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy,
+    medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode,
 };
 
 /// The knob values the route reads, resolved by the served read

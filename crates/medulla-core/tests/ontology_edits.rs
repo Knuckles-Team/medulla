@@ -2,11 +2,16 @@
 
 use std::collections::BTreeSet;
 
-use medulla_catalog_types::ontology_edit::{EditKind, NamingMode, NamingSeverity, OntologyEdit};
 use medulla_core::ontology::edits::{
     append, chain_head, edit_digest, invert, lint_names, revert, EditDraft,
 };
 use medulla_types::contract::Digest256;
+use {
+    medulla_catalog_source_types::ontology_edit::EditKind,
+    medulla_catalog_source_types::ontology_edit::NamingMode,
+    medulla_catalog_source_types::ontology_edit::NamingSeverity,
+    medulla_catalog_source_types::ontology_edit::OntologyEdit,
+};
 
 const SUBJECT: &str = "http://example.org/onto";
 

@@ -26,7 +26,7 @@ use super::search::REMOTE_CHANNEL;
 use super::session::FederationSession;
 use super::trace::{FetchStrategy, FragmentTrace, RawScanReceipt};
 use crate::federation::ForeignSourceRegistry;
-use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
 
 /// The tool that finds candidate ids for a text query.
 pub const RAW_SEARCH: &str = "raw_search";

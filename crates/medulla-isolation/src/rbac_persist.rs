@@ -32,8 +32,12 @@ use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
 use crate::rbac::RbacPolicy;
-use medulla_catalog_types::data_product::{AccessRequest, DataContract, DataProduct};
 use medulla_identity_types::acl::AgentIdentity;
+use {
+    medulla_catalog_source_types::data_product::AccessRequest,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+};
 
 /// `key → serde_json bytes`. One table, three well-known keys (`policy`,
 /// `identities`, `bootstrap`) written in a single durable transaction

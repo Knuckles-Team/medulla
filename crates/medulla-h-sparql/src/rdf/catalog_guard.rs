@@ -295,7 +295,7 @@ pub(super) fn materialize_described_best(
     triples: &mut Vec<oxrdf::Triple>,
     core: &medulla_graph_core::graph::GraphCore,
 ) {
-    use medulla_catalog_types::catalog_relevance as cr;
+    use medulla_catalog_source_types::catalog_relevance as cr;
     use serde_json::{Map, Value};
     let about = format!("{CAT}aboutAsset");
     let predicate = format!("{CAT}describedBest");
@@ -398,7 +398,10 @@ pub(super) fn materialize_described_best(
 /// with a `cat:columnName`. A field's type defaults to the empty string and its nullability to
 /// `true` when the batch does not state them.
 fn schema_digest_triples(catalog: &[Triple]) -> Vec<Triple> {
-    use medulla_catalog_types::data_product::{schema_digest, DigestColumn};
+    use {
+        medulla_catalog_source_types::data_product::schema_digest,
+        medulla_catalog_source_types::data_product::DigestColumn,
+    };
     const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
     let resource_class = Object::Iri(format!("{CAT}DataResource"));
     let has_field = format!("{CAT}hasField");

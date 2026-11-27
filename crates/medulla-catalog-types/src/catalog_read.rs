@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::stewardship::StewardshipTarget;
+use medulla_catalog_source_types::stewardship::StewardshipTarget;
 
 /// The registered stored query behind `Browse`.
 pub const CATALOG_ASSETS_BY_KIND: &str = "catalog.assets_by_kind";
@@ -274,7 +274,11 @@ pub struct CatalogReadAnswer {
 #[cfg(test)]
 mod governance_tests {
     use super::*;
-    use crate::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
+    use {
+        medulla_catalog_source_types::stewardship::StewardRole,
+        medulla_catalog_source_types::stewardship::StewardshipAssignment,
+        medulla_catalog_source_types::stewardship::StewardshipScope,
+    };
 
     // spec: MEDULLA-TYPED-PACKS-R108.18
     #[test]

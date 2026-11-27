@@ -11,12 +11,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
 use medulla_compute::parser::spec_artifacts::{is_row_id, parse_spec_file, SDD_NS};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_source_types::source_changeset::Changeset;
 use medulla_types::contract::EngineErrorCode;
+use {
+    medulla_catalog_source_types::ontology_inspection::RdfObject,
+    medulla_catalog_source_types::ontology_inspection::RdfTriple,
+};
 
 /// Refusal code of a row ID that resolves to no row.
 pub const REQUIREMENT_UNRESOLVED: &str = "REQUIREMENT_UNRESOLVED";

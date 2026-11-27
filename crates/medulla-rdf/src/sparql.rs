@@ -102,7 +102,7 @@ pub struct Projection {
     /// Reads per asset name that `cat:relevance` fuses as its usage prior
     /// (MEDULLA-TYPED-PACKS-R108.16). The serving handler loads it from the usage series;
     /// `None` means no usage is known.
-    pub usage: Option<std::sync::Arc<medulla_catalog_types::catalog_relevance::UsageIndex>>,
+    pub usage: Option<std::sync::Arc<medulla_catalog_source_types::catalog_relevance::UsageIndex>>,
 }
 
 /// The `rdf:type` predicate IRI (bare, no angle brackets — predicates compare bare).

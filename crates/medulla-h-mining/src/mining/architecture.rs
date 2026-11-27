@@ -8,9 +8,6 @@
 
 use std::sync::Arc;
 
-use medulla_catalog_types::architecture_view::{
-    check_revision, ArchitectureViewResponse, ViewScope,
-};
 use medulla_core::architecture_view::{
     derive_architecture_view_with, repository_revision, ViewRules,
 };
@@ -18,6 +15,11 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_protocol_types::result_contract::graph::ArchitectureView;
 use medulla_server_api::knob_config::knobs;
+use {
+    medulla_catalog_source_types::architecture_view::check_revision,
+    medulla_catalog_source_types::architecture_view::ArchitectureViewResponse,
+    medulla_catalog_source_types::architecture_view::ViewScope,
+};
 
 /// Answer one `ArchitectureView` read.
 pub(super) fn handle_architecture_view(

@@ -1,14 +1,21 @@
 //! Round-trip coverage for the architecture-view wire model.
 
-use medulla_catalog_types::architecture_view::{
-    check_revision, view_digest, ArchitectureView, ArchitectureViewResponse, ViewAbstained,
-    ViewContainer, ViewEdge, ViewScope, REFUSALS,
-};
 use medulla_core::architecture_view::{
     derive_architecture_view, derive_architecture_view_with, ViewRules,
 };
 use medulla_graph_core::graph::GraphCore;
 use serde_json::json;
+use {
+    medulla_catalog_source_types::architecture_view::check_revision,
+    medulla_catalog_source_types::architecture_view::view_digest,
+    medulla_catalog_source_types::architecture_view::ArchitectureView,
+    medulla_catalog_source_types::architecture_view::ArchitectureViewResponse,
+    medulla_catalog_source_types::architecture_view::ViewAbstained,
+    medulla_catalog_source_types::architecture_view::ViewContainer,
+    medulla_catalog_source_types::architecture_view::ViewEdge,
+    medulla_catalog_source_types::architecture_view::ViewScope,
+    medulla_catalog_source_types::architecture_view::REFUSALS,
+};
 
 fn node(core: &GraphCore, id: &str, props: serde_json::Value) {
     core.add_node(

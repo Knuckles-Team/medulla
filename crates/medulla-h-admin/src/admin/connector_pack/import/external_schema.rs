@@ -10,8 +10,10 @@ use medulla_catalog_types::connector_pack::{
     ConnectorPackImportRequest, PackEntry, PackEntryKind, PackViolation, PackViolationCode,
     PackWarning, PackWarningCode,
 };
-use medulla_catalog_types::external_schema::{
-    admit_external_schema, ExternalSchemaRefusal, ExternalTermResult,
+use {
+    medulla_catalog_source_types::external_schema::admit_external_schema,
+    medulla_catalog_source_types::external_schema::ExternalSchemaRefusal,
+    medulla_catalog_source_types::external_schema::ExternalTermResult,
 };
 
 use super::vocabulary::PinnedVocabulary;

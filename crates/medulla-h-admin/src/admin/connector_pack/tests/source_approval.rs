@@ -26,9 +26,9 @@ use super::{
 
 /// The quota a registration without one of its own takes: the resolved
 /// `foreign.default_quota.*` knobs, as the register handler resolves them.
-fn default_quota() -> medulla_catalog_types::consolidation_isolation::SourceQuota {
+fn default_quota() -> medulla_catalog_source_types::consolidation_isolation::SourceQuota {
     let knobs = medulla_server_api::knob_config::knobs();
-    medulla_catalog_types::consolidation_isolation::SourceQuota {
+    medulla_catalog_source_types::consolidation_isolation::SourceQuota {
         max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
             .unwrap_or(u32::MAX),
         max_rows: knobs.foreign_default_quota_max_rows,

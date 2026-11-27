@@ -5,7 +5,7 @@
 //! rule in `medulla-catalog-types`; this file only numbers the revision, keeps the
 //! admitted record and reads it back. A refused upgrade writes nothing.
 
-use medulla_catalog_types::skill_admission::SkillAdmission;
+use medulla_catalog_source_types::skill_admission::SkillAdmission;
 use medulla_storage::DECISION_ARTIFACTS;
 use redb::ReadableTable;
 
@@ -97,11 +97,16 @@ impl AgentLibraryStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::consumer_contract::{ConsumerContractSchema, ContractField};
-    use medulla_catalog_types::skill_admission::{
-        admit_skill_upgrade, SkillAdmissionRefusal, SkillUpgradeAdmissionInput,
-    };
     use medulla_types::contract::{Digest256, OpaqueId};
+    use {
+        medulla_catalog_source_types::consumer_contract::ConsumerContractSchema,
+        medulla_catalog_source_types::consumer_contract::ContractField,
+    };
+    use {
+        medulla_catalog_source_types::skill_admission::admit_skill_upgrade,
+        medulla_catalog_source_types::skill_admission::SkillAdmissionRefusal,
+        medulla_catalog_source_types::skill_admission::SkillUpgradeAdmissionInput,
+    };
 
     fn input(revision: u64) -> SkillUpgradeAdmissionInput {
         let field = |type_name: &str| {

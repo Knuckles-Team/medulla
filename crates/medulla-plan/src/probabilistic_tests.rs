@@ -9,7 +9,7 @@
 //!    (prior, evidence) is not a supported conjugate pair are dropped.
 //!  * `Sample { seed }` — deterministic seeded draw (same seed ⇒ same score).
 
-use medulla_catalog_types::distribution::Distribution;
+use medulla_catalog_source_types::distribution::Distribution;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_query_types::wire::{ProbEvidenceSpec, ProbQuery};

@@ -73,11 +73,11 @@ pub fn contract_node_id(owner_scope: &str, name: &str) -> String {
 fn stored_contract(
     core: &medulla_graph_core::graph::GraphCore,
     node_id: &str,
-) -> Option<medulla_catalog_types::metadata_acceleration::MetadataContract> {
+) -> Option<medulla_catalog_source_types::metadata_acceleration::MetadataContract> {
     let blob = core.get_node_properties(node_id)?;
     let value: serde_json::Value = rmp_serde::from_slice(&blob).ok()?;
     Some(
-        medulla_catalog_types::metadata_acceleration::MetadataContract {
+        medulla_catalog_source_types::metadata_acceleration::MetadataContract {
             source_kind: value.get("source_kind")?.as_str()?.to_string(),
             source_name: value.get("source_name")?.as_str()?.to_string(),
             schema_version: u32::try_from(value.get("schema_version")?.as_u64()?).ok()?,
@@ -93,8 +93,8 @@ async fn write_contract(
     req_id: u64,
     owner: &medulla_server_api::carrier::CarrierAuthority,
     node_id: String,
-    contract: &medulla_catalog_types::metadata_acceleration::MetadataContract,
-    stored: Option<&medulla_catalog_types::metadata_acceleration::MetadataContract>,
+    contract: &medulla_catalog_source_types::metadata_acceleration::MetadataContract,
+    stored: Option<&medulla_catalog_source_types::metadata_acceleration::MetadataContract>,
 ) -> Result<(), String> {
     if stored == Some(contract) {
         return Ok(());
@@ -154,7 +154,7 @@ fn source_not_found(req_id: u64, name: &str) -> Response {
         req_id,
         format!(
             "{}: no source {name} is visible to the caller",
-            medulla_catalog_types::foreign_source_catalog::SOURCE_NOT_FOUND
+            medulla_catalog_source_types::foreign_source_catalog::SOURCE_NOT_FOUND
         ),
     )
 }
@@ -169,8 +169,10 @@ fn check_share_request(
     name: &str,
     grantees: &[String],
 ) -> Result<(), String> {
-    use medulla_catalog_types::foreign_source_catalog::{
-        MAX_SHARE_GRANTEES, SOURCE_NOT_FOUND, SOURCE_OWNER_REQUIRED,
+    use {
+        medulla_catalog_source_types::foreign_source_catalog::MAX_SHARE_GRANTEES,
+        medulla_catalog_source_types::foreign_source_catalog::SOURCE_NOT_FOUND,
+        medulla_catalog_source_types::foreign_source_catalog::SOURCE_OWNER_REQUIRED,
     };
     if catalog.owns_source(owner, name) {
         if grantees.is_empty() || grantees.len() > MAX_SHARE_GRANTEES {
@@ -215,7 +217,7 @@ pub async fn try_handle(
             // written; a predicate on a source without copy refuses COPY_CAPABILITY_MISSING.
             if let Some(policy) = &acceleration {
                 if let Err(refusal) =
-                    medulla_catalog_types::metadata_acceleration::validate_policy(policy)
+                    medulla_catalog_source_types::metadata_acceleration::validate_policy(policy)
                 {
                     return Ok(Response::err(req_id, refusal.0));
                 }
@@ -251,7 +253,7 @@ pub async fn try_handle(
             // resolved `foreign.default_quota.*` knobs.
             let knobs = medulla_server_api::knob_config::knobs();
             let quota = quota.unwrap_or(
-                medulla_catalog_types::consolidation_isolation::SourceQuota {
+                medulla_catalog_source_types::consolidation_isolation::SourceQuota {
                     max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
                         .unwrap_or(u32::MAX),
                     max_rows: knobs.foreign_default_quota_max_rows,
@@ -341,7 +343,7 @@ pub async fn try_handle(
                     ResultPayload::of::<
                         medulla_protocol_types::result_contract::cluster::ProbeForeignSource,
                     >(
-                        medulla_catalog_types::foreign_source_catalog::ForeignSourceProbe {
+                        medulla_catalog_source_types::foreign_source_catalog::ForeignSourceProbe {
                             name: view.name,
                             probe_state: view.probe_state,
                         },

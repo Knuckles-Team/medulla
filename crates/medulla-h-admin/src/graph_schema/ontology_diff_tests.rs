@@ -3,8 +3,8 @@
 use super::ontology_diff::{diff_axioms, impact, ImpactSnapshot, SchemaSide};
 use super::ontology_diff_serve::{change_requests_of, diff_ontology};
 use super::ontology_import::{import_ontology, OntologyAuthority};
+use medulla_catalog_source_types::ontology_diff::ChangeImpact;
 use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
-use medulla_catalog_types::ontology_diff::ChangeImpact;
 use medulla_graph_core::graph::GraphCore;
 use medulla_types::contract::{Digest256, ResourceId};
 

@@ -809,8 +809,8 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R085.5.1`: `crates/medulla-identity-types/src/identity/tests/approval_keys.rs::lifecycle_persists_public_facts_and_enforces_rotation_and_revocation_cas`, `::registration_message_has_exact_domain_lengths_and_revision_binding`
 - `MEDULLA-TYPED-PACKS-R085.6.1`: `crates/medulla-identity-types/src/identity/tests/session_evidence.rs::credential_observation_preserves_state_and_existing_refusals`, `::omitted_refresh_preserves_legacy_touch_and_authority`
 - `MEDULLA-TYPED-PACKS-R094.8`: `tests/test_prompt_blueprints_served.py::test_source_effect_receipt_is_recorded_once`
-- `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-catalog-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
-- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
+- `MEDULLA-TYPED-PACKS-R097.2.7.1`: `crates/medulla-catalog-source-types/src/external_schema.rs::tests::mapping_and_coverage_round_trip`
+- `MEDULLA-TYPED-PACKS-R097.2.7.2`: `crates/medulla-catalog-source-types/src/external_schema.rs::tests::reordered_inputs_give_identical_digest`
 - `MEDULLA-TYPED-PACKS-R097.2.7.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/external_schema.rs::refusals_leave_head_and_schema_unchanged` (with the out-of-scope mapping case) and `crates/medulla-h-admin/src/graph_schema/tests.rs::activation_stores_external_coverage_for_inspection`
 - `MEDULLA-TYPED-PACKS-R097.2.7.4`: `tests/typed_packs/test_external_schema_import_served.py::test_mapped_and_unmapped_terms_of_every_kind`
 - `MEDULLA-TYPED-PACKS-R803.7`: `tests/data_plane/test_sensitive_scan_served.py::test_enrich_proposes_claim_for_sensitive_document`
@@ -820,9 +820,9 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R809`: `tests/ontology/test_canonical_hash_served.py::test_reordered_serializations_hash_equal`
 - `MEDULLA-TYPED-PACKS-R110`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::metadata_sync_round_trips_terms_assets_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.1`: `crates/medulla-rdf/tests/open_metadata.rs::mapped_types_resolve_one_class`
-- `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::record_round_trips_and_refuses_unknown_fields`
-- `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
-- `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
+- `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-source-types/src/open_metadata/tests.rs::record_round_trips_and_refuses_unknown_fields`
+- `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-source-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
+- `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-source-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
 - `MEDULLA-TYPED-PACKS-R110.5`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::sync_reads_terms_and_writes_catalog_nodes`
 - `MEDULLA-TYPED-PACKS-R110.6`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::unmapped_types_are_listed_and_skipped`
 - `MEDULLA-TYPED-PACKS-R110.7`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::nodes_keep_guid_version_and_source`
@@ -835,7 +835,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R810.1`: `crates/medulla-transaction/src/admission_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-transaction/src/admission_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-transaction/src/admission_machine.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::admission_machine_matches_edge_table` (planned, L1): proves: AdmissionRow/AdmissionState state machine: route 1 census findings through AdmissionState::apply.
 - `MEDULLA-TYPED-PACKS-R810.2`: `crates/medulla-agent-types/src/agent_library/agent_library_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-agent-types/src/agent_library/agent_library_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-agent-types/src/agent_library/agent_library_machine.rs::tests::no_writer_sets_lifecycle_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::agent_library_machine_matches_edge_table` (planned, L1): proves: AgentLibraryEntry/AgentLibraryLifecycle state machine: route 10 census findings through AgentLibraryLifecycle::apply.
 - `MEDULLA-TYPED-PACKS-R810.3`: `tests/testing/test_synthetic_lifecycle_enum.py::test_lifecycle_compares_use_enum_members_and_unknown_value_raises` (planned, L1): proves: Python synthetic fixtures compare the library lifecycle through the contract enum, never through string literals.
-- `MEDULLA-TYPED-PACKS-R810.4`: `crates/medulla-catalog-types/src/lake_catalog.rs::tests::no_writer_sets_outcome_outside_construction` (L1): proves: QualityReportRef's outcome is set only at construction (renamed from QualityStatus; no machine, MEDULLA-CONTRACT-R062.5).
+- `MEDULLA-TYPED-PACKS-R810.4`: `crates/medulla-catalog-source-types/src/lake_catalog.rs::tests::no_writer_sets_outcome_outside_construction` (L1): proves: QualityReportRef's outcome is set only at construction (renamed from QualityStatus; no machine, MEDULLA-CONTRACT-R062.5).
 - `MEDULLA-TYPED-PACKS-R810.5`: `crates/medulla-h-admin/src/admin/connector_pack/seed_tests.rs::no_writer_sets_content_outside_construction` (L1): proves: the seed plan content snapshot is set only at construction (renamed from SeedGraphState; no machine, MEDULLA-CONTRACT-R062.5).
 - `MEDULLA-TYPED-PACKS-R811`: see each child (rollup).
 - `MEDULLA-TYPED-PACKS-R811.1`: `tests/test_wire_mirror_state_words.py::test_conformance_evidence_types_state_as_the_rust_enum` (L1): proves: Connector pack conformance evidence follows `ConformanceEvidenceMachine`: Python mirror follows the Rust machine.

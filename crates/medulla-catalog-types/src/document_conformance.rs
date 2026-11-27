@@ -8,8 +8,11 @@
 //! native engine and recording its real outcome is a later child
 //! (MEDULLA-UNIFIED-DATA-PLANE-R019.3.2).
 
-use crate::dialect_conformance::{
-    ConformanceDeviation, ConformanceOutcome, DialectConformanceEntry, InvalidConformanceEntry,
+use {
+    medulla_catalog_source_types::dialect_conformance::ConformanceDeviation,
+    medulla_catalog_source_types::dialect_conformance::ConformanceOutcome,
+    medulla_catalog_source_types::dialect_conformance::DialectConformanceEntry,
+    medulla_catalog_source_types::dialect_conformance::InvalidConformanceEntry,
 };
 
 /// The closed set of native engines this row's conformance entry may compare

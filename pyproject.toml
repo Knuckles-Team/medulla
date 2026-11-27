@@ -278,6 +278,7 @@ name = "contract"
 units = [
   "medulla-agent-types",
   "medulla-capabilities",
+  "medulla-catalog-source-types",
   "medulla-catalog-types",
   "medulla-decision-outcome-types",
   "medulla-decision-types",

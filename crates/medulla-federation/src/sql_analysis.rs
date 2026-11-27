@@ -5,13 +5,15 @@
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 
-use medulla_catalog_types::lineage::{
-    LineageError, LINEAGE_MAX_SQL_BYTES_DEFAULT, LINEAGE_MAX_SQL_BYTES_RANGE,
-};
 use medulla_exec::sql_text::SqlDialect;
 use sqlparser::ast::{ObjectName, ObjectNamePart, Query, Statement, Visit, Visitor};
 use sqlparser::dialect::{ClickHouseDialect, MySqlDialect, PostgreSqlDialect};
 use sqlparser::parser::Parser;
+use {
+    medulla_catalog_source_types::lineage::LineageError,
+    medulla_catalog_source_types::lineage::LINEAGE_MAX_SQL_BYTES_DEFAULT,
+    medulla_catalog_source_types::lineage::LINEAGE_MAX_SQL_BYTES_RANGE,
+};
 
 /// Environment override of `knob lineage.max_sql_bytes`.
 pub const ENV_LINEAGE_MAX_SQL_BYTES: &str = "MEDULLA_LINEAGE_MAX_SQL_BYTES";

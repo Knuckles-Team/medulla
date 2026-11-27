@@ -17,8 +17,8 @@ use super::budget::RESULT_INCOMPLETE;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities, SourceRate};
 use super::remote::{Identity, RemoteFetch};
 use super::search::{SearchHit, SearchRemote};
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
-use medulla_catalog_types::web_source::WebSearchCapability;
+use medulla_catalog_source_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_source_types::web_source::WebSearchCapability;
 use medulla_query_types::search_source::SearchIndexCapability;
 
 /// Keys per request when the registration declares key-filter pushdown.

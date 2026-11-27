@@ -10,7 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::shared_db_platform::SharedPlatformEngine;
+use medulla_catalog_source_types::shared_db_platform::SharedPlatformEngine;
 
 /// One independent restore-drill run: a cluster group's PITR backup is
 /// recovered into a scratch cluster and its data is digested before and

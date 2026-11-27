@@ -33,7 +33,7 @@ pub async fn dispatch_service_control_methods(
         Method::EngineCapabilities => Response::ok(
             req.id,
             ResultPayload::of::<medulla_protocol_types::result_contract::cluster::EngineCapabilities>(
-                medulla_catalog_types::engine_capabilities::EngineCapabilities::for_build(
+                medulla_catalog_source_types::engine_capabilities::EngineCapabilities::for_build(
                     cfg!(feature = "pgwire"),
                     cfg!(feature = "raft"),
                     Some(

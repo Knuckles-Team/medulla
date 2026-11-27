@@ -14,7 +14,7 @@ name = "medulla_epistemic"
 medulla-types = { path = "../medulla-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 # The GraphView snapshot the propagation walk runs over (read-only, off-lock).
 medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
@@ -47,7 +47,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 tempfile = "3"
 
 [features]

@@ -10,11 +10,14 @@
 //! never reaches this module.
 
 use super::*;
-use medulla_catalog_types::schema_boundary::{
-    SchemaBoundary, SchemaProjectionsOp, SCHEMA_BOUNDARY_LABEL, SCHEMA_BOUNDARY_TENANT_KEY,
-};
 use medulla_protocol_types::result_contract::graph::SchemaProjectionsPut;
 use medulla_types::contract::ServerErrorCode;
+use {
+    medulla_catalog_source_types::schema_boundary::SchemaBoundary,
+    medulla_catalog_source_types::schema_boundary::SchemaProjectionsOp,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_LABEL,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_TENANT_KEY,
+};
 
 /// The node classes a `mapping_ref` may resolve to.
 const MAPPING_CLASSES: &[&str] = &[

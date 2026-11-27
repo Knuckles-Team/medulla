@@ -13,15 +13,18 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_catalog_source_types::ontology_diff::OntologyDiff;
 use medulla_catalog_types::connector_pack::contract_version::{
     ContractBreak, ContractBreakKind, PackContractError, PackContractVersion,
 };
-use medulla_catalog_types::ontology_diff::OntologyDiff;
-use medulla_catalog_types::stewardship::{ChangeRequest, StewardshipAssignment};
 use medulla_core::stewardship::{open_change_request, StewardshipError, TargetScopes};
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
+use {
+    medulla_catalog_source_types::stewardship::ChangeRequest,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
 };
 
 use crate::graph_schema::ontology_diff::{diff_axioms, SchemaSide};

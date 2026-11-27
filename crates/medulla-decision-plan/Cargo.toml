@@ -12,7 +12,7 @@ name = "medulla_decision_plan"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-types = { path = "../medulla-types" }
 

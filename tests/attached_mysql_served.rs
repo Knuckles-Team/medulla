@@ -5,10 +5,13 @@
 //! nightly lane starts both containers and runs `cargo test --test attached_mysql_served --
 //! --ignored`; a pull request runs the typed unit tests of `medulla_plan::mysql_catalog`.
 
-use medulla_catalog_types::attached_catalog::{AttachedCatalogGraph, CatalogConstraintKind};
-use medulla_catalog_types::attached_source_dialect::SqlEngineKind;
+use medulla_catalog_source_types::attached_source_dialect::SqlEngineKind;
 use medulla_federation::mysql_introspect::run_statements;
 use medulla_plan::mysql_catalog::{read_catalog, MysqlCatalogRead};
+use {
+    medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
+    medulla_catalog_source_types::attached_catalog::CatalogConstraintKind,
+};
 
 const SCHEMA: &str = "medulla_probe_fixture";
 

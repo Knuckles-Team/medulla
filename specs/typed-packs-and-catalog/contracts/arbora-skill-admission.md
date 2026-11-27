@@ -13,7 +13,7 @@ Arbora invoke certification calls the served `AgentComponentOp::AdmitSkillUpgrad
 
 ## Authoritative types
 
-`SkillAdmission` and `admit_skill_upgrade` in `crates/medulla-catalog-types/src/skill_admission.rs` (new); the op variant in `crates/medulla-agent-types/src/agent_component.rs`.
+`SkillAdmission` and `admit_skill_upgrade` in `crates/medulla-catalog-source-types/src/skill_admission.rs` (new); the op variant in `crates/medulla-agent-types/src/agent_component.rs`.
 
 ## Test vectors
 

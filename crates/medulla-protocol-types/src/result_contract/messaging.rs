@@ -75,7 +75,7 @@ method_results! {
     Watch(Watch) => Raw<WatchBatch>;
     // MEDULLA-DURABLE-KERNEL-R878: the watermark a completion barrier ended on.
     #[cfg(feature = "streaming")]
-    AwaitWatermark(AwaitWatermark) => Raw<medulla_catalog_types::await_watermark::WatermarkAwaited>;
+    AwaitWatermark(AwaitWatermark) => Raw<medulla_catalog_source_types::await_watermark::WatermarkAwaited>;
     RegisterTrigger(RegisterTrigger) => Text<String>;
     DropTrigger(DropTrigger) => Bool<bool>;
     #[cfg(feature = "streaming")]

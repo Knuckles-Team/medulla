@@ -10,16 +10,22 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_catalog_types::asset_usage::{AssetUsage, ASSET_USAGE_READS_SERIES};
-use medulla_catalog_types::data_product::ProductProposal;
-use medulla_catalog_types::stewardship::{
-    ChangeRequest, StewardRole, StewardshipAssignment, StewardshipScope,
-};
+use medulla_catalog_source_types::data_product::ProductProposal;
 use medulla_core::data_product::propose_products;
 use medulla_core::stewardship::{open_change_request, TargetScopes};
 use medulla_server_api::state::ServerState;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use {
+    medulla_catalog_source_types::asset_usage::AssetUsage,
+    medulla_catalog_source_types::asset_usage::ASSET_USAGE_READS_SERIES,
+};
+use {
+    medulla_catalog_source_types::stewardship::ChangeRequest,
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+};
 
 /// The verified target of one usage cluster run.
 #[derive(Debug, Clone)]
@@ -99,7 +105,7 @@ pub async fn run_usage_cluster(
     state: &Arc<RwLock<ServerState>>,
     run: &UsageClusterRun,
 ) -> Result<Vec<ProposalWithRequest>, String> {
-    use medulla_catalog_types::asset_usage::catalog_usage_period_s;
+    use medulla_catalog_source_types::asset_usage::catalog_usage_period_s;
     use medulla_tsdb::store::SeriesKey;
 
     let store = state

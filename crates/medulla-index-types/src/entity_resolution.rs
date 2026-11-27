@@ -14,9 +14,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_catalog_types::{
-    entity_link_proposal::EntityLinkProposal, entity_link_proposal::EntityRef,
-    entity_link_proposal::MatchClass,
+use {
+    medulla_catalog_source_types::entity_link_proposal::EntityLinkProposal,
+    medulla_catalog_source_types::entity_link_proposal::EntityRef,
+    medulla_catalog_source_types::entity_link_proposal::MatchClass,
 };
 
 /// One record offered for resolution.
@@ -330,8 +331,9 @@ pub fn decide_merge(evidence: &[IdentityEvidence], embedding_min: f64) -> MergeD
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::{
-        entity_link_proposal::AttachedApplication, entity_link_proposal::CannotAssert,
+    use {
+        medulla_catalog_source_types::entity_link_proposal::AttachedApplication,
+        medulla_catalog_source_types::entity_link_proposal::CannotAssert,
     };
 
     fn record(app: AttachedApplication, id: &str, name: &str, birth: &str) -> ResolutionRecord {

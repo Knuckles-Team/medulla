@@ -3,9 +3,12 @@
 use serde::Serialize;
 
 use super::snapshot::Consistency;
-use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
-use medulla_catalog_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
+use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
 use medulla_query_types::search_source::ScoreKind;
+use {
+    medulla_catalog_source_types::metadata_acceleration::SnapshotIsolation,
+    medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics,
+};
 
 /// How a fragment was fetched.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
@@ -247,7 +250,7 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
 #[cfg(test)]
 mod tests {
     use super::{render_trace, FetchStrategy, FragmentTrace};
-    use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+    use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
 
     #[test]
     fn telemetry_trace_redacts_registered_names_and_keeps_counts() {

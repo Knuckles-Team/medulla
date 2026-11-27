@@ -12,7 +12,10 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::dialect_conformance::{ConformanceOutcome, DialectConformanceEntry};
+use {
+    medulla_catalog_source_types::dialect_conformance::ConformanceOutcome,
+    medulla_catalog_source_types::dialect_conformance::DialectConformanceEntry,
+};
 
 /// A replay comparison refused before a conformance entry could be built.
 #[derive(Clone, Debug, PartialEq, Eq)]

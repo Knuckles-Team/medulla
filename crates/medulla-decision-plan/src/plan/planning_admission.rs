@@ -7,7 +7,7 @@
 //! `medulla_core::architecture_view::derive_architecture_view`; this module
 //! derives nothing and writes nothing.
 
-use medulla_catalog_types::architecture_view::ArchitectureView;
+use medulla_catalog_source_types::architecture_view::ArchitectureView;
 use medulla_decision_types::decision::planning_admission::{
     DesignDifference, MissingKind, PlanningAdmissionRequest,
 };
@@ -56,7 +56,7 @@ pub fn admits(differences: &[DesignDifference]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::architecture_view::ViewContainer;
+    use medulla_catalog_source_types::architecture_view::ViewContainer;
     use medulla_decision_types::decision::planning_admission::{AttachPoint, PlanFeature};
     use medulla_types::contract::{BoundedVec, Digest256};
 

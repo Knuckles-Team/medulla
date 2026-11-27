@@ -8,7 +8,7 @@
 
 use std::sync::OnceLock;
 
-use medulla_catalog_types::open_metadata::OpenMetadataTypeView;
+use medulla_catalog_source_types::open_metadata::OpenMetadataTypeView;
 use oxrdf::Term;
 
 use crate::mapping::parse_turtle;

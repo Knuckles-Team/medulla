@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use medulla_catalog_types::catalog_relevance::UsageIndex;
+use medulla_catalog_source_types::catalog_relevance::UsageIndex;
 use tokio::sync::RwLock;
 
 use crate::carrier::CarrierAuthority;
@@ -22,7 +22,7 @@ pub async fn load_reads_index(
     graph_name: &str,
     carrier: Option<&CarrierAuthority>,
 ) -> Option<Arc<UsageIndex>> {
-    use medulla_catalog_types::asset_usage::ASSET_USAGE_READS_SERIES;
+    use medulla_catalog_source_types::asset_usage::ASSET_USAGE_READS_SERIES;
     use medulla_tsdb::store::SeriesKey;
 
     let carrier = carrier?;
@@ -45,7 +45,7 @@ pub async fn load_reads_index(
         series.push((name, total.max(0.0) as u64));
     }
     Some(Arc::new(
-        medulla_catalog_types::catalog_relevance::usage_index(&series),
+        medulla_catalog_source_types::catalog_relevance::usage_index(&series),
     ))
 }
 

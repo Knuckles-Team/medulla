@@ -227,8 +227,8 @@ fn sparql_virtual(
 pub struct ViewRun<'a> {
     pub mapping: &'a str,
     pub tables: &'a [String],
-    pub sources: &'a [medulla_catalog_types::virtual_graph_view::ViewSource],
-    pub plan: &'a medulla_catalog_types::virtual_graph_view::ViewPlan,
+    pub sources: &'a [medulla_catalog_source_types::virtual_graph_view::ViewSource],
+    pub plan: &'a medulla_catalog_source_types::virtual_graph_view::ViewPlan,
 }
 
 /// What one view read returned: the SPARQL variables and rows, and one pushed statement per

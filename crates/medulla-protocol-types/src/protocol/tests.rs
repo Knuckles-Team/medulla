@@ -924,7 +924,7 @@ fn a_wrapped_declared_refusal_keeps_its_code() {
 #[cfg(feature = "federation")]
 #[test]
 fn register_foreign_source_acceleration_round_trips() {
-    use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
+    use medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy;
     let source: medulla_query_types::wire::ForeignSourceSpec =
         serde_json::from_value(serde_json::json!({"HttpJson": {
             "url": "http://example.invalid/a",

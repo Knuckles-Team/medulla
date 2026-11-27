@@ -10,10 +10,13 @@
 //! engine and recording its real outcome is a later child
 //! (MEDULLA-UNIFIED-DATA-PLANE-R020.3.2).
 
-use crate::dialect_conformance::{
-    ConformanceDeviation, ConformanceOutcome, DialectConformanceEntry, InvalidConformanceEntry,
-};
 use medulla_query_types::warehouse_federation::WarehouseSourceKind;
+use {
+    medulla_catalog_source_types::dialect_conformance::ConformanceDeviation,
+    medulla_catalog_source_types::dialect_conformance::ConformanceOutcome,
+    medulla_catalog_source_types::dialect_conformance::DialectConformanceEntry,
+    medulla_catalog_source_types::dialect_conformance::InvalidConformanceEntry,
+};
 
 /// Why a warehouse conformance entry was refused before being admitted into a
 /// report.

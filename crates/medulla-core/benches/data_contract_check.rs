@@ -10,11 +10,14 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_catalog_types::data_product::{
-    DataContract, DataProduct, ProductPort, ProductPortKind,
-};
-use medulla_catalog_types::quality::QualityScore;
+use medulla_catalog_source_types::quality::QualityScore;
 use medulla_core::data_product::{check_contract, LiveContractState};
+use {
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+    medulla_catalog_source_types::data_product::ProductPort,
+    medulla_catalog_source_types::data_product::ProductPortKind,
+};
 
 const CONTRACTS: usize = 1000;
 const RULES: usize = 8;

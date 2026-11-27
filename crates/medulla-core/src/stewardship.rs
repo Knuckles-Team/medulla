@@ -6,12 +6,17 @@
 //! handler, glossary, pack contracts, data products) import this module and
 //! never the handler crate.
 
-use medulla_catalog_types::stewardship::{
-    Certification, ChangeRequest, StewardRole, StewardshipAssignment, StewardshipFieldError,
-    StewardshipScope, MAX_CHANGE_REQUEST_REVIEWERS,
-};
 use medulla_types::change_request_machine::ChangeRequestState;
 use medulla_types::change_request_machine::CHANGE_REQUEST_MACHINE;
+use {
+    medulla_catalog_source_types::stewardship::Certification,
+    medulla_catalog_source_types::stewardship::ChangeRequest,
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipFieldError,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+    medulla_catalog_source_types::stewardship::MAX_CHANGE_REQUEST_REVIEWERS,
+};
 
 /// `knob stewardship.certification_ttl_days` default.
 pub const CERTIFICATION_TTL_DAYS_DEFAULT: u32 = 365;
@@ -32,7 +37,9 @@ pub struct TargetScopes {
 
 impl TargetScopes {
     /// The scopes a wire target names.
-    pub fn of_target(target: &medulla_catalog_types::stewardship::StewardshipTarget) -> Self {
+    pub fn of_target(
+        target: &medulla_catalog_source_types::stewardship::StewardshipTarget,
+    ) -> Self {
         Self {
             asset: target.asset.clone(),
             concept_scheme: target.concept_scheme.clone(),

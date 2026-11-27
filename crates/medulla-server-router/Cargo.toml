@@ -19,6 +19,7 @@ medulla-h-sparql = { path = "../medulla-h-sparql" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog = { path = "../medulla-catalog" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }

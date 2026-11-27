@@ -105,8 +105,10 @@ pub(super) fn finance_alert_intents(
 pub(super) fn trust_flag_intents(
     methods: &[medulla_protocol_types::protocol::Method],
 ) -> Result<Vec<MutationOutboxIntent>, String> {
-    use medulla_catalog_types::stewardship::{
-        trust_flag_is_announced, TRUST_FLAG_LABEL, TRUST_FLAG_TOPIC,
+    use {
+        medulla_catalog_source_types::stewardship::trust_flag_is_announced,
+        medulla_catalog_source_types::stewardship::TRUST_FLAG_LABEL,
+        medulla_catalog_source_types::stewardship::TRUST_FLAG_TOPIC,
     };
     let mut intents = Vec::new();
     for method in methods {

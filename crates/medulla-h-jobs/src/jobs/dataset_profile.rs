@@ -9,7 +9,7 @@
 //! [`super::sensitive_claims::claim_methods`], inside the job's mutation batch. No second
 //! caller scans values.
 
-use medulla_catalog_types::profile::ColumnProfile;
+use medulla_catalog_source_types::profile::ColumnProfile;
 use medulla_core::sensitive_scan::{scan_values, NoResources, ScanLimits};
 use medulla_query_types::sensitive_detect::{Detection, SensitiveDetector};
 
@@ -86,7 +86,7 @@ impl SensitiveScan {
 
 /// The catalog column node a profile is about.
 fn column_asset(profile: &ColumnProfile) -> String {
-    medulla_catalog_types::lineage::column_node_id(&format!(
+    medulla_catalog_source_types::lineage::column_node_id(&format!(
         "{}.{}",
         profile.dataset, profile.column
     ))

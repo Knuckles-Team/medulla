@@ -24,7 +24,6 @@ mod family_tree;
 mod test_support;
 
 use medulla_catalog_types::gramps_baseline_digest::GrampsBaselineDigest;
-use medulla_catalog_types::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
 use medulla_catalog_types::schema_context::{
     SchemaContextAnswer, SchemaContextIntent, SCHEMA_CONTEXT_UNMAPPED,
 };
@@ -32,6 +31,10 @@ use medulla_protocol_types::protocol::{GraphType, Method, Request, ResultPayload
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use {
+    medulla_catalog_source_types::gramps_pilot_phase::GrampsPilotMilestone,
+    medulla_catalog_source_types::gramps_pilot_phase::PhaseExitArtifact,
+};
 
 use family_tree::{
     family_tree, family_tree_corpus, table_digest, PERSON_MAPPING, PHASE_EXIT_INVALID,
@@ -799,7 +802,7 @@ async fn p4_restore_and_p5_schema() {
             },
         )
         .await;
-    let settled: medulla_catalog_types::await_watermark::WatermarkAwaited = match settled {
+    let settled: medulla_catalog_source_types::await_watermark::WatermarkAwaited = match settled {
         Some(ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice(&bytes).expect("the watermark answer decodes")
         }

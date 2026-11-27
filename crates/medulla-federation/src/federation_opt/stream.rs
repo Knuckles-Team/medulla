@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_source_types::consolidation_isolation::SourceQuota;
 use medulla_exec::rowset::RowSet;
 use serde_json::{json, Value};
 

@@ -21,7 +21,7 @@ use super::capability::{PageRequest, RemoteRequest, SearchPush};
 use super::remote::Identity;
 use super::session::FederationSession;
 use super::trace::{FetchStrategy, FragmentTrace, SearchReceipt};
-use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
 use medulla_query_types::search_source::{ScoreKind, SearchIndexCapability};
 
 /// One result of a pushed search: the document id, the remote score (absent when the source

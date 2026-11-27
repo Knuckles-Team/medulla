@@ -5,8 +5,12 @@
 //! the Postgres control, and the unmodified corpus replay are
 //! MEDULLA-UNIFIED-DATA-PLANE-R026.2.2+.
 
-use crate::gramps_pilot_phase::{GrampsPilotMilestone, InvalidPhaseExit, PhaseExitArtifact};
 use serde::{Deserialize, Serialize};
+use {
+    medulla_catalog_source_types::gramps_pilot_phase::GrampsPilotMilestone,
+    medulla_catalog_source_types::gramps_pilot_phase::InvalidPhaseExit,
+    medulla_catalog_source_types::gramps_pilot_phase::PhaseExitArtifact,
+};
 
 /// A content digest captured for one baseline record set, before any live
 /// Postgres control or replay runs against it.

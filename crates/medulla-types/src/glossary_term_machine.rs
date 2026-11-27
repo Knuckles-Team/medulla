@@ -182,7 +182,9 @@ mod tests {
     // spec: MEDULLA-DATAPLAT-VOCAB-R009.4
     #[test]
     fn no_writer_sets_status_outside_apply() {
-        let sources = [include_str!("../../medulla-catalog-types/src/glossary.rs")];
+        let sources = [include_str!(
+            "../../medulla-catalog-source-types/src/glossary.rs"
+        )];
         for source in sources {
             let production = source.split("#[cfg(test)]").next().unwrap();
             let writes: Vec<&str> = production

@@ -17,13 +17,16 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
-use medulla_catalog_types::metadata_acceleration::{MetadataContract, SourceCategory};
+use medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph;
 use medulla_lake::metastore::scan::{list_all_tables, ScanLimits};
 use medulla_lake::metastore::{MetastoreClient, MetastoreError};
 use medulla_query_types::wire::ForeignSourceSpec;
 use medulla_types::contract::ServerErrorCode;
 use sha2::{Digest, Sha256};
+use {
+    medulla_catalog_source_types::metadata_acceleration::MetadataContract,
+    medulla_catalog_source_types::metadata_acceleration::SourceCategory,
+};
 
 /// Discovery could not produce a contract; the registration is refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -494,7 +497,10 @@ fn declared_shape(spec: &ForeignSourceSpec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::attached_catalog::{CatalogColumn, CatalogTable};
+    use {
+        medulla_catalog_source_types::attached_catalog::CatalogColumn,
+        medulla_catalog_source_types::attached_catalog::CatalogTable,
+    };
 
     fn http(secretish: &str, columns: &[(&str, &str)]) -> ForeignSourceSpec {
         ForeignSourceSpec::HttpJson {

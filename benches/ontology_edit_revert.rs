@@ -7,10 +7,13 @@
 //! Run: `cargo bench --bench ontology_edit_revert`. Nightly suite.
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_catalog_types::ontology_edit::{EditKind, OntologyEdit};
 use medulla_core::ontology::edits::{append, revert, EditDraft};
 use medulla_types::contract::Digest256;
 use std::hint::black_box;
+use {
+    medulla_catalog_source_types::ontology_edit::EditKind,
+    medulla_catalog_source_types::ontology_edit::OntologyEdit,
+};
 
 const CHAIN: usize = 10_000;
 const REVERTED: usize = 100;

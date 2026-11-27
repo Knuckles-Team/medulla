@@ -17,6 +17,7 @@ medulla-tables = { path = "../medulla-tables" }
 medulla-types = { path = "../medulla-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -53,6 +54,7 @@ medulla-table-store = { path = "../medulla-table-store" }
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }
@@ -64,7 +66,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 # their original `cfg(feature = ...)` gates, and the facade forwards to these.
 [features]
 default = []
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support"]
 metrics = ["dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/metrics"]
 server = ["dep:tracing-subscriber"]
 otel = ["server", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]

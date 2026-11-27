@@ -43,7 +43,7 @@ use std::collections::HashMap;
 /// `type_complexity` threshold.
 type JointAssignments = Vec<(Vec<usize>, f64)>;
 
-use medulla_catalog_types::distribution::Distribution;
+use medulla_catalog_source_types::distribution::Distribution;
 
 mod linalg;
 use linalg::invert_matrix;

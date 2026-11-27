@@ -337,7 +337,7 @@ $($variants)*
     /// Store one quality rule in the caller's tenant (from the verified carrier),
     /// approved by the caller. Refuses a rule that does not compile.
     QualityRulePut {
-        rule: medulla_catalog_types::quality::QualityRule,
+        rule: medulla_catalog_source_types::quality::QualityRule,
     },
 
     // ── Classification claims (MEDULLA-TYPED-PACKS-R652.3) ─────────────────
@@ -355,7 +355,7 @@ $($variants)*
     /// `Transition` or `Bind`. Scope `glossary:write`. Terms are
     /// `cat:CatalogGlossaryTerm` graph nodes; reads are UQL, SPARQL and search.
     Glossary {
-        op: Box<medulla_catalog_types::glossary::GlossaryOp>,
+        op: Box<medulla_catalog_source_types::glossary::GlossaryOp>,
     },
 
     // ── Credential receipt (MEDULLA-IDENTITY-R753) ─────────────────────────
@@ -372,7 +372,7 @@ $($variants)*
     /// `stewardship:write`. The answer carries the owners and stewards that govern
     /// the target so a caller can decide whom to admit.
     Stewardship {
-        op: Box<medulla_catalog_types::stewardship::StewardshipOp>,
+        op: Box<medulla_catalog_source_types::stewardship::StewardshipOp>,
     },
 
     // ── Dashboard asset (MEDULLA-TYPED-PACKS-R109.3) ───────────────────────
@@ -408,7 +408,7 @@ $($variants)*
     /// digest. The batch commits as one governed ChangeEnvelope keyed by its
     /// write-set digest, so a replayed event adds no edge.
     LineageIngest {
-        events: Vec<medulla_catalog_types::lineage::LineageEvent>,
+        events: Vec<medulla_catalog_source_types::lineage::LineageEvent>,
     },
 
     // ── Market bars and trend signals (EH-413..EH-418) ─────────────────────
@@ -927,13 +927,13 @@ $($variants)*
     /// request tenant. See [`medulla_catalog_types::data_product`].
     DataProductRegister {
         tenant: String,
-        product: medulla_catalog_types::data_product::DataProduct,
-        contract: medulla_catalog_types::data_product::DataContract,
+        product: medulla_catalog_source_types::data_product::DataProduct,
+        contract: medulla_catalog_source_types::data_product::DataContract,
     },
     /// Open one access request against a registered product (state `pending`).
     AccessRequestOpen {
         tenant: String,
-        request: medulla_catalog_types::data_product::AccessRequest,
+        request: medulla_catalog_source_types::data_product::AccessRequest,
     },
     /// Approve or reject the pending access request of `principal` for `product`.
     AccessRequestDecide {

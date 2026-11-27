@@ -6,13 +6,18 @@
 //! chain count and the newest digest, which makes an append O(1).
 
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
-use medulla_catalog_types::ontology_edit::{EditKind, NamingFinding, NamingMode, OntologyEdit};
 use medulla_core::ontology::edits::{
     edit_digest, revert, verify_chain, verify_head, EditDraft, EditRefusal,
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_types::contract::Digest256;
 use serde_json::{json, Value};
+use {
+    medulla_catalog_source_types::ontology_edit::EditKind,
+    medulla_catalog_source_types::ontology_edit::NamingFinding,
+    medulla_catalog_source_types::ontology_edit::NamingMode,
+    medulla_catalog_source_types::ontology_edit::OntologyEdit,
+};
 
 const EDIT_LABEL: &str = "OntologyEdit";
 const FINDING_LABEL: &str = "NamingFinding";

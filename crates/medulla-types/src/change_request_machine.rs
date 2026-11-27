@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let sources = [
-            include_str!("../../medulla-catalog-types/src/stewardship.rs"),
+            include_str!("../../medulla-catalog-source-types/src/stewardship.rs"),
             include_str!("../../medulla-core/src/stewardship.rs"),
         ];
         for source in sources {

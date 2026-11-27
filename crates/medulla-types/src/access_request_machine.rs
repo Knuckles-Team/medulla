@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn no_writer_sets_state_outside_apply() {
         let sources = [include_str!(
-            "../../medulla-catalog-types/src/data_product.rs"
+            "../../medulla-catalog-source-types/src/data_product.rs"
         )];
         for source in sources {
             let production = source.split("#[cfg(test)]").next().unwrap();

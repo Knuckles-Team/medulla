@@ -339,9 +339,10 @@ pub(super) fn eval_str_function(
         | F::IsNumeric => eval_str_bool_literal(ctx, f, args, sol),
         // The ranked catalog function (MEDULLA-TYPED-PACKS-R108.16).
         F::Custom(iri)
-            if iri.as_str() == medulla_catalog_types::catalog_relevance::CAT_RELEVANCE_IRI
+            if iri.as_str()
+                == medulla_catalog_source_types::catalog_relevance::CAT_RELEVANCE_IRI
                 || iri.as_str()
-                    == medulla_catalog_types::catalog_relevance::CAT_RANK_COMPONENTS_IRI =>
+                    == medulla_catalog_source_types::catalog_relevance::CAT_RANK_COMPONENTS_IRI =>
         {
             eval_catalog_function(ctx, iri.as_str(), args, sol)
         }

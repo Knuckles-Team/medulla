@@ -16,14 +16,23 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::open_metadata::{
-    inbound_mutations, outbound_record, OpenMetadataClassification, OpenMetadataMutation,
-    OpenMetadataRecord, OpenMetadataRelationship, OpenMetadataTypeView, OutboundNode,
-    EXTERNAL_GUID_PROPERTY, EXTERNAL_VERSION_PROPERTY, FROM_PROPERTY, OPEN_METADATA_SCHEMA_VERSION,
-    TO_PROPERTY,
-};
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
+use {
+    medulla_catalog_source_types::open_metadata::inbound_mutations,
+    medulla_catalog_source_types::open_metadata::outbound_record,
+    medulla_catalog_source_types::open_metadata::OpenMetadataClassification,
+    medulla_catalog_source_types::open_metadata::OpenMetadataMutation,
+    medulla_catalog_source_types::open_metadata::OpenMetadataRecord,
+    medulla_catalog_source_types::open_metadata::OpenMetadataRelationship,
+    medulla_catalog_source_types::open_metadata::OpenMetadataTypeView,
+    medulla_catalog_source_types::open_metadata::OutboundNode,
+    medulla_catalog_source_types::open_metadata::EXTERNAL_GUID_PROPERTY,
+    medulla_catalog_source_types::open_metadata::EXTERNAL_VERSION_PROPERTY,
+    medulla_catalog_source_types::open_metadata::FROM_PROPERTY,
+    medulla_catalog_source_types::open_metadata::OPEN_METADATA_SCHEMA_VERSION,
+    medulla_catalog_source_types::open_metadata::TO_PROPERTY,
+};
 
 use crate::source_sync::{GraphEdges, GraphNodes, RecordScreen, SyncAdapter, SyncMutation};
 

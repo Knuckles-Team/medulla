@@ -5,7 +5,7 @@
 //! carries both contracts as typed field lists; their digests are what the
 //! sealed receipt records. Nothing here reads a clock or a store.
 
-use medulla_catalog_types::consumer_contract::ConsumerContractSchema;
+use medulla_catalog_source_types::consumer_contract::ConsumerContractSchema;
 use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
@@ -100,7 +100,7 @@ impl SkillUpgradeRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::consumer_contract::ContractField;
+    use medulla_catalog_source_types::consumer_contract::ContractField;
 
     fn field(name: &str, type_name: &str, required: bool) -> ContractField {
         ContractField {

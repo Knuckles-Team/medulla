@@ -24,8 +24,8 @@ use super::strategy::{choose_join, BatchSizer, JoinInputs, JoinStrategy};
 use super::trace::{FetchStrategy, FragmentTrace};
 use super::{fuse_foreign, stats};
 use crate::federation::ForeignSourceRegistry;
-use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
-use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
+use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
+use medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::rowset::RowSet;
 use medulla_query_types::wire::Op;
 

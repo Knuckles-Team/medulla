@@ -238,7 +238,7 @@ async fn try_handle_sparql(
                         // one usage store, so the prior reflects the caller's own counts.
                         let mut projection =
                             medulla_rdf::sparql::Projection::from_wire(base_iri, type_convention);
-                        if medulla_catalog_types::catalog_relevance::ranks_assets(&query) {
+                        if medulla_catalog_source_types::catalog_relevance::ranks_assets(&query) {
                             projection.usage = medulla_server_api::catalog_usage::load_reads_index(
                                 state,
                                 graph_name,

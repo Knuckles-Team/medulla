@@ -1,11 +1,15 @@
 //! Stewardship rules (MEDULLA-TYPED-PACKS-R802.2).
 
-use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::{
     certify, open_change_request, resolve, reviewers, transition, StewardshipError, TargetScopes,
     CERTIFICATION_TTL_DAYS_DEFAULT,
 };
 use medulla_types::change_request_machine::ChangeRequestState;
+use {
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+};
 
 fn assign(scope: StewardshipScope, role: StewardRole, who: &str) -> StewardshipAssignment {
     StewardshipAssignment {
@@ -176,7 +180,7 @@ fn review_refuses_missing_role_self_approval_and_a_moved_target() {
 // spec: MEDULLA-TYPED-PACKS-R108.18
 #[test]
 fn governing_names_the_owners_and_stewards_of_the_most_specific_level() {
-    use medulla_catalog_types::stewardship::StewardshipTarget;
+    use medulla_catalog_source_types::stewardship::StewardshipTarget;
     use medulla_core::stewardship::governing;
 
     let all = vec![

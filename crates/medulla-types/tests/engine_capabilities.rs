@@ -1,5 +1,9 @@
-use medulla_catalog_types::engine_capabilities::{
-    ConstraintKind, EngineCapabilities, IndexKind, WireFeature, ENGINE_PARITY_CONSUMERS,
+use {
+    medulla_catalog_source_types::engine_capabilities::ConstraintKind,
+    medulla_catalog_source_types::engine_capabilities::EngineCapabilities,
+    medulla_catalog_source_types::engine_capabilities::IndexKind,
+    medulla_catalog_source_types::engine_capabilities::WireFeature,
+    medulla_catalog_source_types::engine_capabilities::ENGINE_PARITY_CONSUMERS,
 };
 
 // spec: MEDULLA-ENGINE-PARITY-R020.1

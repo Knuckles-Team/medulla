@@ -196,8 +196,13 @@ pub fn epistemic_decay_udf() -> ScalarUDF {
 /// `CATALOG_QUERY_TOO_LONG`, a malformed usage argument with `CATALOG_USAGE_INVALID`; a null
 /// argument or a blob that is not a property object scores null.
 pub fn catalog_relevance_udf() -> ScalarUDF {
-    use medulla_catalog_types::catalog_relevance::{
-        parse_usage_argument, relevance, usage_of, validate_query, AssetDoc, UsageIndex,
+    use {
+        medulla_catalog_source_types::catalog_relevance::parse_usage_argument,
+        medulla_catalog_source_types::catalog_relevance::relevance,
+        medulla_catalog_source_types::catalog_relevance::usage_of,
+        medulla_catalog_source_types::catalog_relevance::validate_query,
+        medulla_catalog_source_types::catalog_relevance::AssetDoc,
+        medulla_catalog_source_types::catalog_relevance::UsageIndex,
     };
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let arrays = ColumnarValue::values_to_arrays(args)?;

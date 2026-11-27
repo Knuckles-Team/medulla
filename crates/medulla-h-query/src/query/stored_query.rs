@@ -292,13 +292,13 @@ fn deprecated_in(ctx: &QueryHandlerCtx<'_>) -> std::collections::BTreeSet<String
     let flags: Vec<serde_json::Map<String, Value>> = ctx
         .core
         .get_nodes_by_label(
-            medulla_catalog_types::stewardship::TRUST_FLAG_LABEL,
+            medulla_catalog_source_types::stewardship::TRUST_FLAG_LABEL,
             usize::MAX,
         )
         .into_iter()
         .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_object(&blob).ok())
         .collect();
-    medulla_catalog_types::stewardship::deprecated_assets(&flags, &reader_of(ctx).tenant)
+    medulla_catalog_source_types::stewardship::deprecated_assets(&flags, &reader_of(ctx).tenant)
 }
 
 /// The warnings of one stored version: its recorded references against the deprecated assets.

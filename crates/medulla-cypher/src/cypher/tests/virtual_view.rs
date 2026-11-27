@@ -4,12 +4,14 @@ use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use medulla_catalog_types::virtual_graph_view::{
-    GraphView, NodeLabelMapping, RelationshipTypeMapping,
-};
 use medulla_virtual_graph::obda::{
     apply_view_joins, run_virtual, ForeignRow, JoinScan, ObdaFilter, ObdaSource,
     ObdaSourceRegistry, SourceIdentity, TriplesMap, VirtualGraph, JOIN_RIGHT_PREFIX,
+};
+use {
+    medulla_catalog_source_types::virtual_graph_view::GraphView,
+    medulla_catalog_source_types::virtual_graph_view::NodeLabelMapping,
+    medulla_catalog_source_types::virtual_graph_view::RelationshipTypeMapping,
 };
 
 use super::super::{

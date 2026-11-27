@@ -13,7 +13,7 @@
 // propagate uncertainty through the planner (deferred to avoid the concurrent
 // wire.rs / medulla-plan wave).
 
-use medulla_catalog_types::distribution::Distribution;
+use medulla_catalog_source_types::distribution::Distribution;
 
 /// Observed evidence for a conjugate Bayesian update (CONCEPT:MEDULLA-KG.compute.probabilistic-reasoning).
 #[derive(Clone, Debug, PartialEq)]

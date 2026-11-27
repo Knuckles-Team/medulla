@@ -25,12 +25,12 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
     fn derive_column_lineage(
         &self,
         sql: &str,
-        dialect: medulla_catalog_types::lineage::LineageDialect,
-        catalog: &medulla_catalog_types::attached_catalog::AttachedCatalogGraph,
+        dialect: medulla_catalog_source_types::lineage::LineageDialect,
+        catalog: &medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
         target: &str,
     ) -> Result<
-        medulla_catalog_types::lineage::LineageResult,
-        medulla_catalog_types::lineage::LineageError,
+        medulla_catalog_source_types::lineage::LineageResult,
+        medulla_catalog_source_types::lineage::LineageError,
     > {
         medulla_h_query::query::derive_lineage(sql, dialect, catalog, target)
     }

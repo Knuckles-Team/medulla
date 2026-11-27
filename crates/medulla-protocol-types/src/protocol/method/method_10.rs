@@ -218,7 +218,7 @@ $($variants)*
     /// `VIEW_NO_SUPPORTING_SOURCE`, `VIEW_UNKNOWN_REPOSITORY`,
     /// `VIEW_STALE_REVISION` and `VIEW_TOO_LARGE`.
     ArchitectureView {
-        scope: medulla_catalog_types::architecture_view::ViewScope,
+        scope: medulla_catalog_source_types::architecture_view::ViewScope,
     },
     /// Export the visible architecture nodes as one Open Exchange Format
     /// document (MEDULLA-CQ-ORCH-R705.6). `scope` names an optional graph
@@ -395,7 +395,7 @@ $($variants)*
     /// query against a supplied catalog on the shared parser. Pure compute:
     /// no graph row is read and nothing is committed.
     ColumnLineage {
-        op: Box<medulla_catalog_types::lineage::ColumnLineageOp>,
+        op: Box<medulla_catalog_source_types::lineage::ColumnLineageOp>,
     },
     /// MEDULLA-CQ-XSRC-R008.4: answer one cross-source competency question
     /// (`exposed_services`, `host_limit_capabilities`, `contract_incidents`).

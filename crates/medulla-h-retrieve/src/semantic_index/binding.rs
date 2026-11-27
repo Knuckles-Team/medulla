@@ -232,7 +232,7 @@ async fn admit_binding(
 /// refuses with `PROMOTION_BLOCKED`.
 async fn install_model_config(
     ctx: &SemanticIndexContext<'_>,
-    config: medulla_catalog_types::embedding_promotion::SemanticModelConfig,
+    config: medulla_catalog_source_types::embedding_promotion::SemanticModelConfig,
 ) -> Response {
     let service = Arc::clone(&ctx.service);
     reply::<ingestion_results::SemanticIndexInstallModelConfig, _>(

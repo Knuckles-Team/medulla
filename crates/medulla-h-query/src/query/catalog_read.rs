@@ -14,13 +14,15 @@ use medulla_catalog_types::catalog_read::{
     CatalogReadOp, CATALOG_ASSETS_BY_KIND, CATALOG_ASSETS_SEARCH, CATALOG_ASSET_DETAIL,
     CATALOG_ASSET_KINDS, CATALOG_ASSET_NOT_FOUND, CATALOG_GLOSSARY_KIND, CATALOG_INVALID_ARGUMENT,
 };
-use medulla_catalog_types::catalog_relevance::{
-    CATALOG_QUERY_EMPTY, CATALOG_QUERY_TOO_LONG, CATALOG_SEARCH_MAX_QUERY_CHARS,
-    CATALOG_SEARCH_PAGE_MAX,
-};
 use medulla_protocol_types::result_contract::query as results;
 use medulla_source_types::stored_query::STORED_QUERY_NOT_FOUND;
 use serde_json::{json, Value};
+use {
+    medulla_catalog_source_types::catalog_relevance::CATALOG_QUERY_EMPTY,
+    medulla_catalog_source_types::catalog_relevance::CATALOG_QUERY_TOO_LONG,
+    medulla_catalog_source_types::catalog_relevance::CATALOG_SEARCH_MAX_QUERY_CHARS,
+    medulla_catalog_source_types::catalog_relevance::CATALOG_SEARCH_PAGE_MAX,
+};
 
 use super::stored_query::handle_stored_call;
 use super::*;

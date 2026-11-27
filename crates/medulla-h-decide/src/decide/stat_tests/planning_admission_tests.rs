@@ -74,7 +74,7 @@ async fn harness_with_repositories() -> Harness {
 async fn current_digest(h: &Harness, repo: &str, tenant: &str) -> Digest256 {
     let guard = h.state.read().await;
     let view = guard.registry.get(GRAPH).unwrap().core.analysis_snapshot();
-    let scope = medulla_catalog_types::architecture_view::ViewScope {
+    let scope = medulla_catalog_source_types::architecture_view::ViewScope {
         repository_id: repo.to_string(),
         revision: None,
     };

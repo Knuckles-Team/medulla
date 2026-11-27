@@ -2638,7 +2638,10 @@ mod tag_tests {
 
 #[cfg(test)]
 mod tests {
-    use medulla_catalog_types::engine_capabilities::{EngineCapabilities, PG_SERVER_VERSION};
+    use {
+        medulla_catalog_source_types::engine_capabilities::EngineCapabilities,
+        medulla_catalog_source_types::engine_capabilities::PG_SERVER_VERSION,
+    };
 
     // spec: MEDULLA-ENGINE-PARITY-R020.2
     #[test]

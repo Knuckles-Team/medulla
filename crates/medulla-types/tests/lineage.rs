@@ -1,4 +1,7 @@
-use medulla_catalog_types::{lineage::ColumnLineageEdge, lineage::ColumnTransform};
+use {
+    medulla_catalog_source_types::lineage::ColumnLineageEdge,
+    medulla_catalog_source_types::lineage::ColumnTransform,
+};
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R763.1, MEDULLA-UNIFIED-DATA-PLANE-R763.5
 #[test]

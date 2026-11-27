@@ -2,12 +2,16 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::asset_usage::AssetUsage;
-use medulla_catalog_types::data_product::{
-    ContractPromise, DataContract, DataProduct, ProductPort, ProductPortKind,
-};
-use medulla_catalog_types::quality::QualityScore;
+use medulla_catalog_source_types::asset_usage::AssetUsage;
+use medulla_catalog_source_types::quality::QualityScore;
 use medulla_core::data_product::{check_contract, propose_products, LiveContractState};
+use {
+    medulla_catalog_source_types::data_product::ContractPromise,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+    medulla_catalog_source_types::data_product::ProductPort,
+    medulla_catalog_source_types::data_product::ProductPortKind,
+};
 
 // spec: MEDULLA-TYPED-PACKS-R805.2
 #[test]

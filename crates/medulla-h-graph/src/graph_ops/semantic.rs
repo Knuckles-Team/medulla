@@ -46,10 +46,10 @@ pub(super) fn node_text(core: &GraphCore, node_id: &str) -> (String, String, Str
 fn web_provenance(
     core: &GraphCore,
     node_id: &str,
-) -> medulla_catalog_types::web_source::WebProvenance {
+) -> medulla_catalog_source_types::web_source::WebProvenance {
     core.get_node_properties(node_id)
         .map(|blob| {
-            medulla_catalog_types::web_source::WebProvenance::from_properties(
+            medulla_catalog_source_types::web_source::WebProvenance::from_properties(
                 &super::gateway_graph::decode_json_object(&blob),
             )
         })

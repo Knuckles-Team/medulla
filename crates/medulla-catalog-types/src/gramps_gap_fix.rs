@@ -5,8 +5,12 @@
 //! verification (P4) and the schema-understanding demonstration (P5) are
 //! MEDULLA-UNIFIED-DATA-PLANE-R026.3.2+.
 
-use crate::gramps_pilot_phase::{GrampsPilotMilestone, InvalidPhaseExit, PhaseExitArtifact};
 use serde::{Deserialize, Serialize};
+use {
+    medulla_catalog_source_types::gramps_pilot_phase::GrampsPilotMilestone,
+    medulla_catalog_source_types::gramps_pilot_phase::InvalidPhaseExit,
+    medulla_catalog_source_types::gramps_pilot_phase::PhaseExitArtifact,
+};
 
 /// One gap fixed because a captured driver statement proved a real
 /// discrepancy, with a failing test written before the fix and the same

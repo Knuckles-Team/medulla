@@ -5,11 +5,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_catalog_types::asset_usage::AssetUsage;
-use medulla_catalog_types::data_product::{
-    ContractPromise, ContractViolation, DataContract, DataProduct, ProductProposal,
+use medulla_catalog_source_types::asset_usage::AssetUsage;
+use medulla_catalog_source_types::quality::QualityScore;
+use {
+    medulla_catalog_source_types::data_product::ContractPromise,
+    medulla_catalog_source_types::data_product::ContractViolation,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+    medulla_catalog_source_types::data_product::ProductProposal,
 };
-use medulla_catalog_types::quality::QualityScore;
 
 /// Live state a contract is checked against.
 #[derive(Debug, Clone, PartialEq)]
@@ -153,7 +157,10 @@ pub fn propose_products(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::data_product::{ProductPort, ProductPortKind};
+    use {
+        medulla_catalog_source_types::data_product::ProductPort,
+        medulla_catalog_source_types::data_product::ProductPortKind,
+    };
 
     // spec: MEDULLA-TYPED-PACKS-R805.6
     #[test]

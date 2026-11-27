@@ -11,7 +11,7 @@ mod test_support;
 use std::sync::Arc;
 use std::time::Duration;
 
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_source_types::consolidation_isolation::SourceQuota;
 use medulla_exec::rowset::RowSet;
 use medulla_federation::federation_opt::mcp::{
     register_connector_row_source, ConnectorRowRequest, ConnectorRowSource, ConnectorRows,

@@ -10,7 +10,7 @@ license = "MIT"
 name = "medulla_compute"
 
 [features]
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support"]
 # `algorithms`, `ast`, and `parser` are always compiled (algorithms is used by
 # the always-on graph-op handlers); the heavy domains are gated so a slim build
 # links neither their code nor their deps. Mirrors the facade feature names 1:1.
@@ -122,7 +122,7 @@ medulla-types = { path = "../medulla-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-core = { path = "../medulla-core" }
 # Reuse medulla-geo's generic symmetric distance-matrix traversal for t-SNE's
 # squared-vector metric. Optional with the mining domain so slim builds keep
@@ -273,7 +273,7 @@ medulla-source-types = { path = "../medulla-source-types", features = ["test-sup
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 criterion = "0.8"

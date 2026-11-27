@@ -12,7 +12,12 @@
 
 use std::time::Instant;
 
-use medulla_catalog_types::lineage::{DatasetRef, EtlRun, LineageDrain, LineageEvent};
+use {
+    medulla_catalog_source_types::lineage::DatasetRef,
+    medulla_catalog_source_types::lineage::EtlRun,
+    medulla_catalog_source_types::lineage::LineageDrain,
+    medulla_catalog_source_types::lineage::LineageEvent,
+};
 
 const WARMUP: usize = 200;
 const ITERATIONS: usize = 5_000;

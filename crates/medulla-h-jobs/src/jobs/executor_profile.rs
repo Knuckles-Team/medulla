@@ -12,8 +12,13 @@
 
 use std::collections::HashMap;
 
-use medulla_catalog_types::profile::{ColumnProfile, HistogramBucket, ProfileMethod, TopValue};
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
+use {
+    medulla_catalog_source_types::profile::ColumnProfile,
+    medulla_catalog_source_types::profile::HistogramBucket,
+    medulla_catalog_source_types::profile::ProfileMethod,
+    medulla_catalog_source_types::profile::TopValue,
+};
 
 use super::data_plane_write::{commit_job_methods, edge_method, node_method};
 use super::dataset_profile::SensitiveScan;
@@ -668,7 +673,7 @@ fn sampled_rows(profile: &ColumnProfile) -> u64 {
 
 /// The graph id of the catalog column node of `dataset.column`.
 fn column_node(profile: &ColumnProfile) -> String {
-    medulla_catalog_types::lineage::column_node_id(&format!(
+    medulla_catalog_source_types::lineage::column_node_id(&format!(
         "{}.{}",
         profile.dataset, profile.column
     ))
@@ -697,7 +702,7 @@ fn profile_methods(
             methods.push(node_method(
                 column_id.clone(),
                 &serde_json::json!({
-                    "type": medulla_catalog_types::lineage::COLUMN_LABEL,
+                    "type": medulla_catalog_source_types::lineage::COLUMN_LABEL,
                     "name": format!("{}.{}", profile.dataset, profile.column),
                     "tenant_id": target.tenant,
                     "_owner": target.agent,

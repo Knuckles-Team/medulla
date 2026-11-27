@@ -49,7 +49,7 @@ method_results! {
     EncodedDocumentSearch(EncodedDocumentSearch) => Json<medulla_types::retrieval::EncodedSearchResult>;
     ProjectionRead(ProjectionRead) => Json<medulla_types::projection_read::ProjectionReadResponse>;
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQueryReceipt>;
-    ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_types::entity_link_proposal::EntityLinkApproval>;
+    ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_source_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     // MEDULLA-FEDERATED-QUERY-R708.12: one version as written, one page of names, one tombstone.
     StoredQueryGet(StoredQueryGet) => Json<medulla_source_types::stored_query::StoredQueryView>;
@@ -104,13 +104,13 @@ method_results! {
     BookmarkSemanticSearch(BookmarkSemanticSearch) => Raw<medulla_types::bookmark_query::BookmarkSearchResult>;
     BookmarkRelations(BookmarkRelations) => Raw<medulla_types::bookmark_query::BookmarkRelationsResult>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
-    ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
+    ColumnLineage(ColumnLineage) => Raw<medulla_catalog_source_types::lineage::LineageResult>;
     // MEDULLA-CQ-XSRC-R008.4: the report of one cross-source question.
     CrossSourceQuestion(CrossSourceQuestion) => Raw<medulla_source_types::cross_source_report::CrossSourceReport>;
     // MEDULLA-CQ-XSRC-R011: the supply-chain impact report.
     SupplyChainImpact(SupplyChainImpact) => Raw<medulla_source_types::supply_chain_report::SupplyChainImpactReport>;
     // MEDULLA-UNIFIED-DATA-PLANE-R764.8: frequent users and usage suggestions of one asset.
-    CatalogUsage(CatalogUsage) => Raw<medulla_catalog_types::asset_usage::CatalogUsageAnswer>;
+    CatalogUsage(CatalogUsage) => Raw<medulla_catalog_source_types::asset_usage::CatalogUsageAnswer>;
     // MEDULLA-TYPED-PACKS-R108.17: every catalog read answers one `CatalogReadAnswer`.
     CatalogReadBrowse(CatalogRead / "browse") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
     CatalogReadSearch(CatalogRead / "search") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;

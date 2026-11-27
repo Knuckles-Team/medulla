@@ -8,16 +8,25 @@
 //! caller's RLS-projected graph, so a tenant sees only its own edges.
 
 use super::*;
-use medulla_catalog_types::lineage::{
-    ColumnLineageEdge, ColumnLineageOp, ColumnTransform, ImpactDirection, LineageError,
-    LineageResult, COLUMN_DERIVES_FROM, LINEAGE_IMPACT_MAX_DEPTH_DEFAULT,
-};
-#[cfg(feature = "federation-sql")]
-use medulla_catalog_types::{
-    attached_catalog::{AttachedCatalogGraph, CatalogColumn, CatalogTable},
-    lineage::{LineageCatalogTable, LineageDialect},
-};
 use medulla_protocol_types::result_contract::query::ColumnLineage;
+#[cfg(feature = "federation-sql")]
+use {
+    medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
+    medulla_catalog_source_types::attached_catalog::CatalogColumn,
+    medulla_catalog_source_types::attached_catalog::CatalogTable,
+    medulla_catalog_source_types::lineage::LineageCatalogTable,
+    medulla_catalog_source_types::lineage::LineageDialect,
+};
+use {
+    medulla_catalog_source_types::lineage::ColumnLineageEdge,
+    medulla_catalog_source_types::lineage::ColumnLineageOp,
+    medulla_catalog_source_types::lineage::ColumnTransform,
+    medulla_catalog_source_types::lineage::ImpactDirection,
+    medulla_catalog_source_types::lineage::LineageError,
+    medulla_catalog_source_types::lineage::LineageResult,
+    medulla_catalog_source_types::lineage::COLUMN_DERIVES_FROM,
+    medulla_catalog_source_types::lineage::LINEAGE_IMPACT_MAX_DEPTH_DEFAULT,
+};
 
 #[cfg(feature = "federation-sql")]
 fn catalog_of(tables: Vec<LineageCatalogTable>) -> AttachedCatalogGraph {
@@ -73,10 +82,11 @@ fn derive_catalog(catalog: &AttachedCatalogGraph) -> LineageResult {
             format!("{}.{}", view.schema, view.name)
         };
         if view.definition_gap {
-            out.gaps.push(medulla_catalog_types::lineage::LineageGap {
-                output: format!("{target}.*"),
-                reason: "view definition over lineage.max_sql_bytes was not kept".to_string(),
-            });
+            out.gaps
+                .push(medulla_catalog_source_types::lineage::LineageGap {
+                    output: format!("{target}.*"),
+                    reason: "view definition over lineage.max_sql_bytes was not kept".to_string(),
+                });
             continue;
         }
         match derive_lineage(&view.definition_sql, view.dialect, catalog, &target) {
@@ -84,10 +94,12 @@ fn derive_catalog(catalog: &AttachedCatalogGraph) -> LineageResult {
                 out.edges.extend(result.edges);
                 out.gaps.extend(result.gaps);
             }
-            Err(error) => out.gaps.push(medulla_catalog_types::lineage::LineageGap {
-                output: format!("{target}.*"),
-                reason: error.to_string(),
-            }),
+            Err(error) => out
+                .gaps
+                .push(medulla_catalog_source_types::lineage::LineageGap {
+                    output: format!("{target}.*"),
+                    reason: error.to_string(),
+                }),
         }
     }
     out.edges.sort_by(|a, b| {

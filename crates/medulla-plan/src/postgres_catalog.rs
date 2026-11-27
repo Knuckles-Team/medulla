@@ -8,12 +8,16 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::attached_catalog::{
-    AttachedCatalogGraph, CatalogColumn, CatalogConstraint, CatalogConstraintKind, CatalogTable,
-    CatalogView,
-};
-use medulla_catalog_types::lineage::LineageDialect;
+use medulla_catalog_source_types::lineage::LineageDialect;
 use medulla_federation::pg_introspect::{read_pg_catalog, PgCatalogRows};
+use {
+    medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
+    medulla_catalog_source_types::attached_catalog::CatalogColumn,
+    medulla_catalog_source_types::attached_catalog::CatalogConstraint,
+    medulla_catalog_source_types::attached_catalog::CatalogConstraintKind,
+    medulla_catalog_source_types::attached_catalog::CatalogTable,
+    medulla_catalog_source_types::attached_catalog::CatalogView,
+};
 
 use crate::mysql_catalog::{refuse, CatalogRefusal, CATALOG_VERSION, SOURCE_UNAVAILABLE};
 

@@ -1582,8 +1582,12 @@ const BLOCKING: &str = "https://knuckles-team.github.io/ontology/test/blocking-k
 // spec: MEDULLA-SUPPLY-VOCAB-R007.2
 #[test]
 fn digest_key_is_exact_name_only_key_is_a_proposal() {
-    use medulla_catalog_types::entity_link_proposal::{
-        AttachedApplication, CannotAssert, EntityLinkProposal, EntityRef, MatchClass,
+    use {
+        medulla_catalog_source_types::entity_link_proposal::AttachedApplication,
+        medulla_catalog_source_types::entity_link_proposal::CannotAssert,
+        medulla_catalog_source_types::entity_link_proposal::EntityLinkProposal,
+        medulla_catalog_source_types::entity_link_proposal::EntityRef,
+        medulla_catalog_source_types::entity_link_proposal::MatchClass,
     };
 
     let triples = parse_turtle(include_str!("fixtures/supply_chain_blocking_key_pairs.ttl"))

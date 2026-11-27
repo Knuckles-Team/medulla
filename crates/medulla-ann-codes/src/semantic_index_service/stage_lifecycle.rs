@@ -153,7 +153,7 @@ impl SemanticIndexService {
     /// (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
     pub fn install_model_config(
         &self,
-        config: medulla_catalog_types::embedding_promotion::SemanticModelConfig,
+        config: medulla_catalog_source_types::embedding_promotion::SemanticModelConfig,
     ) -> Result<(), SemanticCodeError> {
         self.store.install_model_config(config)
     }
@@ -161,12 +161,13 @@ impl SemanticIndexService {
     /// Record one S4 or S5 recall measurement (MEDULLA-UNIFIED-DATA-PLANE-R040.6).
     pub fn record_probe_measurement(
         &self,
-        stage: medulla_catalog_types::embedding_promotion::PromotionProbePoint,
+        stage: medulla_catalog_source_types::embedding_promotion::PromotionProbePoint,
         generation: u64,
-        modality: medulla_catalog_types::embedding_promotion::PromotionModality,
+        modality: medulla_catalog_source_types::embedding_promotion::PromotionModality,
         retrieved: &[Vec<u64>],
         now_ms: u64,
-    ) -> Result<medulla_catalog_types::embedding_promotion::StageReceipt, SemanticCodeError> {
+    ) -> Result<medulla_catalog_source_types::embedding_promotion::StageReceipt, SemanticCodeError>
+    {
         self.store
             .record_probe_measurement(stage, generation, modality, retrieved, now_ms)
     }

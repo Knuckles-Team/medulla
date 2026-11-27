@@ -11,8 +11,13 @@
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use medulla_catalog_types::virtual_graph_view::{GraphView, InvalidGraphView, ViewJoin, ViewPlan};
 use serde_json::Value;
+use {
+    medulla_catalog_source_types::virtual_graph_view::GraphView,
+    medulla_catalog_source_types::virtual_graph_view::InvalidGraphView,
+    medulla_catalog_source_types::virtual_graph_view::ViewJoin,
+    medulla_catalog_source_types::virtual_graph_view::ViewPlan,
+};
 
 use super::parser;
 use super::plan::{

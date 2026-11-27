@@ -56,7 +56,7 @@ metastore = ["dep:sha2", "dep:orc-rust", "dep:arrow", "dep:bytes", "dep:apache-a
 serde = { version = "1.0", features = ["derive"] }
 # `ProjectionAccess` (MEDULLA-FEDERATED-QUERY-R080.1) is the canonical lake-catalog vocabulary.
 medulla-types = { path = "../medulla-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 serde_json = "1.0"
 sha2 = { version = "0.10", optional = true }
 # ORC reads of the metastore tier (MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2): footer statistics prune
@@ -102,5 +102,5 @@ iceberg-storage-opendal = { version = "0.10", optional = true, default-features 
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 tempfile = "3"

@@ -14,10 +14,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::PlanCtx;
 use crate::rowset::{RowSet, ValueChannels};
-use medulla_catalog_types::asset_usage::{
-    usage_series_tags, ASSET_USAGE_QUERIES_SERIES, ASSET_USAGE_READS_SERIES, USAGE_VIEW_CHANNELS,
-};
 use medulla_query_types::wire::UsageView;
+use {
+    medulla_catalog_source_types::asset_usage::usage_series_tags,
+    medulla_catalog_source_types::asset_usage::ASSET_USAGE_QUERIES_SERIES,
+    medulla_catalog_source_types::asset_usage::ASSET_USAGE_READS_SERIES,
+    medulla_catalog_source_types::asset_usage::USAGE_VIEW_CHANNELS,
+};
 
 /// The node label of one tool run in the provenance graph.
 pub const TOOL_CALL_LABEL: &str = "ToolCall";
@@ -224,10 +227,13 @@ fn ranked(tallies: BTreeMap<String, Tally>) -> RowSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::asset_usage::{usage_query_series_name, usage_series_name};
     use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
+    use {
+        medulla_catalog_source_types::asset_usage::usage_query_series_name,
+        medulla_catalog_source_types::asset_usage::usage_series_name,
+    };
 
     const WINDOW: UsageWindow = UsageWindow {
         from_s: 1_000,

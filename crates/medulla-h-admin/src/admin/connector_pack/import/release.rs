@@ -20,12 +20,16 @@ use medulla_catalog_types::connector_pack::{
     ChangeRequestRef, ConnectorPackImportRequest, PackEntryKind, PackImportResult,
     PackReleaseEvidence, PackViolation, PackViolationCode,
 };
-use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::TargetScopes;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::connector_pack::ConnectorPackMemberRow;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use tokio::sync::RwLock;
+use {
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+};
 
 use super::planning::ReadyPlan;
 use super::validation::section_bytes;

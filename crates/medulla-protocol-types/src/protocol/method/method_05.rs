@@ -541,13 +541,13 @@ $($variants)*
         /// Absent takes the `foreign.default_quota.*` knobs; a value outside the bounds
         /// refuses `SOURCE_QUOTA_INVALID`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        quota: Option<medulla_catalog_types::consolidation_isolation::SourceQuota>,
+        quota: Option<medulla_catalog_source_types::consolidation_isolation::SourceQuota>,
         /// The acceleration policy of the source (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2): the
         /// hot-subset predicate and freshness watermark that bound the copy route. A predicate
         /// on a source without copy refuses `COPY_CAPABILITY_MISSING`. Absent runs every
         /// fragment live.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        acceleration: Option<medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
+        acceleration: Option<medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy>,
     },
 
     /// Register (or replace) a named read-only graph view over approved R2RML
@@ -559,7 +559,7 @@ $($variants)*
     #[cfg(feature = "federation")]
     RegisterGraphView {
         name: String,
-        view: medulla_catalog_types::virtual_graph_view::GraphView,
+        view: medulla_catalog_source_types::virtual_graph_view::GraphView,
         /// The R2RML Turtle document (or compact mapping) the view's labels map through.
         mapping: String,
         /// Engine user tables the mapping reads.
@@ -567,7 +567,7 @@ $($variants)*
         tables: Vec<String>,
         /// Live relational sources the mapping reads.
         #[serde(default)]
-        sources: Vec<medulla_catalog_types::virtual_graph_view::ViewSource>,
+        sources: Vec<medulla_catalog_source_types::virtual_graph_view::ViewSource>,
     },
 
     /// MEDULLA-UNIFIED-DATA-PLANE-R765: the foreign sources the caller may see, its own and
@@ -793,8 +793,8 @@ $($variants)*
     /// proposal from the two nodes (never from the caller), refuses a pair that is not a
     /// `Match`, records the verified caller as approver and writes one `owl:sameAs` edge.
     ApproveEntityLink {
-        left: medulla_catalog_types::entity_link_proposal::EntityRef,
-        right: medulla_catalog_types::entity_link_proposal::EntityRef,
+        left: medulla_catalog_source_types::entity_link_proposal::EntityRef,
+        right: medulla_catalog_source_types::entity_link_proposal::EntityRef,
     },
 
     // ── Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview) ───────

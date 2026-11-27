@@ -33,11 +33,13 @@ use super::{
     SemanticQueueClass, SemanticSqlSourceManifestDraft, SemanticStageArtifact, SemanticStageIntent,
     SemanticStageTransition,
 };
-use medulla_catalog_types::embedding_promotion::{
-    PromotionModality, PromotionProbePoint, SemanticModelConfig,
-};
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use {
+    medulla_catalog_source_types::embedding_promotion::PromotionModality,
+    medulla_catalog_source_types::embedding_promotion::PromotionProbePoint,
+    medulla_catalog_source_types::embedding_promotion::SemanticModelConfig,
+};
 
 /// The largest number of stage leases one claim may take.
 ///

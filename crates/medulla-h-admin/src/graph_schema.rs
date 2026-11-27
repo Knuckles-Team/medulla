@@ -692,7 +692,7 @@ fn pack_external_coverage(
     sources: &medulla_graph_core::graph::GraphSchemaSources,
     record_id: &str,
     documents: &[PackSchemaDocument],
-) -> Result<Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>, String> {
+) -> Result<Vec<medulla_catalog_source_types::external_schema::ExternalOntologyCoverage>, String> {
     if documents.is_empty() {
         return Ok(Vec::new());
     }
@@ -709,7 +709,7 @@ fn pack_external_coverage(
                 document.uri
             )
         })?;
-        let (_, admitted) = medulla_catalog_types::external_schema::admit_external_schema(
+        let (_, admitted) = medulla_catalog_source_types::external_schema::admit_external_schema(
             &value,
             record_id,
             &schema_revision,

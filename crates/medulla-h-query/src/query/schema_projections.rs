@@ -10,11 +10,15 @@
 //! `Put` op is a write and commits through the mutation gateway.
 
 use super::*;
-use medulla_catalog_types::schema_boundary::{
-    SchemaBoundary, SchemaProjections, SchemaProjectionsOp, BOUNDARY_COUNT_SCOPE,
-    SCHEMA_BOUNDARY_LABEL, SCHEMA_BOUNDARY_TENANT_KEY,
-};
 use medulla_protocol_types::result_contract::graph::SchemaProjectionsList;
+use {
+    medulla_catalog_source_types::schema_boundary::SchemaBoundary,
+    medulla_catalog_source_types::schema_boundary::SchemaProjections,
+    medulla_catalog_source_types::schema_boundary::SchemaProjectionsOp,
+    medulla_catalog_source_types::schema_boundary::BOUNDARY_COUNT_SCOPE,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_LABEL,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_TENANT_KEY,
+};
 
 /// The most boundary nodes one read scans in a graph.
 const MAX_BOUNDARY_NODES: usize = 65_536;

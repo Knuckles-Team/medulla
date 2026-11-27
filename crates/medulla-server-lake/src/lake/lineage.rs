@@ -236,13 +236,16 @@ pub const LINEAGE_GRAPH: &str = "lineage";
 const LINEAGE_SERVICE: &str = "lineage-drain";
 const LINEAGE_ACTOR: &str = "service:lineage-drain";
 
-fn dataset_refs(event: &Value, key: &str) -> Vec<medulla_catalog_types::lineage::DatasetRef> {
+fn dataset_refs(
+    event: &Value,
+    key: &str,
+) -> Vec<medulla_catalog_source_types::lineage::DatasetRef> {
     event[key]
         .as_array()
         .map(|items| {
             items
                 .iter()
-                .map(|item| medulla_catalog_types::lineage::DatasetRef {
+                .map(|item| medulla_catalog_source_types::lineage::DatasetRef {
                     namespace: item["namespace"].as_str().unwrap_or_default().to_string(),
                     name: item["name"].as_str().unwrap_or_default().to_string(),
                 })
@@ -257,14 +260,14 @@ fn dataset_refs(event: &Value, key: &str) -> Vec<medulla_catalog_types::lineage:
 pub fn to_lineage_event(
     event: &Value,
     ended_at_ms: i64,
-) -> medulla_catalog_types::lineage::LineageEvent {
+) -> medulla_catalog_source_types::lineage::LineageEvent {
     let run_id = event["run"]["runId"]
         .as_str()
         .unwrap_or_default()
         .to_string();
-    medulla_catalog_types::lineage::LineageEvent {
+    medulla_catalog_source_types::lineage::LineageEvent {
         event_id: run_id.clone(),
-        run: medulla_catalog_types::lineage::EtlRun {
+        run: medulla_catalog_source_types::lineage::EtlRun {
             run_id,
             job: event["job"]["name"]
                 .as_str()
@@ -370,7 +373,7 @@ mod tests {
         );
         let mapped = to_lineage_event(&ev, 5);
         assert_eq!(mapped.event_id, ev["run"]["runId"].as_str().unwrap());
-        let edges = medulla_catalog_types::lineage::map_lineage_event(&mapped).unwrap();
+        let edges = medulla_catalog_source_types::lineage::map_lineage_event(&mapped).unwrap();
         assert_eq!(edges.len(), 1);
     }
 

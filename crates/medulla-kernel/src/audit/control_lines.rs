@@ -176,7 +176,7 @@ fn incident_audit_line(method: &Method) -> Option<String> {
         }),
         // MEDULLA-TYPED-PACKS-R801.3: the line names the op and the addressed IRI.
         Method::Glossary { op } => {
-            use medulla_catalog_types::glossary::GlossaryOp;
+            use medulla_catalog_source_types::glossary::GlossaryOp;
             Some(match op.as_ref() {
                 GlossaryOp::PutScheme { scheme, .. } => format!("GLOSSARY|put_scheme|{scheme}"),
                 GlossaryOp::PutTerm { iri, .. } => format!("GLOSSARY|put_term|{iri}"),
@@ -201,7 +201,7 @@ fn incident_audit_line(method: &Method) -> Option<String> {
         }
         // MEDULLA-TYPED-PACKS-R802.3: the line names the op and the node it addresses.
         Method::Stewardship { op } => {
-            use medulla_catalog_types::stewardship::StewardshipOp;
+            use medulla_catalog_source_types::stewardship::StewardshipOp;
             Some(match op.as_ref() {
                 StewardshipOp::Assign { assignment } => {
                     format!("STEWARDSHIP|assign|{}", assignment.principal)

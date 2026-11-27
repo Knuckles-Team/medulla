@@ -11,8 +11,11 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_catalog_types::architecture_view::{ArchitectureViewResponse, ViewScope};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
+use {
+    medulla_catalog_source_types::architecture_view::ArchitectureViewResponse,
+    medulla_catalog_source_types::architecture_view::ViewScope,
+};
 
 const SECRET: &str = "architecture-view-served-secret";
 const ENCRYPTION_KEY: &str = "architecture-view-served-key-0123456789";

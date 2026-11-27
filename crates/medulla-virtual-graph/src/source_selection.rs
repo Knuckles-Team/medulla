@@ -27,11 +27,14 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use medulla_catalog_types::metadata_acceleration::{AccelerationPolicy, FragmentExecutionMode};
 use medulla_identity_types::authority_audit::{
     AuditEntry, AuditSourceMode, AuthorityAudit, NotUsedReason, SourceRole,
 };
 use serde::{Deserialize, Serialize};
+use {
+    medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy,
+    medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode,
+};
 
 #[cfg(feature = "rdf")]
 mod live;

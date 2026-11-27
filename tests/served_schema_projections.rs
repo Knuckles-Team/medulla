@@ -8,12 +8,15 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_catalog_types::schema_boundary::{
-    SchemaBoundary, SchemaProjections, SchemaProjectionsOp, SCHEMA_BOUNDARY_LABEL,
-    SCHEMA_BOUNDARY_TENANT_KEY,
-};
 use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use serde_json::json;
+use {
+    medulla_catalog_source_types::schema_boundary::SchemaBoundary,
+    medulla_catalog_source_types::schema_boundary::SchemaProjections,
+    medulla_catalog_source_types::schema_boundary::SchemaProjectionsOp,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_LABEL,
+    medulla_catalog_source_types::schema_boundary::SCHEMA_BOUNDARY_TENANT_KEY,
+};
 
 const SECRET: &str = "medulla-schema-projections-served-secret";
 const GRAPH: &str = "schema-projections";

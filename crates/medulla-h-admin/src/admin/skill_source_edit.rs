@@ -25,12 +25,15 @@ pub(crate) fn edit_skill_source(
     base: &[u8],
     source_digest: &str,
     patches: &[SkillSourcePatch],
-) -> Result<medulla_catalog_types::skill_edit::EditedSkill, String> {
+) -> Result<medulla_catalog_source_types::skill_edit::EditedSkill, String> {
     use super::connector_pack::import::front_matter::front_matter_value;
     use super::connector_pack::import::validation::valid_skill_frontmatter;
 
-    let edited =
-        medulla_catalog_types::skill_edit::apply_skill_patches(base, source_digest, patches)?;
+    let edited = medulla_catalog_source_types::skill_edit::apply_skill_patches(
+        base,
+        source_digest,
+        patches,
+    )?;
     let name = front_matter_value(base, "name").ok_or_else(|| {
         "MALFORMED_BODY: the base skill source declares no front-matter name".to_string()
     })?;
@@ -113,7 +116,7 @@ pub(crate) async fn serve_skill_source_edit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::skill_edit::skill_digest;
+    use medulla_catalog_source_types::skill_edit::skill_digest;
 
     const SOURCE: &str =
         "---\nname: demo\ndescription: First line\n# keep: this comment\nx-custom:   spaced\n---\n\
@@ -123,7 +126,7 @@ mod tests {
         source: &str,
         digest: &str,
         patches: &[SkillSourcePatch],
-    ) -> Result<medulla_catalog_types::skill_edit::EditedSkill, String> {
+    ) -> Result<medulla_catalog_source_types::skill_edit::EditedSkill, String> {
         edit_skill_source(source.as_bytes(), digest, patches)
     }
 

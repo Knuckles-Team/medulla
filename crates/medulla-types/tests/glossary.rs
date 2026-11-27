@@ -1,10 +1,15 @@
 //! Business glossary term model (MEDULLA-TYPED-PACKS-R801.1).
 
-use medulla_catalog_types::glossary::{
-    GlossaryTerm, SkosObject, SKOS_ALT_LABEL, SKOS_BROADER, SKOS_DEFINITION, SKOS_PREF_LABEL,
-    SKOS_RELATED,
-};
 use medulla_types::glossary_term_machine::GlossaryTermStatus;
+use {
+    medulla_catalog_source_types::glossary::GlossaryTerm,
+    medulla_catalog_source_types::glossary::SkosObject,
+    medulla_catalog_source_types::glossary::SKOS_ALT_LABEL,
+    medulla_catalog_source_types::glossary::SKOS_BROADER,
+    medulla_catalog_source_types::glossary::SKOS_DEFINITION,
+    medulla_catalog_source_types::glossary::SKOS_PREF_LABEL,
+    medulla_catalog_source_types::glossary::SKOS_RELATED,
+};
 
 // spec: MEDULLA-TYPED-PACKS-R801.1
 #[test]

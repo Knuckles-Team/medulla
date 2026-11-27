@@ -105,12 +105,15 @@ async fn handle_cypher_view(
 #[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
 struct OneView(
     String,
-    Option<medulla_catalog_types::virtual_graph_view::GraphView>,
+    Option<medulla_catalog_source_types::virtual_graph_view::GraphView>,
 );
 
 #[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
 impl medulla_cypher::cypher::ViewResolver for OneView {
-    fn view(&self, name: &str) -> Option<medulla_catalog_types::virtual_graph_view::GraphView> {
+    fn view(
+        &self,
+        name: &str,
+    ) -> Option<medulla_catalog_source_types::virtual_graph_view::GraphView> {
         (name == self.0).then(|| self.1.clone()).flatten()
     }
 }
@@ -202,7 +205,7 @@ async fn view_read(ctx: &QueryHandlerCtx<'_>, query: String, name: String) -> Re
 /// lexical form the source returned (numbers and booleans keep their JSON type).
 #[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
 fn view_rows_result(
-    plan: &medulla_catalog_types::virtual_graph_view::ViewPlan,
+    plan: &medulla_catalog_source_types::virtual_graph_view::ViewPlan,
     answer: &medulla_h_sparql::rdf::ViewAnswer,
 ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
     let index: Vec<Option<usize>> = plan
@@ -254,10 +257,10 @@ fn lexical_cell(text: &str) -> serde_json::Value {
 /// the same [`FragmentTrace`] the federated profile renders.
 #[cfg(all(feature = "cypher", feature = "obda", feature = "federation"))]
 fn view_explain_result(
-    plan: &medulla_catalog_types::virtual_graph_view::ViewPlan,
+    plan: &medulla_catalog_source_types::virtual_graph_view::ViewPlan,
     pushed: &[(String, String)],
 ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
-    use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+    use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
     use medulla_federation::federation_opt::{render_trace, FetchStrategy, FragmentTrace};
     let columns = vec![
         "fragment".to_string(),

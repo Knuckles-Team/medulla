@@ -12,11 +12,11 @@
 
 use std::sync::Arc;
 
+use medulla_catalog_source_types::ontology_edit::NamingFinding;
 use medulla_catalog_types::graph_schema::{
     ontology_source_key, GraphSchemaCommitted, GraphSchemaOp, OntologyRevisionEntry,
     GRAPH_SCHEMA_RESULT_SCHEMA_VERSION, MAX_ONTOLOGY_REVISION_HISTORY,
 };
-use medulla_catalog_types::ontology_edit::NamingFinding;
 use medulla_graph_core::graph::{
     GraphCore, GraphSchemaSource, SchemaSourceOrigin, MAX_SCHEMA_DOCUMENT_TRIPLES,
 };
@@ -147,7 +147,7 @@ fn assess_impact(
     revision: u64,
     ontology_ttl: &str,
     shapes_ttl: Option<&str>,
-) -> Result<Option<medulla_catalog_types::ontology_diff::ChangeImpact>, String> {
+) -> Result<Option<medulla_catalog_source_types::ontology_diff::ChangeImpact>, String> {
     super::ontology_diff_serve::assess_import(core, source_id, revision, ontology_ttl, shapes_ttl)
         .map(|assessed| assessed.map(|(counts, _)| counts))
 }
@@ -159,7 +159,7 @@ fn open_breaking_change(
     source_id: &str,
     revision: u64,
     digest: &Digest256,
-    impact: Option<&medulla_catalog_types::ontology_diff::ChangeImpact>,
+    impact: Option<&medulla_catalog_source_types::ontology_diff::ChangeImpact>,
 ) -> Result<(), String> {
     match impact {
         Some(counts) if super::ontology_diff_serve::is_breaking(counts) => {

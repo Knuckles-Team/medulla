@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::stewardship::ChangeRequest;
+use medulla_catalog_source_types::stewardship::ChangeRequest;
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 

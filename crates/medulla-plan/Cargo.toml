@@ -280,7 +280,7 @@ medulla-query-types = { path = "../medulla-query-types" }
 # MEDULLA-FEDERATED-QUERY-R702.1 model of medulla-work-types instead of a
 # second type file).
 medulla-work-types = { path = "../medulla-work-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-core = { path = "../medulla-core" }
 # The `ModalityContract` trait + the `EvidenceLocus` shape (CONCEPT:E4/X1). Sits at
 # the SAME DAG level as `medulla-types` (its own deps = `medulla-types` only, per its crate
@@ -440,7 +440,7 @@ medulla-federation = { path = "../medulla-federation", features = ["test-support
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the

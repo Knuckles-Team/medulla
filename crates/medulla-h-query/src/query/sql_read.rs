@@ -720,7 +720,7 @@ pub(super) async fn catalog_sql_response(
 ) -> Response {
     // MEDULLA-TYPED-PACKS-R108.16: a statement that ranks assets gets the caller's usage counts
     // from the one usage store as the third argument of each `catalog_relevance` call.
-    let query = if medulla_catalog_types::catalog_relevance::ranks_assets(&query) {
+    let query = if medulla_catalog_source_types::catalog_relevance::ranks_assets(&query) {
         let usage = medulla_server_api::catalog_usage::load_reads_index(
             state,
             &graph.name,
@@ -728,8 +728,10 @@ pub(super) async fn catalog_sql_response(
         )
         .await
         .unwrap_or_default();
-        let literal = medulla_catalog_types::catalog_relevance::usage_sql_literal(&usage);
-        match medulla_catalog_types::catalog_relevance::inject_usage_argument(&query, &literal) {
+        let literal = medulla_catalog_source_types::catalog_relevance::usage_sql_literal(&usage);
+        match medulla_catalog_source_types::catalog_relevance::inject_usage_argument(
+            &query, &literal,
+        ) {
             Ok(rewritten) => rewritten,
             Err(refusal) => return Response::err(req_id, refusal),
         }

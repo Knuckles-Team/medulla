@@ -6,10 +6,15 @@
 //! runner measured into a score, and [`track_failure`] counts consecutive
 //! failures and opens one incident through an [`IncidentSink`].
 
-use medulla_catalog_types::quality::{
-    InvalidQualityRule, QualityDimension, QualityRule, QualityScore, ScoreEvidence, NATIVE_CHECKER,
-};
 use medulla_types::contract::Digest256;
+use {
+    medulla_catalog_source_types::quality::InvalidQualityRule,
+    medulla_catalog_source_types::quality::QualityDimension,
+    medulla_catalog_source_types::quality::QualityRule,
+    medulla_catalog_source_types::quality::QualityScore,
+    medulla_catalog_source_types::quality::ScoreEvidence,
+    medulla_catalog_source_types::quality::NATIVE_CHECKER,
+};
 
 /// What a rule compiles to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -223,7 +228,7 @@ fn dimension_name(dimension: QualityDimension) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::quality::QualitySeverity;
+    use medulla_catalog_source_types::quality::QualitySeverity;
 
     fn rule(dimension: QualityDimension, target: &str, expression: &str) -> QualityRule {
         QualityRule {

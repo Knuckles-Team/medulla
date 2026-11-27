@@ -5,7 +5,6 @@
 //! abstain with their registered codes and write nothing.
 
 use super::*;
-use medulla_catalog_types::consumer_contract::{ConsumerContractSchema, ContractField};
 use medulla_decision_types::decision::skill_upgrade_request::{
     SkillUpgradeReceipt, SkillUpgradeRequest, UpgradeSubjectKind,
     SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION, SKILL_UPGRADE_DIGEST_MISMATCH,
@@ -15,6 +14,10 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_types::contract::{Digest256, OpaqueId};
+use {
+    medulla_catalog_source_types::consumer_contract::ConsumerContractSchema,
+    medulla_catalog_source_types::consumer_contract::ContractField,
+};
 
 fn contract(fields: &[(&str, &str, bool)]) -> ConsumerContractSchema {
     ConsumerContractSchema::new(

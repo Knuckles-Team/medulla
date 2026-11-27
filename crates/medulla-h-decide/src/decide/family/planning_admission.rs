@@ -18,7 +18,6 @@
 //! DE-REFUSE-VS-ABSTAIN). The `task_plan` family calls [`require_admitted`] for
 //! a plan that carries a `planning_admission` param: one function, two callers.
 
-use medulla_catalog_types::architecture_view::{ArchitectureView, ViewScope};
 use medulla_core::architecture_view::{derive_architecture_view_of_snapshot, ViewRules};
 use medulla_decision_plan::plan::planning_admission::{admits, compare_features};
 use medulla_decision_stats::decision::ladder::LadderResult;
@@ -38,6 +37,10 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_catalog_source_types::architecture_view::ArchitectureView,
+    medulla_catalog_source_types::architecture_view::ViewScope,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 use crate::decide::stat_support::{filtered_view, invalid_parameter};

@@ -362,7 +362,7 @@ $($variants)*
         /// `MAX_TYPED_TRIPLES`. An explicit empty list validates an empty graph;
         /// omitted/null permits the Turtle or live-graph fallback.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        data_triples: Option<Vec<medulla_catalog_types::ontology_inspection::RdfTriple>>,
+        data_triples: Option<Vec<medulla_catalog_source_types::ontology_inspection::RdfTriple>>,
     },
 
     /// Inspect ontology/shapes documents: the named classes, object and

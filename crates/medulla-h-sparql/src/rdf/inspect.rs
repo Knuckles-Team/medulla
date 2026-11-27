@@ -6,12 +6,18 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_catalog_types::ontology_inspection::{
-    OntologyClassView, OntologyCoverageView, OntologyCrosswalkView, OntologyExternalCoverageView,
-    OntologyInspection, OntologyPropertyView, OntologyUnmappedClassView, MAX_INSPECT_DOCUMENTS,
-};
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::Digest256;
+use {
+    medulla_catalog_source_types::ontology_inspection::OntologyClassView,
+    medulla_catalog_source_types::ontology_inspection::OntologyCoverageView,
+    medulla_catalog_source_types::ontology_inspection::OntologyCrosswalkView,
+    medulla_catalog_source_types::ontology_inspection::OntologyExternalCoverageView,
+    medulla_catalog_source_types::ontology_inspection::OntologyInspection,
+    medulla_catalog_source_types::ontology_inspection::OntologyPropertyView,
+    medulla_catalog_source_types::ontology_inspection::OntologyUnmappedClassView,
+    medulla_catalog_source_types::ontology_inspection::MAX_INSPECT_DOCUMENTS,
+};
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSchemaSources;

@@ -19,7 +19,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Mutex, OnceLock};
 
-use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
+use medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

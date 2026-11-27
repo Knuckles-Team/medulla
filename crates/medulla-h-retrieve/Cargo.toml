@@ -14,7 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 async-trait = "0.1"
 hex = "0.4"
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-geo = { path = "../medulla-geo", optional = true }

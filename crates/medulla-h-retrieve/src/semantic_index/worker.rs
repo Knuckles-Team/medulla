@@ -159,12 +159,12 @@ async fn validate(
 async fn record_probe(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_mutation_types::mutation_scope::MutationOutboxLease,
-    stage: medulla_catalog_types::embedding_promotion::PromotionProbePoint,
+    stage: medulla_catalog_source_types::embedding_promotion::PromotionProbePoint,
     generation: u64,
-    modality: medulla_catalog_types::embedding_promotion::PromotionModality,
+    modality: medulla_catalog_source_types::embedding_promotion::PromotionModality,
     retrieved: Vec<Vec<u64>>,
 ) -> Response {
-    use medulla_catalog_types::embedding_promotion::PromotionProbePoint;
+    use medulla_catalog_source_types::embedding_promotion::PromotionProbePoint;
     use medulla_index_types::semantic_index::SemanticStage;
     let consumer = ctx.authority.agent_id().to_string();
     let measured = on_own_lease(ctx, lease, move |service, lease, now_ms| {

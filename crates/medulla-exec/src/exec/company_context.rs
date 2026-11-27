@@ -9,7 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_catalog_types::open_metadata::EXTERNAL_VERSION_PROPERTY;
+use medulla_catalog_source_types::open_metadata::EXTERNAL_VERSION_PROPERTY;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_query_types::wire::CompanyCategory;
 use medulla_types::contract::ServerErrorCode;

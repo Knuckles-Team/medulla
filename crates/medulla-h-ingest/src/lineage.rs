@@ -11,17 +11,32 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::lineage::{
-    column_node_id, ColumnLineageEdge, DatasetId, LineageDrain, LineageEdge, LineageGap,
-    QuarantineReason, QuarantinedLineageEvent, COLUMN_DERIVES_FROM, COLUMN_LABEL, DATASET_LABEL,
-    DERIVES_RELATIONSHIP, LINEAGE_EVENT_MALFORMED, QUARANTINED_LABEL,
-};
-use medulla_catalog_types::lineage::{
-    LineageDialect, LineageError, LineageEvent, LineageIngestReceipt, LineageResult,
-};
 use medulla_protocol_types::protocol::Method;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use {
+    medulla_catalog_source_types::lineage::column_node_id,
+    medulla_catalog_source_types::lineage::ColumnLineageEdge,
+    medulla_catalog_source_types::lineage::DatasetId,
+    medulla_catalog_source_types::lineage::LineageDrain,
+    medulla_catalog_source_types::lineage::LineageEdge,
+    medulla_catalog_source_types::lineage::LineageGap,
+    medulla_catalog_source_types::lineage::QuarantineReason,
+    medulla_catalog_source_types::lineage::QuarantinedLineageEvent,
+    medulla_catalog_source_types::lineage::COLUMN_DERIVES_FROM,
+    medulla_catalog_source_types::lineage::COLUMN_LABEL,
+    medulla_catalog_source_types::lineage::DATASET_LABEL,
+    medulla_catalog_source_types::lineage::DERIVES_RELATIONSHIP,
+    medulla_catalog_source_types::lineage::LINEAGE_EVENT_MALFORMED,
+    medulla_catalog_source_types::lineage::QUARANTINED_LABEL,
+};
+use {
+    medulla_catalog_source_types::lineage::LineageDialect,
+    medulla_catalog_source_types::lineage::LineageError,
+    medulla_catalog_source_types::lineage::LineageEvent,
+    medulla_catalog_source_types::lineage::LineageIngestReceipt,
+    medulla_catalog_source_types::lineage::LineageResult,
+};
 
 use super::repository_index::{EnvelopeLabels, IndexWriteSet};
 
@@ -266,7 +281,10 @@ pub fn handle_lineage_ingest(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::lineage::{DatasetRef, EtlRun};
+    use {
+        medulla_catalog_source_types::lineage::DatasetRef,
+        medulla_catalog_source_types::lineage::EtlRun,
+    };
 
     const NO_COLUMNS: ColumnLineageSeam<'static> = ColumnLineageSeam {
         derive: &|_, _, _, _| Ok(LineageResult::default()),
@@ -334,7 +352,7 @@ mod tests {
         ColumnLineageEdge {
             source_column: source.into(),
             target_column: target.into(),
-            transform: medulla_catalog_types::lineage::ColumnTransform::Identity,
+            transform: medulla_catalog_source_types::lineage::ColumnTransform::Identity,
             query_digest: "d".repeat(64),
             parser_version: "sqlparser-0.62".into(),
         }

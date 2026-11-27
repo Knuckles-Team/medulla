@@ -13,12 +13,16 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::foreign_source_catalog::{
-    ForeignSourceParityAnswer, MAX_PARITY_SAMPLE, MAX_PARITY_TABLES, PARITY_SAMPLE_INVALID,
-    PARITY_TABLES_INVALID, SOURCE_NOT_FOUND,
-};
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_types::contract::Digest256;
+use {
+    medulla_catalog_source_types::foreign_source_catalog::ForeignSourceParityAnswer,
+    medulla_catalog_source_types::foreign_source_catalog::MAX_PARITY_SAMPLE,
+    medulla_catalog_source_types::foreign_source_catalog::MAX_PARITY_TABLES,
+    medulla_catalog_source_types::foreign_source_catalog::PARITY_SAMPLE_INVALID,
+    medulla_catalog_source_types::foreign_source_catalog::PARITY_TABLES_INVALID,
+    medulla_catalog_source_types::foreign_source_catalog::SOURCE_NOT_FOUND,
+};
 
 /// The domain the sample digest is framed under.
 const PARITY_DIGEST_DOMAIN: &[u8] = b"eg/foreign-source-parity/v1";

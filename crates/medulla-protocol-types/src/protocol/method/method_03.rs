@@ -115,7 +115,7 @@ $($variants)*
     /// `required_scopes` the verified token holds, and the total count only to
     /// `audit:operator`.
     SchemaProjections {
-        op: Box<medulla_catalog_types::schema_boundary::SchemaProjectionsOp>,
+        op: Box<medulla_catalog_source_types::schema_boundary::SchemaProjectionsOp>,
     },
 
     /// MEDULLA-TYPED-PACKS-R097.700: evaluate a domain pack manifest's mappings

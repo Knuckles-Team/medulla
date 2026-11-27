@@ -21,8 +21,8 @@ method_results! {
     GetNodes(GetNodes) => NodeList<Vec<(String, serde_json::Value)>>;
     GetNodesByLabel(GetNodesByLabel) => NodeList<Vec<(String, serde_json::Value)>>;
     WalletKeyTrustGet(WalletKeyTrustGet) => Json<medulla_finance_types::finance_wallet_trust::WalletKeyTrust>;
-    SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_types::schema_boundary::SchemaBoundary>;
-    SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_types::schema_boundary::SchemaProjections>;
+    SchemaProjectionsPut(SchemaProjections / "put") => Raw<medulla_catalog_source_types::schema_boundary::SchemaBoundary>;
+    SchemaProjectionsList(SchemaProjections / "list") => Raw<medulla_catalog_source_types::schema_boundary::SchemaProjections>;
     // MEDULLA-CQ-ORCH-R705.6: the architecture exchange import and export answers.
     ArchitectureModelImport(ArchitectureModelImport) => Json<medulla_types::archimate_exchange::ArchitectureModelImported>;
     ArchitectureModelExport(ArchitectureModelExport) => Json<medulla_types::archimate_exchange::ArchitectureModelExported>;
@@ -33,7 +33,7 @@ method_results! {
     DomainPackPreviewResult(DomainPack / "preview") => Raw<medulla_catalog_types::domain_pack::DomainPackPreview>;
     DomainPackRunResult(DomainPack / "run") => Raw<medulla_catalog_types::domain_pack::DomainPackRun>;
     // MEDULLA-CQ-ORCH-R010.3: the served architecture view.
-    ArchitectureView(ArchitectureView) => Json<medulla_catalog_types::architecture_view::ArchitectureViewResponse>;
+    ArchitectureView(ArchitectureView) => Json<medulla_catalog_source_types::architecture_view::ArchitectureViewResponse>;
     ContextFacts(ContextFacts) => Json<medulla_decision_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
     ReadSpan(ReadSpan) => Json<medulla_decision_types::source_toc::ReadSpanResult>;

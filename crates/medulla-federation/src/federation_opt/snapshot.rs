@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use serde::Serialize;
 
-use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
+use medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::rowset::RowSet;
 
 /// The bounds a snapshot is opened under. Both come from the server knobs

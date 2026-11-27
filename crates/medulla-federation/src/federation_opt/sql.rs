@@ -18,7 +18,7 @@ use super::budget::SOURCE_WRITE_FORBIDDEN;
 use super::capability::{KeyLookup, LimitPushdown, RemoteRequest, SourceCapabilities};
 use super::remote::{Identity, RemoteFetch};
 use super::snapshot::{SnapshotBound, SnapshotConn};
-use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
+use medulla_catalog_source_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::rowset::RowSet;
 use medulla_exec::sql_text::{quote_identifier, render_literal, validate_identifier, SqlDialect};
 
@@ -123,7 +123,7 @@ impl RemoteFetch for SqlRemote<'_> {
     fn open_snapshot(&self, bound: &SnapshotBound) -> Result<Option<SnapshotSemantics>, String> {
         #[cfg(feature = "federation-sql")]
         if self.dialect == Some(SqlDialect::Postgres) {
-            use medulla_catalog_types::metadata_acceleration::SnapshotIsolation;
+            use medulla_catalog_source_types::metadata_acceleration::SnapshotIsolation;
             let (conn, token) = crate::federation::PgSnapshot::open(
                 self.spec.dsn,
                 self.spec.id_field,

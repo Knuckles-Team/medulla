@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::semantic_ann_codes::tests::{seeded_s6_publication, S6Fixture};
-use medulla_catalog_types::embedding_promotion::ProbeSet;
+use medulla_catalog_source_types::embedding_promotion::ProbeSet;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_transaction::OutboxClaimBudget;
 

@@ -751,7 +751,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
 /// table (MEDULLA-DECISION-ENGINE-R010.100.1).
 pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     use crate::{belief_revision, claims, context_facts, source_toc};
-    use medulla_catalog_types::asset_usage;
+    use medulla_catalog_source_types::asset_usage;
     use medulla_source_types::meeting_transcript;
     use medulla_types::{
         archimate_exchange, bookmark_query, media_tag, paper_ingest, participant,

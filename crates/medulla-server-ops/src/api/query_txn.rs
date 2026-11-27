@@ -43,14 +43,14 @@ pub trait QueryApi: Send + Sync {
     fn derive_column_lineage(
         &self,
         sql: &str,
-        dialect: medulla_catalog_types::lineage::LineageDialect,
-        catalog: &medulla_catalog_types::attached_catalog::AttachedCatalogGraph,
+        dialect: medulla_catalog_source_types::lineage::LineageDialect,
+        catalog: &medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph,
         target: &str,
     ) -> Result<
-        medulla_catalog_types::lineage::LineageResult,
-        medulla_catalog_types::lineage::LineageError,
+        medulla_catalog_source_types::lineage::LineageResult,
+        medulla_catalog_source_types::lineage::LineageError,
     > {
-        Err(medulla_catalog_types::lineage::LineageError::Parse(
+        Err(medulla_catalog_source_types::lineage::LineageError::Parse(
             "ENGINE_UNAVAILABLE: column lineage needs the federation-sql build".to_string(),
         ))
     }

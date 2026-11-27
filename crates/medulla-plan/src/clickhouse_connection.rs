@@ -309,8 +309,8 @@ fn decode_cell(cell: &serde_json::Value, type_name: &str) -> serde_json::Value {
 #[cfg(feature = "federation")]
 fn engine_family(
     engine: &str,
-) -> medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily {
-    use medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily as Family;
+) -> medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseEngineFamily {
+    use medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseEngineFamily as Family;
     match engine {
         "MergeTree" => Family::MergeTree,
         "ReplacingMergeTree" => Family::ReplacingMergeTree,
@@ -327,11 +327,16 @@ fn engine_family(
 pub fn read_catalog(
     handle: &ClickHouseConnection,
     table: &str,
-) -> Result<medulla_catalog_types::clickhouse_attached_catalog::ClickHouseSourceCatalog, String> {
-    use medulla_catalog_types::clickhouse_attached_catalog::{
-        ClickHouseColumn, ClickHouseSourceCatalog, ClickHouseTableCatalog,
-    };
+) -> Result<
+    medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseSourceCatalog,
+    String,
+> {
     use medulla_exec::sql_text::{ClickHouseStatement, CLICKHOUSE_PARAM_PREFIX};
+    use {
+        medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseColumn,
+        medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseSourceCatalog,
+        medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseTableCatalog,
+    };
     let bind = |sql: &str| ClickHouseStatement {
         sql: sql.to_string(),
         params: vec![
@@ -371,7 +376,7 @@ pub fn read_catalog(
         .and_then(|row| row.first())
         .and_then(serde_json::Value::as_str)
         .map_or(
-            medulla_catalog_types::clickhouse_attached_catalog::ClickHouseEngineFamily::Other,
+            medulla_catalog_source_types::clickhouse_attached_catalog::ClickHouseEngineFamily::Other,
             engine_family,
         );
     let mut catalog = ClickHouseSourceCatalog::default();

@@ -12,7 +12,7 @@ name = "medulla_index_types"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types", features = ["query"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -25,7 +25,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-query-types/wire-complete", "medulla-mutation-types/wire-complete"]
-contract-schema = ["dep:schemars", "medulla-catalog-types/contract-schema", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-catalog-source-types/contract-schema", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-mutation-types/contract-schema"]
 
 [dev-dependencies]
 rmp-serde = "1.3"

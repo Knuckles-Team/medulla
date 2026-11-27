@@ -10,14 +10,17 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::entity_link_proposal::{
-    EntityLinkApproval, EntityLinkProposal, EntityRef, MatchClass,
-};
 use medulla_index_types::entity_resolution::{
     approve, FellegiSunterModel, FieldWeight, ResolutionRecord,
 };
 use medulla_server_api::knob_config::knobs;
 use serde_json::{json, Value};
+use {
+    medulla_catalog_source_types::entity_link_proposal::EntityLinkApproval,
+    medulla_catalog_source_types::entity_link_proposal::EntityLinkProposal,
+    medulla_catalog_source_types::entity_link_proposal::EntityRef,
+    medulla_catalog_source_types::entity_link_proposal::MatchClass,
+};
 
 use super::*;
 

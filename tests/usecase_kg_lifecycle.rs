@@ -111,7 +111,10 @@ async fn rdf_snapshot(state: &test_support::SharedState, id: u64) -> serde_json:
 
 #[tokio::test]
 async fn inline_typed_validation_never_writes_to_the_request_graph() {
-    use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
+    use {
+        medulla_catalog_source_types::ontology_inspection::RdfObject,
+        medulla_catalog_source_types::ontology_inspection::RdfTriple,
+    };
 
     let state = state();
     ok(

@@ -18,6 +18,7 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["cont
 # The memory knob family: the importance cap reinforcement honours (MEDULLA-DECISION-ENGINE-R651.8).
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-types = { path = "../medulla-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
@@ -52,4 +53,5 @@ security = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "medul
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

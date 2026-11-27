@@ -1,5 +1,8 @@
-use medulla_catalog_types::asset_usage::{
-    fuse_with_usage_prior, AssetUsage, CatalogSearchHit, USAGE_PRIOR_CAP,
+use {
+    medulla_catalog_source_types::asset_usage::fuse_with_usage_prior,
+    medulla_catalog_source_types::asset_usage::AssetUsage,
+    medulla_catalog_source_types::asset_usage::CatalogSearchHit,
+    medulla_catalog_source_types::asset_usage::USAGE_PRIOR_CAP,
 };
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R764.1

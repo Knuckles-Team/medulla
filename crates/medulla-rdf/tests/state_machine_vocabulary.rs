@@ -996,7 +996,7 @@ fn workflow_machine_classes_extend_core() {
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
 #[test]
 fn catalog_probe_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_catalog_types::probe_machine::CATALOG_PROBE_MACHINE);
+    sm::assert_matches(&medulla_catalog_source_types::probe_machine::CATALOG_PROBE_MACHINE);
 }
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
 #[test]

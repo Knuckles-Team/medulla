@@ -883,9 +883,9 @@ async fn dispatch_catalog_admin_methods(
                     verified: verified_context,
                 };
                 let applied = match op.as_ref() {
-                    medulla_catalog_types::stewardship::StewardshipOp::Apply { request_id } => {
-                        Some(request_id.clone())
-                    }
+                    medulla_catalog_source_types::stewardship::StewardshipOp::Apply {
+                        request_id,
+                    } => Some(request_id.clone()),
                     _ => None,
                 };
                 let response = medulla_server_graph::dispatch::stewardship::dispatch_stewardship(

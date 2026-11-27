@@ -20,10 +20,6 @@
 
 use std::sync::Arc;
 
-use medulla_catalog_types::stewardship::{
-    ChangeRequest, StewardRole, StewardshipAssignment, StewardshipOp, StewardshipReceipt,
-    StewardshipScope, StewardshipTarget,
-};
 use medulla_core::stewardship::{
     authorize_review, certify, governing, open_change_request, reviewers, transition,
     ReviewRefusal, TargetScopes, CERTIFICATION_TTL_DAYS_DEFAULT,
@@ -37,6 +33,15 @@ use medulla_server_api::state::ServerState;
 use medulla_types::change_request_machine::ChangeRequestState;
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
+use {
+    medulla_catalog_source_types::stewardship::ChangeRequest,
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipOp,
+    medulla_catalog_source_types::stewardship::StewardshipReceipt,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+    medulla_catalog_source_types::stewardship::StewardshipTarget,
+};
 
 use super::graph_client::{
     encode, read_node, took_effect, write, write_batch, GraphTarget, Properties, TENANT_PROPERTY,
@@ -204,7 +209,7 @@ async fn receipt(
     id: String,
     scopes: &TargetScopes,
     change_request: Option<ChangeRequest>,
-    certification: Option<medulla_catalog_types::stewardship::Certification>,
+    certification: Option<medulla_catalog_source_types::stewardship::Certification>,
 ) -> Result<StewardshipReceipt, String> {
     let assignments = load_assignments(state, target).await?;
     let (owners, stewards) = governing(&assignments, scopes);
@@ -881,7 +886,10 @@ fn plan_trust_flag(
     others: &[String],
     asset_node: Option<(String, Properties)>,
 ) -> Result<TrustFlagPlan, String> {
-    use medulla_catalog_types::stewardship::{TRUST_FLAGS, TRUST_FLAG_LABEL};
+    use {
+        medulla_catalog_source_types::stewardship::TRUST_FLAGS,
+        medulla_catalog_source_types::stewardship::TRUST_FLAG_LABEL,
+    };
     if asset.trim().is_empty() {
         return Err(invalid("a trust flag names its asset"));
     }
@@ -904,7 +912,10 @@ fn plan_trust_flag(
     let mut operations =
         vec![serde_json::json!({"op": "upsert_node", "id": id, "properties": node})];
     if let Some((asset_key, mut properties)) = asset_node {
-        let cat_flag = format!("{}flag", medulla_catalog_types::catalog_relevance::CAT_NS);
+        let cat_flag = format!(
+            "{}flag",
+            medulla_catalog_source_types::catalog_relevance::CAT_NS
+        );
         let mut flags: Vec<String> = Vec::new();
         for key in [cat_flag.as_str(), "flag"] {
             match properties.remove(key) {
@@ -935,7 +946,7 @@ async fn other_trust_flags(
     asset: &str,
     principal: &str,
 ) -> Result<Vec<String>, String> {
-    use medulla_catalog_types::stewardship::TRUST_FLAG_LABEL;
+    use medulla_catalog_source_types::stewardship::TRUST_FLAG_LABEL;
     let tenant = target.verified.tenant();
     let mut found = Vec::new();
     let mut after: Option<String> = None;

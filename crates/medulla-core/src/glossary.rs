@@ -8,8 +8,8 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use medulla_catalog_types::asset_usage::UsageKnob;
-use medulla_catalog_types::glossary::GlossaryTerm;
+use medulla_catalog_source_types::asset_usage::UsageKnob;
+use medulla_catalog_source_types::glossary::GlossaryTerm;
 use medulla_types::glossary_term_machine::GlossaryTermStatus;
 
 /// `:definesAsset`: links a term to an asset that serves the class the term names.
@@ -323,7 +323,7 @@ pub fn check_label_free(
 /// whose target is that term.
 pub fn require_review(
     iri: &str,
-    request: Option<&medulla_catalog_types::stewardship::ChangeRequest>,
+    request: Option<&medulla_catalog_source_types::stewardship::ChangeRequest>,
 ) -> Result<(), GlossaryError> {
     use medulla_types::change_request_machine::ChangeRequestState;
     match request {

@@ -12,9 +12,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::incident::{AnomalyReading, IncidentStatus};
-use medulla_catalog_types::quality::{
-    QualityRule, QualityScore, RuleState, ScoreEvidence, NATIVE_CHECKER,
-};
 use medulla_core::quality::{track_failure, Evaluation, IncidentSink, QualityAnomaly};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{SourceIngestionBatch, SourceRecord};
@@ -24,6 +21,13 @@ use medulla_stream::telemetry::incident_nodes::{
 };
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
+use {
+    medulla_catalog_source_types::quality::QualityRule,
+    medulla_catalog_source_types::quality::QualityScore,
+    medulla_catalog_source_types::quality::RuleState,
+    medulla_catalog_source_types::quality::ScoreEvidence,
+    medulla_catalog_source_types::quality::NATIVE_CHECKER,
+};
 
 use super::ResolvedIngestionMappings;
 
@@ -411,7 +415,10 @@ pub(super) fn admit_outside_scores(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
+    use {
+        medulla_catalog_source_types::quality::QualityDimension,
+        medulla_catalog_source_types::quality::QualitySeverity,
+    };
 
     fn fields() -> BTreeMap<String, String> {
         [("checker", "checker"), ("rule", "rule"), ("score", "value")]

@@ -349,8 +349,11 @@ impl<'a> StreamingRequest<'a> {
     /// `AwaitWatermark` (MEDULLA-DURABLE-KERNEL-R878): answer once the named resource's
     /// watermark reaches `at_least`, or when `deadline_ms` has passed on the engine clock.
     async fn await_watermark(&self, resource: String, at_least: u64, deadline_ms: u64) -> Response {
-        use medulla_catalog_types::await_watermark::{WatermarkAwaited, WatermarkResource};
-        use medulla_catalog_types::probe_machine::ProbeState;
+        use medulla_catalog_source_types::probe_machine::ProbeState;
+        use {
+            medulla_catalog_source_types::await_watermark::WatermarkAwaited,
+            medulla_catalog_source_types::await_watermark::WatermarkResource,
+        };
         let Some(kind) = WatermarkResource::parse(&resource) else {
             return Response::err(
                 self.req_id,

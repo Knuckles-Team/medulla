@@ -972,7 +972,7 @@ fn activation_stores_external_coverage_for_inspection() {
         .filter(|term| {
             matches!(
                 term.result,
-                medulla_catalog_types::external_schema::ExternalTermResult::Mapped { .. }
+                medulla_catalog_source_types::external_schema::ExternalTermResult::Mapped { .. }
             )
         })
         .count();

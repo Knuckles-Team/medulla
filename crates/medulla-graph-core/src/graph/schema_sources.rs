@@ -165,7 +165,8 @@ pub struct GraphSchemaSource {
     /// members and the composition's pins, so it is outside both the composed digest
     /// and document identity.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub external_coverage: Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>,
+    pub external_coverage:
+        Vec<medulla_catalog_source_types::external_schema::ExternalOntologyCoverage>,
     /// Deterministic provenance time. Replicated handlers must never read the
     /// local wall clock; until the commit envelope exposes a consensus time,
     /// live attachments use the documented sentinel `0`.
@@ -504,7 +505,7 @@ impl GraphSchemaSources {
     pub fn set_dynamic_external_coverage(
         &mut self,
         source_id: &str,
-        coverage: Vec<medulla_catalog_types::external_schema::ExternalOntologyCoverage>,
+        coverage: Vec<medulla_catalog_source_types::external_schema::ExternalOntologyCoverage>,
     ) -> bool {
         match self.dynamic.get_mut(source_id) {
             Some(source) if source.external_coverage != coverage => {

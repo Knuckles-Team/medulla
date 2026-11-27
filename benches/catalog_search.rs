@@ -16,10 +16,13 @@ use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, Criterion};
-use medulla_catalog_types::catalog_relevance::{
-    relevance, AssetDoc, TrustFlag, CATALOG_SEARCH_PAGE_MAX,
-};
 use serde_json::json;
+use {
+    medulla_catalog_source_types::catalog_relevance::relevance,
+    medulla_catalog_source_types::catalog_relevance::AssetDoc,
+    medulla_catalog_source_types::catalog_relevance::TrustFlag,
+    medulla_catalog_source_types::catalog_relevance::CATALOG_SEARCH_PAGE_MAX,
+};
 
 const ASSETS: usize = 1_000_000;
 const REPORT_SAMPLES: usize = 50;

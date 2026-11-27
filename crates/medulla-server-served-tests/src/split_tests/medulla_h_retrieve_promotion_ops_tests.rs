@@ -4,14 +4,17 @@ use super::medulla_h_query_dispatch_pipeline_tests::{
     dispatch_state, refused, signed, worker_authority, TENANT, WORKER,
 };
 use super::medulla_h_query_sql_source_read_tests::{binding_draft, dispatch_table_fixture};
-use medulla_catalog_types::embedding_promotion::{
-    ProbeSet, PromotionModality, PromotionProbePoint, SemanticModelConfig,
-};
 use medulla_index_types::semantic_index::{
     SemanticBindingState, SemanticIndexOp, SemanticQueueClass, SemanticStageLeasePage,
 };
 use medulla_server_api::test_support::decode_raw_response as ok;
 use std::collections::BTreeMap;
+use {
+    medulla_catalog_source_types::embedding_promotion::ProbeSet,
+    medulla_catalog_source_types::embedding_promotion::PromotionModality,
+    medulla_catalog_source_types::embedding_promotion::PromotionProbePoint,
+    medulla_catalog_source_types::embedding_promotion::SemanticModelConfig,
+};
 
 fn text_config() -> SemanticModelConfig {
     let probe = ProbeSet {

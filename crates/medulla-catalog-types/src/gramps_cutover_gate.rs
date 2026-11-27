@@ -11,7 +11,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
+use {
+    medulla_catalog_source_types::gramps_pilot_phase::GrampsPilotMilestone,
+    medulla_catalog_source_types::gramps_pilot_phase::PhaseExitArtifact,
+};
 
 /// The minimum read-only SQLite fallback window the spec requires.
 pub const MINIMUM_FALLBACK_WINDOW_DAYS: u32 = 30;

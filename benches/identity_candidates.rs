@@ -6,9 +6,12 @@ use std::collections::BTreeMap;
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_catalog_types::entity_link_proposal::{AttachedApplication, EntityRef};
 use medulla_index_types::entity_resolution::{
     propose_links, FellegiSunterModel, FieldWeight, ResolutionRecord,
+};
+use {
+    medulla_catalog_source_types::entity_link_proposal::AttachedApplication,
+    medulla_catalog_source_types::entity_link_proposal::EntityRef,
 };
 
 fn records(count: usize) -> Vec<ResolutionRecord> {

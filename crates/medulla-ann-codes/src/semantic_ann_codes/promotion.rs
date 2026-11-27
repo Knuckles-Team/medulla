@@ -22,12 +22,6 @@ use super::batch::{semantic_digest, MetadataMutation};
 use super::persist::replace_bytes;
 use super::{kernel_error, refused, SemanticCodeError, SemanticCodeStore};
 use medulla_ann::{recall_at_k, EmbeddingVersion, EmbeddingVersionStore, PromotionApproval};
-use medulla_catalog_types::embedding_promotion::{
-    decode_promotion_record, encode_promotion_record, evaluate_promotion, ModalityCheck,
-    ModalityCheckRecord, PromotionCandidate, PromotionMetric, PromotionModality,
-    PromotionProbePoint, PromotionVerdict, SemanticModelConfig, StageReceipt,
-    DEFAULT_PROMOTION_TOLERANCE,
-};
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_semantic_index::semantic::SemanticGenerationImage;
 use medulla_storage::{
@@ -36,6 +30,21 @@ use medulla_storage::{
 };
 use medulla_transaction::AdmittedOwnerWrite;
 use redb::ReadableTable;
+use {
+    medulla_catalog_source_types::embedding_promotion::decode_promotion_record,
+    medulla_catalog_source_types::embedding_promotion::encode_promotion_record,
+    medulla_catalog_source_types::embedding_promotion::evaluate_promotion,
+    medulla_catalog_source_types::embedding_promotion::ModalityCheck,
+    medulla_catalog_source_types::embedding_promotion::ModalityCheckRecord,
+    medulla_catalog_source_types::embedding_promotion::PromotionCandidate,
+    medulla_catalog_source_types::embedding_promotion::PromotionMetric,
+    medulla_catalog_source_types::embedding_promotion::PromotionModality,
+    medulla_catalog_source_types::embedding_promotion::PromotionProbePoint,
+    medulla_catalog_source_types::embedding_promotion::PromotionVerdict,
+    medulla_catalog_source_types::embedding_promotion::SemanticModelConfig,
+    medulla_catalog_source_types::embedding_promotion::StageReceipt,
+    medulla_catalog_source_types::embedding_promotion::DEFAULT_PROMOTION_TOLERANCE,
+};
 
 /// The refusal code of a blocked promotion: the registered
 /// `ServerErrorCode::PromotionBlocked`.

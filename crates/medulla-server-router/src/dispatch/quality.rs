@@ -8,7 +8,6 @@
 
 use std::sync::Arc;
 
-use medulla_catalog_types::quality::{QualityRule, QualityRuleReceipt};
 use medulla_h_jobs::quality_rule::put_quality_rule;
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_protocol_types::result_contract::ingestion::QualityRulePut as QualityRulePutResult;
@@ -17,6 +16,10 @@ use medulla_server_api::state::ServerState;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::typed_response;
 use tokio::sync::RwLock;
+use {
+    medulla_catalog_source_types::quality::QualityRule,
+    medulla_catalog_source_types::quality::QualityRuleReceipt,
+};
 
 /// Who asked, and which graph holds the rule.
 pub struct QualityTarget<'a> {

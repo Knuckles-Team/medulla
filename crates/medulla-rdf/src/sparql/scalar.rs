@@ -290,12 +290,18 @@ fn local_name(term: &str) -> &str {
 
 /// The ranking document of the node `key`: its own text, counters and flags, the labels of the
 /// glossary terms that define it and the classes those terms name.
-fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
-    use medulla_catalog_types::catalog_relevance::{term_labels, AssetDoc};
+fn node_doc(
+    ctx: &Ctx,
+    key: &str,
+) -> Option<medulla_catalog_source_types::catalog_relevance::AssetDoc> {
+    use {
+        medulla_catalog_source_types::catalog_relevance::term_labels,
+        medulla_catalog_source_types::catalog_relevance::AssetDoc,
+    };
     let mut doc = AssetDoc::from_props(&node_object(ctx, key)?);
     if let Some(index) = &ctx.proj.usage {
         doc.usage_reads =
-            medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, key);
+            medulla_catalog_source_types::catalog_relevance::usage_of(index, &doc.names, key);
     }
     for ((from, to), blobs) in &ctx.active.edge_properties {
         if to != key {
@@ -341,7 +347,7 @@ fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relev
 fn catalog_doc(
     ctx: &Ctx,
     asset: &Binding,
-) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
+) -> Option<medulla_catalog_source_types::catalog_relevance::AssetDoc> {
     let key = catalog_node_key(ctx, asset)?;
     node_doc(ctx, &key)
 }
@@ -355,7 +361,7 @@ pub(super) fn eval_catalog_function(
     args: &[Expression],
     sol: &Solution,
 ) -> Option<Binding> {
-    use medulla_catalog_types::catalog_relevance as cr;
+    use medulla_catalog_source_types::catalog_relevance as cr;
     let text = expr_str(ctx, args.get(1)?, sol)?;
     let text = match cr::validate_query(&text) {
         Ok(text) => text.to_string(),

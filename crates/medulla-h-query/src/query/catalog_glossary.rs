@@ -14,8 +14,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use medulla_catalog_types::catalog_read::{CatalogAssetRow, CATALOG_GLOSSARY_KIND};
-use medulla_catalog_types::glossary::{GlossaryTerm, CAT_GLOSSARY_TERM};
 use medulla_core::glossary::GlossaryLabelIndex;
+use {
+    medulla_catalog_source_types::glossary::GlossaryTerm,
+    medulla_catalog_source_types::glossary::CAT_GLOSSARY_TERM,
+};
 
 use serde_json::Value;
 

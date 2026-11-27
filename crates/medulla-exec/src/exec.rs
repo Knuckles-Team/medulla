@@ -2751,9 +2751,9 @@ fn probabilistic_op(
 fn row_distribution(
     view: &GraphView,
     id: &str,
-) -> Option<medulla_catalog_types::distribution::Distribution> {
+) -> Option<medulla_catalog_source_types::distribution::Distribution> {
     let v = row_value(view, id)?;
-    serde_json::from_value::<medulla_catalog_types::distribution::Distribution>(
+    serde_json::from_value::<medulla_catalog_source_types::distribution::Distribution>(
         v.get("distribution")?.clone(),
     )
     .ok()
@@ -2766,7 +2766,7 @@ fn row_distribution(
 /// caller drops the row.
 #[cfg(feature = "probabilistic")]
 fn eval_prob_query(
-    dist: &medulla_catalog_types::distribution::Distribution,
+    dist: &medulla_catalog_source_types::distribution::Distribution,
     query: &medulla_query_types::wire::ProbQuery,
 ) -> Option<f64> {
     use medulla_query_types::wire::{ProbEvidenceSpec, ProbQuery};

@@ -2,7 +2,7 @@
 
 #[cfg(feature = "modality-serving")]
 use super::Dynamic;
-use medulla_catalog_types::embedding_promotion::StageReceipt;
+use medulla_catalog_source_types::embedding_promotion::StageReceipt;
 use medulla_catalog_types::incident::{IncidentRecord, IncidentRelatedClaim, IncidentWriteReceipt};
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticBindingPage,
@@ -100,24 +100,24 @@ method_results! {
     IncidentRelatedClaims(IncidentRelatedClaims) => Raw<Vec<IncidentRelatedClaim>>;
     IncidentSetStatus(IncidentSetStatus) => Raw<IncidentWriteReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: the stored rule, its node and its state.
-    QualityRulePut(QualityRulePut) => Raw<medulla_catalog_types::quality::QualityRuleReceipt>;
+    QualityRulePut(QualityRulePut) => Raw<medulla_catalog_source_types::quality::QualityRuleReceipt>;
     // MEDULLA-TYPED-PACKS-R652.3: the claim and the claims it proposed downstream.
     ClassificationClaim(ClassificationClaim) => Raw<medulla_identity_types::classification::ClassificationClaimResult>;
     // MEDULLA-TYPED-PACKS-R801.3: every glossary op answers one receipt.
-    GlossaryPutScheme(Glossary / "put_scheme") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
-    GlossaryPutTerm(Glossary / "put_term") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
-    GlossaryTransition(Glossary / "transition") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
-    GlossaryBind(Glossary / "bind") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
-    GlossaryProposeDescription(Glossary / "propose_description") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
-    GlossaryReviewDescription(Glossary / "review_description") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryPutScheme(Glossary / "put_scheme") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
+    GlossaryPutTerm(Glossary / "put_term") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
+    GlossaryTransition(Glossary / "transition") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
+    GlossaryBind(Glossary / "bind") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
+    GlossaryProposeDescription(Glossary / "propose_description") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
+    GlossaryReviewDescription(Glossary / "review_description") => Raw<medulla_catalog_source_types::glossary::GlossaryReceipt>;
     // MEDULLA-TYPED-PACKS-R802.3: every stewardship op answers one receipt.
-    StewardshipAssign(Stewardship / "assign") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipRevoke(Stewardship / "revoke") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipOpenChangeRequest(Stewardship / "open_change_request") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipReview(Stewardship / "review") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipApply(Stewardship / "apply") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipCertify(Stewardship / "certify") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
-    StewardshipMarkCritical(Stewardship / "mark_critical") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipAssign(Stewardship / "assign") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipRevoke(Stewardship / "revoke") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipOpenChangeRequest(Stewardship / "open_change_request") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipReview(Stewardship / "review") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipApply(Stewardship / "apply") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipCertify(Stewardship / "certify") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
+    StewardshipMarkCritical(Stewardship / "mark_critical") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
     // MEDULLA-TYPED-PACKS-R109.3: every dashboard op answers one receipt.
     DashboardAssetSave(DashboardAsset / "save") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetShare(DashboardAsset / "share") => Raw<medulla_types::dashboard::DashboardReceipt>;
@@ -126,7 +126,7 @@ method_results! {
     DashboardAssetDelete(DashboardAsset / "delete") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetRestore(DashboardAsset / "restore") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetGet(DashboardAsset / "get") => Raw<medulla_types::dashboard::DashboardReceipt>;
-    StewardshipSetTrustFlag(Stewardship / "set_trust_flag") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
+    StewardshipSetTrustFlag(Stewardship / "set_trust_flag") => Raw<medulla_catalog_source_types::stewardship::StewardshipReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     // MEDULLA-SCM-R008: the gate verdict record.
@@ -188,7 +188,7 @@ method_results! {
     // MEDULLA-IDENTITY-R740: the layered configuration read.
     ConfigLayers(ConfigLayers) => Raw<medulla_source_types::config_layers::ConfigLayersAnswer>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
-    LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
+    LineageIngest(LineageIngest) => Raw<medulla_catalog_source_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.
     SemanticSearch(SemanticSearch) => Raw<Vec<(String, f32)>>;
     Discover(Discover) => Json<DiscoverResult>;

@@ -303,7 +303,7 @@ impl EngineStartupHandler {
 /// .wire_parameters()`, so `server_version` has one source; the rest keep the protocol
 /// library's defaults.
 pub(super) fn startup_parameters() -> DefaultServerParameterProvider {
-    let report = medulla_catalog_types::engine_capabilities::EngineCapabilities::for_build(
+    let report = medulla_catalog_source_types::engine_capabilities::EngineCapabilities::for_build(
         true, false, None,
     );
     let mut provider = DefaultServerParameterProvider::default();

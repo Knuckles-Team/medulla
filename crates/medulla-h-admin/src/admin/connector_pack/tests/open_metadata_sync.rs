@@ -10,10 +10,13 @@ use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
 
-use medulla_catalog_types::open_metadata::{EXTERNAL_GUID_PROPERTY, EXTERNAL_VERSION_PROPERTY};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_sync::SyncConflictReason;
 use medulla_virtual_graph::source_sync::SYNCED_FROM_PROPERTY;
+use {
+    medulla_catalog_source_types::open_metadata::EXTERNAL_GUID_PROPERTY,
+    medulla_catalog_source_types::open_metadata::EXTERNAL_VERSION_PROPERTY,
+};
 
 use super::sync_harness::{unique, SyncHarness, SyncSpec};
 

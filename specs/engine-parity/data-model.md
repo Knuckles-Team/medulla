@@ -50,4 +50,4 @@ This file describes the entities that the rows add or extend.
 
 ### EngineCapabilities
 
-- Fields: `{server_version, wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`, filled by `EngineCapabilities::for_build` (R020.2). Owner: `crates/medulla-catalog-types/src/engine_capabilities.rs`.
+- Fields: `{server_version, wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`, filled by `EngineCapabilities::for_build` (R020.2). Owner: `crates/medulla-catalog-source-types/src/engine_capabilities.rs`.

@@ -2,9 +2,12 @@
 
 use std::path::PathBuf;
 
-use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
 use medulla_compute::parser::spec_artifacts::{
     parse_spec_dir, parse_spec_file, parse_task_line, SpecArtifactRefusal, SDD_NS,
+};
+use {
+    medulla_catalog_source_types::ontology_inspection::RdfObject,
+    medulla_catalog_source_types::ontology_inspection::RdfTriple,
 };
 
 const REQUIREMENTS: &str = "# Requirements\n\n## Rows\n\n\

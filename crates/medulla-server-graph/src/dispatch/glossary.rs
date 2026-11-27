@@ -24,10 +24,6 @@
 
 use std::sync::Arc;
 
-use medulla_catalog_types::glossary::{
-    DescriptionProposal, DescriptionState, GlossaryOp, GlossaryReceipt, GlossaryTerm,
-    GlossaryTermEntry, CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
-};
 use medulla_core::glossary::{
     bind, check_broader_acyclic_over, check_label_free, require_review, GlossaryError, PutScheme,
 };
@@ -39,6 +35,16 @@ use medulla_protocol_types::result_contract::ingestion::{
 use medulla_server_api::state::ServerState;
 use medulla_types::glossary_term_machine::GlossaryTermStatus;
 use tokio::sync::RwLock;
+use {
+    medulla_catalog_source_types::glossary::DescriptionProposal,
+    medulla_catalog_source_types::glossary::DescriptionState,
+    medulla_catalog_source_types::glossary::GlossaryOp,
+    medulla_catalog_source_types::glossary::GlossaryReceipt,
+    medulla_catalog_source_types::glossary::GlossaryTerm,
+    medulla_catalog_source_types::glossary::GlossaryTermEntry,
+    medulla_catalog_source_types::glossary::CAT_GLOSSARY_TERM,
+    medulla_catalog_source_types::glossary::SKOS_IN_SCHEME,
+};
 
 use super::graph_client::{
     encode, read_node, took_effect, write, write_batch, GraphTarget, Properties, TENANT_PROPERTY,
@@ -424,7 +430,7 @@ async fn transition(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     iri: &str,
-    event: medulla_catalog_types::glossary::GlossaryTransition,
+    event: medulla_catalog_source_types::glossary::GlossaryTransition,
     change_request: Option<&str>,
 ) -> Result<GlossaryReceipt, String> {
     let subject = stored_subject(state, target, iri)
@@ -437,7 +443,7 @@ async fn transition(
     let to = from
         .apply(event.event())
         .map_err(|refused| invalid(format!("'{iri}': {refused:?}")))?;
-    if event == medulla_catalog_types::glossary::GlossaryTransition::Approve {
+    if event == medulla_catalog_source_types::glossary::GlossaryTransition::Approve {
         match &subject {
             Subject::Term(term) => approval_gate(state, target, iri, term, change_request).await?,
             Subject::Article { .. } => review_gate(state, target, iri, change_request).await?,

@@ -219,10 +219,14 @@ fn dashboard_ops() -> Vec<(&'static str, medulla_types::dashboard::DashboardAsse
 /// One valid `Stewardship` op per op (MEDULLA-TYPED-PACKS-R802.3).
 fn stewardship_ops() -> Vec<(
     &'static str,
-    medulla_catalog_types::stewardship::StewardshipOp,
+    medulla_catalog_source_types::stewardship::StewardshipOp,
 )> {
-    use medulla_catalog_types::stewardship::{
-        StewardRole, StewardshipAssignment, StewardshipOp, StewardshipScope, StewardshipTarget,
+    use {
+        medulla_catalog_source_types::stewardship::StewardRole,
+        medulla_catalog_source_types::stewardship::StewardshipAssignment,
+        medulla_catalog_source_types::stewardship::StewardshipOp,
+        medulla_catalog_source_types::stewardship::StewardshipScope,
+        medulla_catalog_source_types::stewardship::StewardshipTarget,
     };
     let assignment = StewardshipAssignment {
         scope: StewardshipScope::Asset("col:orders.total".to_string()),
@@ -283,11 +287,17 @@ fn stewardship_ops() -> Vec<(
 }
 
 /// One valid `Glossary` op per op (MEDULLA-TYPED-PACKS-R801.3).
-fn glossary_ops() -> Vec<(&'static str, medulla_catalog_types::glossary::GlossaryOp)> {
-    use medulla_catalog_types::glossary::{
-        GlossaryOp, GlossaryTerm, GlossaryTermEntry, GlossaryTransition,
-    };
+fn glossary_ops() -> Vec<(
+    &'static str,
+    medulla_catalog_source_types::glossary::GlossaryOp,
+)> {
     use medulla_types::glossary_term_machine::GlossaryTermStatus;
+    use {
+        medulla_catalog_source_types::glossary::GlossaryOp,
+        medulla_catalog_source_types::glossary::GlossaryTerm,
+        medulla_catalog_source_types::glossary::GlossaryTermEntry,
+        medulla_catalog_source_types::glossary::GlossaryTransition,
+    };
     let term = GlossaryTerm {
         scheme: "urn:scheme:finance".to_string(),
         pref_label: "Revenue".to_string(),
@@ -334,14 +344,14 @@ fn glossary_ops() -> Vec<(&'static str, medulla_catalog_types::glossary::Glossar
         (
             "Glossary.propose_description",
             GlossaryOp::ProposeDescription {
-                proposal: medulla_catalog_types::glossary::DescriptionProposal {
+                proposal: medulla_catalog_source_types::glossary::DescriptionProposal {
                     target: "col:orders.total".to_string(),
                     text: "Order total in the order currency.".to_string(),
-                    inputs: medulla_catalog_types::glossary::DescriptionInputs {
+                    inputs: medulla_catalog_source_types::glossary::DescriptionInputs {
                         samples_digest: Some(format!("sha256:{}", "0".repeat(64))),
                         ..Default::default()
                     },
-                    state: medulla_catalog_types::glossary::DescriptionState::Proposed,
+                    state: medulla_catalog_source_types::glossary::DescriptionState::Proposed,
                 },
             },
         ),

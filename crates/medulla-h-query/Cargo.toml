@@ -23,6 +23,7 @@ hex = "0.4"
 hmac = "0.12"
 medulla-alignment = { path = "../medulla-alignment", optional = true }
 medulla-capabilities = { path = "../medulla-capabilities" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-decision-policy = { path = "../medulla-decision-policy" }
@@ -92,7 +93,7 @@ medulla-uql = { path = "../medulla-uql" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
-test-support = ["medulla-server-auth/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support", "medulla-federation/test-support"]
+test-support = ["medulla-server-auth/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support", "medulla-federation/test-support"]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment", "medulla-server-blob/alignment", "redb", "server"]
 ann-redb = ["redb", "medulla-h-retrieve/ann-redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
 cypher = ["medulla-cypher/cypher", "medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
@@ -157,6 +158,7 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "obs", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }

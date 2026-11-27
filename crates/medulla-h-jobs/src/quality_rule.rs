@@ -9,11 +9,14 @@
 //! `QualityEvaluate` job updates. A put compiles the rule first, so a rule that cannot be
 //! evaluated is refused and writes nothing.
 
-use medulla_catalog_types::quality::{
-    InvalidQualityRule, QualityRule, QualityRuleReceipt, RuleState,
-};
 use medulla_types::contract::Digest256;
 use serde_json::{json, Value};
+use {
+    medulla_catalog_source_types::quality::InvalidQualityRule,
+    medulla_catalog_source_types::quality::QualityRule,
+    medulla_catalog_source_types::quality::QualityRuleReceipt,
+    medulla_catalog_source_types::quality::RuleState,
+};
 
 /// The node type of a stored quality rule.
 pub const QUALITY_RULE_LABEL: &str = "QualityRule";
@@ -85,7 +88,10 @@ pub fn put_quality_rule(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::quality::{QualityDimension, QualitySeverity};
+    use {
+        medulla_catalog_source_types::quality::QualityDimension,
+        medulla_catalog_source_types::quality::QualitySeverity,
+    };
 
     fn rule(expression: &str, threshold: f64) -> QualityRule {
         QualityRule {

@@ -4876,7 +4876,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-ann",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-index-types",
  "medulla-mutation-types",
  "medulla-protocol-types",
@@ -4942,11 +4942,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-catalog-source-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-query-types",
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "medulla-catalog-types"
 version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-agent-types",
+ "medulla-catalog-source-types",
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
@@ -4977,7 +4994,7 @@ dependencies = [
  "flate2",
  "hex",
  "medulla-agent-types",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-core",
  "medulla-decision-outcome-types",
  "medulla-decision-policy",
@@ -5056,6 +5073,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann",
  "medulla-ann-codes",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-graph-core",
  "medulla-identity-types",
@@ -5107,7 +5125,7 @@ dependencies = [
  "ipnet",
  "md-5 0.10.6",
  "medulla-ann",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-graph-algos",
@@ -5170,7 +5188,7 @@ dependencies = [
 name = "medulla-decision-plan"
 version = "0.1.0"
 dependencies = [
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-decision-types",
  "medulla-types",
  "serde_json",
@@ -5231,6 +5249,7 @@ dependencies = [
  "base64 0.23.1",
  "hex",
  "medulla-agent-types",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-mutation-types",
  "medulla-query-types",
@@ -5330,6 +5349,7 @@ dependencies = [
  "medulla-asr-whisper",
  "medulla-audio",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -5517,7 +5537,7 @@ name = "medulla-epistemic"
 version = "0.1.0"
 dependencies = [
  "hex",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-decision-types",
@@ -5542,7 +5562,7 @@ dependencies = [
 name = "medulla-exec"
 version = "0.1.0"
 dependencies = [
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-decision-types",
@@ -5585,7 +5605,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hmac 0.12.1",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-exec",
  "medulla-identity-types",
  "medulla-protocol-types",
@@ -5702,6 +5722,7 @@ dependencies = [
  "aho-corasick",
  "dashmap",
  "hex",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-decision-types",
  "medulla-index-types",
@@ -5756,6 +5777,7 @@ dependencies = [
  "hex",
  "medulla-agent-types",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -5859,6 +5881,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -5938,6 +5961,7 @@ dependencies = [
  "hmac 0.12.1",
  "medulla-agent-types",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -6009,6 +6033,7 @@ dependencies = [
  "medulla-asr-whisper",
  "medulla-audio",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -6073,6 +6098,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -6133,7 +6159,7 @@ name = "medulla-h-mining"
 version = "0.1.0"
 dependencies = [
  "hex",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-core",
  "medulla-epistemic",
  "medulla-exec",
@@ -6176,6 +6202,7 @@ dependencies = [
  "medulla-alignment",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -6259,7 +6286,7 @@ dependencies = [
  "hex",
  "medulla-ann-codes",
  "medulla-capabilities",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-core",
  "medulla-epistemic",
  "medulla-exec",
@@ -6301,6 +6328,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-catalog",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-exec",
  "medulla-federation",
@@ -6431,7 +6459,7 @@ name = "medulla-index-types"
 version = "0.1.0"
 dependencies = [
  "hex",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
@@ -6465,7 +6493,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "hmac 0.12.1",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-graph-core",
  "medulla-identity-types",
  "medulla-mutation-types",
@@ -6517,6 +6545,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -6575,7 +6604,7 @@ dependencies = [
  "bytes",
  "iceberg",
  "iceberg-storage-opendal",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-modality",
  "medulla-types",
  "orc-rust",
@@ -6859,6 +6888,7 @@ dependencies = [
  "hex",
  "medulla-agent-types",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-decision-types",
@@ -6952,7 +6982,7 @@ dependencies = [
  "hmac 0.12.1",
  "insta",
  "medulla-agent-types",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-decision-policy",
@@ -7029,6 +7059,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-agent-types",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-decision-outcome-types",
  "medulla-decision-types",
@@ -7298,6 +7329,7 @@ dependencies = [
  "md-5 0.10.6",
  "medulla-agent-types",
  "medulla-ann-codes",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -7493,7 +7525,7 @@ dependencies = [
  "medulla-ann",
  "medulla-ann-codes",
  "medulla-capabilities",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-cypher",
@@ -7615,6 +7647,7 @@ dependencies = [
  "medulla-alignment",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -7908,6 +7941,7 @@ dependencies = [
  "jsonwebtoken",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -8019,7 +8053,7 @@ dependencies = [
  "hex",
  "jsonwebtoken",
  "medulla-capabilities",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-identity-types",
@@ -8158,6 +8192,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-core",
  "medulla-cypher",
@@ -8219,6 +8254,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-capabilities",
  "medulla-catalog",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -8306,6 +8342,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-ann-codes",
  "medulla-capabilities",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
@@ -8590,7 +8627,7 @@ dependencies = [
  "ipnet",
  "md-5 0.10.6",
  "medulla-ann",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-finance-quant",
@@ -8954,6 +8991,7 @@ version = "0.27.0"
 dependencies = [
  "hex",
  "medulla-agent-types",
+ "medulla-catalog-source-types",
  "medulla-catalog-types",
  "medulla-decision-types",
  "medulla-identity-types",
@@ -9007,7 +9045,7 @@ dependencies = [
 name = "medulla-virtual-graph"
 version = "0.1.0"
 dependencies = [
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-core",
  "medulla-graph-core",
  "medulla-identity-types",
@@ -9095,7 +9133,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "medulla-capabilities",
- "medulla-catalog-types",
+ "medulla-catalog-source-types",
  "medulla-compute",
  "medulla-core",
  "medulla-cypher",

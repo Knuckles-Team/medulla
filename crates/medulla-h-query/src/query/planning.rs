@@ -390,7 +390,7 @@ pub fn run_unified_with<T>(
         // MEDULLA-UNIFIED-DATA-PLANE-R031.2: a source without its own quota runs under the
         // resolved `foreign.default_quota.*` knobs.
         session.set_default_quota(
-            medulla_catalog_types::consolidation_isolation::SourceQuota {
+            medulla_catalog_source_types::consolidation_isolation::SourceQuota {
                 max_concurrent: u32::try_from(knobs.foreign_default_quota_max_concurrent)
                     .unwrap_or(u32::MAX),
                 max_rows: knobs.foreign_default_quota_max_rows,

@@ -149,7 +149,11 @@ pub(crate) async fn handle_schema_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_catalog_types::virtual_graph_view::{GraphView, NodeLabelMapping, ViewSource};
+    use {
+        medulla_catalog_source_types::virtual_graph_view::GraphView,
+        medulla_catalog_source_types::virtual_graph_view::NodeLabelMapping,
+        medulla_catalog_source_types::virtual_graph_view::ViewSource,
+    };
 
     fn view(source: &str, table: &str, classes: &[&str]) -> RegisteredGraphView {
         RegisteredGraphView {

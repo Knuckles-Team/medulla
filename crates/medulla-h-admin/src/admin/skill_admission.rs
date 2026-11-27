@@ -9,12 +9,19 @@
 use medulla_agent_types::agent_component::{
     SkillAdmissionRequest, SkillContractFieldWire, SkillMigrationWire,
 };
-use medulla_catalog_types::consumer_contract::{ConsumerContractSchema, ContractField};
-use medulla_catalog_types::skill_admission::{
-    admit_skill_upgrade, DeclaredSkillMigration, SkillAdmission, SkillAdmissionRefusal,
-    SkillMigrationOutcome, SkillUpgradeAdmissionInput,
-};
 use medulla_types::contract::{Digest256, OpaqueId};
+use {
+    medulla_catalog_source_types::consumer_contract::ConsumerContractSchema,
+    medulla_catalog_source_types::consumer_contract::ContractField,
+};
+use {
+    medulla_catalog_source_types::skill_admission::admit_skill_upgrade,
+    medulla_catalog_source_types::skill_admission::DeclaredSkillMigration,
+    medulla_catalog_source_types::skill_admission::SkillAdmission,
+    medulla_catalog_source_types::skill_admission::SkillAdmissionRefusal,
+    medulla_catalog_source_types::skill_admission::SkillMigrationOutcome,
+    medulla_catalog_source_types::skill_admission::SkillUpgradeAdmissionInput,
+};
 
 fn contract(fields: &[SkillContractFieldWire]) -> Result<ConsumerContractSchema, String> {
     ConsumerContractSchema::new(

@@ -3,13 +3,20 @@
 //! path, and a caller with neither role or another tenant is refused.
 
 use super::*;
-use medulla_catalog_types::data_product::{
-    AccessRequest, DataContract, DataProduct, ProductPort, ProductPortKind,
-};
-use medulla_catalog_types::stewardship::{
-    StewardRole, StewardshipAssignment, StewardshipOp, StewardshipScope,
-};
 use medulla_types::access_request_machine::AccessRequestState;
+use {
+    medulla_catalog_source_types::data_product::AccessRequest,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+    medulla_catalog_source_types::data_product::ProductPort,
+    medulla_catalog_source_types::data_product::ProductPortKind,
+};
+use {
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipOp,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+};
 
 const TENANT: &str = "tenant-shared";
 const OWNER: &str = "usr:owner";

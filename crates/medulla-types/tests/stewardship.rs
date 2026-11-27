@@ -1,10 +1,14 @@
 //! Stewardship records (MEDULLA-TYPED-PACKS-R802.1).
 
-use medulla_catalog_types::stewardship::{
-    Certification, ChangeRequest, StewardRole, StewardshipAssignment, StewardshipScope,
-    DEFAULT_CERTIFICATION_TTL_SECS,
-};
 use medulla_types::change_request_machine::ChangeRequestState;
+use {
+    medulla_catalog_source_types::stewardship::Certification,
+    medulla_catalog_source_types::stewardship::ChangeRequest,
+    medulla_catalog_source_types::stewardship::StewardRole,
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipScope,
+    medulla_catalog_source_types::stewardship::DEFAULT_CERTIFICATION_TTL_SECS,
+};
 
 fn round_trip<T>(value: &T) -> T
 where

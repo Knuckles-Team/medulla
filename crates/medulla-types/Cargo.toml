@@ -241,6 +241,7 @@ medulla-identity-types = { path = "../medulla-identity-types", features = ["test
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }

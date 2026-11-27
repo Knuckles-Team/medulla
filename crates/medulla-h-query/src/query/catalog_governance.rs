@@ -12,9 +12,12 @@
 use medulla_catalog_types::catalog_read::{
     CatalogGovernance, CatalogProposalKind, CatalogProposalRow, CatalogReadAnswer,
 };
-use medulla_catalog_types::stewardship::{StewardshipAssignment, StewardshipTarget};
 use medulla_core::stewardship::{governing, TargetScopes};
 use serde_json::{Map, Value};
+use {
+    medulla_catalog_source_types::stewardship::StewardshipAssignment,
+    medulla_catalog_source_types::stewardship::StewardshipTarget,
+};
 
 use super::catalog_read::{invalid, page_of};
 use super::*;

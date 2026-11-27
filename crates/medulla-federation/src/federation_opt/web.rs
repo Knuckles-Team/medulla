@@ -12,14 +12,17 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::web_source::{
-    WebCandidateSet, WebResult, WebResultRefusal, WebSearchCapability,
-};
 use medulla_exec::rowset::{RowSet, TextChannels, ValueChannels};
 use medulla_query_types::wire::ForeignSourceSpec;
 use medulla_query_types::wire::Op;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use {
+    medulla_catalog_source_types::web_source::WebCandidateSet,
+    medulla_catalog_source_types::web_source::WebResult,
+    medulla_catalog_source_types::web_source::WebResultRefusal,
+    medulla_catalog_source_types::web_source::WebSearchCapability,
+};
 
 use super::budget::UNSUPPORTED_SEARCH_ARGUMENT;
 use super::mcp::McpRemote;
@@ -28,7 +31,7 @@ use super::search::REMOTE_CHANNEL;
 use super::session::FederationSession;
 use super::trace::{FetchStrategy, FragmentTrace};
 use crate::federation::ForeignSourceRegistry;
-use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+use medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode;
 
 /// The arguments of one web query: the text and the optional narrowing the tool declares.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -161,7 +164,7 @@ pub fn web_read(
     query: &str,
     session: &FederationSession,
     now_ms: u64,
-) -> Result<Option<medulla_catalog_types::web_source::WebCandidateSet>, String> {
+) -> Result<Option<medulla_catalog_source_types::web_source::WebCandidateSet>, String> {
     web_read_with(
         spec,
         registry,
@@ -180,7 +183,7 @@ pub(crate) fn web_read_with(
     query: &str,
     session: &FederationSession,
     now_ms: u64,
-) -> Result<Option<medulla_catalog_types::web_source::WebCandidateSet>, String> {
+) -> Result<Option<medulla_catalog_source_types::web_source::WebCandidateSet>, String> {
     let Some(remote) = resolve_web_with(spec, registry, port) else {
         return Ok(None);
     };

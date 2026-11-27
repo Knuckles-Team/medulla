@@ -2112,11 +2112,11 @@ pub struct ForeignSourceRegistry {
     bound_names: HashSet<String>,
     /// The per-query bounds each registered name may spend
     /// (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
-    quotas: HashMap<String, medulla_catalog_types::consolidation_isolation::SourceQuota>,
+    quotas: HashMap<String, medulla_catalog_source_types::consolidation_isolation::SourceQuota>,
     /// The acceleration policy each registered name carries
     /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
     accelerations:
-        HashMap<String, medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
+        HashMap<String, medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy>,
     cache_scope: Option<Arc<crate::federation_opt::FragmentCacheScope>>,
 }
 
@@ -2227,7 +2227,7 @@ impl ForeignSourceRegistry {
     pub fn set_quota(
         &mut self,
         name: impl Into<String>,
-        quota: medulla_catalog_types::consolidation_isolation::SourceQuota,
+        quota: medulla_catalog_source_types::consolidation_isolation::SourceQuota,
     ) -> &mut Self {
         self.quotas.insert(name.into(), quota);
         self
@@ -2237,7 +2237,7 @@ impl ForeignSourceRegistry {
     pub fn quota(
         &self,
         name: &str,
-    ) -> Option<medulla_catalog_types::consolidation_isolation::SourceQuota> {
+    ) -> Option<medulla_catalog_source_types::consolidation_isolation::SourceQuota> {
         self.quotas.get(name).copied()
     }
 
@@ -2246,7 +2246,7 @@ impl ForeignSourceRegistry {
     pub fn set_acceleration(
         &mut self,
         name: impl Into<String>,
-        policy: medulla_catalog_types::metadata_acceleration::AccelerationPolicy,
+        policy: medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy,
     ) -> &mut Self {
         self.accelerations.insert(name.into(), policy);
         self
@@ -2256,7 +2256,7 @@ impl ForeignSourceRegistry {
     pub fn acceleration(
         &self,
         name: &str,
-    ) -> Option<&medulla_catalog_types::metadata_acceleration::AccelerationPolicy> {
+    ) -> Option<&medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy> {
         self.accelerations.get(name)
     }
 

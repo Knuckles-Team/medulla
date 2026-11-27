@@ -8,9 +8,13 @@
 //! decides no admission: the served handler verifies the caller against the product's roles
 //! before it writes the decision.
 
-use medulla_catalog_types::data_product::{AccessRequest, DataContract, DataProduct};
 use redb::TableDefinition;
 use sha2::{Digest, Sha256};
+use {
+    medulla_catalog_source_types::data_product::AccessRequest,
+    medulla_catalog_source_types::data_product::DataContract,
+    medulla_catalog_source_types::data_product::DataProduct,
+};
 
 use super::durable_write::commit_authority_mutation;
 use super::reservation::require_no_open_reservation;

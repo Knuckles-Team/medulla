@@ -1,5 +1,9 @@
-use medulla_catalog_types::profile::{
-    ColumnProfile, HistogramBucket, InvalidColumnProfile, ProfileMethod, TopValue,
+use {
+    medulla_catalog_source_types::profile::ColumnProfile,
+    medulla_catalog_source_types::profile::HistogramBucket,
+    medulla_catalog_source_types::profile::InvalidColumnProfile,
+    medulla_catalog_source_types::profile::ProfileMethod,
+    medulla_catalog_source_types::profile::TopValue,
 };
 
 fn profile() -> ColumnProfile {

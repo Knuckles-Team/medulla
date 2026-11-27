@@ -14,6 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 medulla-tables = { path = "../medulla-tables" }
 medulla-catalog = { path = "../medulla-catalog" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
@@ -77,6 +78,7 @@ sparql = ["rdf", "dep:medulla-rdf", "medulla-kernel/sparql", "medulla-protocol-t
 sparql-fuseki = ["sparql"]
 sparql-service = ["federation", "medulla-federation/sparql-service", "medulla-server-api/sparql-service", "medulla-server-blob/sparql-service", "owl", "rdf", "security", "shacl", "sparql"]
 [dev-dependencies]
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

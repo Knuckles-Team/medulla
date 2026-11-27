@@ -56,12 +56,11 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use medulla_catalog_types::attached_catalog::AttachedCatalogGraph;
+use medulla_catalog_source_types::attached_catalog::AttachedCatalogGraph;
+use medulla_catalog_source_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy;
 #[cfg(feature = "federation")]
 use medulla_catalog_types::connector_pack::PackSourceKind;
-use medulla_catalog_types::consolidation_isolation::SourceQuota;
-use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
-use medulla_catalog_types::probe_machine::{ProbeRecord, ProbeState};
 use medulla_catalog_types::{
     connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
     connector_pack::PackSourceRegistration,
@@ -69,6 +68,10 @@ use medulla_catalog_types::{
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_query_types::wire::ForeignSourceSpec;
 use medulla_types::contract::Digest256;
+use {
+    medulla_catalog_source_types::probe_machine::ProbeRecord,
+    medulla_catalog_source_types::probe_machine::ProbeState,
+};
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
 use medulla_isolation::isolation::IsolationLayer;
@@ -152,10 +155,10 @@ pub struct SqliteCaptureSource {
 /// (MEDULLA-UNIFIED-DATA-PLANE-R038.6.3).
 #[derive(Clone, Debug)]
 pub struct RegisteredGraphView {
-    pub view: medulla_catalog_types::virtual_graph_view::GraphView,
+    pub view: medulla_catalog_source_types::virtual_graph_view::GraphView,
     pub mapping: String,
     pub tables: Vec<String>,
-    pub sources: Vec<medulla_catalog_types::virtual_graph_view::ViewSource>,
+    pub sources: Vec<medulla_catalog_source_types::virtual_graph_view::ViewSource>,
 }
 
 /// Every owner's registered graph views, partitioned by verified owner scope exactly as
@@ -306,7 +309,7 @@ impl ForeignSourceCatalog {
         acceleration: Option<AccelerationPolicy>,
     ) -> Result<(), String> {
         if let Some(policy) = &acceleration {
-            medulla_catalog_types::metadata_acceleration::validate_policy(policy)
+            medulla_catalog_source_types::metadata_acceleration::validate_policy(policy)
                 .map_err(|refusal| refusal.0)?;
         }
         quota.validate().map_err(|reason| {
@@ -772,8 +775,8 @@ impl ForeignSourceCatalog {
         &self,
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
-    ) -> Vec<medulla_catalog_types::foreign_source_catalog::ForeignSourceView> {
-        use medulla_catalog_types::foreign_source_catalog::ForeignSourceView;
+    ) -> Vec<medulla_catalog_source_types::foreign_source_catalog::ForeignSourceView> {
+        use medulla_catalog_source_types::foreign_source_catalog::ForeignSourceView;
         let mut views: Vec<ForeignSourceView> = self
             .entries
             .iter()
@@ -813,7 +816,7 @@ impl ForeignSourceCatalog {
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
         name: &str,
-    ) -> Option<medulla_catalog_types::foreign_source_catalog::ForeignSourceView> {
+    ) -> Option<medulla_catalog_source_types::foreign_source_catalog::ForeignSourceView> {
         self.visible_sources(caller, isolation)
             .into_iter()
             .find(|view| view.name == name)

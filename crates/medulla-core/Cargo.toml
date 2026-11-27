@@ -74,6 +74,7 @@ medulla-types = { path = "../medulla-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-query-types = { path = "../medulla-query-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-ann = { path = "../medulla-ann" }
 regex = "1"
@@ -163,6 +164,7 @@ harness = false
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }

@@ -91,12 +91,15 @@ pub(crate) async fn record_query_usage(
     assets: Vec<String>,
     digest: Option<String>,
 ) {
-    use medulla_catalog_types::asset_usage::{
-        catalog_usage_period_s, usage_query_series_name, usage_series_name,
-        ASSET_USAGE_QUERIES_SERIES, ASSET_USAGE_READS_SERIES,
-    };
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesKey;
+    use {
+        medulla_catalog_source_types::asset_usage::catalog_usage_period_s,
+        medulla_catalog_source_types::asset_usage::usage_query_series_name,
+        medulla_catalog_source_types::asset_usage::usage_series_name,
+        medulla_catalog_source_types::asset_usage::ASSET_USAGE_QUERIES_SERIES,
+        medulla_catalog_source_types::asset_usage::ASSET_USAGE_READS_SERIES,
+    };
 
     if assets.is_empty() {
         return;
@@ -238,7 +241,7 @@ impl medulla_exec::exec::UsageSource for ServedUsage {
             .saturating_mul(NANOS_PER_SECOND);
         let mut out = Vec::new();
         for name in catalog.into_keys() {
-            if medulla_catalog_types::asset_usage::usage_series_tags(&name, base).is_none() {
+            if medulla_catalog_source_types::asset_usage::usage_series_tags(&name, base).is_none() {
                 continue;
             }
             let key = SeriesKey::new(&self.tenant, &self.graph, name.clone());

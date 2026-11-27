@@ -24,7 +24,7 @@ medulla-transaction = { path = "../medulla-transaction", optional = true }
 sha2 = { version = "0.10", optional = true }
 hmac = { version = "0.12", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }

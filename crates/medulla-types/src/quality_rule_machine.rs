@@ -162,7 +162,7 @@ mod tests {
     #[test]
     fn no_writer_sets_state_outside_apply() {
         for source in [
-            include_str!("../../medulla-catalog-types/src/quality.rs"),
+            include_str!("../../medulla-catalog-source-types/src/quality.rs"),
             include_str!("../../medulla-h-jobs/src/quality_rule.rs"),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();
