@@ -89,6 +89,7 @@ fn read_section(
         IntrospectSection::Locks => Ok(locks_page(limit, cursor)),
         IntrospectSection::Runtime => Ok(runtime_page(limit, cursor)),
         IntrospectSection::Events => events_page(limit, cursor),
+        IntrospectSection::Knobs => Ok(knobs_page(limit, cursor)),
     }
 }
 
@@ -233,6 +234,49 @@ fn build_page(cursor: Option<&str>) -> IntrospectPage {
 /// The `indexes` section: one row per engine-maintained semantic index, key ascending. The
 /// bookmark index needs a bound text embedder; with none, its row says so
 /// (MEDULLA-MEDIA-VOCAB-R001.102.2), so authoring nothing is never silent.
+/// One knob value as JSON: an integer, a number or a flag.
+fn knob_value_json(value: medulla_server_api::knob_config::KnobValue) -> Value {
+    use medulla_server_api::knob_config::KnobValue;
+    match value {
+        KnobValue::U64(v) => json!(v),
+        KnobValue::I64(v) => json!(v),
+        KnobValue::F64(v) => json!(v),
+        KnobValue::Bool(v) => json!(v),
+    }
+}
+
+/// The resolved knobs of the running engine (MEDULLA-OBSERVE-R006.12), ascending by name.
+/// A cursor is the last knob name of the previous page.
+fn knobs_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
+    use medulla_server_api::knob_config::{knobs, KNOB_TABLE};
+    let config = knobs();
+    let mut specs: Vec<_> = KNOB_TABLE.iter().collect();
+    specs.sort_by_key(|spec| spec.name);
+    let (rows, next_cursor) = page_of(
+        specs,
+        limit,
+        |spec| cursor.is_none_or(|last| spec.name > last),
+        |spec| spec.name.to_string(),
+        |spec| {
+            json!({
+                "key": spec.name,
+                "value": config.value_of(spec.name).map(knob_value_json),
+                "default": knob_value_json(spec.default),
+                "min": knob_value_json(spec.min),
+                "max": knob_value_json(spec.max),
+                "unit": spec.unit,
+                "class": format!("{:?}", spec.class).to_lowercase(),
+            })
+        },
+    );
+    IntrospectPage {
+        section: IntrospectSection::Knobs,
+        rows,
+        next_cursor,
+        seq: 0,
+    }
+}
+
 fn indexes_page(cursor: Option<&str>, text_space: Option<(String, usize)>) -> IntrospectPage {
     const KEY: &str = "bookmark_index";
     let rows = if cursor.is_some_and(|last| last >= KEY) {
@@ -499,4 +543,27 @@ fn events_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, Str
         next_cursor,
         seq,
     })
+}
+
+#[cfg(test)]
+mod knob_section_tests {
+    use super::*;
+
+    // spec: MEDULLA-OBSERVE-R006.12
+    #[test]
+    fn the_knobs_section_reads_the_index_bound_and_pages_by_name() {
+        let page = knobs_page(500, None);
+        let row = page
+            .rows
+            .iter()
+            .find(|row| row["key"] == "scheduler.index_max_working_bytes")
+            .expect("the index working-bytes knob is listed");
+        assert_eq!(row["value"], json!(1_073_741_824u64));
+        assert_eq!(row["unit"], "bytes");
+        let first = knobs_page(2, None);
+        assert_eq!(first.rows.len(), 2);
+        let after = first.next_cursor.clone().expect("more rows remain");
+        let second = knobs_page(2, Some(&after));
+        assert!(second.rows[0]["key"].as_str().unwrap() > after.as_str());
+    }
 }

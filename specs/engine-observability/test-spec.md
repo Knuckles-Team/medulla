@@ -62,6 +62,7 @@ Each row names its proving test. A test marked planned does not exist yet; its r
 | `MEDULLA-OBSERVE-R006.4` | Lock holders and waiters | `crates/medulla-server-served-tests/src/split_tests/observability.rs::held_graph_lock_shows_holder_and_waiter` (planned) |
 | `MEDULLA-OBSERVE-R006.5` | Introspection exposes no payload and no secret | `crates/medulla-server-served-tests/src/split_tests/observability.rs::introspect_rows_carry_no_token_or_payload` (planned) |
 | `MEDULLA-OBSERVE-R006.6` | The Python client calls it | `tests/test_introspect_served.py::test_client_reads_each_section` (planned) |
+| `MEDULLA-OBSERVE-R006.12` | `crates/medulla-h-admin/src/admin/introspect.rs::knob_section_tests::the_knobs_section_reads_the_index_bound_and_pages_by_name` | L1 | planned |
 | `MEDULLA-OBSERVE-R007` | Readiness explains itself (rollup) | `crates/medulla-server-served-tests/src/split_tests/observability.rs::health_names_the_blocking_graph_and_reason` (planned) |
 | `MEDULLA-OBSERVE-R007.1` | Per-graph readiness is wired to open, migration and paging | `crates/medulla-server-served-tests/src/split_tests/observability.rs::graph_readiness_follows_open_migrate_materialize` (planned) |
 | `MEDULLA-OBSERVE-R007.2` | The `Health` report carries readiness and blockers | `crates/medulla-server-served-tests/src/split_tests/observability.rs::health_names_the_blocking_graph_and_reason` (planned) |

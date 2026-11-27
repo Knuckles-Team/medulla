@@ -109,3 +109,4 @@ The paging rows (R873, R873.1, R873.2) are tasks T262 to T264 of the durable ker
 - The durable kernel spec holds the paging guard and the seek cursor (rows R873, R873.1, R873.2).
 - The contract spec holds the release symbol artifacts and the symbolization command (rows R060, R060.1 to R060.3).
 - The arbora spec holds the caller half of the trace id (consumer of R002.2).
+- [ ] T061 MEDULLA-OBSERVE-R006.12 Introspection reads the resolved knobs

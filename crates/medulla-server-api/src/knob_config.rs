@@ -82,6 +82,7 @@ impl std::error::Error for KnobRefusal {}
 trait KnobType: Copy + PartialOrd + std::fmt::Display {
     fn parse(raw: &str) -> Option<Self>;
     fn of(value: KnobValue) -> Self;
+    fn to_value(self) -> KnobValue;
 }
 
 impl KnobType for u64 {
@@ -93,6 +94,9 @@ impl KnobType for u64 {
             KnobValue::U64(v) => v,
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
+    }
+    fn to_value(self) -> KnobValue {
+        KnobValue::U64(self)
     }
 }
 
@@ -106,6 +110,9 @@ impl KnobType for u32 {
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
     }
+    fn to_value(self) -> KnobValue {
+        KnobValue::U64(u64::from(self))
+    }
 }
 
 impl KnobType for i64 {
@@ -118,6 +125,9 @@ impl KnobType for i64 {
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
     }
+    fn to_value(self) -> KnobValue {
+        KnobValue::I64(self)
+    }
 }
 
 impl KnobType for f64 {
@@ -129,6 +139,9 @@ impl KnobType for f64 {
             KnobValue::F64(v) => v,
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
+    }
+    fn to_value(self) -> KnobValue {
+        KnobValue::F64(self)
     }
 }
 
@@ -145,6 +158,9 @@ impl KnobType for bool {
             KnobValue::Bool(v) => v,
             other => unreachable!("knob table type mismatch: {other:?}"),
         }
+    }
+    fn to_value(self) -> KnobValue {
+        KnobValue::Bool(self)
     }
 }
 
@@ -169,6 +185,17 @@ macro_rules! knobs {
             unit: $unit,
             class: KnobClass::$class,
         }),+];
+
+        impl KnobConfig {
+            /// The resolved value of the knob `name`, or `None` for a name the table does
+            /// not hold (MEDULLA-OBSERVE-R006.12).
+            pub fn value_of(&self, name: &str) -> Option<KnobValue> {
+                match name {
+                    $($name => Some(<$ty as KnobType>::to_value(self.$field)),)+
+                    _ => None,
+                }
+            }
+        }
 
         impl Default for KnobConfig {
             fn default() -> Self {

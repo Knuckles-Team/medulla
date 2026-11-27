@@ -31,6 +31,10 @@ pub enum IntrospectSection {
     /// (MEDULLA-MEDIA-VOCAB-R001.102.2): `bookmark_index` reads `bound` or
     /// `unbound (no text embedder)`, so a missing embedder is never silent.
     Indexes,
+    /// The resolved engine knobs, one row each, ascending by knob name
+    /// (MEDULLA-OBSERVE-R006.12): `key`, `value`, `default`, `min`, `max`, `unit` and
+    /// `class`. Read-only; a knob changes at startup only.
+    Knobs,
 }
 
 impl IntrospectSection {
@@ -46,6 +50,7 @@ impl IntrospectSection {
             Self::Build => "build",
             Self::Events => "events",
             Self::Indexes => "indexes",
+            Self::Knobs => "knobs",
         }
     }
 }
