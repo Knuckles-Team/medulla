@@ -1174,6 +1174,8 @@ fn library_list(
                 read_only: false,
                 limit,
                 cursor: cursor.map(str::to_string),
+                server_name: None,
+                upstream_name: None,
             })
             .map(|found| AgentLibraryPage {
                 entries: found

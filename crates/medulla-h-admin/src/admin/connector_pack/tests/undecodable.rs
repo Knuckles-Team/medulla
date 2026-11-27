@@ -142,6 +142,8 @@ async fn an_undecodable_head_hides_its_pack_and_never_fails_the_component_search
                                 read_only: false,
                                 limit: None,
                                 cursor: None,
+                                server_name: None,
+                                upstream_name: None,
                             },
                         },
                     },

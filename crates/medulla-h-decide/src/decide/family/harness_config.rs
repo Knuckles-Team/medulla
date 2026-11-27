@@ -334,6 +334,8 @@ fn read_profile(
                 read_only: false,
                 limit: Some(PAGE),
                 cursor: cursor.take(),
+                server_name: None,
+                upstream_name: None,
             })
             .map_err(invalid_parameter)?;
         if let Some(entry) = page

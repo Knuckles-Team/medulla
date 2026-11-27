@@ -456,8 +456,10 @@ class AgentComponentSearchRequest(BaseModel):
     kinds: list[AgentComponentKind] = Field(default_factory=list)
     limit: Annotated[int, Field(ge=0)] | None = None
     read_only: bool | None = None
+    server_name: str | None = None
     task: str | None = None
     tenant_id: str
+    upstream_name: str | None = None
 
 
 class AgentComponentStatusRequest(BaseModel):

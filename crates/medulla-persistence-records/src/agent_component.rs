@@ -277,7 +277,12 @@ fn scan_component_search_page(
             let entry = decode_revision::<ComponentLayer>(value.value())?;
             // A pack component is searchable only while its connector's head
             // is visible (PB1 readiness gate).
-            if request.matches(&entry) && visible(component_id)? {
+            // The server filter reads the connector of the pack id, which only this crate
+            // parses (ARBORA-FLEET-R073).
+            let on_server = request.server_name.as_deref().is_none_or(|wanted| {
+                super::connector_pack::visibility::pack_connector(component_id) == Some(wanted)
+            });
+            if on_server && request.matches(&entry) && visible(component_id)? {
                 matched.push(entry);
             }
             last_consumed = Some(component_id.to_string());
@@ -1276,7 +1281,29 @@ pub mod tests {
             read_only,
             limit: None,
             cursor: None,
+            server_name: None,
+            upstream_name: None,
         }
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R011.3
+    #[test]
+    fn upstream_and_server_filters_narrow_a_search_by_name() {
+        let (_dir, store) = open_store();
+        seed_search_corpus(&store);
+        let mut request = search("tenant-a", Some("eg:task/research"), false);
+        let all = store.search_components(&request).unwrap().entries.len();
+        request.upstream_name = Some("tool:summarize".to_string());
+        let named = store.search_components(&request).unwrap();
+        assert_eq!(named.entries.len(), 1);
+        assert_eq!(named.entries[0].component_id, "tool:summarize");
+        assert!(all > 1);
+        // No pack owns these ids, so they belong to no server.
+        request.upstream_name = None;
+        request.server_name = Some("demo".to_string());
+        assert!(store.search_components(&request).unwrap().entries.is_empty());
+        request.server_name = Some(String::new());
+        assert!(store.search_components(&request).is_err());
     }
 
     #[test]

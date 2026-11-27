@@ -11,7 +11,7 @@ use super::capability_descriptor::SideEffectClass;
 use super::facts::{AgentComponentFacts, ToolEffect, ToolSideEffects};
 use super::{
     validate_names, validate_text, AgentComponentEntry, AgentComponentKind,
-    AgentComponentMutationKind, AGENT_COMPONENT_SEARCH_CURSOR_DOMAIN,
+    AgentComponentMutationKind, ComponentProvenance, AGENT_COMPONENT_SEARCH_CURSOR_DOMAIN,
     MAX_AGENT_COMPONENT_SEARCH_CURSOR_BYTES, MAX_AGENT_COMPONENT_SEARCH_LIMIT, MAX_CAPABILITIES,
 };
 use crate::agent_library::AgentLibraryLifecycle;
@@ -81,6 +81,15 @@ pub struct AgentComponentSearchRequest {
     /// silently resuming somewhere.
     #[serde(default)]
     pub cursor: Option<String>,
+    /// Keep only the components of this server: the connector of a pack component id
+    /// (`mcp:<connector>/...`, the `pack.connector` of its server). A component that no
+    /// pack owns has no server and never matches (ARBORA-FLEET-R073).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_name: Option<String>,
+    /// Keep only the components whose MCP provenance carries this upstream name, the name
+    /// the server itself uses for the tool (ARBORA-FLEET-R073).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upstream_name: Option<String>,
 }
 
 impl AgentComponentSearchRequest {
@@ -99,6 +108,12 @@ impl AgentComponentSearchRequest {
         validate_names("capabilities", &self.capabilities, MAX_CAPABILITIES)?;
         if self.kinds.len() > MAX_SEARCH_KINDS {
             return Err("agent component search names too many kinds".to_string());
+        }
+        if let Some(name) = &self.server_name {
+            validate_text("server_name", name)?;
+        }
+        if let Some(name) = &self.upstream_name {
+            validate_text("upstream_name", name)?;
         }
         if !self.has_selector() {
             return Err("agent component search needs a task, capability, or kind".to_string());
@@ -171,6 +186,12 @@ impl AgentComponentSearchRequest {
         }
         if self.read_only && component.is_side_effecting() {
             return false;
+        }
+        if let Some(wanted) = &self.upstream_name {
+            match &component.provenance {
+                ComponentProvenance::McpServer { upstream_name, .. } if upstream_name == wanted => {}
+                _ => return false,
+            }
         }
         true
     }
@@ -332,6 +353,8 @@ mod tests {
             read_only: false,
             limit: Some(10),
             cursor: None,
+            server_name: None,
+            upstream_name: None,
         }
     }
 

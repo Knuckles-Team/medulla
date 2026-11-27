@@ -109,3 +109,23 @@ def test_task_and_capability_selectors_reach_the_server(
         "op": "search",
         "request": {"tenant_id": "tenant-a", "limit": 64, **wire},
     }
+
+
+# spec: MEDULLA-TYPED-PACKS-R011.3
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R011.3")
+def test_server_and_name_filters_reach_the_server_and_refuse_blank() -> None:
+    client = _Client()
+    request = _request(server_name="demo", upstream_name="search")
+    asyncio.run(send_agent_component_search(client, request))
+    assert client.sent is not None
+    params = client.sent[1]
+    assert isinstance(params, dict)
+    assert params["op"]["request"] == {
+        "tenant_id": "tenant-a",
+        "kinds": ["mcp_server"],
+        "limit": 64,
+        "server_name": "demo",
+        "upstream_name": "search",
+    }
+    with pytest.raises(ValueError):
+        asyncio.run(send_agent_component_search(_Client(), _request(server_name=" ")))

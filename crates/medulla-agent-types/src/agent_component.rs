@@ -2011,6 +2011,8 @@ mod tests {
                     read_only: false,
                     limit: Some(10),
                     cursor: None,
+                    server_name: None,
+                    upstream_name: None,
                 },
             },
             AgentComponentOp::Content {

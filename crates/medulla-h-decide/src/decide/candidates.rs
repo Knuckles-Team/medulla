@@ -98,6 +98,8 @@ fn search_request(
         read_only: false,
         limit: Some(PAGE),
         cursor,
+        server_name: None,
+        upstream_name: None,
     }
 }
 

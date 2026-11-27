@@ -548,6 +548,10 @@ async def send_agent_component_search(
         not request.cursor or len(request.cursor.encode("utf-8")) > 16384
     ):
         raise ValueError("AgentComponent.Search cursor is outside its byte bound")
+    for name in ("server_name", "upstream_name"):
+        value = getattr(request, name)
+        if value is not None and not value.strip():
+            raise ValueError(f"AgentComponent.Search {name} must not be empty")
     params = {
         "op": {
             "op": "search",

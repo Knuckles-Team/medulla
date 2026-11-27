@@ -164,6 +164,8 @@ fn read_heads(
                 read_only: false,
                 limit: Some(PAGE),
                 cursor: cursor.take(),
+                server_name: None,
+                upstream_name: None,
             })
             .map_err(ToolIndexError::Read)?;
         heads.extend(page.entries);

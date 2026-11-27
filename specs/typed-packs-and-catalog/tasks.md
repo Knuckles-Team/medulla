@@ -354,3 +354,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T354 [US8] MEDULLA-TYPED-PACKS-R813.3 Python mirror: `GraphSchemaGet`
 - [ ] T355 [US8] MEDULLA-TYPED-PACKS-R813.4 Schema reads redact provenance below `security:admin`
 - [x] T356 [US8] MEDULLA-TYPED-PACKS-R813.5 Python mirror: `GraphSchemaSourceView.provenance_redacted`
+- [ ] T357 MEDULLA-TYPED-PACKS-R011.3 Component search filters by server and upstream name

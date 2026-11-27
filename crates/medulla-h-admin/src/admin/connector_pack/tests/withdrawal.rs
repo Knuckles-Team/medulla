@@ -31,6 +31,8 @@ async fn search(served: &Served) -> Vec<String> {
                             read_only: false,
                             limit: None,
                             cursor: None,
+                            server_name: None,
+                            upstream_name: None,
                         },
                     },
                 },
