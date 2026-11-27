@@ -17,6 +17,11 @@ use medulla_federation::federation_spark::register_spark;
 use medulla_federation::{mirror_target::target_for, mirror_target::MirrorTargetRegistry};
 use medulla_query_types::wire::{ForeignCypherBackend, ForeignSourceSpec, MirrorTargetSpec};
 
+/// The reader a test registers in place of a live graph connection.
+type AgeReader = dyn Fn(&str, &str) -> Result<Vec<std::collections::HashMap<String, String>>, String>
+    + Send
+    + Sync;
+
 // Verifies MEDULLA-DURABLE-KERNEL-R024.3: the Cypher source binds the AGE backend only.
 // spec: MEDULLA-DURABLE-KERNEL-R024.3
 #[cfg(feature = "federation-sql")]
@@ -33,9 +38,7 @@ fn age_cypher_registers_and_removed_backend_is_refused() {
         id_field: "id".into(),
         score_field: None,
     };
-    let reader: Arc<
-        dyn Fn(&str, &str) -> Result<Vec<HashMap<String, String>>, String> + Send + Sync,
-    > = Arc::new(|_, sql| {
+    let reader: Arc<AgeReader> = Arc::new(|_, sql| {
         if sql.contains("ag_catalog.ag_graph") {
             return Ok(vec![HashMap::from([(
                 "medulla_name".into(),

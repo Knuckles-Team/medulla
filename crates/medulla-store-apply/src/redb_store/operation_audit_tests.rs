@@ -32,11 +32,13 @@ fn seeded(dir: &std::path::Path) -> (Shard, AuditTailCache) {
     };
     commit_ops(
         &shard,
-        &mut vec![(GRAPH.to_string(), seed)],
-        &mut Vec::new(),
-        &mut Vec::new(),
-        "operation-audit-seed",
-        0,
+        crate::redb_store::store_control::DrainInput {
+            ops: &mut vec![(GRAPH.to_string(), seed)],
+            raft_log_ops: &mut Vec::new(),
+            write_counts: &mut Vec::new(),
+            drain_id: "operation-audit-seed",
+            committed_at_ms: 0,
+        },
         DurableCrypto::none(),
         &mut tail,
     )

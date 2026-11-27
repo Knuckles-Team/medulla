@@ -27,7 +27,7 @@ async fn register_udf(call: OwnerScopedCall<'_>, id: String, wasm: Vec<u8>) -> R
     let req_id = call.req_id;
     let owner = match call.owner("RegisterUdf") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     let registry = call.state.read().await.udf_registry.clone();
     // Compile off-reactor (cranelift codegen is CPU-bound).
@@ -58,7 +58,7 @@ async fn run_udf(call: OwnerScopedCall<'_>, id: String, input: Vec<u8>) -> Respo
     let req_id = call.req_id;
     let caller = match call.owner("RunUdf") {
         Ok(caller) => caller,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     let registry = call.state.read().await.udf_registry.clone();
     // Run off-reactor: a fuel-killed infinite loop traps here without stalling

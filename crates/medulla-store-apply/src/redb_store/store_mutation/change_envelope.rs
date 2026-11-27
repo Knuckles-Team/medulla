@@ -15,27 +15,43 @@ pub fn commit_change_envelope(
 ) -> Result<ChangeEnvelopeCommit, String> {
     commit_change_envelope_with_budget(
         shard,
-        graph_fname,
-        envelope,
-        None,
-        committed_at_ms,
-        write_count,
+        crate::redb_store::store_mutation::change_envelope::EnvelopeCommitInput {
+            graph_fname,
+            envelope,
+            source_budget: None,
+            committed_at_ms,
+            write_count,
+        },
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
     )
 }
 
+/// The inputs of [`commit_change_envelope_with_budget`]: the graph, the envelope, the repository
+/// budget authority committed with it, the commit time and the counted write.
+pub struct EnvelopeCommitInput<'a> {
+    pub graph_fname: &'a str,
+    pub envelope: &'a ChangeEnvelope,
+    pub source_budget:
+        Option<&'a medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    pub committed_at_ms: u64,
+    pub write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
+}
+
 pub fn commit_change_envelope_with_budget(
     shard: &Shard,
-    graph_fname: &str,
-    envelope: &ChangeEnvelope,
-    source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
-    committed_at_ms: u64,
-    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
+    input: EnvelopeCommitInput<'_>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<ChangeEnvelopeCommit, String> {
+    let EnvelopeCommitInput {
+        graph_fname,
+        envelope,
+        source_budget,
+        committed_at_ms,
+        write_count,
+    } = input;
     envelope.validate()?;
     let mutation = commit_mutation_batch_inner(
         shard,

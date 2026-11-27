@@ -83,14 +83,16 @@ fn every_durable_chokepoint_refuses_the_reserved_control_scope() {
     let mut log = Vec::new();
     assert!(commit_ops(
         &shard,
-        &mut ops,
-        &mut log,
-        &mut Vec::new(),
-        "control-chokepoint",
-        0,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut log,
+            write_counts: &mut Vec::new(),
+            drain_id: "control-chokepoint",
+            committed_at_ms: 0
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
-        &mut medulla_store::redb_store::AuditTailCache::new(),
+        &mut medulla_store::redb_store::AuditTailCache::new()
     )
     .is_err());
     let handle = shard.graph("graph-a").unwrap();

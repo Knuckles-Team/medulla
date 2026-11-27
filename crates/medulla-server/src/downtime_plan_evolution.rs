@@ -101,7 +101,7 @@ impl DowntimeBody for PlanEvolutionBody {
         let output = serde_json::json!({ "receipts": receipts });
         let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
         Ok(DowntimeStep::Done {
-            result,
+            result: Box::new(result),
             working_bytes: 0,
         })
     }
@@ -334,7 +334,7 @@ impl DowntimeBody for PlannerEvolutionBody {
         let output = serde_json::json!({ "receipts": receipts, "promotion": promotion });
         let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
         Ok(DowntimeStep::Done {
-            result,
+            result: Box::new(result),
             working_bytes: 0,
         })
     }

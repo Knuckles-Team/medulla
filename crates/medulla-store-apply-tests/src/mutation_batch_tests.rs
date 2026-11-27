@@ -539,11 +539,13 @@ fn commit_with_result(
     let mut audit = AuditTailCache::new();
     commit_mutation_batch(
         shard,
-        "graph-a",
-        batch,
-        Some(result),
-        101,
-        None,
+        medulla_store_apply::redb_store::store_mutation::CompactCommitInput {
+            graph_fname: "graph-a",
+            batch: batch,
+            result_msgpack: Some(result),
+            committed_at_ms: 101,
+            write_count: None,
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,
@@ -5798,11 +5800,13 @@ fn no_graph_version_bump_goes_unpublished() {
     let mut audit = AuditTailCache::new();
     medulla_store_apply::redb_store::store_control::commit_ops(
         &db,
-        &mut ops,
-        &mut Vec::new(),
-        &mut Vec::new(),
-        "drain-publication",
-        1,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut Vec::new(),
+            write_counts: &mut Vec::new(),
+            drain_id: "drain-publication",
+            committed_at_ms: 1,
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,

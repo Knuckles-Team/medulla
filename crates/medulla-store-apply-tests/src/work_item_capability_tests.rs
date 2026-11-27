@@ -51,11 +51,13 @@ fn try_commit_method(shard: &Shard, method: Method) -> Result<(), String> {
     let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
     medulla_store_apply::redb_store::store_control::commit_ops(
         shard,
-        &mut ops,
-        &mut raft_log_ops,
-        &mut Vec::new(),
-        &attempt("native-method"),
-        0,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut raft_log_ops,
+            write_counts: &mut Vec::new(),
+            drain_id: &attempt("native-method"),
+            committed_at_ms: 0,
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit_tail,

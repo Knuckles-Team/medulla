@@ -185,11 +185,13 @@ fn edge_ordinals_monotonic_o1_counter_and_reseed_after_restart() {
                 let mut log = Vec::new();
                 commit_ops(
                     &db,
-                    &mut ops,
-                    &mut log,
-                    &mut Vec::new(),
-                    &next_drain_id("security-edge"),
-                    0,
+                    medulla_store_apply::redb_store::store_control::DrainInput {
+                        ops: &mut ops,
+                        raft_log_ops: &mut log,
+                        write_counts: &mut Vec::new(),
+                        drain_id: &next_drain_id("security-edge"),
+                        committed_at_ms: 0,
+                    },
                     crypto,
                     &mut tail,
                 )
@@ -241,11 +243,13 @@ fn edge_ordinals_monotonic_o1_counter_and_reseed_after_restart() {
                 let mut log = Vec::new();
                 commit_ops(
                     &db,
-                    &mut ops,
-                    &mut log,
-                    &mut Vec::new(),
-                    &next_drain_id("security-edge-restart"),
-                    0,
+                    medulla_store_apply::redb_store::store_control::DrainInput {
+                        ops: &mut ops,
+                        raft_log_ops: &mut log,
+                        write_counts: &mut Vec::new(),
+                        drain_id: &next_drain_id("security-edge-restart"),
+                        committed_at_ms: 0,
+                    },
                     crypto,
                     &mut tail,
                 )
@@ -281,11 +285,13 @@ fn seal_off_stores_plaintext_bytes_byte_identical() {
     let mut tail = AuditTailCache::new();
     commit_ops(
         &db,
-        &mut ops,
-        &mut log,
-        &mut Vec::new(),
-        &next_drain_id("security-plaintext"),
-        0,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut log,
+            write_counts: &mut Vec::new(),
+            drain_id: &next_drain_id("security-plaintext"),
+            committed_at_ms: 0,
+        },
         crypto,
         &mut tail,
     )
@@ -319,11 +325,13 @@ fn encryption_no_plaintext_on_disk_round_trips_and_wrong_key_fails() {
         let mut audit_tail = AuditTailCache::new();
         commit_ops(
             &db,
-            &mut ops,
-            &mut log,
-            &mut Vec::new(),
-            &next_drain_id("security-encrypted"),
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut ops,
+                raft_log_ops: &mut log,
+                write_counts: &mut Vec::new(),
+                drain_id: &next_drain_id("security-encrypted"),
+                committed_at_ms: 0,
+            },
             crypto,
             &mut audit_tail,
         )
@@ -382,11 +390,13 @@ fn audit_chain_verifies_clean_and_detects_tampering() {
         let mut log = Vec::new();
         commit_ops(
             &db,
-            &mut ops,
-            &mut log,
-            &mut Vec::new(),
-            &next_drain_id("security-audit"),
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut ops,
+                raft_log_ops: &mut log,
+                write_counts: &mut Vec::new(),
+                drain_id: &next_drain_id("security-audit"),
+                committed_at_ms: 0,
+            },
             crypto,
             &mut audit_tail,
         )
@@ -418,11 +428,13 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
     )];
     commit_ops(
         &db,
-        &mut ops,
-        &mut Vec::new(),
-        &mut Vec::new(),
-        &next_drain_id("audit-seed"),
-        0,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut Vec::new(),
+            write_counts: &mut Vec::new(),
+            drain_id: &next_drain_id("audit-seed"),
+            committed_at_ms: 0,
+        },
         DurableCrypto::none(),
         &mut tail,
     )
@@ -514,11 +526,13 @@ fn audit_tail_cache_o1_append_builds_verifiable_chain_across_batches_and_restart
         let mut log = Vec::new();
         commit_ops(
             shard,
-            &mut ops,
-            &mut log,
-            &mut Vec::new(),
-            &next_drain_id("security-cache"),
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut ops,
+                raft_log_ops: &mut log,
+                write_counts: &mut Vec::new(),
+                drain_id: &next_drain_id("security-cache"),
+                committed_at_ms: 0,
+            },
             crypto,
             cache,
         )
@@ -612,11 +626,13 @@ fn audit_tail_cold_seed_is_a_bounded_seek_not_a_forward_scan() {
         let mut warm_cache = AuditTailCache::new();
         commit_ops(
             &db,
-            &mut ops,
-            &mut log,
-            &mut Vec::new(),
-            &next_drain_id("security-cold-build"),
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut ops,
+                raft_log_ops: &mut log,
+                write_counts: &mut Vec::new(),
+                drain_id: &next_drain_id("security-cold-build"),
+                committed_at_ms: 0,
+            },
             crypto,
             &mut warm_cache,
         )
@@ -633,11 +649,13 @@ fn audit_tail_cold_seed_is_a_bounded_seek_not_a_forward_scan() {
         let _ = medulla_store::redb_store::audit::cold_seed_rows_touched_take(); // discard anything the build left
         commit_ops(
             &db,
-            &mut restart_ops,
-            &mut restart_log,
-            &mut Vec::new(),
-            &next_drain_id("security-cold-restart"),
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut restart_ops,
+                raft_log_ops: &mut restart_log,
+                write_counts: &mut Vec::new(),
+                drain_id: &next_drain_id("security-cold-restart"),
+                committed_at_ms: 0,
+            },
             crypto,
             &mut cold_cache,
         )

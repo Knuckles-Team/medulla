@@ -226,15 +226,18 @@ impl NativeOperationDumpRows {
 /// manufacture a conflicting replay out of a path that never needed one.
 pub fn commit_ops(
     shard: &Shard,
-    ops: &mut Vec<(String, Method)>,
-    raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,
-    write_counts: &mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
-    drain_id: &str,
-    committed_at_ms: u64,
+    input: DrainInput<'_>,
     crypto: DurableCrypto<'_>,
     // O(1) audit-chain tail cache (CONCEPT:MEDULLA-KG.storage.embedded-store), owned by the caller across batches.
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<(), String> {
+    let DrainInput {
+        ops,
+        raft_log_ops,
+        write_counts,
+        drain_id,
+        committed_at_ms,
+    } = input;
     if ops.is_empty() && raft_log_ops.is_empty() {
         return Ok(());
     }
@@ -251,11 +254,13 @@ pub fn commit_ops(
     let total = CommitPhaseTimer::start("commit_ops");
     let result = commit_drained_ops(
         shard,
-        ops,
-        raft_log_ops,
-        write_counts,
-        drain_id,
-        committed_at_ms,
+        DrainInput {
+            ops,
+            raft_log_ops,
+            write_counts,
+            drain_id,
+            committed_at_ms,
+        },
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
@@ -270,19 +275,32 @@ pub fn commit_ops(
     result
 }
 
+/// What one drain commits: the graph methods, the replicated log entries riding with them, the
+/// per-graph write counts, the attempt's unique id and the commit time.
+pub struct DrainInput<'a> {
+    pub ops: &'a mut Vec<(String, Method)>,
+    pub raft_log_ops: &'a mut Vec<(u64, u64, Vec<u8>)>,
+    pub write_counts: &'a mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
+    pub drain_id: &'a str,
+    pub committed_at_ms: u64,
+}
+
 /// The grouping + chunked commit loop `commit_ops` ran inline before EH-290,
 /// extracted so `commit_ops` itself is only the drain-level byte-amplification
 /// measurement wrapped around this.
 fn commit_drained_ops(
     shard: &Shard,
-    ops: &mut Vec<(String, Method)>,
-    raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,
-    write_counts: &mut Vec<medulla_store::redb_store::write_ledger::WriteCount>,
-    drain_id: &str,
-    committed_at_ms: u64,
+    input: DrainInput<'_>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<(), String> {
+    let DrainInput {
+        ops,
+        raft_log_ops,
+        write_counts,
+        drain_id,
+        committed_at_ms,
+    } = input;
     // Group by graph BEFORE anything else: a `BTreeMap` keeps the member order
     // deterministic across replicas, which is what makes the chunking below
     // reproducible, and it is also the order `ShardWrite` hands the members

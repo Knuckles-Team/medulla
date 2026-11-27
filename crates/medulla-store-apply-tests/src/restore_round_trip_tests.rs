@@ -120,11 +120,13 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
     let mut audit = medulla_store::redb_store::AuditTailCache::new();
     commit_ops(
         &source,
-        &mut ops,
-        &mut Vec::new(),
-        &mut Vec::new(),
-        "restore-seed-rows",
-        1,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut Vec::new(),
+            write_counts: &mut Vec::new(),
+            drain_id: "restore-seed-rows",
+            committed_at_ms: 1,
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,

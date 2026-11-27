@@ -44,11 +44,13 @@ fn planted_shard(tag: &str) -> (Shard, std::path::PathBuf) {
         .collect();
     commit_ops(
         &shard,
-        &mut ops,
-        &mut Vec::new(),
-        &mut Vec::new(),
-        &format!("scrub-plant-{tag}"),
-        1,
+        crate::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut Vec::new(),
+            write_counts: &mut Vec::new(),
+            drain_id: &format!("scrub-plant-{tag}"),
+            committed_at_ms: 1,
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut medulla_store::redb_store::AuditTailCache::new(),

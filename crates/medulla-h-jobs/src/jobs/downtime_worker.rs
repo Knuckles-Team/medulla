@@ -232,7 +232,7 @@ mod tests {
                     &serde_json::json!({ "steps": after }),
                 )?;
                 Ok(DowntimeStep::Done {
-                    result,
+                    result: Box::new(result),
                     working_bytes: 1_024,
                 })
             } else {

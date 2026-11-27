@@ -1,13 +1,6 @@
 use super::*;
-#[cfg(any(test, feature = "test-support"))]
-use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_mutation_types::mutation_scope::{
-    DurabilityDomain, MutationOutboxIntent, MutationSurface,
-};
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
-use medulla_protocol_types::mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationOperation, VersionExpectation,
-};
+use medulla_protocol_types::mutation_batch::{MutationBatch, MutationBatchCommit};
 use medulla_protocol_types::protocol::Method;
 use medulla_storage::{GraphShardOwner, OwnedStoreHandle};
 use medulla_store::redb_store::commit_publish::{CommitMaterial, CommitPublication};
@@ -25,6 +18,16 @@ pub enum MutationBatchCrashpoint {
     AfterCommitBeforeAck,
 }
 
+/// The inputs of [`commit_mutation_batch`]: the graph, the batch, its result and commit time, and
+/// the counted write the batch is.
+pub struct CompactCommitInput<'a> {
+    pub graph_fname: &'a str,
+    pub batch: &'a MutationBatch,
+    pub result_msgpack: Option<&'a [u8]>,
+    pub committed_at_ms: u64,
+    pub write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
+}
+
 /// Atomically apply one canonical mutation batch to graph rows, durable status,
 /// idempotency index, and transactional outbox.
 ///
@@ -37,14 +40,17 @@ pub enum MutationBatchCrashpoint {
 /// fails closed.
 pub fn commit_mutation_batch(
     shard: &Shard,
-    graph_fname: &str,
-    batch: &MutationBatch,
-    result_msgpack: Option<&[u8]>,
-    committed_at_ms: u64,
-    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
+    input: CompactCommitInput<'_>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<MutationBatchCommit, String> {
+    let CompactCommitInput {
+        graph_fname,
+        batch,
+        result_msgpack,
+        committed_at_ms,
+        write_count,
+    } = input;
     commit_mutation_batch_inner(
         shard,
         BatchCommitInput::compact(graph_fname, batch, result_msgpack, committed_at_ms)
@@ -816,9 +822,11 @@ mod outbox_reactivation_tests {
     use super::*;
     use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
     use medulla_mutation_types::{
-        mutation_scope::MutationOutboxIntent, mutation_scope::MutationScopeIdentity,
-        mutation_scope::MutationSurface, mutation_scope::MUTATION_BATCH_VERSION,
+        mutation_scope::DurabilityDomain, mutation_scope::MutationOutboxIntent,
+        mutation_scope::MutationScopeIdentity, mutation_scope::MutationSurface,
+        mutation_scope::MUTATION_BATCH_VERSION,
     };
+    use medulla_protocol_types::mutation_batch::{MutationOperation, VersionExpectation};
     use medulla_transaction::OutboxClaimBudget;
     use medulla_types::contract::Digest256;
     pub const GRAPH: &str = "graph-a";

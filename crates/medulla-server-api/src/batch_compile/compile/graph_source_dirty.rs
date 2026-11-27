@@ -238,7 +238,7 @@ mod tests {
         let removal = Method::RemoveNode {
             node_id: "doc:anything".into(),
         };
-        assert!(wake("dirty-g7", &[removal.clone()]).is_some());
+        assert!(wake("dirty-g7", std::slice::from_ref(&removal)).is_some());
         // A removal in a graph with no bound source wakes nothing.
         assert!(wake("unbound-graph", &[removal]).is_none());
         // A field update that sets `type` wakes the sources of the graph, whatever type it sets

@@ -206,7 +206,7 @@ pub async fn try_handle(
         } => {
             let owner = match call.owner("RegisterForeignSource") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             if let Err(error) = medulla_federation::federation::validate_column_mapping(&source) {
                 return Ok(Response::err(req_id, error));
@@ -294,7 +294,7 @@ pub async fn try_handle(
         Method::ListForeignSources {} => {
             let owner = match call.owner("ListForeignSources") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let s = call.state.read().await;
             let views = s.foreign_sources().visible_sources(&owner, &s.isolation);
@@ -308,7 +308,7 @@ pub async fn try_handle(
         Method::GetForeignSource { name } => {
             let owner = match call.owner("GetForeignSource") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let s = call.state.read().await;
             match s
@@ -329,7 +329,7 @@ pub async fn try_handle(
         Method::ProbeForeignSource { name } => {
             let owner = match call.owner("ProbeForeignSource") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let s = call.state.read().await;
             match s
@@ -353,7 +353,7 @@ pub async fn try_handle(
         Method::ShareForeignSource { name, grantees } => {
             let owner = match call.owner("ShareForeignSource") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let mut s = call.state.write().await;
             if let Err(error) =
@@ -379,7 +379,7 @@ pub async fn try_handle(
         Method::UnshareForeignSource { name, grantees } => {
             let owner = match call.owner("UnshareForeignSource") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let mut s = call.state.write().await;
             if let Err(error) =
@@ -407,7 +407,7 @@ pub async fn try_handle(
         Method::ForeignSourceDetach { name } => {
             let owner = match call.owner("ForeignSourceDetach") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let s = call.state.read().await;
             s.foreign_sources().detach(&owner, &name);
@@ -429,7 +429,7 @@ pub async fn try_handle(
         } => {
             let owner = match call.owner("ForeignSourceParity") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             if let Err(error) = medulla_server_ops::api::query_txn::foreign_parity::validate_request(
                 &tables, sample,
@@ -472,7 +472,7 @@ pub async fn try_handle(
         } => {
             let owner = match call.owner("RegisterGraphView") {
                 Ok(owner) => owner,
-                Err(refusal) => return Ok(refusal),
+                Err(refusal) => return Ok(*refusal),
             };
             let s = call.state.read().await;
             let registered = s.foreign_sources().views().register(
@@ -590,7 +590,7 @@ async fn verify_source_query_approval(
     // (1) The verified owner reads.
     let owner = match call.owner("VerifySourceQueryApproval") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();
@@ -740,7 +740,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     let req_id = call.req_id;
     let owner = match call.owner("ForeignReadOpen") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();
@@ -865,7 +865,7 @@ async fn chunk_foreign_read(
     let req_id = call.req_id;
     let owner = match call.owner("ForeignReadChunk") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();
@@ -902,7 +902,7 @@ async fn complete_foreign_read(
     let req_id = call.req_id;
     let owner = match call.owner("ForeignReadComplete") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();
@@ -942,7 +942,7 @@ async fn abort_foreign_read(
     let req_id = call.req_id;
     let owner = match call.owner("ForeignReadAbort") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();
@@ -983,7 +983,7 @@ async fn query_columns(
     let req_id = call.req_id;
     let owner = match call.owner("QueryForeignColumns") {
         Ok(owner) => owner,
-        Err(refusal) => return refusal,
+        Err(refusal) => return *refusal,
     };
     if !owner.can_read() {
         medulla_kernel::metrics::process().access_denied();

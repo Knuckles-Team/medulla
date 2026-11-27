@@ -12,5 +12,4 @@ use medulla_protocol_types::protocol::Method;
 use medulla_result_types::epistemic_operations::{
     ClaimWorkItemResult, ClaimWorkItemResultReason, ClaimWorkItemResultSchemaVersion,
 };
-use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;

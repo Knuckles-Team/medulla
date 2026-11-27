@@ -83,9 +83,11 @@ pub fn apply_work_item_rows(
                 graph,
                 request,
                 nodes,
-                transitions,
-                effect_receipts,
-                admitted_requests,
+                super::effect::EffectReceiptTables {
+                    transitions,
+                    receipts: effect_receipts,
+                    admitted: admitted_requests,
+                },
                 committed_at_ms,
                 crypto,
             ))

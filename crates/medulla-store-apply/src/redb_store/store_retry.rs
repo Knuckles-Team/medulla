@@ -1,7 +1,6 @@
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_protocol_types::mutation_batch::{MutationBatch, MutationOperation};
 use medulla_protocol_types::protocol::Method;
-use medulla_store::redb_store::store_prelude::*;
 
 /// Return a native WorkItem/resource mutation with only authority-owned
 /// lifecycle fields normalized. All other request fields remain serialized and

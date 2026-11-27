@@ -287,6 +287,14 @@ pub fn apply_mark_effect_started_row(
     })
 }
 
+/// The effect tables a receipt write touches: the transition log it appends to, the receipts it
+/// stores and the admitted requests it reads.
+pub struct EffectReceiptTables<'a, 't> {
+    pub transitions: &'a mut EffectTable<'t>,
+    pub receipts: &'a mut EffectTable<'t>,
+    pub admitted: &'a EffectTable<'t>,
+}
+
 /// The served `RecordEffectReceipt` arm: the receipt and the `Resolved` phase
 /// commit in one transaction. The receipt must name this item (job ID), the
 /// admitted request of this attempt (or the item's input when none was
@@ -295,12 +303,15 @@ pub fn apply_record_effect_receipt_row(
     graph: &str,
     request: &RecordEffectReceiptRequest,
     nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
-    transitions: &mut EffectTable<'_>,
-    receipts: &mut EffectTable<'_>,
-    admitted: &EffectTable<'_>,
+    tables: EffectReceiptTables<'_, '_>,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<EffectWriteResult, String> {
+    let EffectReceiptTables {
+        transitions,
+        receipts,
+        admitted,
+    } = tables;
     let mut row = tenant_row(nodes, graph, &request.tenant, &request.work_item_id, crypto)?;
     let key = (graph, request.work_item_id.as_str(), request.attempt);
     if property_u64(&row, "attempt") != request.attempt {

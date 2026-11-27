@@ -78,18 +78,9 @@ macro_rules! writer_command_arms {
                 .into_iter()
                 .map(|method| (graph.clone(), method))
                 .collect();
-            let res = medulla_store_apply::redb_store::store_control::commit_ops(
-                shard,
-                &mut ops,
-                &mut Vec::new(),
-                // A replay re-commits published methods; no caller write is counted.
-                &mut Vec::new(),
-                &shard_write_attempt_id("replay_drain"),
-                medulla_server_api::txn::now_ms(),
-                crypto,
-                #[cfg(feature = "security")]
-                &mut pending.audit_tail,
-            );
+            let res = medulla_store_apply::redb_store::store_control::commit_ops(shard, medulla_store_apply::redb_store::store_control::DrainInput { ops: &mut ops, raft_log_ops: &mut Vec::new(), write_counts: // A replay re-commits published methods; no caller write is counted.
+                &mut Vec::new(), drain_id: &shard_write_attempt_id("replay_drain"), committed_at_ms: medulla_server_api::txn::now_ms() }, crypto, #[cfg(feature = "security")]
+                &mut pending.audit_tail);
             let _ = done.send(res);
             false
         }
@@ -395,17 +386,8 @@ macro_rules! writer_command_arms {
                     &mut pending.audit_tail,
                 )
             } else {
-                commit_mutation_batch(
-                    shard,
-                    &graph,
-                    &batch,
-                    result_msgpack.as_deref(),
-                    committed_at_ms,
-                    write_count.as_ref(),
-                    crypto,
-                    #[cfg(feature = "security")]
-                    &mut pending.audit_tail,
-                )
+                commit_mutation_batch(shard, medulla_store_apply::redb_store::store_mutation::CompactCommitInput { graph_fname: &graph, batch: &batch, result_msgpack: result_msgpack.as_deref(), committed_at_ms: committed_at_ms, write_count: write_count.as_ref() }, crypto, #[cfg(feature = "security")]
+                    &mut pending.audit_tail)
             };
             let _ = done.send(res);
             false
@@ -497,17 +479,8 @@ macro_rules! writer_command_arms {
             // Ordering and atomicity mirror MutationBatch: pending grouped writes
             // commit first, then this envelope owns one indivisible fsync point.
             flush(pending);
-            let res = medulla_store_apply::redb_store::store_mutation::change_envelope::commit_change_envelope_with_budget(
-                shard,
-                &graph,
-                &envelope,
-                source_budget.as_ref(),
-                committed_at_ms,
-                write_count.as_ref(),
-                crypto,
-                #[cfg(feature = "security")]
-                &mut pending.audit_tail,
-            );
+            let res = medulla_store_apply::redb_store::store_mutation::change_envelope::commit_change_envelope_with_budget(shard, medulla_store_apply::redb_store::store_mutation::change_envelope::EnvelopeCommitInput { graph_fname: &graph, envelope: &envelope, source_budget: source_budget.as_ref(), committed_at_ms: committed_at_ms, write_count: write_count.as_ref() }, crypto, #[cfg(feature = "security")]
+                &mut pending.audit_tail);
             let _ = done.send(res);
             false
         }

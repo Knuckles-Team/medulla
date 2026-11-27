@@ -75,11 +75,13 @@ fn eh_290_commit_ops_phase_decomposition() {
         let started = Instant::now();
         commit_ops(
             &shard,
-            &mut ops,
-            &mut log,
-            &mut Vec::new(),
-            &drain_id,
-            index as u64,
+            medulla_store_apply::redb_store::store_control::DrainInput {
+                ops: &mut ops,
+                raft_log_ops: &mut log,
+                write_counts: &mut Vec::new(),
+                drain_id: &drain_id,
+                committed_at_ms: index as u64,
+            },
             DurableCrypto::none(),
             #[cfg(feature = "security")]
             &mut medulla_store::redb_store::AuditTailCache::new(),

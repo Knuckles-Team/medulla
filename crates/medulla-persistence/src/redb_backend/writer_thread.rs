@@ -336,13 +336,14 @@ fn commit_and_notify(
     }
     let res = commit_ops(
         shard,
-        &mut pending.ops,
-        &mut pending.raft_log_ops,
-        &mut pending.write_counts,
-        &shard_write_attempt_id("shard_drain"),
-        medulla_server_api::txn::now_ms(),
-        crypto,
-        // O(1) audit-chain tail cache (CONCEPT:MEDULLA-KG.storage.embedded-store), persistent across batches.
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut pending.ops,
+            raft_log_ops: &mut pending.raft_log_ops,
+            write_counts: &mut pending.write_counts,
+            drain_id: &shard_write_attempt_id("shard_drain"),
+            committed_at_ms: medulla_server_api::txn::now_ms(),
+        },
+        crypto, // O(1) audit-chain tail cache (CONCEPT:MEDULLA-KG.storage.embedded-store), persistent across batches.
         #[cfg(feature = "security")]
         &mut pending.audit_tail,
     );

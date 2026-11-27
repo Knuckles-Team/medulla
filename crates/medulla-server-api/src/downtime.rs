@@ -105,7 +105,7 @@ pub enum DowntimeStep {
     /// The job is finished: its typed result and the bytes the last step held.
     Done {
         /// The job's typed result.
-        result: medulla_jobs::TypedJobResult,
+        result: Box<medulla_jobs::TypedJobResult>,
         /// The working memory the step held, in bytes.
         working_bytes: u64,
     },

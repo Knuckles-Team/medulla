@@ -130,12 +130,8 @@ impl EmbeddedRedbStore {
         );
         medulla_store_apply::redb_store::store_control::commit_ops(
             &self.shard,
-            &mut ops,
-            &mut raft_log_ops,
-            // An embedded store has no served principal, so it keeps no write-day ledger.
-            &mut Vec::new(),
-            &drain_id,
-            0,
+            medulla_store_apply::redb_store::store_control::DrainInput { ops: &mut ops, raft_log_ops: &mut raft_log_ops, write_counts: // An embedded store has no served principal, so it keeps no write-day ledger.
+            &mut Vec::new(), drain_id: &drain_id, committed_at_ms: 0 },
             self.crypto(),
             #[cfg(feature = "security")]
             &mut audit_tail,

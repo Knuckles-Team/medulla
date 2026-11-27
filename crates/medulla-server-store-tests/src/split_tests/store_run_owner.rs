@@ -530,11 +530,13 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     let commit = |shard: &Shard, batch: &MutationBatch| {
         medulla_store_apply::redb_store::store_mutation::commit_mutation_batch(
             shard,
-            GRAPH,
-            batch,
-            None,
-            batch.created_at_ms,
-            None,
+            medulla_store_apply::redb_store::store_mutation::CompactCommitInput {
+                graph_fname: GRAPH,
+                batch: batch,
+                result_msgpack: None,
+                committed_at_ms: batch.created_at_ms,
+                write_count: None,
+            },
             DurableCrypto::none(),
             &mut medulla_store::redb_store::AuditTailCache::new(),
         )

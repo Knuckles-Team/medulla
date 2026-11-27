@@ -46,13 +46,13 @@ impl OwnerScopedCall<'_> {
     pub fn owner(
         &self,
         method: &str,
-    ) -> Result<CarrierAuthority, medulla_protocol_types::protocol::Response> {
+    ) -> Result<CarrierAuthority, Box<medulla_protocol_types::protocol::Response>> {
         self.carrier.cloned().ok_or_else(|| {
             medulla_kernel::metrics::process().access_denied();
-            medulla_protocol_types::protocol::Response::err(
+            Box::new(medulla_protocol_types::protocol::Response::err(
                 self.req_id,
                 format!("ACCESS_DENIED: {method} requires a verified tenant carrier"),
-            )
+            ))
         })
     }
 }

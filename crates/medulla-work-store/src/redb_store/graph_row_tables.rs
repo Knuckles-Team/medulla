@@ -1,6 +1,5 @@
 //! The graph-row table bundle one admitted member writes through.
 use medulla_storage::{GraphShardOwner, ScopedOwnerTableMut};
-use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
 use medulla_transaction::AdmittedOwnerWrite;
 

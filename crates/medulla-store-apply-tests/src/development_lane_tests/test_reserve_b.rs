@@ -225,14 +225,16 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
     let mut audit_tail = medulla_store::redb_store::audit::AuditTailCache::new();
     assert!(medulla_store_apply::redb_store::store_control::commit_ops(
         &fixture.shard,
-        &mut ops,
-        &mut raft_log,
-        &mut Vec::new(),
-        "lane-row-path",
-        TEST_NOW,
+        medulla_store_apply::redb_store::store_control::DrainInput {
+            ops: &mut ops,
+            raft_log_ops: &mut raft_log,
+            write_counts: &mut Vec::new(),
+            drain_id: "lane-row-path",
+            committed_at_ms: TEST_NOW
+        },
         DurableCrypto::none(),
         #[cfg(feature = "security")]
-        &mut audit_tail,
+        &mut audit_tail
     )
     .is_err());
 
