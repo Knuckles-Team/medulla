@@ -34,7 +34,9 @@ pub const UNKNOWN_GAIN_MICRO: i64 = 1_000_000;
 /// contract) and the tool's name.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ResearchTool {
+    /// The connector the research contract names.
     pub connector: String,
+    /// The name of the tool.
     pub tool: String,
 }
 

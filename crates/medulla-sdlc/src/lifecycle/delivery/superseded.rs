@@ -15,13 +15,16 @@ use medulla_source_types::delivery::{
 /// changed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BranchChangeset {
+    /// The changeset id.
     pub id: String,
+    /// The content digest of every path the changeset changed, by path.
     pub path_digests: BTreeMap<String, String>,
 }
 
 /// Another proposal as the verdict reads it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CandidateProposal {
+    /// The id of the proposal.
     pub proposal_id: String,
     /// A person opened it.
     pub by_person: bool,
@@ -34,7 +37,9 @@ pub struct CandidateProposal {
 /// The verdict of one candidate against one delivery branch.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SupersededVerdict {
+    /// The candidate holds nothing the delivery branch lacks: close it as superseded.
     CloseSuperseded,
+    /// The candidate holds work the delivery branch lacks: leave it open.
     Keep,
 }
 

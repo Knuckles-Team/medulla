@@ -20,7 +20,9 @@ pub const HOST_RESTARTED: &str = "host_restarted";
 /// One outside effect an assignment recorded.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecordedEffect {
+    /// The assignment that recorded the effect.
     pub assignment_id: String,
+    /// What the effect did outside.
     pub description: String,
     /// The receipt of the effect, when the outside system gave one.
     pub receipt: Option<String>,
@@ -30,8 +32,11 @@ pub struct RecordedEffect {
 /// its expiry and whether the hold is still active.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LaneLease {
+    /// The id of the work item the lane hold is for.
     pub work_item_id: String,
+    /// When the hold expires, in milliseconds since the Unix epoch.
     pub expires_at_ms: i64,
+    /// Whether the hold is still active.
     pub active: bool,
 }
 

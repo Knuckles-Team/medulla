@@ -42,8 +42,11 @@ pub fn admit_proposal(
 /// A stored proposal as the changeset guard reads it (MEDULLA-SDLC-R017.4).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StoredBinding<'a> {
+    /// The id of the stored proposal.
     pub id: &'a str,
+    /// The project the proposal belongs to.
     pub project: &'a str,
+    /// The lifecycle state of the proposal.
     pub state: ProposalState,
 }
 

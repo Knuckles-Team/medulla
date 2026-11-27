@@ -15,16 +15,27 @@ use medulla_source_types::lifecycle::{
 
 /// The inputs of one delivery open.
 pub struct OpenDelivery<'a> {
+    /// The tenant the delivery belongs to.
     pub tenant: &'a str,
+    /// The repository the delivery changes.
     pub repo: &'a str,
+    /// The root of the slice the delivery carries out.
     pub slice_root: &'a str,
+    /// The spec rows the slice covers; empty is refused.
     pub scope_rows: &'a [String],
+    /// The decision that dispatched the slice.
     pub dispatch_decision_id: &'a str,
+    /// The policy version the dispatch was decided under.
     pub policy_version: &'a str,
+    /// Who requested the delivery.
     pub actor: &'a str,
+    /// Who or what proposed the slice.
     pub origin: ProposalOrigin,
+    /// The project mode in force; it decides whether an unprompted slice starts a run.
     pub mode: ProjectMode,
+    /// The trace id of the run the assignment records.
     pub run_trace_id: &'a str,
+    /// The time of the open, in milliseconds since the Unix epoch.
     pub now_ms: i64,
 }
 
@@ -123,7 +134,9 @@ use medulla_source_types::delivery::WouldDispatch;
 /// The decision of one slice: a run, or a recorded `would_dispatch`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DispatchOutcome {
+    /// The slice started a run; the delivery is open.
     Dispatched(Box<Delivery>),
+    /// Development mode shadowed the slice: nothing started and the would-be dispatch is recorded.
     WouldDispatch(WouldDispatch),
 }
 
