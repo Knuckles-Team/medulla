@@ -1,0 +1,51 @@
+name: Prebuilt embedded analytical database library
+description: >-
+  MEDULLA-CONTRACT-R066.5. Fetch the pinned, checksummed prebuilt library that every build
+  enabling the duckdb feature links, and export DUCKDB_LIB_DIR and DUCKDB_INCLUDE_DIR.
+inputs:
+  target:
+    description: Rust target triple; empty uses the host triple of the installed toolchain.
+    required: false
+    default: ''
+outputs:
+  lib-dir:
+    description: The directory DUCKDB_LIB_DIR and DUCKDB_INCLUDE_DIR name.
+    value: ${{ steps.fetch.outputs.lib-dir }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve the library target
+      id: target
+      shell: bash -e {0}
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+      run: |
+        target="${INPUT_TARGET:-$(rustc -vV | sed -n 's/^host: //p')}"
+        echo "target=$target" >> "$GITHUB_OUTPUT"
+    # The pin file holds the engine version and every checksum, so its hash is the
+    # cache key: a version or checksum change misses the cache and refetches.
+    - name: Restore the verified library
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/duckdb-lib
+        key: duckdb-lib-${{ steps.target.outputs.target }}-${{ hashFiles('scripts/duckdb-pin.toml') }}
+    # A checksum mismatch makes the script exit non-zero (DUCKDB_CHECKSUM_MISMATCH) and fails the job.
+    - name: Fetch the pinned library
+      id: fetch
+      shell: bash -e {0}
+      env:
+        TARGET: ${{ steps.target.outputs.target }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+      run: |
+        out="$RUNNER_TEMP/duckdb-lib"
+        if [ "$CACHE_HIT" = true ]; then
+          lib_dir="$out"
+        else
+          lib_dir="$(python3 scripts/fetch_duckdb_lib.py --target "$TARGET" --out "$out")"
+        fi
+        echo "lib-dir=$lib_dir" >> "$GITHUB_OUTPUT"
+        {
+          echo "DUCKDB_LIB_DIR=$lib_dir"
+          echo "DUCKDB_INCLUDE_DIR=$lib_dir"
+        } >> "$GITHUB_ENV"

@@ -782,6 +782,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libsasl2-dev libcurl4-openssl-dev
       - *medulla-gates-toolchain
+      # MEDULLA-CONTRACT-R066.5: the all-features sweep links the prebuilt library.
+      - &medulla-gates-duckdb
+        name: Fetch the pinned prebuilt analytical database library
+        uses: ./.github/actions/duckdb-prebuilt
       - *medulla-gates-cache
       - *medulla-validation-compiler-cache
 
@@ -1304,6 +1308,8 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+      # MEDULLA-CONTRACT-R066.5: the all-features lint compiles the duckdb crate.
+      - *medulla-gates-duckdb
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: ". -> target-isolated"
