@@ -343,7 +343,9 @@ pub async fn dispatch_agent_library_methods(
         Method::AgentLibrary { op } => {
             #[cfg(feature = "redb")]
             {
-                let outcome = dispatch_boxed(async {
+                // Placed on the heap like `dispatch_boxed`, which only takes a `Response` future:
+                // this one answers the outcome that also names the published entry.
+                let outcome = Box::pin(async {
                     medulla_h_admin::admin::handle_agent_library(
                         state,
                         req.id,

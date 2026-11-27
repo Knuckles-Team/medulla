@@ -205,7 +205,7 @@ fn rollback_request(
 /// The refusal text of a response that refused, if it did.
 #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
 fn refused(response: &Response) -> Option<String> {
-    response.refusal_text().map(str::to_string)
+    response.refusal_text()
 }
 
 #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]

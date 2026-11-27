@@ -507,7 +507,7 @@ fn graph_listing(
                     edge_offset: cursor.edge_offset as u64,
                 }
             }),
-        valid: readiness.as_ref().is_some_and(|value| value.valid),
+        valid: readiness.as_ref().is_some_and(|value| value.valid()),
         index_manifests,
     }
 }
