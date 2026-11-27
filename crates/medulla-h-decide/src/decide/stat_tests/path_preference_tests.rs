@@ -71,7 +71,7 @@ pub(super) fn pins(h: &Harness, tenant: &str) -> (ComponentDependency, DecisionP
     (schema, DecisionPolicyRef::Pinned { component })
 }
 
-fn context(who: &str, tenant: &str) -> VerifiedRequestContext {
+pub(super) fn context(who: &str, tenant: &str) -> VerifiedRequestContext {
     VerifiedRequestContext::verified_for_test_in_tenant(who, tenant)
 }
 

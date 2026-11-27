@@ -11,6 +11,7 @@
 use medulla_protocol_types::protocol::ResultPayload;
 
 /// The batch a handler plans and the reply that follows its commit.
+#[derive(Debug)]
 pub struct PlannedWrite {
     /// The graph the operations commit to.
     pub graph: String,

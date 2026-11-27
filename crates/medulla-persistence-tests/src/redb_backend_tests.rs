@@ -348,7 +348,6 @@ fn seed_valid_resource_reservation(
         state: ResourceReservationRecordState::Released,
         revision: 1,
         lifecycle_revision: 1,
-        tombstone: true,
     };
     let durable = DurableResourceReservationShadow {
         record,

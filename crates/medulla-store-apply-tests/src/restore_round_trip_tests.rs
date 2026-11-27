@@ -122,6 +122,7 @@ fn a_restore_round_trip_carries_every_graph_scoped_table() {
         &source,
         &mut ops,
         &mut Vec::new(),
+        &mut Vec::new(),
         "restore-seed-rows",
         1,
         DurableCrypto::none(),

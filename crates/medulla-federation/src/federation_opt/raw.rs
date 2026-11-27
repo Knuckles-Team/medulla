@@ -330,9 +330,9 @@ mod tests {
 
     fn scan(session: &FederationSession, remote: &RawRemote) -> Result<RowSet, String> {
         let op = Op::ForeignScan {
-            source: ForeignSourceSpec::Named {
+            source: Box::new(ForeignSourceSpec::Named {
                 name: "docs".into(),
-            },
+            }),
             join: false,
         };
         session.bind_search_text(&op, "alpha");

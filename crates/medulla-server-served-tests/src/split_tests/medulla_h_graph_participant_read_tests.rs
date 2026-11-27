@@ -96,7 +96,7 @@ mod served {
             .await;
         assert!(put.error.is_none(), "Put refused: {put:?}");
         {
-            let guard = served.state.read().await;
+            let guard = served.state().read().await;
             let core = guard
                 .registry
                 .get(GRAPH)

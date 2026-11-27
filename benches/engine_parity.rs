@@ -1024,6 +1024,7 @@ fn matview_refresh() -> Record {
         owner: "bench".to_string(),
         refreshed_seq: store.commit_seq(),
         stale: false,
+        program: None,
     };
     let rows = |count: usize| -> Vec<Vec<serde_json::Value>> {
         (0..count)

@@ -1517,7 +1517,7 @@ async fn task_dump_is_one_consistent_snapshot() {
         kind: TaskKind::External,
     });
     let held = medulla_server_api::routed_write_coalescer::lock_graph("observe:dump-lock").await;
-    let dump = |served: &Served| {
+    let dump = || {
         served.call(
             "__commons__",
             Method::Profile {
@@ -1527,7 +1527,7 @@ async fn task_dump_is_one_consistent_snapshot() {
         )
     };
 
-    let first = profile_report("Profile task_dump", dump(&served).await);
+    let first = profile_report("Profile task_dump", dump().await);
     assert_eq!(first.kind, ProfileKind::TaskDump);
     // The four registries are listed by one read each, under one sequence number.
     assert!(first.seq > 0);
@@ -1553,7 +1553,7 @@ async fn task_dump_is_one_consistent_snapshot() {
     assert_eq!((first.seconds, first.hz, first.samples), (0, 0, 0));
 
     // The next dump has a later sequence number.
-    let second = profile_report("Profile task_dump", dump(&served).await);
+    let second = profile_report("Profile task_dump", dump().await);
     assert!(second.seq > first.seq);
     drop(held);
     drop(dumped);

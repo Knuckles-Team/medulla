@@ -13,7 +13,17 @@ fn people() -> GraphView {
 fn explain(view: &GraphView, query: &str) -> (Vec<Vec<Option<String>>>, Vec<SparqlRowProof>) {
     let (table, proofs) =
         execute_explained(&Dataset::new(view, Vec::new()), query, &Projection::raw()).unwrap();
-    (table.to_rows().1, proofs)
+    let rows = table
+        .to_rows()
+        .1
+        .into_iter()
+        .map(|row| {
+            row.into_iter()
+                .map(|cell| cell.map(|term| term.value_text()))
+                .collect()
+        })
+        .collect();
+    (rows, proofs)
 }
 
 fn has_triple(proof: &SparqlRowProof, subject: &str, predicate: &str, object: &str) -> bool {

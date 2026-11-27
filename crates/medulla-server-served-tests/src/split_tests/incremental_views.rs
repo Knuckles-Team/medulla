@@ -742,7 +742,7 @@ async fn view_delta_feed_matches_result_difference() {
         assert!(!read.gap, "change {step}: the cursor stays inside the ring");
         for event in &read.events {
             assert_eq!(event.table, DELTA_VIEW);
-            match event.kind {
+            match &event.kind {
                 CdcKind::InsertRow => *folded.entry(event.node_id.clone()).or_insert(0) += 1,
                 CdcKind::DeleteRow => *folded.entry(event.node_id.clone()).or_insert(0) -= 1,
                 other => panic!("a view feed carries row changes only, got {other:?}"),

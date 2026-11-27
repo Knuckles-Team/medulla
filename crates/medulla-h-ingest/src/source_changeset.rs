@@ -1073,6 +1073,7 @@ mod tests {
                 agent_identity: None,
                 run_trace_id: None,
                 git: None,
+                symbol_edit: None,
             };
             c.id = c.canonical_id();
             c
@@ -1090,6 +1091,7 @@ mod tests {
             merge: keep_ours,
             agent_identity: None,
             git_origin: None,
+            symbol_edit: None,
         };
         let submit = |blob: &str| {
             accept(

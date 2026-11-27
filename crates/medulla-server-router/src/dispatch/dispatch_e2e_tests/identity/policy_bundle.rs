@@ -35,10 +35,9 @@ fn durable_state(dir: &std::path::Path) -> Arc<RwLock<ServerState>> {
             roles: Vec::new(),
         })
         .expect("bootstrap the System identity");
-    Arc::new(RwLock::new(super::super::test_support::new_state_for_test(
-        "dispatch-test-secret",
-        layer,
-    )))
+    Arc::new(RwLock::new(
+        crate::dispatch::test_support::new_state_for_test("dispatch-test-secret", layer),
+    ))
 }
 
 fn editors_group() -> IdentityOp {

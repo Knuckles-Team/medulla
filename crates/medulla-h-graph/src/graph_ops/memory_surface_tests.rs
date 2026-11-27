@@ -3,7 +3,8 @@
 //! tenants, and check how the three methods are routed.
 
 use super::memory_surface::{
-    absent_record, admit_remember, export, promotion_support_refusal, recall, Admitted,
+    absent_record, admit_remember, export, node_blob, promotion_support_refusal, read_usage,
+    recall, tenant_max_bytes, Admitted,
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
@@ -1359,12 +1360,12 @@ fn held_memory_is_refused_and_logged() {
     let core = GraphCore::new();
     stored_record(&core, "tenant-a", "m:held", 0.1, true);
     stored_record(&core, "tenant-a", "m:free", 0.1, false);
-    let ids = [
+    let candidates = [
         "memory:tenant-a:m:held".to_string(),
         "memory:tenant-a:m:free".to_string(),
     ];
     let nodes = core.node_count();
-    let (pruned, live, held) = core.evict_below(&ids, 0.5, true);
+    let (pruned, live, held) = core.evict_below(&candidates, 0.5, true);
     assert_eq!(pruned, ["memory:tenant-a:m:free"]);
     assert!(live.is_empty());
     assert_eq!(held, ["memory:tenant-a:m:held"]);

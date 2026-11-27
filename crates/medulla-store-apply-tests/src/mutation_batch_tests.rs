@@ -5800,6 +5800,7 @@ fn no_graph_version_bump_goes_unpublished() {
         &db,
         &mut ops,
         &mut Vec::new(),
+        &mut Vec::new(),
         "drain-publication",
         1,
         DurableCrypto::none(),

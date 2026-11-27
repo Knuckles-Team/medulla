@@ -532,6 +532,7 @@ fn tensor_graph_vector_cas_dedup_eg387() {
         .unwrap()
         .reduce(1, medulla_tensor::ReduceKind::Mean)
         .unwrap();
+    drop(ctx);
     let store = store.into_inner().unwrap();
     assert_eq!(
         store.len(),

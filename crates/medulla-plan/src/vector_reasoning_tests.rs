@@ -81,10 +81,11 @@ fn add_embedding_then_reason_then_ann_consistent() {
     // BEFORE the write: only p1,p2 are inferred members (p2 closer to q than p1).
     let before = {
         let view = core.analysis_snapshot();
-        reason_rank_plan(q.clone())
+        let ids = reason_rank_plan(q.clone())
             .execute(&PlanCtx::new(&view, &semantic))
             .unwrap()
-            .ids()
+            .ids();
+        ids
     };
     assert_eq!(
         before,
@@ -109,10 +110,11 @@ fn add_embedding_then_reason_then_ann_consistent() {
     // AND ANN-ranked FIRST (closest to q). It cleared BOTH gates in one plan.
     let after = {
         let view = core.analysis_snapshot();
-        reason_rank_plan(q.clone())
+        let ids = reason_rank_plan(q.clone())
             .execute(&PlanCtx::new(&view, &semantic))
             .unwrap()
-            .ids()
+            .ids();
+        ids
     };
     assert_eq!(
         after,

@@ -230,7 +230,7 @@ mod integration {
             durable_version,
             "serving projection must publish the committed authoritative version"
         );
-        assert!(manifest.valid, "resident projection must be complete");
+        assert!(manifest.valid(), "resident projection must be complete");
         assert_eq!(
             manifest.source_snapshot_version,
             Some(durable_version),

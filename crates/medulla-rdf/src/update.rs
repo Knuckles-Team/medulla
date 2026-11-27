@@ -413,7 +413,7 @@ mod tests {
         let graphs: Vec<String> = r
             .solutions
             .iter()
-            .filter_map(|s| s.get("g").map(|b| b.as_str().to_string()))
+            .filter_map(|s| s.get("g").map(|b| b.value_text()))
             .collect();
         assert_eq!(
             graphs,

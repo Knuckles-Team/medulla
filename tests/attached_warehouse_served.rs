@@ -84,6 +84,7 @@ async fn register(
                 name: name.to_string(),
                 source: spec,
                 quota: None,
+                acceleration: None,
             },
         ),
     )

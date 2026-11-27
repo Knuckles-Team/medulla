@@ -802,7 +802,10 @@ mod admission_tests {
             "the failed partial core is evicted"
         );
         let manifest = s.registry.materialization_manifest("frozen:graph").unwrap();
-        assert!(!manifest.valid, "the image is never advertised as complete");
+        assert!(
+            !manifest.valid(),
+            "the image is never advertised as complete"
+        );
         drop(s);
 
         // The same exit degrades the graph's readiness (MEDULLA-OBSERVE-R007.1), naming the

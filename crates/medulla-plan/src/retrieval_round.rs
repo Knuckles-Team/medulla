@@ -1130,6 +1130,8 @@ mod tests {
         forest_similar_k: 8,
         forest_redundancy_weight: 0.5,
         forest_conflict_weight: 1.0,
+        forest_hops: 2,
+        forest_candidate_cap: 2_000,
     };
 
     fn blob(label: &str) -> Vec<u8> {
@@ -1150,6 +1152,7 @@ mod tests {
             state: None,
             feedback: None,
             arbitration: None,
+            context_budget_tokens: None,
         }
     }
 
@@ -1171,7 +1174,8 @@ mod tests {
         core.add_node("other".into(), blob("Other"));
         let view = core.analysis_snapshot();
         let semantic = SemanticStore::new();
-        run_round(request, &PlanCtx::new(&view, &semantic), &KNOBS)
+        let result = run_round(request, &PlanCtx::new(&view, &semantic), &KNOBS);
+        result
     }
 
     #[test]

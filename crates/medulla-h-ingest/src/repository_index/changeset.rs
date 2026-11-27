@@ -1489,7 +1489,7 @@ mod tests {
             for path in &paths {
                 let id = fingerprint_node_id("repo", path).unwrap();
                 if let Some(print) = self.nodes.get(&id).and_then(|properties| {
-                    super::enrich::fingerprint::stored_fingerprint(
+                    crate::repository_index::enrich::fingerprint::stored_fingerprint(
                         &serde_json::to_value(properties).unwrap(),
                     )
                 }) {

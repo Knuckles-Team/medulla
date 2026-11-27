@@ -447,7 +447,7 @@ fn a_pinned_policy_component_decides_and_commits() {
     let candidates = candidate_facts(&entries).expect("facts");
     let inputs = inputs(asked, candidates, Vec::new(), read).expect("inputs");
     let identity = RecordIdentity {
-        tenant_id: tenant.to_string(),
+        tenant_id: TENANT.to_string(),
         caller_principal: "caller-a".to_string(),
         created_at_ms: 21,
     };

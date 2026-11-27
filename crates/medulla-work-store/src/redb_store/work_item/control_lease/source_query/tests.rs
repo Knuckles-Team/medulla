@@ -113,7 +113,7 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
         )?
         .expect("one lease row");
         assert_eq!(row["kind"], "source.query.approval");
-        let stored = row.to_string();
+        let stored = serde_json::to_string(&row).expect("the row serialises");
         assert!(
             !stored.contains("secret_column"),
             "the grant holds no SQL text"

@@ -828,14 +828,14 @@ mod colocated_executor_tests {
             t1,
         )
         .unwrap();
-        assert!(
-            matches!(
-                failed_again.state,
-                medulla_jobs::model::JobState::Submitted { .. }
-            ),
-            "two failures of three attempts leave the job retryable"
-        );
-        assert_eq!(failed_again.not_before_ms, t1 + 1_000);
+        let medulla_jobs::model::JobState::Backoff { not_before_ms, .. } = failed_again.state
+        else {
+            panic!(
+                "two failures of three attempts leave the job retryable in backoff, got {:?}",
+                failed_again.state
+            );
+        };
+        assert_eq!(not_before_ms, t1 + 1_000);
         assert!(claim_at(t1 + 999).is_none());
 
         // Attempt 3 is the last: its failure ends the job with the code only.

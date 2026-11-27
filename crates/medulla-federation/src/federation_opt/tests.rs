@@ -1356,6 +1356,7 @@ mod search_fusion {
                     max_k: 50,
                     score_kind: ScoreKind::Bm25,
                 }),
+                raw: false,
             },
         }
     }

@@ -1011,6 +1011,7 @@ mod graph_meta_migration_tests {
             graph_type: gtype,
             incarnation_id: incarnation_id.to_string(),
             schema_sources: std::sync::Arc::new(sources),
+            importing: None,
         })
         .unwrap()
     }

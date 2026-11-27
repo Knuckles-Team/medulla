@@ -17,6 +17,7 @@ use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::retrieval::{LearningWrite, PointerRef};
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
 use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use serde_json::json;
 
@@ -89,7 +90,7 @@ fn review(tier: SkillTier, team: &str, approver: &str) -> TierReview {
 
 /// A promotion request with the tier review and the graph the membership is read from.
 fn tiered_request(
-    schema: &medulla_decision_types::decision::ComponentDependency,
+    schema: &medulla_agent_types::agent_component::ComponentDependency,
     tier: SkillTier,
     receipt: &str,
     challenger: &str,
@@ -171,7 +172,7 @@ fn abstain_code(batch: &DecisionBatch) -> String {
 /// Promote `challenger` on a decision that wins, commit it and move the pointer.
 async fn promote_to(
     h: &Harness,
-    schema: &medulla_decision_types::decision::ComponentDependency,
+    schema: &medulla_agent_types::agent_component::ComponentDependency,
     tier: SkillTier,
     challenger: &str,
     champion: &str,

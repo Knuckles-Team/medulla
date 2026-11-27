@@ -41,6 +41,7 @@ fn bootstrap() -> Result<GraphBootstrap, CommitRefusal> {
         graph_type: medulla_protocol_types::protocol::GraphType::Global,
         graph_version: 0,
         snapshot: Vec::new(),
+        seal_key_id: None,
     })
 }
 
@@ -58,6 +59,7 @@ async fn seed(store: &dyn ObjectStore) {
             key: EMPTY_SHA256.into(),
             sha256: EMPTY_SHA256.into(),
         },
+        seal_key_id: None,
         batches: Vec::new(),
         digest: String::new(),
     };

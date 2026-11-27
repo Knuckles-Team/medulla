@@ -114,7 +114,7 @@ fn request(schema: &ComponentDependency, body: serde_json::Value) -> DecideReque
 
 fn verdict(record: &StatisticalDecisionRecord) -> String {
     match &record.outcome {
-        StatisticalOutcome::Advisory { scores, .. } => scores[0].option_id.clone(),
+        StatisticalOutcome::Advisory { scores, .. } => scores.as_slice()[0].option_id.clone(),
         other => panic!("an advisory answer, got {other:?}"),
     }
 }

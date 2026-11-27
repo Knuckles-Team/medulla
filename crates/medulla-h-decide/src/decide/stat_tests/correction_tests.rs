@@ -17,6 +17,7 @@ use medulla_decision_types::correction::{
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_protocol_types::protocol::ResultPayload;
+use serde_json::Value;
 
 const GRAPH: &str = "__commons__";
 
@@ -163,7 +164,8 @@ async fn harness() -> Harness {
 #[tokio::test]
 async fn correction_reaches_the_handler() {
     let h = harness().await;
-    seed_action(&core(&h).await, ACTION, TENANT, PRODUCER);
+    let graph = core(&h).await;
+    seed_action(&graph, ACTION, TENANT, PRODUCER);
     let write = plan(
         &h,
         &corrector(TENANT),

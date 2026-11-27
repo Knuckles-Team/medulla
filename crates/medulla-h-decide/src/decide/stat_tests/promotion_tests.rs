@@ -5,7 +5,7 @@
 
 use super::kernel_family_support::kernel_request;
 use super::learning_tests::{activate, pointer_state};
-use super::path_preference_tests::{pins, OTHER};
+use super::path_preference_tests::{context, pins, OTHER};
 use super::retrieval_tests::learn;
 use super::*;
 use medulla_decision_outcome_types::policy_evolution::{

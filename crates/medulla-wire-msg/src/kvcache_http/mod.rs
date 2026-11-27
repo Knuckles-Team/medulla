@@ -1407,7 +1407,11 @@ mod tests {
                 tokio::spawn(async move {
                     let resp = match http1::read_request(&mut stream, HTTP_LIMITS).await {
                         Some(r) => handle_authorized(&store, &r),
-                        None => KvResponse::error("400 Bad Request", "InvalidRequest", "malformed"),
+                        None => KvResponse::error(
+                            ReplyStatus::BadRequest,
+                            "InvalidRequest",
+                            "malformed",
+                        ),
                     };
                     let head = format!(
                         "HTTP/1.1 {}\r\ncontent-type: {}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",

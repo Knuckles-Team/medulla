@@ -517,6 +517,7 @@ mod secure_empty_policy_tests {
                 "graph",
                 GraphType::Agent,
                 None,
+                None,
                 AccessLevel::Read,
             )
         };
@@ -548,6 +549,7 @@ mod secure_empty_policy_tests {
             "agent:a",
             GraphType::Agent,
             Some("agent:a"),
+            None,
             AccessLevel::Read,
         );
         assert!(result
@@ -574,6 +576,7 @@ mod secure_empty_policy_tests {
                 caller,
                 "__commons__",
                 GraphType::Commons,
+                None,
                 None,
                 AccessLevel::Read,
             )

@@ -95,7 +95,10 @@ fn run(local: &GraphView, endpoint: &Endpoint, query: &str) -> Result<Vec<Soluti
 fn column(rows: &[Solution], var: &str) -> Vec<String> {
     let mut out: Vec<String> = rows
         .iter()
-        .map(|row| row.get(var).map_or("-", Binding::as_str).to_string())
+        .map(|row| {
+            row.get(var)
+                .map_or_else(|| "-".to_string(), Binding::value_text)
+        })
         .collect();
     out.sort();
     out

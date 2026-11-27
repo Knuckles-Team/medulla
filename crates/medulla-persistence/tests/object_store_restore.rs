@@ -12,7 +12,7 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_storage::{DurabilityClass, StorageBackendSpec};
 use object_store::memory::InMemory;
 use object_store::path::Path as ObjPath;
-use object_store::ObjectStore;
+use object_store::{ObjectStore, ObjectStoreExt};
 
 #[path = "common/replay_fixture.rs"]
 mod replay_fixture;

@@ -5178,6 +5178,8 @@ mod tests {
             tombstone_count: 0,
             governance: Default::default(),
             row_versions: Default::default(),
+            papers: Default::default(),
+            class_reports: BTreeMap::new(),
         };
         admit_relationships(
             RelationshipAdmissionContext {

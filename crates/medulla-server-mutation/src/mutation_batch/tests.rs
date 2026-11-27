@@ -400,6 +400,7 @@ fn change_envelope_projects_declare_embedding_space() {
         EmbeddingSpaceRef::pinned("m", "1", "a".repeat(64), "b".repeat(64), 3, true).unwrap();
     let mutation = compile_methods(
         CompileBatch {
+            status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id: "declare-space",
             request_id: 10,
             attempt_nonce: None,

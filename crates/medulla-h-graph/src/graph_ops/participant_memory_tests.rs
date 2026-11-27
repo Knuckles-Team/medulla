@@ -334,7 +334,8 @@ mod participant_surface_proofs {
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
     use medulla_server_auth::access::requires_write;
-    use medulla_server_mutation::mutation::{apply_coalescable_write, GATEWAY_ROUTED};
+    use medulla_server_mutation::mutation::apply_coalescable_write;
+    use medulla_server_mutation::mutation::plan::GATEWAY_ROUTED;
     use medulla_types::contract::{ResourceId, TenantId};
     use medulla_work_types::memory::{
         ConversationMessage, ConversationRecord, MessageRole, ThreadAnchor,

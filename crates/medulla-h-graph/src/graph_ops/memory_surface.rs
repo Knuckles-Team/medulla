@@ -203,7 +203,7 @@ fn usage_node_id(tenant: &str) -> String {
 }
 
 /// The tenant's counter, when its node is stored.
-fn read_usage(core: &GraphCore, tenant: &str) -> Option<u64> {
+pub(super) fn read_usage(core: &GraphCore, tenant: &str) -> Option<u64> {
     let blob = core.get_node_properties(&usage_node_id(tenant))?;
     let props = medulla_types::msgpack::decode_property_object(&blob).ok()?;
     if props.get(TENANT_KEY)?.as_str()? != tenant {
@@ -463,7 +463,7 @@ fn node_props(tenant: &str, request: &MemoryRememberRequest) -> serde_json::Valu
     serde_json::Value::Object(props)
 }
 
-fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
+pub(super) fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(&node_props(tenant, request)).map_err(|error| {
         refuse(
             "PARAMETER_INVALID",

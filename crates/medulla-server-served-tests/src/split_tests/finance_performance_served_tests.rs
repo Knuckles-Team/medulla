@@ -7,12 +7,12 @@ use medulla_finance_types::wire_finance::{FinanceRecord, FinanceRecordKind};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::finance_accounting::FinancePerformanceCard;
 
-use super::connector_pack_harness::{ok, Served, TENANT};
+use super::connector_pack_harness::{ok, Served, GRAPH, TENANT};
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.4
 #[tokio::test]
 async fn a_range_without_a_valuation_is_a_null_card_with_no_valuation() {
-    let served = Served::provisioned("finance-source", &[]).await;
+    let served = Served::provisioned(GRAPH, "finance-source", &[]).await;
     let mut fields = BTreeMap::new();
     fields.insert(
         "accountBindingState".to_string(),

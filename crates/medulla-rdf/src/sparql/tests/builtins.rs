@@ -8,8 +8,7 @@ fn scalar(view: &GraphView, expr: &str) -> String {
         .first()
         .and_then(|s| s.get("x"))
         .unwrap_or_else(|| panic!("no ?x for {expr}"))
-        .as_str()
-        .to_string()
+        .value_text()
 }
 
 /// MEDULLA-127: hash built-ins against the canonical `"abc"` test vectors.

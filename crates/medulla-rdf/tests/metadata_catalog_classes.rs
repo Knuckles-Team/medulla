@@ -78,7 +78,7 @@ fn catalog_classes_roll_up_to_eg_core_and_align_to_w3c() {
     let triples = documents();
     let owl_class = format!("{OWL}Class");
     let sub = format!("{RDFS}subClassOf");
-    let expected: [(String, &[String]); 16] = [
+    let expected: [(String, &[String]); 18] = [
         (
             format!("{CAT}Catalog"),
             &[format!("{CAT}Asset"), format!("{DCAT}Catalog")],

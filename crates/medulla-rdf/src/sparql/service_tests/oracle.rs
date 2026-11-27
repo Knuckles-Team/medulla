@@ -277,7 +277,7 @@ fn subjects(filter: &str, refuse_filters: bool) -> (Vec<String>, bool) {
         .solutions
         .iter()
         .filter_map(|row| row.get("s"))
-        .map(|subject| subject.as_str().replace("urn:s:", ""))
+        .map(|subject| subject.value_text().replace("urn:s:", ""))
         .collect();
     kept.sort();
     let sent = endpoint.sent.lock().unwrap();

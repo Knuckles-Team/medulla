@@ -15,6 +15,7 @@ use super::super::stat_log::LogReader;
 use super::super::stat_run_credit::run_key;
 use super::super::stat_session_note::record_note;
 use super::super::stat_vectors::GraphVectors;
+use medulla_exec::exec::TextEmbedder;
 
 const DIMS: usize = 16;
 
@@ -79,6 +80,7 @@ fn ctx<'a>(h: &'a Harness, tenant: &'a str) -> ExecutionContext<'a> {
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     }
 }
 

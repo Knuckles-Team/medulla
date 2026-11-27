@@ -893,7 +893,7 @@ async fn first_commit_bootstraps_head_and_later_commits_publish() {
 // variant each refuse with their wire code, before the listener opens. The variable is
 // process-wide, so the cases run in one test under a lock.
 #[test]
-fn open_from_env_refuses_before_the_listener() {
+fn open_from_env_refuses_an_unset_secret_and_an_unknown_variant_before_the_listener() {
     use crate::object_store_backend::{open_from_env, STORAGE_BACKEND_ENV};
     use medulla_storage::SecretRef;
     use std::sync::Mutex;
@@ -943,7 +943,7 @@ fn open_from_env_refuses_before_the_listener() {
 // publishes version 2. A `HEAD` that lost the fence refuses `OBJECT_PUBLISH_STALE` and the
 // commit is not acked.
 #[tokio::test]
-async fn first_commit_bootstraps_head_and_later_commits_publish() {
+async fn a_crash_between_manifest_and_head_leaves_head_and_refuses_stale() {
     use medulla_storage::object::fetch::ObjectFetcher;
 
     let crashy = CrashyStore::new(false, true);

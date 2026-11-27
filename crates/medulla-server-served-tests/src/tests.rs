@@ -14,6 +14,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_query_types::wire::{Op, Pred};
 use medulla_server_api::compute::weight_semantic_results;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -677,7 +678,6 @@ async fn test_unified_query_matches_separate_surfaces_oracle() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_query_types::wire::{Op, Pred};
     let state = test_state();
     build_unified_fixture(&state).await;
 

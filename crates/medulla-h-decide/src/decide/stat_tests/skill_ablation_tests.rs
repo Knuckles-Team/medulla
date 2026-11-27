@@ -57,7 +57,7 @@ async fn record_set(h: &Harness, set: &RolloutSet) -> String {
 /// Make `revision:one` the champion of the skill through a committed `promote` record.
 async fn champion(
     h: &Harness,
-    schema: &medulla_decision_types::decision::ComponentDependency,
+    schema: &medulla_agent_types::agent_component::ComponentDependency,
 ) -> String {
     let set = skill_set("revision:one", "revision:zero", 150_000);
     let digest = record_set(h, &set).await;
@@ -80,7 +80,7 @@ async fn champion(
 }
 
 fn canary_request(
-    schema: &medulla_decision_types::decision::ComponentDependency,
+    schema: &medulla_agent_types::agent_component::ComponentDependency,
     receipt: &str,
     extra: &[(&str, TypedValue)],
 ) -> DecideRequest {
