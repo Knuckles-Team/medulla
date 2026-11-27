@@ -413,6 +413,21 @@ async fn dispatch_decision_methods(
                             Err(refusal) => Response::err(req.id, refusal),
                         }
                     }
+                    // A critique is recorded on the proposal's node (MEDULLA-DECISION-ENGINE-R038.6).
+                    medulla_decision_types::decision::DecisionEvalOp::HeldItemCritique { request } => {
+                        match medulla_h_decide::decide::handle_held_item_critique(
+                            state,
+                            verified_context,
+                            request,
+                        )
+                        .await
+                        {
+                            Ok(plan) => {
+                                commit_planned_write(state, req.id, verified_context, plan).await
+                            }
+                            Err(refusal) => Response::err(req.id, refusal),
+                        }
+                    }
                     op => {
                         medulla_h_decide::decide::handle_decision_eval(
                             state,

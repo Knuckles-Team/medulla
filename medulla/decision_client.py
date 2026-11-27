@@ -1058,6 +1058,30 @@ def certify_local_skill_op(request: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "certify_local_skill", "request": dict(request)}
 
 
+def held_item_critique_op(
+    tenant_id: str,
+    graph: str,
+    item_ref: str,
+    content_digest: str,
+    answers: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Record the critique of one run output proposal (R038.6) as a ``DecisionEval``
+    op. Needs the scope ``admin:decision-eval``. ``answers`` holds one
+    ``{"id", "passed"}`` per question of the ``checklist`` a ``held_item_admission``
+    answer names. The engine derives the verdict and records ``critique_ref``,
+    ``critique_digest`` and ``critique_verdict`` on the proposal's node."""
+    return {
+        "op": "held_item_critique",
+        "request": {
+            "tenant_id": tenant_id,
+            "graph": graph,
+            "item_ref": item_ref,
+            "content_digest": content_digest,
+            "answers": [dict(answer) for answer in answers],
+        },
+    }
+
+
 def certification_op(
     tenant_id: str, component_id: str, definition_digest: str
 ) -> dict[str, Any]:
@@ -2352,6 +2376,22 @@ class DecisionClient:
             skill_eval_case_add_op(request), idempotency_key
         )
 
+    async def held_item_critique(
+        self,
+        tenant_id: str,
+        graph: str,
+        item_ref: str,
+        content_digest: str,
+        answers: Sequence[Mapping[str, Any]],
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Send ``DecisionEval`` op ``held_item_critique`` (``admin:decision-eval``)."""
+        return await self._skill_eval_send(
+            held_item_critique_op(tenant_id, graph, item_ref, content_digest, answers),
+            idempotency_key,
+        )
+
     async def certification(
         self, tenant_id: str, component_id: str, definition_digest: str
     ) -> Any:
@@ -2809,6 +2849,7 @@ __all__ = [
     "record_outcome_op",
     "resolve_op",
     "certification_op",
+    "held_item_critique_op",
     "certify_local_skill_op",
     "promote_rule_op",
     "propose_rule_op",

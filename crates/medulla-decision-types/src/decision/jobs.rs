@@ -691,6 +691,11 @@ pub enum DecisionEvalOp {
     CertifyLocalSkill {
         request: Box<super::local_certification::LocalCertificationRequest>,
     },
+    /// Record the critique of one run output proposal on its node
+    /// (MEDULLA-DECISION-ENGINE-R038.6).
+    HeldItemCritique {
+        request: super::held_item::HeldItemCritiqueRequest,
+    },
     /// Read the current attestation of one skill revision
     /// (MEDULLA-DECISION-ENGINE-R142.103).
     Certification {
@@ -727,6 +732,7 @@ impl DecisionEvalOp {
                 | Self::RetrievalRankingSubmit { .. }
                 | Self::GroundedAnswerSubmit { .. }
                 | Self::CertifyLocalSkill { .. }
+                | Self::HeldItemCritique { .. }
                 | Self::SkillEval { .. }
                 | Self::SkillEvalCaseAdd { .. }
                 | Self::SkillEvalCalibrate { .. }
@@ -751,6 +757,7 @@ impl DecisionEvalOp {
             Self::GroundedAnswerSubmit { request } => &request.tenant_id,
             Self::CertifyLocalSkill { request } => &request.tenant_id,
             Self::Certification { request } => &request.tenant_id,
+            Self::HeldItemCritique { request } => &request.tenant_id,
             Self::SkillEval { request } => &request.tenant_id,
             Self::SkillEvalCaseAdd { request } => &request.tenant_id,
             Self::SkillEvalReport { request } => &request.tenant_id,

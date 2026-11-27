@@ -230,6 +230,7 @@ method_results! {
     DecisionEvalRetrievalRankingSubmit(DecisionEval / "retrieval_ranking_submit") => Raw<DecisionJobRecord>;
     DecisionEvalGroundedAnswerSubmit(DecisionEval / "grounded_answer_submit") => Raw<DecisionJobRecord>;
     DecisionEvalCertifyLocalSkill(DecisionEval / "certify_local_skill") => Raw<DecisionJobRecord>;
+    DecisionEvalHeldItemCritique(DecisionEval / "held_item_critique") => Raw<medulla_decision_types::decision::held_item::HeldItemCritiqueRecorded>;
     DecisionEvalCertification(DecisionEval / "certification") => Raw<medulla_decision_types::decision::local_certification::CertificationReadAnswer>;
     DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::DecisionEvalReceipt>>;
     DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::DecisionReceiptPage>;

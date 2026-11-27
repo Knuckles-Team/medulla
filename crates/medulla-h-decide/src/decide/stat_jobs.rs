@@ -885,7 +885,9 @@ async fn serve_eval(
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),
         // The suite report is also a graph node, so the op is planned with its graph by
         // `plan_skill_eval` and never answered here (MEDULLA-DECISION-ENGINE-R711.3).
-        DecisionEvalOp::SkillEval { .. } | DecisionEvalOp::SkillEvalCaseAdd { .. } => {
+        DecisionEvalOp::SkillEval { .. }
+        | DecisionEvalOp::SkillEvalCaseAdd { .. }
+        | DecisionEvalOp::HeldItemCritique { .. } => {
             return Err("INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string())
         }
         DecisionEvalOp::SkillEvalReport { request } => {
@@ -1217,6 +1219,32 @@ pub(super) async fn plan_skill_eval_case_add(
             operations,
             reply: ResultPayload::of::<DecisionEvalSkillEvalCaseAdd>(added)?,
         })
+    }
+    .instrument(span)
+    .await
+    .inspect_err(|error| telemetry::refused("DecisionEval", error))
+}
+
+/// Plan one `DecisionEval` op `held_item_critique`: the critique derived from the answers and
+/// recorded on the proposal's node, which the router commits to the request's graph
+/// (MEDULLA-DECISION-ENGINE-R038.6). The proposal is read through the caller's access check and
+/// row-level filter, and the time is the engine's clock.
+pub(super) async fn plan_held_item_critique(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    request: medulla_decision_types::decision::held_item::HeldItemCritiqueRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    if request.tenant_id != verified.tenant() {
+        let error = tenant_refusal("DecisionEval");
+        telemetry::refused("DecisionEval", &error);
+        return Err(error);
+    }
+    let span = telemetry::span("DecisionEval", verified.tenant());
+    async {
+        let view =
+            super::stat_support::filtered_view(state, verified.agent_id(), &request.graph).await?;
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        super::stat_held_item_critique::plan(&view, verified, &request, now_ms)
     }
     .instrument(span)
     .await

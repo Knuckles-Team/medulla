@@ -275,3 +275,145 @@ async fn program_needs_independent_verifier_and_passes() {
     );
     assert!(denied.unwrap_err().starts_with("ACCESS_DENIED"));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R038.6
+#[tokio::test]
+async fn the_engine_records_the_critique_the_admission_then_reads() {
+    use medulla_decision_types::decision::held_item::{
+        critique_checklist, CritiqueAnswer, HeldItemCritiqueRecorded, HeldItemCritiqueRequest,
+        HeldItemOutcome,
+    };
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let core = {
+        let mut guard = h.state.write().await;
+        guard
+            .registry
+            .create_graph(
+                GRAPH,
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
+            .unwrap();
+        guard.registry.get(GRAPH).unwrap().core.clone()
+    };
+    let bare = serde_json::json!({
+        "held_item_kind": "run_output_proposal",
+        "content_digest": digest('d'),
+    });
+    core.add_node("prop-bare".to_string(), rmp_serde::to_vec_named(&bare).unwrap());
+    core.add_node(
+        "prog-1".to_string(),
+        rmp_serde::to_vec_named(&program("compiler", Some("verifier"), 2, "active")).unwrap(),
+    );
+    let (schema, _) = publish_route_schema(&h);
+    let ask = || {
+        held_request(
+            &schema,
+            DecisionPolicyRef::Default,
+            "run_output_proposal",
+            "prop-bare",
+            &digest('d'),
+        )
+    };
+
+    // Without a critique the gate abstains and still names the questions to answer.
+    let before = decide(&h, ask()).await.unwrap();
+    assert_eq!(answer(&before), "abstained:CRITIQUE_MISSING");
+    let questions = typed(&before).checklist;
+    assert_eq!(questions, critique_checklist());
+    assert_eq!(questions.len(), 4);
+
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+    let critique = |passes: [bool; 4]| HeldItemCritiqueRequest {
+        tenant_id: TENANT.to_string(),
+        graph: GRAPH.to_string(),
+        item_ref: "prop-bare".to_string(),
+        content_digest: digest('d'),
+        answers: questions
+            .iter()
+            .zip(passes)
+            .map(|(question, passed)| CritiqueAnswer {
+                id: question.id.clone(),
+                passed,
+            })
+            .collect(),
+    };
+    let commit = |write: &super::super::planned_write::PlannedWrite| {
+        for op in &write.operations {
+            core.add_node(
+                op["id"].as_str().unwrap().to_string(),
+                rmp_serde::to_vec_named(&op["properties"]).unwrap(),
+            );
+        }
+    };
+    let recorded = |write: &super::super::planned_write::PlannedWrite| -> HeldItemCritiqueRecorded {
+        match &write.reply {
+            medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+                rmp_serde::from_slice(bytes).unwrap()
+            }
+            other => panic!("unexpected payload {other:?}"),
+        }
+    };
+
+    // An accepting critique is recorded on the node, and the gate now admits it.
+    let plan = super::super::handle_held_item_critique(&h.state, &verified, critique([true; 4]))
+        .await
+        .unwrap();
+    let accepted = recorded(&plan);
+    assert_eq!(accepted.verdict, "accept");
+    assert_eq!(plan.graph, GRAPH);
+    commit(&plan);
+    let after = decide(&h, ask()).await.unwrap();
+    assert_eq!(answer(&after), "admitted");
+    let admitted = typed(&after);
+    assert_eq!(admitted.outcome, HeldItemOutcome::Admitted);
+    assert_eq!(admitted.verification_ref.as_deref(), Some(accepted.critique_ref.as_str()));
+    assert_eq!(admitted.critique_digest.as_deref(), Some(digest('d').as_str()));
+    assert_eq!(admitted.critique_verdict.as_deref(), Some("accept"));
+    let node = rmp_serde::from_slice::<serde_json::Value>(&core.get_node_properties("prop-bare").unwrap())
+        .unwrap();
+    assert_eq!(node["critique_recorded_by"], "decider");
+    assert!(node["critique_recorded_at_ms"].as_u64().unwrap() > 0);
+    assert_eq!(node["critique_answer_grounded"], true);
+    assert_eq!(node["held_item_kind"], "run_output_proposal", "the node keeps its other fields");
+
+    // A failed question records a rejecting critique.
+    let plan = super::super::handle_held_item_critique(
+        &h.state,
+        &verified,
+        critique([true, false, true, true]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(recorded(&plan).verdict, "reject");
+    commit(&plan);
+    assert_eq!(answer(&decide(&h, ask()).await.unwrap()), "rejected");
+
+    // A stale digest, a program, an absent item, an incomplete critique and a foreign tenant
+    // refuse and plan nothing.
+    async fn refuse(
+        h: &Harness,
+        verified: &VerifiedRequestContext,
+        request: HeldItemCritiqueRequest,
+    ) -> String {
+        super::super::handle_held_item_critique(&h.state, verified, request)
+            .await
+            .map(|_| ())
+            .unwrap_err()
+    }
+    let mut stale = critique([true; 4]);
+    stale.content_digest = digest('e');
+    assert!(refuse(&h, &verified, stale).await.starts_with("DIGEST_MISMATCH"));
+    let mut program = critique([true; 4]);
+    program.item_ref = "prog-1".to_string();
+    assert!(refuse(&h, &verified, program).await.starts_with("HELD_ITEM_UNKNOWN"));
+    let mut absent = critique([true; 4]);
+    absent.item_ref = "prop-absent".to_string();
+    assert!(refuse(&h, &verified, absent).await.starts_with("HELD_ITEM_UNKNOWN"));
+    let mut incomplete = critique([true; 4]);
+    incomplete.answers.pop();
+    assert!(refuse(&h, &verified, incomplete).await.starts_with("PARAMETER_INVALID"));
+    let mut foreign = critique([true; 4]);
+    foreign.tenant_id = "tenant-other".to_string();
+    assert!(refuse(&h, &verified, foreign).await.starts_with("ACCESS_DENIED"));
+}

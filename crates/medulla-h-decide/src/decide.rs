@@ -127,6 +127,9 @@ mod stat_recommend;
 // MEDULLA-DECISION-ENGINE-R142.101: the served local-skill certification.
 #[cfg(feature = "decide")]
 mod stat_certification;
+// MEDULLA-DECISION-ENGINE-R038.6: the engine records a run output proposal's critique.
+#[cfg(feature = "decide")]
+mod stat_held_item_critique;
 #[cfg(feature = "decide")]
 mod stat_ranking_eval;
 #[cfg(feature = "decide")]
@@ -259,7 +262,10 @@ pub use coverage::handle_capability_coverage;
 pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};
 pub use feature_ledger::handle_feature_ledger;
 pub use guardrail::handle_guardrail_entailment;
-pub use jobs::{handle_decision_eval, handle_decision_fit, handle_skill_eval, handle_skill_eval_case_add};
+pub use jobs::{
+    handle_decision_eval, handle_decision_fit, handle_held_item_critique, handle_skill_eval,
+    handle_skill_eval_case_add,
+};
 pub use log::handle_decision_log;
 pub use loops::handle_loops;
 pub use stat_proposals::handle_revision_proposal_list;

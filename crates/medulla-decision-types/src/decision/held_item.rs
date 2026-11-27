@@ -10,9 +10,11 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::digest::HELD_ITEM_CRITIQUE_DIGEST_DOMAIN;
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::record::outcome::DecisionRefusal;
+use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the kind of the held item.
@@ -44,6 +46,54 @@ pub const ROW_CRITIQUE_REF: &str = "critique_ref";
 pub const ROW_CRITIQUE_DIGEST: &str = "critique_digest";
 /// Node row key: `accept` or `reject`.
 pub const ROW_CRITIQUE_VERDICT: &str = "critique_verdict";
+
+/// Node row key: when the engine recorded the critique, in milliseconds of its clock.
+pub const ROW_CRITIQUE_RECORDED_AT: &str = "critique_recorded_at_ms";
+/// Node row key: the verified principal the engine recorded the critique for.
+pub const ROW_CRITIQUE_RECORDED_BY: &str = "critique_recorded_by";
+/// Node row key prefix of one critique answer: `critique_answer_<id>` holds a boolean.
+pub const ROW_CRITIQUE_ANSWER_PREFIX: &str = "critique_answer_";
+
+/// The questions a critique of a run output proposal answers, as `(id, question)`
+/// (MEDULLA-DECISION-ENGINE-R038.6). A critique answers exactly these ids.
+pub const CRITIQUE_CHECKLIST: &[(&str, &str)] = &[
+    (
+        "grounded",
+        "Is every claim in the output supported by evidence the run read?",
+    ),
+    (
+        "complete",
+        "Does the output answer everything the task asked?",
+    ),
+    (
+        "scoped",
+        "Does the output stay within the task's scope and the caller's permissions?",
+    ),
+    (
+        "safe",
+        "Is the output free of secrets, unsupported commitments and unapproved side effects?",
+    ),
+];
+
+/// One typed question of the critique checklist.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CritiqueQuestion {
+    pub id: String,
+    pub question: String,
+}
+
+/// The checklist of a run output proposal critique, in declared order.
+pub fn critique_checklist() -> Vec<CritiqueQuestion> {
+    CRITIQUE_CHECKLIST
+        .iter()
+        .map(|(id, question)| CritiqueQuestion {
+            id: (*id).to_string(),
+            question: (*question).to_string(),
+        })
+        .collect()
+}
 
 /// The kinds of held item.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,6 +172,111 @@ pub struct HeldItemAnswer {
     /// The refusal code when the outcome is `abstained`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// The questions the critique of a run output proposal answers; empty for a program
+    /// (MEDULLA-DECISION-ENGINE-R038.6).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub checklist: Vec<CritiqueQuestion>,
+    /// The digest the critique the outcome rests on is bound to (a proposal).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub critique_digest: Option<String>,
+    /// The verdict of that critique, `accept` or `reject` (a proposal).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub critique_verdict: Option<String>,
+}
+
+/// One answer of a critique: whether the output satisfies the question `id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CritiqueAnswer {
+    pub id: String,
+    pub passed: bool,
+}
+
+/// The body of `DecisionEval` op `held_item_critique`: record the critique of one run output
+/// proposal on the proposal's node (MEDULLA-DECISION-ENGINE-R038.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HeldItemCritiqueRequest {
+    /// The tenant that owns the proposal; checked against the verified tenant.
+    pub tenant_id: String,
+    /// The graph holding the proposal.
+    pub graph: String,
+    /// The node id of the proposal.
+    pub item_ref: String,
+    /// The digest the caller expects the stored proposal to have.
+    pub content_digest: String,
+    /// One answer per checklist question, no more and no fewer.
+    pub answers: Vec<CritiqueAnswer>,
+}
+
+/// What `held_item_critique` answers: the critique as the engine recorded it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HeldItemCritiqueRecorded {
+    /// The digest of the critique, written as `critique_ref` on the proposal node.
+    pub critique_ref: String,
+    pub item_ref: String,
+    /// The proposal digest the critique is bound to.
+    pub content_digest: String,
+    /// `accept` when every question passed, otherwise `reject`.
+    pub verdict: String,
+}
+
+/// The critique the engine derives from a request: its ref, its verdict and its answers in
+/// checklist order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DerivedCritique {
+    pub critique_ref: String,
+    pub verdict: &'static str,
+    pub answers: Vec<CritiqueAnswer>,
+}
+
+/// The body a critique ref is the digest of.
+#[derive(Serialize)]
+struct CritiqueBody<'a> {
+    tenant_id: &'a str,
+    item_ref: &'a str,
+    content_digest: &'a str,
+    answers: &'a [CritiqueAnswer],
+}
+
+/// Derive the critique of `request`: the answers must be exactly the checklist ids, the verdict
+/// is `accept` only when every answer passed, and the ref is the digest of the tenant, the item,
+/// its digest and the answers in checklist order. The same request always derives the same ref.
+pub fn derive_critique(request: &HeldItemCritiqueRequest) -> Result<DerivedCritique, String> {
+    let mut answers = Vec::with_capacity(CRITIQUE_CHECKLIST.len());
+    for (id, _) in CRITIQUE_CHECKLIST {
+        let mut matching = request.answers.iter().filter(|answer| answer.id == *id);
+        match (matching.next(), matching.next()) {
+            (Some(answer), None) => answers.push(answer.clone()),
+            _ => return Err(format!("the critique answers the question `{id}` exactly once")),
+        }
+    }
+    if request.answers.len() != answers.len() {
+        return Err("the critique answers only the checklist questions".to_string());
+    }
+    let critique_ref = digest_text(
+        HELD_ITEM_CRITIQUE_DIGEST_DOMAIN,
+        &CritiqueBody {
+            tenant_id: &request.tenant_id,
+            item_ref: &request.item_ref,
+            content_digest: &request.content_digest,
+            answers: &answers,
+        },
+    );
+    let verdict = if answers.iter().all(|answer| answer.passed) {
+        "accept"
+    } else {
+        "reject"
+    };
+    Ok(DerivedCritique {
+        critique_ref,
+        verdict,
+        answers,
+    })
 }
 
 pub const KNOBS: &[KnobSpec] = &[KnobSpec {
@@ -230,5 +385,55 @@ mod tests {
             item_ref: "p".into(),
         };
         assert_eq!(retired.code().as_str(), "RETIRED");
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R038.6
+    #[test]
+    fn a_critique_answers_the_checklist_and_derives_its_verdict() {
+        let request = |passes: &[bool]| HeldItemCritiqueRequest {
+            tenant_id: "tenant-a".into(),
+            graph: "held".into(),
+            item_ref: "prop-1".into(),
+            content_digest: "b".repeat(64),
+            answers: CRITIQUE_CHECKLIST
+                .iter()
+                .zip(passes)
+                .map(|((id, _), passed)| CritiqueAnswer {
+                    id: (*id).to_string(),
+                    passed: *passed,
+                })
+                .collect(),
+        };
+        let accepted = derive_critique(&request(&[true; 4])).unwrap();
+        assert_eq!(accepted.verdict, "accept");
+        assert!(accepted.critique_ref.starts_with("sha256:"));
+        assert_eq!(
+            accepted,
+            derive_critique(&request(&[true; 4])).unwrap(),
+            "the same request derives the same critique"
+        );
+        let rejected = derive_critique(&request(&[true, true, false, true])).unwrap();
+        assert_eq!(rejected.verdict, "reject");
+        assert_ne!(rejected.critique_ref, accepted.critique_ref);
+
+        // The answers are exactly the checklist: a missing, a repeated and an unknown id refuse.
+        let mut missing = request(&[true; 4]);
+        missing.answers.pop();
+        assert!(derive_critique(&missing).is_err());
+        let mut repeated = request(&[true; 4]);
+        repeated.answers[3] = repeated.answers[0].clone();
+        assert!(derive_critique(&repeated).is_err());
+        let mut extra = request(&[true; 4]);
+        extra.answers.push(CritiqueAnswer {
+            id: "other".into(),
+            passed: true,
+        });
+        assert!(derive_critique(&extra).is_err());
+
+        // Answer order does not change the ref.
+        let mut shuffled = request(&[true; 4]);
+        shuffled.answers.reverse();
+        assert_eq!(derive_critique(&shuffled).unwrap(), accepted);
+        assert_eq!(critique_checklist().len(), CRITIQUE_CHECKLIST.len());
     }
 }

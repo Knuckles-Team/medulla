@@ -63,6 +63,24 @@ pub async fn handle_skill_eval(
     }
 }
 
+/// Plan the `held_item_critique` op of `DecisionEval`: the critique recorded on the proposal's
+/// node, which the router commits (MEDULLA-DECISION-ENGINE-R038.6).
+pub async fn handle_held_item_critique(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    request: medulla_decision_types::decision::held_item::HeldItemCritiqueRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    #[cfg(feature = "decide")]
+    {
+        super::stat_jobs::plan_held_item_critique(state, verified, request).await
+    }
+    #[cfg(not(feature = "decide"))]
+    {
+        let _ = (state, verified, request);
+        Err("DecisionEval requires the `decide` feature".to_string())
+    }
+}
+
 /// Plan the `skill_eval_case_add` op of `DecisionEval` with its graph: the case node is the
 /// batch the router commits (MEDULLA-DECISION-ENGINE-R711.7).
 pub async fn handle_skill_eval_case_add(

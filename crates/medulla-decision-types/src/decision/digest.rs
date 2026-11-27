@@ -40,6 +40,8 @@ pub const DECISION_POLICY_DIGEST_DOMAIN: &str = "eg/decision-policy/v1";
 /// Domain of a local-model certification attestation body
 /// (MEDULLA-DECISION-ENGINE-R142.100).
 pub const LOCAL_CERTIFICATION_DIGEST_DOMAIN: &str = "eg/local-certification/v1";
+/// Domain of a held run output proposal critique (MEDULLA-DECISION-ENGINE-R038.6).
+pub const HELD_ITEM_CRITIQUE_DIGEST_DOMAIN: &str = "eg/held-item-critique/v1";
 
 /// One catalog member, as the catalog digest sees it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

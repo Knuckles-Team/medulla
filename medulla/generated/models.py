@@ -4352,6 +4352,39 @@ class DecisionEvalOpCertifyLocalSkill(BaseModel):
     request: LocalCertificationRequest
 
 
+class CritiqueAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    passed: bool
+
+
+class HeldItemCritiqueRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    answers: list[CritiqueAnswer]
+    content_digest: str
+    graph: str
+    item_ref: str
+    tenant_id: str
+
+
+class HeldItemCritiqueRecorded(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: str
+    critique_ref: str
+    item_ref: str
+    verdict: str
+
+
+class DecisionEvalOpHeldItemCritique(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["held_item_critique"]
+    request: HeldItemCritiqueRequest
+
+
 class CertificationReadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4526,6 +4559,7 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpMemoryRewriteSubmit
     | DecisionEvalOpCertifyLocalSkill
     | DecisionEvalOpCertification
+    | DecisionEvalOpHeldItemCritique
     | DecisionEvalOpRetrievalRankingSubmit
     | DecisionEvalOpGroundedAnswerSubmit,
     Field(discriminator="op"),
@@ -31052,10 +31086,20 @@ class HeldItemOutcome(str, Enum):
     ABSTAINED = "abstained"
 
 
+class CritiqueQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    question: str
+
+
 class HeldItemAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    checklist: list[CritiqueQuestion] = Field(default_factory=list)
     compiler: str | None = None
+    critique_digest: str | None = None
+    critique_verdict: str | None = None
     outcome: HeldItemOutcome
     reason: str | None = None
     verdict_ref: str
@@ -52063,7 +52107,12 @@ __all__ = [
     "DayRollup",
     "CertificationReadAnswer",
     "CertificationReadRequest",
+    "CritiqueAnswer",
+    "CritiqueQuestion",
     "DecisionEvalOpCertification",
+    "DecisionEvalOpHeldItemCritique",
+    "HeldItemCritiqueRecorded",
+    "HeldItemCritiqueRequest",
     "DecisionEvalOpCertifyLocalSkill",
     "DecisionEvalOpDelegationQuality",
     "DecisionEvalOpMemoryChangeBenchmarkSubmit",

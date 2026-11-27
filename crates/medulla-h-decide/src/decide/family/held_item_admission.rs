@@ -10,7 +10,7 @@
 //! writes nothing.
 
 use medulla_decision_types::decision::held_item::{
-    is_digest, min_passes, HeldItemAnswer, HeldItemKind, HeldItemOutcome, HeldItemRefusal,
+    critique_checklist, is_digest, min_passes, HeldItemAnswer, HeldItemKind, HeldItemOutcome, HeldItemRefusal,
     HeldItemVerdict, PARAM_CONTENT_DIGEST,
     PARAM_GRAPH, PARAM_ITEM_KIND, PARAM_ITEM_REF, ROW_COMPILED_BY, ROW_CONTENT_DIGEST,
     ROW_CRITIQUE_DIGEST, ROW_CRITIQUE_REF, ROW_CRITIQUE_VERDICT, ROW_ITEM_KIND, ROW_LIFECYCLE,
@@ -112,7 +112,7 @@ impl DecisionFamily for HeldItemAdmissionFamily {
     }
 }
 
-fn refused(refusal: HeldItemRefusal) -> Result<Executed, String> {
+fn refused(refusal: HeldItemRefusal, kind: HeldItemKind) -> Result<Executed, String> {
     let mut executed = abstained(QuestionKind::HeldItemAdmission, &refusal);
     executed.family = Some(answer_of(HeldItemAnswer {
         outcome: HeldItemOutcome::Abstained,
@@ -121,8 +121,20 @@ fn refused(refusal: HeldItemRefusal) -> Result<Executed, String> {
         verifier: None,
         compiler: None,
         reason: Some(refusal.code().as_str().to_string()),
+        checklist: checklist_of(kind),
+        critique_digest: None,
+        critique_verdict: None,
     }));
     Ok(executed)
+}
+
+/// The questions a critique of an item of `kind` answers: the checklist for a proposal, even
+/// when the question is refused for want of a critique, and none for a program.
+fn checklist_of(kind: HeldItemKind) -> Vec<medulla_decision_types::decision::held_item::CritiqueQuestion> {
+    match kind {
+        HeldItemKind::RunOutputProposal => critique_checklist(),
+        HeldItemKind::StoredRunProgram => Vec::new(),
+    }
 }
 
 /// The typed answer a question seals; the verdict ref is the sealing record's
@@ -165,21 +177,21 @@ fn admit(
     if text(ROW_ITEM_KIND).as_deref() != Some(kind.name()) {
         return refused(HeldItemRefusal::ItemUnknown {
             item_ref: item_ref.to_string(),
-        });
+        }, kind);
     }
     let stored = text(ROW_CONTENT_DIGEST).unwrap_or_default();
     if stored != expected {
         return refused(HeldItemRefusal::DigestMismatch {
             stored,
             expected: expected.to_string(),
-        });
+        }, kind);
     }
     match kind {
         HeldItemKind::StoredRunProgram => {
             if text(ROW_LIFECYCLE).as_deref() == Some("retired") {
                 return refused(HeldItemRefusal::Retired {
                     item_ref: item_ref.to_string(),
-                });
+                }, kind);
             }
             let verification = text(ROW_VERIFICATION_REF);
             let (verifier, compiler) = (text(ROW_VERIFIED_BY), text(ROW_COMPILED_BY));
@@ -190,7 +202,7 @@ fn admit(
             let Some(verification) = verification.filter(|_| independent) else {
                 return refused(HeldItemRefusal::VerifierNotIndependent {
                     item_ref: item_ref.to_string(),
-                });
+                }, kind);
             };
             let passes = row
                 .as_ref()
@@ -199,7 +211,7 @@ fn admit(
                 .unwrap_or(0);
             let required = min_passes(policy);
             if passes < required {
-                return refused(HeldItemRefusal::PassesInsufficient { passes, required });
+                return refused(HeldItemRefusal::PassesInsufficient { passes, required }, kind);
             }
             let mut executed = advisory(vec![HeldItemVerdict::Admitted.option_id().to_string()])?;
             executed.family_premises = vec![premise(
@@ -213,6 +225,9 @@ fn admit(
                 verifier,
                 compiler,
                 reason: None,
+                checklist: Vec::new(),
+                critique_digest: None,
+                critique_verdict: None,
             }));
             Ok(executed)
         }
@@ -223,15 +238,18 @@ fn admit(
                 Some("accept") => HeldItemVerdict::Admitted,
                 Some("reject") => HeldItemVerdict::Rejected,
                 _ => {
-                    return refused(HeldItemRefusal::CritiqueMissing {
-                        item_ref: item_ref.to_string(),
-                    })
+                    return refused(
+                        HeldItemRefusal::CritiqueMissing {
+                            item_ref: item_ref.to_string(),
+                        },
+                        kind,
+                    )
                 }
             };
             let Some(critique) = critique else {
                 return refused(HeldItemRefusal::CritiqueMissing {
                     item_ref: item_ref.to_string(),
-                });
+                }, kind);
             };
             let mut executed = advisory(vec![verdict.option_id().to_string()])?;
             executed.family_premises = vec![premise(format!("critique:{critique}"), item_ref)];
@@ -245,6 +263,9 @@ fn admit(
                 verifier: None,
                 compiler: None,
                 reason: None,
+                checklist: critique_checklist(),
+                critique_digest: text(ROW_CRITIQUE_DIGEST),
+                critique_verdict: text(ROW_CRITIQUE_VERDICT),
             }));
             Ok(executed)
         }
