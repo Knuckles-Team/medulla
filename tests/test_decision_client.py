@@ -123,3 +123,65 @@ def test_decide_can_opt_into_the_nested_pydantic_decision_batch_model() -> None:
     assert isinstance(model, DecisionBatch)
     assert model.schema_version == 2
     assert model.records == []
+
+
+# spec: MEDULLA-DECISION-ENGINE-R029.3
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R029.3")
+def test_retrieval_plan_request_declares_registered_plans_and_pins_the_provider() -> (
+    None
+):
+    provider = {
+        "component_id": "mcp:docs/tool/search",
+        "kind": "tool",
+        "definition_digest": "sha256:" + "a" * 64,
+    }
+    request = dc.retrieval_plan_request(
+        "tenant-a", "arbora.retrieval.space", PIN, provider=provider
+    )
+    assert valid(models.DecideRequest, request)
+    assert request["question"]["kind"] == "retrieval_plan"
+    assert [o["option_id"] for o in request["candidates"]["options"]] == sorted(
+        dc.RETRIEVAL_PLAN_OPTIONS
+    )
+    assert [p["name"] for p in request["params"]] == ["retrieval.provider"]
+
+
+# spec: MEDULLA-SDLC-R019.16
+@pytest.mark.spec("MEDULLA-SDLC-R019.16")
+def test_merge_arming_request_is_typed_and_carries_no_caller_receipt() -> None:
+    arming = {
+        "graph": "g",
+        "delivery_id": "d1",
+        "proposal_id": "p1",
+        "head_commit": "sha256:" + "b" * 64,
+        "head_changeset": "c1",
+        "branch": "main",
+        "required_check": "gate-1",
+        "changed_lines": 12,
+    }
+    request = dc.merge_arming_request("tenant-a", "arbora.merge.arming", arming, PIN)
+    assert valid(models.DecideRequest, request)
+    assert request["question"]["kind"] == "merge_arming"
+    names = [p["name"] for p in request["params"]]
+    assert "changed_lines" in names and "approval" not in names
+
+
+# spec: MEDULLA-DECISION-ENGINE-R829.4
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R829.4")
+def test_catalog_rank_schemas_are_published_per_point_over_one_body() -> None:
+    schemas = dc.CATALOG_RANK_FEATURE_SCHEMAS
+    assert sorted(schemas) == sorted(
+        [
+            "catalog.skill_rank",
+            "catalog.operation_rank",
+            "catalog.catalog_item_rank",
+            "catalog.intent_action_rank",
+        ]
+    )
+    digests = {entry["content_digest"] for entry in schemas.values()}
+    assert len(digests) == 1
+    operation = schemas["catalog.operation_rank"]
+    assert operation["component_id"] == "decide.schema.catalog.operation_rank"
+    names = [f["name"] for f in operation["body"]["features"]]
+    assert names[-1] == "semantic_similarity"
+    assert operation["body"]["features"][-1]["missing"]["missing"] == "impute"

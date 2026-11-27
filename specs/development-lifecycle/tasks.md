@@ -146,3 +146,4 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T137 [US1] MEDULLA-SDLC-R030.4 SpecRowState/SpecState state machine: route 1 census findings through SpecState::apply
 - [ ] T138 [US1] MEDULLA-SDLC-R030.5 TaskRowState/TaskState state machine: route 1 census findings through TaskState::apply
 - [ ] T139 [US1] MEDULLA-SDLC-R014.12.1 Row terms: `usesTerm` edges and glossary term nodes.
+- [ ] T141 MEDULLA-SDLC-R019.16 Typed merge-arming request

@@ -67,6 +67,51 @@ pub const SEMANTIC_KEY: &str = "rank.semantic_similarity";
 /// term-rarity-weighted overlap.
 pub const ITEM_SCORE_KEY: &str = "rank.item_score";
 
+/// The five feature names of the capability-ranking schema, in schema order; each reads the
+/// number key `rank.<name>`.
+pub const FEATURE_NAMES: [&str; 5] = [
+    "name_overlap",
+    "description_overlap",
+    "term_rarity_weighted_overlap",
+    "name_coverage",
+    "semantic_similarity",
+];
+
+/// The canonical feature schema every `catalog.*_rank` point pins
+/// (MEDULLA-DECISION-ENGINE-R829.4): the five computed features, each reading
+/// its `rank.<name>` number and imputing zero when absent, so an absent
+/// `semantic_similarity` is recorded as 0 and never abstains. A host publishes this one
+/// body under each point's `feature_schema` component id; the same bytes mean one tenant's
+/// pin is reproducible. `medulla/generated/_catalog_rank_feature_schemas.py` mirrors it.
+pub fn catalog_rank_feature_schema(
+) -> medulla_decision_types::decision::statistical::features::FeatureSchemaBody {
+    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
+    use medulla_decision_types::decision::statistical::features::{
+        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+    };
+    FeatureSchemaBody {
+        schema_version: FEATURE_SCHEMA_VERSION,
+        features: medulla_types::contract::BoundedVec::new(
+            FEATURE_NAMES
+                .iter()
+                .map(|name| FeatureSpec {
+                    name: (*name).to_string(),
+                    kind: FeatureKind::Number {
+                        key: format!("rank.{name}"),
+                    },
+                    missing: MissingValue::Impute {
+                        value: QuantisedValue {
+                            scale: QuantScaleTag::Q32,
+                            value: 0,
+                        },
+                    },
+                })
+                .collect(),
+        )
+        .expect("five features are within the schema bound"),
+    }
+}
+
 /// Words that carry no ranking signal.
 const STOPWORDS: &[&str] = &[
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in", "into", "is", "it", "of",
@@ -219,6 +264,38 @@ pub fn capability_features(
 mod tests {
     use super::*;
     use medulla_decision_types::decision::statistical::declared::DeclaredText;
+
+    // spec: MEDULLA-DECISION-ENGINE-R829.4
+    #[test]
+    fn the_catalog_rank_schema_reads_the_computed_keys_and_imputes_zero() {
+        let body = catalog_rank_feature_schema().checked().unwrap();
+        assert_eq!(body.names(), FEATURE_NAMES);
+        let keys: Vec<String> = body
+            .features
+            .iter()
+            .map(|feature| match &feature.kind {
+                medulla_decision_types::decision::statistical::features::FeatureKind::Number {
+                    key,
+                } => key.clone(),
+                other => panic!("not a number feature: {other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                NAME_OVERLAP_KEY,
+                DESCRIPTION_OVERLAP_KEY,
+                TERM_RARITY_KEY,
+                NAME_COVERAGE_KEY,
+                SEMANTIC_KEY
+            ]
+        );
+        let encoded = medulla_decision_types::decision::statistical::body::encode_body(&body)
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
+        assert_eq!(json["features"][4]["missing"]["missing"], "impute");
+        assert_eq!(json["features"][4]["missing"]["value"]["value"], 0);
+    }
     use medulla_types::contract::BoundedVec;
 
     fn option(id: &str, name: &str, description: &str) -> DeclaredOption {

@@ -24,6 +24,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from medulla.generated._catalog_rank_feature_schemas import (
+    CATALOG_RANK_FEATURE_SCHEMAS,
+)
 from medulla.generated._task_plan_feature_schema import (
     TASK_PLAN_FEATURE_SCHEMA,
 )
@@ -434,6 +437,99 @@ def skill_plan_request(
         policy=policy,
         params=[param("skill_query", "skill_plan_query", query)],
         max_records=1,
+    )
+
+
+RETRIEVAL_PLAN_OPTIONS = (
+    "retrieval-plan:leanrag",
+    "retrieval-plan:reciprocal-rank-fusion",
+    "retrieval-plan:direct-sparql",
+)
+
+
+def retrieval_plan_request(
+    tenant_id: str,
+    question_id: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    plans: Iterable[str] = RETRIEVAL_PLAN_OPTIONS,
+    provider: Mapping[str, Any] | None = None,
+    reasoning_model: Mapping[str, Any] | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``retrieval_plan`` ``Decide`` request (MEDULLA-DECISION-ENGINE-R029).
+
+    ``plans`` are registered retrieval plan option ids (``retrieval-plan:...``);
+    the engine refuses an unregistered id in that namespace. ``provider`` and
+    ``reasoning_model`` are ``ComponentDependency`` pins (``component_id``,
+    ``kind``, ``definition_digest``); a model without a provider is refused. The
+    answer ranks the plans; the caller runs the chosen one through
+    ``CorpusRetrieve`` or ``RetrievalRound``.
+    """
+    params: list[dict[str, Any]] = []
+    if provider is not None:
+        params.append(
+            param(
+                "retrieval.provider", "text", json.dumps(dict(provider), sort_keys=True)
+            )
+        )
+    if reasoning_model is not None:
+        params.append(
+            param(
+                "retrieval.reasoning_model",
+                "text",
+                json.dumps(dict(reasoning_model), sort_keys=True),
+            )
+        )
+    return decide_request(
+        tenant_id,
+        (question_id, "retrieval_plan", "ordinary"),
+        declared(DeclaredOption(plan) for plan in plans),
+        feature_schema,
+        policy=policy,
+        params=params,
+    )
+
+
+def merge_arming_request(
+    tenant_id: str,
+    question_id: str,
+    arming: Mapping[str, Any],
+    feature_schema: Mapping[str, Any],
+    *,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``merge_arming`` ``Decide`` request (MEDULLA-SDLC-R019.10).
+
+    ``arming`` is the typed request: ``graph``, ``delivery_id``, ``proposal_id``,
+    ``head_commit`` (the head the caller sees now), ``head_changeset``,
+    ``branch``, ``required_check`` and ``changed_lines`` (an integer). The
+    engine reads the owner approval, the reviews and the gate verdicts from the
+    graph, never from the request, so a caller supplies no receipt: an approval
+    that names another commit abstains ``ARMING_HEAD_MISMATCH`` and a missing
+    one ``ARMING_APPROVAL_MISSING``. The verdict is ``arm``, ``disarm`` or
+    ``hold``; the engine never merges.
+    """
+    params = [
+        param(name, "text", str(arming[name]))
+        for name in (
+            "graph",
+            "delivery_id",
+            "proposal_id",
+            "head_commit",
+            "head_changeset",
+            "branch",
+            "required_check",
+        )
+    ]
+    params.append(param("changed_lines", "int", int(arming["changed_lines"])))
+    return decide_request(
+        tenant_id,
+        (question_id, "merge_arming", "ordinary"),
+        declared([DeclaredOption("merge_arming")]),
+        feature_schema,
+        policy=policy,
+        params=params,
     )
 
 
@@ -2602,6 +2698,10 @@ __all__ = [
     "MeasuredFactRecorded",
     "Q32_ONE",
     "TASK_PLAN_FEATURE_SCHEMA",
+    "CATALOG_RANK_FEATURE_SCHEMAS",
+    "RETRIEVAL_PLAN_OPTIONS",
+    "merge_arming_request",
+    "retrieval_plan_request",
     "DecisionClient",
     "DeclaredOption",
     "add_member_op",
