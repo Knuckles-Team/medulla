@@ -255,20 +255,33 @@ pub async fn dispatch_with_context(
             graph: &req.graph,
             principal: &principal,
         });
-    let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Admit);
+    // MEDULLA-OBSERVE-R002.3: the one span that sets the request id, the trace id, the operation
+    // and the graph on every log line of the request. A task the request spawns inherits it.
+    let span = medulla_observe::trace::request_span(
+        req.id,
+        req.trace_id.as_deref(),
+        method,
+        &req.graph,
+    );
+    let _ = span.in_scope(|| {
+        request_guard.apply(medulla_observe::machine::request::RequestEvent::Admit)
+    });
     let resp = medulla_observe::registry::requests::scope(
         request_guard.handle(),
-        dispatch_inner(state, req, context),
+        tracing::Instrument::instrument(dispatch_inner(state, req, context), span.clone()),
     )
     .await;
-    if resp.error.is_some() {
-        let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Refuse);
-    } else if request_guard
-        .apply(medulla_observe::machine::request::RequestEvent::Respond)
-        .is_ok()
-    {
-        let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Complete);
-    }
+    span.in_scope(|| {
+        if resp.error.is_some() {
+            let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Refuse);
+        } else if request_guard
+            .apply(medulla_observe::machine::request::RequestEvent::Respond)
+            .is_ok()
+        {
+            let _ =
+                request_guard.apply(medulla_observe::machine::request::RequestEvent::Complete);
+        }
+    });
 
     if let Some(start) = start {
         let elapsed = start.elapsed();

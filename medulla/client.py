@@ -165,6 +165,9 @@ def trace_id(value: str):
         _TRACE_ID.reset(token)
 
 
+_trace_id_scope = trace_id
+
+
 def _stamp_trace_id(request: dict[str, Any]) -> None:
     """Add the ambient trace id to a request frame, outside its signed fields."""
     ambient = _TRACE_ID.get()
@@ -19646,19 +19649,29 @@ class MedullaClient:
         graph: str | None = None,
         *,
         idempotency_key: str | None = None,
+        trace_id: str | None = None,
     ) -> OpaqueResult:
         """Send any served method by its id (MEDULLA-CONTRACT-R059.1).
 
         The generated sender validates ``params`` with its own model before it
         sends, so an invalid body raises ``pydantic.ValidationError``. An id the
         engine does not serve raises ``ValueError`` before any transport use.
+
+        ``trace_id`` is the caller's W3C ``traceparent`` for this one call
+        (MEDULLA-OBSERVE-R002.5): the engine shows it on every log line of the
+        request and of the tasks the request spawns. It rides outside the signed
+        envelope. An empty or over-long value raises ``ValueError`` before any
+        request is sent.
         """
         from .generated import SEND_BY_METHOD
 
         sender = SEND_BY_METHOD.get(method)
         if sender is None:
             raise ValueError(f"unknown engine method {method!r}")
-        return await sender(self, params, graph, idempotency_key=idempotency_key)
+        if trace_id is None:
+            return await sender(self, params, graph, idempotency_key=idempotency_key)
+        with _trace_id_scope(trace_id):
+            return await sender(self, params, graph, idempotency_key=idempotency_key)
 
     async def _send(
         self,

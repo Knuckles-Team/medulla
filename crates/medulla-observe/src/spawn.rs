@@ -112,7 +112,33 @@ fn take_panic_location() -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
+/// What a job inherits from the code that spawns it (MEDULLA-OBSERVE-R002.4): the span current
+/// at the spawn, which carries the request id and the trace id of the request that spawned it,
+/// and that request's id. A job that outlives its request keeps both.
+#[derive(Clone, Debug)]
+pub struct SpawnContext {
+    /// The span current at the spawn.
+    pub span: tracing::Span,
+    /// The id of the request the spawn ran under, when it ran under one.
+    pub origin_request: Option<u64>,
+}
+
+impl SpawnContext {
+    /// Capture the context of the calling code: one `Arc` clone inside the span and one
+    /// task-local read.
+    pub fn capture() -> Self {
+        Self {
+            span: tracing::Span::current(),
+            origin_request: crate::registry::requests::current()
+                .map(|request| request.request_id()),
+        }
+    }
+}
+
 /// Register the job `spec`, run `future` as a task and finish the handle with its outcome.
+///
+/// The job runs inside the span current at the call, so its log lines carry the request's
+/// ids, and its row records the request that spawned it as `origin_request`.
 ///
 /// The returned handle completes when the job has finished and its row is final.
 #[track_caller]
@@ -125,26 +151,28 @@ where
     let name = spec.name.clone();
     let handle = crate::global().register(spec);
     let reporter = handle.reporter();
-    let span = tracing::Span::current();
-    // The one bare spawn for a registered job: every other spawn site calls this helper.
-    tokio::spawn(async move {
-        let result = CURRENT_NAME
-            .scope(
-                name,
-                CURRENT.scope(
-                    reporter,
-                    AssertUnwindSafe(future.instrument(span)).catch_unwind(),
-                ),
-            )
-            .await;
-        let outcome = match result {
-            Ok(output) => output.into_outcome(),
-            Err(_) => Outcome::Failed(TaskFailure::Panicked {
-                location: take_panic_location(),
-            }),
-        };
-        handle.finish(outcome);
-    })
+    let context = SpawnContext::capture();
+    handle.set_origin_request(context.origin_request);
+    // The one bare spawn for a registered job: every other spawn site calls this helper. The
+    // whole job, its end included, runs inside the inherited span.
+    tokio::spawn(
+        async move {
+            let result = CURRENT_NAME
+                .scope(
+                    name,
+                    CURRENT.scope(reporter, AssertUnwindSafe(future).catch_unwind()),
+                )
+                .await;
+            let outcome = match result {
+                Ok(output) => output.into_outcome(),
+                Err(_) => Outcome::Failed(TaskFailure::Panicked {
+                    location: take_panic_location(),
+                }),
+            };
+            handle.finish(outcome);
+        }
+        .instrument(context.span),
+    )
 }
 
 /// Report progress of the job this call runs in: the cursor, the units done and the caller

@@ -409,6 +409,11 @@ impl TaskHandle {
         record_progress(&self.progress.cell, cursor, units_done, Location::caller());
     }
 
+    /// Record the request that spawned this task (MEDULLA-OBSERVE-R002.4).
+    pub fn set_origin_request(&self, request_id: Option<u64>) {
+        self.progress.cell.lock().origin_request = request_id;
+    }
+
     /// A cloneable reporter of this task's progress.
     pub fn reporter(&self) -> TaskProgress {
         self.progress.clone()

@@ -30,6 +30,7 @@ struct Served {
     state: Arc<RwLock<ServerState>>,
     /// Fails the test when one of its requests was answered by an uncoded refusal.
     tap: crate::refusal_tap::RefusalTap,
+    last_id: AtomicU64,
 }
 
 impl Served {
@@ -55,6 +56,7 @@ impl Served {
             _dir: dir,
             state,
             tap: crate::refusal_tap::RefusalTap::new(),
+            last_id: AtomicU64::new(0),
         }
     }
 
@@ -65,7 +67,29 @@ impl Served {
 
     /// One request as `PRINCIPAL` holding exactly `scopes`.
     async fn call_as(&self, graph: &str, method: Method, scopes: Vec<String>) -> Response {
+        self.call_with(graph, method, scopes, None).await
+    }
+
+    /// One request that carries the caller's `trace_id`.
+    async fn call_traced(&self, graph: &str, method: Method, trace_id: &str) -> Response {
+        self.call_with(graph, method, vec!["*".to_string()], Some(trace_id))
+            .await
+    }
+
+    /// The id of the request this fixture sent last.
+    fn last_request_id(&self) -> u64 {
+        self.last_id.load(Ordering::Relaxed)
+    }
+
+    async fn call_with(
+        &self,
+        graph: &str,
+        method: Method,
+        scopes: Vec<String>,
+        trace_id: Option<&str>,
+    ) -> Response {
         let id = next_id();
+        self.last_id.store(id, Ordering::Relaxed);
         self.tap.issue(id);
         let claims = RequestContextClaims {
             principal: PRINCIPAL.to_string(),
@@ -89,7 +113,7 @@ impl Served {
             auth_token: String::new(),
             agent_id: Some(PRINCIPAL.to_string()),
             method,
-            trace_id: None,
+            trace_id: trace_id.map(str::to_string),
         };
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
@@ -817,4 +841,163 @@ async fn collapsed_refusal_fails_the_harness() {
     assert!(medulla_protocol_types::protocol::unclassified_by_module()
         .iter()
         .any(|(module, count)| module.starts_with("medulla-server-served-tests") && *count >= 2));
+}
+
+const TRACE_HEX: &str = "0af7651916cd43dd8448eb211c80319c";
+const TRACEPARENT: &str = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+
+// spec: MEDULLA-OBSERVE-R002.3
+#[tokio::test(flavor = "multi_thread")]
+async fn engine_log_line_inside_request_shows_ids() {
+    let capture = crate::log_capture::install();
+    let served = Served::new().await;
+
+    // A request that carries a traceparent: every engine log line it prints runs inside the
+    // request span with the request id, the trace id, the operation and the graph.
+    let page = served
+        .call_traced(
+            "__commons__",
+            Method::Introspect {
+                section: IntrospectSection::Tasks,
+                limit: None,
+                cursor: None,
+            },
+            TRACEPARENT,
+        )
+        .await;
+    assert!(page.error.is_none(), "{:?}", page.error);
+    let id = served.last_request_id().to_string();
+    let mine: Vec<_> = capture
+        .events()
+        .into_iter()
+        .filter(|event| event.span_with("request_id", &id).is_some())
+        .collect();
+    let transitions: Vec<_> = mine
+        .iter()
+        .filter(|event| {
+            event.target == "medulla::transition" && event.field("machine") == Some("RequestMachine")
+        })
+        .collect();
+    assert!(
+        transitions.len() >= 3,
+        "the request's machine transitions were logged inside its span: {mine:#?}"
+    );
+    for event in &transitions {
+        let span = event.span_with("request_id", &id).unwrap();
+        assert_eq!(span.name, "request");
+        assert_eq!(span.field("trace_id"), Some(TRACE_HEX));
+        assert_eq!(span.field("op"), Some("Introspect"));
+        assert_eq!(span.field("graph"), Some("__commons__"));
+    }
+
+    // Without a trace id, and with a value that is not a traceparent, the request runs and its
+    // span shows an empty trace id: a malformed value is dropped, never refused.
+    for (label, trace) in [("none", None), ("malformed", Some("not-a-traceparent"))] {
+        let response = match trace {
+            Some(trace) => {
+                served
+                    .call_traced(
+                        "__commons__",
+                        Method::Introspect {
+                            section: IntrospectSection::Locks,
+                            limit: None,
+                            cursor: None,
+                        },
+                        trace,
+                    )
+                    .await
+            }
+            None => served.introspect(IntrospectSection::Locks, None, None).await,
+        };
+        assert!(response.error.is_none(), "{label}: {:?}", response.error);
+        let id = served.last_request_id().to_string();
+        let span = capture
+            .events()
+            .into_iter()
+            .find_map(|event| event.span_with("request_id", &id).cloned())
+            .unwrap_or_else(|| panic!("{label}: the request logged nothing inside its span"));
+        assert_eq!(span.field("trace_id"), Some(""), "{label}");
+    }
+}
+
+// spec: MEDULLA-OBSERVE-R002.4
+#[tokio::test(flavor = "multi_thread")]
+async fn one_trace_id_follows_a_request_into_its_spawned_task() {
+    let capture = crate::log_capture::install();
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let served = Served::new().await;
+    let graph = "observe:traced";
+    let created = served
+        .call(
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Agent,
+            },
+        )
+        .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+    for i in 0..20u64 {
+        let added = served
+            .call(
+                graph,
+                Method::AddNode {
+                    node_id: format!("n{i}"),
+                    properties_msgpack: rmp_serde::to_vec(&serde_json::json!({"payload": i}))
+                        .unwrap(),
+                },
+            )
+            .await;
+        assert!(added.error.is_none(), "add n{i}: {:?}", added.error);
+    }
+    assert!(served.state.write().await.registry.evict_resident(graph));
+
+    // A read of the evicted graph opens it lazily in pages of four; the first page is applied
+    // inline and a registered task pages the rest, spawned by this very request.
+    std::env::set_var("MEDULLA_LAZY_OPEN_PAGE_SIZE", "4");
+    let read = served
+        .call_traced(
+            graph,
+            Method::GetNodeProperties {
+                node_id: "n0".to_string(),
+            },
+            TRACEPARENT,
+        )
+        .await;
+    std::env::remove_var("MEDULLA_LAZY_OPEN_PAGE_SIZE");
+    assert!(read.error.is_none(), "{:?}", read.error);
+    let id = served.last_request_id();
+
+    let name = format!("lazy-page-in:{graph}");
+    let row = finished_task(&name).await;
+    assert_eq!(
+        row.origin_request,
+        Some(id),
+        "the task records the request that spawned it"
+    );
+    let id_text = id.to_string();
+    let inside_task: Vec<_> = capture
+        .events()
+        .into_iter()
+        .filter(|event| {
+            event.target == "medulla::transition"
+                && event.field("machine") == Some("TaskMachine")
+                && event.field("subject") == Some(name.as_str())
+        })
+        .collect();
+    assert!(!inside_task.is_empty(), "the task's transitions were logged");
+    for event in &inside_task {
+        let span = event
+            .span_with("request_id", &id_text)
+            .expect("a task line runs inside the request's span");
+        assert_eq!(span.field("trace_id"), Some(TRACE_HEX));
+    }
+    // The task's introspection row names the origin request too.
+    let page = served.page(IntrospectSection::Tasks).await;
+    let listed = page
+        .rows
+        .iter()
+        .find(|row| row["name"] == name.as_str())
+        .expect("the finished task is listed");
+    assert_eq!(listed["origin_request"], id);
 }

@@ -21,6 +21,7 @@ pub mod runtime_stats;
 pub mod settings;
 pub mod spawn;
 pub mod startup;
+pub mod trace;
 pub mod watchdog;
 
 use std::sync::OnceLock;
