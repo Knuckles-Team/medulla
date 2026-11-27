@@ -101,14 +101,14 @@ fn five_kinds_registered_once() {
         let (spec, inputs) = minimal(kind);
         let result = evaluate_rule(&spec, inputs, AS_OF_MS)
             .unwrap_or_else(|refusal| panic!("{}: {refusal}", kind.as_str()));
-        let arm = match (&result, kind) {
+        let arm = matches!(
+            (&result, kind),
             (RuleResult::Recurrence(_), RuleKind::Recurrence)
-            | (RuleResult::Threshold(_), RuleKind::Threshold)
-            | (RuleResult::Reconcile(_), RuleKind::Reconcile)
-            | (RuleResult::Reorder(_), RuleKind::Reorder)
-            | (RuleResult::PhrasePolicy(_), RuleKind::PhrasePolicy) => true,
-            _ => false,
-        };
+                | (RuleResult::Threshold(_), RuleKind::Threshold)
+                | (RuleResult::Reconcile(_), RuleKind::Reconcile)
+                | (RuleResult::Reorder(_), RuleKind::Reorder)
+                | (RuleResult::PhrasePolicy(_), RuleKind::PhrasePolicy)
+        );
         assert!(arm, "{} answered another kind's result arm", kind.as_str());
         assert_eq!(result.kind(), kind);
         assert_eq!(result.trace().rule_digest, spec.digest);
