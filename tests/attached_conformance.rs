@@ -252,6 +252,8 @@ fn pin(image: &str, digest: &str) -> ImagePin {
 }
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R022.2
+// Proves the committed matrix names the five engines with no digest of its own, that an image runs
+// only when the release manifest pins its digest, and the skip text of every other branch.
 #[test]
 fn manifest_pins_every_image_digest() {
     let engines = parse_matrix(MATRIX);
