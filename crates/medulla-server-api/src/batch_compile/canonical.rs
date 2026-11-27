@@ -470,6 +470,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceExpectedPnlRate { .. }
         | Method::DiffAgainst { .. }
         | Method::Health
+        | Method::IngestWorkerStatus
         | Method::DsTrainTestSplit { .. }
         | Method::GetContextView { .. }
         | Method::CloseChannel { .. }

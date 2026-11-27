@@ -46,6 +46,14 @@ pub async fn dispatch_service_control_methods(
 
         Method::Health => dispatch_boxed(health_response(state, req.id)).await,
 
+        // MEDULLA-INGEST-WORKER-R001.18: the ingest worker series, read from the metrics registry.
+        Method::IngestWorkerStatus => Response::ok(
+            req.id,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::cluster::IngestWorkerStatus,
+            >(medulla_kernel::metrics::process().ingest_status()),
+        ),
+
         // L36: cooperative cancellation of an in-flight request by its `req_id` (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect).
         // Service-level (no graph resolution needed — the registry is keyed by req_id,
         // process-wide) so it works regardless of which graph the target request is

@@ -146,3 +146,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T136 [US1] MEDULLA-INGEST-WORKER-R002.8 Model and behavior: induction from instance data.
 - [ ] T137 [US1] MEDULLA-INGEST-WORKER-R002.9 Refusal and wiring: profile limits and the admission call.
 - [ ] T138 [US1] MEDULLA-INGEST-WORKER-R002.10 Hot-path proof: instance profile to admitted ontology.
+- [ ] T139 [US1] MEDULLA-INGEST-WORKER-R001.18 Ingest worker series read for the health route

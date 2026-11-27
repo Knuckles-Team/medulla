@@ -229,3 +229,46 @@ fn lane_gauges_after_success_and_refusal() {
     assert!(out.contains("medulla_admit_refused_total{lane=\"hydration\"} 1"), "{out}");
     assert!(!out.contains("medulla_admit_refused_total{lane=\"general\"}"), "{out}");
 }
+
+// spec: MEDULLA-INGEST-WORKER-R001.18
+#[test]
+fn the_ingest_status_answers_the_ingest_series_the_registry_holds() {
+    use medulla_types::ingest_lanes::{LaneMetrics, QueueClass};
+    let m = KernelMetrics::new();
+    m.record_job(super::IngestJobOutcome::Enqueued, "ingest");
+    m.record_job(super::IngestJobOutcome::DeadLettered, "ingest-hydration");
+    m.set_lane_gauges(
+        "general",
+        QueueClass::Fast,
+        &LaneMetrics {
+            depth: 3,
+            oldest_age_ms: 42_000,
+            inflight: 1,
+        },
+    );
+    m.admit_refused("hydration");
+    let status = m.ingest_status();
+    let value = |name: &str, label: &str, wanted: &str| {
+        status
+            .series
+            .iter()
+            .find(|sample| {
+                sample.name == name && sample.labels.get(label).map(String::as_str) == Some(wanted)
+            })
+            .map(|sample| sample.value)
+    };
+    assert_eq!(value("medulla_ingest_jobs_total", "outcome", "enqueued"), Some(1.0));
+    assert_eq!(
+        value("medulla_ingest_dead_letter_total", "queue", "ingest-hydration"),
+        Some(1.0)
+    );
+    assert_eq!(value("medulla_lane_depth", "lane", "general"), Some(3.0));
+    assert_eq!(value("medulla_lane_oldest_age_seconds", "lane", "general"), Some(42.0));
+    assert_eq!(value("medulla_lane_inflight", "lane", "general"), Some(1.0));
+    assert_eq!(value("medulla_admit_refused_total", "lane", "hydration"), Some(1.0));
+    // Only the ingest series are answered.
+    assert!(status
+        .series
+        .iter()
+        .all(|sample| medulla_types::ingest_lanes::INGEST_SERIES.contains(&sample.name.as_str())));
+}

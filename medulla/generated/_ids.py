@@ -79,6 +79,7 @@ METHOD_IDS = frozenset(
         "Introspect",
         "Profile",
         "Health",
+        "IngestWorkerStatus",
         "Shutdown",
         "CancelRequest",
         "RegisterForeignSource",

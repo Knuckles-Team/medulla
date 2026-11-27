@@ -453,6 +453,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "HasNode": graph.send_has_node,
     "HasNodesBatch": graph.send_has_nodes_batch,
     "Health": cluster.send_health,
+    "IngestWorkerStatus": cluster.send_ingest_worker_status,
     "IcvConfigure": reasoning.send_icv_configure,
     "Identity": security.send_identity,
     "ImportSqliteFile": storage.send_import_sqlite_file,

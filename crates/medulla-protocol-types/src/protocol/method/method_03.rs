@@ -246,6 +246,11 @@ $($variants)*
 
     Health,
 
+    /// The ingest worker series the engine holds: job outcomes, dead letters, lane depth,
+    /// oldest age and in-flight tasks, and refused claims (MEDULLA-INGEST-WORKER-R001.18). Reads
+    /// only; the series carry no tenant, corpus or job id.
+    IngestWorkerStatus,
+
     Shutdown,
 
     /// Cooperatively cancel an IN-FLIGHT request by its `target_req_id` (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect,

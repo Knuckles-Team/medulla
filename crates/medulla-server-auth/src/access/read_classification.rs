@@ -657,6 +657,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("CancelRequest", REASON_SERVER_LIFECYCLE),
     ("EngineCapabilities", REASON_SERVER_LIFECYCLE),
     ("Health", REASON_SERVER_LIFECYCLE),
+    ("IngestWorkerStatus", REASON_SERVER_LIFECYCLE),
     ("Metrics", REASON_SERVER_LIFECYCLE),
     ("Ping", REASON_SERVER_LIFECYCLE),
     // MEDULLA-DURABLE-KERNEL-R043.100.5: answers engine config only, no tenant row.

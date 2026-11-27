@@ -62,6 +62,7 @@ method_results! {
     Ping(Ping) => Text<String>;
     EngineCapabilities(EngineCapabilities) => Raw<medulla_catalog_types::engine_capabilities::EngineCapabilities>;
     Health(Health) => Json<HealthReport>;
+    IngestWorkerStatus(IngestWorkerStatus) => Json<medulla_types::ingest_lanes::IngestWorkerStatusReport>;
     Shutdown(Shutdown) => Text<String>;
     CancelRequest(CancelRequest) => Bool<bool>;
     RegisterForeignSource(RegisterForeignSource) => Text<String>;

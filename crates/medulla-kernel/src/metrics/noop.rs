@@ -78,4 +78,7 @@ impl KernelMetrics {
     pub fn render(&self) -> String {
         String::new()
     }
+    pub fn ingest_status(&self) -> medulla_types::ingest_lanes::IngestWorkerStatusReport {
+        medulla_types::ingest_lanes::IngestWorkerStatusReport::default()
+    }
 }

@@ -19826,6 +19826,10 @@ class MedullaClient:
     async def health(self) -> dict[str, Any]:
         return (await _gen.cluster.send_health(self)).payload
 
+    async def ingest_worker_status(self) -> dict[str, Any]:
+        """The ingest worker series the engine holds (MEDULLA-INGEST-WORKER-R001.18)."""
+        return (await _gen.cluster.send_ingest_worker_status(self)).payload
+
     async def engine_capabilities(self) -> dict[str, Any]:
         """The capability report of this build (MEDULLA-ENGINE-PARITY-R020.2)."""
         return (await _gen.cluster.send_engine_capabilities(self)).payload

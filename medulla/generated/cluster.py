@@ -1174,6 +1174,66 @@ def decode_health(result: OpaqueResult) -> _models.HealthReport:
     return decode_result("Health", models().HealthReport, result)
 
 
+class IngestWorkerStatusRequest(BaseModel):
+    """Validate one engine-contract request body.
+
+    Method:
+        IngestWorkerStatus
+    Request schema:
+        contract/schemas/method.request.json
+        #/methods/IngestWorkerStatus
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    # Method::IngestWorkerStatus carries no request fields.
+
+
+async def send_ingest_worker_status(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        IngestWorkerStatus
+    Authorization:
+        service:control
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Json
+    Result schema:
+        contract/schemas/result.cluster.json
+        #/methods/IngestWorkerStatus
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    IngestWorkerStatusRequest.model_validate(params or {})
+    payload = await client._send(
+        "IngestWorkerStatus",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("IngestWorkerStatus", payload)
+
+
+def decode_ingest_worker_status(
+    result: OpaqueResult,
+) -> _models.IngestWorkerStatusReport:
+    """Validate this method's result against its contract model."""
+    return decode_result(
+        "IngestWorkerStatus", models().IngestWorkerStatusReport, result
+    )
+
+
 class ShutdownRequest(BaseModel):
     """Validate one engine-contract request body.
 

@@ -87,4 +87,10 @@ impl KernelMetrics {
     pub fn admit_refused(&self, lane: &str) {
         self.admit_refused_total.with_label_values(&[lane]).inc();
     }
+
+    /// Every sample of the ingest worker series this registry holds, read from the one
+    /// exposition the scrape endpoint serves (MEDULLA-INGEST-WORKER-R001.18).
+    pub fn ingest_status(&self) -> medulla_types::ingest_lanes::IngestWorkerStatusReport {
+        medulla_types::ingest_lanes::ingest_series_from_exposition(&self.render())
+    }
 }

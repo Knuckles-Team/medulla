@@ -9222,6 +9222,20 @@ class ReadinessReport(BaseModel):
     ready: bool
 
 
+class IngestMetricSample(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    labels: dict[str, str]
+    name: str
+    value: float
+
+
+class IngestWorkerStatusReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    series: list[IngestMetricSample]
+
+
 class HealthReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -48844,6 +48858,8 @@ __all__ = [
     "GraphReadiness",
     "ReadinessReport",
     "HealthReport",
+    "IngestMetricSample",
+    "IngestWorkerStatusReport",
     "EngineCapabilities",
     "RuleUseItem",
     "Winner",
