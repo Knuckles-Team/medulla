@@ -168,7 +168,12 @@ runs:
       shell: bash
       env:
         CARGO_TARGET_DIR: ${{ runner.temp }}/xtask-target
-      run: cargo --locked xtask inject-server-binary "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" "dist-server-bin/$(ls dist-server-bin | grep -xE 'medulla-server(\.exe)?')"
+      run: |
+        # The server links the prebuilt analytical database library dynamically, so the
+        # library folds in beside it (MEDULLA-CONTRACT-R066.3).
+        cargo --locked xtask inject-server-binary "$(ls dist-${{ inputs.pass }}/medulla-*.whl)" \
+          "dist-server-bin/$(ls dist-server-bin | grep -xE 'medulla-server(\.exe)?')" \
+          "dist-server-bin/$(ls dist-server-bin | grep -xE 'libduckdb\.so|libduckdb\.dylib|duckdb\.dll')"
 
     # Safety net: the server is package data, never a console script; drop any
     # `*.data/scripts/*` member a future build change might emit.

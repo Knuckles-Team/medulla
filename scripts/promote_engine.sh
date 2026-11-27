@@ -77,6 +77,12 @@ if [[ "$DO_BUILD" -eq 1 ]]; then
   echo "building full internal release artifact"
   (
     cd "$REPO_ROOT"
+    # The embedded analytical database links the prebuilt, checksum-pinned library
+    # (MEDULLA-CONTRACT-R066.2); the binary finds it beside itself through the rpath.
+    duckdb_target="$(rustc -vV | sed -n 's/^host: //p')"
+    duckdb_dir="$(python3 scripts/fetch_duckdb_lib.py --target "$duckdb_target" --out "$REPO_ROOT/target/duckdb-lib")"
+    export DUCKDB_LIB_DIR="$duckdb_dir" DUCKDB_INCLUDE_DIR="$duckdb_dir"
+    unset DUCKDB_STATIC DUCKDB_DOWNLOAD_LIB
     cargo build --locked --profile release-internal --features "$BUILD_FEATURES"
   )
 fi

@@ -57,6 +57,12 @@ while IFS='=' read -r key value; do
   export "$key=$value"
 done < "$REMAP_ENV_FILE"
 
+echo "=== fetch the pinned prebuilt analytical database library (MEDULLA-CONTRACT-R066.2) ==="
+DUCKDB_TARGET="$(rustc -vV | sed -n 's/^host: //p')"
+DUCKDB_LIB_DIR="$(python3 scripts/fetch_duckdb_lib.py --target "$DUCKDB_TARGET" --out "$WORKDIR/duckdb-lib")"
+export DUCKDB_LIB_DIR DUCKDB_INCLUDE_DIR="$DUCKDB_LIB_DIR"
+unset DUCKDB_STATIC DUCKDB_DOWNLOAD_LIB
+
 echo "=== build primary server wheel (debug, full+ast-extended) ==="
 maturin build --locked --no-default-features --features full,ast-extended,source-duckdb,dataframe \
   --out "$WORKDIR/dist-primary"

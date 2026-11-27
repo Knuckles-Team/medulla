@@ -6,9 +6,11 @@
 //! `kvcache` and `skills`) is complete; `RECORD` lists every member with its sha256 and size;
 //! `msgpack` is an unconditional requirement and `numpy` is declared nowhere; the in-process
 //! engine binding is present when `--require-engine-kernel` is set; exactly one executable
-//! server binary is present when `--require-server-binary` is set. Only wheel-relative member
+//! server binary is present when `--require-server-binary` is set, beside exactly one non-empty,
+//! non-executable prebuilt analytical database library member (MEDULLA-CONTRACT-R066.3). Only wheel-relative member
 //! names are printed, never a build path.
 
+use crate::inject_server_binary::LIBRARY_NAMES;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use regex::Regex;
 use sha2::{Digest, Sha256};
@@ -29,6 +31,7 @@ const REQUIRED_SUBPACKAGES: [&str; 2] = ["kvcache", "skills"];
 const REQUIRED_BASE_DEPENDENCIES: [&str; 1] = ["msgpack"];
 /// NumPy is a developer-only parity reference, never a shipped runtime or extra.
 const FORBIDDEN_DEPENDENCIES: [&str; 1] = ["numpy"];
+const BIN_DIR: &str = "medulla/_bin";
 const SERVER_MEMBERS: [&str; 2] = [
     "medulla/_bin/medulla-server",
     "medulla/_bin/medulla-server.exe",
@@ -122,6 +125,7 @@ pub fn check_wheel(path: &Path, options: Options) -> Result<Vec<String>, String>
     failures.extend(check_engine_kernel(&names, options.require_engine_kernel));
     failures.extend(check_console_scripts(&names));
     failures.extend(check_server_binary(&members, options.require_server_binary));
+    failures.extend(check_library_member(&members, options.require_server_binary));
     failures.extend(check_python_surface(&names));
     failures.extend(check_base_dependencies(&requirements));
     failures.extend(check_forbidden_dependencies(&requirements));
@@ -196,6 +200,44 @@ fn check_server_binary(members: &[Member], required: bool) -> Vec<String> {
     if !info.name.ends_with(".exe") && info.mode & 0o111 == 0 {
         return vec![format!(
             "{} has no executable bit; pip would install it 0644",
+            info.name
+        )];
+    }
+    Vec::new()
+}
+
+/// MEDULLA-CONTRACT-R066.3: the server links the prebuilt library dynamically, so the wheel
+/// carries it as one non-empty, non-executable member next to the server.
+fn check_library_member(members: &[Member], required: bool) -> Vec<String> {
+    if !required {
+        return Vec::new();
+    }
+    let found: Vec<&Member> = members
+        .iter()
+        .filter(|m| {
+            m.name
+                .strip_prefix(BIN_DIR)
+                .and_then(|rest| rest.strip_prefix('/'))
+                .is_some_and(|base| LIBRARY_NAMES.contains(&base))
+        })
+        .collect();
+    let [info] = found.as_slice() else {
+        return vec![format!(
+            "expected exactly one prebuilt library member ({}), found {} - the library inject did not run or was undone (the server would fail to start)",
+            LIBRARY_NAMES
+                .iter()
+                .map(|n| format!("{BIN_DIR}/{n}"))
+                .collect::<Vec<_>>()
+                .join(" or "),
+            found.len()
+        )];
+    };
+    if info.size == 0 {
+        return vec![format!("{} is empty", info.name)];
+    }
+    if info.mode & 0o111 != 0 {
+        return vec![format!(
+            "{} has an executable bit; the library is a non-executable member",
             info.name
         )];
     }
@@ -351,6 +393,7 @@ mod tests {
 
     const VERSION: &str = "9.9.9";
     const SERVER: &str = "medulla/_bin/medulla-server";
+    const LIBRARY: &str = "medulla/_bin/libduckdb.so";
 
     fn dist_info() -> String {
         format!("medulla_engine-{VERSION}.dist-info")
@@ -551,6 +594,7 @@ mod tests {
         ));
         let mut members = complete_members(&complete_metadata());
         members.push((SERVER.into(), b"\x7fELF-server".to_vec()));
+        members.push((LIBRARY.into(), b"\x7fELF-library".to_vec()));
         let packaged = build(&dir, "packaged.whl", &members, &[SERVER], false, None);
         assert!(failures(&packaged, required).is_empty());
     }
@@ -563,6 +607,7 @@ mod tests {
             ..Options::default()
         };
         let mut members = complete_members(&complete_metadata());
+        members.push((LIBRARY.into(), b"\x7fELF-library".to_vec()));
         members.push((SERVER.into(), b"\x7fELF-server".to_vec()));
         let plain = build(&dir, "plain.whl", &members, &[], false, None);
         assert!(has(&failures(&plain, required), "no executable bit"));
@@ -570,9 +615,53 @@ mod tests {
         let empty = build(&dir, "empty.whl", &members, &[SERVER], false, None);
         assert!(has(&failures(&empty, required), "is empty"));
         let mut windows = complete_members(&complete_metadata());
+        windows.push(("medulla/_bin/duckdb.dll".into(), b"MZ-library".to_vec()));
         windows.push((format!("{SERVER}.exe"), b"MZ-server".to_vec()));
         let exe = build(&dir, "windows.whl", &windows, &[], false, None);
         assert!(failures(&exe, required).is_empty());
+    }
+
+    // spec: MEDULLA-CONTRACT-R066.3
+    #[test]
+    fn a_wheel_without_the_library_member_is_rejected() {
+        let (_t, dir) = fixture();
+        let required = Options {
+            require_server_binary: true,
+            ..Options::default()
+        };
+        let mut members = complete_members(&complete_metadata());
+        members.push((SERVER.into(), b"\x7fELF-server".to_vec()));
+        let without = build(&dir, "no-library.whl", &members, &[SERVER], false, None);
+        let found = failures(&without, required);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(has(&found, "expected exactly one prebuilt library member"));
+        // Not asked for: a wheel without the server needs no library.
+        assert!(failures(&without, Options::default()).is_empty());
+        members.push((LIBRARY.into(), b"\x7fELF-library".to_vec()));
+        let with = build(&dir, "library.whl", &members, &[SERVER], false, None);
+        assert!(failures(&with, required).is_empty());
+    }
+
+    // spec: MEDULLA-CONTRACT-R066.3
+    #[test]
+    fn the_library_member_is_unique_non_empty_and_not_executable() {
+        let (_t, dir) = fixture();
+        let required = Options {
+            require_server_binary: true,
+            ..Options::default()
+        };
+        let mut members = complete_members(&complete_metadata());
+        members.push((SERVER.into(), b"\x7fELF-server".to_vec()));
+        members.push((LIBRARY.into(), b"\x7fELF-library".to_vec()));
+        let executable = build(&dir, "exec.whl", &members, &[SERVER, LIBRARY], false, None);
+        assert!(has(&failures(&executable, required), "has an executable bit"));
+        members.push(("medulla/_bin/libduckdb.dylib".into(), b"mach-o".to_vec()));
+        let two = build(&dir, "two.whl", &members, &[SERVER], false, None);
+        assert!(has(&failures(&two, required), "found 2"));
+        members.pop();
+        members.last_mut().unwrap().1 = Vec::new();
+        let empty = build(&dir, "empty-lib.whl", &members, &[SERVER], false, None);
+        assert!(has(&failures(&empty, required), "libduckdb.so is empty"));
     }
 
     #[test]

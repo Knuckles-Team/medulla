@@ -9,7 +9,7 @@
 # it runs natively. A binary already present in dist-server-bin/ is reused, so
 # the reproduction pass of a dispatch builds the server once.
 medulla_build_release_server() {
-    local target exe target_dir out=dist-server-bin
+    local target exe lib target_dir out=dist-server-bin
     target="${MEDULLA_WHEEL_TARGET:-$(rustc -vV | sed -n 's/^host: //p')}"
     [ -n "$target" ] || { echo 'cannot determine the server target' >&2; return 1; }
     exe=medulla-server
@@ -33,6 +33,16 @@ medulla_build_release_server() {
                 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,--build-id=sha1"
                 ;;
         esac
+        # The embedded analytical database links a prebuilt, checksum-pinned library
+        # (MEDULLA-CONTRACT-R066.2); it ships beside the server (R066.3), so the
+        # server finds it through its own directory.
+        duckdb_dir="$(python3 "$(dirname "${BASH_SOURCE[0]}")/fetch_duckdb_lib.py" --target "$target" --out "$PWD/dist-duckdb-lib")" || exit 1
+        export DUCKDB_LIB_DIR="$duckdb_dir" DUCKDB_INCLUDE_DIR="$duckdb_dir"
+        unset DUCKDB_STATIC DUCKDB_DOWNLOAD_LIB
+        case "$target" in
+            *-unknown-linux-*) export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,-rpath,\$ORIGIN" ;;
+            *-apple-darwin) export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,-rpath,@loader_path" ;;
+        esac
         cargo build --locked --profile release-server --features full,ast-extended,source-duckdb,dataframe \
             --bin medulla-server --target "$target"
     ) || return 1
@@ -47,6 +57,14 @@ medulla_build_release_server() {
     mkdir -p "$out" || return 1
     cp "$target_dir/$target/release-server/$exe" "$out/$exe" || return 1
     chmod 0755 "$out/$exe" || return 1
+    # The prebuilt library travels with the server (MEDULLA-CONTRACT-R066.3).
+    case "$target" in
+        *-windows-*) lib=duckdb.dll ;;
+        *-apple-darwin) lib=libduckdb.dylib ;;
+        *) lib=libduckdb.so ;;
+    esac
+    cp "$PWD/dist-duckdb-lib/$lib" "$out/$lib" || return 1
+    chmod 0644 "$out/$lib" || return 1
     # Split the debug information into dist-server-symbols/ and strip the shipped
     # binary; the build-id stays in both (MEDULLA-CONTRACT-R060.1).
     case "$target" in

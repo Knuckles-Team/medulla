@@ -5,6 +5,11 @@
 //! the same platform as the wheel's extension modules. The executable is placed in the
 //! already-built wheel, mode 0755, and `RECORD` is rewritten. The wheel is rewritten in place and
 //! an existing server member is replaced.
+//!
+//! MEDULLA-CONTRACT-R066.3: a server built with `source-duckdb` links the prebuilt analytical
+//! database library dynamically, so an optional third argument folds the library as one
+//! non-executable member (mode 0644) beside the server: `medulla/_bin/libduckdb.so`,
+//! `libduckdb.dylib` or `duckdb.dll`. An existing library member is replaced.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -21,21 +26,44 @@ pub const SUMMARY: &str = "fold the release server executable into the medulla w
 const TARGET_DIR: &str = "medulla/_bin";
 const SERVER_NAMES: [&str; 2] = ["medulla-server", "medulla-server.exe"];
 const SERVER_MODE: u32 = 0o755;
+/// The prebuilt library member names, one per platform (MEDULLA-CONTRACT-R066.3).
+pub const LIBRARY_NAMES: [&str; 3] = ["libduckdb.so", "libduckdb.dylib", "duckdb.dll"];
+const LIBRARY_MODE: u32 = 0o644;
 
 pub fn run(_root: &Path, args: &[String]) -> Result<(), String> {
-    let [wheel, binary] = args else {
-        return Err(
-            "usage: cargo xtask inject-server-binary <medulla_wheel> <server_binary>".into(),
-        );
+    let (wheel, binary, library) = match args {
+        [wheel, binary] => (wheel, binary, None),
+        [wheel, binary, library] => (wheel, binary, Some(Path::new(library))),
+        _ => {
+            return Err(
+                "usage: cargo xtask inject-server-binary <medulla_wheel> <server_binary> [<library>]"
+                    .into(),
+            )
+        }
     };
-    let target = inject(Path::new(wheel), Path::new(binary))?;
+    let target = inject(Path::new(wheel), Path::new(binary), library)?;
     println!("OK: injected {target} (mode {SERVER_MODE:04o}) into the release wheel");
+    if let Some(library) = library {
+        println!(
+            "OK: injected {TARGET_DIR}/{} (mode {LIBRARY_MODE:04o})",
+            file_name(library)
+        );
+    }
     Ok(())
 }
 
-fn is_server_member(name: &str) -> bool {
+fn is_bin_member(name: &str, names: &[&str]) -> bool {
     name.rsplit_once('/')
-        .is_some_and(|(dir, base)| dir == TARGET_DIR && SERVER_NAMES.contains(&base))
+        .is_some_and(|(dir, base)| dir == TARGET_DIR && names.contains(&base))
+}
+
+fn is_replaced_member(name: &str, with_library: bool) -> bool {
+    is_bin_member(name, &SERVER_NAMES) || (with_library && is_bin_member(name, &LIBRARY_NAMES))
+}
+
+fn file_name(path: &Path) -> String {
+    path.file_name()
+        .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
 }
 
 struct Entry {
@@ -85,11 +113,9 @@ fn record_bytes(entries: &[Entry], record_name: &str) -> Vec<u8> {
     out.into_bytes()
 }
 
-/// Folds `binary` into `wheel`; returns the member name written.
-pub fn inject(wheel: &Path, binary: &Path) -> Result<String, String> {
-    let binary_name = binary
-        .file_name()
-        .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+/// Folds `binary` (and `library`, when given) into `wheel`; returns the server member name written.
+pub fn inject(wheel: &Path, binary: &Path, library: Option<&Path>) -> Result<String, String> {
+    let binary_name = file_name(binary);
     if !SERVER_NAMES.contains(&binary_name.as_str()) || !binary.is_file() {
         return Err(format!("not a medulla-server executable: {binary_name}"));
     }
@@ -97,6 +123,20 @@ pub fn inject(wheel: &Path, binary: &Path) -> Result<String, String> {
     if data.is_empty() {
         return Err("server executable is empty".into());
     }
+    let library = match library {
+        None => None,
+        Some(path) => {
+            let name = file_name(path);
+            if !LIBRARY_NAMES.contains(&name.as_str()) || !path.is_file() {
+                return Err(format!("not a prebuilt library: {name}"));
+            }
+            let bytes = fs::read(path).map_err(|e| e.to_string())?;
+            if bytes.is_empty() {
+                return Err("prebuilt library is empty".into());
+            }
+            Some((name, bytes))
+        }
+    };
     let target = format!("{TARGET_DIR}/{binary_name}");
     let mut archive =
         ZipArchive::new(File::open(wheel).map_err(|e| format!("{}: {e}", wheel.display()))?)
@@ -128,7 +168,7 @@ pub fn inject(wheel: &Path, binary: &Path) -> Result<String, String> {
         if name.ends_with(".dist-info/RECORD") {
             records += 1;
             record = Some(entry);
-        } else if !is_server_member(&name) {
+        } else if !is_replaced_member(&name, library.is_some()) {
             entries.push(entry);
         }
     }
@@ -142,6 +182,15 @@ pub fn inject(wheel: &Path, binary: &Path) -> Result<String, String> {
         time: stamp.unwrap_or(record.time),
         mode: Some(SERVER_MODE),
     });
+    if let Some((name, bytes)) = library {
+        entries.push(Entry {
+            name: format!("{TARGET_DIR}/{name}"),
+            data: bytes,
+            method: CompressionMethod::Deflated,
+            time: stamp.unwrap_or(record.time),
+            mode: Some(LIBRARY_MODE),
+        });
+    }
     let record_data = record_bytes(&entries, &record.name);
     let temporary = PathBuf::from(format!("{}.tmp", wheel.display()));
     {
@@ -196,7 +245,7 @@ mod tests {
             fs::write(&binary, b"\x7fELF server").expect("write");
             for _ in 0..2 {
                 // idempotent: a second fold replaces the member
-                inject(&path, &binary).expect("injects");
+                inject(&path, &binary, None).expect("injects");
             }
             let mut archive = ZipArchive::new(File::open(&path).expect("open")).expect("zip");
             let bin: Vec<String> = archive
@@ -229,7 +278,7 @@ mod tests {
         let tree = Tree::new(&[("nemesis", "x")]);
         let path = tree.path().join("medulla-1.0-py3-none-any.whl");
         wheel(&path, &[("medulla/x.py", b"")]);
-        let error = inject(&path, &tree.path().join("nemesis")).expect_err("refused");
+        let error = inject(&path, &tree.path().join("nemesis"), None).expect_err("refused");
         assert!(error.contains("not a medulla-server executable"));
     }
 
@@ -242,8 +291,48 @@ mod tests {
             .start_file("medulla/x.py", SimpleFileOptions::default())
             .expect("start");
         writer.finish().expect("finish");
-        let error = inject(&path, &tree.path().join("medulla-server")).expect_err("refused");
+        let error = inject(&path, &tree.path().join("medulla-server"), None).expect_err("refused");
         assert!(error.contains("exactly one RECORD"));
+    }
+
+    // spec: MEDULLA-CONTRACT-R066.3
+    #[test]
+    fn inject_folds_the_library_as_a_non_executable_member_beside_the_server() {
+        let tree = Tree::new(&[("medulla-server", "x"), ("libduckdb.so", "y"), ("bad.so", "z")]);
+        let path = tree.path().join("medulla-1.0-cp39-abi3-linux_x86_64.whl");
+        wheel(
+            &path,
+            &[
+                ("medulla/__init__.py", b""),
+                ("medulla/_bin/libduckdb.so", b"stale"),
+            ],
+        );
+        let server = tree.path().join("medulla-server");
+        let refused = inject(&path, &server, Some(&tree.path().join("bad.so"))).expect_err("name");
+        assert!(refused.contains("not a prebuilt library"));
+        let library = tree.path().join("libduckdb.so");
+        for _ in 0..2 {
+            inject(&path, &server, Some(&library)).expect("injects");
+        }
+        let mut archive = ZipArchive::new(File::open(&path).expect("open")).expect("zip");
+        let mut bin: Vec<String> = archive
+            .file_names()
+            .filter_map(Result::ok)
+            .map(|n| n.to_string())
+            .filter(|n| n.contains("/_bin/"))
+            .collect();
+        bin.sort();
+        assert_eq!(bin, ["medulla/_bin/libduckdb.so", "medulla/_bin/medulla-server"]);
+        let member = archive.by_name("medulla/_bin/libduckdb.so").expect("member");
+        assert_eq!(member.unix_mode().expect("mode") & 0o777, 0o644);
+        drop(member);
+        let mut text = String::new();
+        archive
+            .by_name("medulla-1.0.dist-info/RECORD")
+            .expect("record")
+            .read_to_string(&mut text)
+            .expect("read");
+        assert!(text.contains("medulla/_bin/libduckdb.so,sha256="));
     }
 
     #[test]
