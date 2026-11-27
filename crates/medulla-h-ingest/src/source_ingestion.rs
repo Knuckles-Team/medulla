@@ -3786,6 +3786,7 @@ impl PreparedSourceIngestion {
             relationship_raw_admissions: Vec::new(),
             tombstones: Vec::new(),
             relationship_tombstones: Vec::new(),
+            class_reports: BTreeMap::new(),
             accepted_checkpoint: batch.provider_checkpoint.clone(),
             live_set_digest: None,
             relationship_live_set_digest: None,
