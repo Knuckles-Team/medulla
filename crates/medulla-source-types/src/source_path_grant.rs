@@ -195,6 +195,7 @@ impl ListPathGrantsRequest {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PathGrantList {
+    /// The grants of the principal, ordered by repository, then prefix.
     pub grants: Vec<PathGrant>,
 }
 

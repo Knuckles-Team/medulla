@@ -28,7 +28,9 @@ pub struct BisectStepRequest {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct BisectLink {
+    /// The branch commit id of the changeset.
     pub commit: String,
+    /// The changeset id, which is the key of its verdict.
     pub changeset: String,
 }
 
@@ -47,7 +49,9 @@ pub enum BisectOutcome {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct BisectStepReceipt {
+    /// Whether the answer asks for a verdict or names the culprit.
     pub outcome: BisectOutcome,
+    /// The changeset the outcome is about.
     pub link: BisectLink,
     /// Changesets strictly between the known-good and known-bad bounds (`0` for a culprit).
     pub remaining: u64,
@@ -56,10 +60,13 @@ pub struct BisectStepReceipt {
 /// Why a bisect step produced no answer.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum BisectRefusal {
+    /// No verdict covers a changeset the search needs.
     #[error("BISECT_VERDICT_COVERAGE: {0}")]
     VerdictCoverage(String),
+    /// The named revision is not on the changeset chain.
     #[error("REVISION_NOT_ON_CHAIN: {0}")]
     RevisionNotOnChain(String),
+    /// The request is malformed.
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
 }
