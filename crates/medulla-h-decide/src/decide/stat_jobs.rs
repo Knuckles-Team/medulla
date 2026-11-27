@@ -1190,7 +1190,7 @@ pub(super) async fn plan_skill_eval(
     }
     .instrument(span)
     .await
-    .inspect_err(|error| telemetry::refused("DecisionEval", error))
+    .inspect_err(|error: &String| telemetry::refused("DecisionEval", error))
 }
 
 /// Plan one `DecisionEval` op `skill_eval_case_add`: the case checked and planned as one
@@ -1222,7 +1222,7 @@ pub(super) async fn plan_skill_eval_case_add(
     }
     .instrument(span)
     .await
-    .inspect_err(|error| telemetry::refused("DecisionEval", error))
+    .inspect_err(|error: &String| telemetry::refused("DecisionEval", error))
 }
 
 /// Plan one `DecisionEval` op `held_item_critique`: the critique derived from the answers and
@@ -1248,7 +1248,7 @@ pub(super) async fn plan_held_item_critique(
     }
     .instrument(span)
     .await
-    .inspect_err(|error| telemetry::refused("DecisionEval", error))
+    .inspect_err(|error: &String| telemetry::refused("DecisionEval", error))
 }
 
 /// Serve one `DecisionFit` op.

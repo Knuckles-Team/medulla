@@ -266,6 +266,7 @@ pub async fn require_admit_receipts(
     candidate: &MemoryChangeCandidate,
     digests: &[String],
 ) -> Result<Vec<String>, String> {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     let store = state.write().await.ensure_agent_library()?;
     check_receipts(&store, verified.tenant(), kind, candidate, digests)
 }

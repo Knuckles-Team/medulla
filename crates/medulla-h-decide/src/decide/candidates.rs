@@ -211,12 +211,13 @@ pub(super) fn filter_by_slot_kind(
     entries: &[AgentComponentEntry],
     views: &[CandidateView],
 ) -> Result<Vec<CandidateView>, AssembleRefusal> {
-    let kind_of = |entry: &AgentComponentEntry| {
+    // A function item, not a closure, so the kind borrows from the entry it reads.
+    fn kind_of(entry: &AgentComponentEntry) -> Option<&str> {
         entry
             .attributes
             .get(medulla_agent_types::agent_component::A2A_AGENT_KIND_ATTRIBUTE)
             .map(String::as_str)
-    };
+    }
     if slots.iter().all(|slot| slot.required_agent_kind.is_none()) {
         return Ok(views.to_vec());
     }

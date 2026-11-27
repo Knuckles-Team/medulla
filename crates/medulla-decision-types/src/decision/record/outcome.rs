@@ -163,7 +163,10 @@ impl AbstainReason {
 
     /// Fold a typed refusal into the abstention that reports it, under the
     /// origin the raising caller passes.
-    pub fn from_refusal(origin: RefusalOrigin, refusal: &impl DecisionRefusal) -> Self {
+    pub fn from_refusal(
+        origin: RefusalOrigin,
+        refusal: &(impl DecisionRefusal + ?Sized),
+    ) -> Self {
         let (code, detail) = (refusal.code(), refusal.detail());
         match origin {
             RefusalOrigin::Decide(family) => Self::Family {

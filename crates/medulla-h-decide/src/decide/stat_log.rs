@@ -301,7 +301,7 @@ fn commit(
     // MEDULLA-DECISION-ENGINE-R019.100.2: the receipt names the digest the reviewer saw (the
     // submitted record's, before the seed reveal) and is checked before the idempotency read,
     // so a refusal writes nothing and a retry carries its approval again.
-    let resolved = super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.policy)?;
+    let resolved = super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.inputs.policy)?;
     if resolved.policy.approval_required {
         medulla_decision_types::decision::approval::check_approval(
             approval,
@@ -550,7 +550,7 @@ pub(super) fn aggregate_log(
         attribution,
         transfer,
         skill_candidates: skills,
-        correction_labels: BoundedVec::try_from(correction_labels.to_vec())
+        correction_labels: BoundedVec::new(correction_labels.to_vec())
             .map_err(|_| "the correction labels exceed the aggregate bound".to_string())?,
     })
 }

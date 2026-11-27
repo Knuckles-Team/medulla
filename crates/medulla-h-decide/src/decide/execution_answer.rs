@@ -10,6 +10,7 @@
 use super::SharedState;
 use medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAnswerRequest;
 use medulla_protocol_types::protocol::Response;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The steps of the task, each with its successor and the source that states it.
@@ -252,6 +253,7 @@ pub(super) fn part_or_abstain(
         provenance: PremiseProvenance::Request {
             field: "task_iri".to_string(),
         },
+        trust_tier: None,
     };
     ExecutionAnswerPart::Abstain {
         reason: AbstainReason::Family {
@@ -295,6 +297,7 @@ fn solved_parts(
     match &record.outcome {
         DecisionOutcome::Abstained { reasons } => {
             let copied = reasons
+                .as_slice()
                 .first()
                 .map(|reason| reason.code().as_str().to_string())
                 .unwrap_or_else(|| "INSUFFICIENT_CONFIDENCE".to_string());
@@ -639,6 +642,12 @@ fn contract_steps(
             }
             continue;
         }
+        let skills = {
+            let mut skills = skills_by_tool.get(&tool).cloned().unwrap_or_default();
+            skills.sort();
+            skills.dedup();
+            skills
+        };
         steps.push(ContractStep {
             contract,
             tool,
@@ -647,12 +656,7 @@ fn contract_steps(
             params: take(&mut params),
             result_fields: take(&mut results),
             refusal_codes: take(&mut refusals),
-            skills: {
-                let mut skills = skills_by_tool.get(&tool).cloned().unwrap_or_default();
-                skills.sort();
-                skills.dedup();
-                skills
-            },
+            skills,
             step,
         });
     }
@@ -801,7 +805,7 @@ fn query_part(
             "INTERNAL: the execution answer query did not answer a table".to_string(),
         ));
     };
-    let (vars, mut rows) = result.to_rows();
+    let (vars, mut rows) = result.to_text_rows();
     // The evaluator gives no order the caller can rely on: sort so the same
     // graph answers the same bytes.
     rows.sort();

@@ -154,6 +154,8 @@ fn proposal_of(
                 PlanNotes {
                     relevance_q32: Default::default(),
                     engine_chose_aggregation: true,
+                    process_premises: Vec::new(),
+                    process_ranked: false,
                 },
             ),
             other => other,
@@ -171,6 +173,8 @@ fn proposal_of(
                     PlanNotes {
                         relevance_q32: relevance,
                         engine_chose_aggregation: false,
+                        process_premises: Vec::new(),
+                        process_ranked: false,
                     },
                 ),
                 other => other,

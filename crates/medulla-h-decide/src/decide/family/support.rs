@@ -119,7 +119,7 @@ pub(in crate::decide) fn advisory_scored(options: Vec<(String, i64)>) -> Result<
 /// An abstention that reports `refusal` under `kind`'s registered table.
 pub(super) fn abstained(
     kind: medulla_decision_types::decision::statistical::QuestionKind,
-    refusal: &impl medulla_decision_types::decision::record::outcome::DecisionRefusal,
+    refusal: &(impl medulla_decision_types::decision::record::outcome::DecisionRefusal + ?Sized),
 ) -> Executed {
     use medulla_decision_types::decision::record::outcome::RefusalOrigin;
     use medulla_decision_types::decision::AbstainReason;

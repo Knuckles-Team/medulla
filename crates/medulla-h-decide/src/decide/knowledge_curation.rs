@@ -69,7 +69,7 @@ mod served {
     use serde::{Deserialize, Serialize};
     use serde_json::{json, Map, Value};
 
-    use super::SCOPE_CURATE;
+    use super::{CurationOp, SCOPE_CURATE};
     use crate::decide::knowledge_flag::served::{all_flags, edge_operation, flag_by_id};
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};

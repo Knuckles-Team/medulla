@@ -469,7 +469,7 @@ fn review(
     let pointer = ChampionPointer {
         subject: ask.subject.clone(),
         revision_ref: opaque(&target)?,
-        parent_ref: match state.stack.last().and_then(|event| event.target.as_deref()) {
+        parent_ref: match state.stack.as_slice().last().and_then(|event| event.target.as_deref()) {
             Some(parent) => Some(opaque(parent)?),
             None => None,
         },
@@ -522,7 +522,7 @@ fn regressed(
     let pointer = ChampionPointer {
         subject: ask.subject.clone(),
         revision_ref: opaque(active.target.as_deref().unwrap_or_default())?,
-        parent_ref: match state.stack.last().and_then(|event| event.target.as_deref()) {
+        parent_ref: match state.stack.as_slice().last().and_then(|event| event.target.as_deref()) {
             Some(parent) => Some(opaque(parent)?),
             None => None,
         },
