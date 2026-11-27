@@ -226,8 +226,8 @@ impl CapacityCell {
 /// Lifecycle state of one `CapacityLease` (MEDULLA-PLACEMENT-R786.2). A renewal is a
 /// count (`renewed_count`), not a state, and a deadline passed before the sweeper stored
 /// `Expired` is derived by [`CapacityLease::effective_status`]: a timestamp records a
-/// fact, not a state. The retired stored texts `active` and `reclaimed` read as
-/// `Granted` and `Expired`.
+/// fact, not a state. The retired stored texts `active` and `reclaimed` are not read: a
+/// record carrying either is refused as an unknown state (hard cutover).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -237,14 +237,12 @@ pub enum CapacityLeaseState {
     /// Waiting in its cell's fair queue for a slot.
     Queued,
     /// Holds its slot and has not started work.
-    #[serde(alias = "active")]
     Granted,
     /// Holds its slot and runs.
     Running,
     /// The holder gave the slot back (or cancelled its wait). Terminal.
     Released,
     /// A deadline passed and the sweeper returned the slot. Terminal.
-    #[serde(alias = "reclaimed")]
     Expired,
     /// An administrator took the slot back. Terminal.
     Revoked,
@@ -1372,12 +1370,13 @@ mod tests {
         assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
     }
 
-    /// The retired stored texts read as their successors; no other text is a state.
+    /// Only the seven stored texts are states; the retired `active` and `reclaimed` are
+    /// refused with a typed error, never read as a successor and never a panic.
     #[test]
-    fn retired_stored_texts_read_as_granted_and_expired() {
+    fn retired_stored_texts_are_refused() {
         let read = |text: &str| serde_json::from_str::<CapacityLeaseState>(&format!("\"{text}\""));
-        assert_eq!(read("active").unwrap(), CapacityLeaseState::Granted);
-        assert_eq!(read("reclaimed").unwrap(), CapacityLeaseState::Expired);
+        assert!(read("active").is_err());
+        assert!(read("reclaimed").is_err());
         assert!(read("renewed").is_err());
         for &state in CAPACITY_LEASE_MACHINE.states {
             assert_eq!(read(state.stored()).unwrap(), state);
