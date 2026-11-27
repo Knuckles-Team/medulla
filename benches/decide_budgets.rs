@@ -187,6 +187,9 @@ const FAMILIES: &[QuestionKind] = &[
     QuestionKind::FeatureMatch,
     QuestionKind::PlaybookTriage,
     QuestionKind::ToolActionAdmission,
+    QuestionKind::CredentialReuse,
+    QuestionKind::ScaleIntent,
+    QuestionKind::Promotion,
 ];
 
 /// The families with their own bench fixture instead of the generic one:
@@ -316,6 +319,9 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::RevertOrFixForward => "revert_or_fix_forward",
         // Needs a stored defect, symbols and blame, so it has its own bench fixture.
         QuestionKind::DefectTriage => "defect_triage",
+        QuestionKind::CredentialReuse => "credential_reuse",
+        QuestionKind::ScaleIntent => "scale_intent",
+        QuestionKind::Promotion => "promotion",
     }
 }
 
@@ -2075,6 +2081,8 @@ fn bench_load_set(
         max_agents: 4,
         graph: "__commons__".to_string(),
         embedding_version: LOAD_SET_VERSION.to_string(),
+        persona: None,
+        removed_capabilities: Vec::new(),
     };
     let asked = typed_request(
         &asked,
@@ -2565,6 +2573,7 @@ fn bench_memory_consolidate(
                 include_archived: false,
                 current_revision: None,
                 episode_scope: None,
+                memory_scope: None,
             }),
         })
     };
@@ -3186,6 +3195,7 @@ fn bench_memory_scaling(
                 request: Box::new(MemoryRememberRequest {
                     record,
                     embedding: Vec::new(),
+                    episode: None,
                 }),
             },
         ));

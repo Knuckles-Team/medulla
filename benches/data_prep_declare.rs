@@ -55,7 +55,12 @@ fn commit(core: &GraphCore, methods: &[Method]) {
             Method::RemoveEdge {
                 source_id,
                 target_id,
-            } => core.remove_edge(source_id.clone(), target_id.clone()),
+                relationship,
+            } => core.remove_edge_scoped(
+                source_id.clone(),
+                target_id.clone(),
+                relationship.as_deref(),
+            ),
             other => panic!("unexpected method {other:?}"),
         }
     }

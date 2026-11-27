@@ -20,7 +20,7 @@ use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_work_types::work_item_read::{
-    EffectOutcome, EffectReceipt, RecordEffectReceiptRequest,
+    EffectOutcome, EffectReceipt, ReceiptId, RecordEffectReceiptRequest,
 };
 
 #[path = "common/redb_fan_in.rs"]
@@ -70,7 +70,8 @@ fn receipt(index: usize) -> Method {
                 request_ref: REQUEST_REF.to_string(),
                 principal_ref: WORKER.to_string(),
                 outcome: EffectOutcome::Applied,
-                receipt_ref: format!("sha256:bench-receipt-{index}"),
+                receipt_ref: ReceiptId::parse(&format!("sha256:{index:064x}"))
+                    .expect("a sha256 digest of 64 hex characters is a receipt id"),
                 committed_at: 7,
             },
         },

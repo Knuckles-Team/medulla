@@ -19,6 +19,8 @@ use medulla_ingestion_types::source_governance::SourceContainer;
 const CONTAINERS: usize = 10_000;
 const FIRST_LEVEL: usize = 100;
 const RESOLUTIONS: usize = 100;
+/// The fixed clock reading every container is stamped with, so the tree is identical per run.
+const SYNCED_AT_MS: u64 = 1_700_000_000_000;
 const BUDGET_P99: Duration = Duration::from_millis(5);
 const BUDGET_MIB: f64 = 32.0;
 
@@ -61,7 +63,7 @@ fn high_water_mib() -> f64 {
 
 fn main() {
     let core = GraphCore::new();
-    let written = upsert_containers(&core, "tenant:bench", &tree()).expect("the tree is valid");
+    let written = upsert_containers(&core, "tenant:bench", &tree(), SYNCED_AT_MS).expect("the tree is valid");
     assert_eq!(written.nodes, CONTAINERS as u64);
     let root = container_node_id("tenant:bench", "drive", "root").expect("root id");
     let mut samples = Vec::with_capacity(RESOLUTIONS);
