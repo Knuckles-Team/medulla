@@ -23,6 +23,7 @@ import json
 import logging
 import math
 import os
+import re
 import secrets
 import socket
 import ssl
@@ -2825,6 +2826,9 @@ def _modality_stats(value: Any) -> ServedModalityStats:
     return cast(ServedModalityStats, stats)
 
 
+_CAUSE_REF_PATTERN = re.compile(r"\((cause-[0-9a-f]{8})\)$")
+
+
 class EngineResponseError(RuntimeError):
     """Engine refusal with a stable wire code separate from diagnostic detail.
 
@@ -2835,7 +2839,20 @@ class EngineResponseError(RuntimeError):
     def __init__(self, code: str, detail: str | None = None) -> None:
         self.code = code
         self.detail = detail
+        #: The ``cause-<8 hex>`` reference of an ``INTERNAL`` refusal the engine
+        #: could not type. The same reference is on the one WARN log line of the
+        #: engine that holds the full text (MEDULLA-OBSERVE-R001.2); ``None`` for a
+        #: typed refusal.
+        self.cause_ref = _cause_ref_of(code, detail)
         super().__init__(f"{code}: {detail}" if detail else code)
+
+
+def _cause_ref_of(code: str, detail: str | None) -> str | None:
+    """The cause reference an ``INTERNAL`` refusal detail ends with, else ``None``."""
+    if code != "INTERNAL" or not detail:
+        return None
+    match = _CAUSE_REF_PATTERN.search(detail)
+    return match.group(1) if match else None
 
 
 class TransitionRefusedError(EngineResponseError):
