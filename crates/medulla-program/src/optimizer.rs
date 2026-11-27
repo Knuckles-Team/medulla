@@ -368,10 +368,6 @@ pub struct ScoreSource {
     pub skipped_without_run: u64,
 }
 
-fn is_zero(value: &u64) -> bool {
-    *value == 0
-}
-
 impl OptimizationRequest {
     pub fn validate(&self) -> Result<(), ProgramError> {
         if self.schema_version != PROGRAM_SCHEMA_VERSION {
