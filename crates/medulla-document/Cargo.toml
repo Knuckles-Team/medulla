@@ -28,7 +28,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 thiserror = "2.0"
-# Reader parsers (MEDULLA-INGEST-WORKER-R700.7 to R700.10). `default-features = false`
+# Reader parsers (MEDULLA-INGEST-WORKER-R700.7 to MEDULLA-INGEST-WORKER-R700.10). `default-features = false`
 # keeps every date-time feature (and so `chrono`) off, which the manifest rule of
 # MEDULLA-INGEST-WORKER-R700.1 requires; each is linked only under its `reader-*` feature.
 lopdf = { version = "0.47", default-features = false, optional = true }

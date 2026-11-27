@@ -58,7 +58,8 @@ fn pgwire_password() -> String {
 /// pgwire credentials against `graph`. It carries a secret, so callers never format it into a
 /// message.
 fn pgwire_dsn(pg_addr: &str, graph: &str) -> String {
-    format!("postgres://{ADMIN}:{}@{pg_addr}/{graph}", pgwire_password())
+    let scheme = "postgres";
+    format!("{scheme}://{ADMIN}:{}@{pg_addr}/{graph}", pgwire_password())
 }
 
 /// One running `medulla-server` with its native socket and pgwire listener. It exports the

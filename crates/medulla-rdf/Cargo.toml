@@ -178,14 +178,14 @@ medulla-jobs = { path = "../medulla-jobs" }
 medulla-tsdb = { path = "../medulla-tsdb" }
 # The CircuitBreaker machine edge table the state-machine ontology test compares with (MEDULLA-PLACEMENT-R784.1).
 medulla-resource = { path = "../medulla-resource" }
-# The direct-state install and exact-retirement machine edge tables (MEDULLA-DURABLE-KERNEL-R874.4, R874.6).
+# The direct-state install and exact-retirement machine edge tables (MEDULLA-DURABLE-KERNEL-R874.4, MEDULLA-DURABLE-KERNEL-R874.6).
 medulla-direct-state = { path = "../medulla-direct-state" }
-# The semantic source-reconciliation and semantic stage machine edge tables (MEDULLA-DURABLE-KERNEL-R874.17, R874.18).
+# The semantic source-reconciliation and semantic stage machine edge tables (MEDULLA-DURABLE-KERNEL-R874.17, MEDULLA-DURABLE-KERNEL-R874.18).
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-store = { path = "../medulla-store", features = ["redb", "statechart"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }
 # The foreign-read session machine edge table (MEDULLA-UNIFIED-DATA-PLANE-R768.7).
 medulla-server-ops = { path = "../medulla-server-ops" }
-# The served-modality lifecycle and TCK status machine edge tables (MEDULLA-UNIFIED-DATA-PLANE-R768.6, R768.9).
+# The served-modality lifecycle and TCK status machine edge tables (MEDULLA-UNIFIED-DATA-PLANE-R768.6, MEDULLA-UNIFIED-DATA-PLANE-R768.9).
 medulla-modality = { path = "../medulla-modality" }

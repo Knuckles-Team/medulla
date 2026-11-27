@@ -1,6 +1,6 @@
 name: Nightly work-item budgets
 
-# MEDULLA-DURABLE-KERNEL-R028.4.2, R028.5.4 and R039.4.2: run the three work-item
+# MEDULLA-DURABLE-KERNEL-R028.4.2, MEDULLA-DURABLE-KERNEL-R028.5.4 and MEDULLA-DURABLE-KERNEL-R039.4.2: run the three work-item
 # groups of `benches/redb_write_latency_bench.rs` (owner-bound recovery,
 # current-plan publication and paired pending consumption) at 04:00 UTC on main.
 # The bench exits non-zero when any group misses its budget, which fails the run;

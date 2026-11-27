@@ -1428,7 +1428,7 @@ jobs:
 
   # ── Nightly budget benches of the incremental-views spec (MEDULLA-INCREMENTAL-VIEWS-R015).
   # The release gate runs every oracle test in the post-land `tests` set; these three
-  # benches state the service levels of R001.10, R009.8 and R011.7 and run on the nightly
+  # benches state the service levels of their spec rows and run on the nightly
   # schedule only. A bench asserts its own budget, so a regression fails here; the job is
   # a service level, never a release gate.
   incremental-budget-benches:
