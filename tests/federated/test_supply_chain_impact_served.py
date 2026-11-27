@@ -283,3 +283,79 @@ def test_erpnext_absent_abstains_and_software_rows_unchanged(
             caller.close()
         system.tenants.delete(graph)
         system.close()
+
+
+CONNECTED = (
+    "leanix-mcp",
+    "github-mcp",
+    "gitlab-mcp",
+    "dockerhub-mcp",
+    "uptime-mcp",
+    "erpnext-mcp",
+)
+
+
+@pytest.mark.spec("MEDULLA-CQ-XSRC-R007.2")
+def test_report_from_ingested_connector_rows(start_medulla_server) -> None:
+    """Verifies MEDULLA-CQ-XSRC-R007.2: rows ingested from several connected sources
+    answer the supply-chain question on the services and software sides; each item
+    names a connected source, each source used is one the caller registered, and no
+    connected source is reported as unconnected.
+
+    The engine reads the connected-source list from the caller's own catalog. The run
+    against the sources connected on the day is the owner's live check."""
+    graph = f"supply-chain-live-{uuid.uuid4().hex[:8]}"
+    system = _client()
+    system.tenants.create(graph)
+    agent = f"xsrc-live-{uuid.uuid4().hex[:8]}"
+    caller = None
+    try:
+        _attach_seed(system, graph)
+        for service, version, component, supplier, source in (
+            ("svc-checkout", "ver-nginx-1.18", "cmp-nginx", "sup-acme", "github-mcp"),
+            (
+                "svc-billing",
+                "ver-redis-7.0",
+                "cmp-redis",
+                "sup-globex",
+                "dockerhub-mcp",
+            ),
+        ):
+            _add_node(system, graph, service, {"type": "Service", "name": service})
+            _add_node(
+                system,
+                graph,
+                version,
+                {"type": "ComponentVersion", "source": source},
+            )
+            _add_node(system, graph, component, {"type": "SoftwareComponent"})
+            _add_node(system, graph, supplier, {"type": "Supplier"})
+            _add_edge(system, graph, service, "usesComponent", version)
+            _add_edge(system, graph, version, "supplyChainVersionOf", component)
+            _add_edge(system, graph, component, "publishedBy", supplier)
+
+        caller = _agent_client(agent, graph)
+        _register(caller, *CONNECTED)
+        report = _ask(caller, graph, ROOTS)
+
+        assert sorted(impact["service"] for impact in report["service_impacts"]) == [
+            "svc-billing",
+            "svc-checkout",
+        ], report["service_impacts"]
+        for impact in report["service_impacts"]:
+            assert impact["items"], impact
+            for item in impact["items"]:
+                assert item["supplier"] and item["component_version"], item
+                assert item["source"] in CONNECTED, item
+        assert report["sources_used"], report
+        assert all(entry["source"] in CONNECTED for entry in report["sources_used"])
+        assert not [
+            entry
+            for entry in report["abstentions"]
+            if entry.get("kind") == "unconnected" and entry.get("source") in CONNECTED
+        ], report["abstentions"]
+    finally:
+        if caller is not None:
+            caller.close()
+        system.tenants.delete(graph)
+        system.close()

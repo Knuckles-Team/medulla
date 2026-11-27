@@ -54,7 +54,7 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | Assemble the report from the federated rows | `MEDULLA-CQ-XSRC-R006.4` | `crates/medulla-source-types/src/supply_chain_report.rs::tests::assembly_is_byte_for_byte_deterministic_over_recorded_rows` |
 | Serve the report through Arbora | `MEDULLA-CQ-XSRC-R006.5` | `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::the_method_body_returns_a_report_matching_the_typed_model` |
 | Acceptance on recorded connector responses | `MEDULLA-CQ-XSRC-R007.1` | `crates/medulla-rdf/tests/xsrc_supply_chain_acceptance.rs::the_recorded_responses_answer_the_impact_question_with_provenance` |
-| Acceptance against the live connected sources | `MEDULLA-CQ-XSRC-R007.2` | `tests/federated/test_supply_chain_impact_served.py::test_report_from_ingested_connector_rows` (planned) |
+| Acceptance against the live connected sources | `MEDULLA-CQ-XSRC-R007.2` | `tests/federated/test_supply_chain_impact_served.py::test_report_from_ingested_connector_rows` |
 | Acceptance with the procurement source not connected | `MEDULLA-CQ-XSRC-R007.3` | `tests/federated/test_supply_chain_impact_served.py::test_erpnext_absent_abstains_and_software_rows_unchanged` (planned, L3): seed attached, five sources registered without erpnext-mcp; run 1 has `{kind: unconnected, source: erpnext-mcp, class: …Supplier}` and no `Supplier` source used; run 2 (erpnext-mcp registered) has no such abstention; software-side `sources_used` and non-erpnext impact items are equal across runs |
 | Query fixture and authority rows: vulnerable deployed image to exposed service | `MEDULLA-CQ-XSRC-R008.1.1` | `crates/medulla-rdf/tests/xsrc_supply_chain_query.rs::the_vulnerable_image_question_plans_to_exactly_the_named_sources` |
 | Acceptance: exposed services listed with image, vulnerability and sources | `MEDULLA-CQ-XSRC-R008.1.2` | `tests/federated/test_cross_source_questions_served.py::test_question_served[vulnerable_image_services]` (planned) |
@@ -68,7 +68,7 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | Query fixture: claims that touch the report | `MEDULLA-CQ-XSRC-R009.1` | `tests/test_cq_xsrc_r009.py::test_fixture_compiles_to_one_plan` |
 | Evidence clustering | `MEDULLA-CQ-XSRC-R009.2` | `tests/test_cq_xsrc_r009.py::test_evidence_clusters_by_embedding` |
 | Contradiction decay analysis | `MEDULLA-CQ-XSRC-R009.3` | `tests/uql_decay_engine_clock.rs::decay_weight_follows_the_engine_clock` (L4, engine clock moved one half-life); `tests/test_cq_xsrc_r009.py::test_contradiction_weights_decay_by_age`; `crates/medulla-plan/src/epistemic_tests.rs::contradicts_runs_once_per_input_row` (L1) |
-| Served acceptance through arbora | `MEDULLA-CQ-XSRC-R009.4` | `tests/test_cq_xsrc_r009.py::test_agent_claims_against_report_one_plan` (planned) |
+| Served acceptance through arbora | `MEDULLA-CQ-XSRC-R009.4` | `tests/test_cq_xsrc_r009.py::test_agent_claims_against_report_one_plan` |
 | Refusal | `MEDULLA-CQ-XSRC-R009.5` | `tests/test_cq_xsrc_r009.py::test_unknown_report_refuses`; `tests/test_cq_xsrc_r009.py::test_empty_window_is_empty_result` |
 | Serve the supply-chain impact report as a Medulla method | `MEDULLA-CQ-XSRC-R011` | `tests/federated/test_supply_chain_impact_served.py::test_method_returns_typed_report` (planned) |
 | Cross-connector join with a provenance record per fact | `MEDULLA-CQ-XSRC-R012.1` | `tests/federated/test_cross_connector_served.py::test_join_across_two_virtual_graphs_carries_provenance` (planned) |

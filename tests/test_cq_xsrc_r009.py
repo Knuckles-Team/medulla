@@ -12,14 +12,16 @@ two readings are two programs of the one selection.
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import tenant_request_context
 
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, SyncMedullaClient
 
 FIXTURES = Path(__file__).parent / "fixtures" / "cq"
 FIXTURE = FIXTURES / "xsrc_r009.uql"
@@ -226,3 +228,57 @@ def test_empty_window_is_empty_result(clean_graph) -> None:
     result = clean_graph.query.uql(_program(), _params(tag))
     assert result["kind"] == "rows", result
     assert result["rows"] == [], result
+
+
+@pytest.mark.spec("MEDULLA-CQ-XSRC-R009.4")
+def test_agent_claims_against_report_one_plan(clean_graph) -> None:
+    """Verifies MEDULLA-CQ-XSRC-R009.4: one served acceptance of both fixtures.
+
+    Each program explains to one plan root and one plan id. The cluster program
+    returns the evidence of the selected claims and the decay program returns their
+    decayed contradiction weights. A second tenant reads the same report id and gets
+    the refusal of an absent report, never a row of the first tenant."""
+    tag = uuid.uuid4().hex[:8]
+    ids = _ingest(clean_graph, tag)
+    start_ms = int(time.time() * 1000)
+    ages = _contradict(clean_graph, tag, ids, start_ms)
+    params = _params(tag)
+
+    for path in (FIXTURE, DECAY_FIXTURE):
+        explained = clean_graph.query.uql(_program(path, "EXPLAIN"), params)
+        assert explained["kind"] == "explain", explained
+        assert explained["plan_root_count"] == 1, explained
+        assert explained["plan_id_count"] == 1, explained
+
+    selected = ("mention-a", "mention-b", "similar")
+    clustered = clean_graph.query.uql(_program(), params)
+    assert clustered["kind"] == "rows", clustered
+    cluster_rows = {row["id"]: row["channels"] for row in clustered["rows"]}
+    assert set(cluster_rows) == {
+        ids[f"evidence:{claim}-{index}"] for claim in selected for index in (1, 2)
+    }, cluster_rows
+    assert all("cluster_id" in channels for channels in cluster_rows.values())
+
+    before_ms = int(time.time() * 1000)
+    decayed = clean_graph.query.uql(_program(DECAY_FIXTURE), params)
+    after_ms = int(time.time() * 1000)
+    assert decayed["kind"] == "rows", decayed
+    scores = {row["id"]: row["score"] for row in decayed["rows"]}
+    assert set(scores) == {ids[f"contradiction:{claim}"] for claim in selected}, scores
+    for claim in selected:
+        valid_time_ms = start_ms - ages[claim]
+        high = _decay_weight(before_ms, valid_time_ms)
+        low = _decay_weight(after_ms, valid_time_ms)
+        assert low - 1e-6 <= scores[ids[f"contradiction:{claim}"]] <= high + 1e-6
+
+    foreign = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context("tenant:xsrc-r009-other"),
+    )
+    try:
+        for path in (FIXTURE, DECAY_FIXTURE):
+            with pytest.raises(EngineResponseError) as refused:
+                foreign.query.uql(_program(path), params)
+            assert "CQ_REPORT_NOT_FOUND" in str(refused.value)
+    finally:
+        foreign.close()
