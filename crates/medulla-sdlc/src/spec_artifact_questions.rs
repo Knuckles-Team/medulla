@@ -44,11 +44,13 @@ impl SpecGraphView {
             .map(|(id, _)| id.as_str())
     }
 
-    fn out<'a>(
-        &'a self,
-        source: &'a str,
-        relationship: &'a str,
-    ) -> impl Iterator<Item = &'a str> + 'a {
+    /// The targets of the edges `source` has under `relationship`. The targets borrow the graph
+    /// alone, so they outlive a `source` that is a temporary.
+    fn out<'g, 'q>(
+        &'g self,
+        source: &'q str,
+        relationship: &'q str,
+    ) -> impl Iterator<Item = &'g str> + use<'g, 'q> {
         self.edges
             .iter()
             .filter(move |(from, rel, _)| from == source && rel == relationship)
