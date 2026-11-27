@@ -712,6 +712,7 @@ METHOD_IDS = frozenset(
         "SubmitChangeset",
         "ImportGitHistory",
         "GitExportPack",
+        "GitRefsList",
         "BundleExport",
         "BundleImport",
         "TraceCritique",

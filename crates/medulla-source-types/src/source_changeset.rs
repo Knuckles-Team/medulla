@@ -459,6 +459,29 @@ pub struct GitExportPackReceipt {
     pub pack_bytes: u64,
 }
 
+/// The request of `GitRefsList` (MEDULLA-SCM-R851): every live branch of one repository.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GitRefsListRequest {
+    pub repo: String,
+}
+
+/// One advertised git ref: `refs/heads/<branch>` and the git commit id of the branch head.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GitRef {
+    #[serde(rename = "ref")]
+    pub ref_name: String,
+    pub object_id: String,
+}
+
+/// The git ref name of a branch.
+pub fn git_ref_name(branch: &str) -> String {
+    format!("refs/heads/{branch}")
+}
+
 /// A request refused with the stable code and a detail naming the field.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubmitRefusal {

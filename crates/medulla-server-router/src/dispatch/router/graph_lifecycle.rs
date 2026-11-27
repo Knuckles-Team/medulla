@@ -238,6 +238,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R851: the refs of a repository with their head commit ids.
+        Method::GitRefsList { request } => {
+            dispatch_boxed(super::git_refs_list::handle_git_refs_list(
+                state,
+                req,
+                verified_context,
+                super::git_refs_list::GitRefsListFields { request },
+            ))
+            .await
+        }
         // MEDULLA-SCM-R004: the tree of a repository at one changeset revision.
         Method::ReadTree { request } => {
             dispatch_boxed(super::read_tree::handle_read_tree(

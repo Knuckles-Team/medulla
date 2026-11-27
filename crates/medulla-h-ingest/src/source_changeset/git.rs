@@ -699,6 +699,50 @@ pub fn export_pack(
     export_pack_with_format(chain, blobs, wants, haves).map(|(_, pack)| pack)
 }
 
+/// The git commit id of the changeset `head` as [`export_pack_with_format`] would
+/// export it (MEDULLA-SCM-R851.1): an imported head answers the commit id it
+/// was imported with; a native head replays the chain from the root and hashes
+/// the synthesized commit. A `head` that is no changeset of the chain answers `None`.
+pub fn head_commit_id(
+    chain: &dyn TreeChain,
+    blobs: &dyn BlobIo,
+    head: &str,
+) -> Result<Option<(GitObjectFormat, String)>, SubmitRefusal> {
+    let mut walked: Vec<Changeset> = Vec::new();
+    let mut cursor = head.to_string();
+    while let Some(changeset) = chain.changeset_at(&cursor).map_err(read_failed)? {
+        let next = changeset.parents.first().cloned().unwrap_or_default();
+        walked.push(changeset);
+        cursor = next;
+    }
+    let Some(newest) = walked.first() else {
+        return Ok(None);
+    };
+    if let Some(origin) = &newest.git {
+        return Ok(Some((origin.object_format, origin.commit_id.clone())));
+    }
+    walked.reverse();
+    let format = walked
+        .iter()
+        .find_map(|changeset| changeset.git.as_ref().map(|origin| origin.object_format))
+        .unwrap_or(GitObjectFormat::Sha1);
+    let mut cache: HashMap<(String, bool), String> = HashMap::new();
+    let mut tree = Tree::new();
+    let mut previous: Option<String> = None;
+    for changeset in &walked {
+        apply_scoped(&mut tree, changeset, "");
+        let mut files: BTreeMap<String, (u32, String)> = BTreeMap::new();
+        for (path, (digest, mode)) in &tree {
+            let id = file_id(format, blobs, &mut cache, digest, *mode)?;
+            files.insert(path.clone(), (*mode, id));
+        }
+        let (tree_id, _) = build_tree_objects(format, &files).map_err(codec)?;
+        let body = commit_body(changeset, &tree_id, previous.as_deref());
+        previous = Some(object_id(format, GitObjectKind::Commit, &body));
+    }
+    Ok(previous.map(|commit_id| (format, commit_id)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

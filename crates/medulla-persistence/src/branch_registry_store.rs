@@ -310,6 +310,31 @@ impl BranchRegistry {
         })
     }
 
+    /// Every live (not deleted) branch row of `graph` for `tenant`, in name order
+    /// (MEDULLA-SCM-R851). The scan is bounded to the length-prefixed `tenant/graph/` key
+    /// prefix, which no other row kind shares.
+    pub fn live_branches_of(&self, tenant: &str, graph: &str) -> Result<Vec<Branch>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let low = format!("{}:{tenant}/{}:{graph}/", tenant.len(), graph.len());
+        let mut branches = Vec::new();
+        for entry in table
+            .range::<&str>(low.as_str()..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = entry.map_err(|error| error.to_string())?;
+            if !key.value().starts_with(low.as_str()) {
+                break;
+            }
+            let row = decode(value.value())?;
+            if !row.deleted && row.tenant == tenant && row.graph == graph {
+                branches.push(row);
+            }
+        }
+        branches.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(branches)
+    }
+
     /// The commit a prior attempt with `batch_id` appended, if any.
     pub fn commit_for_batch(
         &self,
@@ -1229,5 +1254,34 @@ mod tests {
         assert_eq!(after.len(), 2);
         let denied = after.iter().find(|g| g.repo == "r").unwrap();
         assert!(!denied.read && !denied.write);
+    }
+
+    // spec: MEDULLA-SCM-R851
+    #[test]
+    fn live_branches_of_one_graph_exclude_deleted_and_foreign_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
+        let named = |tenant: &str, graph: &str, name: &str, deleted: bool| Branch {
+            tenant: tenant.into(),
+            graph: graph.into(),
+            name: name.into(),
+            deleted,
+            ..branch(name)
+        };
+        for row in [
+            named("t", "g", "b2", false),
+            named("t", "g", "b1", false),
+            named("t", "g", "gone", true),
+            named("t", "g2", "other", false),
+            named("t2", "g", "foreign", false),
+        ] {
+            registry.create(&row).unwrap();
+        }
+        let live = registry.live_branches_of("t", "g").unwrap();
+        assert_eq!(
+            live.iter().map(|b| b.name.as_str()).collect::<Vec<_>>(),
+            ["b1", "b2"]
+        );
+        assert!(registry.live_branches_of("t", "none").unwrap().is_empty());
     }
 }

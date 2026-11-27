@@ -25,3 +25,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T020 [US5] MEDULLA-SCM-R013.6 Evidence
 - [ ] T021 [US5] MEDULLA-SCM-R013.7 Hot-path proof
 - [ ] T022 [US2] MEDULLA-SCM-R014 Served git export of wants and haves
+- [ ] T023 MEDULLA-SCM-R851 Served git ref listing

@@ -1342,6 +1342,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REVISION_NOT_ON_CHAIN",
         ],
     ),
+    // MEDULLA-SCM-R851: the git ref listing refusals.
+    (
+        "GitRefsList",
+        &[
+            "GIT_EXPORT_TREE_READ_FAILED",
+            "GIT_GRAPH_MALFORMED",
+            "PATH_READ_DENIED",
+        ],
+    ),
     // MEDULLA-SCM-R007: a path grant that is out of bounds.
     ("SetPathGrant", &["PATH_GRANT_INVALID"]),
     ("ListPathGrants", &["PATH_GRANT_INVALID"]),

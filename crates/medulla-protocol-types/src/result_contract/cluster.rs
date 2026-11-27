@@ -35,6 +35,7 @@ method_results! {
     BundleExport(BundleExport) => Json<medulla_types::knowledge_bundle::BundleExportReceipt>;
     BundleImport(BundleImport) => Json<medulla_types::knowledge_bundle::BundleImportReceipt>;
     GitExportPack(GitExportPack) => Json<medulla_source_types::source_changeset::GitExportPackReceipt>;
+    GitRefsList(GitRefsList) => Json<Vec<medulla_source_types::source_changeset::GitRef>>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;
     CatalogAssign(CatalogAssign) => Bool<bool>;

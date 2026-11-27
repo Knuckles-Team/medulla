@@ -664,6 +664,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ListPathGrants { .. }
         | Method::BisectStep { .. }
         | Method::GitExportPack { .. }
+        | Method::GitRefsList { .. }
         | Method::FinanceDistributionShift { .. }
         | Method::FinancePatternClassify { .. }
         | Method::FinanceProfitAttribution { .. }

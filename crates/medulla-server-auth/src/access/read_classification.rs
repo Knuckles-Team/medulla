@@ -815,6 +815,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("BisectStep", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // MEDULLA-SCM-R014: the pack is built from the tenant's own branch chain.
     ("GitExportPack", REASON_BRANCH_CHAIN_TENANT_SCOPED),
+    // MEDULLA-SCM-R851: the refs are listed from the tenant's own branch registry rows.
+    ("GitRefsList", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // REASON_TENANT_KEY_SCOPED_KV
     ("KvGet", REASON_TENANT_KEY_SCOPED_KV),
     ("KvScan", REASON_TENANT_KEY_SCOPED_KV),

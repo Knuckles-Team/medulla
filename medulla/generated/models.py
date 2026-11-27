@@ -8840,6 +8840,7 @@ class IntrospectSection(str, Enum):
     BUILD = "build"
     EVENTS = "events"
     INDEXES = "indexes"
+    KNOBS = "knobs"
 
 
 class GraphType(str, Enum):
@@ -18108,6 +18109,13 @@ class MethodGitExportPack(BaseModel):
     params: MethodGitExportPackParams
 
 
+class MethodGitRefsList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GitRefsList"]
+    params: MethodGitRefsListParams
+
+
 class MethodSetPathGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18990,6 +18998,7 @@ Method = Annotated[
         MethodBundleExport,
         MethodBundleImport,
         MethodGitExportPack,
+        MethodGitRefsList,
         MethodSetPathGrant,
         MethodListPathGrants,
         MethodReadPathHistory,
@@ -41978,6 +41987,12 @@ class MethodGitExportPackParams(BaseModel):
     request: GitExportPackRequest
 
 
+class MethodGitRefsListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: GitRefsListRequest
+
+
 class MethodTraceCritiqueParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -42251,6 +42266,19 @@ class GitExportPackRequest(BaseModel):
     haves: list[str] = Field(default_factory=list)
     repo: str
     wants: list[str]
+
+
+class GitRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    object_id: str
+    ref: str
+
+
+class GitRefsListRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    repo: str
 
 
 class ImportGitHistoryReceipt(BaseModel):
@@ -52071,6 +52099,8 @@ __all__ = [
     "GenerationCycleRequest",
     "GitExportPackReceipt",
     "GitExportPackRequest",
+    "GitRef",
+    "GitRefsListRequest",
     "GitObjectFormat",
     "GoldGuarantee",
     "GoldGuaranteeEvidence",
@@ -52262,6 +52292,8 @@ __all__ = [
     "MethodBundleImportParams",
     "MethodGitExportPack",
     "MethodGitExportPackParams",
+    "MethodGitRefsList",
+    "MethodGitRefsListParams",
     "MethodHarnessEdit",
     "MethodHarnessEditParams",
     "MethodImportGitHistory",

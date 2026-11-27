@@ -745,6 +745,16 @@ $($variants)*
     GitExportPack {
         request: Box<medulla_source_types::source_changeset::GitExportPackRequest>,
     },
+
+    /// List the refs of a repository (MEDULLA-SCM-R851): `refs/heads/<branch>` and the git
+    /// commit id of the head, for every live branch of the verified tenant that has a head
+    /// changeset, in branch-name order. The caller needs read access on every path of every
+    /// listed branch chain, the check `GitExportPack` makes; one denied path refuses the whole
+    /// request `PATH_READ_DENIED`. A repository with no branch answers an empty list, so an
+    /// unknown repository and an empty one read alike. Reads only.
+    GitRefsList {
+        request: Box<medulla_source_types::source_changeset::GitRefsListRequest>,
+    },
         ]);
     };
 }

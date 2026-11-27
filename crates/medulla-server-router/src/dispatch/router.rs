@@ -75,6 +75,7 @@ pub mod service_control;
 pub(crate) mod share;
 mod source_ingest;
 mod git_export_pack;
+mod git_refs_list;
 mod import_git_history;
 mod list_path_grants;
 mod read_blame;
