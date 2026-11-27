@@ -267,7 +267,7 @@ fn service_context(
 struct Engine<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     anonymous: bool,
-    server: medulla_server_api::server_context::ServerContext,
+    server: Arc<medulla_server_api::server_context::ServerContext>,
     tenant: String,
 }
 
@@ -288,6 +288,7 @@ impl Engine<'_> {
             graph: graph.to_string(),
             auth_token: String::new(),
             agent_id: Some(PLANNER_ACTOR.to_string()),
+            trace_id: None,
             method,
         };
         let response =
