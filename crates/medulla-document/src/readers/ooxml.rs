@@ -258,7 +258,11 @@ impl Reader for OoxmlReader {
             OoxmlKind::Presentation => {
                 let mut slides: Vec<(u32, String)> = archive
                     .file_names()
-                    .filter_map(|name| slide_number(name).map(|n| (n, name.to_string())))
+                    .filter_map(|name| {
+                        // A part whose name is not valid text cannot be a slide part.
+                        let name = name.ok()?;
+                        slide_number(&name).map(|n| (n, name.into_owned()))
+                    })
                     .collect();
                 slides.sort();
                 if slides.is_empty() {
