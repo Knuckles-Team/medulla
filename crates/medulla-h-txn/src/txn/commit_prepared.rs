@@ -13,14 +13,14 @@ pub(super) fn commit_prepared_authorize(
     req_id: u64,
     caller: Option<&str>,
     txn: &GraphTxnState,
-) -> Result<CommitPreparedAuthorized, Response> {
+) -> Result<CommitPreparedAuthorized, Box<Response>> {
     let entry = match s.registry.get(&txn.graph) {
         Some(e) => e,
         None => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("Graph '{}' not found", txn.graph),
-            ));
+            )));
         }
     };
     if !consensus_apply_is_authorized() {
@@ -33,7 +33,7 @@ pub(super) fn commit_prepared_authorize(
             entry.importing.as_deref(),
             AccessLevel::Write,
         ) {
-            return Err(Response::err(req_id, denied));
+            return Err(Box::new(Response::err(req_id, denied)));
         }
     }
     Ok((entry.core.clone(), s.persistence.clone(), txn.graph.clone()))
@@ -50,26 +50,26 @@ pub(super) fn commit_prepared_validate(
     core: &medulla_graph_core::graph::GraphCore,
     txn: &GraphTxnState,
     receipt: TxnReceipt,
-) -> Result<(Vec<Method>, TxnReceipt), Response> {
+) -> Result<(Vec<Method>, TxnReceipt), Box<Response>> {
     let gtxn = core.txn();
     let ok = txn.validate(core);
     drop(gtxn);
     if !ok {
-        return Err(
+        return Err(Box::new(
             match finish_txn_receipt(receipt, ResultPayload::Bool(false)) {
                 Ok(result) => Response::ok(req_id, result),
                 Err(error) => Response::err(req_id, error),
             },
-        );
+        ));
     }
     let applied = txn.write_set.clone();
     if applied.is_empty() {
-        return Err(
+        return Err(Box::new(
             match finish_txn_receipt(receipt, ResultPayload::Bool(true)) {
                 Ok(result) => Response::ok(req_id, result),
                 Err(error) => Response::err(req_id, error),
             },
-        );
+        ));
     }
     Ok((applied, receipt))
 }
@@ -128,7 +128,7 @@ pub(super) async fn commit_prepared(
     let (core, persistence, graph_name) = match commit_prepared_authorize(&s, req_id, caller, &txn)
     {
         Ok(value) => value,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     drop(s); // release the registry read lock before taking the graph write lock.
 
@@ -141,7 +141,7 @@ pub(super) async fn commit_prepared(
     // authoritative path below commits the batch first.
     let (applied, receipt) = match commit_prepared_validate(req_id, &core, &txn, receipt) {
         Ok(pair) => pair,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let tenant_scope = txn.tenant_scope.clone();
     let begin_version = txn.begin_version;
@@ -262,7 +262,7 @@ pub(super) async fn compile_prepared_batch(
         medulla_protocol_types::mutation_batch::MutationBatch,
         Vec<u8>,
     ),
-    Response,
+    Box<Response>,
 > {
     let CompilePreparedBatchArgs {
         req_id,
@@ -283,10 +283,10 @@ pub(super) async fn compile_prepared_batch(
     {
         Ok(version) => version.unwrap_or(begin_version),
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("authoritative graph version read failed: {error}"),
-            ));
+            )));
         }
     };
     let principal = txn_receipt_principal(caller).map_err(|error| Response::err(req_id, error))?;
@@ -311,19 +311,19 @@ pub(super) async fn compile_prepared_batch(
     ) {
         Ok(batch) => batch,
         Err(e) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("MutationBatch compile failed: {e}"),
-            ));
+            )));
         }
     };
     let result_msgpack = match rmp_serde::to_vec_named(&ResultPayload::Bool(true)) {
         Ok(bytes) => bytes,
         Err(e) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("MutationBatch result encode failed: {e}"),
-            ));
+            )));
         }
     };
     Ok((batch, result_msgpack))
@@ -371,7 +371,7 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
     .await
     {
         Ok(pair) => pair,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     // Authoritative commit point: all graph rows + batch status/idempotency/outbox
     // are durable before the serving projection changes.

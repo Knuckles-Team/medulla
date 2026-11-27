@@ -67,7 +67,7 @@ pub(super) async fn begin_txn(
     // bounds request concurrency. Count current open txns for this graph/agent.
     let agent = txn_owner.to_string();
     if let Err(response) = check_open_txn_caps(&s, req_id, &graph_name, &agent) {
-        return response;
+        return *response;
     }
 
     let txn_id = s.txn_id_gen.next();
@@ -99,7 +99,7 @@ pub(super) fn check_open_txn_caps(
     req_id: u64,
     graph_name: &str,
     agent: &str,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let (mut for_graph, mut for_agent) = (0usize, 0usize);
     for e in s.open_txns.iter() {
         let t = e.value().lock();
@@ -111,16 +111,16 @@ pub(super) fn check_open_txn_caps(
         }
     }
     if for_graph >= s.txn_max_per_graph {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             format!("too many open transactions for graph '{}'", graph_name),
-        ));
+        )));
     }
     if for_agent >= s.txn_max_per_agent {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "too many open transactions for agent",
-        ));
+        )));
     }
     Ok(())
 }
@@ -323,31 +323,31 @@ pub(super) fn resolve_txn_default_core(
     txn_id: &str,
     target_graph: Option<&str>,
     kind: &str,
-) -> Result<Arc<medulla_graph_core::graph::GraphCore>, Response> {
+) -> Result<Arc<medulla_graph_core::graph::GraphCore>, Box<Response>> {
     let entry = match s.open_txns.get(txn_id) {
         Some(e) => e,
         None => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("unknown transaction '{}'", txn_id),
-            ));
+            )));
         }
     };
     let default_graph = entry.value().lock().graph.clone();
     if let Some(g) = target_graph {
         if g != default_graph {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!("cross-modal {kind} must target the txn's default graph"),
-            ));
+            )));
         }
     }
     match s.registry.get(&default_graph) {
         Some(g) => Ok(g.core.clone()),
-        None => Err(Response::err(
+        None => Err(Box::new(Response::err(
             req_id,
             format!("Graph '{}' not found", default_graph),
-        )),
+        ))),
     }
 }
 
@@ -366,7 +366,7 @@ pub(super) async fn stage_axiom(
     let s = state.read().await;
     let core = match resolve_txn_default_core(&s, req_id, txn_id, target_graph, "axiom") {
         Ok(c) => c,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let triples = match medulla_rdf::mapping::parse_turtle(&turtle) {
         Ok(t) => t,
@@ -411,7 +411,7 @@ pub(super) async fn stage_construct(
     let s = state.read().await;
     let core = match resolve_txn_default_core(&s, req_id, txn_id, target_graph, "construct") {
         Ok(c) => c,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let projected = read_authority.project_core(&core);
     // KNOWN GAP (BUG A3): see `stage_axiom`'s identical note just above --
@@ -502,7 +502,7 @@ pub(super) async fn stage_plan_writeback(
     let s = state.read().await;
     let core = match resolve_txn_default_core(&s, req_id, txn_id, target_graph, "plan writeback") {
         Ok(c) => c,
-        Err(resp) => return resp,
+        Err(resp) => return *resp,
     };
     let projected = read_authority.project_core(&core);
     if read_authority.is_active() {

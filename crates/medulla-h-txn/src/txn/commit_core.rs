@@ -264,7 +264,7 @@ pub(super) async fn commit_resume_txn(
                 ));
             }
             Err(tag_commit_response(
-                response,
+                *response,
                 CommitResponseOptions {
                     replayed: true,
                     keyed,
@@ -290,7 +290,7 @@ pub(super) struct ResumeTxnRequest<'a> {
 pub(super) enum ResumedCommit {
     /// The commit already reached its terminal answer; the caller tags (and, on
     /// the ordinary path, cleans up after) this untagged response.
-    Replayed(Response),
+    Replayed(Box<Response>),
     /// A durably Prepared parent and its recovered plan, still to be finished.
     /// Boxed: the transaction state dwarfs a replayed response.
     Prepared(Box<(GraphTxnState, TxnReceipt)>),
@@ -326,7 +326,7 @@ pub(super) async fn reconcile_or_resume_txn(
     )
     .await
     {
-        Ok(Some(response)) => return Ok(ResumedCommit::Replayed(response)),
+        Ok(Some(response)) => return Ok(ResumedCommit::Replayed(Box::new(response))),
         Ok(None) => {}
         Err(error) => {
             return Err(Response::err(req_id, error));
@@ -349,7 +349,9 @@ pub(super) async fn reconcile_or_resume_txn(
         ));
     };
     if let Some(result) = replayed {
-        return Ok(ResumedCommit::Replayed(Response::ok(req_id, result)));
+        return Ok(ResumedCommit::Replayed(Box::new(Response::ok(
+            req_id, result,
+        ))));
     }
     let Some(txn) = recovered else {
         return Err(Response::err(

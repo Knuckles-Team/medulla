@@ -176,7 +176,7 @@ pub(super) async fn prepare_consensus_resume_txn(
     let keyed = request.receipt_key.idempotency_key.is_some();
     match reconcile_or_resume_txn(state, request).await? {
         ResumedCommit::Replayed(response) => Err(tag_commit_response(
-            response,
+            *response,
             CommitResponseOptions {
                 replayed: true,
                 keyed,

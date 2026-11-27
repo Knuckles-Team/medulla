@@ -64,13 +64,13 @@ impl<'a> DistributedRequest<'a> {
         &self,
         missing_message: &'static str,
         active_message: Option<&'static str>,
-    ) -> Result<&'a GraphReadAuthority, Response> {
+    ) -> Result<&'a GraphReadAuthority, Box<Response>> {
         let Some(read_authority) = self.read_authority else {
-            return Err(Response::err(self.req_id, missing_message));
+            return Err(Box::new(Response::err(self.req_id, missing_message)));
         };
         if let Some(active_message) = active_message {
             if read_authority.is_active() {
-                return Err(Response::err(self.req_id, active_message));
+                return Err(Box::new(Response::err(self.req_id, active_message)));
             }
         }
         Ok(read_authority)
@@ -86,7 +86,7 @@ impl<'a> DistributedRequest<'a> {
             None,
         ) {
             Ok(read_authority) => read_authority,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
         match pregel::run_distributed(self.state, &graphs, &algo, read_authority).await {
             Ok(result) => Response::ok(
@@ -112,7 +112,7 @@ impl<'a> DistributedRequest<'a> {
             ),
         ) {
             Ok(read_authority) => read_authority,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
         let result = match pregel::run_distributed(self.state, &graphs, &algo, read_authority).await
         {
@@ -141,7 +141,7 @@ impl<'a> DistributedRequest<'a> {
             Some("unscoped distributed materialized views are unavailable under active RLS"),
         ) {
             Ok(_) => {}
-            Err(response) => return response,
+            Err(response) => return *response,
         }
         match self.load_matview(&name).await {
             Some(view) => Response::ok(
@@ -166,7 +166,7 @@ impl<'a> DistributedRequest<'a> {
             Some("unscoped distributed materialized views are unavailable under active RLS"),
         ) {
             Ok(read_authority) => read_authority,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
         // Read the view's definition, recompute its result over the (possibly
         // changed) graphs, and re-persist. For connected-components the recompute
@@ -219,7 +219,7 @@ pub async fn try_handle(
     let method = {
         let admitted = admit_plan_matview_under_rls(method, req_id, read_authority);
         let Ok(method) = admitted else {
-            return Ok(admitted.err().unwrap());
+            return Ok(*admitted.err().unwrap());
         };
         method
     };
@@ -277,7 +277,7 @@ fn admit_plan_matview_under_rls(
     method: Method,
     req_id: u64,
     read_authority: Option<&GraphReadAuthority>,
-) -> Result<Method, Response> {
+) -> Result<Method, Box<Response>> {
     let is_plan_matview_method = matches!(
         &method,
         Method::PlanMatViewDefine { .. }
@@ -288,10 +288,10 @@ fn admit_plan_matview_under_rls(
     if is_plan_matview_method
         && read_authority.is_some_and(GraphReadAuthority::row_level_security_active)
     {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "unscoped plan materialized views are unavailable under active RLS",
-        ));
+        )));
     }
     Ok(method)
 }
