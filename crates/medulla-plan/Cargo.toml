@@ -432,7 +432,7 @@ medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-sql = { path = "../medulla-sql" }
-duckdb = { version = "1.4", features = ["bundled"], optional = true }
+duckdb = { version = "=1.10506.1", features = ["bundled"], optional = true }
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

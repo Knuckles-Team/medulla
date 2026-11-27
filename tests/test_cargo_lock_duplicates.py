@@ -1,0 +1,140 @@
+"""MEDULLA-CONTRACT-R065: one dependency family, one TLS backend, reasoned duplicates.
+
+`Cargo.lock` holds one version of each columnar-array crate, selects `ring` and no
+`aws-lc-sys`, keeps the vendored security patches as path packages, and holds every
+other multi-version package only when `scripts/cargo_lock_duplicates.toml` names it
+with the pinning dependents and a reason. The allow-list only shrinks: a stale entry
+fails, and an entry the merge base did not hold fails.
+"""
+
+from __future__ import annotations
+
+import subprocess
+from collections import defaultdict
+from pathlib import Path
+
+import pytest
+import tomllib
+
+pytestmark = pytest.mark.no_engine
+
+ROOT = Path(__file__).resolve().parents[1]
+LOCK = ROOT / "Cargo.lock"
+ALLOW = ROOT / "scripts" / "cargo_lock_duplicates.toml"
+
+ARRAY_CRATES = (
+    "arrow",
+    "arrow-arith",
+    "arrow-array",
+    "arrow-buffer",
+    "arrow-cast",
+    "arrow-data",
+    "arrow-ord",
+    "arrow-row",
+    "arrow-schema",
+    "arrow-select",
+    "arrow-string",
+    "arrow-ipc",
+    "parquet",
+)
+DUCKDB_VERSION = "1.10506.1"
+PATCHED = (
+    "apache-avro",
+    "arrow-ipc",
+    "iceberg",
+    "parquet",
+    "polars-parquet",
+    "tantivy-sstable",
+    "opendal-core",
+    "opendal-service-s3",
+    "iceberg-storage-opendal",
+)
+OPENSSL_DEPENDENTS = {"rdkafka-sys"}
+
+
+def _packages(text: str) -> list[dict]:
+    return tomllib.loads(text)["package"]
+
+
+def _versions(packages: list[dict]) -> dict[str, set[str]]:
+    found: dict[str, set[str]] = defaultdict(set)
+    for package in packages:
+        found[package["name"]].add(package["version"])
+    return found
+
+
+def _lock_packages() -> list[dict]:
+    return _packages(LOCK.read_text(encoding="utf-8"))
+
+
+def _duplicates(packages: list[dict]) -> dict[str, set[str]]:
+    return {n: v for n, v in _versions(packages).items() if len(v) > 1}
+
+
+def _dependents(packages: list[dict], name: str) -> set[str]:
+    out: set[str] = set()
+    for package in packages:
+        for dep in package.get("dependencies", []):
+            if dep.split(" ")[0] == name:
+                out.add(package["name"])
+    return out
+
+
+def _allow_list() -> dict[str, dict]:
+    return tomllib.loads(ALLOW.read_text(encoding="utf-8"))
+
+
+def check_duplicates(
+    packages: list[dict], allow: dict[str, dict], base_names: set[str] | None
+) -> list[str]:
+    """Return the failures of the three duplicate rules (R065.4)."""
+    problems: list[str] = []
+    dups = _duplicates(packages)
+    for name in sorted(set(dups) - set(allow)):
+        problems.append(
+            f"duplicate package outside the allow-list: {name} {sorted(dups[name])}"
+        )
+    for name in sorted(set(allow) - set(dups)):
+        problems.append(f"stale allow-list entry (no longer a duplicate): {name}")
+    if base_names is not None:
+        for name in sorted(set(allow) - base_names):
+            problems.append(f"allow-list entry added since the merge base: {name}")
+    return problems
+
+
+def _base_allow_names() -> set[str] | None:
+    """Entry names at the merge base, or None when the base has no list yet."""
+    try:
+        base = subprocess.run(
+            ["bash", str(ROOT / "scripts" / "gate_base_ref.sh")],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        shown = subprocess.run(
+            ["git", "show", f"{base}:scripts/cargo_lock_duplicates.toml"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return set(tomllib.loads(shown))
+
+
+# spec: MEDULLA-CONTRACT-R065.1
+def test_one_columnar_array_family() -> None:
+    packages = _lock_packages()
+    versions = _versions(packages)
+    for name in ARRAY_CRATES:
+        assert len(versions.get(name, set())) == 1, (
+            f"{name} must have exactly one version: {versions.get(name)}"
+        )
+    (arrow,) = versions["arrow"]
+    for name in ("parquet", "arrow-ipc"):
+        assert versions[name] == {arrow}, (
+            f"{name} {versions[name]} must equal arrow {arrow}"
+        )
+    assert versions["duckdb"] == {DUCKDB_VERSION}, versions["duckdb"]

@@ -1657,7 +1657,7 @@ medulla-tensor = { path = "crates/medulla-tensor", optional = true }
 # uses its safe native Parquet-format implementation. These edges are optional and
 # `obs`-gated; the writer explicitly chooses uncompressed pages.
 arrow = { version = "58.4", optional = true }
-duckdb = { version = "1.4", features = ["bundled"], optional = true }
+duckdb = { version = "=1.10506.1", features = ["bundled"], optional = true }
 polars-core = { version = "0.54.4", optional = true, default-features = false }
 polars-io = { version = "0.54.4", optional = true, default-features = false, features = ["parquet"] }
 # Native RDF/SPARQL surface (features `rdf`/`sparql`, included in the main build,
