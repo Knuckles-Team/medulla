@@ -430,8 +430,8 @@ async fn node_properties(
     assert!(r.error.is_none(), "GetNodeProperties failed: {:?}", r.error);
     match &r.result {
         Some(ResultPayload::Raw(bytes)) => Some(rmp_serde::from_slice(bytes).expect("property map")),
-        Some(ResultPayload::Null) | None => None,
-        other => panic!("expected Raw or Null, got {other:?}"),
+        None => None,
+        other => panic!("expected Raw or no result, got {other:?}"),
     }
 }
 

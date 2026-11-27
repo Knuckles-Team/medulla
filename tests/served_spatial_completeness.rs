@@ -202,7 +202,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .clone();
     let served = medulla_h_retrieve::secondary_indexes::ServedSpatialIndex::new(core.clone());
     let partial = registry.materialization_manifest(name).unwrap();
-    assert!(!partial.valid);
+    assert!(!partial.valid());
     assert!(core
         .indexes()
         .server_manifests()
@@ -225,7 +225,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         "the final page must complete backfill before publishing the index"
     );
     let complete = registry.materialization_manifest(name).unwrap();
-    assert!(complete.valid);
+    assert!(complete.valid());
     assert!(core
         .indexes()
         .server_manifests()

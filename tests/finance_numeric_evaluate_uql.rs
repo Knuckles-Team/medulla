@@ -63,7 +63,7 @@ impl Served {
             .call(Method::TsAppend {
                 series_id: name.into(),
                 n_fields: columns.len(),
-                bucket_ns: 3_600 * NS,
+                bucket_ns: 3_600 * NS as u64,
                 field_names: (0..columns.len()).map(|i| format!("v{i}")).collect(),
                 points_msgpack: rmp_serde::to_vec_named(&points).unwrap(),
             })

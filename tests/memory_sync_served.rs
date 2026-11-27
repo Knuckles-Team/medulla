@@ -1211,7 +1211,7 @@ fn recall_notes(min_relevance: Option<f64>, current_revision: Option<u64>) -> Me
     }
 }
 
-async fn session_note_state(label: &str) -> (tempfile::TempDir, test_support::SharedState) {
+async fn session_note_state(label: &str) -> (std::path::PathBuf, test_support::SharedState) {
     install_knobs();
     let (dir, _backend, state) = test_support::durable_graph_state(
         SECRET,

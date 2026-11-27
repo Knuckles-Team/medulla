@@ -27,7 +27,7 @@ const STARTED_MS: u64 = 1_000;
 async fn stored_state(state: &test_support::SharedState) -> Option<ImportState> {
     let control = medulla_server_api::knob_config::default_ingest_graph();
     let core = state.read().await.registry.get(control)?.core.clone();
-    let id = core.nodes_by_property("type", "BundleImport").ok()?.into_iter().next()?;
+    let id = core.nodes_by_property("type", "BundleImport")?.into_iter().next()?;
     let raw = core.get_node_properties(&id)?;
     let properties: serde_json::Value = medulla_types::msgpack::decode_property_value(&raw).ok()?;
     ImportRecord::from_properties(&properties).map(|record| record.state)

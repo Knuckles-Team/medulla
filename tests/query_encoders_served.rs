@@ -106,15 +106,16 @@ async fn query(state: &Arc<RwLock<ServerState>>, graph: &str) -> Response {
         foreign_execution: None,
         foreign_executions: Default::default(),
         code_map: None,
-        retrieval: Some(RetrievalRequest {
+        retrieval: Some(Box::new(RetrievalRequest {
             constraints: None,
             topic: None,
             modality: Some(ModalityPair {
                 query: Modality::Text,
                 target: Modality::Text,
             }),
-        }),
+        })),
         latency_class: Default::default(),
+        spec_report: None,
     };
     test_support::dispatch(state, test_support::request(SECRET, 2, graph, method)).await
 }
