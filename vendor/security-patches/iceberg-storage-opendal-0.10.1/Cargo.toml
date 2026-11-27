@@ -105,7 +105,7 @@ version = "0.57"
 # binary is out of arm64 range, so the macOS server link fails.
 default-features = false
 features = [
-    "reqwest-rustls-tls",
+    "reqwest-rustls-no-provider-tls",
     "executors-tokio",
     "layers-concurrent-limit",
     "layers-logging",

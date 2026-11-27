@@ -42,7 +42,7 @@ all-features = true
 [features]
 blocking = ["internal-tokio-rt"]
 default = [
-    "reqwest-rustls-tls",
+    "reqwest-rustls-no-provider-tls",
     "executors-tokio",
 ]
 executors-tokio = ["tokio/rt"]

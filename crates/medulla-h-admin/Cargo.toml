@@ -45,7 +45,7 @@ serde_json = "1.0"
 medulla-capabilities = { path = "../medulla-capabilities" }
 sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
-tokio-rustls = { version = "0.26", optional = true }
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"], optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }

@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 hex = "0.4"
-jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-graphql = { path = "../medulla-graphql", optional = true }

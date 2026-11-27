@@ -15,7 +15,7 @@ path = "src/lib.rs"
 medulla-server-api = { path = "../medulla-server-api" }
 hex = "0.4"
 hmac = "0.12"
-jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }

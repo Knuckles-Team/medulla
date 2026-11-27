@@ -4051,7 +4051,7 @@ reason = "Licensed upstream source snapshot; preserve exact upstream bytes and a
 
 [[source]]
 path = "vendor/security-patches/opendal-core-0.57.0/Cargo.toml"
-sha256 = "d7c120ccacfdd2d032ec49028f0a9ef33671f5ce80ee15fc303109410020b71a"
+sha256 = "20f1ad50793d17232894fe91ea303bd623070b7045a286ef304a411ee39b6771"
 package = "opendal-core"
 reason = "Licensed upstream source snapshot; preserve exact upstream bytes and attribution while the security patch raises the vulnerable dependency floor."
 
@@ -5506,7 +5506,7 @@ path = "vendor/security-patches/opendal-core-0.57.0/Cargo.toml"
 line = 17
 kind = "upstream_privacy_example"
 reason = "Upstream documented metadata/example; preserve licensed attribution and source bytes."
-sha256 = "d7c120ccacfdd2d032ec49028f0a9ef33671f5ce80ee15fc303109410020b71a"
+sha256 = "20f1ad50793d17232894fe91ea303bd623070b7045a286ef304a411ee39b6771"
 content_sha256 = "2c1bf7980758e4d291808814a986f9475ac22ae51fe1a83e0ecd07788937fda5"
 
 [[finding]]

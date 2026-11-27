@@ -45,7 +45,7 @@ medulla-lake = { path = "../medulla-lake", optional = true }
 
 medulla-stream = { path = "../medulla-stream", optional = true }
 
-jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 
 medulla-capabilities = { path = "../medulla-capabilities" }
 

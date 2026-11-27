@@ -39,7 +39,7 @@ prometheus = { version = "0.14", optional = true, default-features = false }
 chacha20poly1305 = { version = "0.10", optional = true }
 opentelemetry = { version = "0.33", optional = true }
 opentelemetry_sdk = { version = "0.33.1", optional = true, features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.33", optional = true, features = ["grpc-tonic"] }
+opentelemetry-otlp = { version = "0.33", optional = true, default-features = false, features = ["grpc-tonic", "http-proto", "reqwest-blocking-client", "trace", "metrics", "logs", "internal-logs"] }
 tracing-opentelemetry = { version = "0.34", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 uuid = { version = "1.28", features = ["v4"] }

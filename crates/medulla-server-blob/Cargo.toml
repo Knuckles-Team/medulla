@@ -46,7 +46,7 @@ medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-federation = { path = "../medulla-federation" }
 
-object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+object_store = { version = "0.14.2", optional = true, features = ["aws-base", "ring"] }
 medulla-identity-types = { path = "../medulla-identity-types" }
 
 [features]

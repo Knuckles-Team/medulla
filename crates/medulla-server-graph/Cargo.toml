@@ -86,7 +86,7 @@ sha1 = { version = "0.10", optional = true }
 
 argon2 = { version = "0.5", optional = true, default-features = false, features = ["alloc", "password-hash"] }
 
-jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 
 [features]
 test-support = ["medulla-server-auth/test-support", "medulla-compute/test-support", "medulla-h-ingest/test-support", "medulla-h-query/test-support", "medulla-h-txn/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-source-types/test-support", "medulla-work-types/test-support", "medulla-store-apply/test-support", "medulla-work-store/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]

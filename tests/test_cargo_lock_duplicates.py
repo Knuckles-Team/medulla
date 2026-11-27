@@ -9,6 +9,7 @@ fails, and an entry the merge base did not hold fails.
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from collections import defaultdict
 from pathlib import Path
@@ -49,7 +50,19 @@ PATCHED = (
     "opendal-service-s3",
     "iceberg-storage-opendal",
 )
-OPENSSL_DEPENDENTS = {"rdkafka-sys"}
+# The Kafka client's C library has no other TLS library. The second route is the
+# build-time download of `ort` (pulled by `piper-rs`, whose own manifest keeps the
+# default `tls-native`), which only the default-off `medulla-tts-piper` crate reaches.
+OPENSSL_DEPENDENTS = {"rdkafka-sys", "native-tls", "openssl"}
+NATIVE_TLS_DEPENDENTS = {"ureq"}
+
+
+def _cargo_usable() -> bool:
+    """Cargo runs here (a host without cargo, or a refusing shim, skips the closure)."""
+    if shutil.which("cargo") is None:
+        return False
+    probe = subprocess.run(["cargo", "--version"], capture_output=True, text=True)
+    return probe.returncode == 0
 
 
 def _packages(text: str) -> list[dict]:
@@ -138,3 +151,30 @@ def test_one_columnar_array_family() -> None:
             f"{name} {versions[name]} must equal arrow {arrow}"
         )
     assert versions["duckdb"] == {DUCKDB_VERSION}, versions["duckdb"]
+
+
+# spec: MEDULLA-CONTRACT-R065.2
+def test_one_tls_and_crypto_backend() -> None:
+    packages = _lock_packages()
+    versions = _versions(packages)
+    assert "ring" in versions, "ring is the one TLS and crypto backend"
+    assert "aws-lc-sys" not in versions, "aws-lc-sys must not be in the lock"
+    assert "aws-lc-rs" not in versions, "aws-lc-rs must not be in the lock"
+    if "openssl-sys" in versions:
+        dependents = _dependents(packages, "openssl-sys")
+        assert dependents <= OPENSSL_DEPENDENTS, (
+            f"openssl-sys dependents: {sorted(dependents)}"
+        )
+        native = _dependents(packages, "native-tls")
+        assert native <= NATIVE_TLS_DEPENDENTS, sorted(native)
+    if not _cargo_usable():
+        return
+    for crate in ("openssl-sys", "aws-lc-sys"):
+        for features in ("full", "default"):
+            args = ["cargo", "tree", "--locked", "-e", "normal", "-i", crate]
+            if features == "full":
+                args += ["--features", "full"]
+            proc = subprocess.run(args, cwd=ROOT, capture_output=True, text=True)
+            assert proc.returncode != 0 and "did not match" in proc.stderr, (
+                f"{crate} is in the {features} closure:\n{proc.stdout[:800]}"
+            )

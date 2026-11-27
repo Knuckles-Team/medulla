@@ -39,7 +39,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-table-store = { path = "../medulla-table-store" }
 
 futures-util = { version = "0.3", default-features = false, optional = true }
-object_store = { version = "0.14.2", optional = true, features = ["aws", "fs"] }
+object_store = { version = "0.14.2", optional = true, features = ["aws-base", "ring", "fs"] }
 medulla-core = { path = "../medulla-core" }
 
 [features]
