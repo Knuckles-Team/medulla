@@ -171,3 +171,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T164 [US4] MEDULLA-CONTRACT-R065.6 Upgrade `zip` and `url` past their current advisories
 - [ ] T165 [US4] MEDULLA-CONTRACT-R065.7 The lock is current: a clean locked resolve succeeds
 - [ ] T166 [US4] MEDULLA-CONTRACT-R066.4 The columnar-dataframe library family is behind its own feature
+- [ ] T167 [US5] MEDULLA-CONTRACT-R066.5 Every CI and release job that builds the DuckDB feature fetches the pinned prebuilt library first.

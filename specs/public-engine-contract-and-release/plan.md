@@ -216,6 +216,7 @@ No follow-on above asserts a passed test or changes a subsystem's acceptance in 
 - **Special cases.** One dependency exception (the Kafka client's TLS) is on the allow-list with its reason; no crate has a size exception.
 - **State.** `scripts/cargo_lock_duplicates.toml` is the one tracked list and only shrinks; the machines of the split crates keep their edge tables (no lifecycle is added).
 - **Environment.** The embedded database library, its version and its checksums are pinned in `scripts/duckdb-pin.toml`; the deploy profile is a Cargo profile; nothing varies by host.
+- **CI fetch (R066.5).** One composite action, `.github/actions/duckdb-prebuilt`, fetches the pinned library for `ci.yml` jobs that enable the DuckDB feature (`gates-crates`, `gates-storage`, `gates-pyo3`, `quality-advisory`) through one anchored step; its cache key hashes `scripts/duckdb-pin.toml`. Release jobs fetch inside `scripts/build_release_server.sh`. `tests/test_ci_duckdb_prebuilt.py` parses the workflows and holds the rule.
 
 ### Duplicate census (R065.3)
 
