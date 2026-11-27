@@ -167,7 +167,7 @@ pub async fn load_assignments(
             {
                 continue;
             }
-            if let Some(assignment) = StewardshipAssignment::from_properties(&properties) {
+            if let Some(assignment) = properties.as_object().and_then(StewardshipAssignment::from_properties) {
                 found.push(assignment);
             }
         }
