@@ -84,7 +84,7 @@ pub fn cluster_config(state: &ServerState) -> ClusterConfig {
     state
         .pinned_policy
         .as_deref()
-        .map(medulla_decision_stats::decision::cluster_knobs::config_from_policy)
+        .map(medulla_decision_stats_records::decision::cluster_knobs::config_from_policy)
         .unwrap_or_default()
 }
 

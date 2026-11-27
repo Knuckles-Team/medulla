@@ -34,7 +34,7 @@ Directory: `crates/medulla-numeric/src/cluster/`.
 
 ## Knob table (R002.5)
 
-File: `crates/medulla-decision-stats/src/decision/cluster_knobs.rs`. Values are `Integer` unless stated.
+File: `crates/medulla-decision-stats-records/src/decision/cluster_knobs.rs`. Values are `Integer` unless stated.
 
 | Name | Unit | Default | Min | Max | Safety |
 |---|---|---|---|---|---|

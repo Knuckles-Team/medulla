@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 
 use medulla_decision_stats::decision::drift::{DriftMonitor, DriftThresholds, Moments, VocabBloom};
-use medulla_decision_stats::decision::refusal::Refusal;
+use medulla_decision_stats_records::decision::refusal::Refusal;
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_decision_types::decision::statistical::retrieval_drift::{DriftKind, RegionRef};
 use medulla_decision_types::decision::statistical::shard_monitor::{

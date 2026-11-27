@@ -32,7 +32,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-CLUSTER-R002.2` | Seeding | `crates/medulla-numeric/tests/cluster_kernel.rs::seeding_is_deterministic_and_distinct` (planned) |
 | `MEDULLA-CLUSTER-R002.3` | Mini-batch moving-average update | `crates/medulla-numeric/tests/cluster_kernel.rs::moving_average_matches_reference_fold` (planned) |
 | `MEDULLA-CLUSTER-R002.4` | Exact mode | `crates/medulla-numeric/tests/cluster_kernel.rs::exact_mode_matches_brute_force_lloyd_oracle` (planned) |
-| `MEDULLA-CLUSTER-R002.5` | Every tunable is a knob | `crates/medulla-decision-stats/src/decision/cluster_knobs.rs::tests::defaults_lie_inside_bounds_and_equal_kernel_defaults` (planned) |
+| `MEDULLA-CLUSTER-R002.5` | Every tunable is a knob | `crates/medulla-decision-stats-records/src/decision/cluster_knobs.rs::tests::defaults_lie_inside_bounds_and_equal_kernel_defaults` (planned) |
 | `MEDULLA-CLUSTER-R002.6` | Wiring: the engine resolves knobs once per build | `crates/medulla-server-served-tests/src/split_tests/clustering_kernel.rs::activation_uses_pinned_cluster_knobs` |
 | `MEDULLA-CLUSTER-R003` | Bit-identical results (rollup) | `crates/medulla-numeric/tests/cluster_kernel.rs::centroids_bit_identical_across_threads` |
 | `MEDULLA-CLUSTER-R003.1` | Fixed reduction order | `crates/medulla-numeric/tests/cluster_kernel.rs::tie_goes_to_lowest_index_and_fold_is_row_ordered` (planned) |

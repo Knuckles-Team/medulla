@@ -8,7 +8,7 @@ use super::super::correction::handle_correction_record;
 use super::super::planned_write::PlannedWrite;
 use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
-use medulla_decision_stats::decision::correction::commit_correction;
+use medulla_decision_stats_records::decision::correction::commit_correction;
 use medulla_decision_types::correction::{
     task_class_of, Correction, CorrectionInput, CorrectionOp, CorrectionOutcomes, CorrectionRead,
     CorrectionRecorded, CorrectionSource, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED,

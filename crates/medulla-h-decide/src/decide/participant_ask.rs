@@ -9,8 +9,7 @@
 //! question nothing grounds is an abstention, `NO_GROUNDED_CLAIMS`. Nothing is written.
 
 use super::SharedState;
-use medulla_decision_stats::decision::participant_ask::{cite, ground, AskClaim};
-use medulla_decision_stats::decision::participant_card::confidence_ppm;
+use medulla_decision_stats_records::decision::participant_card::confidence_ppm;
 use medulla_decision_types::claims::{ClaimRecord, EvidenceChannel};
 use medulla_decision_types::decision::knob_families::participant::default_u64;
 use medulla_decision_types::decision::record::outcome::{AbstainReason, RefusalSurface};
@@ -19,6 +18,11 @@ use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination::ParticipantReadAsk;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::participant_ask::cite,
+    medulla_decision_stats_records::decision::participant_ask::ground,
+    medulla_decision_stats_records::decision::participant_ask::AskClaim,
+};
 
 /// The prefix a worker may put before a turn id in a piece of evidence's source digest.
 const TURN_PREFIX: &str = "turn:";

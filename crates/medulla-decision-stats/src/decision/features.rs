@@ -18,10 +18,13 @@ use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
 };
 
-use super::bm25;
-use super::candidate::CandidateView;
 use super::quant::{q32, q32_integer};
-use super::refusal::{Refusal, RefusalResult};
+use medulla_decision_stats_records::decision::bm25;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// A computed, complete, fixed-point feature matrix.
 #[derive(Debug, Clone, PartialEq, Eq)]

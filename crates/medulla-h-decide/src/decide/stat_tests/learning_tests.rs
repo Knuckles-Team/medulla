@@ -246,7 +246,10 @@ async fn an_adapter_is_served_only_after_its_passing_receipt_and_rolls_back() {
 #[cfg(feature = "query")]
 #[test]
 fn a_plan_rewrite_re_aims_every_vector_rank_only() {
-    use medulla_decision_stats::{decision::adapter::to_body, decision::adapter::Direction};
+    use {
+        medulla_decision_stats_records::decision::adapter::to_body,
+        medulla_decision_stats_records::decision::adapter::Direction,
+    };
     let body = to_body(
         &[Direction {
             unit: vec![0.0, 1.0],

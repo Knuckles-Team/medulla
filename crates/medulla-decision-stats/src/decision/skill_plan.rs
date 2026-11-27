@@ -17,8 +17,8 @@ use medulla_decision_types::decision::task_plan::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::bm25;
 use super::quant::q32;
+use medulla_decision_stats_records::decision::bm25;
 
 /// The metadata text of one tenant-visible published skill.
 #[derive(Debug, Clone, PartialEq, Eq)]

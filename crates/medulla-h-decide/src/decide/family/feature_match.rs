@@ -17,9 +17,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_stats::decision::feature_match::{
-    dedup, name_only_pair, score_parts, MatchParams, PPM,
-};
 use medulla_decision_types::decision::feature_match::{
     match_option_id, plan_option_id, FeatureMatchAnswer, FeatureMatrixRow, Match, PlanProposal,
 };
@@ -34,6 +31,13 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_stats_records::decision::feature_match::dedup,
+    medulla_decision_stats_records::decision::feature_match::name_only_pair,
+    medulla_decision_stats_records::decision::feature_match::score_parts,
+    medulla_decision_stats_records::decision::feature_match::MatchParams,
+    medulla_decision_stats_records::decision::feature_match::PPM,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

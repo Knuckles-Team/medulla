@@ -10,7 +10,7 @@ use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 
 use super::features::FeatureMatrix;
 use super::head_eval::{read_head, HeadReading};
-use super::refusal::RefusalResult;
+use medulla_decision_stats_records::decision::refusal::RefusalResult;
 use medulla_numeric::detkernel::StatResult;
 use medulla_numeric::risk::SampleGate;
 use medulla_numeric::{

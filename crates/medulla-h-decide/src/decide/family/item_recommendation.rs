@@ -16,9 +16,6 @@
 use sha2::{Digest, Sha256};
 
 use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
-use medulla_decision_stats::decision::recommend::{
-    encode_catalog, refine_and_rank, Encoder, RecommendError,
-};
 use medulla_decision_types::decision::item_recommendation::{
     encoder_key, encoder_prefix, DIMENSION_MISMATCH, EMPTY_CATALOG, ENCODER_MISSING, ENCODER_STALE,
 };
@@ -33,6 +30,12 @@ use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::recommend::encode_catalog,
+    medulla_decision_stats_records::decision::recommend::refine_and_rank,
+    medulla_decision_stats_records::decision::recommend::Encoder,
+    medulla_decision_stats_records::decision::recommend::RecommendError,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

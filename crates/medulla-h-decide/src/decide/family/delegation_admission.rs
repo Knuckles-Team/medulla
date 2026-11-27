@@ -7,7 +7,7 @@
 //! an evaluation recorded by the principal that decided the record never does.
 //! `Decide` is evaluate-only and writes nothing.
 
-use medulla_decision_stats::decision::delegation::admit_delegation;
+use medulla_decision_stats_records::decision::delegation::admit_delegation;
 use medulla_decision_types::decision::delegation::{
     knob_values, DelegationAdmissionRequest, DelegationOutcome, METRIC_SUCCESS, Q32_ONE,
 };

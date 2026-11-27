@@ -6,7 +6,7 @@
 //! a `Claim` resolved as a `Constraint`. Nothing is written: the caller records
 //! the rewards it accepts through `DecisionLog`.
 
-use medulla_decision_stats::decision::reward::decompose;
+use medulla_decision_stats_records::decision::reward::decompose;
 use medulla_decision_types::decision::reward::{RewardDecompositionRequest, RewardKnobs};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{

@@ -9,7 +9,7 @@
 //! bounds is untouched.
 
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_stats::decision::safety::evaluate_bounds;
+use medulla_decision_stats_records::decision::safety::evaluate_bounds;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::safety::{
     BoundCheck, BoundOutcome, SafetyMeasurement, SafetyVerdict, KNOBS,

@@ -12,9 +12,6 @@ use medulla_decision_outcome_types::decision::evolution_round::{
     EvolutionDefaults, JudgeRun, ModelOption, PredictionDeclaration, RoundRefusal,
     RoundTaskOutcome, RoundVerdict, RubricDeclaration, RunBudget, StageInput,
 };
-use medulla_decision_stats::decision::evolution_round::{
-    judge_outcome_divergence, DivergenceKnobs,
-};
 use medulla_decision_types::decision::context_package::is_sha256_hex;
 use medulla_decision_types::decision::harness_contrast::ContrastKnobs;
 use medulla_decision_types::decision::knob_families::{criterion_review, round_verdict};
@@ -28,6 +25,10 @@ use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_decision_types::decision::{PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_stats_records::decision::evolution_round::judge_outcome_divergence,
+    medulla_decision_stats_records::decision::evolution_round::DivergenceKnobs,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

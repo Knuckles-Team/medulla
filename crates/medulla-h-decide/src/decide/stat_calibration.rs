@@ -9,7 +9,7 @@
 //! [`MAX_CALIBRATION_KNOTS`] knots by pooling the closest neighbours. Its pointer
 //! is the champion of the `rerank_calibration` revision subject (R805).
 
-use medulla_decision_stats::decision::retrieval::Verdict;
+use medulla_decision_stats_records::decision::retrieval::Verdict;
 use medulla_decision_types::decision::codes::CALIBRATION_TOO_FEW_PAIRS;
 use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::body::{

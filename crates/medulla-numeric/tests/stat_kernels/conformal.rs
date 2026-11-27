@@ -5,20 +5,29 @@ use crate::common::{
     assert_all_close, assert_at_least_within, assert_close, categorical, level, rng, uniform,
     uniform_in,
 };
-use medulla_decision_stats::{
-    conformal::acceptability_score, conformal::aps_label_scores, conformal::aps_scores,
-    conformal::binary_conformal, conformal::lac_scores, conformal::mondrian_conformal,
-    conformal::realised_coverage_interval, conformal::split_conformal,
-    conformal::weighted_split_conformal, conformal::AdaptiveConformal, conformal::BinarySet,
-    conformal::ClassThreshold, conformal::PredictionSet, conformal::RapsPenalty,
-    conformal::Threshold,
-};
 use medulla_numeric::calibration::ProbabilityMatrix;
 use medulla_numeric::detkernel::kernels::softmax;
 use medulla_numeric::detkernel::Level;
 use medulla_numeric::risk::sample_gate::coverage_standard_deviation;
 use medulla_numeric::risk::SampleGate;
 use rand_chacha::ChaCha8Rng;
+use {
+    medulla_decision_stats_records::conformal::acceptability_score,
+    medulla_decision_stats_records::conformal::aps_label_scores,
+    medulla_decision_stats_records::conformal::aps_scores,
+    medulla_decision_stats_records::conformal::binary_conformal,
+    medulla_decision_stats_records::conformal::lac_scores,
+    medulla_decision_stats_records::conformal::mondrian_conformal,
+    medulla_decision_stats_records::conformal::realised_coverage_interval,
+    medulla_decision_stats_records::conformal::split_conformal,
+    medulla_decision_stats_records::conformal::weighted_split_conformal,
+    medulla_decision_stats_records::conformal::AdaptiveConformal,
+    medulla_decision_stats_records::conformal::BinarySet,
+    medulla_decision_stats_records::conformal::ClassThreshold,
+    medulla_decision_stats_records::conformal::PredictionSet,
+    medulla_decision_stats_records::conformal::RapsPenalty,
+    medulla_decision_stats_records::conformal::Threshold,
+};
 
 #[test]
 fn split_conformal_uses_the_exact_order_statistic() {

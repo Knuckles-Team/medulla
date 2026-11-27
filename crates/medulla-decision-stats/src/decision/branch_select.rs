@@ -14,7 +14,11 @@ use medulla_decision_types::decision::task_plan::{
     BranchArm, BranchCondition, BranchKind, BranchSpec, CompareOp,
 };
 
-use super::dmn_eval::{evaluate_table, DmnError, DmnTable};
+use {
+    medulla_decision_stats_records::decision::dmn_eval::evaluate_table,
+    medulla_decision_stats_records::decision::dmn_eval::DmnError,
+    medulla_decision_stats_records::decision::dmn_eval::DmnTable,
+};
 
 fn unsupported(what: impl Into<String>) -> DmnError {
     DmnError::ExpressionUnsupported { entry: what.into() }
@@ -170,9 +174,12 @@ pub fn select_branch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::dmn_eval::{DmnOutput, DmnRule};
     use medulla_decision_types::decision::task_plan::{BranchComparison, BranchDecisionCondition};
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_stats_records::decision::dmn_eval::DmnOutput,
+        medulla_decision_stats_records::decision::dmn_eval::DmnRule,
+    };
 
     fn arm(target: &str, condition: Option<BranchCondition>) -> BranchArm {
         BranchArm {

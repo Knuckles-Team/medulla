@@ -10,15 +10,6 @@
 //! passing receipt that qualified exactly this body; every pointer move is an
 //! audited event, and rollback returns to the adapter active before.
 
-use medulla_decision_stats::decision::adapter::{
-    evaluate_for, feedback_labels, fit_for, fit_scoped, is_held_out, monitor_adapter_for,
-    wilson_upper, FeedbackLabel, MonitorVerdict, ScopedFitError, ScopedFitParams, ScopedItem,
-};
-use medulla_decision_stats::{
-    decision::adapter::directions_of, decision::adapter::to_body, decision::adapter::to_q16,
-    decision::adapter::JudgedItem,
-};
-use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_decision_types::decision::statistical::feedback::{
     FeedbackEvent, StoredFeedback, FEEDBACK_PREFIX,
 };
@@ -46,6 +37,30 @@ use medulla_decision_types::{
 };
 use medulla_query_types::solve_scalar::digest_text;
 use std::collections::{BTreeMap, BTreeSet};
+use {
+    medulla_decision_stats_records::decision::adapter::directions_of,
+    medulla_decision_stats_records::decision::adapter::to_body,
+    medulla_decision_stats_records::decision::adapter::to_q16,
+    medulla_decision_stats_records::decision::adapter::JudgedItem,
+};
+use {
+    medulla_decision_stats_records::decision::adapter::evaluate_for,
+    medulla_decision_stats_records::decision::adapter::feedback_labels,
+    medulla_decision_stats_records::decision::adapter::fit_for,
+    medulla_decision_stats_records::decision::adapter::fit_scoped,
+    medulla_decision_stats_records::decision::adapter::is_held_out,
+    medulla_decision_stats_records::decision::adapter::monitor_adapter_for,
+    medulla_decision_stats_records::decision::adapter::wilson_upper,
+    medulla_decision_stats_records::decision::adapter::FeedbackLabel,
+    medulla_decision_stats_records::decision::adapter::MonitorVerdict,
+    medulla_decision_stats_records::decision::adapter::ScopedFitError,
+    medulla_decision_stats_records::decision::adapter::ScopedFitParams,
+    medulla_decision_stats_records::decision::adapter::ScopedItem,
+};
+use {
+    medulla_decision_stats_records::decision::retrieval::hard_negatives,
+    medulla_decision_stats_records::decision::retrieval::Verdict,
+};
 
 use super::served_adapter::{adapter_key, read_fitted};
 use super::stat_executor::ExecutionContext;

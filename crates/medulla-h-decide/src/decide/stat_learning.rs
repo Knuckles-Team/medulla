@@ -8,7 +8,7 @@
 //! derive from their own verified carrier) and the ACL-checked graphs a fit or
 //! a generation evaluation probes.
 
-use medulla_decision_stats::decision::adapter::AdapterKernel;
+use medulla_decision_stats_records::decision::adapter::AdapterKernel;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval_adapter::{
     AdapterFitRequest, AdapterMonitorRequest, AdapterScope,

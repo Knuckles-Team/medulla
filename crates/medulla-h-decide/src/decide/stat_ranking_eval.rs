@@ -8,7 +8,7 @@
 //! the kernel refuses never reaches a receipt.
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_stats::decision::ranking_eval::evaluate_ranking;
+use medulla_decision_stats_records::decision::ranking_eval::evaluate_ranking;
 use medulla_decision_types::decision::knob_families::ranking_eval::{RankingEvalKnobs, KNOBS};
 use medulla_decision_types::decision::statistical::ranking_eval::{
     AlgorithmScore, RetrievalRankingReceipt, RetrievalRankingRequest,

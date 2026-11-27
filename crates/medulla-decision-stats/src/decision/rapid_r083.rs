@@ -55,7 +55,9 @@ impl OptionFacts {
     /// are its declared capabilities, its declared cost and p95 latency its
     /// cost/latency cells. Missing cost or latency encode as zero here only;
     /// the feature matrix keeps its own declared missing-value rule.
-    pub fn from_candidate(candidate: &super::candidate::CandidateView) -> Self {
+    pub fn from_candidate(
+        candidate: &medulla_decision_stats_records::decision::candidate::CandidateView,
+    ) -> Self {
         Self {
             shacl_shape: String::new(),
             capabilities: candidate.classification.clone(),

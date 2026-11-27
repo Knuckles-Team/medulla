@@ -2,7 +2,6 @@
 //! These synthetic fixtures exercise the real fitted resident scorer and evaluator.
 
 use medulla_decision_stats::decision::features::FeatureMatrix;
-use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
 use medulla_decision_stats::{
     decision::evaluate::evaluate, decision::evaluate::EvalSpec, decision::evaluate::ECE_BINS,
 };
@@ -19,6 +18,10 @@ use medulla_decision_types::{
     decision::statistical::dataset::LabelledDataset,
 };
 use medulla_numeric::calibration::metrics::{reliability, BinCount};
+use {
+    medulla_decision_stats_records::decision::admission::admit,
+    medulla_decision_stats_records::decision::admission::Regime,
+};
 
 use super::common::{dataset, gold_item_for, statistical, FEATURES};
 use super::fit_eval::{fitted, rules};

@@ -45,7 +45,10 @@ pub const KNOBS: &[KnobSpec] = &[
         safety: KnobSafety::Tunable,
     },
 ];
-use super::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Whether this decision may explore, and how much.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

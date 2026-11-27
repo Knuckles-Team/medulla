@@ -682,12 +682,13 @@ pub fn store_admit_receipts(
             policy_ref: DecisionPolicyRef::Default,
             history: RewriteHistory::sealed(Vec::<HistoryEntry>::new())?,
         };
-        let evaluation = medulla_decision_stats::decision::memory_rewrite::evaluate_rewrite(
-            &proposal,
-            &MemoryRewriteKnobs::from_policy(&resolved.policy),
-            head_revision,
-        )
-        .map_err(|code| format!("the rewrite receipt was refused: {code:?}"))?;
+        let evaluation =
+            medulla_decision_stats_records::decision::memory_rewrite::evaluate_rewrite(
+                &proposal,
+                &MemoryRewriteKnobs::from_policy(&resolved.policy),
+                head_revision,
+            )
+            .map_err(|code| format!("the rewrite receipt was refused: {code:?}"))?;
         rows.push(super::stat_memory_change::rewrite_receipt_row(&evaluation)?);
         digests.push(evaluation.receipt_digest);
     }

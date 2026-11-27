@@ -29,7 +29,10 @@ use medulla_types::contract::BoundedVec;
 use super::exploration::{audit, logging_vector, plan, ExplorationPermit, ExplorationPlan};
 use super::head_eval::{act_rule, calibration_statement, top_index, Evaluated};
 use super::quant::{exact_wire, q32};
-use super::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// What the rule reads.
 #[derive(Debug, Clone, Copy)]

@@ -50,7 +50,7 @@ solve = ["medulla-decision-policy/solve"]
 decide = ["solve", "mining"]
 # The statistical half of the Decide layer: heads, calibration and the
 # off-policy estimators, which are medulla-numeric kernels.
-decide-stats = ["decide", "medulla-numeric/decision", "medulla-decision-stats/decision"]
+decide-stats = ["decide", "medulla-numeric/decision", "medulla-decision-stats-records/decision"]
 # GPU transitive-closure DISPATCH SEAM (CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu):
 # compiles the `ClosureBackend` trait + backend selection in `reasoning_closure`. The
 # pure-Rust CPU hash-join is ALWAYS the compiled-in fallback; this marker just opts a
@@ -262,7 +262,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
-medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }

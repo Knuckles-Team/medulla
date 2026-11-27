@@ -10,10 +10,6 @@
 //! stored one, is refused. The scorer's recorded inputs must not include the
 //! label set.
 
-use medulla_decision_stats::decision::grounded_eval::{
-    topic_coverage, weighted_brier, GroundedRefusal, GROUNDED_DIGEST_MISMATCH,
-    GROUNDED_REVISION_STALE, GROUNDED_SCORER_SAW_LABELS,
-};
 use medulla_decision_types::decision::knob_families::grounded::{
     coverage_knobs, score_digits, KNOBS,
 };
@@ -25,6 +21,14 @@ use medulla_decision_types::decision::statistical::ranking_eval::is_sha256_hex;
 use medulla_decision_types::decision::DecisionJobOutput;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{grounded_pin_key, grounded_pin_prefix};
+use {
+    medulla_decision_stats_records::decision::grounded_eval::topic_coverage,
+    medulla_decision_stats_records::decision::grounded_eval::weighted_brier,
+    medulla_decision_stats_records::decision::grounded_eval::GroundedRefusal,
+    medulla_decision_stats_records::decision::grounded_eval::GROUNDED_DIGEST_MISMATCH,
+    medulla_decision_stats_records::decision::grounded_eval::GROUNDED_REVISION_STALE,
+    medulla_decision_stats_records::decision::grounded_eval::GROUNDED_SCORER_SAW_LABELS,
+};
 
 use super::stat_jobs::{ArtifactRows, JobRun};
 use super::stat_support::resolve_policy;

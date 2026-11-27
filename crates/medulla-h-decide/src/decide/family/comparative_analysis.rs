@@ -8,8 +8,8 @@
 //! class is `Claim` and the resolution is `Constraint`.
 
 use medulla_agent_types::agent_component::AgentComponentEntry;
-use medulla_decision_stats::decision::comparative_analysis::plan_comparative_analysis;
 use medulla_decision_stats::decision::ladder::LadderResult;
+use medulla_decision_stats_records::decision::comparative_analysis::plan_comparative_analysis;
 use medulla_decision_types::decision::comparative_analysis::{
     ComparativeAnalysisPlan, ComparativeAnalysisRequest, ComparativeAnalysisStage,
     ComparativeKnobs, COMPARATIVE_CANDIDATE_INVALID, COMPARATIVE_STALE_INPUT,

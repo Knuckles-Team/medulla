@@ -7,8 +7,8 @@
 //! names another tenant's head does not resolve.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_stats::decision::importance_penalty::ImportancePenalty;
 use medulla_decision_stats::decision::quant::value_of;
+use medulla_decision_stats_records::decision::importance_penalty::ImportancePenalty;
 use medulla_decision_types::decision::importance_penalty::PenaltyReceipt;
 use medulla_decision_types::decision::jobs::DecisionFitRequest;
 use medulla_decision_types::decision::statistical::dataset::LabelledDataset;

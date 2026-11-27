@@ -35,12 +35,8 @@
 
 use std::sync::Arc;
 
-use medulla_decision_stats::decision::adapter::to_q16;
-use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::decision::entity_resolution::{
-    accept_rate_drift, proposal_option_id, tier_evaluation, tier_of_option, tier_token,
-    AcceptDrift, CandidateIndex, IndexedNode,
-};
+use medulla_decision_stats_records::decision::adapter::to_q16;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::codes::{ER_BELOW_THRESHOLD, ER_CROSS_TENANT, ER_DRIFT_HOLD};
 use medulla_decision_types::decision::entity_resolution::{ResolutionTier, ReviewOutcome};
 use medulla_decision_types::decision::knob_families::resolve_entity as resolve_entity_knobs;
@@ -63,6 +59,16 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
+use {
+    medulla_decision_stats_records::decision::entity_resolution::accept_rate_drift,
+    medulla_decision_stats_records::decision::entity_resolution::proposal_option_id,
+    medulla_decision_stats_records::decision::entity_resolution::tier_evaluation,
+    medulla_decision_stats_records::decision::entity_resolution::tier_of_option,
+    medulla_decision_stats_records::decision::entity_resolution::tier_token,
+    medulla_decision_stats_records::decision::entity_resolution::AcceptDrift,
+    medulla_decision_stats_records::decision::entity_resolution::CandidateIndex,
+    medulla_decision_stats_records::decision::entity_resolution::IndexedNode,
+};
 
 use super::support::{invalid, text_param};
 use super::DecisionFamily;

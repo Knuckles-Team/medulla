@@ -12,7 +12,6 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_decision_stats::decision::participant_derive::{DeriveKey, DerivePayload};
 use medulla_decision_types::claims::ObserverRef;
 use medulla_h_graph::graph_ops::participant_derive::{payload_node_id, read_payload};
 use medulla_protocol_types::protocol::{Method, Response};
@@ -23,6 +22,10 @@ use medulla_work_types::memory::{
     MemoryKind, MemoryRecord, MemoryRememberRequest, MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
 };
 use medulla_work_types::participant::ParticipantId;
+use {
+    medulla_decision_stats_records::decision::participant_derive::DeriveKey,
+    medulla_decision_stats_records::decision::participant_derive::DerivePayload,
+};
 
 const SECRET: &str = "participant-derive-served-secret";
 const ENCRYPTION_KEY: &str = "participant-derive-served-encryption-key-0123456789";

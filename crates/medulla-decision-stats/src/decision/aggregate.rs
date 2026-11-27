@@ -21,12 +21,18 @@ use medulla_decision_types::{
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 
-use super::admission::{fidelity_rank, floor_rank};
 use super::quant::q32;
-use super::refusal::{Refusal, RefusalResult};
 use medulla_numeric::{
     risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts,
     risk::PoolTree, risk::PooledNode,
+};
+use {
+    medulla_decision_stats_records::decision::admission::fidelity_rank,
+    medulla_decision_stats_records::decision::admission::floor_rank,
+};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
 };
 
 /// One committed record joined with its evaluations.

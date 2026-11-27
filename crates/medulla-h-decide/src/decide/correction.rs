@@ -47,9 +47,6 @@ mod served {
     use medulla_agent_types::agent_guardrail::{
         check_rule_against_invariants, GuardrailRule, RulePromotionVerdict,
     };
-    use medulla_decision_stats::decision::correction::{
-        candidate_outcomes, commit_correction, nearest_corrections, OutcomeRow,
-    };
     use medulla_decision_types::correction::{
         task_class_of, CandidateOutcomes, Correction, CorrectionEffect, CorrectionInput,
         CorrectionNearest, CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead,
@@ -66,6 +63,12 @@ mod served {
     };
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_stats_records::decision::correction::candidate_outcomes,
+        medulla_decision_stats_records::decision::correction::commit_correction,
+        medulla_decision_stats_records::decision::correction::nearest_corrections,
+        medulla_decision_stats_records::decision::correction::OutcomeRow,
+    };
 
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::program_embedding::{embed_texts, SpacedEmbedder};
@@ -244,11 +247,13 @@ mod served {
         }
         // A correction of a skill feeds the skill's evaluation suite (R702.7, R711.3): the
         // `EvalCase` effect becomes one `SkillEvalCase` node linked from the correction.
-        if let Some(case) = medulla_decision_stats::decision::skill_eval::case_from_correction(
-            &correction.target,
-            correction.source,
-            &commit.effect.eval_case,
-        ) {
+        if let Some(case) =
+            medulla_decision_stats_records::decision::skill_eval::case_from_correction(
+                &correction.target,
+                correction.source,
+                &commit.effect.eval_case,
+            )
+        {
             let mut properties = Map::new();
             properties.insert(TYPE.into(), "SkillEvalCase".into());
             properties.insert("_owner".into(), verified.agent_id().into());

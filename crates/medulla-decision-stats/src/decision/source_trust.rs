@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
 
-use super::retrieval::hard_negatives;
+use medulla_decision_stats_records::decision::retrieval::hard_negatives;
 
 /// One source's Beta posterior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -10,8 +10,7 @@
 
 use std::sync::Arc;
 
-use medulla_decision_stats::decision::memory_benchmark::{benchmark, BenchmarkVerdict, RunMetrics};
-use medulla_decision_stats::decision::memory_rewrite::evaluate_rewrite;
+use medulla_decision_stats_records::decision::memory_rewrite::evaluate_rewrite;
 use medulla_decision_types::decision::memory_benchmark::{
     BenchmarkKnobs, BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt,
     MemoryChangeBenchmarkRequest, RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
@@ -28,6 +27,11 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::memory_benchmark::benchmark,
+    medulla_decision_stats_records::decision::memory_benchmark::BenchmarkVerdict,
+    medulla_decision_stats_records::decision::memory_benchmark::RunMetrics,
+};
 
 use super::stat_jobs::JobRun;
 use super::stat_support::{refusal, resolve_policy};

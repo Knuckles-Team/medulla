@@ -98,7 +98,6 @@ pub(super) mod served {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use medulla_decision_stats::decision::feature_match::{advance_ledger, LedgerChangeError};
     use medulla_decision_types::decision::feature_match::{
         FeatureLedgerOp, FeatureLedgerView, LedgerEntry, LedgerEvent, LedgerStatus, PlanProposal,
         FEATURE_LEDGER_MACHINE,
@@ -115,6 +114,10 @@ pub(super) mod served {
         StatechartStore,
     };
     use medulla_store::feature_ledger_statechart::{feature_ledger_statechart_def, RECORD_EVENT};
+    use {
+        medulla_decision_stats_records::decision::feature_match::advance_ledger,
+        medulla_decision_stats_records::decision::feature_match::LedgerChangeError,
+    };
 
     use super::super::claims::served::{field, invalid, request_key, ClaimStore};
 

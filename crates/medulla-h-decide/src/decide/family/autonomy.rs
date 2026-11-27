@@ -10,9 +10,6 @@
 //! `Irreversible`, always requires confirmation (`ACTION_NEEDS_APPROVAL`). The
 //! record is an `Observation` resolved as a `Constraint`.
 
-use medulla_decision_stats::decision::autonomy::{
-    autonomy_verdict, ledger_from_outcomes, rule_requires_approval,
-};
 use medulla_decision_types::decision::autonomy::{
     clean_outcomes_needed, AutonomyReading, AutonomyRequest, TRUST_SELF_REPORTED,
 };
@@ -25,6 +22,11 @@ use medulla_decision_types::decision::{
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_stats_records::decision::autonomy::autonomy_verdict,
+    medulla_decision_stats_records::decision::autonomy::ledger_from_outcomes,
+    medulla_decision_stats_records::decision::autonomy::rule_requires_approval,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_log::{recent_labels_counted, LogReader};

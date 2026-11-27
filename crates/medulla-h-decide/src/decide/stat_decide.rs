@@ -889,7 +889,7 @@ fn candidate_pool(
     request: &DecideRequest,
     policy: &ResolvedPolicy,
     context_digest: &str,
-    views: &[medulla_decision_stats::decision::candidate::CandidateView],
+    views: &[medulla_decision_stats_records::decision::candidate::CandidateView],
     matched: &[super::stat_log::MatchedTrajectory],
 ) -> Option<CandidatePool> {
     use medulla_decision_stats::decision::exploration::{build_pool, permit, ExplorationPermit};
@@ -943,7 +943,7 @@ fn bounded<T, const N: usize>(values: Vec<T>) -> Result<BoundedVec<T, N>, String
 }
 
 fn feature_matrix(
-    views: &[medulla_decision_stats::decision::candidate::CandidateView],
+    views: &[medulla_decision_stats_records::decision::candidate::CandidateView],
     pinned: &Pinned,
     executed: &Executed,
 ) -> Result<FeatureMatrixRef, String> {
@@ -1142,7 +1142,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::TeamCoordination => {
             medulla_decision_types::decision::team_coordination::KNOBS
         }
-        QuestionKind::ChangesetReview => medulla_decision_stats::decision::changeset_review::KNOBS,
+        QuestionKind::ChangesetReview => {
+            medulla_decision_stats_records::decision::changeset_review::KNOBS
+        }
         QuestionKind::RewardDecomposition => medulla_decision_types::decision::reward::KNOBS,
         QuestionKind::CurriculumPromotion => medulla_decision_types::decision::curriculum::KNOBS,
         QuestionKind::AutonomyVerdict => medulla_decision_types::decision::autonomy::KNOBS,

@@ -10,7 +10,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_stats::decision::bm25;
+use medulla_decision_stats_records::decision::bm25;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::ingest_rules::subclass_closure;
 use medulla_ingestion_types::ingestion_wire::{

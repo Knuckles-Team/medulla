@@ -13,9 +13,7 @@
 //! look-ahead.
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_stats::decision::admission::Regime;
 use medulla_decision_stats::decision::fit::FitSpec;
-use medulla_decision_stats::decision::refusal::RefusalResult;
 use medulla_decision_stats::{decision::quant::q32, decision::quant::value_of};
 use medulla_decision_stats::{
     decision::replay::cursor_of, decision::replay::gold_steps, decision::replay::head_digest,
@@ -24,6 +22,8 @@ use medulla_decision_stats::{
     decision::replay::HeadReplay, decision::replay::OrderedEvents, decision::replay::ReplayOutcome,
     decision::replay::ReplayPolicy, decision::replay::ReplayStep, decision::replay::Uniform,
 };
+use medulla_decision_stats_records::decision::admission::Regime;
+use medulla_decision_stats_records::decision::refusal::RefusalResult;
 use medulla_decision_types::decision::statistical::dataset::LabelledItem;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{

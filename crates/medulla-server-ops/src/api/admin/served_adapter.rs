@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use medulla_decision_stats::decision::adapter::AdapterKernel;
+use medulla_decision_stats_records::decision::adapter::AdapterKernel;
 use medulla_graph_core::graph::GraphCore;
 
 use medulla_server_api::state::ServerState;

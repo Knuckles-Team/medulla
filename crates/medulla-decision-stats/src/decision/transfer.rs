@@ -25,7 +25,10 @@ use medulla_types::evidence_class::EvidenceClass;
 
 use super::aggregate::{label_use, LabelUse};
 use super::quant::q32;
-use super::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// One stored evaluation and the principal that decided the record it judges.
 #[derive(Debug, Clone, Copy)]

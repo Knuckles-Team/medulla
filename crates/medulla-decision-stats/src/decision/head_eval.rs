@@ -26,11 +26,14 @@ use medulla_types::contract::BoundedVec;
 
 use super::features::FeatureMatrix;
 use super::quant::{q32, raw_value, value_of};
-use super::refusal::{Refusal, RefusalResult};
 use super::scorer::fixed::to_f64;
 use super::scorer::forward::{macs, read as read_scorer, Scoring};
 use super::scorer::legal::LegalSet;
 use medulla_numeric::detkernel::kernels::softmax;
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// A head read over every candidate.
 #[derive(Debug, Clone, PartialEq)]

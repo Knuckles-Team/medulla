@@ -10,9 +10,6 @@ use std::collections::BTreeMap;
 
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_stats::decision::skill_eval::{
-    ablation_verdict, check_traffic, noise_band, stale_after_change,
-};
 use medulla_decision_types::decision::codes::CANARY_NO_CHAMPION;
 use medulla_decision_types::decision::codes::COMPILE_MODEL_UNKNOWN;
 use medulla_decision_types::decision::skill_evolution::{Rollout, RolloutSet};
@@ -25,6 +22,12 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::read_pointer;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::skill_eval::ablation_verdict,
+    medulla_decision_stats_records::decision::skill_eval::check_traffic,
+    medulla_decision_stats_records::decision::skill_eval::noise_band,
+    medulla_decision_stats_records::decision::skill_eval::stale_after_change,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_promotion::record_rollouts;

@@ -20,7 +20,7 @@ use medulla_decision_types::decision::tool_relevance::{
 use medulla_types::contract::BoundedVec;
 use std::collections::BTreeMap;
 
-use super::{bm25, quant};
+use {crate::decision::quant, medulla_decision_stats_records::decision::bm25};
 
 /// One tool of the index with its stored embedding and visibility.
 #[derive(Debug, Clone, PartialEq, Eq)]

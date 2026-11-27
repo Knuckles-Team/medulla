@@ -1,3 +1,5 @@
+
+
 [package]
 name = "medulla-decision-stats"
 version = "0.1.0"
@@ -13,7 +15,6 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-numeric = { path = "../medulla-numeric" }
-medulla-ann = { path = "../medulla-ann" }
 rand_chacha = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 medulla-types = { path = "../medulla-types", optional = true }
@@ -21,13 +22,12 @@ medulla-query-types = { path = "../medulla-query-types", optional = true }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 serde_json = "1.0"
-sha2 = "0.10"
-unicode-normalization = "0.1"
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
-medulla-work-types = { path = "../medulla-work-types" }
+
+medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 
 [features]
-decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/decision"]
+decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/decision", "medulla-decision-stats-records/decision"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

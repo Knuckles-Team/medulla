@@ -317,6 +317,7 @@ units = [
   "medulla-decision-rank",
   "medulla-decision-records",
   "medulla-decision-stats",
+  "medulla-decision-stats-records",
   "medulla-document",
   "medulla-enrich",
   "medulla-finance",

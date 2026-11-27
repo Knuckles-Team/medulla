@@ -19,10 +19,11 @@ pub async fn check_derivation_count(
     payload_ref: &str,
     claims_written: u32,
 ) -> Result<(), String> {
-    use medulla_decision_stats::decision::participant_derive::{
-        conclusion_claim_prefix, DeriveKey,
-    };
     use medulla_h_graph::graph_ops::participant_derive::derive_input;
+    use {
+        medulla_decision_stats_records::decision::participant_derive::conclusion_claim_prefix,
+        medulla_decision_stats_records::decision::participant_derive::DeriveKey,
+    };
     let tenant = verified.tenant();
     let core = super::claims::participants_of(state, graph)
         .await

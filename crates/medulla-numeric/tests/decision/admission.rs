@@ -1,11 +1,6 @@
 //! EH-016 / EH-022: only independently evaluated outcomes train, and the two
 //! label regimes never mix. Each §11.2 label defect is planted once.
 
-use medulla_decision_stats::{
-    decision::admission::admit, decision::admission::exclusion,
-    decision::admission::AdmissionRules, decision::admission::Exclusion,
-    decision::admission::Regime,
-};
 use medulla_decision_types::decision::{RecordWindow, TraceFidelityLevel};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
@@ -14,6 +9,13 @@ use medulla_decision_types::{
     decision::statistical::dataset::PropensitySource,
 };
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_stats_records::decision::admission::admit,
+    medulla_decision_stats_records::decision::admission::exclusion,
+    medulla_decision_stats_records::decision::admission::AdmissionRules,
+    medulla_decision_stats_records::decision::admission::Exclusion,
+    medulla_decision_stats_records::decision::admission::Regime,
+};
 
 use super::common::{gold_item, logged_item, rational};
 

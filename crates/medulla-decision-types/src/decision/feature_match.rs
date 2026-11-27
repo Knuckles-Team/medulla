@@ -414,7 +414,7 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_transition() {
         for source in [
-            include_str!("../../../medulla-decision-stats/src/decision/feature_match.rs"),
+            include_str!("../../../medulla-decision-stats-records/src/decision/feature_match.rs"),
             include_str!("../../../medulla-h-decide/src/decide/feature_ledger.rs"),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();

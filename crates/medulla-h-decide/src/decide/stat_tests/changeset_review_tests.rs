@@ -188,7 +188,7 @@ async fn review_covers_five_classes_and_filters_by_impact() {
 
     // A pinned policy can lower nothing: the blocking severity stays fixed.
     assert_eq!(
-        medulla_decision_stats::decision::changeset_review::block_severity(
+        medulla_decision_stats_records::decision::changeset_review::block_severity(
             &DecisionPolicy::engine_default()
         ),
         medulla_decision_types::decision::changeset_review::Severity::High

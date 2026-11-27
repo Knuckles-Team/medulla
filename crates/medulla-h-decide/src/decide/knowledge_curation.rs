@@ -44,9 +44,6 @@ mod served {
 
     use medulla_decision_outcome_types::decision::promotion::RevisionStage;
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-    use medulla_decision_stats::decision::knowledge_curation::{
-        check_contradictions, is_due, loop_metrics, FlagMeasure, Invariant, KnowledgeIndex,
-    };
     use medulla_decision_types::decision::held_out::RevisionSubject;
     use medulla_decision_types::knowledge_curation::{
         ContradictionFinding, CorrectionRef, CurationAdmitted, CurationEditOp, CurationInputs,
@@ -68,6 +65,14 @@ mod served {
     use medulla_types::contract::Digest256;
     use serde::{Deserialize, Serialize};
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_stats_records::decision::knowledge_curation::check_contradictions,
+        medulla_decision_stats_records::decision::knowledge_curation::is_due,
+        medulla_decision_stats_records::decision::knowledge_curation::loop_metrics,
+        medulla_decision_stats_records::decision::knowledge_curation::FlagMeasure,
+        medulla_decision_stats_records::decision::knowledge_curation::Invariant,
+        medulla_decision_stats_records::decision::knowledge_curation::KnowledgeIndex,
+    };
 
     use super::{CurationOp, SCOPE_CURATE};
     use crate::decide::knowledge_flag::served::{all_flags, edge_operation, flag_by_id};

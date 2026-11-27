@@ -121,7 +121,9 @@ fn benchmark_request(key: &str, candidate_hits: bool) -> MemoryChangeBenchmarkRe
             query_id: format!("q{i}"),
             expected_evidence_ids: vec![format!("e{i}")],
             reference_answer_digest:
-                medulla_decision_stats::decision::memory_benchmark::answer_digest(&answer(i)),
+                medulla_decision_stats_records::decision::memory_benchmark::answer_digest(&answer(
+                    i,
+                )),
         })
         .collect();
     let run = |revision: BenchRevision, hit: bool| RunResults {

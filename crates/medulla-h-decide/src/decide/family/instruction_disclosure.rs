@@ -17,9 +17,6 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_stats::decision::instruction_disclosure::{
-    next_disclosure_event, DisclosureInput,
-};
 use medulla_decision_types::decision::instruction_disclosure::{
     instruction_version_prefix, instructions_hash, scan_limit, timeout_s, DisclosureEvent,
     DisclosureTiming, DisclosureTrigger, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
@@ -33,6 +30,10 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_stats_records::decision::instruction_disclosure::next_disclosure_event,
+    medulla_decision_stats_records::decision::instruction_disclosure::DisclosureInput,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,

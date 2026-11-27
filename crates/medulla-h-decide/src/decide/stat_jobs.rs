@@ -18,10 +18,6 @@ use tracing::Instrument;
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_stats::decision::feature_power::FeaturePowerKnobs;
 use medulla_decision_stats::{
-    decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted,
-    decision::admission::Regime,
-};
-use medulla_decision_stats::{
     decision::evaluate::evaluate, decision::evaluate::seal_receipt, decision::evaluate::EvalSpec,
 };
 use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
@@ -47,6 +43,12 @@ use medulla_decision_types::{
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::admission::admit,
+    medulla_decision_stats_records::decision::admission::AdmissionRules,
+    medulla_decision_stats_records::decision::admission::Admitted,
+    medulla_decision_stats_records::decision::admission::Regime,
+};
 
 use super::stat_log::{logged_dataset, LogReader};
 use super::stat_penalty::{draft_premises, precheck_importance, resolve_penalty};

@@ -2,10 +2,13 @@
 //! pause steps refine the query toward the history, so the ranking over a
 //! seeded catalog of four clusters never loses NDCG.
 
-use medulla_decision_stats::decision::recommend::{
-    encode_catalog, fit_codebooks, refine_and_rank, CatalogItem,
-};
 use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
+use {
+    medulla_decision_stats_records::decision::recommend::encode_catalog,
+    medulla_decision_stats_records::decision::recommend::fit_codebooks,
+    medulla_decision_stats_records::decision::recommend::refine_and_rank,
+    medulla_decision_stats_records::decision::recommend::CatalogItem,
+};
 
 const TOP_K: u16 = 6;
 

@@ -903,15 +903,16 @@ mod scoped_recall_proofs {
 mod observation_flag_proofs {
     use super::super::participant_surface::{admit, observation_of};
     use super::SCOPE_A;
-    use medulla_decision_stats::decision::participant_derive::{
-        derivation_targets, DerivationInput,
-    };
     use medulla_graph_core::graph::GraphCore;
     use medulla_server_mutation::mutation::apply_coalescable_write;
     use medulla_types::contract::{ResourceId, TenantId};
     use medulla_work_types::memory_scope::ObservationConfig;
     use medulla_work_types::participant::{
         Participant, ParticipantId, ParticipantKind, ParticipantOp, PARTICIPANT_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_stats_records::decision::participant_derive::derivation_targets,
+        medulla_decision_stats_records::decision::participant_derive::DerivationInput,
     };
 
     fn id(slug: &str) -> ParticipantId {
@@ -1097,7 +1098,6 @@ mod derive_worker_proofs {
         advance_checkpoint, derive_input, payload_node_id, payload_write, read_checkpoint,
     };
     use super::{SCOPE_A, SCOPE_B};
-    use medulla_decision_stats::decision::participant_derive::{DeriveKey, DerivePayload};
     use medulla_decision_types::claims::ObserverRef;
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
@@ -1105,6 +1105,10 @@ mod derive_worker_proofs {
     use medulla_types::contract::ResourceId;
     use medulla_work_types::memory::{MemoryRememberRequest, MemoryTier};
     use medulla_work_types::participant::ParticipantId;
+    use {
+        medulla_decision_stats_records::decision::participant_derive::DeriveKey,
+        medulla_decision_stats_records::decision::participant_derive::DerivePayload,
+    };
 
     fn id(slug: &str) -> ParticipantId {
         ParticipantId::new(slug).unwrap()

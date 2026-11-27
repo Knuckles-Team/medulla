@@ -10,7 +10,6 @@
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
-use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::exploration::{permit, ExplorationPermit};
 use medulla_decision_stats::{
     decision::features::feature_matrix, decision::features::FeatureInputs,
@@ -24,6 +23,7 @@ use medulla_decision_stats::{
 use medulla_decision_stats::{
     decision::ladder::decide, decision::ladder::LadderInputs, decision::ladder::LadderResult,
 };
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::statistical::CandidatePool;

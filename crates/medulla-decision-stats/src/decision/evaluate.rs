@@ -21,7 +21,6 @@ use medulla_decision_types::{
 };
 use medulla_query_types::solve_scalar::digest_text;
 
-use super::admission::Regime;
 use super::evaluate_bandit::{bandit_gates, BanditReport};
 use super::feature_power::{feature_power, FeaturePowerKnobs};
 use super::head_eval::{
@@ -29,10 +28,14 @@ use super::head_eval::{
 };
 use super::promotion::{Observation, Protocol};
 use super::quant::{item_rows, q32, unit_wire, value_of};
-use super::refusal::{bounded, RefusalResult};
+use medulla_decision_stats_records::decision::admission::Regime;
 use medulla_numeric::detkernel::math;
 use medulla_numeric::{calibration::metrics::reliability, calibration::metrics::BinCount};
 use medulla_numeric::{risk::clopper_pearson, risk::BinomialCounts, risk::IntervalSide};
+use {
+    medulla_decision_stats_records::decision::refusal::bounded,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Domain of an evaluation receipt digest.
 pub const EVAL_RECEIPT_DOMAIN: &str = "eg/decision-eval-receipt/v1";

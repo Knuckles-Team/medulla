@@ -44,7 +44,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-index-types = { path = "../medulla-index-types" }
-medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-cypher = { path = "../medulla-cypher" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-table-store = { path = "../medulla-table-store" }

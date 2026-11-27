@@ -178,7 +178,7 @@ pub(super) async fn assemble_for(
             .collect();
         let views: Vec<_> = entries
             .iter()
-            .map(medulla_decision_stats::decision::candidate::CandidateView::from_component)
+            .map(medulla_decision_stats_records::decision::candidate::CandidateView::from_component)
             .collect();
         let kept = super::candidates::filter_by_slot_kind(&slots, &entries, &views)
             .map_err(|refusal| refusal.to_string())?;

@@ -12,9 +12,12 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_stats::{conformal::binary_conformal, conformal::BinarySet};
 use medulla_numeric::detkernel::{Level, StatError};
 use medulla_numeric::risk::{clopper_pearson, BinomialCounts, IntervalSide, SampleGate};
+use {
+    medulla_decision_stats_records::conformal::binary_conformal,
+    medulla_decision_stats_records::conformal::BinarySet,
+};
 
 use super::{
     DataStatus, FlipAbstainReason, FlipConfidence, FlipConfidenceRequest, FlipFeatures,

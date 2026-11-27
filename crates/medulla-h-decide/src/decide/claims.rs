@@ -921,7 +921,7 @@ pub(super) mod served {
             prefix: &str,
             turn_ids: &BTreeSet<&str>,
         ) -> Result<u32, String> {
-            use medulla_decision_stats::decision::participant_derive::cited_turn;
+            use medulla_decision_stats_records::decision::participant_derive::cited_turn;
             let mut count = 0u32;
             for instance_id in self
                 .store

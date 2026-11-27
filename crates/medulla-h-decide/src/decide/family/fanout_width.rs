@@ -6,7 +6,6 @@
 //! fanout.replica_ceiling` allow. The spread is a caller claim, so the record is
 //! a `Claim` resolved as `Statistical`. The harness starts the replicas.
 
-use medulla_decision_stats::decision::population::{fanout_cap, fanout_width, mean_diversity};
 use medulla_decision_types::decision::population::{
     FanoutRequest, PopulationKnobs, FANOUT_BUDGET_TOO_LOW,
 };
@@ -17,6 +16,11 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_stats_records::decision::population::fanout_cap,
+    medulla_decision_stats_records::decision::population::fanout_width,
+    medulla_decision_stats_records::decision::population::mean_diversity,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

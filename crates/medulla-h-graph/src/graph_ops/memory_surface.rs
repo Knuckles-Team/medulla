@@ -27,8 +27,7 @@ use super::*;
 use medulla_decision_memory::memory::episodes::{
     episodes_visible_at, first_session_overlap, valid_episode, RecordStamp,
 };
-use medulla_decision_stats::decision::memory as kernel;
-use medulla_decision_stats::decision::session_note::{annotate_notes_with, NoteKnobs, StoredNote};
+use medulla_decision_stats_records::decision::memory as kernel;
 use medulla_decision_types::decision::knob_families::memory::{
     ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, SEARCH_STATE_MAX_BYTES, TENANT_MAX_BYTES,
 };
@@ -50,6 +49,11 @@ use medulla_work_types::memory::{
 };
 use medulla_work_types::memory::{MemoryKind, NoteView, SessionNoteBody};
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_stats_records::decision::session_note::annotate_notes_with,
+    medulla_decision_stats_records::decision::session_note::NoteKnobs,
+    medulla_decision_stats_records::decision::session_note::StoredNote,
+};
 
 const TENANT_KEY: &str = "tenant_scope";
 const DERIVATION_TEXT_KEY: &str = "derivationText";

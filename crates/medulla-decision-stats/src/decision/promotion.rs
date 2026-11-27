@@ -40,8 +40,11 @@ use medulla_types::refusal_code::RefusalCode;
 
 use super::head_eval::top_index;
 use super::quant::{exact_wire, level, q32, unit_wire};
-use super::refusal::{Refusal, RefusalResult};
 use medulla_numeric::{risk::clopper_pearson, risk::BinomialCounts, risk::IntervalSide};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Largest mean cost a promoted head may spend per decision, in
 /// multiply-accumulates. The largest resident scorer (64 options, 32

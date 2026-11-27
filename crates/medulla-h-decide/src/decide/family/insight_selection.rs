@@ -8,7 +8,7 @@
 //! `insight.*` knobs and writes nothing. A context signature that is empty, or
 //! matches no stored insight, abstains with `UNKNOWN_CONTEXT_SIGNATURE`.
 
-use medulla_decision_stats::decision::insight::select_insights;
+use medulla_decision_stats_records::decision::insight::select_insights;
 use medulla_decision_types::decision::program_store::insight::{
     Insight, InsightKnobs, UnknownContextSignature, INSIGHT_KEY_PREFIX,
 };

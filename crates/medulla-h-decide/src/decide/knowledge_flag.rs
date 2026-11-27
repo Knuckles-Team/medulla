@@ -41,9 +41,6 @@ pub async fn handle_knowledge_flag(
 pub(crate) mod served {
     use std::collections::BTreeMap;
 
-    use medulla_decision_stats::decision::knowledge_flag::{
-        raise, resolve, FlagKnobs, FlagRefusal,
-    };
     use medulla_decision_types::knowledge_flag::{
         evidence_digest, flag_id_of, flag_key, FlagKind, FlagResolution, FlagState, KnowledgeFlag,
         KnowledgeFlagList, KnowledgeFlagOp, KnowledgeFlagReceipt, KnowledgeFlagView, RaiseOutcome,
@@ -59,6 +56,12 @@ pub(crate) mod served {
     use medulla_types::contract::Digest256;
     use medulla_types::transition_refused::MachineState;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_stats_records::decision::knowledge_flag::raise,
+        medulla_decision_stats_records::decision::knowledge_flag::resolve,
+        medulla_decision_stats_records::decision::knowledge_flag::FlagKnobs,
+        medulla_decision_stats_records::decision::knowledge_flag::FlagRefusal,
+    };
 
     use super::{SCOPE_CURATE, SCOPE_FLAG};
     use crate::decide::planned_write::PlannedWrite;

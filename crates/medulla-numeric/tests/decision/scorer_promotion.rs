@@ -4,7 +4,6 @@
 use medulla_decision_stats::decision::exploration::ExplorationPermit;
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_stats::decision::scorer::forward::served_probabilities;
-use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
 use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
 use medulla_decision_stats::{
     decision::head_eval::calibration_statement, decision::head_eval::read_head,
@@ -27,6 +26,10 @@ use medulla_decision_types::{
     decision::ColdStart, decision::QuantScaleTag, decision::QuantisedValue,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::admission::admit,
+    medulla_decision_stats_records::decision::admission::Regime,
+};
 
 use super::common::{
     dataset, gold_dataset, gold_item, option_ids, policy, rows, statistical, FEATURES, OPTIONS,

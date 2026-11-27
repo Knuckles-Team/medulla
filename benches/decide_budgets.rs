@@ -44,10 +44,10 @@ use medulla_compute::assemble::admit_topology;
 use medulla_decision_outcome_types::decision::concentration::{
     concentration_verdict, ConcentrationPolicy, EditFact,
 };
-use medulla_decision_stats::decision::population::wasserstein1;
-use medulla_decision_stats::decision::reward::decompose;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
 use medulla_decision_stats::decision::trajectory_join::join;
+use medulla_decision_stats_records::decision::population::wasserstein1;
+use medulla_decision_stats_records::decision::reward::decompose;
 use medulla_decision_types::belief_revision::BeliefReviseRequest;
 use medulla_decision_types::claims::{ClaimOp, EvidenceChannel};
 use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
@@ -1876,10 +1876,14 @@ fn bench_retrieval_learning(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_stats::decision::adapter::{to_body, AdapterKernel, Direction};
     use medulla_exec::exec::TextEmbedder;
     use medulla_h_decide::decide::stat_test_support::{
         generation_cycle_fixture, submit_generation_cycle, CYCLE_DIMS,
+    };
+    use {
+        medulla_decision_stats_records::decision::adapter::to_body,
+        medulla_decision_stats_records::decision::adapter::AdapterKernel,
+        medulla_decision_stats_records::decision::adapter::Direction,
     };
 
     let group_name = "decide/retrieval_learning".to_string();

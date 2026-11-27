@@ -19,7 +19,10 @@ use medulla_decision_types::decision::statistical::retrieval_drift::{
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionPolicy;
 
-use super::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Bytes of the activation vocabulary filter.
 pub const BLOOM_BYTES: usize = 8 * 1024;

@@ -11,14 +11,10 @@
 //! is the typed int param `route.turn_tokens`; a question that does not state
 //! it, or that declares no options, has no fast path to run.
 
-use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::ladder::{cost_tie_break, tie_ids, CostTie, LadderResult};
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use std::collections::BTreeMap;
 
-use medulla_decision_stats::decision::route::{
-    route_pipeline, FastPath, OptionHistory, RouteChoice, RouteInput, RouteOption, RouteStage,
-    TeamReuse, FAST_PATH_STAGE,
-};
 use medulla_decision_types::decision::codes::PREFERENCE_NOT_LEGAL;
 use medulla_decision_types::decision::knob_families::route::{
     cost_tie_epsilon_micros, fast_path_max_tokens, team_reuse_floors,
@@ -33,6 +29,17 @@ use medulla_decision_types::decision::{
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::route::route_pipeline,
+    medulla_decision_stats_records::decision::route::FastPath,
+    medulla_decision_stats_records::decision::route::OptionHistory,
+    medulla_decision_stats_records::decision::route::RouteChoice,
+    medulla_decision_stats_records::decision::route::RouteInput,
+    medulla_decision_stats_records::decision::route::RouteOption,
+    medulla_decision_stats_records::decision::route::RouteStage,
+    medulla_decision_stats_records::decision::route::TeamReuse,
+    medulla_decision_stats_records::decision::route::FAST_PATH_STAGE,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource, Pinned, RouteExecuted,

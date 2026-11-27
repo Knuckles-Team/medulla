@@ -10,7 +10,7 @@
 //! a terminal cycle, or a shadow graph that is already the active generation,
 //! changes nothing. `GenerationCycleMachine` is the only writer of the state.
 
-use medulla_decision_stats::decision::adapter::AdapterKernel;
+use medulla_decision_stats_records::decision::adapter::AdapterKernel;
 use medulla_decision_types::decision::statistical::body::canonical_body_bytes;
 use medulla_decision_types::decision::statistical::body::content_digest_of;
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;

@@ -112,7 +112,7 @@ pub(in crate::decide) use fanout_aggregate::fanout_view;
 pub(in crate::decide) use graph_intake::intake_view;
 pub(in crate::decide) use held_item_admission::held_item_view;
 pub(in crate::decide) use instruction_disclosure::{disclosure_view, event_premise_fact};
-use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 pub(in crate::decide) use merge_arming::arming_view;
 pub(in crate::decide) use paper_admission::with_similarity;
 pub(in crate::decide) use program_store::with_program_candidates;

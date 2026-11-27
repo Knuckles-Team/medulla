@@ -31,20 +31,26 @@ use medulla_types::contract::BoundedVec;
 use super::fit::Example;
 use super::head_eval::{apply_isotonic, logit, scaled_softmax, top_index};
 use super::quant::{item_rows, level, q32, unit_wire, value_of};
-use super::refusal::{Refusal, RefusalResult};
 use super::scorer::fixed::{to_f64, to_q32};
 use super::scorer::forward::{read, served_probabilities, EXCLUDED_LOGIT};
 use super::scorer::legal::LegalSet;
 use super::targets::{audit_weight, targets};
-use crate::{
-    conformal::acceptability_score, conformal::realised_coverage_interval,
-    conformal::split_conformal, conformal::weighted_split_conformal, conformal::Threshold,
-};
 use medulla_numeric::calibration::isotonic::fit_isotonic_weighted;
 use medulla_numeric::{
     detkernel::optimise::minimise_convex_bounded, detkernel::optimise::DEFAULT_BISECTION_STEPS,
 };
 use medulla_numeric::{risk::calibrate_selective_risk, risk::RiskTarget, risk::SampleGate};
+use {
+    medulla_decision_stats_records::conformal::acceptability_score,
+    medulla_decision_stats_records::conformal::realised_coverage_interval,
+    medulla_decision_stats_records::conformal::split_conformal,
+    medulla_decision_stats_records::conformal::weighted_split_conformal,
+    medulla_decision_stats_records::conformal::Threshold,
+};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Inverse-temperature search bracket.
 pub const INVERSE_TEMPERATURE_RANGE: (f64, f64) = (1e-3, 1e3);

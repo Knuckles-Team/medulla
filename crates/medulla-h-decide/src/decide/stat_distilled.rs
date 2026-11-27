@@ -17,8 +17,7 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::decision::distilled::{rank_stored, MissingScore};
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::statistical::distilled::{
     DistilledScorerManifest, DistilledUpload, TeacherJudgment, KNOBS, Q16_ONE,
@@ -33,6 +32,10 @@ use medulla_decision_types::decision::{
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{BoundedVec, Digest256};
+use {
+    medulla_decision_stats_records::decision::distilled::rank_stored,
+    medulla_decision_stats_records::decision::distilled::MissingScore,
+};
 
 use super::family::advisory;
 use super::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};

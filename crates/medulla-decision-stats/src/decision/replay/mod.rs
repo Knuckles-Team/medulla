@@ -25,8 +25,11 @@ pub use events::{cursor_of, event_digest, order_events, OrderedEvents};
 pub use folds::{walk_forward, Fold};
 pub use head::{gold_steps, head_digest, time_ordered, HeadReplay};
 
-use super::refusal::{Refusal, RefusalResult};
 use medulla_decision_types::decision::replay::WalkForward;
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// One replayable decision point.
 #[derive(Debug, Clone, PartialEq)]

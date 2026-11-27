@@ -10,7 +10,7 @@ In this spec, *clustering* means grouping numeric vectors around centroids. It n
 Component: Compute
 Depends-on: MEDULLA-DECISION-ENGINE-R179
 References: [MEDULLA-DECISION-ENGINE](../decision-engine/spec.md), [MEDULLA-FEDERATED-QUERY](../federated-query-and-reasoning/spec.md), [MEDULLA-INCREMENTAL-VIEWS](../incremental-views/spec.md)
-Code: ../../crates/medulla-numeric/src/cluster/mod.rs ../../crates/medulla-numeric/src/cluster.rs ../../crates/medulla-decision-stats/src/decision/cluster_knobs.rs ../../crates/medulla-semantic-index/src/semantic_ann_index.rs ../../crates/medulla-ann/src/kmeans.rs ../../crates/medulla-ann/src/kmeans_gpu.rs ../../crates/medulla-ann/src/ivfpq.rs ../../crates/medulla-compute/src/datascience/primitives.rs ../../crates/medulla-graph-algos/src/graph_algos/spectral.rs ../../crates/medulla-mining/src/mining/cluster.rs ../../crates/medulla-server-graph/src/semantic_activation.rs
+Code: ../../crates/medulla-numeric/src/cluster/mod.rs ../../crates/medulla-numeric/src/cluster.rs ../../crates/medulla-decision-stats-records/src/decision/cluster_knobs.rs ../../crates/medulla-semantic-index/src/semantic_ann_index.rs ../../crates/medulla-ann/src/kmeans.rs ../../crates/medulla-ann/src/kmeans_gpu.rs ../../crates/medulla-ann/src/ivfpq.rs ../../crates/medulla-compute/src/datascience/primitives.rs ../../crates/medulla-graph-algos/src/graph_algos/spectral.rs ../../crates/medulla-mining/src/mining/cluster.rs ../../crates/medulla-server-graph/src/semantic_activation.rs
 
 ## User Scenarios & Testing
 

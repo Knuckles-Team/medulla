@@ -13,13 +13,17 @@ use sha2::{Digest, Sha256};
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
-use medulla_decision_stats::decision::recommend::{fit_codebooks, CatalogItem, RecommendError};
 use medulla_decision_types::decision::item_recommendation::{
     encoder_key, CatalogEncoderFitted, DIMENSION_MISMATCH, EMPTY_CATALOG,
 };
 use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
 use medulla_persistence_records::decision_jobs::encode_artifact;
+use {
+    medulla_decision_stats_records::decision::recommend::fit_codebooks,
+    medulla_decision_stats_records::decision::recommend::CatalogItem,
+    medulla_decision_stats_records::decision::recommend::RecommendError,
+};
 
 use super::family::json_param;
 use super::stat_executor::ExecutionContext;

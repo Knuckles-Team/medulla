@@ -17,8 +17,7 @@ use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, Promo
 use medulla_decision_stats::decision::promotion::{
     regression_rollback, subject_gate, PromotionGate,
 };
-use medulla_decision_stats::decision::promotion_tier::tier_gate;
-use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};
+use medulla_decision_stats_records::decision::promotion_tier::tier_gate;
 use medulla_decision_types::decision::codes::{
     ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
     CANARY_TRAFFIC_OUT_OF_BOUNDS,
@@ -43,6 +42,10 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::OpaqueId;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::skill_eval::canary_verdict,
+    medulla_decision_stats_records::decision::skill_eval::check_traffic,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,

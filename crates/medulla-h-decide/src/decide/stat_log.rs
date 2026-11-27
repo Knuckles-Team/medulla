@@ -13,7 +13,6 @@ use std::time::Instant;
 use tracing::Instrument;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::features::outcome_rate_key;
 use medulla_decision_stats::decision::transfer::{
     robust_transfer, skill_candidates, SkillKnobs, SkillRow, TransferKnobs, TransferRow,
@@ -22,6 +21,7 @@ use medulla_decision_stats::{
     decision::aggregate::aggregate, decision::aggregate::AggregateRules,
     decision::aggregate::JoinedRecord,
 };
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::transfer::{is_digest, TransferEstimate, TransferRequest};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,

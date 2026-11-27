@@ -6,7 +6,7 @@
 //! caller cannot see is indistinguishable from an absent one. Any failure
 //! abstains under its registered code with no recommendation. Evaluate-only.
 
-use medulla_decision_stats::decision::analyst_synthesis::synthesize;
+use medulla_decision_stats_records::decision::analyst_synthesis::synthesize;
 use medulla_decision_types::decision::analyst_synthesis::{min_citations, SynthesisRequest};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{

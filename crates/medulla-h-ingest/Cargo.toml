@@ -58,6 +58,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
@@ -77,7 +78,7 @@ test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-su
 asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", "dep:medulla-asr-whisper", "medulla-persistence/asr-whisper", "medulla-raft/asr-whisper", "medulla-server-api/asr-whisper", "server"]
 ast = ["medulla-compute/ast", "medulla-server-api/ast", "medulla-store/ast"]
 blob = ["dep:jiff", "dep:medulla-rdf", "medulla-rdf/rdf", "redb", "medulla-protocol-types/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob", "server"]
-decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "redb", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server"]
+decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "medulla-decision-stats-records/decision", "redb", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server"]
 modality-serving = ["dep:medulla-video", "medulla-video/runtime", "dep:medulla-image", "medulla-image/runtime", "medulla-document/serving", "dep:medulla-audio", "medulla-audio/runtime", "redb", "security", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "server"]
 query = ["medulla-tables/sql", "medulla-table-store/sql", "redb", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "medulla-store/raft", "server"]

@@ -15,8 +15,6 @@ use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_stats::decision::context_cursor::{self, CursorState};
-use medulla_decision_stats::decision::context_search::{index_text, query_ngrams, search_document};
 use medulla_decision_types::decision::knob_families::context_search::{ContextSearchKnobs, KNOBS};
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::statistical::context_search::{
@@ -25,6 +23,15 @@ use medulla_decision_types::decision::statistical::context_search::{
 };
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_protocol_types::result_contract::query::RetrievalContextSearch;
+use {
+    medulla_decision_stats_records::decision::context_cursor,
+    medulla_decision_stats_records::decision::context_cursor::CursorState,
+};
+use {
+    medulla_decision_stats_records::decision::context_search::index_text,
+    medulla_decision_stats_records::decision::context_search::query_ngrams,
+    medulla_decision_stats_records::decision::context_search::search_document,
+};
 
 /// Node type whose `text` property is searched.
 const DOCUMENT_TYPE: &str = "Document";

@@ -22,9 +22,6 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_stats::decision::research_voi::{
-    expand_frontier, q32_to_micro, FrontierLimits, FrontierStop, SourceNode,
-};
 use medulla_decision_types::decision::research_voi::{
     ResearchAnswer, ResearchRead, ResearchStop, RESEARCH_DEPTH_EXCEEDED, RESEARCH_NO_BUDGET,
     SPENT_CLASSIFICATION, STOP_OPTION_ID, SUBTASK_CLASSIFICATION,
@@ -41,6 +38,13 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::research_voi::expand_frontier,
+    medulla_decision_stats_records::decision::research_voi::q32_to_micro,
+    medulla_decision_stats_records::decision::research_voi::FrontierLimits,
+    medulla_decision_stats_records::decision::research_voi::FrontierStop,
+    medulla_decision_stats_records::decision::research_voi::SourceNode,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

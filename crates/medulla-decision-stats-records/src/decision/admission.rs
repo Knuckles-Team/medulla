@@ -60,7 +60,7 @@ pub struct Admitted<'a> {
 
 /// How complete an outcome's trace is, 0 = full step; `None` for an outcome
 /// that carries no usable trace. Shared with the outcome aggregate.
-pub(super) fn fidelity_rank(fidelity: OutcomeFidelity) -> Option<u8> {
+pub fn fidelity_rank(fidelity: OutcomeFidelity) -> Option<u8> {
     match fidelity {
         OutcomeFidelity::FullStep => Some(0),
         OutcomeFidelity::ToolCalls => Some(1),
@@ -72,7 +72,7 @@ pub(super) fn fidelity_rank(fidelity: OutcomeFidelity) -> Option<u8> {
 }
 
 /// The least-complete trace a policy's fidelity floor still admits.
-pub(super) fn floor_rank(floor: TraceFidelityLevel) -> u8 {
+pub fn floor_rank(floor: TraceFidelityLevel) -> u8 {
     match floor {
         TraceFidelityLevel::FullStep => 0,
         TraceFidelityLevel::ToolCalls => 1,

@@ -14,7 +14,10 @@ use medulla_decision_types::decision::statistical::body::{
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
-use crate::decision::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// The events a replay applies, in order, with their digests and the cursor
 /// after the last one.

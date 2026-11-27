@@ -11,8 +11,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::quant::q32;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::codes::UNCALIBRATED_CANDIDATE;
 use medulla_decision_types::decision::paper_admission::{
     nearest_neighbour_param, relevance_min_micros, split_claim_ids, AdmittedPaper,

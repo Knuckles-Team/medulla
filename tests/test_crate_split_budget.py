@@ -35,3 +35,9 @@ def _assert_split(crates: list[str], budget: int = BUDGET_LINES) -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.3")
 def test_catalog_types_split_is_within_budget() -> None:
     _assert_split(["medulla-catalog-source-types", "medulla-catalog-types"])
+
+
+# spec: MEDULLA-CONTRACT-R067.5
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.5")
+def test_decision_stats_split_is_within_budget() -> None:
+    _assert_split(["medulla-decision-stats-records", "medulla-decision-stats"])

@@ -20,8 +20,12 @@ use medulla_numeric::series::window::{pearson, ranks};
 use medulla_query_types::solve_scalar::digest_text;
 
 use super::quant::{item_rows, q32, raw_value};
-use super::refusal::{bounded, Refusal, RefusalResult};
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use {
+    medulla_decision_stats_records::decision::refusal::bounded,
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Domain of the dataset digest that seeds the bootstrap.
 pub const FEATURE_POWER_SEED_DOMAIN: &str = "eg/decision-feature-power-seed/v1";

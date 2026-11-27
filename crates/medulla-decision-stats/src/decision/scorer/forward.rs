@@ -21,7 +21,10 @@ use medulla_decision_types::{
 
 use super::fixed::{add, dot, mul, saturate, softmax, to_q32, FRAC_BITS, ONE};
 use super::legal::{shortlist, LegalSet};
-use crate::{decision::refusal::Refusal, decision::refusal::RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// The logit reported for an option that was not scored.
 pub const EXCLUDED_LOGIT: i64 = -(1 << 62);

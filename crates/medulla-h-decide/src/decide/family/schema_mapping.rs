@@ -11,9 +11,6 @@
 //! the policy the request resolves.
 
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_stats::decision::schema_mapping::{
-    rank, OntologyProperty, SqlColumn, ValueType, Weights,
-};
 use medulla_decision_types::decision::knob_families::schema_mapping as mapping_knobs;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -25,6 +22,13 @@ use medulla_decision_types::decision::{
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::schema_mapping::rank,
+    medulla_decision_stats_records::decision::schema_mapping::OntologyProperty,
+    medulla_decision_stats_records::decision::schema_mapping::SqlColumn,
+    medulla_decision_stats_records::decision::schema_mapping::ValueType,
+    medulla_decision_stats_records::decision::schema_mapping::Weights,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

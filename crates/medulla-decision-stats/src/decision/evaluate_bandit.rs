@@ -25,11 +25,11 @@ use medulla_decision_types::{
 use super::evaluate::{read_item, EvalSpec};
 use super::head_eval::top_index;
 use super::quant::{q32, unit_wire, value_of};
-use super::refusal::RefusalResult;
 use crate::{
     ope::clipped_ips, ope::doubly_robust, ope::ips, ope::snips, ope::switch, ope::LoggedDecision,
     ope::OpeEstimate,
 };
+use medulla_decision_stats_records::decision::refusal::RefusalResult;
 use medulla_numeric::detkernel::Propensity;
 use medulla_numeric::{
     risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts,

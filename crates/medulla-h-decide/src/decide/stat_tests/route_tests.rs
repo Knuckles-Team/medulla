@@ -3,7 +3,7 @@
 //! reaches the shared ladder (the learned policy).
 
 use super::*;
-use medulla_decision_stats::decision::route::FAST_PATH_CLASS;
+use medulla_decision_stats_records::decision::route::FAST_PATH_CLASS;
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::{

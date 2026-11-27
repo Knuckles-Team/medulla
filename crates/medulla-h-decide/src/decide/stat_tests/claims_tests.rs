@@ -1132,7 +1132,10 @@ async fn a_perspective_claim_transition_announces_one_event_after_commit() {
 // spec: MEDULLA-DECISION-ENGINE-R651.12
 #[tokio::test]
 async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
-    use medulla_decision_stats::decision::participant_derive::{conclusion_claim_id, DeriveKey};
+    use {
+        medulla_decision_stats_records::decision::participant_derive::conclusion_claim_id,
+        medulla_decision_stats_records::decision::participant_derive::DeriveKey,
+    };
     let h = Harness::new().await;
     seed_participants(&h, TENANT, &[("ada", "worker-principal", "s1")]).await;
     let key = DeriveKey {
@@ -1201,7 +1204,7 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
     )
     .unwrap();
     let prefix =
-        medulla_decision_stats::decision::participant_derive::conclusion_claim_prefix(&key);
+        medulla_decision_stats_records::decision::participant_derive::conclusion_claim_prefix(&key);
     let range = |ids: &[&'static str]| {
         ids.iter()
             .copied()

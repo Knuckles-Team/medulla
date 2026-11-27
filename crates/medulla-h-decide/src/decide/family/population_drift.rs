@@ -6,7 +6,7 @@
 //! drift.alert`. The windows are caller claims, so the record is a `Claim`
 //! resolved as `Statistical`. The harness collects the windows.
 
-use medulla_decision_stats::decision::population::drift_reading;
+use medulla_decision_stats_records::decision::population::drift_reading;
 use medulla_decision_types::decision::population::{
     max_samples, DriftRequest, PopulationKnobs, DRIFT_EMPTY_WINDOW,
 };

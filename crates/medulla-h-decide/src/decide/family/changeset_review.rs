@@ -13,7 +13,6 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_stats::decision::changeset_review::{block_severity, filter_findings};
 use medulla_decision_types::decision::changeset_review::{
     changed_files_digest, FindingDisposition, ReviewClass, ReviewFinding, Severity, CLASS_PREFIX,
     SEVERITY_PREFIX,
@@ -24,6 +23,10 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_stats_records::decision::changeset_review::block_severity,
+    medulla_decision_stats_records::decision::changeset_review::filter_findings,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

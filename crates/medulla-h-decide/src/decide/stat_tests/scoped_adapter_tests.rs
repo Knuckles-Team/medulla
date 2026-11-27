@@ -451,7 +451,7 @@ use super::super::stat_log::LogReader;
 use super::super::stat_vectors::graph_vectors;
 use super::generation_cycle_tests::{with_ledger_class, CELL};
 use super::learning_tests::graph_with;
-use medulla_decision_stats::decision::adapter::AdapterKernel;
+use medulla_decision_stats_records::decision::adapter::AdapterKernel;
 use medulla_decision_types::decision::statistical::retrieval_generation::{
     GenerationCycleRequest, GenerationCycleState, GenerationEvalItem, GenerationEvalRequest,
     IndexAdapterRef, ModelRef,

@@ -13,9 +13,6 @@
 //! promotion protocol a `DecisionEval` job runs. Prints one JSON object: the
 //! head's content digest, its parameter count and the receipt.
 
-use medulla_decision_stats::{
-    decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Regime,
-};
 use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
 use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
@@ -30,6 +27,11 @@ use medulla_decision_types::{
     decision::TraceFidelityLevel, decision::UnitRationalWire,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::admission::admit,
+    medulla_decision_stats_records::decision::admission::AdmissionRules,
+    medulla_decision_stats_records::decision::admission::Regime,
+};
 
 fn tenth() -> UnitRationalWire {
     UnitRationalWire::new(1, 10).expect("1/10 is a unit rational")

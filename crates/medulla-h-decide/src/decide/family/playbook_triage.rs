@@ -30,9 +30,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_stats::decision::playbook::{
-    match_playbook, Correlator, CorrelatorLimits, PlaybookEvent, PlaybookIndex,
-};
 use medulla_decision_types::decision::playbook::{
     NoTrigger, Playbook, TriggerKind, PARAM_EXECUTE, PLAYBOOK_EVALUATE_ONLY, REASON_EVALUATE_ONLY,
 };
@@ -44,6 +41,13 @@ use medulla_decision_types::decision::statistical::{CandidateSource, DecideReque
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_stats_records::decision::playbook::match_playbook,
+    medulla_decision_stats_records::decision::playbook::Correlator,
+    medulla_decision_stats_records::decision::playbook::CorrelatorLimits,
+    medulla_decision_stats_records::decision::playbook::PlaybookEvent,
+    medulla_decision_stats_records::decision::playbook::PlaybookIndex,
+};
 
 use crate::decide::candidates::library_candidates;
 use crate::decide::stat_executor::{

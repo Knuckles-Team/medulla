@@ -14,9 +14,6 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_stats::decision::branch_select::select_branch;
-use medulla_decision_stats::decision::dmn_eval::{
-    evaluate_table, DmnError, DmnOutput, DmnRule, DmnTable,
-};
 use medulla_decision_types::decision::process_decision::{
     BranchSelectRequest, BranchVerdict, DecisionTableRequest, DmnValue, TableVerdict,
     BRANCH_NO_ARM, DMN_ANY_CONFLICT, DMN_EXPRESSION_UNSUPPORTED, DMN_INPUT_MISSING,
@@ -33,6 +30,13 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_stats_records::decision::dmn_eval::evaluate_table,
+    medulla_decision_stats_records::decision::dmn_eval::DmnError,
+    medulla_decision_stats_records::decision::dmn_eval::DmnOutput,
+    medulla_decision_stats_records::decision::dmn_eval::DmnRule,
+    medulla_decision_stats_records::decision::dmn_eval::DmnTable,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

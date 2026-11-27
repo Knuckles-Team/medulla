@@ -8,7 +8,7 @@
 //! stage policy's threshold. The answer is an uncalibrated advisory; the record
 //! is an `Observation` resolved as `Statistical`.
 
-use medulla_decision_stats::decision::curriculum::promotion_verdict;
+use medulla_decision_stats_records::decision::curriculum::promotion_verdict;
 use medulla_decision_types::decision::curriculum::{
     promote_floor_micros, window_runs, CurriculumRequest,
 };

@@ -11,7 +11,10 @@ use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 use super::head_eval::{read_rows, RowsReading};
-use super::refusal::{Refusal, RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// One temporal slice: every option's row as of a time. An empty slice had
 /// no complete matrix (a fact was unknown then).

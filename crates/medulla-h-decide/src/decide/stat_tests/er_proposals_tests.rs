@@ -10,7 +10,7 @@ use super::resolve_entity_tests::{
     entity, pair_option, pair_request, publish_acting_head, publish_schema, two_pairs,
 };
 use super::*;
-use medulla_decision_stats::decision::entity_resolution::proposal_option_id;
+use medulla_decision_stats_records::decision::entity_resolution::proposal_option_id;
 use medulla_decision_types::decision::entity_resolution::{ResolutionTier, TierEvaluation};
 use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
 use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;

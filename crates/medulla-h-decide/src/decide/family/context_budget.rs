@@ -13,9 +13,9 @@ use std::collections::BTreeSet;
 use medulla_decision_outcome_types::decision::context_budget::{
     AvailableContextSource, ContextSourceSelection, OmissionReason, OmittedContextSource,
 };
-use medulla_decision_stats::decision::candidate::CandidateView;
-use medulla_decision_stats::decision::context_partition::partition;
 use medulla_decision_stats::decision::quant::q32;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
+use medulla_decision_stats_records::decision::context_partition::partition;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, ScoredOption, StatisticalErrorCode, StatisticalOutcome, TypedValue,

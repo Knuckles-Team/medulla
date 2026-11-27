@@ -20,7 +20,10 @@ use medulla_decision_types::{
 use super::{ReplayPolicy, ReplayStep};
 use crate::decision::evaluate::read_item;
 use crate::{decision::fit::fit, decision::fit::FitSpec};
-use crate::{decision::refusal::Refusal, decision::refusal::RefusalResult};
+use {
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// `items` in time order: by `recorded_at_ms`, ties by `item_id`.
 pub fn time_ordered<'a>(items: &[&'a LabelledItem]) -> Vec<&'a LabelledItem> {

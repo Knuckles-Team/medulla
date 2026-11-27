@@ -7,8 +7,8 @@
 //! none stays the decision abstains. Options that share a code are separated
 //! by the caller's item-level score.
 
-use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::quant::unit_wire;
+use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::decision::codes::QUESTION_UNPUBLISHED;
 use medulla_decision_types::decision::codes::UNCALIBRATED_CANDIDATE;
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;

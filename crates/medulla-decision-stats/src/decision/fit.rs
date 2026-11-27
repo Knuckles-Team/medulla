@@ -26,15 +26,19 @@ use medulla_decision_types::{
 };
 use medulla_query_types::solve_scalar::digest_text;
 
-use super::admission::Regime;
 use super::fit_calibrate::{calibrate, calibrate_scorer, checked_method};
-use super::importance_penalty::ImportancePenalty;
 use super::quant::{q32, raw_value, value_of};
-use super::refusal::{bounded, Refusal, RefusalResult};
 use super::scorer::train::train;
 use super::targets::{audit_weight, targets};
+use medulla_decision_stats_records::decision::admission::Regime;
+use medulla_decision_stats_records::decision::importance_penalty::ImportancePenalty;
 use medulla_numeric::detkernel::kernels::softmax;
 use medulla_numeric::detkernel::optimise::minimise_convex_unbounded;
+use {
+    medulla_decision_stats_records::decision::refusal::bounded,
+    medulla_decision_stats_records::decision::refusal::Refusal,
+    medulla_decision_stats_records::decision::refusal::RefusalResult,
+};
 
 /// Most coordinate-descent sweeps a fit may run, whatever it asks for.
 pub const MAX_SWEEPS: u32 = 200;
@@ -353,7 +357,7 @@ mod tests {
     use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue, UnitRationalWire};
     use medulla_types::contract::BoundedVec;
 
-    use crate::decision::importance_penalty::ImportancePenalty;
+    use medulla_decision_stats_records::decision::importance_penalty::ImportancePenalty;
 
     fn bv<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
         BoundedVec::new(values).expect("inside bound")

@@ -8,16 +8,23 @@
 
 use super::assistant_profile::node_blob;
 use super::*;
-use medulla_decision_stats::decision::participant_derive::{
-    conclusion_claim_prefix, derivation_targets, derive_held, key_node_digest, select_turns,
-    DerivationInput, DeriveCheckpoint, DeriveKey, DerivePayload,
-};
 use medulla_decision_types::memory_events::{DerivationCompleted, MemoryEvent};
 use medulla_decision_types::participant_memory::{DeriveInput, DeriveTurn};
 use medulla_isolation::profile_access::read_stored;
 use medulla_work_types::memory_scope::ObservationConfig;
 use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
 use medulla_work_types::participant::ParticipantId;
+use {
+    medulla_decision_stats_records::decision::participant_derive::conclusion_claim_prefix,
+    medulla_decision_stats_records::decision::participant_derive::derivation_targets,
+    medulla_decision_stats_records::decision::participant_derive::derive_held,
+    medulla_decision_stats_records::decision::participant_derive::key_node_digest,
+    medulla_decision_stats_records::decision::participant_derive::select_turns,
+    medulla_decision_stats_records::decision::participant_derive::DerivationInput,
+    medulla_decision_stats_records::decision::participant_derive::DeriveCheckpoint,
+    medulla_decision_stats_records::decision::participant_derive::DeriveKey,
+    medulla_decision_stats_records::decision::participant_derive::DerivePayload,
+};
 
 pub use super::memory_surface::{session_turns, SessionTurn};
 

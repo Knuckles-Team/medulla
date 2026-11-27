@@ -15,13 +15,6 @@
 //! * `decision_pointers` -- every governed pointer move (adapter, generation)
 //!   of the caller's tenant.
 
-use medulla_decision_stats::{
-    decision::retrieval::class_usage,
-    decision::retrieval::hard_negatives,
-    decision::retrieval::proven_paths,
-    decision::retrieval::Verdict,
-    decision::source_trust::{posterior, JudgedUnits, SourceTrust},
-};
 use medulla_decision_types::decision::statistical::retrieval_pointer::PointerEvent;
 use medulla_decision_types::{
     decision::statistical::retrieval::ClassUsage, decision::statistical::retrieval::HardNegative,
@@ -32,6 +25,15 @@ use medulla_decision_types::{
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_tables::schema::ColumnType;
 use serde_json::Value;
+use {
+    medulla_decision_stats::decision::source_trust::posterior,
+    medulla_decision_stats::decision::source_trust::JudgedUnits,
+    medulla_decision_stats::decision::source_trust::SourceTrust,
+    medulla_decision_stats_records::decision::retrieval::class_usage,
+    medulla_decision_stats_records::decision::retrieval::hard_negatives,
+    medulla_decision_stats_records::decision::retrieval::proven_paths,
+    medulla_decision_stats_records::decision::retrieval::Verdict,
+};
 
 use super::stat_log::LogReader;
 use super::stat_pointer::pointer_events;
