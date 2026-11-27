@@ -79,7 +79,30 @@ use work_governance::{
 
 /// Dispatch a graph-level operation to the target named graph, enforcing the
 /// isolation ACL (`isolation.rs::check_access`) when rules are registered.
-pub async fn dispatch_graph_op(
+///
+/// The future is boxed because the operation is recursive: a source batch routed to another graph
+/// dispatches itself there (MEDULLA-INGEST-WORKER-R605.3). An `async fn` that awaits itself through
+/// its own routes has no `Send` proof the compiler can finish, so the recursion goes through a
+/// named `Send` future type.
+pub fn dispatch_graph_op<'a>(
+    state: &'a Arc<RwLock<ServerState>>,
+    graph_name: &'a str,
+    req_id: u64,
+    caller: Option<&'a str>,
+    verified_context: &'a VerifiedRequestContext,
+    method: Method,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>> {
+    Box::pin(dispatch_graph_op_boxed(
+        state,
+        graph_name,
+        req_id,
+        caller,
+        verified_context,
+        method,
+    ))
+}
+
+async fn dispatch_graph_op_boxed(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     req_id: u64,
