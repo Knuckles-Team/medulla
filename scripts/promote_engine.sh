@@ -36,7 +36,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_BINARY="${ENGINE_SOURCE_BINARY:-${REPO_ROOT}/target/release-internal/medulla-server}"
 DESTINATION="${ENGINE_BIN_DEST:-}"
 PROMOTION_HOOK="${ENGINE_PROMOTION_HOOK:-}"
-BUILD_FEATURES="${ENGINE_BUILD_FEATURES:-full,ast-extended}"
+BUILD_FEATURES="${ENGINE_BUILD_FEATURES:-full,ast-extended,source-duckdb}"
 
 DO_BUILD=0
 DO_ACTIVATE=0
