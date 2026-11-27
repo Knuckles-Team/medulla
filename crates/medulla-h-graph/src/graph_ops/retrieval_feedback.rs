@@ -13,7 +13,7 @@
 use super::*;
 use medulla_protocol_types::result_contract::query::RetrievalFeedbackRecord;
 use medulla_result_types::feedback_event::{
-    FeedbackKind, FeedbackStamp, RetrievalFeedback, RETRIEVAL_FEEDBACK_LABEL,
+    FeedbackStamp, RetrievalFeedback, RETRIEVAL_FEEDBACK_LABEL,
 };
 use medulla_retrieval::feedback_boost::{document_boost, DocumentBoost, DEFAULT_HALF_LIFE_S};
 use medulla_server_ops::api::ingest::graph::commit_gateway;
@@ -234,7 +234,7 @@ pub(crate) fn load_feedback(
         })
         .filter(|event| event.tenant == tenant && wanted.contains(event.document_ref.as_str()))
         .collect();
-    events.sort_by(|a, b| b.at.cmp(&a.at));
+    events.sort_by_key(|event| std::cmp::Reverse(event.at));
     let mut kept: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     events.retain(|event| {
         let count = kept.entry(event.document_ref.clone()).or_insert(0);
@@ -257,6 +257,7 @@ pub(crate) fn load_feedback(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_result_types::feedback_event::FeedbackKind;
 
     fn stored(core: &GraphCore, document: &str, kind: FeedbackKind, weight: f64, at: u64) {
         let event = RetrievalFeedback {

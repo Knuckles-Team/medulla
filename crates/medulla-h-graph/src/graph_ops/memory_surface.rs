@@ -766,7 +766,6 @@ pub(super) async fn known_attachment_digests(
     }
     #[cfg(feature = "blob")]
     {
-        use medulla_server_blob::blob::store::ChunkStore;
         use medulla_server_blob::blob::BlobStateExt;
         let Ok(holder) = medulla_server_blob::blob::store::HolderId::for_owner(owner_scope) else {
             return BTreeSet::new();
@@ -808,7 +807,6 @@ pub(super) async fn check_attachment_types(
     };
     #[cfg(feature = "blob")]
     {
-        use medulla_server_blob::blob::store::ChunkStore;
         use medulla_server_blob::blob::BlobStateExt;
         let max_blob_bytes = medulla_work_types::memory::media_max_blob_bytes();
         let store = {
@@ -883,13 +881,13 @@ async fn commit_embedding(ctx: &MutationCtx<'_>, write: &Method) -> Option<Respo
 
 /// The per-tenant gate serializing the remembers of one tenant.
 fn tenant_gate(tenant: &str) -> std::sync::Arc<tokio::sync::Mutex<()>> {
+    use medulla_kernel::lock_recovery::LockRecovery;
     static GATES: std::sync::OnceLock<
         std::sync::Mutex<BTreeMap<String, std::sync::Arc<tokio::sync::Mutex<()>>>>,
     > = std::sync::OnceLock::new();
     let mut gates = GATES
         .get_or_init(|| std::sync::Mutex::new(BTreeMap::new()))
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
+        .lock_recovering("memory surface tenant gates");
     std::sync::Arc::clone(gates.entry(tenant.to_string()).or_default())
 }
 

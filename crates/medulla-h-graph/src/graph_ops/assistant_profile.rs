@@ -21,7 +21,7 @@ use super::*;
 use medulla_identity_types::acl::RbacAction;
 use medulla_identity_types::assistant_profile::{
     document_set_node_id, document_set_resource, profile_node_id, profile_resource,
-    resolve_document_set, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp, ProfileShare,
+    resolve_document_set, AssistantProfile, DocumentSet, DocumentSetKind, ProfileOp,
 };
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_isolation::profile_access::{may, profile_unavailable, read_stored, Caller};

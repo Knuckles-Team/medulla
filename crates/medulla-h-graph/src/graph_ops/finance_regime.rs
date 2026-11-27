@@ -219,17 +219,22 @@ fn run_forecast(
     })
 }
 
-fn scope_of(ctx: &GraphOpsContext<'_>) -> Result<String, Response> {
+fn scope_of(ctx: &GraphOpsContext<'_>) -> Result<String, Box<Response>> {
     ctx.read_authority
         .carrier()
         .map(|carrier| carrier.tenant_scope().to_owned())
-        .ok_or_else(|| Response::err(ctx.req_id, "ACCESS_DENIED: no verified tenant"))
+        .ok_or_else(|| {
+            Box::new(Response::err(
+                ctx.req_id,
+                "ACCESS_DENIED: no verified tenant",
+            ))
+        })
 }
 
 fn handle_forecast(ctx: GraphOpsContext<'_>, request: &RegimeForecastRequest) -> Response {
     let scope = match scope_of(&ctx) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match run_forecast(ctx.core, &scope, request) {
         Ok(forecasted) => Response::ok(
@@ -258,7 +263,7 @@ fn handle_sizing(
 ) -> Response {
     let scope = match scope_of(&ctx) {
         Ok(scope) => scope,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     if policy.policy_id.is_empty()
         || policy.revision.is_empty()

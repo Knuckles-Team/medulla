@@ -43,15 +43,15 @@ fn payload(req_id: u64, body: Result<ResultPayload, String>) -> Response {
     }
 }
 
-fn parse_doc(req_id: u64, doc_id: &str) -> Result<DocId, Response> {
-    DocId::new(doc_id).map_err(|MemorySyncError { code, .. }| refuse(req_id, code))
+fn parse_doc(req_id: u64, doc_id: &str) -> Result<DocId, Box<Response>> {
+    DocId::new(doc_id).map_err(|MemorySyncError { code, .. }| Box::new(refuse(req_id, code)))
 }
 
 /// `ReadMemorySnapshot`: the head or a retained revision with its bytes.
 pub(crate) fn read(req_id: u64, core: &GraphCore, doc_id: &str, revision: Option<u64>) -> Response {
     let doc = match parse_doc(req_id, doc_id) {
         Ok(doc) => doc,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match store::read(core, &doc, revision).map(with_search_state) {
         Some(found) => payload(

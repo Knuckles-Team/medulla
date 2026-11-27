@@ -214,7 +214,7 @@ fn admit_put(
     agent_id: &str,
     participant: &Participant,
 ) -> Result<Admitted, String> {
-    participant.validate().map_err(|error| invalid(error))?;
+    participant.validate().map_err(invalid)?;
     let tenant = medulla_types::contract::TenantId::new(tenant_scope).map_err(invalid)?;
     let iri = participant.iri();
     let stored: Option<Participant> = read_stored(core, &iri, PARTICIPANT_NODE_TYPE, tenant_scope);
@@ -395,6 +395,7 @@ pub fn resolve_scope_ref(
 
 /// The stored observation setting of one participant in one session; a missing one reads as the
 /// default (MEDULLA-DECISION-ENGINE-R651.10).
+#[cfg(test)]
 pub(super) fn observation_of(
     core: &GraphCore,
     tenant_scope: &str,

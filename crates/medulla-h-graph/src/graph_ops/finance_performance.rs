@@ -33,8 +33,6 @@ use sha2::{Digest, Sha256};
 const NS_PER_DAY: i64 = 86_400 * 1_000_000_000;
 /// A figure whose end valuation is older than this is stale.
 pub(super) const PERFORMANCE_STALE_NS: i64 = 5 * NS_PER_DAY;
-/// The literal account IRI of a benchmark level record.
-const BENCHMARK_ACCOUNT: &str = "account-benchmark";
 const YEAR_NS: f64 = 365.0 * 86_400.0 * 1e9;
 
 /// Whether `kind` is one of the four record kinds the return engine reads.
@@ -130,6 +128,7 @@ fn benchmark_events(core: &GraphCore, scope: &str, name: &str, known_ns: i64) ->
 }
 
 /// `(ns, level_ticks)` of the benchmark `name` known at `known_ns`, ascending.
+#[cfg(test)]
 fn benchmark_levels(core: &GraphCore, scope: &str, name: &str, known_ns: i64) -> Vec<(i64, i64)> {
     levels_of(&benchmark_events(core, scope, name, known_ns))
 }

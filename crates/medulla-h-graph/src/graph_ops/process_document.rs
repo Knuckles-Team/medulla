@@ -246,7 +246,7 @@ pub(super) async fn handle_process_document_import(
             admitted,
             model_iri.clone(),
             stored_model_version,
-            |answer| ResultPayload::of::<ProcessDocumentImport>(answer),
+            ResultPayload::of::<ProcessDocumentImport>,
         )
         .await,
     )

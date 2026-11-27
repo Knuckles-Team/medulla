@@ -430,7 +430,7 @@ pub(super) async fn handle_process_compile(
             admitted,
             process_iri.clone(),
             stored_version,
-            |answer| ResultPayload::of::<ProcessCompile>(answer),
+            ResultPayload::of::<ProcessCompile>,
         )
         .await,
     )
@@ -475,7 +475,7 @@ pub(super) async fn handle_process_model_import(
             admitted,
             workflow_id.clone(),
             stored_version,
-            |answer| ResultPayload::of::<ProcessModelImport>(answer),
+            ResultPayload::of::<ProcessModelImport>,
         )
         .await,
     )

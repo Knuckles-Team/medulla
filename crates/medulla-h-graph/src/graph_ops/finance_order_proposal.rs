@@ -101,7 +101,7 @@ fn refused((code, detail): Refusal) -> String {
 /// What an admitted stage does: write, or answer an equal retry.
 #[cfg(feature = "finance")]
 enum Staged {
-    Write(Method, OrderStageResult),
+    Write(Box<Method>, OrderStageResult),
     Retry(OrderStageResult),
 }
 
@@ -271,9 +271,9 @@ fn admit_stage(core: &GraphCore, scope: &str, method: &Method) -> Result<Staged,
         }),
     ];
     Ok(Staged::Write(
-        Method::BatchUpdate {
+        Box::new(Method::BatchUpdate {
             operations_msgpack: encode(&operations)?,
-        },
+        }),
         result,
     ))
 }
@@ -641,7 +641,7 @@ async fn stage(ctx: &MutationCtx<'_>, method: &Method) -> Response {
         Ok(Staged::Write(write, result)) => {
             commit_write(
                 ctx,
-                write,
+                *write,
                 ResultPayload::of::<FinanceOrderStage>(result),
                 None,
             )

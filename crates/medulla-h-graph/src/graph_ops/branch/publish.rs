@@ -296,7 +296,7 @@ pub struct MergeApplyPlan {
 /// What `publish_merge` answers: a receipt that needs no write, or a plan.
 pub enum MergeStep {
     /// A replay: the original receipt, nothing to apply.
-    Done(BranchMergeReceipt),
+    Done(Box<BranchMergeReceipt>),
     Apply(Box<MergeApplyPlan>),
 }
 
@@ -598,7 +598,9 @@ pub async fn publish_merge(
             .as_deref()
             .and_then(|bytes| rmp_serde::from_slice::<MergePublication>(bytes).ok())
         {
-            return Ok(MergeStep::Done(receipt_of(commit, &original, true)));
+            return Ok(MergeStep::Done(Box::new(receipt_of(
+                commit, &original, true,
+            ))));
         }
     }
     // The adopted rows land in the target data graph: the target state with the
@@ -854,7 +856,7 @@ pub async fn plan_trunk_merge(
         } else {
             outcome_of_records(&conflicts)
         };
-        return Ok(MergeStep::Done(BranchMergeReceipt {
+        return Ok(MergeStep::Done(Box::new(BranchMergeReceipt {
             outcome,
             merge_base: classified.merge_base,
             source_head: head.clone(),
@@ -863,7 +865,7 @@ pub async fn plan_trunk_merge(
             commit: None,
             conflicts,
             replayed: false,
-        }));
+        })));
     }
     Ok(MergeStep::Apply(Box::new(MergeApplyPlan {
         tenant,

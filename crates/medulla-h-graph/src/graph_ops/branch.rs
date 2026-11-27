@@ -344,7 +344,7 @@ pub async fn plan_branch_merge(
                 .map_err(|error| publish_error_response(req_id, error))?;
             let receipt = publish::replayed_receipt(&chain, &classified.source_head)
                 .unwrap_or_else(|| plain_receipt(classified));
-            Ok(publish::MergeStep::Done(receipt))
+            Ok(publish::MergeStep::Done(Box::new(receipt)))
         }
         MergeOutcome::FastForward | MergeOutcome::Merged | MergeOutcome::Conflict => {
             publish::publish_merge(state, verified, source, target, &classified, request.policy)
