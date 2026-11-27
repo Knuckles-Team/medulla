@@ -56,7 +56,9 @@ pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
     let root = target_root(root, args)?;
     let (ok, text) = hakari(&root, &["--version"])?;
     if !ok {
-        return Err(format!("CANNOT RUN: cargo-hakari is not installed:\n{text}"));
+        return Err(format!(
+            "CANNOT RUN: cargo-hakari is not installed:\n{text}"
+        ));
     }
     check_version(&text)?;
     let steps: [(&str, &[&str]); 3] = [
@@ -68,7 +70,10 @@ pub fn run(root: &Path, args: &[String]) -> Result<(), String> {
     for (what, step) in steps {
         let (ok, text) = hakari(&root, step)?;
         if !ok {
-            stale.push(format!("  {what} is stale (cargo hakari {}):\n{text}", step.join(" ")));
+            stale.push(format!(
+                "  {what} is stale (cargo hakari {}):\n{text}",
+                step.join(" ")
+            ));
         }
     }
     if stale.is_empty() {
