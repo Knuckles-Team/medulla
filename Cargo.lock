@@ -5527,6 +5527,7 @@ dependencies = [
  "medulla-wire-msg",
  "medulla-work-store",
  "medulla-work-types",
+ "object 0.40.0",
  "object_store 0.14.2",
  "openraft",
  "opentelemetry",
@@ -6130,6 +6131,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+ "unicode-normalization",
  "uuid",
 ]
 
@@ -6187,6 +6189,7 @@ dependencies = [
  "medulla-types",
  "medulla-version",
  "medulla-work-types",
+ "parking_lot",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6722,6 +6725,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-video",
+ "rayon",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -6886,6 +6890,8 @@ dependencies = [
 name = "medulla-persistence-ops"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "futures-util",
  "hex",
  "medulla-core",
  "medulla-direct-state",
@@ -7477,6 +7483,7 @@ dependencies = [
 name = "medulla-result-types"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "hex",
  "medulla-mutation-types",
  "medulla-query-types",
@@ -8707,6 +8714,8 @@ dependencies = [
 name = "medulla-storage"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "futures-util",
  "medulla-direct-state",
  "medulla-identity-types",
  "medulla-mutation-types",
@@ -8991,6 +9000,7 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_bytes",
+ "serde_json",
  "tempfile",
  "tokio",
 ]

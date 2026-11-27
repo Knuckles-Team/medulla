@@ -673,6 +673,16 @@ repos:
     additional_dependencies: ['pipelines-hooks @ git+https://github.com/Knuckles-Team/pipelines@main']
     files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|\.config/deny\.toml|\.config/cargo-audit-allow\.txt|pyproject\.toml|scripts/scanner_contract\.py)$
     pass_filenames: false
+  # MEDULLA-CONTRACT-R065.7: a manifest change that forgets Cargo.lock fails here,
+  # not in a later `cargo build --locked`. Needs cargo, so it runs on a build host.
+  - id: cargo-lock-current
+    name: Cargo.lock is current (cargo metadata --locked)
+    entry: pytest --noconftest -p no:cacheprovider -q tests/test_cargo_lock_current.py
+    language: python
+    additional_dependencies: [pytest]
+    files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|vendor/.*/Cargo\.toml|tools/.*/Cargo\.toml)$
+    pass_filenames: false
+    stages: [pre-push, manual]
   # crates.io-only dependency edict (AGENTS.md, "crates.io-only Rust dependency
   # edict"): fails if any Cargo.toml adds a `git = ` source or an
   # out-of-workspace `path = ` dependency, or Cargo.lock resolves anything from
