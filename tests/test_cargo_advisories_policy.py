@@ -51,8 +51,13 @@ def test_cargo_deny_advisories_pass_without_new_ignores() -> None:
     if base is not None:
         added = _ignore_ids(DENY.read_text(encoding="utf-8")) - base
         assert not added, f"new advisory ignores since the merge base: {sorted(added)}"
-    if shutil.which("cargo") is None or shutil.which("cargo-deny") is None:
-        pytest.skip("cargo-deny is not installed; this gate runs on a build host")
+    probe = (
+        subprocess.run(["cargo", "--version"], capture_output=True, text=True)
+        if shutil.which("cargo") and shutil.which("cargo-deny")
+        else None
+    )
+    if probe is None or probe.returncode != 0:
+        pytest.skip("cargo-deny is unavailable here; this gate runs on a build host")
     proc = subprocess.run(
         ["cargo", "deny", "--all-features", "check", "advisories"],
         cwd=ROOT,

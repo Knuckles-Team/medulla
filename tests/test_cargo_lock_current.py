@@ -22,8 +22,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # spec: MEDULLA-CONTRACT-R065.7
 def test_locked_metadata_resolve_succeeds_on_a_clean_checkout() -> None:
-    if shutil.which("cargo") is None:
-        pytest.skip("cargo is not on PATH; this gate runs on a build host")
+    probe = (
+        subprocess.run(["cargo", "--version"], capture_output=True, text=True)
+        if shutil.which("cargo")
+        else None
+    )
+    if probe is None or probe.returncode != 0:
+        pytest.skip("cargo is unavailable here; this gate runs on a build host")
     lock = ROOT / "Cargo.lock"
     before = hashlib.sha256(lock.read_bytes()).hexdigest()
     proc = subprocess.run(
