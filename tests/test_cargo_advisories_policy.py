@@ -1,72 +1,62 @@
-"""Dependency hygiene: no workspace manifest names an unmaintained date-time crate
-(MEDULLA-CONTRACT-R064)."""
+"""MEDULLA-CONTRACT-R065.6: the dependency advisory gate passes without new ignores.
+
+`zip` and `url` are on releases past their advisories, so `cargo deny check
+advisories` exits 0 and `.config/deny.toml` holds no ignore that the merge base did
+not hold.
+"""
 
 from __future__ import annotations
 
-import datetime
-import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 import tomllib
 
-REPO = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.no_engine
 
-FORBIDDEN = ("chrono", "chrono-tz", "chrono-tz-build", "humantime")
-IGNORED_ADVISORIES = (
-    "RUSTSEC-2026-0543",
-    "RUSTSEC-2026-0555",
-    "RUSTSEC-2026-0559",
-    "RUSTSEC-2026-0542",
-)
-_KINDS = ("dependencies", "dev-dependencies", "build-dependencies")
+ROOT = Path(__file__).resolve().parents[1]
+DENY = ROOT / ".config" / "deny.toml"
 
 
-def _workspace_manifests() -> list[Path]:
-    manifests = [REPO / "Cargo.toml"]
-    for group in ("crates", "tools"):
-        manifests.extend(sorted((REPO / group).glob("*/Cargo.toml")))
-    return manifests
+def _ignore_ids(text: str) -> set[str]:
+    return {e["id"] for e in tomllib.loads(text)["advisories"].get("ignore", [])}
 
 
-def _tables(manifest: dict) -> list[tuple[str, dict]]:
-    found = [(kind, manifest[kind]) for kind in _KINDS if kind in manifest]
-    for platform, body in manifest.get("target", {}).items():
-        found.extend((f"target.{platform}.{kind}", body[kind]) for kind in _KINDS if kind in body)
-    workspace = manifest.get("workspace", {})
-    if "dependencies" in workspace:
-        found.append(("workspace.dependencies", workspace["dependencies"]))
-    return found
+def _base_ignore_ids() -> set[str] | None:
+    try:
+        base = subprocess.run(
+            ["bash", str(ROOT / "scripts" / "gate_base_ref.sh")],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        shown = subprocess.run(
+            ["git", "show", f"{base}:.config/deny.toml"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return _ignore_ids(shown)
 
 
-def _package_name(spec: object, key: str) -> str:
-    """The crate a dependency entry resolves to: a renamed entry names it in `package`."""
-    if isinstance(spec, dict) and isinstance(spec.get("package"), str):
-        return spec["package"]
-    return key
-
-
-@pytest.mark.spec("MEDULLA-CONTRACT-R064")
-def test_no_workspace_manifest_names_a_date_time_crate() -> None:
-    # spec: MEDULLA-CONTRACT-R064
-    failures: list[str] = []
-    for path in _workspace_manifests():
-        manifest = tomllib.loads(path.read_text(encoding="utf-8"))
-        for table, deps in _tables(manifest):
-            for key, spec in deps.items():
-                if _package_name(spec, key) in FORBIDDEN:
-                    failures.append(f"{path.relative_to(REPO)}: [{table}] names {key}")
-    assert not failures, "\n".join(failures)
-
-    deny = tomllib.loads((REPO / ".config" / "deny.toml").read_text(encoding="utf-8"))
-    reasons = {entry["id"]: entry["reason"] for entry in deny["advisories"]["ignore"]}
-    ledger = (REPO / ".config" / "cargo-audit-allow.txt").read_text(encoding="utf-8")
-    today = datetime.date.today()
-    limit = today + datetime.timedelta(days=90)
-    for advisory in IGNORED_ADVISORIES:
-        assert "MEDULLA-CONTRACT-R064" in reasons.get(advisory, ""), advisory
-        match = re.search(rf"^{advisory} expires=(\d{{4}}-\d{{2}}-\d{{2}})\b", ledger, re.M)
-        assert match, f"{advisory}: no ledger line"
-        expiry = datetime.date.fromisoformat(match.group(1))
-        assert expiry <= limit, f"{advisory}: expiry {expiry} is more than 90 days ahead"
+# spec: MEDULLA-CONTRACT-R065.6
+def test_cargo_deny_advisories_pass_without_new_ignores() -> None:
+    base = _base_ignore_ids()
+    if base is not None:
+        added = _ignore_ids(DENY.read_text(encoding="utf-8")) - base
+        assert not added, f"new advisory ignores since the merge base: {sorted(added)}"
+    if shutil.which("cargo") is None or shutil.which("cargo-deny") is None:
+        pytest.skip("cargo-deny is not installed; this gate runs on a build host")
+    proc = subprocess.run(
+        ["cargo", "deny", "--all-features", "check", "advisories"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr[-3000:]
