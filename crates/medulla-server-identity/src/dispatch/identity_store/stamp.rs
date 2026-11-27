@@ -407,11 +407,14 @@ fn derive_webauthn(op: &mut MfaOp, stamp: &mut IdentityStamp) -> Derived {
             &mut request.session_token
         }
         MfaOp::RemoveWebauthn { .. }
-        | MfaOp::EnrollTotp { .. }
-        | MfaOp::ConfirmTotp { .. }
-        | MfaOp::VerifyTotp { .. }
+        | MfaOp::Enroll { .. }
+        | MfaOp::Confirm { .. }
+        | MfaOp::Verify { .. }
+        | MfaOp::Disable { .. }
         | MfaOp::SetRecoveryCodes { .. }
-        | MfaOp::ConsumeRecoveryCode { .. } => return Ok(()),
+        | MfaOp::ConsumeRecoveryCode { .. }
+        | MfaOp::IssueChallenge { .. }
+        | MfaOp::ConsumeChallenge { .. } => return Ok(()),
     };
     stamp.token_hashes = vec![take_token(session, Floor::Lookup)?];
     Ok(())
