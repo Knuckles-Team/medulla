@@ -8,6 +8,7 @@ mod topology;
 pub use lifecycle::*;
 use medulla_result_types::compute_result::distributed::DistResult;
 pub use registry::*;
+pub use sharding::*;
 pub use topology::*;
 
 use super::Dynamic;
