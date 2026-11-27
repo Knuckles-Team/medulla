@@ -372,6 +372,19 @@ impl ForeignSourceCatalog {
         }
     }
 
+    /// Remove `owner`'s own entry `name` and nothing else (MEDULLA-UNIFIED-DATA-PLANE-R769).
+    /// The key carries the verified owner scope, so another owner's entry of the same name is
+    /// a different key and is never touched. Returns whether the owner held one; a caller
+    /// answers the same either way, so a detach reveals nothing about another catalog.
+    pub fn detach(&self, owner: &CarrierAuthority, name: &str) -> bool {
+        self.entries
+            .remove(&CatalogKey {
+                owner_scope: owner.owner_scope().to_string(),
+                name: name.to_string(),
+            })
+            .is_some()
+    }
+
     /// THE scoping chokepoint: the executor registry holding `caller`'s own
     /// (tenant+principal) sources by plain name, plus each other owner's source the
     /// caller holds an exact share grant for (EH-378) by `<owner agent>/<name>`.
@@ -1387,6 +1400,31 @@ mod tests {
             assert_eq!(scoped.owner_scope(), caller.owner_scope());
             assert_eq!(scoped.registry().len(), 1, "only the caller's own entry");
         }
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R769
+    #[test]
+    fn detach_removes_only_the_owners_own_entry_and_is_idempotent() {
+        let (a, b) = (carrier("agent-a"), carrier("agent-b"));
+        let catalog = ForeignSourceCatalog::default();
+        for (owner, name, url) in [
+            (&a, "src", "http://a.invalid/"),
+            (&a, "other", "http://a2.invalid/"),
+            (&b, "src", "http://b.invalid/"),
+        ] {
+            catalog
+                .register(owner, name.into(), http_spec(url), quota(), None)
+                .expect("http sources are not outbound-gated here");
+        }
+        assert!(catalog.detach(&a, "src"), "the owner held it");
+        assert_eq!(catalog.spec_for(&a, "src"), None);
+        assert!(catalog.spec_for(&a, "other").is_some(), "other sources stay");
+        assert!(
+            catalog.spec_for(&b, "src").is_some(),
+            "another owner's same-named source stays"
+        );
+        assert!(!catalog.detach(&a, "src"), "a second detach changes nothing");
+        assert!(!catalog.detach(&a, "never-registered"));
     }
 
     #[test]

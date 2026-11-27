@@ -51,7 +51,8 @@ fn is_session_control_mutation(method: &Method) -> bool {
         Method::RegisterForeignSource { .. }
         | Method::RegisterGraphView { .. }
         | Method::ShareForeignSource { .. }
-        | Method::UnshareForeignSource { .. } => true,
+        | Method::UnshareForeignSource { .. }
+        | Method::ForeignSourceDetach { .. } => true,
         _ => false,
     }
 }
@@ -188,7 +189,8 @@ fn validate_session_control_result(method: &Method, result: &ResultPayload) -> R
         Method::RegisterForeignSource { .. }
         | Method::RegisterGraphView { .. }
         | Method::ShareForeignSource { .. }
-        | Method::UnshareForeignSource { .. } => {
+        | Method::UnshareForeignSource { .. }
+        | Method::ForeignSourceDetach { .. } => {
             require_session_control_variant(method, result, "String", |value| {
                 matches!(value, ResultPayload::String(_))
             })

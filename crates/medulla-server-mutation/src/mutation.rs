@@ -913,6 +913,7 @@ mod tests {
         ("RegisterGraphView", "opaque prepared/committed session-control MutationBatch"),
         ("ShareForeignSource", "opaque prepared/committed session-control MutationBatch"),
         ("UnshareForeignSource", "opaque prepared/committed session-control MutationBatch"),
+        ("ForeignSourceDetach", "opaque prepared/committed session-control MutationBatch"),
         ("RegisterUdf", "opaque prepared/committed session-control MutationBatch"),
         ("RegisterContinuousQuery", "opaque prepared/committed session-control MutationBatch"),
         ("DropContinuousQuery", "opaque prepared/committed session-control MutationBatch"),

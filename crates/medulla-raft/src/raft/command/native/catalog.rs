@@ -162,6 +162,8 @@ macro_rules! native_method_catalog {
             record ShareForeignSource => SessionControl,
             #[cfg(feature = "federation")]
             record UnshareForeignSource => SessionControl,
+            #[cfg(feature = "federation")]
+            record ForeignSourceDetach => SessionControl,
             #[cfg(feature = "wasm-udf")]
             record RegisterUdf => SessionControl,
             #[cfg(feature = "streaming")]

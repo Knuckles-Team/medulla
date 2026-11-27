@@ -89,6 +89,8 @@ METHOD_IDS = frozenset(
         "ProbeForeignSource",
         "ShareForeignSource",
         "UnshareForeignSource",
+        "ForeignSourceDetach",
+        "ForeignSourceParity",
         "PlanMatViewDefine",
         "PlanMatViewGet",
         "PlanMatViewRefresh",

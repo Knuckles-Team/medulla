@@ -15742,6 +15742,20 @@ class MethodUnshareForeignSource(BaseModel):
     params: MethodUnshareForeignSourceParams
 
 
+class MethodForeignSourceDetach(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ForeignSourceDetach"]
+    params: MethodForeignSourceDetachParams
+
+
+class MethodForeignSourceParity(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ForeignSourceParity"]
+    params: MethodForeignSourceParityParams
+
+
 class MethodQueryForeignColumns(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18919,6 +18933,8 @@ Method = Annotated[
         MethodProbeForeignSource,
         MethodShareForeignSource,
         MethodUnshareForeignSource,
+        MethodForeignSourceDetach,
+        MethodForeignSourceParity,
         MethodQueryForeignColumns,
         MethodForeignReadOpen,
         MethodForeignReadChunk,
@@ -22277,6 +22293,20 @@ class MethodUnshareForeignSourceParams(BaseModel):
 
     grantees: list[str]
     name: str
+
+
+class MethodForeignSourceDetachParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+
+
+class MethodForeignSourceParityParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    sample: int
+    tables: list[str]
 
 
 class MethodRegisterIdentityParams(BaseModel):
@@ -50597,6 +50627,10 @@ __all__ = [
     "MethodShareForeignSourceParams",
     "MethodUnshareForeignSource",
     "MethodUnshareForeignSourceParams",
+    "MethodForeignSourceDetach",
+    "MethodForeignSourceDetachParams",
+    "MethodForeignSourceParity",
+    "MethodForeignSourceParityParams",
     "GraphView",
     "NodeLabelMapping",
     "RelationshipTypeMapping",

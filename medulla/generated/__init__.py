@@ -646,6 +646,8 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "ProbeForeignSource": cluster.send_probe_foreign_source,
     "ShareForeignSource": cluster.send_share_foreign_source,
     "UnshareForeignSource": cluster.send_unshare_foreign_source,
+    "ForeignSourceDetach": cluster.send_foreign_source_detach,
+    "ForeignSourceParity": cluster.send_foreign_source_parity,
     "RegisterIdentity": security.send_register_identity,
     "RegisterServer": cluster.send_register_server,
     "RegisterTrigger": messaging.send_register_trigger,

@@ -1580,6 +1580,8 @@ _REQUEST_METHODS = frozenset(
         "ProbeForeignSource",
         "ShareForeignSource",
         "UnshareForeignSource",
+        "ForeignSourceDetach",
+        "ForeignSourceParity",
         "PlanMatViewDefine",
         "PlanMatViewGet",
         "PlanMatViewRefresh",
@@ -1651,4 +1653,10 @@ send_share_foreign_source = contract_sender(
 )
 send_unshare_foreign_source = contract_sender(
     "UnshareForeignSource", "MethodUnshareForeignSourceParams"
+)
+send_foreign_source_detach = contract_sender(
+    "ForeignSourceDetach", "MethodForeignSourceDetachParams"
+)
+send_foreign_source_parity = contract_sender(
+    "ForeignSourceParity", "MethodForeignSourceParityParams"
 )

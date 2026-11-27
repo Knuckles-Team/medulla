@@ -70,7 +70,8 @@ def test_visibility_probe_and_revocation() -> None:
         with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND"):
             _call(other, "GetForeignSource", {"name": qualified})
 
-    # Only the owner shares: the grantee's attempt is refused, the stranger's looks unknown.
+    # Only the owner shares: the grantee's attempt is refused, and the
+    # stranger's attempt looks like an unknown source.
     with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND"):
         _call(
             stranger,
@@ -86,7 +87,9 @@ def test_visibility_probe_and_revocation() -> None:
     )
     shared = _call(grantee, "GetForeignSource", {"name": qualified})
     assert (shared["name"], shared["owned"]) == (qualified, False)
-    assert _call(grantee, "ProbeForeignSource", {"name": qualified})["name"] == qualified
+    assert (
+        _call(grantee, "ProbeForeignSource", {"name": qualified})["name"] == qualified
+    )
     with pytest.raises(EngineResponseError, match="SOURCE_OWNER_REQUIRED"):
         _call(
             grantee,
@@ -107,4 +110,65 @@ def test_visibility_probe_and_revocation() -> None:
     with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND"):
         _call(grantee, "ProbeForeignSource", {"name": qualified})
     for client in (owner, grantee, stranger):
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R769")
+def test_detach_removes_only_the_owners_registration() -> None:
+    tag = uuid.uuid4().hex[:8]
+    owner_agent, stranger_agent = (
+        f"det-{role}-{tag}" for role in ("owner", "stranger")
+    )
+    owner, stranger = (_client(agent) for agent in (owner_agent, stranger_agent))
+    kept, gone = f"detach-kept-{tag}", f"detach-gone-{tag}"
+    for name in (kept, gone):
+        _call(
+            owner, "RegisterForeignSource", {"name": name, "source": SOURCE}, write=True
+        )
+    # The stranger registers the same name; detaching its own leaves the owner's.
+    _call(
+        stranger, "RegisterForeignSource", {"name": gone, "source": SOURCE}, write=True
+    )
+
+    _call(owner, "ForeignSourceDetach", {"name": gone}, write=True)
+    names = [view["name"] for view in _call(owner, "ListForeignSources", {})]
+    assert gone not in names and kept in names
+    with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND"):
+        _call(owner, "GetForeignSource", {"name": gone})
+    assert _call(stranger, "GetForeignSource", {"name": gone})["owned"] is True
+
+    # A second detach, an unregistered name and another owner's name answer alike.
+    for name in (gone, f"never-registered-{tag}"):
+        _call(owner, "ForeignSourceDetach", {"name": name}, write=True)
+    _call(owner, "ForeignSourceDetach", {"name": kept}, write=True)
+    _call(stranger, "ForeignSourceDetach", {"name": kept}, write=True)
+    _call(stranger, "ForeignSourceDetach", {"name": gone}, write=True)
+    with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND"):
+        _call(stranger, "GetForeignSource", {"name": gone})
+    for client in (owner, stranger):
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R770")
+def test_parity_refusals_are_typed_and_reveal_nothing() -> None:
+    tag = uuid.uuid4().hex[:8]
+    owner_agent, stranger_agent = (
+        f"par-{role}-{tag}" for role in ("owner", "stranger")
+    )
+    owner, stranger = (_client(agent) for agent in (owner_agent, stranger_agent))
+    name = f"parity-{tag}"
+    _call(owner, "RegisterForeignSource", {"name": name, "source": SOURCE}, write=True)
+
+    request = {"name": name, "tables": ["accounts"], "sample": 5}
+    with pytest.raises(EngineResponseError, match="PARITY_TABLES_INVALID"):
+        _call(owner, "ForeignSourceParity", request | {"tables": []})
+    with pytest.raises(EngineResponseError, match="PARITY_SAMPLE_INVALID"):
+        _call(owner, "ForeignSourceParity", request | {"sample": 0})
+    # An unregistered table and another owner's source refuse alike.
+    with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND") as unregistered:
+        _call(owner, "ForeignSourceParity", request)
+    with pytest.raises(EngineResponseError, match="SOURCE_NOT_FOUND") as foreign:
+        _call(stranger, "ForeignSourceParity", request)
+    assert str(unregistered.value) == str(foreign.value)
+    for client in (owner, stranger):
         client.close()

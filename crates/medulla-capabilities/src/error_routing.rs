@@ -344,6 +344,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("ProbeForeignSource", &["SOURCE_NOT_FOUND"]),
     ("ShareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
     ("UnshareForeignSource", &["SOURCE_NOT_FOUND", "SOURCE_OWNER_REQUIRED"]),
+    // MEDULLA-UNIFIED-DATA-PLANE-R770: an invisible source and a malformed parity request.
+    (
+        "ForeignSourceParity",
+        &["SOURCE_NOT_FOUND", "PARITY_TABLES_INVALID", "PARITY_SAMPLE_INVALID"],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: a DuckDB file outside its allowlist is refused at
     // registration; a warehouse read refuses a kind the engine does not serve, an unreadable
     // source, a drifted schema and a denied file with these typed codes.

@@ -601,6 +601,24 @@ $($variants)*
         grantees: Vec<String>,
     },
 
+    /// MEDULLA-UNIFIED-DATA-PLANE-R769: remove the caller's own registration of `name` and leave
+    /// every other source untouched. Idempotent: a source the caller does not own, one that is
+    /// shared to it and one nobody registered all answer alike (the name), so the call tells
+    /// nothing about another owner's catalog.
+    #[cfg(feature = "federation")]
+    ForeignSourceDetach { name: String },
+
+    /// MEDULLA-UNIFIED-DATA-PLANE-R770: row counts per table and one digest of up to `sample`
+    /// sampled keys, for a registered source. The keys are chosen by sorted `(table, key)`
+    /// order, so a source and its prior connector are compared over the same keys. A source
+    /// that is not visible refuses `SOURCE_NOT_FOUND`.
+    #[cfg(feature = "federation")]
+    ForeignSourceParity {
+        name: String,
+        tables: Vec<String>,
+        sample: u32,
+    },
+
     /// Read mapped columns from this caller's registered SQL or HTTP source. The source
     /// may push a safe subset of predicates; the engine evaluates every predicate
     /// locally before returning the requested projection.

@@ -72,6 +72,8 @@ method_results! {
     ProbeForeignSource(ProbeForeignSource) => Json<medulla_catalog_types::foreign_source_catalog::ForeignSourceProbe>;
     ShareForeignSource(ShareForeignSource) => Text<String>;
     UnshareForeignSource(UnshareForeignSource) => Text<String>;
+    ForeignSourceDetach(ForeignSourceDetach) => Text<String>;
+    ForeignSourceParity(ForeignSourceParity) => Json<medulla_catalog_types::foreign_source_catalog::ForeignSourceParityAnswer>;
     RegisterUdf(RegisterUdf) => Text<String>;
     CreateMatView(CreateMatView) => Count<u64>;
     #[cfg(feature = "compute-dist")]

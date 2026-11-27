@@ -393,6 +393,67 @@ pub async fn try_handle(
                 >(name),
             ))
         }
+        // MEDULLA-UNIFIED-DATA-PLANE-R769: the owner's own registration goes; every other
+        // answer (not owned, shared to the caller, never registered) is the same success.
+        Method::ForeignSourceDetach { name } => {
+            let owner = match call.owner("ForeignSourceDetach") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            let s = call.state.read().await;
+            s.foreign_sources().detach(&owner, &name);
+            drop(s);
+            Ok(Response::ok(
+                req_id,
+                ResultPayload::scalar::<
+                    medulla_protocol_types::result_contract::cluster::ForeignSourceDetach,
+                >(name),
+            ))
+        }
+        // MEDULLA-UNIFIED-DATA-PLANE-R770: counts and a sampled-key digest over the caller's
+        // own registry (own sources and exact shares only). The full fetch blocks on the
+        // source, so it runs off the reactor with no state lock held.
+        Method::ForeignSourceParity {
+            name,
+            tables,
+            sample,
+        } => {
+            let owner = match call.owner("ForeignSourceParity") {
+                Ok(owner) => owner,
+                Err(refusal) => return Ok(refusal),
+            };
+            if let Err(error) =
+                medulla_server_ops::api::query_txn::foreign_parity::validate_request(&tables, sample)
+            {
+                return Ok(Response::err(req_id, error));
+            }
+            let registry = {
+                let s = call.state.read().await;
+                s.foreign_sources()
+                    .registry_for(&owner, &s.isolation)
+                    .into_registry()
+            };
+            let source = name.clone();
+            let answer = tokio::task::spawn_blocking(move || {
+                medulla_server_ops::api::query_txn::foreign_parity::parity(
+                    &registry, &source, &tables, sample,
+                )
+            })
+            .await;
+            match answer {
+                Ok(Ok(answer)) => Ok(Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::cluster::ForeignSourceParity,
+                    >(answer),
+                )),
+                Ok(Err(error)) => Ok(Response::err(req_id, error)),
+                Err(error) => Ok(Response::err(
+                    req_id,
+                    format!("INTERNAL: the parity read of {name} did not finish: {error}"),
+                )),
+            }
+        }
         Method::RegisterGraphView {
             name,
             view,

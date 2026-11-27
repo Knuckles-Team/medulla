@@ -12,6 +12,14 @@ pub const SOURCE_NOT_FOUND: &str = "SOURCE_NOT_FOUND";
 pub const SOURCE_OWNER_REQUIRED: &str = "SOURCE_OWNER_REQUIRED";
 /// Most principals one share names.
 pub const MAX_SHARE_GRANTEES: usize = 64;
+/// Refusal code: a parity request names no table, too many tables or a blank table.
+pub const PARITY_TABLES_INVALID: &str = "PARITY_TABLES_INVALID";
+/// Refusal code: a parity sample size is zero or past [`MAX_PARITY_SAMPLE`].
+pub const PARITY_SAMPLE_INVALID: &str = "PARITY_SAMPLE_INVALID";
+/// Most tables one parity request names.
+pub const MAX_PARITY_TABLES: usize = 64;
+/// Most sampled keys one parity digest covers.
+pub const MAX_PARITY_SAMPLE: u32 = 10_000;
 
 /// One source visible to the caller.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,4 +48,16 @@ pub struct ForeignSourceProbe {
     pub name: String,
     /// The catalog probe state after the probe, in snake case.
     pub probe_state: String,
+}
+
+/// The answer of one parity read (MEDULLA-UNIFIED-DATA-PLANE-R770): the row count of each named
+/// table and one digest over the sampled keys. It carries no row content.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ForeignSourceParityAnswer {
+    /// The row count of each requested table, keyed by the table name as requested.
+    pub counts: std::collections::BTreeMap<String, u64>,
+    /// `sha256:<64 hex>` over up to `sample` keys, taken in sorted `(table, key)` order.
+    pub sample_digest: String,
 }
