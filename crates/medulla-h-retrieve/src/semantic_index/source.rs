@@ -91,7 +91,7 @@ async fn admit_replacement(
 ) -> Response {
     let (replacement, manifest) = match checked_replacement(ctx, draft, source_manifest) {
         Ok(validated) => validated,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let service = Arc::clone(&ctx.service);
     let now_ms = ctx.now_ms;
