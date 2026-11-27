@@ -8,5 +8,9 @@ pub mod work_item;
 pub mod work_item_capability;
 
 use medulla_lane_store::redb_store::development_lane;
+use medulla_protocol_types::protocol::Method;
+use medulla_result_types::epistemic_operations::{
+    ClaimWorkItemResult, ClaimWorkItemResultReason, ClaimWorkItemResultSchemaVersion,
+};
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
