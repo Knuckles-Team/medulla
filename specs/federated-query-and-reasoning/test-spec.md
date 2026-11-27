@@ -669,7 +669,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R073.2 | `crates/medulla-federation/src/federation_opt/tests.rs::protocol_matrix_bounds_pushdown` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.1 | `crates/medulla-sql/src/sql/ann.rs::r0771_column_vector_binding_round_trips_and_rejects_zero_dimension` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.2 | `tests/retrieval/test_column_vector_served.py::test_bind_text_refuse_integer` | exists |
-| MEDULLA-FEDERATED-QUERY-R077.5 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_column_vector_tests.rs::bound_column_nearest_neighbour` | planned |
+| MEDULLA-FEDERATED-QUERY-R077.5 | `crates/medulla-server-served-tests/src/split_tests/medulla_h_query_column_vector_tests.rs::bound_column_nearest_neighbour` | exists |
 | MEDULLA-FEDERATED-QUERY-R078.1 | `crates/medulla-table-store/src/plan_scope.rs::plan_scope_round_trips_and_rejects_empty_tenant` | exists |
 | MEDULLA-FEDERATED-QUERY-R078.2 | `crates/medulla-table-store/src/plan_scope.rs::three_leaf_plan_all_scoped` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.3 | `tests/plan_scope_tenant.rs::planned_statement_executes_only_with_predicate` | planned |

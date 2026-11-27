@@ -79,13 +79,18 @@ fn claims(principal: &str) -> RequestContextClaims {
 /// it. The attempt nonce and idempotency key the handler uses are derived
 /// from THIS envelope, not from the op body.
 pub(super) fn signed(id: u64, op: SemanticIndexOp) -> Request {
+    signed_method(id, Method::SemanticIndex { op: Box::new(op) })
+}
+
+/// One signed request of any method, as the worker principal signs it.
+pub(super) fn signed_method(id: u64, method: Method) -> Request {
     let context = claims(WORKER);
     let mut request = Request {
         id,
         graph: TENANT.to_string(),
         auth_token: String::new(),
         agent_id: Some(WORKER.to_string()),
-        method: Method::SemanticIndex { op: Box::new(op) },
+        method,
         trace_id: None,
     };
     request.auth_token = compute_verified_envelope_token(
@@ -121,6 +126,131 @@ pub(super) fn worker_authority() -> CarrierAuthority {
         "semantic-dispatch-key-0".to_string(),
     ))
     .unwrap()
+}
+
+/// The generation a binding was driven to and the source entities it indexes.
+pub(super) struct LiveBinding {
+    /// The live generation the active pointer names.
+    pub(super) generation: u64,
+    /// The source entity id of every indexed row, as the S1 intents name them.
+    pub(super) entities: Vec<String>,
+}
+
+/// Drive a SQL-column binding from its draft to a live generation, entirely through `dispatch`:
+/// admit the binding, admit the committed row's source-dirty wakeup, move the binding to
+/// building, claim and complete S1 over the row's source digest, then complete S2 to S6 with
+/// the shared live-generation driver. The engine's S6 worker activates the generation.
+pub(super) async fn drive_binding_to_live_generation(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    draft: &medulla_index_types::semantic_index::SemanticBindingDraft,
+    fixture: &super::medulla_h_query_sql_source_read_tests::DispatchTableFixture,
+) -> LiveBinding {
+    use super::semantic_live_generation::{drive_signed_generation_to_live, DRIVER};
+    let binding_id = draft.binding_id.clone();
+    let dispatch = |op: SemanticIndexOp| {
+        medulla_server_router::dispatch::request_boundary::dispatch(
+            state,
+            signed(next_dispatch_id(), op),
+        )
+    };
+    let _: serde_json::Value = ok(
+        "AdmitBinding",
+        dispatch(SemanticIndexOp::AdmitBinding {
+            tenant_id: TENANT.to_string(),
+            binding_id: binding_id.clone(),
+            draft: Box::new(draft.clone()),
+            idempotency_key: "semantic-live-admit".to_string(),
+        })
+        .await,
+    );
+    let _: serde_json::Value = ok(
+        "AdmitSourceRecord",
+        dispatch(SemanticIndexOp::AdmitSourceRecord {
+            tenant_id: TENANT.to_string(),
+            binding_id: binding_id.clone(),
+            record: Box::new(fixture.dirty.clone()),
+        })
+        .await,
+    );
+    let _: serde_json::Value = ok(
+        "TransitionBinding",
+        dispatch(SemanticIndexOp::TransitionBinding {
+            tenant_id: TENANT.to_string(),
+            binding_id: binding_id.clone(),
+            expected_generation: draft.generation,
+            next_state: SemanticBindingState::Building,
+            idempotency_key: "semantic-live-build".to_string(),
+        })
+        .await,
+    );
+    let _: serde_json::Value = ok(
+        "SubscribeStageConsumer",
+        dispatch(SemanticIndexOp::SubscribeStageConsumer {
+            tenant_id: TENANT.to_string(),
+            binding_id: binding_id.clone(),
+            consumer: DRIVER.to_string(),
+        })
+        .await,
+    );
+    let fast: SemanticStageLeasePage = ok(
+        "ClaimStageLeases(Fast)",
+        dispatch(SemanticIndexOp::ClaimStageLeases {
+            tenant_id: TENANT.to_string(),
+            binding_id: binding_id.clone(),
+            consumer: DRIVER.to_string(),
+            queue_class: SemanticQueueClass::Fast,
+            limit: 8,
+            lease_ms: 60_000,
+        })
+        .await,
+    );
+    assert_eq!(fast.entries.len(), 1, "the admitted S1 is claimable");
+    let mut entities = Vec::new();
+    for entry in fast.entries {
+        entities.push(
+            entry
+                .intent
+                .scope
+                .source_entity_id()
+                .expect("an S1 intent is entity scoped")
+                .to_string(),
+        );
+        let transition = SemanticStageTransition {
+            intent: entry.intent.clone(),
+            receipt: SemanticStageReceipt {
+                intent_digest: entry.intent.intent_digest,
+                output_digest: fixture.source_digest,
+                cursor: "sql-source:complete".to_string(),
+                completed_at: format!("unix-ms:{}", future_ms()),
+                outcome: SemanticStageOutcome::Completed,
+            },
+            generation_checkpoint: None,
+        };
+        let _: serde_json::Value = ok(
+            "CompleteSqlSourceStage",
+            dispatch(SemanticIndexOp::CompleteSqlSourceStage {
+                tenant_id: TENANT.to_string(),
+                binding_id: binding_id.clone(),
+                lease: Box::new(entry.lease.clone()),
+                transition: Box::new(transition),
+                successor: None,
+                page_cursor: None,
+            })
+            .await,
+        );
+    }
+    let generation = drive_signed_generation_to_live(state, &binding_id).await;
+    LiveBinding {
+        generation,
+        entities,
+    }
+}
+
+/// Request ids of the helper start well above the ones the shared driver draws, so one state
+/// never sees a repeated envelope nonce.
+fn next_dispatch_id() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(100_000);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 pub(super) fn refused(label: &str, response: Response) -> String {

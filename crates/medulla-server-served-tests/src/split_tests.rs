@@ -135,6 +135,18 @@ mod semantic_live_generation;
     feature = "shacl",
     feature = "security"
 ))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod medulla_h_query_column_vector_tests;
+#[cfg(all(
+    test,
+    unix,
+    feature = "query",
+    feature = "redb",
+    feature = "ann-redb",
+    feature = "blob",
+    feature = "shacl",
+    feature = "security"
+))]
 mod bookmark_served_tests;
 #[cfg(all(
     test,

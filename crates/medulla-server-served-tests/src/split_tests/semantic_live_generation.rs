@@ -30,7 +30,7 @@ use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::protocol::Method;
 
 /// The consumer the helper claims its leases as.
-const DRIVER: &str = "live-generation-driver";
+pub(super) const DRIVER: &str = "live-generation-driver";
 
 /// The deterministic unit vector the helper embeds for `source_entity_id`, so a proof can build
 /// the query embedding that ranks an entity first.
@@ -143,23 +143,47 @@ impl Cumulative {
     }
 }
 
-/// The helper's dispatches go through the harness's own signing path, `Served::call_on`, the
-/// one the connector-pack proofs sign with; it holds no signer of its own.
+/// Where the helper's dispatches go: the harness's own signing path, `Served::call_on`, the one
+/// the connector-pack proofs sign with, or a state of its own that a test signs requests for
+/// with the dispatch-pipeline signer. The helper holds no signer of its own.
+#[derive(Clone, Copy)]
+enum Target<'a> {
+    Served(&'a Served),
+    Signed(&'a std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>),
+}
+
 struct Driver<'a> {
-    served: &'a Served,
+    target: Target<'a>,
     binding_id: &'a str,
 }
 
-impl Driver<'_> {
+impl<'a> Driver<'a> {
+    fn served(served: &'a Served, binding_id: &'a str) -> Self {
+        Self {
+            target: Target::Served(served),
+            binding_id,
+        }
+    }
+
     async fn dispatch<T: serde::de::DeserializeOwned>(&self, label: &str, op: SemanticIndexOp) -> T {
-        let response = self
-            .served
-            .call_on(
-                self.served.graph(),
-                &format!("live-generation:{label}:{}", next_id()),
-                Method::SemanticIndex { op: Box::new(op) },
-            )
-            .await;
+        let response = match self.target {
+            Target::Served(served) => {
+                served
+                    .call_on(
+                        served.graph(),
+                        &format!("live-generation:{label}:{}", next_id()),
+                        Method::SemanticIndex { op: Box::new(op) },
+                    )
+                    .await
+            }
+            Target::Signed(state) => {
+                medulla_server_router::dispatch::request_boundary::dispatch(
+                    state,
+                    super::medulla_h_query_dispatch_pipeline_tests::signed(next_id(), op),
+                )
+                .await
+            }
+        };
         ok(label, response)
     }
 
@@ -290,7 +314,7 @@ fn successor_of(
 
 /// The admitted binding `binding_id`.
 pub(super) async fn binding_of(served: &Served, binding_id: &str) -> SemanticBinding {
-    Driver { served, binding_id }.binding().await
+    Driver::served(served, binding_id).binding().await
 }
 
 /// Complete S1 for every entity of a graph-sourced binding: move the binding to building, admit
@@ -301,7 +325,7 @@ pub(super) async fn complete_graph_source_s1(
     binding_id: &str,
     dirty: &MutationOutboxRecord,
 ) {
-    let driver = Driver { served, binding_id };
+    let driver = Driver::served(served, binding_id);
     let binding = driver.binding().await;
     let _: serde_json::Value = driver
         .dispatch(
@@ -368,7 +392,23 @@ pub(super) async fn complete_graph_source_s1(
 
 /// Drive the binding's generation from completed S1 to live and return the live generation.
 pub(super) async fn drive_generation_to_live(served: &Served, binding_id: &str) -> u64 {
-    let driver = Driver { served, binding_id };
+    drive_stages_to_live(Driver::served(served, binding_id)).await
+}
+
+/// As [`drive_generation_to_live`], for a state a test signs its own requests for.
+pub(super) async fn drive_signed_generation_to_live(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    binding_id: &str,
+) -> u64 {
+    drive_stages_to_live(Driver {
+        target: Target::Signed(state),
+        binding_id,
+    })
+    .await
+}
+
+async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
+    let binding_id = driver.binding_id;
     let _: serde_json::Value = driver
         .dispatch(
             "SubscribeStageConsumer",
