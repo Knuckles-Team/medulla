@@ -64,6 +64,8 @@ mod commit_batch;
 mod common;
 #[path = "common/redb_fan_in.rs"]
 mod redb_fan_in;
+#[path = "../crates/medulla-persistence/tests/common/replay_archive.rs"]
+mod replay_archive;
 #[path = "../crates/medulla-persistence/tests/common/replay_fixture.rs"]
 mod replay_fixture;
 #[path = "../tests/common/test_support.rs"]
@@ -1082,11 +1084,11 @@ fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
     let source_dir = dir.join("source");
     let bundle = dir.join("bundle");
     let restored = dir.join("restored");
-    let archive = replay_fixture::archive();
+    let archive = replay_archive::archive();
     let scope = ledger_scope_key(&replay_fixture::identity());
     let source =
         RedbBackend::open(source_dir.to_string_lossy().into_owned(), 1024).expect("open source");
-    replay_fixture::bundle_of(&source, &bundle);
+    replay_archive::bundle_of(&source, &bundle);
     rt.block_on(replay_fixture::commit_range(&source, 0..PITR_BATCHES));
     let policy = ArchivePolicy {
         segment_bytes: 64 * 1024 * 1024,
@@ -1094,7 +1096,7 @@ fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
         interval_s: 10,
     };
     let pass = rt
-        .block_on(source.archive_pass(&archive, replay_fixture::TENANT, &policy))
+        .block_on(source.archive_pass(&archive, replay_archive::TENANT, &policy))
         .expect("archive pass");
     assert_eq!(pass.records_archived, PITR_BATCHES);
     drop(source);
@@ -1107,7 +1109,7 @@ fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
             &restored,
             1,
             &archive,
-            replay_fixture::TENANT,
+            replay_archive::TENANT,
             &target,
         ))
         .expect("replay to the target");
@@ -1145,7 +1147,7 @@ fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
             &restored,
             1,
             &archive,
-            replay_fixture::TENANT,
+            replay_archive::TENANT,
             &target,
         ))
         .expect("second replay");

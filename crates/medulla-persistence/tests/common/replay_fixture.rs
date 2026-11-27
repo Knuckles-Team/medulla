@@ -1,9 +1,7 @@
 //! Committed-batch fixtures shared by the restore tests and the restore drill
 //! bench (`MEDULLA-ENGINE-PARITY-R016.2` and `MEDULLA-ENGINE-PARITY-R016.3`):
-//! one scope of single-node batches, an in-memory archive and a bundle writer.
-
-use std::path::Path;
-use std::sync::Arc;
+//! one scope of single-node batches. The in-memory archive and the bundle writer live in
+//! `replay_archive.rs`, so a test binary that only commits batches does not compile them.
 
 use medulla_mutation_types::mutation_scope::{
     DurabilityDomain, IncarnationId, LogicalName, MutationOutboxIntent, MutationScopeIdentity,
@@ -15,9 +13,7 @@ use medulla_protocol_types::mutation_batch::{
 };
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_storage::object::archive::ObjectArchive;
 
-pub const TENANT: &str = "engine";
 pub const GRAPH: &str = "replay-graph";
 
 pub fn identity() -> MutationScopeIdentity {
@@ -83,14 +79,4 @@ pub async fn commit_range(backend: &RedbBackend, range: std::ops::Range<u64>) {
         .await
         .expect("batch commits");
     }
-}
-
-pub fn archive() -> ObjectArchive {
-    ObjectArchive::new(Arc::new(object_store::memory::InMemory::new()), "root")
-}
-
-pub fn bundle_of(backend: &RedbBackend, dir: &Path) {
-    backend
-        .backup(dir, "test", 1_700_000_000, "replay", &[])
-        .expect("bundle is written");
 }

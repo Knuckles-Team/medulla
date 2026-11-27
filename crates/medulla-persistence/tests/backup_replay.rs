@@ -8,9 +8,12 @@ use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_storage::{ledger_scope_key, replay_to, ArchivePolicy, ArchiveRefusal, ReplayTarget};
 
+#[path = "common/replay_archive.rs"]
+mod replay_archive;
 #[path = "common/replay_fixture.rs"]
 mod replay_fixture;
-use replay_fixture::{archive, bundle_of, commit_range, identity, GRAPH, TENANT};
+use replay_archive::{archive, bundle_of, TENANT};
+use replay_fixture::{commit_range, identity, GRAPH};
 
 // spec: MEDULLA-ENGINE-PARITY-R016.2
 #[tokio::test(flavor = "multi_thread")]
