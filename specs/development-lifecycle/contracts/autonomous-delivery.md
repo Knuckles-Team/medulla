@@ -16,7 +16,7 @@ The change-proposal records come from `SCION-SCM-R003.1`. The connector rows `CO
 | Method | Request | Answer |
 |---|---|---|
 | `DeliveryOpen` | `{tenant, repo, dispatch_id, slice_root, scope_rows[], requester, prompted}` | `{delivery_id, assignment_id, idempotent}` or `{would_dispatch, decision_id}` |
-| `DeliveryFeedback` | `{tenant, event: ScmFeedbackEvent, admitted_principal?}` | `{event_id, deliveries[], resumed[], verdicts[]}` |
+| `DeliveryFeedback` | `{tenant, event: ScmFeedbackEvent}` (the event carries `admitted_principal?`) | `{event_id, deliveries[], resumed[], verdicts[]}` |
 | `DeliveryReport` | `{delivery_id, assignment_id, state, summary, proposal?, question?, checks_run[]}` | `{stage}` |
 | `DeliveryStatus` | `{delivery_id}` | `{stage, mandate, proposals[], assignments[], attention?, ended?}` |
 | `DeliveryList` | `{tenant, repo?, stage?}` | `[{delivery_id, stage, scope_rows[], proposals[]}]` |

@@ -32,7 +32,24 @@ fn event(id: &str, source: InputSource, failed: bool) -> ScmFeedbackEvent {
         failed,
         summary: "s".into(),
         observed_at: 1,
+        admitted_principal: None,
     }
+}
+
+// spec: MEDULLA-SDLC-R019.6
+#[test]
+fn the_admitted_principal_is_optional_on_the_wire() {
+    let bare: ScmFeedbackEvent = serde_json::from_value(serde_json::json!({
+        "event_id": "e", "connector": "scm", "kind": "check_changed", "source": "person",
+        "proposal_id": "pr-1", "summary": "s", "observed_at": 1
+    }))
+    .expect("an event without the stamp decodes");
+    assert_eq!(bare.admitted_principal, None);
+    let mut stamped = bare.clone();
+    stamped.admitted_principal = Some("usr:alice".into());
+    let json = serde_json::to_value(&stamped).unwrap();
+    assert_eq!(json["admitted_principal"], "usr:alice");
+    assert!(serde_json::to_value(&bare).unwrap().get("admitted_principal").is_none());
 }
 
 fn context<'a>(

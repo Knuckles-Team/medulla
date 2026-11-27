@@ -390,6 +390,11 @@ pub struct ScmFeedbackEvent {
     pub failed: bool,
     pub summary: String,
     pub observed_at: i64,
+    /// The principal arbora mapped the code-host actor to, set only when that principal holds
+    /// `source:write` on the repository (MEDULLA-SDLC-R019.6); absent otherwise. A resume of an
+    /// ended delivery reads it as the actor's write admission.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub admitted_principal: Option<String>,
 }
 
 /// A refused feedback event.

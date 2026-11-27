@@ -578,8 +578,12 @@ pub(super) async fn feedback(
         }) || visible_object(&core, &authority, &tenant, &event.proposal_id)
             .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some(PROPOSAL_TYPE));
         // A person's event may resume an ended delivery whose mandate still holds. The
-        // actor's `source:write` is read from the verified scopes of this call.
-        let actor_can_write = target.verified.allows_method("source:write", true);
+        // actor's `source:write` is the admission arbora stamped on the event: the call's own
+        // scopes belong to the intake principal, not to the code-host actor (R019.6).
+        let actor_can_write = event
+            .admitted_principal
+            .as_deref()
+            .is_some_and(|principal| !principal.trim().is_empty());
         let mut revalidated = BTreeSet::new();
         for delivery in deliveries.iter().filter(|d| d.ended.is_some()) {
             let mode = stored_project_mode(state, &target, &delivery.repo).await?;
