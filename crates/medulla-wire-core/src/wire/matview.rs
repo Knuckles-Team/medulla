@@ -9,21 +9,13 @@
 
 use medulla_federation::sql_analysis::referenced_tables;
 use medulla_sql_lang::sql::classify::CreateMatViewPlan;
-use medulla_sql_lang::sql::typed_result::{matview_result_schema, PgColType};
+use medulla_sql_lang::sql::typed_result::matview_result_schema;
 use medulla_table_store::tables::{
     create_incremental_matview_txn, create_matview_txn, drop_matview_txn, join_key_indexed,
     refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp, MATVIEW_EXISTS, MATVIEW_UNKNOWN,
 };
-use medulla_tables::schema::ColumnType;
 
 use super::{user_err, WireOutcome, WireProtocol, WireResult, WireSession};
-
-/// The stored column type of a result column (R014.1): `Text` → `Text`,
-/// `Int8` → `BigInt`, `Float8` → `Double`, `Bool` → `Bool`, `Vector` →
-/// `Vector(None)`.
-pub(crate) fn matview_column_type(ty: PgColType) -> ColumnType {
-    ty.stored_column_type()
-}
 
 /// The user tables `select_sql` reads, by leaf name. Every one must be a user
 /// table of the tenant store: a graph input (`nodes`, `edges`) or an unknown
@@ -122,7 +114,7 @@ impl WireSession {
                 .get_schema(table)
                 .ok()
                 .flatten()
-                .and_then(|schema| schema.column(column).map(|found| found.ty.clone()))
+                .and_then(|schema| schema.column(column).map(|found| found.ty))
         };
         let compiled = medulla_sql_lang::sql::matview_compile::compile_incremental_sql(
             &name,
