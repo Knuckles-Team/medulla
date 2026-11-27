@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     AuditAppendRequest = _models.MethodAuditAppendParams
     AuditReadEventRequest = _models.MethodAuditReadEventParams
+    AuditListRequest = _models.MethodAuditListParams
     AuditProveInclusionRequest = _models.MethodAuditProveInclusionParams
     RegisterIdentityRequest = _models.MethodRegisterIdentityParams
     RbacAdminRequest = _models.MethodRbacAdminParams
@@ -228,6 +229,42 @@ async def send_audit_read_event(
 def decode_audit_read_event(result: OpaqueResult) -> _models.AuditEventProof:
     """Validate this method's result against its contract model."""
     return decode_result("AuditReadEvent", models().AuditEventProof, result)
+
+
+async def send_audit_list(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        AuditList
+    Authorization:
+        audit:operator
+    Durability:
+        None
+    Result:
+        ResultPayload::Raw
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodAuditListParams.model_validate(params or {})
+    payload = await client._send(
+        "AuditList",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("AuditList", payload)
+
+
+def decode_audit_list(result: OpaqueResult) -> _models.AuditListPage:
+    """Validate this method's result against its contract model."""
+    return decode_result("AuditList", models().AuditListPage, result)
 
 
 async def send_audit_prove_inclusion(
@@ -563,6 +600,7 @@ _REQUEST_METHODS = frozenset(
     {
         "AuditAppend",
         "AuditReadEvent",
+        "AuditList",
         "AuditProveInclusion",
         "RegisterIdentity",
         "RbacAdmin",

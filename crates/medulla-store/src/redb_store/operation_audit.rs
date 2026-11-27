@@ -413,6 +413,65 @@ pub fn operation_audit_append(
     })
 }
 
+/// One page of the operation-audit records of `verified_tenant`, ascending by sequence
+/// (MEDULLA-IDENTITY-R023.14). `op` keeps only that operation's records, matched on the
+/// decoded `op=` field of the line and never on a substring, so an evidence value cannot
+/// forge a match. The page stops at `limit` records and names the sequence to resume after.
+pub fn operation_audit_list(
+    shard: &Shard,
+    graph: &str,
+    verified_tenant: &str,
+    op: Option<&str>,
+    after_seq: Option<u64>,
+    limit: usize,
+) -> Result<medulla_protocol_types::protocol::AuditListPage, String> {
+    use medulla_protocol_types::protocol::{AuditListPage, AuditListRecord};
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    let audit = read.scoped_owner_table(AUDIT)?;
+    let prefix = format!("OP_AUDIT|v1|tenant={verified_tenant}|");
+    let op_field = op.map(|name| format!("op={name}"));
+    let mut records: Vec<AuditListRecord> = Vec::new();
+    let mut next_after_seq = None;
+    for row in audit.scope_rows()? {
+        let (key, value) = row?;
+        let seq = key.value().1;
+        if after_seq.is_some_and(|after| seq <= after) {
+            continue;
+        }
+        let Some((_, hash, line)) = medulla_kernel::audit::decode_entry(value.value()) else {
+            continue;
+        };
+        let Ok(line) = std::str::from_utf8(line) else {
+            continue;
+        };
+        if !line.starts_with(&prefix) {
+            continue;
+        }
+        // Fields: OP_AUDIT, v1, tenant, principal, op, ...
+        if op_field
+            .as_deref()
+            .is_some_and(|wanted| line.split('|').nth(4) != Some(wanted))
+        {
+            continue;
+        }
+        if records.len() >= limit {
+            next_after_seq = records.last().map(|record| record.seq);
+            break;
+        }
+        records.push(AuditListRecord {
+            seq,
+            entry_sha256: hex::encode(hash),
+            event_line: line.to_string(),
+        });
+    }
+    Ok(AuditListPage {
+        graph: graph.to_string(),
+        records,
+        next_after_seq,
+    })
+}
+
 /// Fetch one operation event and verify the entire graph chain before giving
 /// the caller a proof status. This is an operator read, so the O(history)
 /// verification is explicit; appends remain O(log history) on a cold tail.

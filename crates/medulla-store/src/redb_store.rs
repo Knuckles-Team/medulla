@@ -153,7 +153,8 @@ pub use audit::{
 };
 #[cfg(feature = "security")]
 pub use operation_audit::{
-    audit_writer_unavailable, operation_audit_append, operation_audit_read, read_audit_chain_scope,
+    audit_writer_unavailable, operation_audit_append, operation_audit_list, operation_audit_read,
+    read_audit_chain_scope,
     OperationAuditEvent,
 };
 pub use shard::{Shard, ShardWrite};

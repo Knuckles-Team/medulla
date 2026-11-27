@@ -123,6 +123,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "AuditAppend": security.send_audit_append,
     "AuditProveInclusion": security.send_audit_prove_inclusion,
     "AuditReadEvent": security.send_audit_read_event,
+    "AuditList": security.send_audit_list,
     "AuditVerify": security.send_audit_verify,
     "Backup": storage.send_backup,
     "Batch": coordination.send_batch,

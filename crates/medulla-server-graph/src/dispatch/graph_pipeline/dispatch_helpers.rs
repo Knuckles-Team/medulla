@@ -220,6 +220,46 @@ pub async fn dispatch_op_audit_read_event(
     }
 }
 
+/// `AuditList` (MEDULLA-IDENTITY-R023.14): one page of the caller tenant's audit records.
+#[cfg(feature = "security")]
+pub async fn dispatch_op_audit_list(
+    req_id: u64,
+    target: AuditChainTarget<'_>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    filter: (Option<String>, Option<u64>, Option<u32>),
+) -> Response {
+    use medulla_protocol_types::result_contract::security::AUDIT_LIST_MAX_LIMIT;
+    let (op, after_seq, limit) = filter;
+    let limit = limit.unwrap_or(AUDIT_LIST_MAX_LIMIT);
+    if !(1..=AUDIT_LIST_MAX_LIMIT).contains(&limit) {
+        return Response::err(
+            req_id,
+            format!("INVALID_ARGUMENT: AuditList limit must be 1..={AUDIT_LIST_MAX_LIMIT}"),
+        );
+    }
+    if op.as_deref().is_some_and(|name| name.is_empty() || name.contains('|')) {
+        return Response::err(
+            req_id,
+            "INVALID_ARGUMENT: AuditList op must be a non-empty operation id without '|'",
+        );
+    }
+    match persistence.as_ref().and_then(|p| p.as_redb()) {
+        Some(redb) => match redb
+            .audit_list(&target.fname, target.tenant, op, after_seq, limit as usize)
+            .await
+        {
+            Ok(page) => Response::ok(
+                req_id,
+                ResultPayload::of::<medulla_protocol_types::result_contract::security::AuditList>(
+                    page,
+                ),
+            ),
+            Err(error) => Response::err(req_id, format!("AuditList error: {error}")),
+        },
+        None => Response::err(req_id, "AuditList requires durable redb"),
+    }
+}
+
 #[cfg(feature = "security")]
 pub async fn dispatch_op_audit_append(
     req_id: u64,

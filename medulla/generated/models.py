@@ -14211,6 +14211,13 @@ class MethodAuditAppend(BaseModel):
     params: MethodAuditAppendParams
 
 
+class MethodAuditList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AuditList"]
+    params: MethodAuditListParams
+
+
 class MethodAuditReadEvent(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18474,6 +18481,7 @@ Method = Annotated[
         MethodAuditVerify,
         MethodAuditAppend,
         MethodAuditReadEvent,
+        MethodAuditList,
         MethodAuditProveInclusion,
         MethodGetSubgraph,
         MethodGetNeighborhood,
@@ -19208,6 +19216,31 @@ class MethodAuditProveInclusionParams(BaseModel):
 
     anchor_seq: Annotated[int, Field(ge=0)] | None = None
     node_id: str
+
+
+class MethodAuditListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after_seq: Annotated[int, Field(ge=0)] | None = None
+    chain: AuditChain
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: str | None = None
+
+
+class AuditListRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entry_sha256: str
+    event_line: str
+    seq: Annotated[int, Field(ge=0)]
+
+
+class AuditListPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    next_after_seq: Annotated[int, Field(ge=0)] | None = None
+    records: list[AuditListRecord]
 
 
 class MethodAuditReadEventParams(BaseModel):
@@ -49173,6 +49206,10 @@ __all__ = [
     "MethodAuditProveInclusion",
     "MethodAuditProveInclusionParams",
     "MethodAuditReadEvent",
+    "MethodAuditList",
+    "MethodAuditListParams",
+    "AuditListRecord",
+    "AuditListPage",
     "MethodAuditReadEventParams",
     "MethodAuditVerify",
     "MethodBackup",

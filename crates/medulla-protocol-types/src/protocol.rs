@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 pub use crate::result_contract::security::LedgerReadResult;
 #[cfg(feature = "security")]
 pub use crate::result_contract::security::{
-    AuditAppendReceipt, AuditChain, AuditEventProof, AuditReport, MerkleInclusionReport,
+    AuditAppendReceipt, AuditChain, AuditEventProof, AuditListPage, AuditListRecord, AuditReport,
+    MerkleInclusionReport,
     MerkleProofStep, MerkleSide,
 };
 

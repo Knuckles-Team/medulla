@@ -367,6 +367,24 @@ $($variants)*
         chain: crate::result_contract::security::AuditChain,
     },
 
+    /// List the operation-audit records of the named chain that belong to the verified
+    /// caller's tenant (MEDULLA-IDENTITY-R023.14), ascending by sequence and paged: `op` keeps
+    /// only the records of that operation id, `after_seq` resumes after a sequence, and `limit`
+    /// is 1 to 500 (default 500). The page carries no chain verification (`AuditReadEvent`
+    /// verifies the chain for one event); a record of another tenant is never listed. Scope
+    /// `audit:operator`, which no ordinary caller holds. A limit outside its bound or an `op`
+    /// holding `|` refuses `INVALID_ARGUMENT`. Reads only.
+    #[cfg(feature = "security")]
+    AuditList {
+        chain: crate::result_contract::security::AuditChain,
+        #[serde(default)]
+        op: Option<String>,
+        #[serde(default)]
+        after_seq: Option<u64>,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+
     /// Produce + server-side-verify a Merkle inclusion proof for one node against
     /// a prior provenance anchor (CONCEPT:MEDULLA-KG.sharding.row-level-security, feature `security`) — the
     /// extension that lets [`AuditVerify`](Method::AuditVerify)'s tamper-evidence

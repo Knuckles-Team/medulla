@@ -61,6 +61,31 @@ pub struct AuditAppendReceipt {
     pub outcome_seq: Option<u64>,
 }
 
+/// The largest page `AuditList` answers, and its default (MEDULLA-IDENTITY-R023.14).
+#[cfg(feature = "security")]
+pub const AUDIT_LIST_MAX_LIMIT: u32 = 500;
+
+/// One operation-audit record of a listing: its sequence, entry hash and privacy-safe line.
+#[cfg(feature = "security")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AuditListRecord {
+    pub seq: u64,
+    pub entry_sha256: String,
+    pub event_line: String,
+}
+
+/// One page of operation-audit records of the caller's tenant, ascending by sequence.
+/// `next_after_seq` is the sequence to resume after, or `None` on the last page.
+#[cfg(feature = "security")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AuditListPage {
+    pub graph: String,
+    pub records: Vec<AuditListRecord>,
+    pub next_after_seq: Option<u64>,
+}
+
 /// One operation event bound to a verified hash chain. `chain_verified` is
 /// false when any entry in the graph's chain fails verification.
 #[cfg(feature = "security")]
@@ -234,6 +259,8 @@ method_results! {
     AuditAppend(AuditAppend) => Raw<AuditAppendReceipt>;
     #[cfg(feature = "security")]
     AuditReadEvent(AuditReadEvent) => Raw<AuditEventProof>;
+    #[cfg(feature = "security")]
+    AuditList(AuditList) => Raw<AuditListPage>;
     #[cfg(feature = "security")]
     AuditProveInclusion(AuditProveInclusion) => Raw<MerkleInclusionReport>;
     RegisterIdentity(RegisterIdentity) => Text<String>;

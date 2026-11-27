@@ -494,3 +494,37 @@ fn evidence_is_bounded_rendered_in_the_chain_line_and_part_of_the_outcome_equali
         assert_eq!(refused.validate().unwrap_err(), invalid);
     }
 }
+
+// spec: MEDULLA-IDENTITY-R023.14
+#[test]
+fn the_audit_list_keeps_the_callers_tenant_and_one_operation_and_pages_by_sequence() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = Store::seeded(dir.path());
+    store.append(&event("request-a", "reserved")).unwrap();
+    let mut edges = event("request-b", "reserved");
+    edges.op = "graph.edges.write".into();
+    store.append(&edges).unwrap();
+    let mut foreign = event("request-c", "reserved");
+    foreign.tenant = "other-tenant".into();
+    store.append(&foreign).unwrap();
+    store.append(&event("request-d", "reserved")).unwrap();
+
+    let all = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, 100).unwrap();
+    assert!(all.records.iter().all(|r| r.event_line.contains(&format!("tenant={TENANT}|"))));
+    assert!(all.records.iter().all(|r| !r.event_line.contains("other-tenant")));
+    assert_eq!(all.records.len(), 3);
+    assert_eq!(all.next_after_seq, None);
+
+    let writes =
+        operation_audit_list(&store.shard, GRAPH, TENANT, Some("graph.nodes.write"), None, 100)
+            .unwrap();
+    assert_eq!(writes.records.len(), 2);
+    assert!(writes.records.iter().all(|r| r.event_line.contains("|op=graph.nodes.write|")));
+
+    let first = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, 1).unwrap();
+    assert_eq!(first.records.len(), 1);
+    let resume = first.next_after_seq.expect("more records remain");
+    let rest = operation_audit_list(&store.shard, GRAPH, TENANT, None, Some(resume), 100).unwrap();
+    assert_eq!(rest.records.len(), 2);
+    assert!(rest.records[0].seq > resume);
+}

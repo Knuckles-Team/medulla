@@ -360,6 +360,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         Method::AuditProveInclusion { .. }
         | Method::AuditVerify
         | Method::AuditReadEvent { .. }
+        | Method::AuditList { .. }
         | Method::AuditAppend { .. } => {
             default_mutation_domain(surface)
         }

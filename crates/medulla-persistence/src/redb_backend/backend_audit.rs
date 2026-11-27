@@ -18,6 +18,30 @@ impl RedbBackend {
         })
         .await
     }
+    /// One page of the verified tenant's operation-audit records of `graph_fname`.
+    #[cfg(feature = "security")]
+    pub async fn audit_list(
+        &self,
+        graph_fname: &str,
+        verified_tenant: &str,
+        op: Option<String>,
+        after_seq: Option<u64>,
+        limit: usize,
+    ) -> Result<medulla_protocol_types::protocol::AuditListPage, String> {
+        let graph = graph_fname.to_string();
+        let tenant = verified_tenant.to_string();
+        self.read_snapshot(graph_fname, move |shard, _| {
+            medulla_store::redb_store::operation_audit_list(
+                shard,
+                &graph,
+                &tenant,
+                op.as_deref(),
+                after_seq,
+                limit,
+            )
+        })
+        .await
+    }
     /// Append one operation audit event through the graph's shard writer.
     ///
     /// The writer's own answer -- a receipt, or a refusal of the event -- is

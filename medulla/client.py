@@ -18028,6 +18028,30 @@ class AdminClient:
             )
         ).payload
 
+    async def audit_list(
+        self,
+        *,
+        chain: str,
+        op: str | None = None,
+        after_seq: int | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """List the caller tenant's operation-audit records (``audit:operator``).
+
+        One page, ascending by sequence: ``op`` keeps one operation id, ``after_seq``
+        resumes after a sequence (the previous page's ``next_after_seq``), and
+        ``limit`` is 1 to 500. The page does not verify the chain; use
+        :meth:`audit_read_event` for one verified event.
+        """
+        params: dict[str, Any] = {"chain": chain}
+        if op is not None:
+            params["op"] = op
+        if after_seq is not None:
+            params["after_seq"] = _integer("after_seq", after_seq, minimum=0)
+        if limit is not None:
+            params["limit"] = _integer("limit", limit, minimum=1)
+        return (await _gen.security.send_audit_list(self._client, params)).payload
+
     async def audit_prove_inclusion(
         self, node_id: str, *, anchor_seq: int | None = None
     ) -> dict[str, Any]:

@@ -1026,6 +1026,25 @@ async fn route_graph_audit_and_modality(
             )
             .await);
         }
+        Method::AuditList {
+            chain,
+            op,
+            after_seq,
+            limit,
+        } => {
+            return Ok(dispatch_op_audit_list(
+                ctx.req_id,
+                AuditChainTarget::of(
+                    ctx.graph_name,
+                    chain,
+                    ctx.tenant_scope,
+                    ctx.verified_context.tenant(),
+                ),
+                ctx.persistence.clone(),
+                (op, after_seq, limit),
+            )
+            .await);
+        }
         Method::AuditAppend {
             op,
             surface,
