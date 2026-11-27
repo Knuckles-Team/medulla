@@ -32,6 +32,16 @@ pub(super) struct SparqlShapeGate {
     pub(super) log: Arc<medulla_exec::policy_mask::PolicyEvaluationLog>,
 }
 
+/// The query of one SPARQL read: its text, its LPG→RDF projection, whether rows carry proofs,
+/// the solution budget and the negotiated graph media type.
+pub(super) struct SparqlQuery {
+    pub(super) query: String,
+    pub(super) proj: medulla_rdf::sparql::Projection,
+    pub(super) mode: SparqlProofMode,
+    pub(super) max_solutions: usize,
+    pub(super) graph_media_type: Option<&'static str>,
+}
+
 /// The graph node a bound term names, if any: an IRI as its bracketed or bare key or as the
 /// node a projected IRI of the core ontology namespace stands for, and a blank node as its
 /// `_:` key. A literal or a quoted triple names no node.
@@ -182,15 +192,18 @@ fn apply_sparql_shapes(
 pub(super) async fn handle_sparql(
     req_id: u64,
     (core, packs): (Arc<GraphCore>, Vec<(String, Arc<GraphCore>)>),
-    query: String,
-    proj: medulla_rdf::sparql::Projection,
-    mode: SparqlProofMode,
-    max_solutions: usize,
-    graph_media_type: Option<&'static str>,
+    request: SparqlQuery,
     shapes: Option<SparqlShapeGate>,
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
+    let SparqlQuery {
+        query,
+        proj,
+        mode,
+        max_solutions,
+        graph_media_type,
+    } = request;
     // The request graph's runtime-imported ontologies are read the same way as a pack
     // graph: their classes and properties join the default graph, so a served query
     // sees an imported class after its revision and not after its withdrawal

@@ -266,16 +266,18 @@ async fn try_handle_sparql(
                         let response = super::sparql::handle_sparql(
                             req_id,
                             (core, packs),
-                            query.clone(),
-                            projection,
-                            super::sparql::SparqlProofMode::of(*explain),
-                            // MEDULLA-FEDERATED-QUERY-R731: the interactive node budget.
-                            usize::try_from(
-                                medulla_server_api::knob_config::knobs()
-                                    .query_interactive_node_budget,
-                            )
-                            .unwrap_or(usize::MAX),
-                            graph_media_type,
+                            super::sparql::SparqlQuery {
+                                query: query.clone(),
+                                proj: projection,
+                                mode: super::sparql::SparqlProofMode::of(*explain),
+                                // MEDULLA-FEDERATED-QUERY-R731: the interactive node budget.
+                                max_solutions: usize::try_from(
+                                    medulla_server_api::knob_config::knobs()
+                                        .query_interactive_node_budget,
+                                )
+                                .unwrap_or(usize::MAX),
+                                graph_media_type,
+                            },
                             gate,
                             #[cfg(feature = "security")]
                             caller,
