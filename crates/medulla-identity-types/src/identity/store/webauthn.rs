@@ -73,7 +73,9 @@ impl IdentityStore {
             | MfaOp::Verify { .. }
             | MfaOp::Disable { .. }
             | MfaOp::SetRecoveryCodes { .. }
-            | MfaOp::ConsumeRecoveryCode { .. } => Err(IdentityRefusal::InvalidRequest),
+            | MfaOp::ConsumeRecoveryCode { .. }
+            | MfaOp::IssueChallenge { .. }
+            | MfaOp::ConsumeChallenge { .. } => Err(IdentityRefusal::InvalidRequest),
         }
     }
 
