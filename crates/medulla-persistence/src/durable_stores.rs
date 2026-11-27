@@ -115,6 +115,11 @@ pub const DURABLE_STORES: &[DurableStore] = &[
          comes up on the knob policy and the operator sets it again",
     ),
     excluded(
+        "observe_startup.redb",
+        "MEDULLA-OBSERVE-R008.2 the startup reports of earlier boots are a diagnostic history of \
+         the process that wrote them, so a restore starts a new history and carries none",
+    ),
+    excluded(
         "graph_source_bindings.redb",
         "MEDULLA-MEDIA-VOCAB-R001.102.2 the registry of graph-sourced semantic bindings is \
          rebuilt at startup and re-recorded by every semantic operation on a binding, and the \

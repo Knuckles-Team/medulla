@@ -9,6 +9,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
+use serde::{Deserialize, Serialize};
 
 /// The code a guard records when it drops without a verdict.
 pub const STARTUP_STEP_ABANDONED: &str = "STARTUP_STEP_ABANDONED";
@@ -61,10 +62,55 @@ pub struct StartupStep {
     pub outcome: StepOutcome,
 }
 
-/// The steps of one boot, in the order they finished.
-#[derive(Default)]
+/// One step of a stored boot report (MEDULLA-OBSERVE-R008.2): the outcome as its word and its
+/// reason or code.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StoredStep {
+    /// The step name.
+    pub name: String,
+    /// The graph the step ran for; empty for a step that spans the store.
+    pub graph: String,
+    /// Unix milliseconds when the step started.
+    pub started_unix_ms: u64,
+    /// How long the step took, in milliseconds.
+    pub duration_ms: u64,
+    /// `Ok`, `Skipped`, `Refused` or `Failed`.
+    pub outcome: String,
+    /// The reason or code the outcome carries.
+    pub detail: Option<String>,
+}
+
+/// The report of one boot as the control store keeps it: the boot sequence number, when the boot
+/// began and every step it recorded.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StoredBoot {
+    /// The boot sequence number: one more than the highest stored before this boot.
+    pub boot_seq: u64,
+    /// Unix milliseconds when this report began.
+    pub started_unix_ms: u64,
+    /// The steps, ascending by start time.
+    pub steps: Vec<StoredStep>,
+}
+
+/// The steps of one boot, in the order they finished, and the reports of the boots before it.
 pub struct StartupReport {
     steps: Mutex<Vec<StartupStep>>,
+    boot_seq: std::sync::atomic::AtomicU64,
+    started_unix_ms: u64,
+    previous: Mutex<Vec<StoredBoot>>,
+}
+
+impl Default for StartupReport {
+    fn default() -> Self {
+        Self {
+            steps: Mutex::new(Vec::new()),
+            boot_seq: std::sync::atomic::AtomicU64::new(1),
+            started_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_or(0, |elapsed| elapsed.as_millis() as u64),
+            previous: Mutex::new(Vec::new()),
+        }
+    }
 }
 
 impl StartupReport {
@@ -86,6 +132,46 @@ impl StartupReport {
                 .unwrap_or(0),
             started: Instant::now(),
             outcome: None,
+        }
+    }
+
+    /// Load the reports of the boots before this one, oldest first (MEDULLA-OBSERVE-R008.2).
+    /// The boot sequence number becomes one more than the highest of them.
+    pub fn load_previous(&self, mut previous: Vec<StoredBoot>) {
+        previous.sort_by_key(|boot| boot.boot_seq);
+        let next = previous.last().map_or(1, |boot| boot.boot_seq + 1);
+        self.boot_seq.store(next, std::sync::atomic::Ordering::Relaxed);
+        *self.previous.lock() = previous;
+    }
+
+    /// The reports of the boots before this one, oldest first.
+    pub fn previous(&self) -> Vec<StoredBoot> {
+        self.previous.lock().clone()
+    }
+
+    /// The sequence number of this boot.
+    pub fn boot_seq(&self) -> u64 {
+        self.boot_seq.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// The report of this boot as the control store keeps it: what `Introspect startup` calls
+    /// the current report once the boot is over (MEDULLA-OBSERVE-R008.2).
+    pub fn finish(&self) -> StoredBoot {
+        StoredBoot {
+            boot_seq: self.boot_seq(),
+            started_unix_ms: self.started_unix_ms,
+            steps: self
+                .steps()
+                .into_iter()
+                .map(|step| StoredStep {
+                    name: step.name,
+                    graph: step.graph,
+                    started_unix_ms: step.started_unix_ms,
+                    duration_ms: step.duration_ms,
+                    outcome: step.outcome.word().to_string(),
+                    detail: step.outcome.detail().map(str::to_string),
+                })
+                .collect(),
         }
     }
 

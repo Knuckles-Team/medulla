@@ -196,6 +196,7 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "doc_state"
         | "scheduler_config"
         | "graph_source_bindings"
+        | "observe_startup_report"
         | "agent_library"
         | "agent_library_heads"
         | "agent_graph"

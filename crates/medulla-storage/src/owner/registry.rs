@@ -571,6 +571,9 @@ macro_rules! visit_owner_tables {
             OwnerLayout::GraphSourceBindings => {
                 $visit!(crate::owner::graph_source_bindings::GRAPH_SOURCE_BINDINGS)
             }
+            OwnerLayout::ObserveStartup => {
+                $visit!(crate::owner::observe_startup::OBSERVE_STARTUP_REPORT)
+            }
         }
     }};
 }
@@ -961,6 +964,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
         OwnerLayout::RetrievalState => &["doc_state"],
         OwnerLayout::SchedulerConfig => &["scheduler_config"],
         OwnerLayout::GraphSourceBindings => &["graph_source_bindings"],
+        OwnerLayout::ObserveStartup => &["observe_startup_report"],
     }
 }
 
@@ -1060,7 +1064,7 @@ where
 }
 
 /// Every layout, in registry order (the lineage module's one list).
-pub(crate) fn owner_layouts() -> [OwnerLayout; 22] {
+pub(crate) fn owner_layouts() -> [OwnerLayout; 23] {
     crate::owner::lineage::ALL_LAYOUTS
 }
 

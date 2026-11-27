@@ -188,6 +188,7 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
                     | OwnerLayout::RetrievalState
                     | OwnerLayout::SchedulerConfig
                     | OwnerLayout::GraphSourceBindings
+                    | OwnerLayout::ObserveStartup
             )
         ) {
             TableScope::StorePrivate
@@ -278,7 +279,7 @@ fn domain_owner_key_type(name: &str) -> Option<&'static str> {
     match name {
         "series_chunks" => Some("(&str,u64)"),
         "kv" => Some("(&str,&str)"),
-        "cas_uploads" | "node_info" => Some("u64"),
+        "cas_uploads" | "node_info" | "observe_startup_report" => Some("u64"),
         // One arm, not four: every RF-ADR-008 layer's head table is keyed the
         // same `(tenant, id)` way, and four identical arms were four branches
         // saying one thing.
@@ -474,6 +475,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "doc_state"
         | "scheduler_config"
         | "graph_source_bindings"
+        | "observe_startup_report"
         | "agent_library"
         | "agent_graph"
         | "agent_component"
@@ -570,6 +572,7 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "decision_artifacts"
         | "write_back_change_sets"
         | "write_back_idempotency"
+        | "observe_startup_report"
         | "write_back_receipts" => "msgpack-v1",
         "decision_records"
         | "capability_reward"
@@ -757,6 +760,7 @@ fn index_and_scalar_capabilities(name: &str) -> Option<u16> {
         | "branch_registry"
         | "doc_state"
         | "scheduler_config"
+        | "observe_startup_report"
         | "cas_uploads"
         | "cas_holders"
         | "cas_retention"

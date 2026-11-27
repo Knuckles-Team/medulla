@@ -141,6 +141,9 @@ pub mod doc_state_store;
 // MEDULLA-DURABLE-KERNEL-R076.2: the durable scheduler policy owner file.
 #[cfg(feature = "redb")]
 pub mod scheduler_config_store;
+// MEDULLA-OBSERVE-R008.2: the durable startup reports of the last boots, one owner file.
+#[cfg(feature = "redb")]
+pub mod observe_startup_store;
 // MEDULLA-MEDIA-VOCAB-R001.102.2: the durable graph-sourced semantic binding registry owner file.
 #[cfg(feature = "redb")]
 pub mod graph_source_binding_store;

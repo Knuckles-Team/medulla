@@ -44,11 +44,83 @@ fn maintenance_task(name: &str) -> medulla_observe::registry::tasks::TaskSpec {
 pub async fn spawn_post_bind_maintenance(state: Arc<RwLock<ServerState>>) {
     // Both tasks are feature-gated; without either there is nothing to do.
     let _ = &state;
+    // MEDULLA-OBSERVE-R008.2: the reports of the boots before this one load before any step of
+    // this boot is recorded, and this boot's report is stored once its boot tasks have ended.
+    #[cfg(feature = "redb")]
+    load_previous_startup_reports(&state).await;
     crate::namespace_migration::spawn(state.clone());
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
     spawn_matview_reload(state.clone());
     #[cfg(all(feature = "redb", feature = "tsdb"))]
-    spawn_time_series_reconcile(state).await;
+    spawn_time_series_reconcile(state.clone()).await;
+    #[cfg(feature = "redb")]
+    spawn_startup_report_persist(state);
+}
+
+/// The tasks whose end closes the boot report.
+#[cfg(feature = "redb")]
+pub const BOOT_TASKS: [&str; 3] = [
+    crate::namespace_migration::TASK_NAME,
+    "matview-reload",
+    "time-series-reconcile",
+];
+
+/// How often the persist task checks that the boot tasks have ended.
+#[cfg(feature = "redb")]
+const BOOT_POLL: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Load the stored reports of the earlier boots into the process-wide startup report. A build
+/// without a persist directory has none; a store that cannot be read is logged and the boot
+/// goes on without a history.
+#[cfg(feature = "redb")]
+async fn load_previous_startup_reports(state: &Arc<RwLock<ServerState>>) {
+    let store = {
+        let guard = state.read().await;
+        if guard.persist_dir.is_none() {
+            return;
+        }
+        medulla_persistence::observe_startup_store::shared_observe_startup_store(&guard)
+    };
+    match store.and_then(|store| store.list()) {
+        Ok(previous) => medulla_observe::startup().load_previous(previous),
+        Err(error) => tracing::warn!(%error, "the earlier startup reports could not be read"),
+    }
+}
+
+/// Store this boot's report once the boot tasks have ended, keeping the newest
+/// `observe.startup_reports_kept` (one write per boot). The task is registered as
+/// `startup-report`.
+#[cfg(feature = "redb")]
+fn spawn_startup_report_persist(state: Arc<RwLock<ServerState>>) {
+    medulla_observe::spawn::spawn(maintenance_task("startup-report"), async move {
+        let mut polls = 0_u64;
+        while medulla_observe::global()
+            .live()
+            .iter()
+            .any(|row| BOOT_TASKS.contains(&row.name.as_str()))
+        {
+            polls += 1;
+            medulla_observe::spawn::progress(
+                medulla_observe::registry::tasks::ProgressCursor::Counter(polls),
+                polls,
+            );
+            tokio::time::sleep(BOOT_POLL).await;
+        }
+        let store = {
+            let guard = state.read().await;
+            if guard.persist_dir.is_none() {
+                return Ok(());
+            }
+            medulla_persistence::observe_startup_store::shared_observe_startup_store(&guard)?
+        };
+        let report = medulla_observe::startup().finish();
+        let keep = medulla_observe::settings::startup_reports_kept();
+        medulla_server_api::api::dispatch_support::blocking_task("startup report", move || {
+            store.put(&report, keep)
+        })
+        .await
+        .map_err(|error| format!("INTERNAL: {error}"))
+    });
 }
 
 /// Re-hydrate the in-RAM materialized-view index from the durable tier as a

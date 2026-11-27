@@ -52,7 +52,7 @@ pub use owner::domain::{
     AgentLibraryOwner, BlobOwner, BranchRegistryOwner, ClusterHierarchyOwner, ColdTierOwner,
     GraphShardOwner, JobsOwner, KvOwner, LedgerOnlyOwner, NodeInfoOwner, OwnerDomain,
     PathIndexOwner, RbacOwner, RequestReplayOwner, RetrievalStateOwner, SchedulerConfigOwner,
-    GraphSourceBindingsOwner, SemanticIndexOwner, SqlOwner, StatechartOwner, TenantCatalogOwner, TimeSeriesOwner,
+    GraphSourceBindingsOwner, ObserveStartupOwner, SemanticIndexOwner, SqlOwner, StatechartOwner, TenantCatalogOwner, TimeSeriesOwner,
     VizProvenanceOwner,
 };
 pub use owner::grant::{AuthenticatedScopeGrant, ScopeGrantVerifier};
@@ -101,6 +101,7 @@ pub use owner::registry::{
     WRITE_BACK_RECEIPTS, WRITE_BACK_RECEIPT_HEADS,
 };
 pub use owner::retrieval_state::DOC_STATE;
+pub use owner::observe_startup::OBSERVE_STARTUP_REPORT;
 pub use owner::scheduler_config::SCHEDULER_CONFIG;
 pub use owner::graph_source_bindings::GRAPH_SOURCE_BINDINGS;
 pub use owner::row_key::{

@@ -223,6 +223,7 @@ fn every_owner_table_declares_its_partition_boundary() {
                             | OwnerLayout::RetrievalState
                             | OwnerLayout::SchedulerConfig
                             | OwnerLayout::GraphSourceBindings
+                            | OwnerLayout::ObserveStartup
                             | OwnerLayout::GraphShard
                     ));
                 }

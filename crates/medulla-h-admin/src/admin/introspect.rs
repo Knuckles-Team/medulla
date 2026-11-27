@@ -286,27 +286,65 @@ async fn bound_text_space(
     None
 }
 
-/// The `startup` section: the recorded boot steps. The key is `<started_unix_ms>:<name>:<graph>`
-/// with the start time zero-padded, so the keys ascend with the rows.
+/// The `startup` section: the recorded boot steps of this boot and of the boots before it. The
+/// key is `<started_unix_ms>:<name>:<graph>` with the start time zero-padded, so the keys ascend
+/// with the rows and an earlier boot's rows come first. Each row names the boot it belongs to
+/// (MEDULLA-OBSERVE-R008.2 and R008.4).
 fn startup_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
-    let key = |step: &medulla_observe::startup::StartupStep| {
-        format!("{:020}:{}:{}", step.started_unix_ms, step.name, step.graph)
-    };
-    let (rows, next_cursor) = page_of(
-        medulla_observe::startup().steps(),
-        limit,
-        |step| cursor.map_or(true, |last| key(step).as_str() > last),
-        key,
-        |step| {
+    let current_boot = medulla_observe::startup().boot_seq();
+    let mut rows: Vec<(String, Value)> = Vec::new();
+    let mut push = |boot_seq: u64,
+                    name: &str,
+                    graph: &str,
+                    started_unix_ms: u64,
+                    duration_ms: u64,
+                    outcome: &str,
+                    detail: Option<&str>| {
+        rows.push((
+            format!("{started_unix_ms:020}:{name}:{graph}"),
             json!({
-                "name": step.name,
-                "graph": step.graph,
-                "started_unix_ms": step.started_unix_ms,
-                "duration_ms": step.duration_ms,
-                "outcome": step.outcome.word(),
-                "detail": step.outcome.detail(),
-            })
-        },
+                "boot_seq": boot_seq,
+                "current": boot_seq == current_boot,
+                "name": name,
+                "graph": graph,
+                "started_unix_ms": started_unix_ms,
+                "duration_ms": duration_ms,
+                "outcome": outcome,
+                "detail": detail,
+            }),
+        ));
+    };
+    for boot in medulla_observe::startup().previous() {
+        for step in &boot.steps {
+            push(
+                boot.boot_seq,
+                &step.name,
+                &step.graph,
+                step.started_unix_ms,
+                step.duration_ms,
+                &step.outcome,
+                step.detail.as_deref(),
+            );
+        }
+    }
+    for step in medulla_observe::startup().steps() {
+        push(
+            current_boot,
+            &step.name,
+            &step.graph,
+            step.started_unix_ms,
+            step.duration_ms,
+            step.outcome.word(),
+            step.outcome.detail(),
+        );
+    }
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    let (rows, next_cursor) = page_of(
+        rows,
+        limit,
+        |(key, _)| cursor.map_or(true, |last| key.as_str() > last),
+        |(key, _)| key.clone(),
+        |(_, row)| row.clone(),
     );
     IntrospectPage {
         section: IntrospectSection::Startup,

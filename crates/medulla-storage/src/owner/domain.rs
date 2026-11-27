@@ -42,4 +42,5 @@ owner_domains!(
     RetrievalStateOwner => RetrievalState,
     SchedulerConfigOwner => SchedulerConfig,
     GraphSourceBindingsOwner => GraphSourceBindings,
+    ObserveStartupOwner => ObserveStartup,
 );

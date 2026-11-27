@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const OWNER_LAYOUT_DOMAIN: &[u8] = b"eg/mutation-owner-layout/v1\0";
-const OWNER_LAYOUT_NAMES: [&str; 22] = [
+const OWNER_LAYOUT_NAMES: [&str; 23] = [
     "ledger_only",
     "rbac",
     "jobs",
@@ -29,8 +29,9 @@ const OWNER_LAYOUT_NAMES: [&str; 22] = [
     "retrieval_state",
     "scheduler_config",
     "graph_source_bindings",
+    "observe_startup",
 ];
-pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 22] = [
+pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 23] = [
     DurabilityDomain::ControlPlane,
     DurabilityDomain::ControlPlane,
     DurabilityDomain::AnalyticsJob,
@@ -58,6 +59,8 @@ pub(crate) const OWNER_LAYOUT_DOMAINS: [DurabilityDomain; 22] = [
     // MEDULLA-DURABLE-KERNEL-R076.2 scheduler config: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
     // MEDULLA-MEDIA-VOCAB-R001.102.2 graph-source binding registry: a ControlPlane owner file.
+    DurabilityDomain::ControlPlane,
+    // MEDULLA-OBSERVE-R008.2 startup reports: a ControlPlane owner file.
     DurabilityDomain::ControlPlane,
 ];
 
@@ -113,6 +116,9 @@ pub enum OwnerLayout {
     /// The registry of graph-sourced semantic bindings (`graph_source_bindings.redb`,
     /// MEDULLA-MEDIA-VOCAB-R001.102.2).
     GraphSourceBindings,
+    /// The startup reports of the last boots (`observe_startup.redb`,
+    /// MEDULLA-OBSERVE-R008.2).
+    ObserveStartup,
 }
 
 impl OwnerLayout {

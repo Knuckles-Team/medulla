@@ -35,7 +35,12 @@ struct Served {
 
 impl Served {
     async fn new() -> Self {
-        let dir = tempfile::tempdir().unwrap();
+        Self::new_in(tempfile::tempdir().unwrap()).await
+    }
+
+    /// A served engine over the persist directory `dir`. A directory a former engine left is
+    /// reopened: this is how a test restarts the engine.
+    async fn new_in(dir: tempfile::TempDir) -> Self {
         let mut state = medulla_server::seams_install::new_state_for_test(
             "observability-fixture-secret", // sanitizer:ignore
             ServerState::test_isolation(PRINCIPAL),
@@ -58,6 +63,11 @@ impl Served {
             tap: crate::refusal_tap::RefusalTap::new(),
             last_id: AtomicU64::new(0),
         }
+    }
+
+    /// Stop this engine and hand back its persist directory.
+    fn into_dir(self) -> tempfile::TempDir {
+        self._dir
     }
 
     /// One request as `PRINCIPAL` on `graph`, through the verified dispatch.
@@ -1226,4 +1236,88 @@ async fn index_build_task_shows_cursor_in_introspect() {
     assert_eq!(row["kind"], "Index");
     assert_eq!(row["cursor"]["kind"], "counter");
     assert!(row["cursor"]["value"].is_u64());
+}
+
+/// Wait, within a bounded deadline, until `condition` holds.
+async fn eventually(what: &str, mut condition: impl FnMut() -> bool) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !condition() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "{what} did not happen within the deadline"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+}
+
+// spec: MEDULLA-OBSERVE-R008.2
+#[tokio::test(flavor = "multi_thread")]
+async fn previous_boot_report_is_queryable_after_restart() {
+    let _boot = BOOT_LOCK.lock().await;
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+
+    // First boot: one recorded step, boot tasks run, and the report is stored when they end.
+    let first = Served::new().await;
+    let graph = "observe:restart";
+    medulla_observe::startup().step("restart_probe_first", graph).ok();
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(first.state.clone()).await;
+    let store = {
+        let state = first.state.read().await;
+        medulla_persistence::observe_startup_store::shared_observe_startup_store(&state)
+            .expect("the startup report store opens under the persist directory")
+    };
+    eventually("the first boot's report was stored", || {
+        store.list().is_ok_and(|boots| !boots.is_empty())
+    })
+    .await;
+    let first_seq = store.list().unwrap().last().unwrap().boot_seq;
+    drop(store);
+    // The engine is stopped once no boot task holds its state any longer.
+    eventually("the first engine's boot tasks released its state", || {
+        Arc::strong_count(&first.state) == 1
+    })
+    .await;
+
+    // Restart on the same directory: the engine loads the stored reports before it records any
+    // step of the new boot.
+    let dir = first.into_dir();
+    let second = Served::new_in(dir).await;
+    medulla_observe::startup().step("restart_probe_second", graph).ok();
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(second.state.clone()).await;
+
+    let mut rows = Vec::new();
+    let mut cursor: Option<String> = None;
+    loop {
+        let page = page_of(
+            "Introspect startup",
+            second
+                .introspect(IntrospectSection::Startup, Some(500), cursor.as_deref())
+                .await,
+        );
+        rows.extend(page.rows);
+        cursor = page.next_cursor;
+        if cursor.is_none() {
+            break;
+        }
+    }
+    let probe = |name: &str, boot_seq: u64| {
+        rows.iter().any(|row| {
+            row["name"] == name && row["graph"] == graph && row["boot_seq"] == boot_seq
+        })
+    };
+    // The earlier boot's report answers under its own sequence number and is not the current one.
+    assert!(probe("restart_probe_first", first_seq), "the previous report is queryable");
+    assert!(!probe("restart_probe_second", first_seq));
+    // The new boot is the next sequence number and carries both probes in this process.
+    let current = first_seq + 1;
+    assert_eq!(medulla_observe::startup().boot_seq(), current);
+    assert!(probe("restart_probe_second", current));
+    assert!(rows
+        .iter()
+        .filter(|row| row["boot_seq"] == first_seq)
+        .all(|row| row["current"] == false));
+    assert!(rows
+        .iter()
+        .filter(|row| row["boot_seq"] == current)
+        .all(|row| row["current"] == true));
 }

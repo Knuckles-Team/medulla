@@ -910,7 +910,8 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         | OwnerLayout::BranchRegistry
         | OwnerLayout::RetrievalState
         | OwnerLayout::SchedulerConfig
-        | OwnerLayout::GraphSourceBindings => &[],
+        | OwnerLayout::GraphSourceBindings
+        | OwnerLayout::ObserveStartup => &[],
         OwnerLayout::GraphShard => &[
             GRAPH_SHARD_BEFORE_STORAGE_SCRUB,
             GRAPH_SHARD_BEFORE_ENRICHMENT,
@@ -928,7 +929,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
 }
 
 /// Every layout, in registry order.
-pub const ALL_LAYOUTS: [OwnerLayout; 22] = [
+pub const ALL_LAYOUTS: [OwnerLayout; 23] = [
     OwnerLayout::LedgerOnly,
     OwnerLayout::Rbac,
     OwnerLayout::Jobs,
@@ -951,6 +952,7 @@ pub const ALL_LAYOUTS: [OwnerLayout; 22] = [
     OwnerLayout::RetrievalState,
     OwnerLayout::SchedulerConfig,
     OwnerLayout::GraphSourceBindings,
+    OwnerLayout::ObserveStartup,
 ];
 
 /// The digest each layout had when its lineage was last declared, hex.
@@ -1020,6 +1022,11 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
         // Not yet measured: the layout-digest test prints the compiled digest;
         // the coordinator replaces this pin with it.
         OwnerLayout::GraphSourceBindings => {
+            "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+        // Not yet measured: the layout-digest test prints the compiled digest;
+        // the coordinator replaces this pin with it.
+        OwnerLayout::ObserveStartup => {
             "0000000000000000000000000000000000000000000000000000000000000000"
         }
     }
