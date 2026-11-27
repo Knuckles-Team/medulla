@@ -831,8 +831,7 @@ async fn handle_sql_with_lease(
         snap,
         authority.clone(),
         std::path::PathBuf::from(persist_dir),
-        query,
-        graph,
+        (query, graph),
         None,
     )
     .await;

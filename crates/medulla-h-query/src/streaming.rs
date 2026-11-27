@@ -441,7 +441,6 @@ impl<'a> StreamingRequest<'a> {
     ) -> Result<u64, String> {
         if let Some(consumer) = consumer {
             use medulla_mutation_types::mutation_scope::CommittedVersion;
-            use medulla_server_api::api::persistence::PersistenceBackend;
             let persistence = self
                 .state
                 .read()

@@ -231,8 +231,7 @@ where
         run_unified_with_staged_finish(
             plan,
             &view,
-            &core,
-            &vectors,
+            (&core, &vectors),
             #[cfg(feature = "federation")]
             bound_registry(&foreign),
             #[cfg(feature = "tsdb")]
@@ -257,8 +256,7 @@ where
 pub fn run_unified_with_staged_finish<T>(
     plan: medulla_query_types::wire::Plan,
     view: &medulla_graph_core::graph::GraphView,
-    core: &Arc<GraphCore>,
-    staged: &[(String, Vec<f32>)],
+    (core, staged): (&Arc<GraphCore>, &[(String, Vec<f32>)]),
     #[cfg(feature = "federation")] foreign: Option<
         &medulla_federation::federation::ForeignSourceRegistry,
     >,

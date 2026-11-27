@@ -39,8 +39,11 @@ struct TermList {
 
 type CacheKey = (String, String, String);
 
-fn cache() -> &'static Mutex<HashMap<CacheKey, (u64, Arc<TermList>)>> {
-    static CACHE: OnceLock<Mutex<HashMap<CacheKey, (u64, Arc<TermList>)>>> = OnceLock::new();
+/// The cached term list of one key with the version it was built at.
+type CacheEntries = HashMap<CacheKey, (u64, Arc<TermList>)>;
+
+fn cache() -> &'static Mutex<CacheEntries> {
+    static CACHE: OnceLock<Mutex<CacheEntries>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 

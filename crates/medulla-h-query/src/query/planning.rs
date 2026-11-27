@@ -1217,8 +1217,7 @@ where
         run_unified_with_staged_finish(
             plan,
             &snap,
-            &core_for_ctx,
-            &[],
+            (&core_for_ctx, &[]),
             #[cfg(feature = "federation")]
             bound_registry(&foreign),
             #[cfg(feature = "tsdb")]

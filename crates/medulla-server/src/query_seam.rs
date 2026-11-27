@@ -65,8 +65,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         medulla_h_query::query::overlay::run_unified_with_staged_finish(
             plan,
             view,
-            core,
-            staged,
+            (core, staged),
             #[cfg(feature = "federation")]
             foreign,
             #[cfg(feature = "tsdb")]

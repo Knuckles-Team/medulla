@@ -201,7 +201,7 @@ async fn relations(
         let source_offset = text(&node, "source_offset").parse::<u64>().unwrap_or(0);
         if newest
             .as_ref()
-            .map_or(true, |(best, ..)| source_offset >= *best)
+            .is_none_or(|(best, ..)| source_offset >= *best)
         {
             newest = Some((
                 source_offset,

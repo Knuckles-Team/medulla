@@ -218,8 +218,7 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         snap,
         authority.clone(),
         persist_dir.to_path_buf(),
-        query,
-        graph,
+        (query, graph),
         gate,
     )
     .await;
@@ -716,8 +715,7 @@ pub(super) async fn catalog_sql_response(
     snap: Arc<medulla_graph_core::graph::GraphView>,
     authority: medulla_server_api::carrier::CarrierAuthority,
     persist_dir: std::path::PathBuf,
-    query: String,
-    graph: medulla_server_auth::sql_catalog_acl::RequestGraph,
+    (query, graph): (String, medulla_server_auth::sql_catalog_acl::RequestGraph),
     shapes: Option<SqlShapeGate>,
 ) -> Response {
     // MEDULLA-TYPED-PACKS-R108.16: a statement that ranks assets gets the caller's usage counts

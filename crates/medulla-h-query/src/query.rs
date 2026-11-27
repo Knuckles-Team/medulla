@@ -238,8 +238,6 @@ pub(crate) use indexless::handle_indexless_retrieve;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
-pub(crate) use run_trace_export::handle_run_trace_export;
-#[cfg(feature = "query")]
 pub(crate) use schema_context::handle_schema_context;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
