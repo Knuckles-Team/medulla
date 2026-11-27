@@ -541,7 +541,7 @@ fn commit_with_result(
         shard,
         medulla_store_apply::redb_store::store_mutation::CompactCommitInput {
             graph_fname: "graph-a",
-            batch: batch,
+            batch,
             result_msgpack: Some(result),
             committed_at_ms: 101,
             write_count: None,
@@ -5621,10 +5621,13 @@ fn terminal_extension_rejects_preexisting_receipt_ids_atomically() {
     let _ = std::fs::remove_file(path);
 }
 
+/// One commit the recording publisher saw: graph, batch id, previous version and new version.
+type SeenCommit = (String, String, Option<u64>, u64);
+
 /// Records every commit the shard's chokepoint hands it, and refuses when armed
 /// (a lost publish fence).
 struct RecordingPublisher {
-    seen: std::sync::Mutex<Vec<(String, String, Option<u64>, u64)>>,
+    seen: std::sync::Mutex<Vec<SeenCommit>>,
     refuse: std::sync::atomic::AtomicBool,
 }
 

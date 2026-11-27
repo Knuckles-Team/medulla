@@ -49,9 +49,12 @@ impl GraphTableVisitor for SeedFloorRows<'_, '_> {
     }
 }
 
+/// The rows of each table, keyed by table name: key and value bytes.
+type TableRows = BTreeMap<String, Vec<(Vec<u8>, Vec<u8>)>>;
+
 /// Every row of the graph, per table, as the root would carry it: the node and
 /// edge rows as the dump pages read them and every other table as exported.
-fn graph_rows(shard: &Shard) -> BTreeMap<String, Vec<(Vec<u8>, Vec<u8>)>> {
+fn graph_rows(shard: &Shard) -> TableRows {
     let mut rows = BTreeMap::new();
     for table in read_graph_table_rows(shard, GRAPH).unwrap() {
         rows.insert(table.table, table.rows);

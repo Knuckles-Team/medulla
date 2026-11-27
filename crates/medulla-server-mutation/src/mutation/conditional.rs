@@ -254,7 +254,7 @@ where
         medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     let prep = match commit_prepare(ctx, plan, method) {
         Ok(p) => p,
-        Err(short_circuit) => return short_circuit,
+        Err(short_circuit) => return *short_circuit,
     };
     if matches!(plan.durability_domain, DurabilityDomain::None) {
         let response = match apply(Arc::clone(ctx.core)).await {
@@ -461,7 +461,8 @@ where
     }
     let staged_snapshot = staged.snapshot();
     let (row_delta, state_msgpack) =
-        diff_and_serialize_staged_mutation(ctx, &base_snapshot_for_delta, &staged_snapshot)?;
+        diff_and_serialize_staged_mutation(ctx, &base_snapshot_for_delta, &staged_snapshot)
+            .map_err(|response| *response)?;
     Ok(StagedMutation {
         payload,
         row_delta,

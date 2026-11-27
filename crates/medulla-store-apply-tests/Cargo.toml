@@ -40,6 +40,7 @@ medulla-lane-store = { path = "../medulla-lane-store", features = ["server"] }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 
 [features]
+test-support = []
 compute-dist = ["raft", "medulla-store-apply/compute-dist", "medulla-store/compute-dist", "medulla-result-types/compute-dist", "medulla-protocol-types/compute-dist", "medulla-types/compute-dist"]
 matview = ["medulla-store-apply/matview", "medulla-store/matview", "medulla-protocol-types/matview", "medulla-types/matview"]
 metrics = ["medulla-store-apply/metrics", "medulla-store/metrics", "medulla-protocol-types/metrics", "medulla-kernel/metrics", "medulla-types/metrics"]

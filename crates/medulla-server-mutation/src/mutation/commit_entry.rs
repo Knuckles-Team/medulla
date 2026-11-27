@@ -41,7 +41,7 @@ pub(super) fn commit_prepare(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
-) -> Result<CommitPrep, Response> {
+) -> Result<CommitPrep, Box<Response>> {
     // 1. Authz -- the SAME isolation ACL check every other graph-scoped method
     // goes through, driven by the plan's `mutates` flag. (A read-only invocation of
     // a runtime-conditional method never reaches here — see
@@ -56,7 +56,7 @@ pub(super) fn commit_prepare(
             ctx.importing,
             AccessLevel::Write,
         ) {
-            return Err(Response::err(ctx.req_id, denied));
+            return Err(Box::new(Response::err(ctx.req_id, denied)));
         }
     }
 
@@ -67,14 +67,14 @@ pub(super) fn commit_prepare(
     if let Err(refused) =
         medulla_kernel::sealed_guard::refuse_generic_sealed_write(method, ctx.core.as_ref())
     {
-        return Err(Response::err(ctx.req_id, refused));
+        return Err(Box::new(Response::err(ctx.req_id, refused)));
     }
 
     // 1.6. owl:sameAs (MEDULLA-UNIFIED-DATA-PLANE-R030.4): only `ApproveEntityLink` writes
     // such an edge, so a generic edge writer carrying one is refused here, and again in the
     // durable row applier.
     if let Err(refused) = medulla_kernel::same_as_guard::refuse_unapproved_same_as_write(method) {
-        return Err(Response::err(ctx.req_id, refused));
+        return Err(Box::new(Response::err(ctx.req_id, refused)));
     }
 
     // 2. Idempotency-replay dedup -- ONLY for methods policy marks idempotent. A
@@ -100,7 +100,7 @@ pub(super) fn commit_prepare(
     if let Some(key) = &dedup_key {
         if let Some(mut cached) = idempotency_store().get(key) {
             cached.id = ctx.req_id;
-            return Err(cached);
+            return Err(Box::new(cached));
         }
     }
 
@@ -343,7 +343,7 @@ where
 {
     let prep = match commit_prepare(ctx, plan, method) {
         Ok(p) => p,
-        Err(short_circuit) => return short_circuit,
+        Err(short_circuit) => return *short_circuit,
     };
 
     if matches!(plan.durability_domain, DurabilityDomain::None) {

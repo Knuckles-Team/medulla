@@ -32,38 +32,38 @@ pub(super) fn diff_and_serialize_staged_mutation(
     ctx: &MutationCtx<'_>,
     base_snapshot_for_delta: &medulla_graph_core::graph::GraphSnapshot,
     staged_snapshot: &medulla_graph_core::graph::GraphSnapshot,
-) -> Result<(medulla_kernel::graph_delta::GraphRowDelta, Vec<u8>), Response> {
+) -> Result<(medulla_kernel::graph_delta::GraphRowDelta, Vec<u8>), Box<Response>> {
     let row_delta = match medulla_kernel::graph_delta::GraphRowDelta::between(
         base_snapshot_for_delta,
         staged_snapshot,
     ) {
         Ok(delta) => delta,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 format!("staged graph delta failed: {error}"),
-            ));
+            )));
         }
     };
     let state_msgpack = match row_delta.to_msgpack() {
         Ok(bytes) => bytes,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 format!("staged graph delta serialization failed: {error}"),
-            ));
+            )));
         }
     };
     let max_bytes = mutation_snapshot_max_bytes();
     if max_bytes > 0 && state_msgpack.len() > max_bytes {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             ctx.req_id,
             format!(
                 "staged mutation delta is {} bytes, above the configured {} byte limit",
                 state_msgpack.len(),
                 max_bytes
             ),
-        ));
+        )));
     }
     Ok((row_delta, state_msgpack))
 }
@@ -137,7 +137,7 @@ pub(super) async fn commit_staged_with_receipt(
     } = staged;
     let descriptor = match staged_mutation_descriptor(ctx, source_version, &state_msgpack) {
         Ok(descriptor) => descriptor,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let (batch, result) = match compile_batch_and_encode_result(
         ctx,
@@ -157,7 +157,7 @@ pub(super) async fn commit_staged_with_receipt(
         },
     ) {
         Ok(pair) => pair,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let committed = match persistence
         .commit_mutation_batch_state(
@@ -216,15 +216,15 @@ pub(super) fn staged_mutation_descriptor(
     ctx: &MutationCtx<'_>,
     source_version: u64,
     state_msgpack: &[u8],
-) -> Result<medulla_protocol_types::mutation_batch::MutationStateDescriptor, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationStateDescriptor, Box<Response>> {
     use sha2::{Digest, Sha256};
     let target_graph_version = match source_version.checked_add(1) {
         Some(version) => version,
         None => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 "authoritative graph version overflow",
-            ));
+            )));
         }
     };
     Ok(

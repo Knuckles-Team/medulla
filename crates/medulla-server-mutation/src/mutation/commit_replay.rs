@@ -129,18 +129,20 @@ async fn commit_staged_replay_found(
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = match compile_replay_batch(
         ctx,
-        batch_id,
-        source_version,
-        created_at_ms,
-        default_surface,
-        Some(descriptor),
+        ReplayBatchIdentity {
+            batch_id,
+            source_version,
+            created_at_ms,
+            default_surface,
+            authoritative_state: Some(descriptor),
+        },
         methods,
         medulla_server_api::batch_compile::SourceDirtyBasis::Recorded(
             medulla_server_api::batch_compile::recorded_source_dirty_input(&record.batch),
         ),
     ) {
         Ok(batch) => batch,
-        Err(response) => return Some(response),
+        Err(response) => return Some(*response),
     };
     let committed = persistence
         .commit_mutation_batch_state(fname, &batch, Vec::new(), None, created_at_ms, plan.audited)
@@ -198,16 +200,29 @@ async fn read_replay_source_version(
         .ok_or_else(|| Response::err(ctx.req_id, missing_message))
 }
 
-fn compile_replay_batch(
-    ctx: &MutationCtx<'_>,
-    batch_id: &str,
+/// What names one replayed batch: its id, the version it reads, when it was created, the surface
+/// its operations default to and the staged-state descriptor it carries, if any.
+struct ReplayBatchIdentity<'a> {
+    batch_id: &'a str,
     source_version: u64,
     created_at_ms: u64,
     default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
+}
+
+fn compile_replay_batch(
+    ctx: &MutationCtx<'_>,
+    identity: ReplayBatchIdentity<'_>,
     methods: Vec<Method>,
     source_dirty: medulla_server_api::batch_compile::SourceDirtyBasis<'_>,
-) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, Box<Response>> {
+    let ReplayBatchIdentity {
+        batch_id,
+        source_version,
+        created_at_ms,
+        default_surface,
+        authoritative_state,
+    } = identity;
     medulla_server_api::batch_compile::compile_methods_with_source_dirty(
         compile_batch_context(
             ctx,
@@ -222,10 +237,10 @@ fn compile_replay_batch(
         source_dirty,
     )
     .map_err(|error| {
-        Response::err(
+        Box::new(Response::err(
             ctx.req_id,
             format!("MutationBatch replay probe compile failed: {error}"),
-        )
+        ))
     })
 }
 
@@ -336,16 +351,18 @@ async fn commit_row_replay_found(
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = match compile_replay_batch(
         ctx,
-        batch_id,
-        source_version,
-        created_at_ms,
-        medulla_mutation_types::mutation_scope::MutationSurface::Graph,
-        None,
+        ReplayBatchIdentity {
+            batch_id,
+            source_version,
+            created_at_ms,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
+            authoritative_state: None,
+        },
         vec![method.clone()],
         medulla_server_api::batch_compile::SourceDirtyBasis::Methods,
     ) {
         Ok(batch) => batch,
-        Err(response) => return Some(response),
+        Err(response) => return Some(*response),
     };
     let committed = persistence
         .commit_mutation_batch(fname, &batch, None, created_at_ms)
@@ -394,7 +411,7 @@ pub(super) fn compile_batch_and_encode_result(
         medulla_protocol_types::mutation_batch::MutationBatch,
         Vec<u8>,
     ),
-    Response,
+    Box<Response>,
 > {
     let batch = match medulla_server_api::batch_compile::compile_methods_with_source_dirty(
         compile,
@@ -404,19 +421,19 @@ pub(super) fn compile_batch_and_encode_result(
     ) {
         Ok(batch) => batch,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 format!("MutationBatch compile failed: {error}"),
-            ));
+            )));
         }
     };
     let result = match rmp_serde::to_vec_named(payload) {
         Ok(result) => result,
         Err(error) => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 format!("MutationBatch result encode failed: {error}"),
-            ));
+            )));
         }
     };
     Ok((batch, result))

@@ -129,7 +129,8 @@ async fn commit_prepublish_durable_batch(
         vec![method.clone()],
         predicted,
         medulla_server_api::batch_compile::SourceDirtyBasis::Methods,
-    )?;
+    )
+    .map_err(|response| *response)?;
     persistence
         .commit_mutation_batch(fname, &batch, Some(&result), created_at_ms)
         .await
@@ -255,7 +256,8 @@ where
     }
     let staged_snapshot = staged.snapshot();
     let (row_delta, state_msgpack) =
-        diff_and_serialize_staged_mutation(ctx, &base_snapshot_for_delta, &staged_snapshot)?;
+        diff_and_serialize_staged_mutation(ctx, &base_snapshot_for_delta, &staged_snapshot)
+            .map_err(|response| *response)?;
     Ok(StagedMutation {
         payload,
         row_delta,

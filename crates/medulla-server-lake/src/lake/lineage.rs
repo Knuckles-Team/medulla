@@ -309,7 +309,7 @@ pub async fn submit_events(
             unbootstrapped: "LINEAGE_POLICY_UNBOOTSTRAPPED",
         }
         .ensure(
-            &mut medulla_server_api::state::timed_write(&state)
+            &mut medulla_server_api::state::timed_write(state)
                 .await
                 .isolation,
             LINEAGE_GRAPH,

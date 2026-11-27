@@ -49,7 +49,6 @@ pub use graph_store::{
     parse_rdf_body, rdf_graph_write_event_update, rdf_graph_write_update, RdfBodyRefusal,
     RdfWriteMode, RDF_BODY_MAX_TRIPLES,
 };
-use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 use negotiation::{choose_ct, render_query_outcome};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
