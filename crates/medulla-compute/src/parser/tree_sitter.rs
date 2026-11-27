@@ -14,7 +14,7 @@ pub struct SymbolMetadata {
     pub args: Vec<String>,
 }
 
-use medulla_ingestion_types::ingestion_wire::{ExtractedNode, ParseResult};
+use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, ParseResult};
 
 #[path = "tree_sitter_ast.rs"]
 mod ast;
