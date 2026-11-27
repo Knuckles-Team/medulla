@@ -83,24 +83,20 @@ impl ShardCommitPublisher {
         let mut segment = Vec::new();
         let (mut node_after, mut edge_after): (Option<String>, Option<(String, String, u32)>) =
             (None, None);
-        loop {
-            let Some(page) = read_graph_dump_page(
-                &shard,
-                graph,
-                crypto,
-                PageCursorRef {
-                    node_offset: 0,
-                    edge_offset: 0,
-                    node_after: node_after.as_deref(),
-                    edge_after: edge_after.as_ref().map(|(source, target, ordinal)| {
-                        (source.as_str(), target.as_str(), *ordinal)
-                    }),
-                    page_size: BATCH_ROWS,
-                },
-            )?
-            else {
-                break;
-            };
+        while let Some(page) = read_graph_dump_page(
+            &shard,
+            graph,
+            crypto,
+            PageCursorRef {
+                node_offset: 0,
+                edge_offset: 0,
+                node_after: node_after.as_deref(),
+                edge_after: edge_after
+                    .as_ref()
+                    .map(|(source, target, ordinal)| (source.as_str(), target.as_str(), *ordinal)),
+                page_size: BATCH_ROWS,
+            },
+        )? {
             node_after = page.node_after.clone();
             edge_after = page.edge_after.clone();
             let done = page.nodes_exhausted && page.edges_exhausted;

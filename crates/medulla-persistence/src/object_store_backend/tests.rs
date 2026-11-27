@@ -658,7 +658,7 @@ fn open_from_env_refuses_before_the_listener() {
     for name in ["R2_4_ENDPOINT", "R2_4_BUCKET", "R2_4_ROOT"] {
         std::env::remove_var(name);
     }
-    let refusal = open_from_env().err().expect("an unset secret refuses");
+    let refusal = open_from_env().expect_err("an unset secret refuses");
     assert!(
         refusal.starts_with("OBJECT_STORE_SECRET_UNRESOLVED"),
         "{refusal}"
@@ -667,7 +667,7 @@ fn open_from_env_refuses_before_the_listener() {
     // An unknown variant and an unreadable body are `STORAGE_BACKEND_UNKNOWN`.
     for setting in [r#"{"variant":"tape_library"}"#, "{"] {
         std::env::set_var(STORAGE_BACKEND_ENV, setting);
-        let refusal = open_from_env().err().expect("an unknown spec refuses");
+        let refusal = open_from_env().expect_err("an unknown spec refuses");
         assert!(refusal.starts_with("STORAGE_BACKEND_UNKNOWN"), "{refusal}");
     }
 
@@ -899,7 +899,9 @@ fn open_from_env_refuses_an_unset_secret_and_an_unknown_variant_before_the_liste
     use std::sync::Mutex;
 
     static ENV: Mutex<()> = Mutex::new(());
-    let _guard = ENV.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let _guard = ENV
+        .lock()
+        .expect("a test that panicked left the environment lock poisoned");
 
     std::env::remove_var(STORAGE_BACKEND_ENV);
     assert!(open_from_env().unwrap().is_none(), "unset opens nothing");
@@ -923,7 +925,7 @@ fn open_from_env_refuses_an_unset_secret_and_an_unknown_variant_before_the_liste
         layout_digest: None,
     };
     std::env::set_var(STORAGE_BACKEND_ENV, serde_json::to_string(&spec).unwrap());
-    let error = open_from_env().err().expect("the unset secret refuses");
+    let error = open_from_env().expect_err("the unset secret refuses");
     assert!(
         error.starts_with("OBJECT_STORE_SECRET_UNRESOLVED:"),
         "{error}"
@@ -931,7 +933,7 @@ fn open_from_env_refuses_an_unset_secret_and_an_unknown_variant_before_the_liste
 
     // An unknown variant is not a backend.
     std::env::set_var(STORAGE_BACKEND_ENV, r#"{"variant":"tape"}"#);
-    let error = open_from_env().err().expect("the unknown variant refuses");
+    let error = open_from_env().expect_err("the unknown variant refuses");
     assert!(error.starts_with("STORAGE_BACKEND_UNKNOWN:"), "{error}");
 
     std::env::remove_var(STORAGE_BACKEND_ENV);

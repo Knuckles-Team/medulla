@@ -28,7 +28,7 @@ pub use client::resolve_object_store_client;
 #[cfg(feature = "redb")]
 mod shard_publisher;
 #[cfg(feature = "redb")]
-pub(crate) use shard_publisher::{attach_shard_publishers, ShardCipher};
+pub(crate) use shard_publisher::attach_shard_publishers;
 
 /// The tenant the served engine files its graph versions under in the root:
 /// `<root>/engine/<graph>/`.
