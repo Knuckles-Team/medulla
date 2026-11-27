@@ -621,6 +621,8 @@ METHOD_IDS = frozenset(
         "MarkWorkItemEffectStarted",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
+        "MeetingSummaryGet",
+        "MeetingTranscriptRead",
         "MeetingTranscriptRevision",
         "OntologyCanonicalHash",
         "PolicyEvolutionStore",

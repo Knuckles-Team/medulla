@@ -504,6 +504,8 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "MeasureIngestThroughput": ingestion.send_measure_ingest_throughput,
     "MeetingSummaryCommit": ingestion.send_meeting_summary_commit,
     "MeetingSummaryContext": ingestion.send_meeting_summary_context,
+    "MeetingSummaryGet": ingestion.send_meeting_summary_get,
+    "MeetingTranscriptRead": ingestion.send_meeting_transcript_read,
     "MeetingTranscriptRevision": ingestion.send_meeting_transcript_revision,
     "Metrics": graph.send_metrics,
     "MineAnomaly": compute.send_mine_anomaly,

@@ -760,6 +760,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "MeetingTranscriptRevision",
         &["TRANSCRIPT_BASE_CONFLICT", "TRANSCRIPT_EVENT_CONFLICT"],
     ),
+    // MEDULLA-MEDIA-VOCAB-R001.101.7.
+    ("MeetingTranscriptRead", &["TRANSCRIPT_READ_LIMIT_INVALID"]),
     (
         "BusHeartbeat",
         &[

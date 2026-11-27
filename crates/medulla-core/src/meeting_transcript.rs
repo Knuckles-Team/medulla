@@ -37,6 +37,10 @@ pub struct AppliedEvent {
     pub idempotency_key: String,
     pub digest: Digest256,
     pub revision: u64,
+    /// The event operation (MEDULLA-MEDIA-VOCAB-R001.101.7); absent on an
+    /// event stored before it was recorded.
+    #[serde(default)]
+    pub op: Option<TranscriptRevisionOp>,
 }
 
 /// A summary written against one finalized digest.
@@ -154,6 +158,7 @@ pub fn apply_revision(
         idempotency_key: event.idempotency_key.clone(),
         digest: event.text_digest,
         revision,
+        op: Some(event.op),
     });
     Ok(Revision {
         transcript: next,

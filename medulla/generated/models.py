@@ -17445,6 +17445,20 @@ class MethodMeetingSummaryCommit(BaseModel):
     params: MethodMeetingSummaryCommitParams
 
 
+class MethodMeetingSummaryGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeetingSummaryGet"]
+    params: MethodMeetingSummaryGetParams
+
+
+class MethodMeetingTranscriptRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MeetingTranscriptRead"]
+    params: MethodMeetingTranscriptReadParams
+
+
 class MethodMeetingSummaryContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -19106,6 +19120,8 @@ Method = Annotated[
         MethodMeasureIngestThroughput,
         MethodMeetingSummaryCommit,
         MethodMeetingSummaryContext,
+        MethodMeetingSummaryGet,
+        MethodMeetingTranscriptRead,
         MethodMeetingTranscriptRevision,
         MethodOntologyCanonicalHash,
         MethodReadMemorySnapshot,
@@ -37592,6 +37608,65 @@ class MeetingTranscriptRevision(BaseModel):
     text_digest: str
 
 
+class MeetingTranscriptReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after_seq: Annotated[int, Field(ge=0)] | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    meeting_id: str
+
+
+class TranscriptEventRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    finalization_digest: str | None = None
+    op: TranscriptRevisionOp | None = None
+    revision: Annotated[int, Field(ge=0)]
+    sequence: Annotated[int, Field(ge=0)]
+    text_digest: str
+
+
+class MeetingTranscriptReadAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    context_revision: Annotated[int, Field(ge=0)]
+    events: list[TranscriptEventRecord]
+    finalization_digest: str | None = None
+    last_sequence: Annotated[int, Field(ge=0)]
+    meeting_id: str
+    next_seq: Annotated[int, Field(ge=0)] | None = None
+    transcript_revision: Annotated[int, Field(ge=0)]
+
+
+class MeetingSummaryGetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    meeting_id: str
+    summary_id: str | None = None
+
+
+class MeetingSummaryRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claims: list[SummaryClaim]
+    context_digest: str
+    model: str
+    output_digest: str
+    policy_revision: str
+    provider: str
+    receipt_digest: str
+    receipt_id: str
+    stale: bool
+    summary_id: str
+    transcript_digest: str
+
+
+class MeetingSummaryGetAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    summary: MeetingSummaryRecord | None
+
+
 class MeetingTranscriptRevisionReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38041,6 +38116,18 @@ class MethodMeetingSummaryCommitParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: MeetingSummaryCommitRequest
+
+
+class MethodMeetingSummaryGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MeetingSummaryGetRequest
+
+
+class MethodMeetingTranscriptReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: MeetingTranscriptReadRequest
 
 
 class MethodMeetingSummaryContextParams(BaseModel):
@@ -49420,8 +49507,14 @@ __all__ = [
     "MeetingSummaryContext",
     "MeetingSummaryContextRequest",
     "MeetingSummaryLimitPolicy",
+    "MeetingSummaryGetAnswer",
+    "MeetingSummaryGetRequest",
+    "MeetingSummaryRecord",
+    "MeetingTranscriptReadAnswer",
+    "MeetingTranscriptReadRequest",
     "MeetingTranscriptRevision",
     "MeetingTranscriptRevisionReceipt",
+    "TranscriptEventRecord",
     "MemorySnapshotHead",
     "MemorySnapshotList",
     "MemorySnapshotRead",
@@ -50240,6 +50333,10 @@ __all__ = [
     "MethodMeetingSummaryCommitParams",
     "MethodMeetingSummaryContext",
     "MethodMeetingSummaryContextParams",
+    "MethodMeetingSummaryGet",
+    "MethodMeetingSummaryGetParams",
+    "MethodMeetingTranscriptRead",
+    "MethodMeetingTranscriptReadParams",
     "MethodMeetingTranscriptRevision",
     "MethodMeetingTranscriptRevisionParams",
     "MethodMetrics",

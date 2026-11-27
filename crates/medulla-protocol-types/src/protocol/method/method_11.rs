@@ -790,6 +790,19 @@ $($variants)*
     MeetingSummaryCommit {
         request: Box<medulla_source_types::meeting_transcript::MeetingSummaryCommitRequest>,
     },
+    /// Read the revision events of one meeting transcript after a sequence
+    /// cursor, with each event's revision and the seal state
+    /// (MEDULLA-MEDIA-VOCAB-R001.101.7). Reads only; an unknown meeting and a
+    /// meeting the caller cannot see answer the same empty transcript.
+    MeetingTranscriptRead {
+        request: Box<medulla_source_types::meeting_transcript::MeetingTranscriptReadRequest>,
+    },
+    /// Read one stored meeting summary (the named one, else the latest) with
+    /// its claims and receipt digests (MEDULLA-MEDIA-VOCAB-R001.101.7). Reads
+    /// only; an unknown or unseen summary answers `summary: null`.
+    MeetingSummaryGet {
+        request: Box<medulla_source_types::meeting_transcript::MeetingSummaryGetRequest>,
+    },
 
     // ── Document delete (MEDULLA-UNIFIED-DATA-PLANE-R651.3..R651.5) ─────────
     /// Delete one RLS-visible Document of the request graph and everything

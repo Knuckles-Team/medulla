@@ -74,6 +74,9 @@ method_results! {
     MeetingTranscriptRevision(MeetingTranscriptRevision) => Raw<medulla_source_types::meeting_transcript::MeetingTranscriptRevisionReceipt>;
     MeetingSummaryContext(MeetingSummaryContext) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryContext>;
     MeetingSummaryCommit(MeetingSummaryCommit) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryCommitReceipt>;
+    // MEDULLA-MEDIA-VOCAB-R001.101.7: the transcript events after a cursor, and one stored summary.
+    MeetingTranscriptRead(MeetingTranscriptRead) => Raw<medulla_source_types::meeting_transcript::MeetingTranscriptReadAnswer>;
+    MeetingSummaryGet(MeetingSummaryGet) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryGetAnswer>;
     // MEDULLA-INGEST-WORKER-R001.1007/.1008: what one declaration did, and the stored declaration.
     DataPrepDeclare(DataPrepDeclare) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclareReceipt>;
     DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclarationView>;

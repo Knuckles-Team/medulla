@@ -9,6 +9,7 @@
 
 pub mod commit;
 pub mod context;
+pub mod read;
 
 use std::collections::BTreeMap;
 

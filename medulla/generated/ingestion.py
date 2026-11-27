@@ -966,6 +966,18 @@ send_meeting_summary_context = contract_sender(
 decode_meeting_summary_context = contract_decoder(
     "MeetingSummaryContext", "MeetingSummaryContext"
 )
+send_meeting_summary_get = contract_sender(
+    "MeetingSummaryGet", "MethodMeetingSummaryGetParams"
+)
+decode_meeting_summary_get = contract_decoder(
+    "MeetingSummaryGet", "MeetingSummaryGetAnswer"
+)
+send_meeting_transcript_read = contract_sender(
+    "MeetingTranscriptRead", "MethodMeetingTranscriptReadParams"
+)
+decode_meeting_transcript_read = contract_decoder(
+    "MeetingTranscriptRead", "MeetingTranscriptReadAnswer"
+)
 send_meeting_transcript_revision = contract_sender(
     "MeetingTranscriptRevision", "MethodMeetingTranscriptRevisionParams"
 )

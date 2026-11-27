@@ -269,6 +269,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `read_authority.project_core` projected, then keep the verified tenant's.
     "MemoryExport",
     "MemoryRecall",
+    // MEDULLA-MEDIA-VOCAB-R001.101.7: both read the transcript head, revision and summary
+    // rows through `read_authority.node_visible`, so a row the reader cannot see reads as absent.
+    "MeetingTranscriptRead",
+    "MeetingSummaryGet",
     "MineClassifyFit",
     // MEDULLA-DECISION-ENGINE-R655.4: reads participants, claims' sessions and card nodes of the
     // projected core, then keeps the verified tenant's.

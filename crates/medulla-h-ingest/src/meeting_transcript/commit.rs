@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 use medulla_core::meeting_transcript::{SummaryMark, TranscriptSnapshot};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::meeting_transcript::{
-    MeetingSummaryCommitReceipt, MeetingSummaryCommitRequest, SummaryAdmissionRef,
+    MeetingSummaryCommitReceipt, MeetingSummaryCommitRequest, SummaryAdmissionRef, SummaryClaim,
 };
 
 use super::context::{context_node_id, current_final, StoredContext};
@@ -99,10 +99,7 @@ pub fn commit_summary(
     }
     current_final(state, &context.transcript_digest)?;
 
-    let summary_id = format!(
-        "meeting-summary:{}:{}",
-        request.meeting_id, request.summary_id
-    );
+    let summary_id = super::read::summary_node_id(&request.meeting_id, &request.summary_id);
     let context_id = context_node_id(&receipt.input_context_digest);
     let mut next = state.clone();
     next.summaries.push(SummaryMark {
@@ -128,6 +125,21 @@ pub fn commit_summary(
     properties.insert("model", stored_value(&receipt.model).to_string());
     properties.insert("policy_revision", receipt.policy_revision.clone());
     properties.insert("output_digest", receipt.output_digest.to_hex());
+    // MEDULLA-MEDIA-VOCAB-R001.101.7: the claims, so `MeetingSummaryGet` reads
+    // one row. Claim text takes the same redaction as the claim nodes.
+    let stored_claims: Vec<SummaryClaim> = request
+        .claims
+        .iter()
+        .map(|claim| SummaryClaim {
+            text: stored_value(&claim.text).to_string(),
+            ..claim.clone()
+        })
+        .collect();
+    properties.insert(
+        "claims_json",
+        serde_json::to_string(&stored_claims)
+            .map_err(|error| format!("meeting summary claims encoding failed: {error}"))?,
+    );
     methods.push(Method::AddNode {
         node_id: summary_id.clone(),
         properties_msgpack: encode(properties)?,

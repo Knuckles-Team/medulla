@@ -791,6 +791,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MeetingSummaryCommit { .. }
         | Method::MeetingSummaryContext { .. }
         | Method::MeetingTranscriptRevision { .. }
+        // MEDULLA-MEDIA-VOCAB-R001.101.7: reads of the transcript surface.
+        | Method::MeetingTranscriptRead { .. }
+        | Method::MeetingSummaryGet { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R651.3: lowers to one ChangeEnvelope.
         | Method::DocumentDelete { .. }
         // MEDULLA-REPO-INGEST-R002.100: lowers to one ChangeEnvelope.

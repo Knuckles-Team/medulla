@@ -19,6 +19,7 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T013 [US5] MEDULLA-MEDIA-VOCAB-R001.101.4 Summary context
 - [ ] T014 [US5] MEDULLA-MEDIA-VOCAB-R001.101.5 Summary commit
 - [ ] T015 [US5] MEDULLA-MEDIA-VOCAB-R001.101.6 Refusals, evidence and served proof
+- [ ] T015a [US5] MEDULLA-MEDIA-VOCAB-R001.101.7 Transcript and summary reads
 - [ ] T016 [US5] MEDULLA-MEDIA-VOCAB-R001.102.1 Model
 - [ ] T017 [US5] MEDULLA-MEDIA-VOCAB-R001.102.2 Search
 - [ ] T018 [US5] MEDULLA-MEDIA-VOCAB-R001.102.3 Relations

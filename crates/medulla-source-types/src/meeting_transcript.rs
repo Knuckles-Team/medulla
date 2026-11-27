@@ -16,6 +16,11 @@ pub const MAX_SUMMARY_SPANS: u32 = 128;
 pub const MAX_SUMMARY_SEGMENT_BYTES: u32 = 16_384;
 /// Fixed ceiling of `MeetingSummaryLimitPolicy::max_tokens`.
 pub const MAX_SUMMARY_TOKENS: u32 = 8_192;
+/// Events a `MeetingTranscriptRead` answers when the request names no limit
+/// (MEDULLA-MEDIA-VOCAB-R001.101.7).
+pub const DEFAULT_TRANSCRIPT_READ_LIMIT: u32 = 100;
+/// Fixed ceiling of `MeetingTranscriptReadRequest::limit`.
+pub const MAX_TRANSCRIPT_READ_LIMIT: u32 = 500;
 
 /// The refusal codes of the meeting transcript surface
 /// (MEDULLA-MEDIA-VOCAB-R001.101.6), `(code, meaning)`, sorted by code. A
@@ -57,6 +62,10 @@ pub const REFUSALS: &[(RefusalCode, &str)] = &[
     (
         RefusalCode::new("TRANSCRIPT_NOT_FINAL"),
         "the transcript revision is not finalized",
+    ),
+    (
+        RefusalCode::new("TRANSCRIPT_READ_LIMIT_INVALID"),
+        "the transcript read limit is zero or above its fixed ceiling",
     ),
     (
         RefusalCode::new("TRANSCRIPT_STALE"),
@@ -302,4 +311,107 @@ pub struct MeetingSummaryCommitReceipt {
     pub citation_count: u32,
     #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub transcript_digest: Digest256,
+}
+
+/// `MeetingTranscriptRead` request (MEDULLA-MEDIA-VOCAB-R001.101.7): the
+/// revision events of one meeting whose sequence is above `after_seq`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingTranscriptReadRequest {
+    pub meeting_id: String,
+    /// The cursor: only events with a greater `monotonic_event_sequence`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub after_seq: Option<u64>,
+    /// At most this many events (default 100, ceiling 500).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+}
+
+/// One revision event as the read answers it. It carries digests and revision
+/// numbers only, never segment text.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct TranscriptEventRecord {
+    pub sequence: u64,
+    /// The transcript revision this event produced (a correction's new revision).
+    pub revision: u64,
+    /// The event operation; absent for an event stored before it was recorded.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub op: Option<TranscriptRevisionOp>,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub text_digest: Digest256,
+    /// The sealed digest when this event finalized the transcript.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
+    pub finalization_digest: Option<Digest256>,
+}
+
+/// The answer of `MeetingTranscriptRead`. An unknown meeting and a meeting of
+/// another tenant answer the same empty transcript at revision 0.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingTranscriptReadAnswer {
+    pub meeting_id: String,
+    pub events: Vec<TranscriptEventRecord>,
+    /// The sequence of the last event of the whole transcript (0 when none).
+    pub last_sequence: u64,
+    /// The cursor for the next page: the last returned sequence, absent when
+    /// no event follows it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_seq: Option<u64>,
+    /// The current transcript revision.
+    pub transcript_revision: u64,
+    /// The revision of the latest sealed transcript a summary context is cut
+    /// from (0 when none is sealed).
+    pub context_revision: u64,
+    /// The latest seal, when one exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
+    pub finalization_digest: Option<Digest256>,
+}
+
+/// `MeetingSummaryGet` request (MEDULLA-MEDIA-VOCAB-R001.101.7): the stored
+/// summary `summary_id` of the meeting, or its latest one when absent.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryGetRequest {
+    pub meeting_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary_id: Option<String>,
+}
+
+/// One stored summary with its receipt evidence.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryRecord {
+    pub summary_id: String,
+    /// True once a later transcript revision made the summary's digest old.
+    pub stale: bool,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub transcript_digest: Digest256,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub context_digest: Digest256,
+    pub receipt_id: String,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub receipt_digest: Digest256,
+    #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
+    pub output_digest: Digest256,
+    pub provider: String,
+    pub model: String,
+    pub policy_revision: String,
+    pub claims: Vec<SummaryClaim>,
+}
+
+/// The answer of `MeetingSummaryGet`: `None` for an unknown summary and for
+/// one the caller cannot see, identically.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct MeetingSummaryGetAnswer {
+    pub summary: Option<MeetingSummaryRecord>,
 }

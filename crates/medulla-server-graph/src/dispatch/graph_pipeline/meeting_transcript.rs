@@ -1,6 +1,8 @@
 //! The graph-scoped routes of `MeetingTranscriptRevision`,
 //! `MeetingSummaryContext` and `MeetingSummaryCommit`
-//! (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5).
+//! (MEDULLA-MEDIA-VOCAB-R001.101.3 / .4 / .5), and the reads
+//! `MeetingTranscriptRead` and `MeetingSummaryGet` (R001.101.7), which see only
+//! the rows the caller's read authority admits.
 //!
 //! Each arrives after graph ACL, tenant binding, lazy-open and placement
 //! lookup, reads the meeting's transcript head (and, for a commit, the named
@@ -13,7 +15,7 @@ use super::repository_index::commit_context;
 use super::*;
 use medulla_h_ingest::meeting_transcript as transcript;
 
-/// Route the three meeting transcript methods; hand any other method back.
+/// Route the five meeting transcript methods; hand any other method back.
 pub async fn route_meeting_transcript(
     ctx: GraphOpRouting<'_>,
     method: Method,
@@ -22,6 +24,8 @@ pub async fn route_meeting_transcript(
         Method::MeetingTranscriptRevision { request } => Ok(revision(ctx, *request).await),
         Method::MeetingSummaryContext { request } => Ok(summary_context(ctx, *request).await),
         Method::MeetingSummaryCommit { request } => Ok(summary_commit(ctx, *request).await),
+        Method::MeetingTranscriptRead { request } => Ok(transcript_read(&ctx, &request)),
+        Method::MeetingSummaryGet { request } => Ok(summary_get(&ctx, &request)),
         other => Err(other),
     }
 }
@@ -134,4 +138,46 @@ async fn summary_commit(
         ),
     );
     commit(ctx, write_set, answer).await
+}
+
+fn transcript_read(
+    ctx: &GraphOpRouting<'_>,
+    request: &medulla_source_types::meeting_transcript::MeetingTranscriptReadRequest,
+) -> Response {
+    let answered = state(ctx, &request.meeting_id)
+        .and_then(|state| transcript::read::read_transcript(&state, request));
+    match answered {
+        Ok(answer) => Response::ok(
+            ctx.req_id,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::ingestion::MeetingTranscriptRead,
+            >(answer),
+        ),
+        Err(error) => Response::err(ctx.req_id, error),
+    }
+}
+
+fn summary_get(
+    ctx: &GraphOpRouting<'_>,
+    request: &medulla_source_types::meeting_transcript::MeetingSummaryGetRequest,
+) -> Response {
+    let answered = state(ctx, &request.meeting_id).and_then(|state| {
+        let mark = transcript::read::pick_summary(&state, request);
+        let row = mark.and_then(|mark| {
+            visible_properties(
+                ctx,
+                &transcript::read::summary_node_id(&request.meeting_id, &mark.summary_id),
+            )
+        });
+        transcript::read::summary_answer(mark, row.as_deref())
+    });
+    match answered {
+        Ok(answer) => Response::ok(
+            ctx.req_id,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::ingestion::MeetingSummaryGet,
+            >(answer),
+        ),
+        Err(error) => Response::err(ctx.req_id, error),
+    }
 }
