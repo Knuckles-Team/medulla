@@ -35,8 +35,11 @@ pub const MAX_DRIFT_LIST: usize = 500;
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DriftEvidence {
+    /// The stream that drifted.
     pub stream: ResourceId,
+    /// The classification of the drift.
     pub report: DriftReport,
+    /// The record shape the drifted delivery inferred.
     pub shape: InferredRecordShape,
 }
 
@@ -45,7 +48,9 @@ pub struct DriftEvidence {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DriftEvidenceRecord {
+    /// The connector the quarantined delivery came from.
     pub connector: ResourceId,
+    /// The drifted streams of the delivery.
     pub streams: Vec<DriftEvidence>,
 }
 
@@ -54,7 +59,9 @@ pub struct DriftEvidenceRecord {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DriftStreamView {
+    /// The drifted stream.
     pub stream: ResourceId,
+    /// The classification of the drift.
     pub report: DriftReport,
 }
 
@@ -65,9 +72,11 @@ pub struct DriftStreamView {
 pub struct DriftRecordView {
     /// The id of the quarantine node.
     pub drift_id: String,
+    /// The connector the quarantined delivery came from.
     pub connector: ResourceId,
     /// The delivery digest the quarantine was parked under.
     pub source_digest: String,
+    /// The drifted streams of the delivery.
     pub streams: Vec<DriftStreamView>,
 }
 
@@ -84,7 +93,9 @@ pub struct SchemaDriftListRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+/// The answer of `SchemaDriftList`.
 pub struct SchemaDriftListAnswer {
+    /// The quarantined drifts, each with its drifted streams.
     pub drifts: Vec<DriftRecordView>,
 }
 
@@ -92,7 +103,9 @@ pub struct SchemaDriftListAnswer {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+/// The reference of one drift: `SchemaDriftGet` reads it by id.
 pub struct SchemaDriftRef {
+    /// The id of the quarantine node.
     pub drift_id: String,
 }
 
@@ -101,7 +114,9 @@ pub struct SchemaDriftRef {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SchemaRepairTarget {
+    /// The id of the quarantine node.
     pub drift_id: String,
+    /// The drifted stream the repair targets.
     pub stream: ResourceId,
 }
 
@@ -110,10 +125,13 @@ pub struct SchemaRepairTarget {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SchemaRepairPreview {
+    /// The id of the quarantine node.
     pub drift_id: String,
+    /// The drifted stream the candidate repairs.
     pub stream: ResourceId,
     /// The `approved:<stream>` key the candidate attaches under.
     pub source_id: String,
+    /// The repair candidate the drift derives.
     pub candidate: RecordContract,
     /// The digest an approval grant must bind.
     pub candidate_digest: String,
@@ -122,6 +140,7 @@ pub struct SchemaRepairPreview {
     /// What the shadow check found in the graph's current data, as counts: a candidate with
     /// violations is shown with them here and refused at approval.
     pub shadow_check: ShadowCheckSummary,
+    /// True when the candidate was applied; a preview never applies it.
     pub applied: bool,
 }
 
@@ -130,7 +149,9 @@ pub struct SchemaRepairPreview {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SchemaRepairApproveRequest {
+    /// The id of the quarantine node.
     pub drift_id: String,
+    /// The drifted stream the approval covers.
     pub stream: ResourceId,
     /// The candidate digest the approval binds; must be the digest the drift derives.
     pub proposal_digest: String,
@@ -141,12 +162,17 @@ pub struct SchemaRepairApproveRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+/// The answer of `SchemaRepairApprove`: the repair that was approved.
 pub struct SchemaRepairApproved {
+    /// The id of the quarantine node.
     pub drift_id: String,
+    /// The drifted stream that was repaired.
     pub stream: ResourceId,
+    /// The digest of the candidate the approval bound.
     pub candidate_digest: String,
     /// False when the candidate was already the contract in force: nothing was written.
     pub activated: bool,
+    /// The composed schema digest after the approval.
     pub composed_digest: String,
 }
 

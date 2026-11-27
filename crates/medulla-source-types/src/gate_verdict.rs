@@ -160,8 +160,10 @@ pub fn landing_gate_check(
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct LandingPolicyPutRequest {
+    /// The landing policy to store.
     pub policy: LandingPolicy,
     #[serde(default)]
+    /// The operator approval that authorizes lowering the stored policy; absent for a write that does not lower it.
     pub approval: Option<ProjectModeApproval>,
 }
 
@@ -180,9 +182,13 @@ pub struct LandingPolicyReceipt {
 /// What `LandingPolicyPut` writes (not on the wire).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LandingPolicyWrite {
+    /// The request that was accepted.
     pub request: LandingPolicyPutRequest,
+    /// The policy node id, `landing_policy:<repo>:<branch>`.
     pub node_id: String,
+    /// True when the stored policy was lowered under an approval.
     pub lowered: bool,
+    /// True when the same policy was already stored.
     pub replayed: bool,
 }
 
