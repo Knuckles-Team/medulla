@@ -1939,6 +1939,7 @@ fn control_lease_end(
             expected_revision,
             to,
             idempotency_key: format!("end:{lease_id}:{expected_revision}:{to:?}"),
+            decided_by: String::new(),
         },
     }
 }

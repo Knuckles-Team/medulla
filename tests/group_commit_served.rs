@@ -32,6 +32,7 @@ fn mutation(graph: &str, node_id: &str) -> (Cmd, oneshot::Receiver<Result<(), St
             graph: graph.to_string(),
             method: Box::new(add_node(node_id)),
             done,
+            write_count: None,
         },
         rx,
     )

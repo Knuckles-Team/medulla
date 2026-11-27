@@ -92,6 +92,7 @@ impl Served {
                 code_map: None,
                 retrieval: None,
                 latency_class: Default::default(),
+                spec_report: None,
             })
             .await;
         test_support::raw_rows(&r)

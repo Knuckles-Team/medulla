@@ -68,6 +68,7 @@ async fn register(
         name: name.into(),
         source,
         quota,
+        acceleration: None,
     };
     test_support::dispatch(state, test_support::commons_request(SECRET, id, method)).await
 }
@@ -80,6 +81,7 @@ async fn read(state: &test_support::SharedState, id: u64, name: &str) -> Respons
         code_map: None,
         retrieval: None,
         latency_class: Default::default(),
+        spec_report: None,
     };
     test_support::dispatch(state, test_support::commons_request(SECRET, id, method)).await
 }

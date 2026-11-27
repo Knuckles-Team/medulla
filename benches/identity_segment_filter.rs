@@ -35,6 +35,7 @@ fn caller() -> ReadCaller {
             tenant: "tenant-0".to_owned(),
         },
         tenant: TenantId::new("tenant-0").ok(),
+        held_markings: Default::default(),
     }
 }
 

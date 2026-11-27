@@ -112,6 +112,7 @@ async fn sparql(state: &test_support::SharedState, id: u64, query: String,
             explain: false,
             requires_packs: Vec::new(),
             graph_media_type: None,
+            latency_class: Default::default(),
         },
     )
     .await;

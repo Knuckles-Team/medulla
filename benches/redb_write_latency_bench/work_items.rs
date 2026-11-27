@@ -417,6 +417,7 @@ fn paired_sample(sample: usize) -> f64 {
         expected_revision: 1,
         to: ControlLeaseTarget::Consumed,
         idempotency_key: format!("bench-consume-{sample}"),
+        decided_by: String::new(),
     };
     let started = Instant::now();
     let payload = test_shard::apply(

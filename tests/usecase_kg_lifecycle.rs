@@ -377,6 +377,7 @@ async fn validate_commit_infer_reindex_under_concurrency_eg438() {
                     code_map: None,
                     retrieval: None,
                     latency_class: Default::default(),
+                    spec_report: None,
                 },
             ),
         )

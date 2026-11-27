@@ -287,6 +287,7 @@ async fn inline_adapter_refused_named_source_grounds() {
                 },
             },
             quota: None,
+            acceleration: None,
         },
     )
     .await;

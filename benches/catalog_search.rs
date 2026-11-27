@@ -54,6 +54,8 @@ fn assets() -> Vec<AssetDoc> {
                 1 => vec![TrustFlag::Deprecation],
                 _ => Vec::new(),
             },
+            article_status: None,
+            described: Vec::new(),
         })
         .collect()
 }

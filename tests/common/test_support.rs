@@ -607,6 +607,7 @@ pub async fn unified_query(
                 code_map: None,
                 retrieval: None,
                 latency_class: Default::default(),
+                spec_report: None,
             },
         ),
     )
