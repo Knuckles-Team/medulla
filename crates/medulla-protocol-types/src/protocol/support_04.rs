@@ -172,6 +172,63 @@ pub const UNCLASSIFIED_DETAIL: &str = "unclassified engine refusal";
 pub static UNCLASSIFIED_REFUSALS: std::sync::atomic::AtomicU64 =
     std::sync::atomic::AtomicU64::new(0);
 
+/// The same count by the crate that reported the refusal, behind the series
+/// `medulla_refusal_unclassified_total{module}` (MEDULLA-OBSERVE-R001.3). The label is a
+/// crate name, so it is bounded by the workspace and never names a request value.
+static UNCLASSIFIED_BY_MODULE: std::sync::Mutex<std::collections::BTreeMap<String, u64>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+/// The crate a source file belongs to: `crates/<name>/...` is `<name>`, any other path is the
+/// root package.
+fn module_of(file: &str) -> &str {
+    file.strip_prefix("crates/")
+        .and_then(|rest| rest.split('/').next())
+        .unwrap_or("medulla-engine")
+}
+
+/// Uncoded refusals reported since the process started, by reporting crate, ascending by name.
+pub fn unclassified_by_module() -> Vec<(String, u64)> {
+    UNCLASSIFIED_BY_MODULE
+        .lock()
+        .map(|counts| counts.iter().map(|(module, n)| (module.clone(), *n)).collect())
+        .unwrap_or_default()
+}
+
+/// One uncoded refusal a test harness can read back.
+#[cfg(feature = "test-support")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnclassifiedRefusal {
+    /// The id of the request the refusal answered.
+    pub request_id: u64,
+    /// The cause reference the wire answer carries.
+    pub cause: CauseRef,
+    /// The crate that reported it.
+    pub module: String,
+}
+
+/// The newest uncoded refusals, bounded; kept only in a test-support build.
+#[cfg(feature = "test-support")]
+static UNCLASSIFIED_LOG: std::sync::Mutex<std::collections::VecDeque<UnclassifiedRefusal>> =
+    std::sync::Mutex::new(std::collections::VecDeque::new());
+
+/// The most uncoded refusals the test-support log keeps.
+#[cfg(feature = "test-support")]
+const UNCLASSIFIED_LOG_CAPACITY: usize = 4096;
+
+/// The uncoded refusals reported for any request id `wanted` accepts, oldest first.
+#[cfg(feature = "test-support")]
+pub fn unclassified_refusals(wanted: impl Fn(u64) -> bool) -> Vec<UnclassifiedRefusal> {
+    UNCLASSIFIED_LOG
+        .lock()
+        .map(|log| {
+            log.iter()
+                .filter(|entry| wanted(entry.request_id))
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// A short, stable reference that ties a wire `INTERNAL` to the one WARN log
 /// line holding the full refusal text (MEDULLA-OBSERVE-R001.2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -212,6 +269,7 @@ impl Response {
     }
 
     /// Create an error response.
+    #[track_caller]
     pub fn err(id: u64, error: impl Into<String>) -> Self {
         let text = error.into();
         let (error, error_detail) = match text.split_once(": ") {
@@ -230,6 +288,21 @@ impl Response {
                     // by a cause reference (MEDULLA-OBSERVE-R001.2).
                     let cause = CauseRef::of(&text);
                     UNCLASSIFIED_REFUSALS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let module = module_of(std::panic::Location::caller().file()).to_string();
+                    #[cfg(feature = "test-support")]
+                    if let Ok(mut log) = UNCLASSIFIED_LOG.lock() {
+                        if log.len() >= UNCLASSIFIED_LOG_CAPACITY {
+                            log.pop_front();
+                        }
+                        log.push_back(UnclassifiedRefusal {
+                            request_id: id,
+                            cause,
+                            module: module.clone(),
+                        });
+                    }
+                    if let Ok(mut counts) = UNCLASSIFIED_BY_MODULE.lock() {
+                        *counts.entry(module).or_insert(0) += 1;
+                    }
                     tracing::warn!(
                         target: "medulla::refusal",
                         request_id = id,

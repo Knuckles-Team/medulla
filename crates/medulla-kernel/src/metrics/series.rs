@@ -259,6 +259,8 @@ pub struct KernelMetrics {
     pub(super) store_migration_steps_total: IntCounterVec,
     pub(super) shard_writer_inflight: IntGaugeVec,
     pub(super) shard_writer_commit_seconds: HistogramVec,
+    pub(super) refusal_unclassified_total: IntCounterVec,
+    pub(super) refusal_unclassified_synced: Mutex<std::collections::BTreeMap<String, u64>>,
 }
 
 impl KernelMetrics {
@@ -806,6 +808,13 @@ impl KernelMetrics {
             &["shard"],
             lock_gap_buckets(),
         ),
+            refusal_unclassified_total: counter_vec(&registry,
+            "medulla_refusal_unclassified_total",
+            "Refusals a handler reported without a declared code, answered as INTERNAL with a \
+             cause reference, by the crate that reported them (MEDULLA-OBSERVE-R001.3)",
+            &["module"],
+        ),
+            refusal_unclassified_synced: Mutex::new(std::collections::BTreeMap::new()),
             registry,
         }
     }

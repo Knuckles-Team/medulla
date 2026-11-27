@@ -28,6 +28,8 @@ fn next_id() -> u64 {
 struct Served {
     _dir: tempfile::TempDir,
     state: Arc<RwLock<ServerState>>,
+    /// Fails the test when one of its requests was answered by an uncoded refusal.
+    tap: crate::refusal_tap::RefusalTap,
 }
 
 impl Served {
@@ -49,7 +51,11 @@ impl Served {
         ));
         let state = Arc::new(RwLock::new(state));
         medulla_server::seams_install::install_seams_on(&state).await;
-        Self { _dir: dir, state }
+        Self {
+            _dir: dir,
+            state,
+            tap: crate::refusal_tap::RefusalTap::new(),
+        }
     }
 
     /// One request as `PRINCIPAL` on `graph`, through the verified dispatch.
@@ -60,6 +66,7 @@ impl Served {
     /// One request as `PRINCIPAL` holding exactly `scopes`.
     async fn call_as(&self, graph: &str, method: Method, scopes: Vec<String>) -> Response {
         let id = next_id();
+        self.tap.issue(id);
         let claims = RequestContextClaims {
             principal: PRINCIPAL.to_string(),
             agent_id: PRINCIPAL.to_string(),
@@ -764,4 +771,50 @@ async fn introspect_rows_carry_no_token_or_payload() {
     assert!(!denial.contains(graph), "the refusal names a graph: {denial}");
     // The call writes nothing: the catalog is unchanged.
     assert_eq!(served.state.read().await.registry.catalog_len(), catalog_before);
+}
+
+// spec: MEDULLA-OBSERVE-R001.3
+#[tokio::test(flavor = "multi_thread")]
+async fn collapsed_refusal_fails_the_harness() {
+    use crate::refusal_tap::RefusalTap;
+    let served = Served::new().await;
+
+    // A typed refusal through the served path is never a collapse.
+    let refused = served
+        .introspect(IntrospectSection::Tasks, Some(0), None)
+        .await;
+    assert!(refusal(refused).starts_with("INTROSPECT_LIMIT_INVALID"));
+    served.tap.assert_no_collapse();
+
+    // A handler error without a code answers INTERNAL and the tap sees it for its own request.
+    let text = "graph shard 9 lock poisoned: observe harness fixture";
+    let tap = RefusalTap::new();
+    let id = next_id();
+    tap.issue(id);
+    let response = Response::err(id, text);
+    assert_eq!(response.error.as_deref(), Some("INTERNAL"));
+    let collapsed = tap.collapsed();
+    assert_eq!(collapsed.len(), 1);
+    assert_eq!(collapsed[0].request_id, id);
+    assert!(
+        collapsed[0].module.starts_with("medulla-server-served-tests"),
+        "the reporting crate is named: {}",
+        collapsed[0].module
+    );
+    // The harness fails the test at its end: the check panics while the collapse is undeclared.
+    let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        tap.assert_no_collapse();
+    }));
+    assert!(failed.is_err(), "an undeclared collapse must fail the harness");
+    // A request the tap did not issue is none of its business: parallel tests stay independent.
+    let other = Response::err(next_id(), "another test's uncoded refusal");
+    assert_eq!(other.error.as_deref(), Some("INTERNAL"));
+    assert_eq!(tap.collapsed().len(), 1);
+    // Declaring the text makes the collapse expected, and the drop at the end of the test passes.
+    tap.expect_unclassified(text);
+    assert!(tap.collapsed().is_empty());
+    // The series counts the collapse by the reporting crate.
+    assert!(medulla_protocol_types::protocol::unclassified_by_module()
+        .iter()
+        .any(|(module, count)| module.starts_with("medulla-server-served-tests") && *count >= 2));
 }

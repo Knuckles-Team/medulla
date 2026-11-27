@@ -399,6 +399,7 @@ impl KernelMetrics {
 
     /// Render the full registry in Prometheus text exposition format.
     pub fn render(&self) -> String {
+        self.sync_unclassified_refusals();
         let encoder = TextEncoder::new();
         let mut buf = Vec::new();
         if encoder.encode(&self.registry.gather(), &mut buf).is_err() {
