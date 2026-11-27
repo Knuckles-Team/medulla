@@ -16,6 +16,8 @@ path = "src/lib.rs"
 # Linux target with glibc; on any other target `Profile` answers `PROFILE_UNAVAILABLE`.
 default = ["profiler"]
 profiler = ["dep:libc", "dep:medulla-version"]
+# The fault injection of the chaos proof (MEDULLA-OBSERVE-R012); off in every release build.
+chaos = []
 
 [dependencies]
 futures-util = { version = "0.3", default-features = false, features = ["std"] }

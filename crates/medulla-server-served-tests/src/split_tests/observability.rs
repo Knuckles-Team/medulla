@@ -1451,3 +1451,152 @@ async fn task_dump_is_one_consistent_snapshot() {
     drop(held);
     drop(dumped);
 }
+
+// spec: MEDULLA-OBSERVE-R012.1
+// spec: MEDULLA-OBSERVE-R012.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn chaos_stalled_task_and_spinning_loop_are_named() {
+    use medulla_observe::registry::tasks::{TaskKind, TaskSpec};
+    let served = Served::new().await;
+
+    // StallTask: a paging task that reports once and never again is listed Stalled with the
+    // location that registered it, and the graph it pages names it as the blocker. The scan
+    // takes the clock as an argument, so the test waits on none.
+    let graph = "observe:chaos-stall";
+    let task = format!("lazy-page-in:{graph}");
+    medulla_observe::readiness().open(graph);
+    let stalled = medulla_observe::chaos::stall_task(&task);
+    let at = stalled.row().last_progress_unix_ms;
+    let found = medulla_observe::watchdog::scan(
+        medulla_observe::global(),
+        medulla_observe::readiness(),
+        at + 501,
+        500,
+    );
+    assert!(found.iter().any(|stalled| stalled.row.name == task));
+    let page = served.page(IntrospectSection::Tasks).await;
+    let row = page
+        .rows
+        .iter()
+        .find(|row| row["name"] == task.as_str())
+        .expect("the stalled task is listed");
+    assert_eq!(row["state"], "stalled");
+    assert!(
+        row["registered_location"]
+            .as_str()
+            .is_some_and(|location| location.contains("observability.rs")),
+        "the row names where the task was registered: {}",
+        row["registered_location"]
+    );
+    let readiness = health(&served).await.readiness.unwrap();
+    assert!(readiness
+        .blockers
+        .iter()
+        .any(|blocker| blocker.graph == graph && blocker.task.as_deref() == Some(task.as_str())));
+    medulla_observe::readiness().remove(graph);
+    drop(stalled);
+
+    // SpinLoop behind its guard ends with NO_PROGRESS, naming the loop and where the guard is.
+    let error = medulla_observe::chaos::spin_guarded("chaos-spin")
+        .await
+        .expect_err("a loop whose cursor never moves must end");
+    assert_eq!(error.name, "chaos-spin");
+    assert_eq!(error.code().as_str(), "NO_PROGRESS");
+    assert!(medulla_observe::registry::tasks::file_line(error.location)
+        .contains("observability.rs"));
+    // The same loop as a registered task ends Failed with the typed code.
+    medulla_observe::spawn::spawn(
+        TaskSpec {
+            name: "chaos-spin-task".to_string(),
+            owner: "test".to_string(),
+            kind: TaskKind::External,
+        },
+        async {
+            medulla_observe::chaos::spin_guarded("chaos-spin-task")
+                .await
+                .map_err(|error| error.to_string())
+        },
+    )
+    .await
+    .unwrap();
+    let row = medulla_observe::global().get("chaos-spin-task").unwrap();
+    assert_eq!(row.state, medulla_observe::machine::task::TaskState::Failed);
+    assert_eq!(
+        row.failure
+            .as_ref()
+            .map(medulla_observe::machine::task::TaskFailure::code),
+        Some("NO_PROGRESS")
+    );
+
+    // With the guard bypassed the loop pins one worker: the runtime section flags it spinning.
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let pinned = medulla_observe::chaos::spin_pinned(stop.clone());
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let page = served.page(IntrospectSection::Runtime).await;
+        if page.rows.iter().any(|row| row["spinning"] == true) {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no worker was flagged spinning"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    // A profile taken while the worker is pinned samples the threads of the process.
+    if medulla_observe::profile::available() {
+        let report = profile_report(
+            "Profile stacks",
+            served
+                .call(
+                    "__commons__",
+                    Method::Profile {
+                        kind: medulla_types::introspect::ProfileKind::Stacks,
+                        seconds: 1,
+                    },
+                )
+                .await,
+        );
+        assert!(report.samples > 0);
+    }
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    pinned.await.unwrap();
+}
+
+// spec: MEDULLA-OBSERVE-R012.3
+#[tokio::test(flavor = "multi_thread")]
+async fn frozen_paging_cursor_ends_typed_and_degrades_graph() {
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let served = Served::new().await;
+    let graph = "observe:frozen";
+    medulla_observe::chaos::freeze_cursor(graph);
+    served.lazy_graph(graph, 25, 5).await;
+
+    // The paging loop meets the same cursor again and ends NO_PROGRESS, naming itself.
+    let row = finished_task(&format!("lazy-page-in:{graph}")).await;
+    assert_eq!(row.state, medulla_observe::machine::task::TaskState::Failed);
+    assert_eq!(
+        row.failure
+            .as_ref()
+            .map(medulla_observe::machine::task::TaskFailure::code),
+        Some("NO_PROGRESS")
+    );
+    // The graph is degraded, with the paging task as the reason.
+    let readiness = medulla_observe::readiness().get(graph).expect("a readiness row");
+    assert_eq!(
+        readiness.state,
+        medulla_observe::machine::readiness::ReadinessState::Degraded
+    );
+    let reason = readiness.reason.expect("a degraded graph has a reason");
+    assert_eq!(reason.code, "NO_PROGRESS");
+    assert_eq!(reason.task.as_deref(), Some(format!("lazy-page-in:{graph}").as_str()));
+
+    // The failed partial core was evicted; the next read opens the graph again in pages of five
+    // and meets the partial image: it is refused PARTIAL_MATERIALIZATION, typed on the wire.
+    std::env::set_var("MEDULLA_LAZY_OPEN_PAGE_SIZE", "5");
+    let read = served.call(graph, Method::NodeIds).await;
+    std::env::remove_var("MEDULLA_LAZY_OPEN_PAGE_SIZE");
+    medulla_observe::chaos::thaw_cursor(graph);
+    assert_eq!(read.error.as_deref(), Some("PARTIAL_MATERIALIZATION"), "{read:?}");
+    assert!(read.error_detail.as_deref().is_some_and(|detail| detail.contains("\"phase\"")));
+}

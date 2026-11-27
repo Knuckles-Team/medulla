@@ -12,6 +12,7 @@
 #![deny(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod chaos;
 pub mod events;
 pub mod machine;
 pub mod profile;

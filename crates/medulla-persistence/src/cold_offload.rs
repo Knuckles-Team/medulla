@@ -604,6 +604,14 @@ async fn page_in_remaining(
         let next = medulla_core::registry::GraphRegistry::apply_lazy_page_to_handle(
             &ticket, &handle, &manifest, page,
         );
+        // MEDULLA-OBSERVE-R012.3: the fault `FreezeCursor` holds the paging cursor where the page
+        // started, so the progress guard below meets the same cursor again. It never fires in a
+        // build without the `chaos` feature of `medulla-observe`.
+        let next = if next.is_some() && medulla_observe::chaos::cursor_frozen(ticket.name()) {
+            Some(paged_from.clone())
+        } else {
+            next
+        };
         match next {
             Some(c) => {
                 if let Err(stuck) = guard.check(&keyset_progress(&c)) {
