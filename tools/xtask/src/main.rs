@@ -9,6 +9,7 @@ mod canonical_property_schema;
 mod ci_affected_crates;
 mod ci_change_scope;
 mod crate_isolation;
+mod crate_size_budget;
 mod decide_budgets;
 mod dispatch_decomposition;
 mod fanout_host_groups;
@@ -189,6 +190,14 @@ const CHECKS: &[Check] = &[
         name: crate_isolation::NAME,
         summary: crate_isolation::SUMMARY,
         run: crate_isolation::run,
+        standalone: true,
+        needs_git: false,
+    },
+    Check {
+        name: crate_size_budget::NAME,
+        summary: crate_size_budget::SUMMARY,
+        run: crate_size_budget::run,
+        // Not yet green: MEDULLA-CONTRACT-R067.14 flips this once the crates are split.
         standalone: true,
         needs_git: false,
     },
