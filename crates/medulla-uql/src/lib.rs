@@ -56,7 +56,7 @@ pub mod parser;
 pub mod print;
 /// Running a parsed statement: rows with score channels, EXPLAIN, PROFILE (UQL-07/08/09).
 pub use diag::render_caret;
-use diag::{UqlError, UqlWarnCode, UqlWarning, ALL_CODES};
+pub use diag::{UqlError, UqlWarnCode, UqlWarning, ALL_CODES};
 use medulla_types::contract::UqlCode;
 pub use parser::call_stored::{CallArg, CallStored};
 #[cfg(feature = "query")]
