@@ -451,7 +451,8 @@ impl LearningWrite {
             | Self::RecordFeedback { .. }
             | Self::PackageRun { .. }
             | Self::RecordSessionNote { .. }
-            | Self::RecordRollouts { .. } => LogOpClass::Write,
+            | Self::RecordRollouts { .. }
+            | Self::RecordAblation { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
             | Self::FitCalibration { .. }
@@ -464,6 +465,8 @@ impl LearningWrite {
             | Self::EvaluateDrift { .. }
             | Self::RegisterDriftPolicy { .. }
             | Self::RefreshDrift { .. }
+            | Self::RecordCanary { .. }
+            | Self::RecordModelCompile { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }
