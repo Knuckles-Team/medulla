@@ -556,10 +556,12 @@ async fn accept_followers(
                 ctx.req_id,
                 std::sync::Arc::clone(&store),
                 owner.clone(),
-                changeset,
-                &follow.branch,
-                *seq,
-                source.clone(),
+                crate::dispatch::changeset_lifecycle::AcceptedChangeset {
+                    changeset,
+                    branch: &follow.branch,
+                    seq: *seq,
+                    chain: source.clone(),
+                },
             ))
             .await?;
         }

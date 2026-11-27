@@ -527,7 +527,7 @@ async fn move_request(
     to: ChangeRequestState,
     extra: Properties,
 ) -> Result<ChangeRequest, String> {
-    let next = transition(stored.request.state, to).map_err(|error| invalid(error))?;
+    let next = transition(stored.request.state, to).map_err(invalid)?;
     let mut request = stored.request.clone();
     request.state = next;
     let mut conditions = Properties::new();

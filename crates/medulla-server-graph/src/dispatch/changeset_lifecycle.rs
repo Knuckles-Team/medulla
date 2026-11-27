@@ -478,6 +478,14 @@ pub async fn resolve_waiting(
     apply(state, verified, req_id, repo, operations).await
 }
 
+/// An accepted changeset with where it sits: carried at `seq` of its chain on `branch`.
+pub struct AcceptedChangeset<'a> {
+    pub changeset: &'a Changeset,
+    pub branch: &'a str,
+    pub seq: u64,
+    pub chain: BranchChain,
+}
+
 /// Derive and write the lifecycle edges of the accepted `changeset`, carried at `seq` of its
 /// chain on `branch`. `Ok(())` when the repository graph is not resident. A refusal
 /// (`CHANGESET_NODE_CONFLICT`, `LIFECYCLE_ENDPOINT_UNKNOWN`) is returned as its coded text and
@@ -488,11 +496,14 @@ pub async fn accept_edges(
     req_id: u64,
     store: Arc<dyn ChunkStore>,
     owner: String,
-    changeset: &Changeset,
-    branch: &str,
-    seq: u64,
-    chain: BranchChain,
+    accepted: AcceptedChangeset<'_>,
 ) -> Result<(), String> {
+    let AcceptedChangeset {
+        changeset,
+        branch,
+        seq,
+        chain,
+    } = accepted;
     let repo = changeset.repo.clone();
     ensure_graph_resident(state, &repo).await;
     let resolved = {

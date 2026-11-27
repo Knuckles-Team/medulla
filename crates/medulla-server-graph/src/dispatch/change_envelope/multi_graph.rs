@@ -62,7 +62,7 @@ pub async fn multi_graph_batch_update(
     let saga =
         match begin_multi_graph_saga(redb, req_id, verified_context, batches_msgpack, clustered) {
             Ok(saga) => saga,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
     let report = if batches.is_empty() {
         txn_results::MultiGraphBatchReport::default()
@@ -125,7 +125,7 @@ fn begin_multi_graph_saga(
     verified_context: &VerifiedRequestContext,
     batches_msgpack: &[u8],
     clustered: bool,
-) -> Result<Option<medulla_server_ops::api::admin::saga::AdminSaga>, Response> {
+) -> Result<Option<medulla_server_ops::api::admin::saga::AdminSaga>, Box<Response>> {
     if clustered {
         return Ok(None);
     }
@@ -142,9 +142,9 @@ fn begin_multi_graph_authorized_saga(
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     method: &Method,
-) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
+) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Box<Response>> {
     let authority = CarrierAuthority::from_verified(verified_context)
-        .map_err(|error| Response::err(req_id, error))?;
+        .map_err(|error| Box::new(Response::err(req_id, error)))?;
     medulla_server_ops::api::admin::saga::begin_authenticated_admin_saga(
         redb,
         req_id,
@@ -153,22 +153,22 @@ fn begin_multi_graph_authorized_saga(
         medulla_mutation_types::mutation_scope::DurabilityDomain::MultiGraph,
         authority.attempt_nonce(),
     )
-    .map_err(|error| Response::err(req_id, error))
+    .map_err(|error| Box::new(Response::err(req_id, error)))
 }
 
 #[cfg(feature = "redb")]
 fn finish_multi_graph_saga_begin(
     req_id: u64,
     saga: medulla_server_ops::api::admin::saga::AdminSaga,
-) -> Result<Option<medulla_server_ops::api::admin::saga::AdminSaga>, Response> {
+) -> Result<Option<medulla_server_ops::api::admin::saga::AdminSaga>, Box<Response>> {
     if saga.prepared {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "multi-graph saga is Prepared; refusing to re-execute",
-        ));
+        )));
     }
     if let Some(result) = saga.replayed.clone() {
-        return Err(Response::ok(req_id, result));
+        return Err(Box::new(Response::ok(req_id, result)));
     }
     Ok(Some(saga))
 }

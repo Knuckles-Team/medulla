@@ -65,10 +65,10 @@ pub fn resolve_graph_read_authority(
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     isolation: &medulla_isolation::isolation::IsolationLayer,
-) -> Result<(GraphReadAuthority, String), Response> {
+) -> Result<(GraphReadAuthority, String), Box<Response>> {
     let authority = match GraphReadAuthority::from_verified(verified_context, isolation) {
         Ok(authority) => authority,
-        Err(denied) => return Err(Response::err(req_id, denied)),
+        Err(denied) => return Err(Box::new(Response::err(req_id, denied))),
     };
     let tenant_scope = authority
         .carrier()
@@ -113,7 +113,7 @@ pub fn gate_graph_op_under_lock(
     method: &Method,
     access: AccessLevel,
     state_machine_authorized: bool,
-) -> Result<GraphOpGate, Response> {
+) -> Result<GraphOpGate, Box<Response>> {
     let GraphOpContext {
         graph_name,
         req_id,
@@ -132,7 +132,7 @@ pub fn gate_graph_op_under_lock(
         resolve_graph_read_authority(req_id, verified_context, &s.isolation)?;
     let verified_actor = match read_authority.verified_actor() {
         Ok(actor) => actor.to_string(),
-        Err(denied) => return Err(Response::err(req_id, denied)),
+        Err(denied) => return Err(Box::new(Response::err(req_id, denied))),
     };
     let gateway_authz_ctx = graph_op_gateway_authz_ctx(s, method, &entry);
     Ok(GraphOpGate {
@@ -192,7 +192,7 @@ pub fn check_graph_op_access(
     graph_name: &str,
     access: AccessLevel,
     state_machine_authorized: bool,
-) -> Result<GraphEntryFacts, Response> {
+) -> Result<GraphEntryFacts, Box<Response>> {
     check_known_caller(
         &s.isolation,
         req_id,
@@ -202,10 +202,10 @@ pub fn check_graph_op_access(
         state_machine_authorized,
     )?;
     let Some(entry) = s.registry.get(graph_name) else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             format!("INVALID_ARGUMENT: Graph '{graph_name}' not found"),
-        ));
+        )));
     };
     check_materialization_valid(&s.registry, req_id, graph_name)?;
     if !state_machine_authorized {
@@ -218,7 +218,7 @@ pub fn check_graph_op_access(
             entry.importing.as_deref(),
             access,
         ) {
-            return Err(Response::err(req_id, denied));
+            return Err(Box::new(Response::err(req_id, denied)));
         }
     }
     Ok(GraphEntryFacts {
@@ -311,10 +311,10 @@ pub fn check_known_caller(
     graph_name: &str,
     access: AccessLevel,
     state_machine_authorized: bool,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if !state_machine_authorized {
         if let Err(denied) = check_caller_is_known(isolation, caller, graph_name, access) {
-            return Err(Response::err(req_id, denied));
+            return Err(Box::new(Response::err(req_id, denied)));
         }
     }
     Ok(())
@@ -324,7 +324,7 @@ pub fn check_materialization_valid(
     registry: &medulla_core::registry::GraphRegistry,
     req_id: u64,
     graph_name: &str,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if let Some(manifest) = registry.materialization_manifest(graph_name) {
         if !manifest.valid() {
             let phase = match manifest.phase {
@@ -344,13 +344,13 @@ pub fn check_materialization_valid(
             });
             // The declared code leads the text so the wire keeps it
             // (MEDULLA-OBSERVE-R001.1); the detail stays machine-readable JSON.
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 format!(
                     "{}: {detail}",
                     medulla_types::contract::ServerErrorCode::PartialMaterialization
                 ),
-            ));
+            )));
         }
     }
     Ok(())

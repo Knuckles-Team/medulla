@@ -496,16 +496,23 @@ mod tests {
 
     const SCOPE: &str = "tenant-a";
 
-    fn seed(
-        core: &GraphCore,
-        id: &str,
-        scope: &str,
-        account: &str,
-        kind: &str,
-        position: &str,
-        date: &str,
-        extra: &[(&str, &str)],
-    ) {
+    /// The fixed columns of one seeded activity record.
+    struct Activity<'a> {
+        scope: &'a str,
+        account: &'a str,
+        kind: &'a str,
+        position: &'a str,
+        date: &'a str,
+    }
+
+    fn seed(core: &GraphCore, id: &str, activity: &Activity<'_>, extra: &[(&str, &str)]) {
+        let Activity {
+            scope,
+            account,
+            kind,
+            position,
+            date,
+        } = *activity;
         let mut fields: BTreeMap<&str, String> = BTreeMap::new();
         fields.insert("activityKind", format!("\"{kind}\""));
         fields.insert(
@@ -550,16 +557,14 @@ mod tests {
                 extra.push(("recordKnownAt", format!("\"{known}\"^^xsd:dateTime")));
             }
             let extra: Vec<(&str, &str)> = extra.iter().map(|(a, b)| (*a, b.as_str())).collect();
-            seed(
-                &core,
-                id,
+            let activity = Activity {
                 scope,
-                "acct",
+                account: "acct",
                 kind,
-                "account-value",
+                position: "account-value",
                 date,
-                &extra,
-            );
+            };
+            seed(&core, id, &activity, &extra);
         };
         put(
             "v1",
@@ -627,16 +632,14 @@ mod tests {
                 extra.push(("recordKnownAt", format!("\"{known}\"^^xsd:dateTime")));
             }
             let extra: Vec<(&str, &str)> = extra.iter().map(|(a, b)| (*a, b.as_str())).collect();
-            seed(
-                &core,
-                id,
-                SCOPE,
-                "account-benchmark",
-                "benchmark_level",
-                "spx",
+            let activity = Activity {
+                scope: SCOPE,
+                account: "account-benchmark",
+                kind: "benchmark_level",
+                position: "spx",
                 date,
-                &extra,
-            );
+            };
+            seed(&core, id, &activity, &extra);
         };
         put("b1", "2026-01-02T00:00:00Z", "100", None);
         put(

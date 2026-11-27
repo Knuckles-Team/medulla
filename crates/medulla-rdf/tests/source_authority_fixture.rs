@@ -275,7 +275,7 @@ fn service_seed_passes_shape() {
         (service.clone(), health.clone()),
         (service.clone(), RDFS_LABEL.to_string()),
     ];
-    let got = verdicts(&fixture, &[service.clone()], &facets);
+    let got = verdicts(&fixture, std::slice::from_ref(&service), &facets);
     // Health: uptime first, lgtm second. Identity: the CMDB.
     assert_eq!(
         covered(&got, &service, Some(&health)),

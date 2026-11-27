@@ -82,7 +82,8 @@ async fn capture_graph_dispatch<'a>(
         method,
         access,
         state_machine_authorized,
-    )?;
+    )
+    .map_err(|response| *response)?;
     let GraphOpGate {
         entry,
         read_authority,

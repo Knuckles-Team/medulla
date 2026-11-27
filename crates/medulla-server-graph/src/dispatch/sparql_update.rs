@@ -322,10 +322,10 @@ fn begin_sealed_sparql_saga(
     plan: &SparqlRecoveryPlan,
     batch_id: &str,
     event_type: &str,
-) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
+) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Box<Response>> {
     let (digest, encrypted) = match seal_private_coordinator_plan(coord.redb, plan) {
         Ok(value) => value,
-        Err(error) => return Err(Response::err(coord.req_id, error)),
+        Err(error) => return Err(Box::new(Response::err(coord.req_id, error))),
     };
     medulla_server_ops::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
         coord.redb,
@@ -340,7 +340,7 @@ fn begin_sealed_sparql_saga(
             encrypted_payload: &encrypted,
         },
     )
-    .map_err(|error| Response::err(coord.req_id, error))
+    .map_err(|error| Box::new(Response::err(coord.req_id, error)))
 }
 
 /// First attempt: resolve the graph set, gate access, plan the before/after
@@ -386,7 +386,8 @@ async fn build_sparql_update_plan(
         counts,
         request_sha256: sparql_request_sha256(query),
     };
-    let saga = begin_sealed_sparql_saga(coord, &plan, coord.parent_id, SPARQL_RECOVERY_EVENT)?;
+    let saga = begin_sealed_sparql_saga(coord, &plan, coord.parent_id, SPARQL_RECOVERY_EVENT)
+        .map_err(|response| *response)?;
     Ok((saga, plan))
 }
 
@@ -613,7 +614,7 @@ async fn try_sparql_forward_commit(
         SPARQL_COMPENSATION_EVENT,
     ) {
         Ok(marker) => SparqlForwardOutcome::Compensate(Box::new((saga, marker))),
-        Err(response) => SparqlForwardOutcome::Settled(Box::new(response)),
+        Err(response) => SparqlForwardOutcome::Settled(response),
     }
 }
 

@@ -470,13 +470,15 @@ mod served {
                                         req.id,
                                         Arc::clone(&store),
                                         merge_owner,
-                                        &changeset,
-                                        &request.branch,
-                                        seq,
-                                        medulla_server_graph::dispatch::changeset_lifecycle::BranchChain::new(
-                                            target.registry(),
-                                            target.reference.clone(),
-                                        ),
+                                        medulla_server_graph::dispatch::changeset_lifecycle::AcceptedChangeset {
+                                            changeset: &changeset,
+                                            branch: &request.branch,
+                                            seq,
+                                            chain: medulla_server_graph::dispatch::changeset_lifecycle::BranchChain::new(
+                                                target.registry(),
+                                                target.reference.clone(),
+                                            ),
+                                        },
                                     )
                                     .await
                                 }

@@ -61,16 +61,19 @@ mod imp {
         medulla_types::msgpack::decode_property_value(&bytes).ok()
     }
 
-    fn refuse(ctx: &GraphOpRouting<'_>, error: EnrichError) -> Response {
-        Response::err(ctx.req_id, error.to_string())
+    fn refuse(ctx: &GraphOpRouting<'_>, error: EnrichError) -> Box<Response> {
+        Box::new(Response::err(ctx.req_id, error.to_string()))
     }
 
-    fn id(ctx: &GraphOpRouting<'_>, value: &str) -> Result<Id, Response> {
+    fn id(ctx: &GraphOpRouting<'_>, value: &str) -> Result<Id, Box<Response>> {
         Id::new(value).map_err(|error| refuse(ctx, error))
     }
 
-    fn not_scheduled(ctx: &GraphOpRouting<'_>, why: &str) -> Response {
-        Response::err(ctx.req_id, format!("{ENRICHMENT_NOT_SCHEDULED}: {why}"))
+    fn not_scheduled(ctx: &GraphOpRouting<'_>, why: &str) -> Box<Response> {
+        Box::new(Response::err(
+            ctx.req_id,
+            format!("{ENRICHMENT_NOT_SCHEDULED}: {why}"),
+        ))
     }
 
     /// The call must name a committed, visible `EnrichmentSchedule` decision
@@ -78,7 +81,7 @@ mod imp {
     async fn check_schedule(
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
-    ) -> Result<(), Response> {
+    ) -> Result<(), Box<Response>> {
         let store = ctx.state.read().await.agent_library();
         let Some(store) = store else {
             return Err(not_scheduled(ctx, "no committed schedule decision exists"));
@@ -87,7 +90,7 @@ mod imp {
         let principal = ctx.verified_context.principal_persistence_id();
         let bytes = store
             .decision_artifact(tenant, &record_key(op.schedule_record_id()))
-            .map_err(|error| Response::err(ctx.req_id, error))?;
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))?;
         let Some(bytes) = bytes else {
             return Err(not_scheduled(
                 ctx,
@@ -95,7 +98,7 @@ mod imp {
             ));
         };
         let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")
-            .map_err(|error| Response::err(ctx.req_id, error))?;
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))?;
         let seen = match &entry.visibility {
             RecordVisibility::Tenant => true,
             RecordVisibility::Principal { principal: owner } => *owner == principal,
@@ -148,7 +151,7 @@ mod imp {
         }
     }
 
-    fn enrichment_knobs(ctx: &GraphOpRouting<'_>) -> Result<EnrichmentKnobs, Response> {
+    fn enrichment_knobs(ctx: &GraphOpRouting<'_>) -> Result<EnrichmentKnobs, Box<Response>> {
         let knobs = knobs();
         let narrow = |value: u64| u32::try_from(value).unwrap_or(u32::MAX);
         EnrichmentKnobs::new(
@@ -172,7 +175,7 @@ mod imp {
 
     pub(super) async fn serve(ctx: GraphOpRouting<'_>, op: SemanticEnrichOp) -> Response {
         if let Err(response) = check_schedule(&ctx, &op).await {
-            return response;
+            return *response;
         }
         let mut receipt = receipt(&op);
         let write_set = match &op {
@@ -185,7 +188,7 @@ mod imp {
         match write_set {
             Ok(Some(write_set)) => commit(ctx, write_set, receipt).await,
             Ok(None) => respond(ctx.req_id, receipt),
-            Err(response) => response,
+            Err(response) => *response,
         }
     }
 
@@ -193,7 +196,7 @@ mod imp {
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
         receipt: &mut SemanticEnrichReceipt,
-    ) -> Result<Option<IndexWriteSet>, Response> {
+    ) -> Result<Option<IndexWriteSet>, Box<Response>> {
         let SemanticEnrichOp::Card {
             schedule_record_id,
             subject,
@@ -227,14 +230,14 @@ mod imp {
         receipt.node_ids = vec![stored.id.as_str().to_string()];
         receipt.edge_count = 1;
         lower::lower_card(&stored, schedule_record_id)
-            .map_err(|error| Response::err(ctx.req_id, error))
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))
     }
 
     fn proposals(
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
         receipt: &mut SemanticEnrichReceipt,
-    ) -> Result<Option<IndexWriteSet>, Response> {
+    ) -> Result<Option<IndexWriteSet>, Box<Response>> {
         let SemanticEnrichOp::RankProposals {
             schedule_record_id,
             subject,
@@ -254,7 +257,7 @@ mod imp {
                     cost_units: concept.cost_units,
                 })
             })
-            .collect::<Result<Vec<_>, Response>>()?;
+            .collect::<Result<Vec<_>, Box<Response>>>()?;
         let ranked = rank_candidates_top(&inputs, knobs.proposal_top_n)
             .map_err(|error| refuse(ctx, error))?;
         receipt.node_ids = ranked
@@ -262,14 +265,14 @@ mod imp {
             .map(|candidate| lower::proposal_id(subject, candidate.concept.as_str()))
             .collect();
         lower::lower_proposals(subject, &ranked, concepts, schedule_record_id)
-            .map_err(|error| Response::err(ctx.req_id, error))
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))
     }
 
     async fn classify(
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
         receipt: &mut SemanticEnrichReceipt,
-    ) -> Result<Option<IndexWriteSet>, Response> {
+    ) -> Result<Option<IndexWriteSet>, Box<Response>> {
         let SemanticEnrichOp::Classify {
             schedule_record_id,
             subject,
@@ -281,10 +284,10 @@ mod imp {
         let knobs = enrichment_knobs(ctx)?;
         let document = id(ctx, subject)?;
         let Some(properties) = visible_node(ctx, subject) else {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 ctx.req_id,
                 format!("DOCUMENT_NOT_FOUND: no Document '{subject}'"),
-            ));
+            )));
         };
         let embedder = medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env();
         let held = ctx.core.semantic_store.read().get_embedding(subject);
@@ -296,10 +299,10 @@ mod imp {
                     .find_map(|name| properties.get(*name).and_then(|v| v.as_str()))
                     .filter(|text| !text.trim().is_empty())
                     .ok_or_else(|| {
-                        Response::err(
+                        Box::new(Response::err(
                             ctx.req_id,
                             "DOCUMENT_TEXT_MISSING: the Document holds no text to classify",
-                        )
+                        ))
                     })?
                     .to_string();
                 let worker = embedder.clone();
@@ -311,13 +314,13 @@ mod imp {
                 match embedded {
                     Ok(Ok(mut vectors)) if vectors.len() == 1 => vectors.remove(0),
                     Ok(Ok(_)) => {
-                        return Err(Response::err(
+                        return Err(Box::new(Response::err(
                             ctx.req_id,
                             "EMBEDDING_UNAVAILABLE: the embedder returned no vector",
-                        ))
+                        )))
                     }
-                    Ok(Err(error)) => return Err(Response::err(ctx.req_id, error)),
-                    Err(response) => return Err(response),
+                    Ok(Err(error)) => return Err(Box::new(Response::err(ctx.req_id, error))),
+                    Err(response) => return Err(Box::new(response)),
                 }
             }
         };
@@ -347,7 +350,7 @@ mod imp {
         receipt.topic = Some(assignment.topic.as_str().to_string());
         receipt.confidence_bp = Some(assignment.confidence.basis_points());
         lower::lower_assignment(&assignment, taxonomy, embedder.name(), schedule_record_id)
-            .map_err(|error| Response::err(ctx.req_id, error))
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))
     }
 
     /// Fit the topics of a taxonomy from labelled examples and lower each as a `Topic` node with
@@ -357,7 +360,7 @@ mod imp {
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
         receipt: &mut SemanticEnrichReceipt,
-    ) -> Result<Option<IndexWriteSet>, Response> {
+    ) -> Result<Option<IndexWriteSet>, Box<Response>> {
         let SemanticEnrichOp::FitTopics {
             schedule_record_id,
             subject,
@@ -376,7 +379,7 @@ mod imp {
                     example: id(ctx, &example.example)?,
                 })
             })
-            .collect::<Result<Vec<_>, Response>>()?;
+            .collect::<Result<Vec<_>, Box<Response>>>()?;
         let fitted = fit_topics(&labelled, holdout_bp.unwrap_or(HOLDOUT_BP_DEFAULT))
             .map_err(|error| refuse(ctx, error))?;
         receipt.node_ids = fitted
@@ -394,14 +397,14 @@ mod imp {
             })
             .collect();
         lower::lower_fit(&fitted, subject, schedule_record_id)
-            .map_err(|error| Response::err(ctx.req_id, error))
+            .map_err(|error| Box::new(Response::err(ctx.req_id, error)))
     }
 
     fn project(
         ctx: &GraphOpRouting<'_>,
         op: &SemanticEnrichOp,
         receipt: &mut SemanticEnrichReceipt,
-    ) -> Result<Option<IndexWriteSet>, Response> {
+    ) -> Result<Option<IndexWriteSet>, Box<Response>> {
         let SemanticEnrichOp::Project { subject, rules, .. } = op else {
             unreachable!("project is called for a Project op")
         };
@@ -416,7 +419,7 @@ mod imp {
                     relation: id(ctx, &rule.relation)?,
                 })
             })
-            .collect::<Result<Vec<_>, Response>>()?;
+            .collect::<Result<Vec<_>, Box<Response>>>()?;
         let mut known_taxonomies = BTreeSet::new();
         for (topic_id, bytes) in ctx.core.get_nodes_by_label("Topic", 0) {
             if !visible(ctx, &topic_id) {
@@ -471,7 +474,7 @@ mod imp {
             }
         }
         receipt.edge_count = u32::try_from(edges.len()).unwrap_or(u32::MAX);
-        lower::lower_projection(&edges).map_err(|error| Response::err(ctx.req_id, error))
+        lower::lower_projection(&edges).map_err(|error| Box::new(Response::err(ctx.req_id, error)))
     }
 
     async fn commit(

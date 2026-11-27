@@ -77,31 +77,31 @@ pub async fn modality_leader_fence(ctx: &ModalityReplication<'_>) -> Option<Resp
 pub fn decode_modality_replication_inputs(
     req_id: u64,
     method: Method,
-) -> Result<(medulla_types::ServedModalityOp, ModalityMutationInputs), Response> {
+) -> Result<(medulla_types::ServedModalityOp, ModalityMutationInputs), Box<Response>> {
     let safe_method = medulla_server_mutation::mutation::durable_receipt_method(&method);
     let Method::ServedModality { op } = method else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "served modality replication received the wrong method",
-        ));
+        )));
     };
     let Some((operation, modality)) =
         medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
     else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "served modality mutation category is invalid",
-        ));
+        )));
     };
     let receipt_query = match &safe_method {
         Method::ApplyMutation { event_type, query } if event_type == "served_modality_v1" => {
             query.clone()
         }
         _ => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req_id,
                 "served modality receipt construction failed",
-            ))
+            )))
         }
     };
     Ok((
@@ -175,15 +175,20 @@ pub fn decode_modality_replay_result(
     req_id: u64,
     inputs: &ModalityMutationInputs,
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-) -> Result<ResultPayload, Response> {
+) -> Result<ResultPayload, Box<Response>> {
     let Some(encoded) = record.result_msgpack.as_deref() else {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             req_id,
             "replicated modality receipt has no terminal result",
-        ));
+        )));
     };
     medulla_raft::raft::decode_sanitized_modality_result(inputs.modality, inputs.operation, encoded)
-        .map_err(|_| Response::err(req_id, "replicated modality receipt has an invalid result"))
+        .map_err(|_| {
+            Box::new(Response::err(
+                req_id,
+                "replicated modality receipt has an invalid result",
+            ))
+        })
 }
 
 /// Repair RAM from the durably committed image before answering a replay.
@@ -252,7 +257,7 @@ pub async fn try_replay_modality_receipt(
     }
     let result = match decode_modality_replay_result(ctx.req_id, inputs, &record) {
         Ok(result) => result,
-        Err(response) => return Some(response),
+        Err(response) => return Some(*response),
     };
     Some(install_modality_committed_image(ctx, graph_fname, result).await)
 }
@@ -482,7 +487,7 @@ pub async fn replicate_served_modality(request: ModalityReplicationRequest<'_>) 
         medulla_server_api::routed_write_coalescer::lock_graph(request.graph_name).await;
     let (op, inputs) = match decode_modality_replication_inputs(request.req_id, method) {
         Ok(decoded) => decoded,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let graph_fname = medulla_kernel::persist::sanitize(request.graph_name);
     let batch_id = super::dispatch_helpers::replicated_graph_batch_id(

@@ -508,7 +508,7 @@ mod sm {
     use std::collections::BTreeSet;
 
     use super::common::{parse_all, KG, RDFS};
-    use medulla_rdf::oxrdf::{Literal, NamedNode, Subject, Term, Triple};
+    use medulla_rdf::oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
     use medulla_types::transition_refused::{MachineDef, MachineEvent, MachineState};
 
     const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
@@ -700,7 +700,7 @@ mod sm {
             let subject = triples
                 .iter()
                 .find_map(|t| match (&t.subject, &t.object) {
-                    (Subject::NamedNode(node), Term::Literal(value))
+                    (NamedOrBlankNode::NamedNode(node), Term::Literal(value))
                         if t.predicate.as_str() == stored_form
                             && node.as_str().starts_with(&prefix)
                             && Literal::value(value) == state.id =>

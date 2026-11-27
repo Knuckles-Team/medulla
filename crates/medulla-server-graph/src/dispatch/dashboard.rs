@@ -163,7 +163,7 @@ async fn serve(
             properties.insert(
                 "grants".into(),
                 serde_json::to_string(&next.asset.grants)
-                    .map_err(|error| invalid(error))?
+                    .map_err(invalid)?
                     .into(),
             );
             properties.insert("grants_by".into(), caller.principal.into());
