@@ -102,7 +102,16 @@ fn run_import(
     // (MEDULLA-TYPED-PACKS-R107.3): a breaking or in-use release stops here.
     let release = match interruptible(cancel, || {
         release::judge(
-            store, chunks, &request, archive, &prepared, &prior, usage, approval,
+            store,
+            chunks,
+            &request,
+            release::JudgeInputs {
+                archive,
+                ready: &prepared,
+                prior_members: &prior,
+            },
+            usage,
+            approval,
         )
     })?? {
         Verdict::Refused(result) => return Ok(result),

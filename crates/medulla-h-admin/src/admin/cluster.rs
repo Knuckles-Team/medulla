@@ -128,7 +128,7 @@ pub async fn try_handle(
 async fn handle_reshard(call: AdminSagaCall<'_>, graph: String, to_shard: u32) -> Response {
     let saga = match call.begin_saga(DurabilityDomain::MultiGraph) {
         Ok(saga) => saga,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let fname = medulla_kernel::persist::sanitize(&graph);
     let report = match call.backend.reshard_graph(&fname, to_shard).await {
@@ -227,7 +227,7 @@ impl AdminSagaCall<'_> {
     fn begin_saga(
         &self,
         domain: DurabilityDomain,
-    ) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
+    ) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Box<Response>> {
         let mut saga = begin_admin_saga_with_nonce(
             self.backend,
             self.req_id,
@@ -236,9 +236,9 @@ impl AdminSagaCall<'_> {
             domain,
             self.attempt_nonce,
         )
-        .map_err(|error| Response::err(self.req_id, error))?;
+        .map_err(|error| Box::new(Response::err(self.req_id, error)))?;
         match saga.replayed.take() {
-            Some(result) => Err(Response::ok(self.req_id, result)),
+            Some(result) => Err(Box::new(Response::ok(self.req_id, result))),
             None => Ok(saga),
         }
     }
@@ -256,7 +256,7 @@ async fn handle_rebalance_execute(
     } = call;
     let saga = match call.begin_saga(DurabilityDomain::MultiGraph) {
         Ok(saga) => saga,
-        Err(response) => return Ok(response),
+        Err(response) => return Ok(*response),
     };
     let Some(cat) = backend.catalog() else {
         return Ok(no_catalog(req_id));
@@ -451,7 +451,7 @@ async fn handle_restore(
     }
     let saga = match call.begin_saga(DurabilityDomain::ControlPlane) {
         Ok(saga) => saga,
-        Err(response) => return Ok(response),
+        Err(response) => return Ok(*response),
     };
     let source = match resolve_backup_source(&source) {
         Ok(value) => value,

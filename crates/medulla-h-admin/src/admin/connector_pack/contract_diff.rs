@@ -481,6 +481,7 @@ impl StoredRelease {
         }
     }
 
+    #[cfg(test)]
     pub fn status(&self) -> ReleaseStatus {
         self.status
     }
@@ -562,6 +563,7 @@ impl ContractHistory {
             .find(|r| r.contract.version.version == version)
     }
 
+    #[cfg(test)]
     pub fn releases(&self) -> &[StoredRelease] {
         &self.releases
     }
@@ -657,6 +659,7 @@ impl ContractHistory {
     }
 
     /// A pending release whose change request was rejected is never served.
+    #[cfg(test)]
     pub fn reject(&mut self, version: &str) -> Result<(), ContractDiffError> {
         let index = self.index_of(version)?;
         self.releases[index]

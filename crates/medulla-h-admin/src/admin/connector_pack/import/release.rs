@@ -608,17 +608,27 @@ fn kind_name(kind: ContractBreakKind) -> String {
         .unwrap_or_default()
 }
 
+/// The archive, the prepared plan and the head's members one release judgement reads.
+pub(super) struct JudgeInputs<'a> {
+    pub archive: &'a [u8],
+    pub ready: &'a ReadyPlan,
+    pub prior_members: &'a [ConnectorPackMemberRow],
+}
+
 /// Diff the release `ready` would activate against the head's active release.
 pub(super) fn judge(
     store: &AgentLibraryStore,
     chunks: &dyn medulla_server_blob::blob::ChunkStore,
     request: &ConnectorPackImportRequest,
-    archive: &[u8],
-    ready: &ReadyPlan,
-    prior_members: &[ConnectorPackMemberRow],
+    inputs: JudgeInputs<'_>,
     usage: &dyn ClassUsage,
     approval: Option<&PendingPackRelease>,
 ) -> Result<Verdict, String> {
+    let JudgeInputs {
+        archive,
+        ready,
+        prior_members,
+    } = inputs;
     let tenant = request.context.tenant_id.as_str();
     let connector = &request.index.connector;
     let mut next = next_contract(request, archive, ready)?;

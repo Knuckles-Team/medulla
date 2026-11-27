@@ -126,7 +126,7 @@ fn tasks_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, Stri
     let (rows, next_cursor) = page_of(
         registry.all(),
         limit,
-        |row: &TaskRow| after_id.map_or(true, |id| row.id > id),
+        |row: &TaskRow| after_id.is_none_or(|id| row.id > id),
         |row| row.id.to_string(),
         task_json,
     );
@@ -170,7 +170,7 @@ fn readiness_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     let (rows, next_cursor) = page_of(
         registry.snapshot(),
         limit,
-        |row| cursor.map_or(true, |last| row.graph.as_str() > last),
+        |row| cursor.is_none_or(|last| row.graph.as_str() > last),
         |row| row.graph.clone(),
         |row| {
             json!({
@@ -387,7 +387,7 @@ fn startup_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     let (rows, next_cursor) = page_of(
         rows,
         limit,
-        |(key, _)| cursor.map_or(true, |last| key.as_str() > last),
+        |(key, _)| cursor.is_none_or(|last| key.as_str() > last),
         |(key, _)| key.clone(),
         |(_, row)| row.clone(),
     );
@@ -413,7 +413,7 @@ fn requests_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, S
         registry.snapshot(),
         limit,
         |row: &medulla_observe::registry::requests::RequestRow| {
-            after.map_or(true, |key| row.key > key)
+            after.is_none_or(|key| row.key > key)
         },
         |row| row.key.to_string(),
         |row| {
@@ -443,7 +443,7 @@ fn locks_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     let (rows, next_cursor) = page_of(
         medulla_observe::locks().snapshot(),
         limit,
-        |row| cursor.map_or(true, |last| row.name.as_str() > last),
+        |row| cursor.is_none_or(|last| row.name.as_str() > last),
         |row| row.name.clone(),
         |row| {
             json!({
@@ -497,7 +497,7 @@ fn runtime_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     let (rows, next_cursor) = page_of(
         keyed,
         limit,
-        |(key, _)| cursor.map_or(true, |last| key.as_str() > last),
+        |(key, _)| cursor.is_none_or(|last| key.as_str() > last),
         |(key, _)| key.clone(),
         |(_, row)| row.clone(),
     );
@@ -523,7 +523,7 @@ fn events_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, Str
     let (rows, next_cursor) = page_of(
         ring.snapshot(),
         limit,
-        |(key, _)| after.map_or(true, |last| *key > last),
+        |(key, _)| after.is_none_or(|last| *key > last),
         |(key, _)| key.to_string(),
         |(key, event)| {
             json!({

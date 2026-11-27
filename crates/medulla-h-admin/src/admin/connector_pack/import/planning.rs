@@ -585,12 +585,15 @@ impl<'a> PlanCollector<'a> {
             self.request,
             self.revision,
             self.record_id,
-            self.records,
-            warnings,
-            self.server_pin
-                .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
-            object_model_shape_digest,
-            seed,
+            ImportRecordParts {
+                entries: self.records,
+                warnings,
+                server: self
+                    .server_pin
+                    .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
+                object_model_shape_digest,
+                seed,
+            },
         )?;
         let record_bytes =
             medulla_storage::encode_bounded(&record, "connector pack import record")?;
@@ -719,16 +722,28 @@ fn declared_relations(
     decode_relationship_mappings(&documents)
 }
 
-fn import_record(
-    request: &ConnectorPackImportRequest,
-    revision: u64,
-    record_id: String,
+/// What one pack import record carries beyond its request, revision and id.
+struct ImportRecordParts {
     entries: Vec<PackEntryRecord>,
     warnings: Vec<PackWarning>,
     server: ComponentDependency,
     object_model_shape_digest: Option<Digest256>,
     seed: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
+}
+
+fn import_record(
+    request: &ConnectorPackImportRequest,
+    revision: u64,
+    record_id: String,
+    parts: ImportRecordParts,
 ) -> Result<PackImportRecord, String> {
+    let ImportRecordParts {
+        entries,
+        warnings,
+        server,
+        object_model_shape_digest,
+        seed,
+    } = parts;
     Ok(PackImportRecord {
         schema_version: PACK_IMPORT_RECORD_SCHEMA_VERSION,
         tenant_id: request.context.tenant_id.clone(),

@@ -20,9 +20,9 @@ fn bind_status_context(
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose_id: &str,
-) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Response> {
+) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Box<Response>> {
     bind_agent_library_context(store, req_id, verified, context, purpose_id, false)
-        .map_err(|error| Response::err(req_id, error))
+        .map_err(|error| Box::new(Response::err(req_id, error)))
 }
 
 #[cfg(feature = "redb")]
@@ -534,7 +534,7 @@ fn component_status(
     let purpose = component_status_purpose(request.kind);
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match store.component_status(request) {
         Ok(result) => Response::ok(
@@ -727,7 +727,7 @@ fn template_status(
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match store.template_status(request) {
         Ok(result) => Response::ok(
@@ -942,7 +942,7 @@ fn graph_status(
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match store.graph_status(request) {
         Ok(result) => Response::ok(
@@ -1012,8 +1012,7 @@ pub async fn handle_agent_library(
             &tenant_id,
             kind.unwrap_or_default(),
             lifecycle,
-            limit,
-            cursor.as_deref(),
+            (limit, cursor.as_deref()),
         )
         .into(),
         medulla_agent_types::agent_library::AgentLibraryOp::Get {
@@ -1152,8 +1151,7 @@ fn library_list(
     tenant_id: &str,
     kind: medulla_agent_types::agent_library::AgentLibraryKind,
     lifecycle: Option<medulla_agent_types::agent_library::AgentLibraryLifecycle>,
-    limit: Option<u32>,
-    cursor: Option<&str>,
+    (limit, cursor): (Option<u32>, Option<&str>),
 ) -> Response {
     use medulla_agent_types::agent_library::{
         unsupported_kind_refusal, AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage,
@@ -1267,7 +1265,7 @@ fn library_status(
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     match store.status(request) {
         Ok(result) => Response::ok(
