@@ -41,6 +41,7 @@ pub mod retrieval_plan;
 pub mod retrieval_pointer;
 pub mod retrieval_refresh;
 pub mod run_credit;
+pub mod scale;
 pub mod scorer;
 // MEDULLA-FEDERATED-QUERY-R739.1: the shard drift monitor machine.
 pub mod shard_monitor;
@@ -295,6 +296,8 @@ pub enum QuestionKind {
     IngestShortfall,
     /// Whether a proposed capacity change is allowed against the ledger (MEDULLA-DECISION-ENGINE-R824). See `decision::statistical::capacity`.
     CapacityProposal,
+    /// Whether a workload's replica-count intent is allowed against the stored scale authority: `allow` or `refuse:<CODE>` (MEDULLA-DECISION-ENGINE-R833). Evaluate-only. See `statistical::scale`.
+    ScaleIntent,
     /// Which red-team attacks and transforms to run for a stated goal (MEDULLA-DECISION-ENGINE-R818). See `family::probe_selection`.
     ProbeSelection,
     /// Splits one trajectory reward over its steps and hierarchy

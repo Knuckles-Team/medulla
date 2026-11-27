@@ -2149,6 +2149,8 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R180.5` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decision_refusals_name_the_rule` |
 | `MEDULLA-DECISION-ENGINE-R180.6` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::premises_cite_rules_and_inputs` |
 | `MEDULLA-DECISION-ENGINE-R180.7` | `tests/decide/test_process_decision_served.py::test_table_and_branch_served` |
+| `MEDULLA-DECISION-ENGINE-R833` | `crates/medulla-decision-types/src/decision/statistical/scale.rs::tests::each_fault_refuses_with_its_own_code_in_check_order`; `crates/medulla-h-decide/src/decide/stat_tests/scale_intent_tests.rs::a_scale_intent_is_judged_against_the_stored_authority`; `tests/test_scale_intent_request.py::test_scale_intent_request_shape` |
+| `MEDULLA-DECISION-ENGINE-R834` | `crates/medulla-rdf/tests/scale_inventory_classes.rs::the_scale_inventory_classes_are_declared_and_rooted_in_the_core_system` |
 | `MEDULLA-DECISION-ENGINE-R180.8` | `crates/medulla-h-decide/src/decide/family/process_decision.rs::control_schema_tests::the_control_schema_is_valid_and_encodes_one_inert_feature`; `tests/test_decision_client.py::test_process_control_schemas_are_published_per_step_over_one_body` |
 
 ## Explicit state machine rows (Article XXXI)

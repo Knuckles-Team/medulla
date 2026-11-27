@@ -15,6 +15,7 @@ mod autonomy;
 mod branch_outcome;
 pub(in crate::decide) mod capability_designation;
 mod capacity_proposal;
+pub(in crate::decide) mod scale_intent;
 mod changeset_review;
 mod classify;
 mod command_config;
@@ -399,6 +400,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         ingest_shortfall::IngestShortfallFamily;
     static CAPACITYPROPOSALFAMILY: capacity_proposal::CapacityProposalFamily =
         capacity_proposal::CapacityProposalFamily;
+    static SCALEINTENTFAMILY: scale_intent::ScaleIntentFamily = scale_intent::ScaleIntentFamily;
     static REWARDDECOMPOSITIONFAMILY: reward_decomposition::RewardDecompositionFamily =
         reward_decomposition::RewardDecompositionFamily;
     static CURRICULUMPROMOTIONFAMILY: curriculum_promotion::CurriculumPromotionFamily =
@@ -503,6 +505,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ProcessPlan => &PROCESSPLANFAMILY,
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
         QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
+        QuestionKind::ScaleIntent => &SCALEINTENTFAMILY,
         QuestionKind::ProbeSelection => &PROBESELECTIONFAMILY,
         QuestionKind::RewardDecomposition => &REWARDDECOMPOSITIONFAMILY,
         QuestionKind::CurriculumPromotion => &CURRICULUMPROMOTIONFAMILY,
@@ -611,6 +614,7 @@ mod tests {
             QuestionKind::ProcessPlan,
             QuestionKind::IngestShortfall,
             QuestionKind::CapacityProposal,
+            QuestionKind::ScaleIntent,
             QuestionKind::ProbeSelection,
             QuestionKind::RewardDecomposition,
             QuestionKind::CurriculumPromotion,
@@ -710,6 +714,7 @@ mod tests {
             | QuestionKind::ProcessPlan
             | QuestionKind::IngestShortfall
             | QuestionKind::CapacityProposal
+            | QuestionKind::ScaleIntent
             | QuestionKind::ProbeSelection
             | QuestionKind::TrajectoryLadder
             | QuestionKind::AnalystSynthesis

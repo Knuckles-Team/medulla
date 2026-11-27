@@ -1116,6 +1116,9 @@ mod generated_code_admission_tests;
 // MEDULLA-DECISION-ENGINE-R832: served credential reuse.
 mod credential_reuse_tests;
 
+// MEDULLA-DECISION-ENGINE-R833: served scale intents.
+mod scale_intent_tests;
+
 // MEDULLA-DECISION-ENGINE-R137.3: the served over-window plan.
 mod over_window_plan_tests;
 

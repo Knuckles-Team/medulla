@@ -2371,6 +2371,7 @@ QuestionKind = (
     | Literal["process_remediation"]
     | Literal["ingest_shortfall"]
     | Literal["capacity_proposal"]
+    | Literal["scale_intent"]
     | Literal["probe_selection"]
     | Literal["reward_decomposition"]
     | Literal["research_next"]

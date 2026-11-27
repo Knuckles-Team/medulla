@@ -541,6 +541,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         GENERATED_CODE_ADMISSION,
     ),
     (QuestionKind::CredentialReuse, CREDENTIAL_REUSE),
+    (QuestionKind::ScaleIntent, super::statistical::scale::REFUSALS),
     (QuestionKind::RecursionMode, RECURSION_SIGNALS),
     (QuestionKind::SubCallAdmission, super::sub_call::REFUSALS),
     (

@@ -436,6 +436,13 @@ pub(super) async fn serve(
                 super::family::process_decision::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
+            } else if request.question.kind == QuestionKind::ScaleIntent {
+                // A `scale_intent` question reads the stored `Scale*` authority nodes
+                // of the graph named by its `graph` param, under the same ACL and RLS
+                // filter (MEDULLA-DECISION-ENGINE-R833).
+                super::family::scale_intent::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ProcessPlan {
                 // A `process_plan` question reads its stored workflow in the graph named by
                 // its `graph` param, under the same ACL and RLS filter (MEDULLA-CQ-ORCH-R704.5).

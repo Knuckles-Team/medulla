@@ -903,6 +903,39 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
     rdfs:domain :ContainerStack ;
     rdfs:range :ManagementEnvironment .
 
+# ── Scale inventory (MEDULLA-DECISION-ENGINE-R834) ───────────────────────────────
+# The typed nodes the scale_intent verdict (MEDULLA-DECISION-ENGINE-R833) reads. Each node's properties are the record's own fields.
+
+:ScaleFailureDomain a owl:Class ;
+    rdfs:label "Scale Failure Domain" ;
+    rdfs:comment "A failure domain (host, zone, rack, cluster or device) a scale unit's replicas depend on. Node fields: domain_id, kind, status (healthy, degraded or offline), last_observed_at, authority_ref." ;
+    rdfs:subClassOf kg:System .
+
+:ScaleResourcePool a owl:Class ;
+    rdfs:label "Scale Resource Pool" ;
+    rdfs:comment "A pool of capacity units that scale units draw replicas from. Node fields: pool_id, revision, resource_kind, capacity_units, allocated_units, reserved_headroom_units, failure_domain_id, quota, lease_fence, offline_recovery." ;
+    rdfs:subClassOf kg:System .
+
+:ScaleWorkloadClass a owl:Class ;
+    rdfs:label "Scale Workload Class" ;
+    rdfs:comment "A class of workload with a cadence, a priority, a concurrency limit and a quota, bound to one resource pool. Node fields: workload_id, revision, tenant_ref, resource_pool_id, cadence, priority, max_concurrency, quota." ;
+    rdfs:subClassOf kg:System .
+
+:ScaleUnit a owl:Class ;
+    rdfs:label "Scale Unit" ;
+    rdfs:comment "One independently scalable unit of a workload class with replica bounds, a controller mode and one replica writer. Node fields: unit_id, revision, workload_class_id, resource_pool_id, cadence, controller_mode, delegated_controller, controller_id, replica_writer_id, min_replicas, max_replicas, reserved_headroom_replicas, tenant_quota, failure_domain_id, offline_recovery, maintenance_window, rollback_policy, depends_on." ;
+    rdfs:subClassOf kg:System .
+
+:ScaleControllerRegistration a owl:Class ;
+    rdfs:label "Scale Controller Registration" ;
+    rdfs:comment "The registration of the controller that writes one scale unit's replicas, with its lease fence. Node fields: unit_id, controller_id, mode, delegated_controller, writes_replicas, lease_fence." ;
+    rdfs:subClassOf kg:System .
+
+:ScaleAuthorityRevision a owl:Class ;
+    rdfs:label "Scale Authority Revision" ;
+    rdfs:comment "The one node that names the revision of the scale inventory a decision is made against. Node field: authority_revision." ;
+    rdfs:subClassOf kg:System .
+
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:System through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/infrastructure#BladeServer> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .

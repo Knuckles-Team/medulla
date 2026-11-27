@@ -379,6 +379,37 @@ def credential_reuse_request(
     )
 
 
+def scale_intent_request(
+    tenant_id: str,
+    question_id: str,
+    graph: str,
+    intent: Mapping[str, Any],
+    feature_schema: Mapping[str, Any],
+    *,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``scale_intent`` ``Decide`` request (MEDULLA-DECISION-ENGINE-R833).
+
+    ``graph`` holds the stored ``Scale*`` authority nodes. ``intent`` is the scale
+    intent record: ``intent_id``, ``intent_revision``, ``expected_unit_revision``,
+    ``desired_replicas``, ``min_replicas``, ``max_replicas``, ``controller_mode``,
+    ``replica_writer_id``, ``execution_key``, ``fence`` and ``target`` (its
+    ``workload_id`` names the scale unit). The one declared option is ``verdict``;
+    the answer is ``allow`` or ``refuse:<CODE>``, so the reason is the code.
+    """
+    return decide_request(
+        tenant_id,
+        (question_id, "scale_intent", "ordinary"),
+        declared([DeclaredOption("verdict")]),
+        feature_schema,
+        policy=policy,
+        params=[
+            param("graph", "text", graph),
+            param("intent", "text", json.dumps(dict(intent), sort_keys=True)),
+        ],
+    )
+
+
 def task_plan_request(
     tenant_id: str,
     question_id: str,
@@ -2768,6 +2799,7 @@ __all__ = [
     "TASK_PLAN_FEATURE_SCHEMA",
     "CATALOG_RANK_FEATURE_SCHEMAS",
     "PROCESS_CONTROL_FEATURE_SCHEMAS",
+    "scale_intent_request",
     "RETRIEVAL_PLAN_OPTIONS",
     "merge_arming_request",
     "retrieval_plan_request",
