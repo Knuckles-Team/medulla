@@ -35,7 +35,9 @@ const RRF_K: f64 = 60.0;
 /// A slice refusal: the wire code and its detail. Nothing was written.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SliceRefusal {
+    /// The wire code of the refusal.
     pub code: String,
+    /// The detail of the refusal.
     pub detail: String,
 }
 

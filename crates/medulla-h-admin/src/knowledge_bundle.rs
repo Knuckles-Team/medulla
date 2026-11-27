@@ -231,6 +231,7 @@ pub async fn handle_bundle_export(
     }
 }
 
+/// Export the named graphs as one bundle, as the caller sees them. Each graph contributes its triples and provenance, plus its embeddings and documents when asked; a bundle of no graph, of more graphs or triples than a bundle holds, or naming a graph twice refuses.
 pub async fn export_bundle(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,

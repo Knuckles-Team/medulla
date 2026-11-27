@@ -20,7 +20,9 @@ pub const MAX_BISECT_WINDOW: u64 = 4096;
 /// `good` inside it when the request names one.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BisectWindow {
+    /// The changesets of the window, oldest first, ending at the bad one.
     pub links: Vec<BisectLink>,
+    /// The index in `links` of the known-good changeset, when the request names one.
     pub good: Option<usize>,
 }
 

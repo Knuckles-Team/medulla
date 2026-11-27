@@ -119,6 +119,7 @@ fn node_json(bytes: &[u8]) -> serde_json::Value {
     rmp_serde::from_slice(bytes).unwrap_or(serde_json::Value::Null)
 }
 
+/// One page of the stored downtime selections, after `after`, at most `limit` of them; the page names where the next one starts when more remain.
 pub fn selection_page(
     core: &medulla_graph_core::graph::GraphCore,
     after: Option<&str>,

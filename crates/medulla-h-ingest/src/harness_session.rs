@@ -72,7 +72,9 @@ pub fn run_trace_digest(properties: &Map<String, Value>) -> String {
 /// the index revision the plan was made against.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SessionAdmission {
+    /// The operations to commit; empty for an identical replay.
     pub operations: Vec<Value>,
+    /// The answer of the batch.
     pub result: IndexHarnessSessionBatchResult,
     /// The counter revision the plan read; the commit refuses when it moved.
     pub revision_before: u64,

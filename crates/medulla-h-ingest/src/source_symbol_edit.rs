@@ -26,7 +26,9 @@ use crate::source_changeset::BlobIo;
 /// Why a symbol edit produced no changeset request.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SymbolEditRefusal {
+    /// The projection of the source refused.
     Projection(ProjectionRefusal),
+    /// The round trip of the edit refused.
     Roundtrip(RoundtripRefusal),
     /// The blob store failed.
     Store(String),

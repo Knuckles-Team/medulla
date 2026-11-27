@@ -30,8 +30,11 @@ pub const DRAIN_MODES: [&str; 3] = ["full", "delta", "reconcile"];
 /// A drain that was started: its handle, its record and the envelope of page 0.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StartedDrain {
+    /// The handle of the drain.
     pub handle: DrainHandle,
+    /// The record of the drain to write.
     pub record: DrainRecord,
+    /// The envelope of page 0, to enqueue.
     pub first_page: IngestJobEnvelope,
 }
 
@@ -42,14 +45,22 @@ pub enum DrainAckOutcome {
     Stale,
     /// The node already holds this ack (the node was written, the task ack or the enqueue did not
     /// finish): write nothing, ack the task and enqueue `next` when the drain is still Running.
-    Replay { next: Option<IngestJobEnvelope> },
+    Replay {
+        /// The page to enqueue, when the drain is still running.
+        next: Option<IngestJobEnvelope>,
+    },
     /// The drain moved to the next page: write `record`, enqueue `next`.
     Advanced {
+        /// The drain record to write.
         record: DrainRecord,
+        /// The next page to enqueue.
         next: IngestJobEnvelope,
     },
     /// The drain closed: write `record`.
-    Closed { record: DrainRecord },
+    Closed {
+        /// The closed drain record to write.
+        record: DrainRecord,
+    },
 }
 
 /// The drain id of one start: framed over tenant, connector, stream, mode and start time, so a
