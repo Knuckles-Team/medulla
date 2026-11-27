@@ -72,6 +72,9 @@ pub fn annotations() -> PackAnnotations {
         side_effects: None,
         declared_by: None,
         schema_tokens: None,
+        // Absent so the frozen contract-wave vectors keep their digests: the digest frames
+        // `prompt_role` only when it is present.
+        prompt_role: None,
     }
 }
 

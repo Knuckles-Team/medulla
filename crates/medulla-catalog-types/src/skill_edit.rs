@@ -17,6 +17,7 @@ pub const MAX_EDITED_SKILL_BYTES: usize = 2 * 1024 * 1024;
 /// The edited bytes and their digest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EditedSkill {
+    /// The edited source.
     pub bytes: Vec<u8>,
     /// `sha256:<hex>` of `bytes`.
     pub digest: String,
