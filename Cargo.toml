@@ -1014,6 +1014,11 @@ lake = ["medulla-server/lake", "medulla-server-lake/lake", "medulla-server-obs/l
 # are exercised through the feature's own `serve()` (non-security) test suite in
 # `src/server/lake/rest.rs`.
 lake-rest = ["medulla-server/lake-rest", "medulla-server-lake/lake-rest", "medulla-wire/lake-rest", "lake", "oidc"]
+# The columnar-dataframe library family (`polars-*`, about 900 unit-seconds of a cold build)
+# is reached only through `lake` and `obs`. This umbrella names every feature that pulls it,
+# so the serving and release builds pass `dataframe`; a build without it refuses a lake table
+# or telemetry-archive request with CAPABILITY_UNSUPPORTED (MEDULLA-CONTRACT-R066.4).
+dataframe = ["lake", "obs", "lake-rest", "traces", "promql", "otel-export"]
 # OpenLineage transport for the lake tier's already-emitted run events (CA-15), off by
 # default and EMPTY until CA-15 implements it. Declared here by CA-17's single feature-
 # stub commit so that CA-15 never edits this shared table. Implies `lake`.
@@ -1245,7 +1250,7 @@ policy_export = ["medulla-server/policy_export", "medulla-server-lake/policy_exp
 # `eg2.` protocol identity binding and `kvcache-server`'s KV-cache HTTP bearer auth —
 # rather than each surface vendoring its own copy.
 oidc = ["medulla-server/oidc", "medulla-server-lake/oidc", "medulla-server-obs/oidc", "medulla-server-api/oidc", "medulla-server-auth/oidc", "dep:jsonwebtoken", "dep:ureq", "medulla-federation/oidc"]
-full = ["medulla-server/full", "medulla-wire/full", "medulla-h-txn/full", "medulla-h-query/full", "medulla-server-api/full", "compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "otel-export", "shex", "obs", "geosparql", "nl-query", "promql", "traces", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "lake", "lake-rest", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
+full = ["medulla-server/full", "medulla-wire/full", "medulla-h-txn/full", "medulla-h-query/full", "medulla-server-api/full", "compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "shex", "geosparql", "nl-query", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
 all = ["full"]
 # D4 (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate): `epistemic` (the medulla-epistemic
 # claims/evidence/belief-state layer, E6/E2/D3/D5) is folded into `full` above so a

@@ -18,7 +18,7 @@
 # Configuration:
 #   ENGINE_BIN_DEST        Required destination managed by the deployment.
 #   ENGINE_SOURCE_BINARY   Candidate binary; defaults to this checkout's release output.
-#   ENGINE_BUILD_FEATURES  Cargo features used by --build (default full,ast-extended).
+#   ENGINE_BUILD_FEATURES  Cargo features used by --build (default full,ast-extended,source-duckdb,dataframe).
 #   ENGINE_PROMOTION_HOOK  Executable implementing the hook protocol below.
 #
 # Hook protocol (action followed by bounded path arguments):
@@ -36,7 +36,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_BINARY="${ENGINE_SOURCE_BINARY:-${REPO_ROOT}/target/release-internal/medulla-server}"
 DESTINATION="${ENGINE_BIN_DEST:-}"
 PROMOTION_HOOK="${ENGINE_PROMOTION_HOOK:-}"
-BUILD_FEATURES="${ENGINE_BUILD_FEATURES:-full,ast-extended,source-duckdb}"
+BUILD_FEATURES="${ENGINE_BUILD_FEATURES:-full,ast-extended,source-duckdb,dataframe}"
 
 DO_BUILD=0
 DO_ACTIVATE=0

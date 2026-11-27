@@ -58,7 +58,7 @@ while IFS='=' read -r key value; do
 done < "$REMAP_ENV_FILE"
 
 echo "=== build primary server wheel (debug, full+ast-extended) ==="
-maturin build --locked --no-default-features --features full,ast-extended,source-duckdb \
+maturin build --locked --no-default-features --features full,ast-extended,source-duckdb,dataframe \
   --out "$WORKDIR/dist-primary"
 
 echo "=== build medulla-numeric kernel wheel (debug, feature python) ==="

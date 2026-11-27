@@ -33,7 +33,7 @@ medulla_build_release_server() {
                 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C link-arg=-Wl,--build-id=sha1"
                 ;;
         esac
-        cargo build --locked --profile release-server --features full,ast-extended,source-duckdb \
+        cargo build --locked --profile release-server --features full,ast-extended,source-duckdb,dataframe \
             --bin medulla-server --target "$target"
     ) || return 1
     target_dir="${CARGO_TARGET_DIR:-}"
