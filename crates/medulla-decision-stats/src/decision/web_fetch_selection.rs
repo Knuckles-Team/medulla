@@ -21,6 +21,8 @@ use medulla_decision_outcome_types::{
     decision::web_fetch_selection::DEFAULT_FRESHNESS_WINDOW_S,
 };
 
+/// Domain of a web page selection's decision id (MEDULLA-DECISION-ENGINE-R802.7).
+const WEB_SELECTION_DIGEST_DOMAIN: &str = "eg/web-selection/v1";
 const RRF_K: f64 = 60.0;
 const MICROS: f64 = 1_000_000.0;
 const DAY_MS: f64 = 86_400_000.0;
@@ -225,13 +227,26 @@ pub fn select_web_pages(
             ));
         }
     }
+    let considered = request.candidates.len() as u32;
+    let decision_id = medulla_query_types::solve_scalar::digest_text(
+        WEB_SELECTION_DIGEST_DOMAIN,
+        &(
+            &query_digest,
+            &selected,
+            &skipped,
+            request.max_fetches,
+            considered,
+            now_ms,
+        ),
+    );
     Ok(SelectWebPagesAnswer {
         query_digest,
         selected,
         skipped,
         max_fetches: request.max_fetches,
-        considered: request.candidates.len() as u32,
+        considered,
         now_ms,
+        decision_id,
     })
 }
 
@@ -487,5 +502,31 @@ mod tests {
             .selected
             .windows(2)
             .all(|w| w[0].score_micros >= w[1].score_micros));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R802.7
+    #[test]
+    fn the_decision_id_names_the_answer_content() {
+        let candidates = vec![
+            row("https://a.example/rust-chunking", "Rust document chunking", "google", 1),
+            row("https://b.example/other", "Unrelated", "google", 2),
+        ];
+        let held = BTreeMap::new();
+        let digests = BTreeSet::new();
+        let ask = |count: u32, now: u64| {
+            select_web_pages(
+                &request(candidates.clone(), count),
+                &held,
+                &digests,
+                now,
+                "q".into(),
+            )
+            .unwrap()
+        };
+        let first = ask(2, NOW);
+        assert!(first.decision_id.starts_with("sha256:"));
+        assert_eq!(first.decision_id, ask(2, NOW).decision_id, "a pure decision replays");
+        assert_ne!(first.decision_id, ask(1, NOW).decision_id, "the budget changes it");
+        assert_ne!(first.decision_id, ask(2, NOW + 1).decision_id, "the clock changes it");
     }
 }

@@ -1049,3 +1049,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1043 MEDULLA-DECISION-ENGINE-R142.103 DecisionEval certification read of the current attestation of a skill revision
 - [ ] T1044 MEDULLA-DECISION-ENGINE-R166.7 Workflow registration declares and reads back its skills
 - [ ] T1045 MEDULLA-DECISION-ENGINE-R038.6 Held-item answer checklist and the engine-recorded critique
+- [ ] T1046 MEDULLA-DECISION-ENGINE-R802.7 Web page selection answer names its decision

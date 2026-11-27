@@ -27451,6 +27451,7 @@ class SelectWebPagesAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     considered: Annotated[int, Field(ge=0)]
+    decision_id: str
     max_fetches: Annotated[int, Field(ge=0)]
     now_ms: Annotated[int, Field(ge=0)]
     query_digest: str

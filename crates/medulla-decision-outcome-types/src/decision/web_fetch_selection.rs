@@ -142,6 +142,10 @@ pub struct SelectWebPagesAnswer {
     pub max_fetches: u32,
     pub considered: u32,
     pub now_ms: u64,
+    /// The `sha256:` digest of the answer's own content (query digest, selected, skipped,
+    /// budget, considered and clock). The decision is pure, so the same request against the same
+    /// held documents and clock names the same id; an audit event cites it (R802.7).
+    pub decision_id: String,
 }
 
 #[cfg(test)]
