@@ -199,6 +199,7 @@ impl IdentityStore {
             | IdpOp::Remove { .. }
             | IdpOp::Link { .. }
             | IdpOp::Unlink { .. }
+            | IdpOp::ResolveLink { .. }
             | IdpOp::List => self.apply_idp_admin(op, stamp, ctx),
             IdpOp::Provision { .. }
             | IdpOp::ListProvisioned { .. }
@@ -246,6 +247,12 @@ impl IdentityStore {
                 Ok(IdentityReply::Done { changed: true })
             }
             IdpOp::Unlink { request } => self.unlink(request, stamp, now_ms),
+            IdpOp::ResolveLink { request } => Ok(IdentityReply::LinkedPrincipal {
+                principal_id: self
+                    .links
+                    .get(&link_key(&request.idp_id, &request.subject))
+                    .map(|link| link.principal_id.clone()),
+            }),
             IdpOp::List => Ok(IdentityReply::Idps(self.idps.values().cloned().collect())),
             IdpOp::Provision { .. }
             | IdpOp::ListProvisioned { .. }

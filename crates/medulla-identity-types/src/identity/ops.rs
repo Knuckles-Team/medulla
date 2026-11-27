@@ -424,6 +424,11 @@ pub enum IdpOp {
     Unlink {
         request: LinkRequest,
     },
+    /// Read the principal an `(idp_id, subject)` link names (MEDULLA-IDENTITY-R752); the
+    /// request's `principal_id` is ignored. An unlinked subject and an unknown IdP answer alike.
+    ResolveLink {
+        request: LinkRequest,
+    },
     List,
     /// Directory provisioning (SCIM `Users`, LDAP sync).
     Provision {
@@ -711,6 +716,7 @@ impl IdpOp {
             Self::Remove { .. } => meta("remove_idp", true, OpAuthority::Admin),
             Self::Link { .. } => meta("link_identity", true, OpAuthority::Admin),
             Self::Unlink { .. } => meta("unlink_identity", true, OpAuthority::Admin),
+            Self::ResolveLink { .. } => meta("resolve_link", false, OpAuthority::Read),
             Self::List => meta("list_idps", false, OpAuthority::Directory),
             Self::Provision { .. } => meta("provision", true, OpAuthority::Provision),
             Self::ListProvisioned { .. } => meta("list_provisioned", false, OpAuthority::Provision),

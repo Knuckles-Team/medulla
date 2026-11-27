@@ -239,6 +239,11 @@ pub enum IdentityReply<C = ()> {
     Principal {
         principal_id: String,
     },
+    /// `resolve_link`: the principal an external identity is linked to, `None` when it is not
+    /// (MEDULLA-IDENTITY-R752).
+    LinkedPrincipal {
+        principal_id: Option<String>,
+    },
     User(UserView),
     Users(Vec<UserView>),
     Resolution(PrincipalResolution<C>),
@@ -352,6 +357,9 @@ impl IdentityReply {
             Self::WireLoginRevoked(value) => IdentityReply::WireLoginRevoked(value),
             Self::Done { changed } => IdentityReply::Done { changed },
             Self::Principal { principal_id } => IdentityReply::Principal { principal_id },
+            Self::LinkedPrincipal { principal_id } => {
+                IdentityReply::LinkedPrincipal { principal_id }
+            }
             Self::Resolution(value) => IdentityReply::Resolution(compose(value)?),
         })
     }

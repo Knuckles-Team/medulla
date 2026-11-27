@@ -10131,6 +10131,14 @@ class IdentityOpIdpUnlink(BaseModel):
     request: LinkRequest
 
 
+class IdentityOpIdpResolveLink(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["idp"]
+    op: Literal["resolve_link"]
+    request: LinkRequest
+
+
 class IdentityOpIdpList(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -10183,6 +10191,7 @@ IdentityOpIdp = Annotated[
     | IdentityOpIdpRemove
     | IdentityOpIdpLink
     | IdentityOpIdpUnlink
+    | IdentityOpIdpResolveLink
     | IdentityOpIdpList
     | IdentityOpIdpProvision
     | IdentityOpIdpListProvisioned
@@ -10269,6 +10278,13 @@ class IdentityReplyPrincipal(BaseModel):
 
     kind: Literal["principal"]
     value: IdentityReplyPrincipalValue
+
+
+class IdentityReplyLinkedPrincipal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["linked_principal"]
+    value: IdentityReplyLinkedPrincipalValue
 
 
 class IdentityReplyUser(BaseModel):
@@ -10465,6 +10481,7 @@ IdentityReply = Annotated[
     | IdentityReplyDone
     | IdentityReplyConfig
     | IdentityReplyPrincipal
+    | IdentityReplyLinkedPrincipal
     | IdentityReplyUser
     | IdentityReplyUsers
     | IdentityReplyResolution
@@ -10500,6 +10517,12 @@ class IdentityReplyDoneValue(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     changed: bool
+
+
+class IdentityReplyLinkedPrincipalValue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal_id: str | None = None
 
 
 class IdentityReplyPrincipalValue(BaseModel):
@@ -49121,6 +49144,7 @@ __all__ = [
     "IdentityOpIdpProvisionGroup",
     "IdentityOpIdpRemove",
     "IdentityOpIdpRemoveDirectoryGroup",
+    "IdentityOpIdpResolveLink",
     "IdentityOpIdpUnlink",
     "IdentityOpIdpUpsert",
     "IdentityOpMfa",
@@ -49170,6 +49194,8 @@ __all__ = [
     "IdentityReplyDoneValue",
     "IdentityReplyGroups",
     "IdentityReplyIdps",
+    "IdentityReplyLinkedPrincipal",
+    "IdentityReplyLinkedPrincipalValue",
     "IdentityReplyPrincipal",
     "IdentityReplyPrincipalValue",
     "IdentityReplyProvisioned",

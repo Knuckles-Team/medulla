@@ -419,3 +419,49 @@ fn provisioning_needs_its_minted_id_and_bounded_claims() {
     );
     assert!(apply_kept(&mut store, &op, &provisioner(SCIM_BOT), NOW).is_ok());
 }
+
+fn resolve(
+    store: &mut IdentityStore,
+    idp_id: &str,
+    subject: &str,
+    stamp: &IdentityStamp,
+) -> Result<IdentityReply, IdentityRefusal> {
+    let op = IdentityOp::Idp(IdpOp::ResolveLink {
+        request: LinkRequest {
+            idp_id: idp_id.to_string(),
+            subject: subject.to_string(),
+            principal_id: String::new(),
+        },
+    });
+    apply_kept(store, &op, stamp, NOW)
+}
+
+// spec: MEDULLA-IDENTITY-R752
+#[test]
+fn a_link_resolves_to_its_principal_and_an_absent_one_to_none() {
+    let mut store = directory_store();
+    let local = create(&mut store, "dana", UserKind::Human).unwrap();
+    let link = IdentityOp::Idp(IdpOp::Link {
+        request: LinkRequest {
+            idp_id: "ldap".to_string(),
+            subject: "ext-dana".to_string(),
+            principal_id: local.clone(),
+        },
+    });
+    apply_kept(&mut store, &link, &admin(), NOW).unwrap();
+    let reader = IdentityStamp::for_actor(actor("usr:reader", &[IDENTITY_READ_SCOPE]));
+    assert_eq!(
+        resolve(&mut store, "ldap", "ext-dana", &reader),
+        Ok(IdentityReply::LinkedPrincipal {
+            principal_id: Some(local)
+        })
+    );
+    let none = Ok(IdentityReply::LinkedPrincipal { principal_id: None });
+    assert_eq!(resolve(&mut store, "ldap", "ext-nobody", &reader), none);
+    assert_eq!(resolve(&mut store, "no-such-idp", "ext-dana", &reader), none);
+    let nobody = IdentityStamp::for_actor(actor("usr:nobody", &[]));
+    assert_eq!(
+        resolve(&mut store, "ldap", "ext-dana", &nobody),
+        Err(IdentityRefusal::NotAuthorized)
+    );
+}

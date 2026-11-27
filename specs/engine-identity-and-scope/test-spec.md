@@ -162,3 +162,4 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | `MEDULLA-IDENTITY-R023.15` | `crates/medulla-store-apply/src/redb_store/operation_audit_tests.rs::an_operator_record_is_listed_by_request_id_and_never_read_back_as_a_tenant_event` | L1 | planned |
 | `MEDULLA-IDENTITY-R750` | `crates/medulla-identity-types/src/identity/tests/tokens.rs::a_login_state_exists_before_any_session_and_is_spent_once_within_its_ttl` | L1 | planned |
 | `MEDULLA-IDENTITY-R751` | `crates/medulla-identity-types/src/identity/tests/tokens.rs::an_assertion_id_registers_once_until_it_expires` | L1 | planned |
+| `MEDULLA-IDENTITY-R752` | `crates/medulla-identity-types/src/identity/tests/provision.rs::a_link_resolves_to_its_principal_and_an_absent_one_to_none` | L1 | planned |

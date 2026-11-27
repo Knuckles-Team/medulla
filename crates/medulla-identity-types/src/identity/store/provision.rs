@@ -130,6 +130,7 @@ impl IdentityStore {
             | IdpOp::Remove { .. }
             | IdpOp::Link { .. }
             | IdpOp::Unlink { .. }
+            | IdpOp::ResolveLink { .. }
             | IdpOp::List => Err(IdentityRefusal::InvalidRequest),
         }
     }
