@@ -6,6 +6,7 @@
 //! caller does not act as is the same `PARTICIPANT_NOT_VISIBLE` envelope, so a reader cannot tell
 //! which of the three it hit.
 
+use super::terminal::GraphOpsContext;
 use super::participant_surface::{
     participant_unavailable, readable_participants, resolve_scope_ref, sessions_visible_to,
 };
