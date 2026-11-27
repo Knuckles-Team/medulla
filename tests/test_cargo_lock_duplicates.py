@@ -9,6 +9,7 @@ fails, and an entry the merge base did not hold fails.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from collections import defaultdict
@@ -222,3 +223,39 @@ def test_every_allow_list_entry_has_pinned_by_and_reason() -> None:
         assert set(entry["versions"]) == versions.get(name, set()), (
             f"{name}: versions differ from the lock"
         )
+
+
+# spec: MEDULLA-CONTRACT-R065.4
+def test_a_duplicate_outside_the_allow_list_fails() -> None:
+    def pkg(name: str, version: str) -> dict:
+        return {"name": name, "version": version}
+
+    synthetic = [pkg("alpha", "1.0.0"), pkg("alpha", "2.0.0"), pkg("beta", "1.0.0")]
+    entry = {"versions": ["1.0.0", "2.0.0"], "pinned_by": ["x"], "reason": "r"}
+    failing = check_duplicates(synthetic, {}, None)
+    assert any("alpha" in line for line in failing), failing
+    assert check_duplicates(synthetic, {"alpha": entry}, None) == []
+    stale = check_duplicates(synthetic, {"alpha": entry, "beta": entry}, None)
+    assert any("stale" in line and "beta" in line for line in stale), stale
+    added = check_duplicates(synthetic, {"alpha": entry}, set())
+    assert any(
+        "added since the merge base" in line and "alpha" in line for line in added
+    ), added
+    assert check_duplicates(synthetic, {"alpha": entry}, {"alpha"}) == []
+    # The real lock and list pass.
+    real = check_duplicates(_lock_packages(), _allow_list(), _base_allow_names())
+    assert real == [], "\n".join(real)
+
+
+# spec: MEDULLA-CONTRACT-R065
+def test_lock_has_one_array_family_one_backend_and_only_reasoned_duplicates() -> None:
+    test_one_columnar_array_family()
+    test_one_tls_and_crypto_backend()
+    test_every_allow_list_entry_has_pinned_by_and_reason()
+    problems = check_duplicates(_lock_packages(), _allow_list(), _base_allow_names())
+    assert problems == [], "\n".join(problems)
+
+
+def test_allow_list_names_are_plain_package_names() -> None:
+    for name in _allow_list():
+        assert re.fullmatch(r"[A-Za-z0-9_.+-]+", name), name

@@ -683,6 +683,16 @@ repos:
     files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|vendor/.*/Cargo\.toml|tools/.*/Cargo\.toml)$
     pass_filenames: false
     stages: [pre-push, manual]
+  # MEDULLA-CONTRACT-R065.4: Cargo.lock holds one columnar-array family, no aws-lc, and
+  # only the duplicates named (with a reason) in scripts/cargo_lock_duplicates.toml.
+  - id: cargo-lock-duplicates
+    name: Cargo.lock duplicates are reasoned and the allow-list only shrinks
+    entry: pytest --noconftest -p no:cacheprovider -q tests/test_cargo_lock_duplicates.py
+    language: python
+    additional_dependencies: [pytest]
+    files: ^(Cargo\.lock|Cargo\.toml|crates/.*/Cargo\.toml|vendor/.*/Cargo\.toml|scripts/cargo_lock_duplicates\.toml|tests/test_cargo_lock_duplicates\.py)$
+    pass_filenames: false
+    stages: [pre-push, manual]
   # crates.io-only dependency edict (AGENTS.md, "crates.io-only Rust dependency
   # edict"): fails if any Cargo.toml adds a `git = ` source or an
   # out-of-workspace `path = ` dependency, or Cargo.lock resolves anything from
