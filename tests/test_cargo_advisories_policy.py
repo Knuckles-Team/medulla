@@ -7,6 +7,8 @@ not hold.
 
 from __future__ import annotations
 
+import datetime
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -65,3 +67,56 @@ def test_cargo_deny_advisories_pass_without_new_ignores() -> None:
         text=True,
     )
     assert proc.returncode == 0, proc.stderr[-3000:]
+
+
+BANNED = ("chrono", "chrono-tz", "chrono-tz-build", "humantime")
+LEDGER = ROOT / ".config" / "cargo-audit-allow.txt"
+ROW = "MEDULLA-CONTRACT-R064"
+
+
+def _manifests() -> list[Path]:
+    found = [ROOT / "Cargo.toml"]
+    for group in ("crates", "tools"):
+        found += sorted((ROOT / group).glob("*/Cargo.toml"))
+    return found
+
+
+def _named_in(node: object, path: str = "") -> list[str]:
+    hits: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            here = f"{path}.{key}" if path else key
+            if key in BANNED and path.rsplit(".", 1)[-1] in {
+                "dependencies",
+                "dev-dependencies",
+                "build-dependencies",
+            }:
+                hits.append(here)
+            if isinstance(value, dict) and value.get("package") in BANNED:
+                hits.append(f"{here} (package = {value['package']})")
+            hits += _named_in(value, here)
+    return hits
+
+
+# spec: MEDULLA-CONTRACT-R064
+def test_no_workspace_manifest_names_a_date_time_crate() -> None:
+    offenders: list[str] = []
+    for manifest in _manifests():
+        data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+        offenders += [
+            f"{manifest.relative_to(ROOT)}: [{table}]" for table in _named_in(data)
+        ]
+    assert not offenders, f"manifests name a banned date-time crate: {offenders}"
+
+    ignores = tomllib.loads(DENY.read_text(encoding="utf-8"))["advisories"]["ignore"]
+    assert len(ignores) == 4, "the four date-time advisories are the only ignores"
+    ledger: dict[str, datetime.date] = {}
+    for line in LEDGER.read_text(encoding="utf-8").splitlines():
+        found = re.match(r"(RUSTSEC-\d{4}-\d{4}) expires=(\d{4}-\d{2}-\d{2})\b", line)
+        if found:
+            ledger[found[1]] = datetime.date.fromisoformat(found[2])
+    limit = datetime.date.today() + datetime.timedelta(days=90)
+    for entry in ignores:
+        assert ROW in entry["reason"], f"{entry['id']} reason does not cite {ROW}"
+        assert entry["id"] in ledger, f"{entry['id']} has no ledger line with an expiry"
+        assert ledger[entry["id"]] <= limit, f"{entry['id']} expiry is over 90 days out"
