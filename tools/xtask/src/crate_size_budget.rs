@@ -134,6 +134,7 @@ mod tests {
         "x\n".repeat(n)
     }
 
+    // spec: MEDULLA-CONTRACT-R067.1
     #[test]
     fn a_crate_of_25001_lines_fails_and_25000_passes() {
         let big = lines(25_001);
