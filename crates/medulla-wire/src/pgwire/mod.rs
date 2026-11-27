@@ -2060,8 +2060,7 @@ impl EngineBackendFactory {
     fn new(
         state: Arc<RwLock<ServerState>>,
         default_graph: String,
-        auth_mode: PgWireAuthMode,
-        auth_secret: String,
+        (auth_mode, auth_secret): (PgWireAuthMode, String),
         tls_certificate_pem: Option<Arc<Vec<u8>>>,
         connections: Arc<pgwire::api::ConnectionManager>,
         activity: Arc<medulla_wire_core::wire::activity::WireActivity>,
@@ -2209,8 +2208,7 @@ pub async fn serve_prepared(
         let factory = Arc::new(EngineBackendFactory::new(
             state.clone(),
             default_graph.clone(),
-            auth_mode,
-            auth_secret.clone(),
+            (auth_mode, auth_secret.clone()),
             tls_material
                 .as_ref()
                 .map(|(_, certificate_pem)| certificate_pem.clone()),
