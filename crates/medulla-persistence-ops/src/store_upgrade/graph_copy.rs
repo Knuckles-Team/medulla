@@ -19,7 +19,6 @@ use medulla_storage::object::fetch::{ObjectHead, SegmentHeader, VersionManifest}
 use medulla_storage::object::rows::{table_row_pages, RowBatch, BATCH_ROWS};
 use object_store::path::Path as ObjPath;
 use object_store::{ObjectStore, ObjectStoreExt, PutMode, PutOptions};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 /// The wire code of a copy whose destination digest differs from the source digest.
@@ -143,18 +142,15 @@ pub async fn copy_graph(
     let mut staged: Vec<(String, String, u64)> = Vec::new();
     let (mut node_after, mut edge_after) = (None, None);
     let mut pages: Vec<RowBatch> = Vec::new();
-    loop {
-        let Some(page) = backend
-            .export_graph_raw_page(
-                graph_fname,
-                node_after.clone(),
-                edge_after.clone(),
-                BATCH_ROWS,
-            )
-            .map_err(GraphCopyRefusal::Source)?
-        else {
-            break;
-        };
+    while let Some(page) = backend
+        .export_graph_raw_page(
+            graph_fname,
+            node_after.clone(),
+            edge_after.clone(),
+            BATCH_ROWS,
+        )
+        .map_err(GraphCopyRefusal::Source)?
+    {
         node_after = page.node_after.clone();
         edge_after = page.edge_after.clone();
         let done = page.nodes_exhausted && page.edges_exhausted;
