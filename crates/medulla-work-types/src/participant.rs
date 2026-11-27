@@ -65,8 +65,11 @@ impl<'de> Deserialize<'de> for ParticipantId {
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ParticipantKind {
+    /// A human.
     Person,
+    /// An agent acting for a person or a team.
     Agent,
+    /// A non-living thing the workspace tracks, such as a tool or a file.
     Object,
 }
 
@@ -90,15 +93,21 @@ impl ParticipantKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Participant {
+    /// The slug that names the participant within its workspace.
     pub participant_id: ParticipantId,
+    /// The tenant the participant belongs to.
     pub tenant: TenantId,
+    /// The workspace the participant takes part in.
     pub workspace: ResourceId,
+    /// What the participant is.
     pub kind: ParticipantKind,
+    /// The name shown for the participant; never empty.
     pub display_name: String,
     /// The `Person` or `Agent` node the participant stands for; required for those two kinds.
     pub represents: Option<String>,
     /// The principals that may read as this participant.
     pub acts_as: Vec<String>,
+    /// The version of the stored participant shape.
     pub schema_version: u16,
 }
 
@@ -205,7 +214,10 @@ pub fn membership_edges(conversation: &crate::memory::ConversationRecord) -> Vec
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ParticipantOp {
     /// Create a participant, or update its name and `acts_as`.
-    Put { participant: Participant },
+    Put {
+        /// The participant to store.
+        participant: Participant,
+    },
     /// Add a participant to a session. Idempotent on the pair.
     AddMember {
         /// The session (conversation) the participant joins.
@@ -214,13 +226,24 @@ pub enum ParticipantOp {
         participant_id: ParticipantId,
     },
     /// Create or replace a memory scope (MEDULLA-DECISION-ENGINE-R651.9).
-    PutScope { scope: crate::memory_scope::MemoryScope },
+    PutScope {
+        /// The scope to store.
+        scope: crate::memory_scope::MemoryScope,
+    },
     /// Set a participant's observation flags in one session (MEDULLA-DECISION-ENGINE-R651.10).
-    SetObservation { config: crate::memory_scope::ObservationConfig },
+    SetObservation {
+        /// The observation flags to set.
+        config: crate::memory_scope::ObservationConfig,
+    },
     /// Finish one derive task: advance the checkpoint of its key to the payload's last turn and
     /// announce it (MEDULLA-DECISION-ENGINE-R651.12). `claims_written` is how many conclusions
     /// the worker proposed; more than `memory.derive_max_conclusions` is refused.
-    CompleteDerivation { payload_ref: String, claims_written: u32 },
+    CompleteDerivation {
+        /// The reference of the derive task payload being finished.
+        payload_ref: String,
+        /// How many conclusions the worker proposed.
+        claims_written: u32,
+    },
 }
 
 #[derive(Deserialize)]
