@@ -107,7 +107,7 @@ pub use ann_pushdown::{user_ann_decision, UserAnnDecision, UserAnnPushdown};
 // trait directly: `medulla-plan` depends on `medulla-query`, so the reverse edge is a package
 // cycle — see `embed_udf`'s module doc).
 pub use embed_udf::{bind_text_embedder, medulla_embed_udf, medulla_embed_udf_with, EmbedFn};
-use exec::{
+pub use exec::{
     exec_graph_table_typed_with_tables, exec_graph_table_typed_with_tables_cancellable, exec_sql,
     exec_sql_arrow, exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables,
     exec_sql_typed, exec_sql_typed_cancellable, exec_sql_typed_with_tables,
