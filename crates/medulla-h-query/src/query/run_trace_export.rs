@@ -169,7 +169,10 @@ fn walk(
     }
     // The stack walk visits children of the last pushed run first; re-sort so the order is the
     // recorded depth-first preorder: parents before children, siblings by id.
-    let order = preorder(&found);
+    let order: BTreeMap<String, usize> = preorder(&found)
+        .into_iter()
+        .map(|(record_ref, at)| (record_ref.to_owned(), at))
+        .collect();
     found.sort_by_key(|record| order[record.record_ref.as_str()]);
     Ok((found, declared))
 }
