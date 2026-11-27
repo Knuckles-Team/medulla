@@ -509,22 +509,48 @@ fn the_audit_list_keeps_the_callers_tenant_and_one_operation_and_pages_by_sequen
     store.append(&foreign).unwrap();
     store.append(&event("request-d", "reserved")).unwrap();
 
-    let all = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, 100).unwrap();
+    let all = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, None, 100).unwrap();
     assert!(all.records.iter().all(|r| r.event_line.contains(&format!("tenant={TENANT}|"))));
     assert!(all.records.iter().all(|r| !r.event_line.contains("other-tenant")));
     assert_eq!(all.records.len(), 3);
     assert_eq!(all.next_after_seq, None);
 
     let writes =
-        operation_audit_list(&store.shard, GRAPH, TENANT, Some("graph.nodes.write"), None, 100)
+        operation_audit_list(&store.shard, GRAPH, TENANT, Some("graph.nodes.write"), None, None, 100)
             .unwrap();
     assert_eq!(writes.records.len(), 2);
     assert!(writes.records.iter().all(|r| r.event_line.contains("|op=graph.nodes.write|")));
 
-    let first = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, 1).unwrap();
+    let first = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, None, 1).unwrap();
     assert_eq!(first.records.len(), 1);
     let resume = first.next_after_seq.expect("more records remain");
-    let rest = operation_audit_list(&store.shard, GRAPH, TENANT, None, Some(resume), 100).unwrap();
+    let rest = operation_audit_list(&store.shard, GRAPH, TENANT, None, None, Some(resume), 100).unwrap();
     assert_eq!(rest.records.len(), 2);
     assert!(rest.records[0].seq > resume);
+}
+
+// spec: MEDULLA-IDENTITY-R023.15
+#[test]
+fn an_operator_record_is_listed_by_request_id_and_never_read_back_as_a_tenant_event() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = Store::seeded(dir.path());
+    store.append(&event("request-a", "reserved")).unwrap();
+    let mut withheld = event("request-w", "reserved");
+    withheld.audit_class = OPERATOR_AUDIT_CLASS.into();
+    withheld.op = "query.projections".into();
+    withheld.evidence.insert("withheld_count".into(), "3".into());
+    let receipt = store.append(&withheld).unwrap();
+
+    let listed =
+        operation_audit_list(&store.shard, GRAPH, TENANT, None, Some("request-w"), None, 100)
+            .unwrap();
+    assert_eq!(listed.records.len(), 1);
+    assert!(listed.records[0].event_line.contains("|class=operator"));
+    assert!(listed.records[0].event_line.contains("withheld_count=3"));
+    // The tenant's own read of the same sequence finds nothing.
+    let refused = operation_audit_read(&store.shard, GRAPH, TENANT, receipt.seq).unwrap_err();
+    assert_eq!(refused, "AUDIT_EVENT_NOT_FOUND");
+    // An ordinary event of the same chain still reads back.
+    let ordinary = store.append(&event("request-b", "reserved")).unwrap();
+    assert!(operation_audit_read(&store.shard, GRAPH, TENANT, ordinary.seq).is_ok());
 }

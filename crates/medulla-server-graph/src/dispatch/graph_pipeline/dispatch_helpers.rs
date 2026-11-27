@@ -226,10 +226,10 @@ pub async fn dispatch_op_audit_list(
     req_id: u64,
     target: AuditChainTarget<'_>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
-    filter: (Option<String>, Option<u64>, Option<u32>),
+    filter: (Option<String>, Option<String>, Option<u64>, Option<u32>),
 ) -> Response {
     use medulla_protocol_types::result_contract::security::AUDIT_LIST_MAX_LIMIT;
-    let (op, after_seq, limit) = filter;
+    let (op, request_id, after_seq, limit) = filter;
     let limit = limit.unwrap_or(AUDIT_LIST_MAX_LIMIT);
     if !(1..=AUDIT_LIST_MAX_LIMIT).contains(&limit) {
         return Response::err(
@@ -237,15 +237,19 @@ pub async fn dispatch_op_audit_list(
             format!("INVALID_ARGUMENT: AuditList limit must be 1..={AUDIT_LIST_MAX_LIMIT}"),
         );
     }
-    if op.as_deref().is_some_and(|name| name.is_empty() || name.contains('|')) {
+    if [&op, &request_id]
+        .into_iter()
+        .flatten()
+        .any(|name| name.is_empty() || name.contains('|'))
+    {
         return Response::err(
             req_id,
-            "INVALID_ARGUMENT: AuditList op must be a non-empty operation id without '|'",
+            "INVALID_ARGUMENT: AuditList op and request_id are non-empty without '|'",
         );
     }
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb
-            .audit_list(&target.fname, target.tenant, op, after_seq, limit as usize)
+            .audit_list(&target.fname, target.tenant, op, request_id, after_seq, limit as usize)
             .await
         {
             Ok(page) => Response::ok(

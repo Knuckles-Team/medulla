@@ -96,3 +96,4 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T086 [US6] MEDULLA-IDENTITY-R727.3 RETIRED: one tenant per engine; sharing goes through arbora federation
 - [ ] T087 [US6] MEDULLA-IDENTITY-R727.4 RETIRED: one tenant per engine; sharing goes through arbora federation
 - [ ] T088 MEDULLA-IDENTITY-R023.14 Operator read of the operation audit by operation and tenant
+- [ ] T089 MEDULLA-IDENTITY-R023.15 Operator-class audit records

@@ -18033,6 +18033,7 @@ class AdminClient:
         *,
         chain: str,
         op: str | None = None,
+        request_id: str | None = None,
         after_seq: int | None = None,
         limit: int | None = None,
     ) -> dict[str, Any]:
@@ -18040,12 +18041,16 @@ class AdminClient:
 
         One page, ascending by sequence: ``op`` keeps one operation id, ``after_seq``
         resumes after a sequence (the previous page's ``next_after_seq``), and
-        ``limit`` is 1 to 500. The page does not verify the chain; use
+        ``limit`` is 1 to 500. ``request_id`` keeps one request's records, which is
+        how an operator-class record (``audit_class`` ``operator``, never returned by
+        :meth:`audit_read_event`) is read. The page does not verify the chain; use
         :meth:`audit_read_event` for one verified event.
         """
         params: dict[str, Any] = {"chain": chain}
         if op is not None:
             params["op"] = op
+        if request_id is not None:
+            params["request_id"] = request_id
         if after_seq is not None:
             params["after_seq"] = _integer("after_seq", after_seq, minimum=0)
         if limit is not None:

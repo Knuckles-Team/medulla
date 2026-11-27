@@ -25,6 +25,7 @@ impl RedbBackend {
         graph_fname: &str,
         verified_tenant: &str,
         op: Option<String>,
+        request_id: Option<String>,
         after_seq: Option<u64>,
         limit: usize,
     ) -> Result<medulla_protocol_types::protocol::AuditListPage, String> {
@@ -36,6 +37,7 @@ impl RedbBackend {
                 &graph,
                 &tenant,
                 op.as_deref(),
+                request_id.as_deref(),
                 after_seq,
                 limit,
             )

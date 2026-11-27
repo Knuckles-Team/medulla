@@ -159,3 +159,4 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 - `MEDULLA-IDENTITY-R727.3`: retired (one tenant per engine; cross-tenant sharing goes through arbora federation).
 - `MEDULLA-IDENTITY-R727.4`: retired (one tenant per engine; cross-tenant sharing goes through arbora federation).
 | `MEDULLA-IDENTITY-R023.14` | `crates/medulla-store-apply/src/redb_store/operation_audit_tests.rs::the_audit_list_keeps_the_callers_tenant_and_one_operation_and_pages_by_sequence`; `tests/identity/test_audit_list_served.py::test_audit_list_pages_by_sequence_filters_by_op_and_needs_the_operator_scope` | L3 | planned |
+| `MEDULLA-IDENTITY-R023.15` | `crates/medulla-store-apply/src/redb_store/operation_audit_tests.rs::an_operator_record_is_listed_by_request_id_and_never_read_back_as_a_tenant_event` | L1 | planned |

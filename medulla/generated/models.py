@@ -19225,6 +19225,7 @@ class MethodAuditListParams(BaseModel):
     chain: AuditChain
     limit: Annotated[int, Field(ge=0)] | None = None
     op: str | None = None
+    request_id: str | None = None
 
 
 class AuditListRecord(BaseModel):

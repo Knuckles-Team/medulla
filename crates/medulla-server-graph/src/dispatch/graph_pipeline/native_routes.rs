@@ -1029,6 +1029,7 @@ async fn route_graph_audit_and_modality(
         Method::AuditList {
             chain,
             op,
+            request_id,
             after_seq,
             limit,
         } => {
@@ -1041,7 +1042,7 @@ async fn route_graph_audit_and_modality(
                     ctx.verified_context.tenant(),
                 ),
                 ctx.persistence.clone(),
-                (op, after_seq, limit),
+                (op, request_id, after_seq, limit),
             )
             .await);
         }

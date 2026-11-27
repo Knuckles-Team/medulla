@@ -66,7 +66,24 @@ pub fn read_audit_chain_scope(tenant: &str, graph_fname: &str) -> String {
 }
 
 /// The audit classes an operation may declare.
-const AUDIT_CLASSES: [&str; 3] = ["event", "identity_chain", "scope_exceeds_policy"];
+const AUDIT_CLASSES: [&str; 4] = ["event", "identity_chain", "scope_exceeds_policy", OPERATOR_AUDIT_CLASS];
+/// The operator-only audit class (ARBORA-OPS-R052.5): a record such as a withheld count that the
+/// tenant's own audit reads never return. Only `AuditList`, under `audit:operator`, lists it.
+pub const OPERATOR_AUDIT_CLASS: &str = "operator";
+
+/// The fields of one chain line, in order: `OP_AUDIT`, `v1`, tenant, principal, op, surface,
+/// params digest, status, request id and class.
+fn line_field(line: &str, index: usize, name: &str) -> Option<String> {
+    line.split('|')
+        .nth(index)
+        .and_then(|field| field.strip_prefix(name))
+        .map(str::to_string)
+}
+
+/// Whether the chain line is an operator-class record.
+fn is_operator_line(line: &str) -> bool {
+    line_field(line, 9, "class=").as_deref() == Some(OPERATOR_AUDIT_CLASS)
+}
 /// How a caller spells "this operation declares no audit class".
 const NO_AUDIT_CLASS: &str = "none";
 
@@ -422,6 +439,7 @@ pub fn operation_audit_list(
     graph: &str,
     verified_tenant: &str,
     op: Option<&str>,
+    request_id: Option<&str>,
     after_seq: Option<u64>,
     limit: usize,
 ) -> Result<medulla_protocol_types::protocol::AuditListPage, String> {
@@ -431,6 +449,7 @@ pub fn operation_audit_list(
     let audit = read.scoped_owner_table(AUDIT)?;
     let prefix = format!("OP_AUDIT|v1|tenant={verified_tenant}|");
     let op_field = op.map(|name| format!("op={name}"));
+    let request_field = request_id.map(|id| format!("request_id={id}"));
     let mut records: Vec<AuditListRecord> = Vec::new();
     let mut next_after_seq = None;
     for row in audit.scope_rows()? {
@@ -452,6 +471,12 @@ pub fn operation_audit_list(
         if op_field
             .as_deref()
             .is_some_and(|wanted| line.split('|').nth(4) != Some(wanted))
+        {
+            continue;
+        }
+        if request_field
+            .as_deref()
+            .is_some_and(|wanted| line.split('|').nth(8) != Some(wanted))
         {
             continue;
         }
@@ -490,7 +515,10 @@ pub fn operation_audit_read(
     let (previous, hash, line) = medulla_kernel::audit::decode_entry(entry.value())
         .ok_or_else(|| "AUDIT_EVENT_CORRUPT".to_string())?;
     let event_line = std::str::from_utf8(line).map_err(|_| "AUDIT_EVENT_CORRUPT")?;
-    if !event_line.starts_with(&format!("OP_AUDIT|v1|tenant={verified_tenant}|")) {
+    // An operator-class record is never returned to the tenant's own audit read.
+    if !event_line.starts_with(&format!("OP_AUDIT|v1|tenant={verified_tenant}|"))
+        || is_operator_line(event_line)
+    {
         return Err("AUDIT_EVENT_NOT_FOUND".to_string());
     }
     let proof = medulla_protocol_types::protocol::AuditEventProof {

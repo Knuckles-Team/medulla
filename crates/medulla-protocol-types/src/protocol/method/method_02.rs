@@ -372,13 +372,17 @@ $($variants)*
     /// only the records of that operation id, `after_seq` resumes after a sequence, and `limit`
     /// is 1 to 500 (default 500). The page carries no chain verification (`AuditReadEvent`
     /// verifies the chain for one event); a record of another tenant is never listed. Scope
-    /// `audit:operator`, which no ordinary caller holds. A limit outside its bound or an `op`
+    /// `audit:operator`, which no ordinary caller holds. `request_id` keeps one request's records,
+    /// the read of an operator-class record (`audit_class` `operator`, for example a withheld count
+    /// kept in `evidence`), which `AuditReadEvent` never returns. A limit outside its bound or an `op`
     /// holding `|` refuses `INVALID_ARGUMENT`. Reads only.
     #[cfg(feature = "security")]
     AuditList {
         chain: crate::result_contract::security::AuditChain,
         #[serde(default)]
         op: Option<String>,
+        #[serde(default)]
+        request_id: Option<String>,
         #[serde(default)]
         after_seq: Option<u64>,
         #[serde(default)]
