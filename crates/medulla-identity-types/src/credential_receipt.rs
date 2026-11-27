@@ -21,7 +21,10 @@ pub const RECEIPT_NODE_TYPE: &str = "CredentialReceipt";
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum CredentialReceiptOp {
     /// Record one receipt.
-    Record { receipt: CredentialReceipt },
+    Record {
+        /// The receipt to store.
+        receipt: CredentialReceipt,
+    },
 }
 
 /// One credentialed decision.
@@ -29,14 +32,21 @@ pub enum CredentialReceiptOp {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CredentialReceipt {
+    /// The tenant the decision was made under.
     pub tenant: String,
+    /// The client (agent or service identity) that used the credential.
     pub client: String,
+    /// The connector whose resource the credential reached.
     pub connector: String,
+    /// The connector resource the decision touched.
     pub resource: String,
+    /// The operation the credential was used for.
     pub operation: String,
+    /// The outcome of the decision, such as `allowed` or `denied`.
     pub outcome: String,
     /// `sha256:` and 64 lowercase hex characters: the digest of the binding the decision used.
     pub binding_digest: String,
+    /// When the decision was made, in milliseconds since the Unix epoch.
     pub at_ms: u64,
 }
 
