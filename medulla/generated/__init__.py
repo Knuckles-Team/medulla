@@ -428,6 +428,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "SourceDrainStatus": coordination.send_source_drain_status,
     "IngestQueueDepth": coordination.send_ingest_queue_depth,
     "Introspect": security.send_introspect,
+    "Profile": security.send_profile,
     "GetShortestPath": compute.send_get_shortest_path,
     "GetSubgraph": graph.send_get_subgraph,
     "GetSuccessors": graph.send_get_successors,

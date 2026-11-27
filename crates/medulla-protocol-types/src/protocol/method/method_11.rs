@@ -947,6 +947,16 @@ $($variants)*
         #[serde(default)]
         cursor: Option<String>,
     },
+    /// Profile the running engine (MEDULLA-OBSERVE-R010.1). Kind `stacks` samples every
+    /// thread's stack for `seconds` (1 to 60) and answers folded stacks, each frame naming its
+    /// module, build id and offset; kind `task_dump` answers one atomic snapshot of the tasks,
+    /// requests, locks and last events. Scope `observe:profile` (admin class); audited. Refuses
+    /// `PROFILE_BUSY`, `PROFILE_DURATION_INVALID` and `PROFILE_UNAVAILABLE`.
+    Profile {
+        kind: medulla_types::introspect::ProfileKind,
+        #[serde(default)]
+        seconds: u16,
+    },
     /// Enqueue one durable task (MEDULLA-DURABLE-KERNEL-R072) into the job store
     /// as a job of family `task.<queue>`. Scope `task:enqueue`. The tenant and
     /// principal come from the verified request; a repeated `idempotency_key` in

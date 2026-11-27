@@ -8825,6 +8825,11 @@ class GraphTextPropertyRef(BaseModel):
     type_id: str
 
 
+class ProfileKind(str, Enum):
+    STACKS = "stacks"
+    TASK_DUMP = "task_dump"
+
+
 class IntrospectSection(str, Enum):
     REQUESTS = "requests"
     TASKS = "tasks"
@@ -17188,6 +17193,20 @@ class MethodIntrospect(BaseModel):
     params: MethodIntrospectParams
 
 
+class MethodProfileParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: ProfileKind
+    seconds: int = Field(default=0, ge=0, le=65535)
+
+
+class MethodProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Profile"]
+    params: MethodProfileParams
+
+
 class MethodMeasureIngestThroughput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18850,6 +18869,7 @@ Method = Annotated[
         MethodMarkWorkItemEffectStarted,
         MethodDescribeContract,
         MethodIntrospect,
+        MethodProfile,
         MethodMeasureIngestThroughput,
         MethodMeetingSummaryCommit,
         MethodMeetingSummaryContext,
@@ -49262,6 +49282,9 @@ __all__ = [
     "MethodDescribeContractParams",
     "MethodIntrospect",
     "MethodIntrospectParams",
+    "MethodProfile",
+    "MethodProfileParams",
+    "ProfileKind",
     "IntrospectSection",
     "MethodDecide",
     "MethodDecideParams",

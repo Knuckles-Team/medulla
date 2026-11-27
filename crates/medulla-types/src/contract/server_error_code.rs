@@ -433,6 +433,12 @@ closed_error_codes! {
         IntrospectLimitInvalid => "INTROSPECT_LIMIT_INVALID",
         /// MEDULLA-OBSERVE-R006.1: `Introspect` cursor is not a key of the section.
         IntrospectCursorInvalid => "INTROSPECT_CURSOR_INVALID",
+        /// MEDULLA-OBSERVE-R010.1: a stack profile is already running; one runs at a time.
+        ProfileBusy => "PROFILE_BUSY",
+        /// MEDULLA-OBSERVE-R010.1: `Profile` seconds is 0 or over the profile maximum.
+        ProfileDurationInvalid => "PROFILE_DURATION_INVALID",
+        /// MEDULLA-OBSERVE-R010.1: this build or platform has no stack sampler.
+        ProfileUnavailable => "PROFILE_UNAVAILABLE",
         DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
         DerivedBoundMalformed => "DERIVED_BOUND_MALFORMED",
         DerivedOriginMissing => "DERIVED_ORIGIN_MISSING",

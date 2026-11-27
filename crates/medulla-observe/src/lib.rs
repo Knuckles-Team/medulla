@@ -9,11 +9,12 @@
 //! finishes the handle with the future's outcome; `TaskRegistry::register` returns the handle
 //! for a job the caller runs itself. Both report through `progress` and end through `finish`.
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![deny(missing_docs)]
 
 pub mod events;
 pub mod machine;
+pub mod profile;
 pub mod progress;
 pub mod registry;
 pub mod report;

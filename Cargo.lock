@@ -6806,9 +6806,12 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "futures-util",
+ "libc",
  "medulla-types",
+ "medulla-version",
  "parking_lot",
  "serde",
+ "serde_json",
  "tokio",
  "tracing",
 ]

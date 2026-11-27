@@ -73,6 +73,9 @@ def error_codes() -> set[str]:
     wanted = {
         "INTROSPECT_LIMIT_INVALID",
         "INTROSPECT_CURSOR_INVALID",
+        "PROFILE_BUSY",
+        "PROFILE_DURATION_INVALID",
+        "PROFILE_UNAVAILABLE",
         "PARTIAL_MATERIALIZATION",
         "NO_PROGRESS",
         "TRANSITION_REFUSED",
@@ -102,7 +105,7 @@ def test_guide_matches_codes_knobs_and_sections():
     missing = sorted(name for name in sections if name not in spans)
     assert not missing, f"the guide states no row for the sections: {missing}"
     codes = error_codes()
-    assert len(codes) == 5, sorted(codes)
+    assert len(codes) == 8, sorted(codes)
     missing = sorted(code for code in codes if code not in spans)
     assert not missing, f"the guide states no row for the codes: {missing}"
     # The log targets the engine writes are the ones the guide lists.

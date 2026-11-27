@@ -24,12 +24,27 @@ value; a principal appears only as an opaque keyed reference. The call writes no
 | `events` | sequence number | One accepted state-machine transition |
 | `indexes` | index name | One semantic index the engine maintains and whether it is bound |
 
+## Profile
+
+`Profile` needs the `observe:profile` scope and is audited. `kind` is `stacks` or `task_dump`.
+`stacks` samples the stack of every thread of the server for `seconds` (1 to 60) at
+`observe.profile_hz` and answers folded stacks: for each thread name, each distinct stack with
+its sample count. Every frame holds its module path, the module's build id, the offset inside the
+module and, when the module has a dynamic symbol for it, the function. Resolve the offsets with
+`scripts/symbolize.sh`, below. One profile runs at a time. The sampler is signal based and needs a
+Linux build with glibc; elsewhere the call refuses `PROFILE_UNAVAILABLE`. `task_dump` answers the
+tasks, the in-flight requests, the lock sites and the last 256 events, each registry read once
+under one sequence number, and needs no sampler.
+
 ## Refusal codes
 
 | Code | Meaning |
 |---|---|
 | `INTROSPECT_LIMIT_INVALID` | `limit` is 0 or over 500 |
 | `INTROSPECT_CURSOR_INVALID` | `cursor` is not a key of the section |
+| `PROFILE_BUSY` | A stack profile is already running |
+| `PROFILE_DURATION_INVALID` | `seconds` is 0 or over 60 |
+| `PROFILE_UNAVAILABLE` | This build or platform has no stack sampler |
 | `PARTIAL_MATERIALIZATION` | A read met a graph that is only partly paged into memory; the detail carries the phase and the cursor |
 | `NO_PROGRESS` | A guarded loop made no progress; the message names the loop and its `file:line` |
 | `TRANSITION_REFUSED` | A state machine refused an event; the detail names the machine, the state, the event and the reason |

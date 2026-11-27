@@ -230,6 +230,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("node:write", User, "engine"),
     entry("observation:state", User, "engine"),
     // MEDULLA-OBSERVE-R006.1: the runtime introspection read.
+    // MEDULLA-OBSERVE-R010.1: the on-demand stack profile.
+    entry("observe:profile", Admin, "engine"),
     entry("observe:read", Admin, "engine"),
     entry("ops:admin", Admin, "graph-os"),
     entry("ops:read", Admin, "graph-os"),

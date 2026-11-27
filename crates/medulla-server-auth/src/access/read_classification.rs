@@ -506,6 +506,11 @@ pub(super) const REASON_CONTRACT_CATALOG_METADATA: &str =
 pub(super) const REASON_RUNTIME_INTROSPECTION: &str =
     "Introspect answers from the process-wide runtime registries of medulla_observe (medulla_h_admin::admin::introspect, routed by the control-plane admin arm in dispatch/router/control_plane.rs): rows describe the engine's own tasks, readiness and runtime, carry no payload and no token, and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the observe:read scope";
 
+// MEDULLA-OBSERVE-R010.1: `Profile` samples the process's own threads or snapshots the same
+// runtime registries as `Introspect`; frames and rows describe the engine, never graph content.
+pub(super) const REASON_RUNTIME_PROFILE: &str =
+    "Profile answers from the process itself (medulla_h_admin::admin::profile, routed by the control-plane admin arm in dispatch/router/control_plane.rs): folded stacks of the engine's own threads, or a snapshot of the runtime registries; it holds no graph content and no token, so there is no row for RLS to filter.";
+
 // RF-ADR-010 DL-4: `Decide` reads its candidates from ONE tenant-bound
 // agent_library.redb snapshot through `AgentComponent.Search`'s accessor, and
 // its pinned feature schema, head and policy bodies from the same owner. The
@@ -870,6 +875,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("DescribeContract", REASON_CONTRACT_CATALOG_METADATA),
     // REASON_RUNTIME_INTROSPECTION (MEDULLA-OBSERVE-R006.1)
     ("Introspect", REASON_RUNTIME_INTROSPECTION),
+    // REASON_RUNTIME_PROFILE (MEDULLA-OBSERVE-R010.1)
+    ("Profile", REASON_RUNTIME_PROFILE),
 ];
 
 // L-RLS-1 burn-down (CONCEPT:EPI-P3-3/P3-6): the 5 methods this pass covered (see the

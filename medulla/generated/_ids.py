@@ -76,6 +76,7 @@ METHOD_IDS = frozenset(
         "EngineCapabilities",
         "DescribeContract",
         "Introspect",
+        "Profile",
         "Health",
         "Shutdown",
         "CancelRequest",

@@ -274,4 +274,6 @@ method_results! {
     DescribeContract(DescribeContract) => Json<medulla_types::contract_catalog::DescribeContractPage>;
     // MEDULLA-OBSERVE-R006.1: one page of one runtime-registry section.
     Introspect(Introspect) => Json<medulla_types::introspect::IntrospectPage>;
+    // MEDULLA-OBSERVE-R010.1: folded stacks or one task dump.
+    Profile(Profile) => Json<medulla_types::introspect::ProfileReport>;
 }

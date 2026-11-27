@@ -20596,6 +20596,21 @@ class MedullaClient:
             raise RuntimeError("Introspect must answer with an object")
         return result
 
+    async def profile(self, kind: str, *, seconds: int = 0) -> dict[str, Any]:
+        """Profile the running engine (MEDULLA-OBSERVE-R010.1).
+
+        ``kind`` is ``stacks`` (sample every thread's stack for ``seconds``, 1..=60,
+        and answer folded stacks whose frames name their module, build id and
+        offset) or ``task_dump`` (one atomic snapshot of the tasks, requests, locks
+        and last events). Needs the ``observe:profile`` scope; the call is audited.
+        """
+        result = await self._send(
+            "Profile", {"kind": kind, "seconds": seconds}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("Profile must answer with an object")
+        return result
+
     async def cancel_request(self, target_req_id: int) -> bool:
         """Cooperatively cancel an IN-FLIGHT request by its ``target_req_id`` (L36) —
         e.g. a long-running :meth:`QueryClient.sql`/:meth:`~JobsClient.status` call

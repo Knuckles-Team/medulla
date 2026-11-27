@@ -610,3 +610,6 @@ send_describe_contract = contract_sender(
 
 
 send_introspect = contract_sender("Introspect", "MethodIntrospectParams")
+
+
+send_profile = contract_sender("Profile", "MethodProfileParams")

@@ -11,11 +11,20 @@ publish = false
 name = "medulla_observe"
 path = "src/lib.rs"
 
+[features]
+# The signal-based stack sampler of `Method::Profile` (MEDULLA-OBSERVE-R010.1). It is built on a
+# Linux target with glibc; on any other target `Profile` answers `PROFILE_UNAVAILABLE`.
+default = ["profiler"]
+profiler = ["dep:libc", "dep:medulla-version"]
+
 [dependencies]
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+libc = { version = "0.2", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-version = { path = "../medulla-version", optional = true }
 parking_lot = "0.12"
 serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
 tokio = { version = "1.53", features = ["rt", "sync", "time", "macros"] }
 tracing = "0.1"
 

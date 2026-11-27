@@ -51,6 +51,10 @@ pub async fn try_handle(
     if let Method::Introspect { .. } = method {
         return Ok(super::introspect::handle(state, req_id, method).await);
     }
+    // The profile samples the process or reads the same registries: no substrate either.
+    if let Method::Profile { .. } = method {
+        return Ok(super::profile::handle(req_id, method).await);
+    }
     // Keep the backend owner alive across every async helper call.
     let backend_arc = { state.read().await.persistence.clone() };
     let Some(backend) = backend_arc.as_ref().and_then(|p| p.as_redb()) else {

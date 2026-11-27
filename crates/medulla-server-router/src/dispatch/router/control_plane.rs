@@ -113,7 +113,9 @@ async fn dispatch_cluster_admin_methods_arm_0(ctx: DispatchCtx<'_>, method: Meth
         // same admin seam; it needs no durable substrates.
         | Method::DescribeContract { .. }
         // MEDULLA-OBSERVE-R006.1: the runtime introspection read, same seam.
-        | Method::Introspect { .. }) => {
+        | Method::Introspect { .. }
+        // MEDULLA-OBSERVE-R010.1: the on-demand profile, same seam.
+        | Method::Profile { .. }) => {
             dispatch_boxed(
                 async {
     let req_id = req.id;

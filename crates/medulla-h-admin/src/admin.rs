@@ -52,6 +52,7 @@ pub mod ownership;
 pub(crate) mod connector_pack;
 mod describe_contract;
 pub mod introspect;
+mod profile;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
 mod workflow_registry;
@@ -84,6 +85,7 @@ pub async fn try_handle(
     match method {
         Method::DescribeContract { .. } => Ok(describe_contract::handle(req_id, method)),
         Method::Introspect { .. } => Ok(introspect::handle(_state, req_id, method).await),
+        Method::Profile { .. } => Ok(profile::handle(req_id, method).await),
         Method::Reshard { .. }
         | Method::CatalogAssign { .. }
         | Method::CatalogReassign { .. }

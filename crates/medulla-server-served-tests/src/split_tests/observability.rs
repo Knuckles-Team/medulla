@@ -1321,3 +1321,133 @@ async fn previous_boot_report_is_queryable_after_restart() {
         .filter(|row| row["boot_seq"] == current)
         .all(|row| row["current"] == true));
 }
+
+/// The report a `Profile` call answered.
+fn profile_report(label: &str, response: Response) -> medulla_types::introspect::ProfileReport {
+    decoded(label, response)
+}
+
+// spec: MEDULLA-OBSERVE-R010.1
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn profile_samples_the_spinning_worker() {
+    use medulla_types::introspect::ProfileKind;
+    let served = Served::new().await;
+    let profile = |kind, seconds| Method::Profile { kind, seconds };
+
+    // A duration outside 1 to 60 is refused before anything is sampled.
+    for seconds in [0u16, 61] {
+        let refused = refusal(
+            served
+                .call("__commons__", profile(ProfileKind::Stacks, seconds))
+                .await,
+        );
+        assert!(refused.starts_with("PROFILE_DURATION_INVALID"), "{refused}");
+    }
+    // A caller without `observe:profile` is refused.
+    let denied = served
+        .call_as(
+            "__commons__",
+            profile(ProfileKind::TaskDump, 0),
+            vec!["observe:read".to_string()],
+        )
+        .await;
+    assert!(denied.error.is_some(), "observe:read does not clear observe:profile");
+
+    if !medulla_observe::profile::available() {
+        let unavailable = refusal(
+            served
+                .call("__commons__", profile(ProfileKind::Stacks, 1))
+                .await,
+        );
+        assert!(unavailable.starts_with("PROFILE_UNAVAILABLE"), "{unavailable}");
+        return;
+    }
+    // Three workers spin while the sampler runs; the fourth and the test keep serving.
+    let spinners: Vec<_> = (0..3)
+        .map(|_| {
+            tokio::spawn(async {
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(3);
+                while std::time::Instant::now() < until {
+                    std::hint::spin_loop();
+                }
+            })
+        })
+        .collect();
+    let report = profile_report(
+        "Profile stacks",
+        served
+            .call("__commons__", profile(ProfileKind::Stacks, 1))
+            .await,
+    );
+    assert_eq!(report.kind, ProfileKind::Stacks);
+    assert_eq!(report.seconds, 1);
+    assert!(report.samples > 0, "threads were sampled");
+    assert!(
+        report
+            .stacks
+            .iter()
+            .any(|stack| stack.thread.starts_with("tokio-runtime")),
+        "the runtime workers are named by thread: {:?}",
+        report.stacks.iter().map(|stack| &stack.thread).collect::<Vec<_>>()
+    );
+    // Every frame names its module and an offset in it.
+    assert!(report
+        .stacks
+        .iter()
+        .flat_map(|stack| &stack.frames)
+        .all(|frame| !frame.module.is_empty()));
+    for spinner in spinners {
+        spinner.await.unwrap();
+    }
+}
+
+// spec: MEDULLA-OBSERVE-R010.3
+#[tokio::test(flavor = "multi_thread")]
+async fn task_dump_is_one_consistent_snapshot() {
+    use medulla_observe::registry::tasks::{TaskKind, TaskSpec};
+    use medulla_types::introspect::ProfileKind;
+    let served = Served::new().await;
+    let dumped = medulla_observe::global().register(TaskSpec {
+        name: "task-dump:served".to_string(),
+        owner: "test".to_string(),
+        kind: TaskKind::External,
+    });
+    let held = medulla_server_api::routed_write_coalescer::lock_graph("observe:dump-lock").await;
+    let dump = |served: &Served| {
+        served.call(
+            "__commons__",
+            Method::Profile {
+                kind: ProfileKind::TaskDump,
+                seconds: 0,
+            },
+        )
+    };
+
+    let first = profile_report("Profile task_dump", dump(&served).await);
+    assert_eq!(first.kind, ProfileKind::TaskDump);
+    // The four registries are listed by one read each, under one sequence number.
+    assert!(first.seq > 0);
+    assert!(first.tasks.iter().any(|row| row["name"] == "task-dump:served"));
+    assert!(
+        first.requests.iter().any(|row| row["method"] == "Profile"),
+        "the dump request itself is in flight"
+    );
+    assert!(first
+        .locks
+        .iter()
+        .any(|row| row["name"] == "lock_graph:observe:dump-lock" && row["holder"].is_string()));
+    assert!(first.events.len() <= medulla_observe::profile::TASK_DUMP_EVENTS);
+    assert!(first
+        .events
+        .windows(2)
+        .all(|pair| pair[0]["seq"].as_u64() < pair[1]["seq"].as_u64()));
+    // A dump takes no sampler: it answers on a build that has none, and it names no stack.
+    assert!(first.stacks.is_empty());
+    assert_eq!((first.seconds, first.hz, first.samples), (0, 0, 0));
+
+    // The next dump has a later sequence number.
+    let second = profile_report("Profile task_dump", dump(&served).await);
+    assert!(second.seq > first.seq);
+    drop(held);
+    drop(dumped);
+}

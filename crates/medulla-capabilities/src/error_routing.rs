@@ -225,6 +225,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "INTROSPECT_CURSOR_INVALID",
         ],
     ),
+    // MEDULLA-OBSERVE-R010.1: the on-demand profile's refusals.
+    (
+        "Profile",
+        &[
+            "PROFILE_BUSY",
+            "PROFILE_DURATION_INVALID",
+            "PROFILE_UNAVAILABLE",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R709: a GeoSPARQL operand that is not WKT or
     // names an unsupported coordinate reference.
     // MEDULLA-CQ-CONN-R084.7: a competency question names a pack the tenant has not imported.
