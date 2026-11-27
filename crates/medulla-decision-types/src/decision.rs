@@ -173,7 +173,7 @@ pub use policy::{
     ColdStart, DecisionPolicy, ExplorationBudget, ObjectiveLevelKind, ObjectiveOrder,
     StatisticalPolicy, TraceFidelityLevel, UnknownCostRule, WeightedLevel,
 };
-use record::{
+pub use record::{
     AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation,
     DecisionInputs, PromptSelection, SelectedPromptFacts, DecisionOutcome, DecisionQuestion,
     DecisionRecord, DerivationClass, DerivationEdge, EdgeSource, Elimination, PremiseClass,
@@ -184,7 +184,7 @@ pub use replay::{
     EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
     MAX_IC_DECAY_LAGS,
 };
-use request::{
+pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult,
     LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, PromptAssignment, RenderedPrompt,
