@@ -416,6 +416,38 @@ pub const GENERATED_CODE_ADMISSION: &[RefusalCode] = &[
     VERIFIER_REVISION_STALE,
 ];
 
+// The `credential_reuse` family's refusals (MEDULLA-DECISION-ENGINE-R832).
+/// The credential binding is owned by another principal than the question names.
+pub const CREDENTIAL_OWNER_MISMATCH: RefusalCode = RefusalCode::new("CREDENTIAL_OWNER_MISMATCH");
+/// The agent is not among the agents the binding names.
+pub const CREDENTIAL_AGENT_NOT_BOUND: RefusalCode = RefusalCode::new("CREDENTIAL_AGENT_NOT_BOUND");
+/// The binding was revoked.
+pub const CREDENTIAL_REVOKED: RefusalCode = RefusalCode::new("CREDENTIAL_REVOKED");
+/// The binding ended at or before the engine clock.
+pub const CREDENTIAL_EXPIRED: RefusalCode = RefusalCode::new("CREDENTIAL_EXPIRED");
+/// The connector or provider is not one the binding names.
+pub const CREDENTIAL_CONNECTOR_NOT_BOUND: RefusalCode =
+    RefusalCode::new("CREDENTIAL_CONNECTOR_NOT_BOUND");
+/// A requested scope is outside the binding's scopes.
+pub const CREDENTIAL_SCOPE_EXCEEDED: RefusalCode = RefusalCode::new("CREDENTIAL_SCOPE_EXCEEDED");
+/// The purpose is not one the binding allows.
+pub const CREDENTIAL_PURPOSE_NOT_ALLOWED: RefusalCode =
+    RefusalCode::new("CREDENTIAL_PURPOSE_NOT_ALLOWED");
+/// No binding accompanies the question, so there is nothing to decide on.
+pub const CREDENTIAL_BINDING_MISSING: RefusalCode = RefusalCode::new("CREDENTIAL_BINDING_MISSING");
+
+/// Every `credential_reuse` family code, in declaration order.
+pub const CREDENTIAL_REUSE: &[RefusalCode] = &[
+    CREDENTIAL_OWNER_MISMATCH,
+    CREDENTIAL_AGENT_NOT_BOUND,
+    CREDENTIAL_REVOKED,
+    CREDENTIAL_EXPIRED,
+    CREDENTIAL_CONNECTOR_NOT_BOUND,
+    CREDENTIAL_SCOPE_EXCEEDED,
+    CREDENTIAL_PURPOSE_NOT_ALLOWED,
+    CREDENTIAL_BINDING_MISSING,
+];
+
 // The `probe_verdict` family's refusals (MEDULLA-DECISION-ENGINE-R138.4).
 /// No scorer of the tenant matches the attack's category.
 pub const NO_SCORER_FOR_CATEGORY: RefusalCode = RefusalCode::new("NO_SCORER_FOR_CATEGORY");
@@ -508,6 +540,7 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::GeneratedCodeAdmission,
         GENERATED_CODE_ADMISSION,
     ),
+    (QuestionKind::CredentialReuse, CREDENTIAL_REUSE),
     (QuestionKind::RecursionMode, RECURSION_SIGNALS),
     (QuestionKind::SubCallAdmission, super::sub_call::REFUSALS),
     (

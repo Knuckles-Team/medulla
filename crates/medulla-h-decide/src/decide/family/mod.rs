@@ -40,6 +40,7 @@ mod fanout_width;
 mod feature_match;
 pub(super) mod feedback_loop;
 mod field_shielding;
+mod credential_reuse;
 mod generated_code_admission;
 pub(in crate::decide) mod graph_intake;
 pub(super) mod harness_config;
@@ -373,6 +374,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         changeset_review::ChangesetReviewFamily;
     static TEMPORALBASISFAMILY: temporal_basis::TemporalBasisFamily =
         temporal_basis::TemporalBasisFamily;
+    static CREDENTIALREUSEFAMILY: credential_reuse::CredentialReuseFamily =
+        credential_reuse::CredentialReuseFamily;
     static GENERATEDCODEADMISSIONFAMILY: generated_code_admission::GeneratedCodeAdmissionFamily =
         generated_code_admission::GeneratedCodeAdmissionFamily;
     static CRITERIONREVIEWFAMILY: evolution_round::CriterionReviewFamily =
@@ -486,6 +489,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::HeldItemAdmission => &HELDITEMADMISSIONFAMILY,
         QuestionKind::CriterionReview => &CRITERIONREVIEWFAMILY,
         QuestionKind::GeneratedCodeAdmission => &GENERATEDCODEADMISSIONFAMILY,
+        QuestionKind::CredentialReuse => &CREDENTIALREUSEFAMILY,
         QuestionKind::RuntimeQuota => &RUNTIMEQUOTAFAMILY,
         QuestionKind::InsightSelection => &INSIGHTSELECTIONFAMILY,
         QuestionKind::ToolRelevance => &TOOLRELEVANCEFAMILY,
@@ -593,6 +597,7 @@ mod tests {
             QuestionKind::HeldItemAdmission,
             QuestionKind::CriterionReview,
             QuestionKind::GeneratedCodeAdmission,
+            QuestionKind::CredentialReuse,
             QuestionKind::RuntimeQuota,
             QuestionKind::InsightSelection,
             QuestionKind::ToolRelevance,
@@ -691,6 +696,7 @@ mod tests {
             | QuestionKind::HeldItemAdmission
             | QuestionKind::CriterionReview
             | QuestionKind::GeneratedCodeAdmission
+            | QuestionKind::CredentialReuse
             | QuestionKind::RuntimeQuota
             | QuestionKind::InsightSelection
             | QuestionKind::ToolRelevance

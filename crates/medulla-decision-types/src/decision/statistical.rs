@@ -254,6 +254,10 @@ pub enum QuestionKind {
     /// Whether generated code is admitted, from its adversarial verifier receipt
     /// (MEDULLA-DECISION-ENGINE-R138.100). See `decision::verifier_receipt`.
     GeneratedCodeAdmission,
+    /// Whether an agent may reuse an owner's stored credential binding for one connector,
+    /// provider, scope set and purpose: `admit`, `deny:<code>` or an abstention
+    /// (MEDULLA-DECISION-ENGINE-R832). Evaluate-only. See `family::credential_reuse`.
+    CredentialReuse,
     /// The runtime quota of one run: knob defaults, task-class overrides and a
     /// request that only tightens, under fixed ceilings (MEDULLA-DECISION-ENGINE-R133).
     /// Evaluate-only. See `decision::run_governance`.

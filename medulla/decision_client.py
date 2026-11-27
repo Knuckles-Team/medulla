@@ -335,6 +335,44 @@ def usage_guidance_request(
     )
 
 
+def credential_reuse_request(
+    tenant_id: str,
+    question_id: str,
+    usage: Mapping[str, Any],
+    feature_schema: Mapping[str, Any],
+    *,
+    binding: Mapping[str, Any] | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``credential_reuse`` ``Decide`` request (MEDULLA-DECISION-ENGINE-R832).
+
+    ``usage`` names the use: ``owner``, ``agent_id``, ``connector``, ``provider``,
+    ``purpose`` and ``scopes`` (a list of strings). ``binding`` is the owner's stored
+    binding record (``owner``, ``agents``, ``connectors``, ``providers``,
+    ``scopes``, ``purposes``, ``expires_at_ms``, ``revoked``, ``revision``),
+    never the secret; without one the engine abstains
+    ``CREDENTIAL_BINDING_MISSING``. The answer is the option ``admit`` or
+    ``deny:<CODE>``, so the reason is the code.
+    """
+    params = [
+        param(name, "text", str(usage[name]))
+        for name in ("owner", "agent_id", "connector", "provider", "purpose")
+    ]
+    params.append(param("scopes", "text", json.dumps(list(usage["scopes"]))))
+    if binding is not None:
+        params.append(
+            param("binding", "text", json.dumps(dict(binding), sort_keys=True))
+        )
+    return decide_request(
+        tenant_id,
+        (question_id, "credential_reuse", "ordinary"),
+        declared([DeclaredOption("admit")]),
+        feature_schema,
+        policy=policy,
+        params=params,
+    )
+
+
 def task_plan_request(
     tenant_id: str,
     question_id: str,

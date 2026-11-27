@@ -2360,6 +2360,7 @@ QuestionKind = (
     | Literal["held_item_admission"]
     | Literal["criterion_review"]
     | Literal["generated_code_admission"]
+    | Literal["credential_reuse"]
     | Literal["runtime_quota"]
     | Literal["insight_selection"]
     | Literal["tool_relevance"]
