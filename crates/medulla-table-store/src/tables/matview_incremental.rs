@@ -21,7 +21,7 @@ use std::cmp::Ordering;
 pub type Row = Map<String, Value>;
 
 /// A scalar expression over one row.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RowExpr {
     Column(String),
     Literal(Value),
@@ -44,7 +44,7 @@ pub enum RowExpr {
 }
 
 /// An exact aggregate of a grouped view.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExactAgg {
     Count,
     Sum(RowExpr),
@@ -57,7 +57,7 @@ pub enum ExactAgg {
 }
 
 /// What the view stores per source row or per group.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViewOutput {
     Rows(Vec<(String, RowExpr)>),
     Groups {
@@ -82,7 +82,7 @@ pub struct EquiJoin {
 }
 
 /// The incremental program of one materialized view.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IncrementalViewProgram {
     pub view: String,
     pub table: String,
