@@ -384,6 +384,20 @@ fn declared_shape(spec: &ForeignSourceSpec) -> Vec<String> {
             format!("tool={tool}"),
             format!("capabilities={capabilities:?}"),
         ],
+        ForeignSourceSpec::EventStream {
+            server,
+            tool,
+            from_ms,
+            to_ms,
+            capabilities,
+        } => vec![
+            "event_stream".into(),
+            format!("server={server}"),
+            format!("tool={tool}"),
+            format!("from_ms={}", from_ms.map(|ms| ms.to_string()).unwrap_or_default()),
+            format!("to_ms={}", to_ms.map(|ms| ms.to_string()).unwrap_or_default()),
+            format!("capabilities={capabilities:?}"),
+        ],
         ForeignSourceSpec::A2a {
             agent,
             skill,
