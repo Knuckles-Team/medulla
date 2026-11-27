@@ -103,7 +103,7 @@ fn read_members(path: &Path) -> Result<Vec<Member>, String> {
             file.read_to_end(&mut data).map_err(|e| e.to_string())?;
         }
         members.push(Member {
-            name: file.name().to_owned(),
+            name: file.name().map_err(|e| e.to_string())?.to_string(),
             size: file.size(),
             mode: file.unix_mode().unwrap_or(0),
             data,

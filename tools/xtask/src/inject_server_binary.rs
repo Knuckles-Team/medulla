@@ -109,7 +109,7 @@ pub fn inject(wheel: &Path, binary: &Path) -> Result<String, String> {
     let mut seen = std::collections::BTreeSet::new();
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).map_err(|e| e.to_string())?;
-        let name = file.name().to_string();
+        let name = file.name().map_err(|e| e.to_string())?.to_string();
         if !seen.insert(name.clone()) {
             return Err("wheel contains duplicate members".into());
         }
@@ -201,8 +201,9 @@ mod tests {
             let mut archive = ZipArchive::new(File::open(&path).expect("open")).expect("zip");
             let bin: Vec<String> = archive
                 .file_names()
+                .filter_map(Result::ok)
+                .map(|n| n.to_string())
                 .filter(|n| n.contains("/_bin/"))
-                .map(String::from)
                 .collect();
             assert_eq!(bin, [format!("medulla/_bin/{exe}")]);
             let member = archive

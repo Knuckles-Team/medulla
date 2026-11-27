@@ -462,7 +462,12 @@ pub fn audit_wheel(
     let mut names: Vec<(String, usize)> = Vec::new();
     for index in 0..archive.len() {
         match archive.by_index_raw(index) {
-            Ok(entry) => names.push((entry.name().to_string(), index)),
+            Ok(entry) => match entry.name() {
+                Ok(name) => names.push((name.to_string(), index)),
+                Err(_) => {
+                    invalid(&mut findings);
+                }
+            },
             Err(_) => {
                 invalid(&mut findings);
             }

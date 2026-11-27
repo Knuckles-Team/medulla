@@ -78,7 +78,10 @@ fn refuse_encrypted_entries(archive: &mut ZipArchive<Cursor<&[u8]>>) -> Result<(
         if entry.encrypted() {
             return Err(ReaderError {
                 code: READER_ENCRYPTED,
-                detail: format!("ooxml part {} is encrypted", entry.name()),
+                detail: format!(
+                    "ooxml part {} is encrypted",
+                    entry.name().as_deref().unwrap_or("unnamed")
+                ),
             });
         }
     }
