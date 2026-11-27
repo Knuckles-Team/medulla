@@ -178,3 +178,22 @@ def test_one_tls_and_crypto_backend() -> None:
             assert proc.returncode != 0 and "did not match" in proc.stderr, (
                 f"{crate} is in the {features} closure:\n{proc.stdout[:800]}"
             )
+
+
+# spec: MEDULLA-CONTRACT-R065.5
+def test_vendored_security_patches_stay_patched() -> None:
+    manifest = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+    patched = set(manifest["patch"]["crates-io"])
+    assert set(PATCHED) <= patched, sorted(set(PATCHED) - patched)
+    packages = _lock_packages()
+    for name in PATCHED:
+        entries = [p for p in packages if p["name"] == name]
+        assert entries, f"{name} is not in the lock"
+        path_entries = [p for p in entries if "source" not in p]
+        assert path_entries, f"{name} no longer resolves to the path source"
+    versions = _versions(packages)
+    (arrow,) = versions["arrow"]
+    for name in ("arrow-ipc", "parquet"):
+        assert versions[name] == {arrow}, (
+            f"{name} {versions[name]} must stay equal to arrow {arrow}"
+        )
