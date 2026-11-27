@@ -37683,6 +37683,7 @@ class TranscriptEventRecord(BaseModel):
     finalization_digest: str | None = None
     op: TranscriptRevisionOp | None = None
     revision: Annotated[int, Field(ge=0)]
+    segment_ids: list[str] = Field(default_factory=list)
     sequence: Annotated[int, Field(ge=0)]
     text_digest: str
 
@@ -37696,6 +37697,7 @@ class MeetingTranscriptReadAnswer(BaseModel):
     last_sequence: Annotated[int, Field(ge=0)]
     meeting_id: str
     next_seq: Annotated[int, Field(ge=0)] | None = None
+    segment_digests: dict[str, str] = Field(default_factory=dict)
     transcript_revision: Annotated[int, Field(ge=0)]
 
 

@@ -67,3 +67,37 @@ def test_the_read_models_mirror_the_wire_shape() -> None:
     assert stored.summary is not None and stored.summary.claims[0].claim_id == "c1"
     assert ingestion.send_meeting_transcript_read is not None
     assert ingestion.send_meeting_summary_get is not None
+
+
+# spec: MEDULLA-MEDIA-VOCAB-R001.101.7
+@pytest.mark.spec("MEDULLA-MEDIA-VOCAB-R001.101.7")
+def test_the_transcript_read_carries_segment_ids_and_digests() -> None:
+    answer = _models.MeetingTranscriptReadAnswer.model_validate(
+        {
+            "meeting_id": "m1",
+            "events": [
+                {
+                    "sequence": 30,
+                    "revision": 3,
+                    "text_digest": DIGEST,
+                    "segment_ids": ["s1", "s2"],
+                }
+            ],
+            "last_sequence": 30,
+            "transcript_revision": 3,
+            "context_revision": 3,
+            "segment_digests": {"s1": DIGEST, "s2": DIGEST},
+        }
+    )
+    assert answer.events[0].segment_ids == ["s1", "s2"]
+    assert answer.segment_digests == {"s1": DIGEST, "s2": DIGEST}
+    bare = _models.MeetingTranscriptReadAnswer.model_validate(
+        {
+            "meeting_id": "m1",
+            "events": [],
+            "last_sequence": 0,
+            "transcript_revision": 0,
+            "context_revision": 0,
+        }
+    )
+    assert bare.segment_digests == {}

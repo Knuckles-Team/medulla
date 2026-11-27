@@ -342,6 +342,11 @@ pub struct TranscriptEventRecord {
     pub op: Option<TranscriptRevisionOp>,
     #[cfg_attr(feature = "contract-schema", schemars(with = "String"))]
     pub text_digest: Digest256,
+    /// The ordered segment ids of this event's revision when that revision is sealed
+    /// (MEDULLA-MEDIA-VOCAB-R001.101.7); empty for a revision the engine did not seal, because
+    /// only a seal records its ordered ids.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub segment_ids: Vec<String>,
     /// The sealed digest when this event finalized the transcript.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
@@ -371,6 +376,16 @@ pub struct MeetingTranscriptReadAnswer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "contract-schema", schemars(with = "Option<String>"))]
     pub finalization_digest: Option<Digest256>,
+    /// `{segment_id: text_digest}` of every segment the latest seal covers, so a caller can
+    /// refuse a text source whose segment does not hash to the engine's digest. Present only
+    /// while the stored segments still reproduce the seal's `finalization_digest`; empty when
+    /// there is no seal or the transcript has moved past it.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    #[cfg_attr(
+        feature = "contract-schema",
+        schemars(with = "std::collections::BTreeMap<String, String>")
+    )]
+    pub segment_digests: std::collections::BTreeMap<String, Digest256>,
 }
 
 /// `MeetingSummaryGet` request (MEDULLA-MEDIA-VOCAB-R001.101.7): the stored

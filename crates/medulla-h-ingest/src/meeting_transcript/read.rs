@@ -6,7 +6,11 @@
 //! authority. An unknown meeting, an unknown summary and a row the caller
 //! cannot see answer identically, so neither read is an existence oracle.
 
-use medulla_core::meeting_transcript::{get_final, SummaryMark, TranscriptSnapshot};
+use std::collections::BTreeMap;
+
+use medulla_core::meeting_transcript::{
+    finalization_digest, get_final, FinalizedRevision, SummaryMark, TranscriptSnapshot,
+};
 use medulla_source_types::meeting_transcript::{
     MeetingSummaryGetAnswer, MeetingSummaryGetRequest, MeetingSummaryRecord, MeetingTranscriptReadAnswer,
     MeetingTranscriptReadRequest, SummaryClaim, TranscriptEventRecord,
@@ -41,6 +45,12 @@ pub fn read_transcript(
             revision: event.revision,
             op: event.op,
             text_digest: event.digest,
+            segment_ids: state
+                .finalized
+                .iter()
+                .find(|sealed| sealed.revision == event.revision)
+                .map(|sealed| sealed.ordered_segment_ids.clone())
+                .unwrap_or_default(),
             finalization_digest: state
                 .finalized
                 .iter()
@@ -59,7 +69,37 @@ pub fn read_transcript(
         transcript_revision: state.revision,
         context_revision: sealed.map_or(0, |sealed| sealed.revision),
         finalization_digest: sealed.map(|sealed| sealed.finalization_digest),
+        segment_digests: sealed.map_or_else(BTreeMap::new, |sealed| {
+            sealed_segment_digests(state, sealed)
+        }),
     })
+}
+
+/// The `{segment_id: text_digest}` of the segments `sealed` covers, only when the stored
+/// segments reproduce the seal's digest: a transcript that moved past the seal no longer holds
+/// the sealed texts' digests, and no map is better than a map for the wrong revision.
+fn sealed_segment_digests(
+    state: &TranscriptSnapshot,
+    sealed: &FinalizedRevision,
+) -> BTreeMap<String, Digest256> {
+    let ordered: Vec<(String, Digest256)> = sealed
+        .ordered_segment_ids
+        .iter()
+        .filter_map(|id| {
+            state
+                .segments
+                .iter()
+                .find(|(segment, _)| segment == id)
+                .map(|(segment, digest)| (segment.clone(), *digest))
+        })
+        .collect();
+    if ordered.len() == sealed.ordered_segment_ids.len()
+        && finalization_digest(&ordered) == sealed.finalization_digest
+    {
+        ordered.into_iter().collect()
+    } else {
+        BTreeMap::new()
+    }
 }
 
 /// The summary mark a request names: the one `summary_id`, else the latest.
@@ -176,6 +216,35 @@ mod tests {
         assert_eq!(rest.events[0].op, Some(TranscriptRevisionOp::Finalize));
         assert_eq!(rest.events[0].finalization_digest, Some(digest(99)));
         assert_eq!(rest.last_sequence, 30);
+    }
+
+    // spec: MEDULLA-MEDIA-VOCAB-R001.101.7
+    #[test]
+    fn a_seal_names_its_segments_and_their_digests_until_the_transcript_moves_on() {
+        let segments = vec![("s1".to_string(), digest(1)), ("s2".to_string(), digest(2))];
+        let mut sealed_state = state();
+        sealed_state.segments = segments.clone();
+        sealed_state.finalized = vec![FinalizedRevision {
+            revision: 3,
+            ordered_segment_ids: vec!["s1".into(), "s2".into()],
+            finalization_digest: finalization_digest(&segments),
+        }];
+        let answer = read_transcript(&sealed_state, &request(None, None)).expect("reads");
+        assert!(answer.events[0].segment_ids.is_empty(), "an unsealed revision names none");
+        assert_eq!(answer.events[2].segment_ids, vec!["s1".to_string(), "s2".to_string()]);
+        assert_eq!(answer.segment_digests.len(), 2);
+        assert_eq!(answer.segment_digests["s1"], digest(1));
+        assert_eq!(answer.segment_digests["s2"], digest(2));
+
+        // A segment re-digested after the seal no longer reproduces it: no map is returned.
+        let mut moved = sealed_state.clone();
+        moved.segments[1].1 = digest(7);
+        let after = read_transcript(&moved, &request(None, None)).expect("reads");
+        assert!(after.segment_digests.is_empty());
+        // No seal at all: none either.
+        let unsealed = read_transcript(&TranscriptSnapshot::default(), &request(None, None))
+            .expect("reads");
+        assert!(unsealed.segment_digests.is_empty());
     }
 
     // spec: MEDULLA-MEDIA-VOCAB-R001.101.7
