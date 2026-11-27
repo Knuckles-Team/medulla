@@ -37,7 +37,9 @@ pub struct ParticipantQuestion {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct Citation {
+    /// The id of the claim.
     pub claim_id: String,
+    /// The ids of the turns the claim rests on.
     pub turn_ids: Vec<String>,
 }
 
@@ -46,8 +48,11 @@ pub struct Citation {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ParticipantAnswer {
+    /// The text of the answer.
     pub text: String,
+    /// The claims the sentences of the answer rest on.
     pub citations: Vec<Citation>,
+    /// Why the answer abstained; absent when it answers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub abstained: Option<AbstainReason>,
 }
@@ -57,9 +62,13 @@ pub struct ParticipantAnswer {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CardClaim {
+    /// The id of the claim.
     pub claim_id: String,
+    /// The text of the claim.
     pub text: String,
+    /// How confident the claim is, in parts per million.
     pub confidence_ppm: u32,
+    /// How recent the claim is, in parts per million.
     pub recency_ppm: u32,
 }
 
@@ -68,10 +77,15 @@ pub struct CardClaim {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ParticipantCard {
+    /// The participant the card describes.
     pub subject: ParticipantId,
+    /// Whose view the card belongs to.
     pub observer: ObserverRef,
+    /// The claims on the card, ranked.
     pub claims: Vec<CardClaim>,
+    /// The card size in tokens, estimated.
     pub token_estimate: u32,
+    /// When the card was computed, in milliseconds since the Unix epoch.
     pub computed_at_ms: i64,
     /// SHA-256 over the card's claims, as `sha256:<hex>`.
     pub digest: String,
@@ -84,9 +98,13 @@ pub struct ParticipantCard {
 pub struct DerivationStatus {
     /// The memory scope the derivation runs under; empty when it runs over the whole view.
     pub scope_id: String,
+    /// The session the derivation runs in.
     pub session_id: String,
+    /// The participant the conclusions are about.
     pub subject: ParticipantId,
+    /// How many turns await derivation.
     pub pending: u32,
+    /// The age of the oldest pending turn, in milliseconds.
     pub oldest_pending_age_ms: u64,
 }
 
@@ -97,8 +115,11 @@ pub struct DerivationStatus {
 pub struct DeriveTurn {
     /// The memory record that holds the turn; the evidence of a conclusion cites it.
     pub turn_id: String,
+    /// The participant who spoke the turn.
     pub speaker: ParticipantId,
+    /// The text of the turn.
     pub text: String,
+    /// When the turn was said, in milliseconds since the Unix epoch.
     pub timestamp_ms: u64,
 }
 
@@ -110,13 +131,17 @@ pub struct DeriveTurn {
 pub struct DeriveInput {
     /// The memory scope the derivation runs under; empty over the whole view.
     pub scope_id: String,
+    /// The session the derivation runs in.
     pub session_id: String,
     /// The participant the conclusions are about.
     pub subject: ParticipantId,
     /// Whose view the conclusions belong to.
     pub observer: ObserverRef,
+    /// The first turn of the range.
     pub first_turn_id: String,
+    /// The last turn of the range.
     pub last_turn_id: String,
+    /// The turns of the range the perspective may see.
     pub turns: Vec<DeriveTurn>,
     /// At most this many conclusions are kept (`memory.derive_max_conclusions`).
     pub max_conclusions: u32,
@@ -132,19 +157,34 @@ pub struct DeriveInput {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ParticipantReadOp {
     /// One participant the caller may read.
-    Get { participant_id: ParticipantId },
+    Get {
+        /// The participant to read.
+        participant_id: ParticipantId,
+    },
     /// Every participant the caller may read.
     List,
     /// Ask a question about a participant.
-    Ask { question: ParticipantQuestion },
+    Ask {
+        /// The question to ask.
+        question: ParticipantQuestion,
+    },
     /// The stored card of a subject as one observer sees it.
-    Card { subject: ParticipantId, observer: ObserverRef },
+    Card {
+        /// The participant the card describes.
+        subject: ParticipantId,
+        /// Whose view the card is read as.
+        observer: ObserverRef,
+    },
     /// The turns and perspective of one claimed derive task (MEDULLA-DECISION-ENGINE-R651.12);
     /// `payload_ref` is the payload the queue task names. A range that starts after the stored
     /// checkpoint answers `DERIVE_ORDER_HELD`.
-    DeriveInput { payload_ref: String },
+    DeriveInput {
+        /// The payload the queue task names.
+        payload_ref: String,
+    },
     /// The derivation backlog the caller may see, optionally narrowed to one scope.
     Status {
+        /// The scope to narrow the backlog to; absent reads every scope.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         memory_scope: Option<ScopeRef>,
     },

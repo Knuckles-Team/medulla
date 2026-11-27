@@ -34,10 +34,15 @@ pub const MEMORY_EVENT_TOPICS: [&str; 3] =
 pub struct DerivationCompleted {
     /// The memory scope the derivation ran under; empty over the whole view.
     pub scope_id: String,
+    /// The session the derivation ran in.
     pub session_id: String,
+    /// The participant the conclusions are about.
     pub subject: ParticipantId,
+    /// Whose view the conclusions belong to.
     pub observer: ObserverRef,
+    /// How many conclusions the worker proposed.
     pub claims_written: u32,
+    /// The last turn the checkpoint advanced to.
     pub last_turn_id: String,
 }
 
@@ -46,10 +51,15 @@ pub struct DerivationCompleted {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ClaimChanged {
+    /// The id of the claim that moved.
     pub claim_id: String,
+    /// The state the claim left.
     pub from: ClaimState,
+    /// The state the claim entered.
     pub to: ClaimState,
+    /// The participant the claim is about.
     pub subject: ParticipantId,
+    /// Whose view the claim belongs to.
     pub observer: ObserverRef,
 }
 
@@ -58,7 +68,9 @@ pub struct ClaimChanged {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CardUpdated {
+    /// The participant the card describes.
     pub subject: ParticipantId,
+    /// Whose view the card belongs to.
     pub observer: ObserverRef,
     /// SHA-256 of the card, as `sha256:<hex>`.
     pub card_digest: String,
@@ -69,8 +81,11 @@ pub struct CardUpdated {
 #[serde(tag = "event_kind", rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum MemoryEvent {
+    /// A derivation job finished.
     DerivationCompleted(DerivationCompleted),
+    /// A claim changed state.
     ClaimChanged(ClaimChanged),
+    /// A card was recomputed.
     CardUpdated(CardUpdated),
 }
 
