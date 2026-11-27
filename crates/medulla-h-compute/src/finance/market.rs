@@ -140,7 +140,7 @@ mod served_ops_tests {
         }
     }
 
-    // spec: MEDULLA-FINANCE-PRIMITIVES-R006
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R006, MEDULLA-FINANCE-PRIMITIVES-R006.1
     #[test]
     fn the_corporate_actions_op_serves_the_as_of_view_and_refuses_a_conflict() {
         let original = dividend("L1", DAY, 0, DAY);
@@ -165,7 +165,7 @@ mod served_ops_tests {
         assert!(refused.starts_with("INVALID_ARGUMENT"), "{refused}");
     }
 
-    // spec: MEDULLA-FINANCE-PRIMITIVES-R007.1
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R007.1, MEDULLA-FINANCE-PRIMITIVES-R006.1
     #[test]
     fn the_strategy_evaluate_op_proposes_a_buy_and_refuses_a_non_positive_amount() {
         let spec = |amount: i64| StrategySpec {

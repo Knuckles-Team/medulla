@@ -25,8 +25,9 @@ def _action(kind: dict, revision: int = 0) -> dict:
     }
 
 
-# spec: MEDULLA-FINANCE-PRIMITIVES-R006
+# spec: MEDULLA-FINANCE-PRIMITIVES-R006, MEDULLA-FINANCE-PRIMITIVES-R006.1
 @pytest.mark.spec("MEDULLA-FINANCE-PRIMITIVES-R006")
+@pytest.mark.spec("MEDULLA-FINANCE-PRIMITIVES-R006.1")
 def test_the_corporate_actions_op_mirrors_the_wire_shape() -> None:
     adapter = TypeAdapter(models.FinanceMarketOp)
     op = {
@@ -51,8 +52,9 @@ def test_the_corporate_actions_op_mirrors_the_wire_shape() -> None:
         )
 
 
-# spec: MEDULLA-FINANCE-PRIMITIVES-R007.1
+# spec: MEDULLA-FINANCE-PRIMITIVES-R007.1, MEDULLA-FINANCE-PRIMITIVES-R006.1
 @pytest.mark.spec("MEDULLA-FINANCE-PRIMITIVES-R007.1")
+@pytest.mark.spec("MEDULLA-FINANCE-PRIMITIVES-R006.1")
 def test_the_strategy_evaluate_op_and_its_result_mirror_the_wire_shape() -> None:
     adapter = TypeAdapter(models.FinanceMarketOp)
     op = {
