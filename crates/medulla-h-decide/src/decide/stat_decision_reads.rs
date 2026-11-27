@@ -272,22 +272,21 @@ fn assembly_provenance(
             _ => None,
         })
         .collect();
-    let approver =
-        store
-            .current_component(&reader.tenant_id, record_id)?
-            .and_then(|component| {
-                component
-                    .attributes
-                    .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
-                    .cloned()
-            })
-            .and_then(|receipt| {
-                serde_json::from_str::<
+    let approver = store
+        .current_component(&reader.tenant_id, record_id)?
+        .and_then(|component| {
+            component
+                .attributes
+                .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
+                .cloned()
+        })
+        .and_then(|receipt| {
+            serde_json::from_str::<
                     medulla_decision_types::decision::approval::RecommendationApproval,
                 >(&receipt)
                 .ok()
-            })
-            .map(|approval| approval.reviewer_principal);
+        })
+        .map(|approval| approval.reviewer_principal);
     Ok(DecisionProvenance {
         record_id: record.record_id.clone(),
         record_kind: RecordKind::Assembly,
