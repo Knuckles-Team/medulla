@@ -902,6 +902,12 @@ decode_glossary_propose_description = contract_decoder(
 decode_glossary_review_description = contract_decoder(
     "Glossary", "GlossaryReceipt", "review_description"
 )
+send_credential_receipt = contract_sender(
+    "CredentialReceipt", "MethodCredentialReceiptParams"
+)
+decode_credential_receipt = contract_decoder(
+    "CredentialReceipt", "CredentialReceiptRecorded"
+)
 send_stewardship = contract_sender("Stewardship", "MethodStewardshipParams")
 decode_stewardship_assign = contract_decoder(
     "Stewardship", "StewardshipReceipt", "assign"

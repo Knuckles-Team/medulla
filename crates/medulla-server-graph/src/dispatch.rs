@@ -57,6 +57,7 @@ pub mod policy_evolution;
 pub mod shared;
 #[allow(missing_docs)]
 pub mod stewardship;
+pub mod credential_receipt;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sparql_update;
 

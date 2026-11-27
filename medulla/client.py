@@ -20356,6 +20356,13 @@ class MedullaClient:
         """
         return await self._delivery("DeliveryOpen", {"request": request}, graph)
 
+    async def record_credential_receipt(
+        self, receipt: dict[str, Any], graph: str
+    ) -> dict[str, Any]:
+        """Record one credential use receipt of the tenant (R753); no secret."""
+        op = {"op": "record", "receipt": receipt}
+        return await self._delivery("CredentialReceipt", {"op": op}, graph)
+
     async def delivery_feedback(
         self, event: dict[str, Any], graph: str
     ) -> dict[str, Any]:

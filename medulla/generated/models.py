@@ -17346,6 +17346,13 @@ class MethodGlossary(BaseModel):
     params: MethodGlossaryParams
 
 
+class MethodCredentialReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CredentialReceipt"]
+    params: MethodCredentialReceiptParams
+
+
 class MethodStewardship(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -19129,6 +19136,7 @@ Method = Annotated[
         MethodQualityRulePut,
         MethodClassificationClaim,
         MethodGlossary,
+        MethodCredentialReceipt,
         MethodStewardship,
         MethodDashboardAsset,
         MethodLineageIngest,
@@ -38078,6 +38086,41 @@ class MethodGlossaryParams(BaseModel):
     op: GlossaryOp
 
 
+class CredentialReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    binding_digest: str
+    client: str
+    connector: str
+    operation: str
+    outcome: str
+    resource: str
+    tenant: str
+
+
+class CredentialReceiptOpRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["record"]
+    receipt: CredentialReceipt
+
+
+CredentialReceiptOp = Annotated[CredentialReceiptOpRecord, Field(discriminator="op")]
+
+
+class CredentialReceiptRecorded(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipt_id: str
+
+
+class MethodCredentialReceiptParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: CredentialReceiptOp
+
+
 class MethodStewardshipParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -50227,6 +50270,12 @@ __all__ = [
     "DescriptionProposal",
     "MethodStewardship",
     "MethodStewardshipParams",
+    "MethodCredentialReceipt",
+    "MethodCredentialReceiptParams",
+    "CredentialReceipt",
+    "CredentialReceiptOp",
+    "CredentialReceiptOpRecord",
+    "CredentialReceiptRecorded",
     "StewardRole",
     "StewardshipScopeDomain",
     "StewardshipScopeConceptScheme",

@@ -50,3 +50,5 @@ pub mod identity;
 pub mod rbac_elevation;
 // MEDULLA-IDENTITY-R704.1 — the resource grant ledger in the RBAC policy image.
 pub mod resource_grant;
+// MEDULLA-IDENTITY-R753 — the credential use receipt.
+pub mod credential_receipt;

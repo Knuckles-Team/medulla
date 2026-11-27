@@ -612,6 +612,7 @@ METHOD_IDS = frozenset(
         "ClassificationClaim",
         "Glossary",
         "Stewardship",
+        "CredentialReceipt",
         "DashboardAsset",
         "LineageIngest",
         "ListMemorySnapshots",

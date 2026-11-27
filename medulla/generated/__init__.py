@@ -466,6 +466,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "QualityRulePut": ingestion.send_quality_rule_put,
     "ClassificationClaim": ingestion.send_classification_claim,
     "Glossary": ingestion.send_glossary,
+    "CredentialReceipt": ingestion.send_credential_receipt,
     "Stewardship": ingestion.send_stewardship,
     "DashboardAsset": ingestion.send_dashboard_asset,
     "IndexRepository": ingestion.send_index_repository,

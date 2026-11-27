@@ -190,6 +190,16 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 }
             })
         }
+        // MEDULLA-IDENTITY-R753: the line names the client and the connector, never a secret.
+        Method::CredentialReceipt { op } => {
+            let medulla_identity_types::credential_receipt::CredentialReceiptOp::Record {
+                receipt,
+            } = op.as_ref();
+            Some(format!(
+                "CREDENTIAL_RECEIPT|record|{}|{}",
+                receipt.client, receipt.connector
+            ))
+        }
         // MEDULLA-TYPED-PACKS-R802.3: the line names the op and the node it addresses.
         Method::Stewardship { op } => {
             use medulla_catalog_types::stewardship::StewardshipOp;

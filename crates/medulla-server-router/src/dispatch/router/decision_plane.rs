@@ -883,6 +883,20 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-IDENTITY-R753: the credential receipt commits through the graph gateway.
+        Method::CredentialReceipt { op } => {
+            dispatch_boxed(medulla_server_graph::dispatch::credential_receipt::dispatch_credential_receipt(
+                state,
+                medulla_server_graph::dispatch::graph_client::GraphTarget {
+                    graph: &req.graph,
+                    req_id: req.id,
+                    caller: req.agent_id.as_deref(),
+                    verified: verified_context,
+                },
+                *op,
+            ))
+            .await
+        }
         // MEDULLA-TYPED-PACKS-R109.3: the dashboard ops commit through the graph gateway.
         Method::DashboardAsset { op } => {
             dispatch_boxed(async {

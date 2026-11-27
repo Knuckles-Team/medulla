@@ -100,3 +100,4 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T090 MEDULLA-IDENTITY-R750 Pre-login OIDC state: register and consume once
 - [ ] T091 MEDULLA-IDENTITY-R751 SAML assertion id register-if-new
 - [ ] T091a MEDULLA-IDENTITY-R752 Resolve an external identity link to its principal
+- [ ] T091b MEDULLA-IDENTITY-R753 Record one credential use receipt

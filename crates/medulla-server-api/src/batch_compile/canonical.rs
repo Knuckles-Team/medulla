@@ -824,6 +824,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::Glossary { .. }
         // MEDULLA-TYPED-PACKS-R802.3: the stewardship ops self-translate into request-graph writes.
         | Method::Stewardship { .. }
+        // MEDULLA-IDENTITY-R753: the credential receipt self-translates into a request-graph write.
+        | Method::CredentialReceipt { .. }
         // MEDULLA-TYPED-PACKS-R109.3: the dashboard ops self-translate into request-graph writes.
         | Method::DashboardAsset { .. }
         // MEDULLA-SDLC-R002.3: release and deployment records self-translate

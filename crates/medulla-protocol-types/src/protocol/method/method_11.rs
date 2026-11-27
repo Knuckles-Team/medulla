@@ -358,6 +358,14 @@ $($variants)*
         op: Box<medulla_catalog_types::glossary::GlossaryOp>,
     },
 
+    // ── Credential receipt (MEDULLA-IDENTITY-R753) ─────────────────────────
+    /// Record one credential use receipt in the caller's tenant: who used which connector
+    /// resource for which operation, with what outcome and under which binding digest. The
+    /// receipt carries no secret. Scope `security:audit-write`.
+    CredentialReceipt {
+        op: Box<medulla_identity_types::credential_receipt::CredentialReceiptOp>,
+    },
+
     // ── Stewardship (MEDULLA-TYPED-PACKS-R802.3) ───────────────────────────
     /// One stewardship op in the caller's tenant: `Assign` or `Revoke` a role,
     /// `OpenChangeRequest`, `Review`, `Apply` or `Certify`. Scope
