@@ -266,6 +266,18 @@ macro_rules! __eg_method_chunk_0 {
         request: medulla_work_types::native_control::CapacityLeaseMutationRequest,
     },
 
+    /// Move every named granted lease to running in one all-or-nothing transaction
+    /// (MEDULLA-PLACEMENT-R786.7, edge B04).
+    StartCapacity {
+        request: medulla_work_types::native_control::CapacityLeaseMutationRequest,
+    },
+
+    /// Administratively take one capacity lease back (MEDULLA-PLACEMENT-R786.7, edges
+    /// B10 to B12).
+    RevokeCapacity {
+        request: medulla_work_types::native_control::CapacityRevokeRequest,
+    },
+
     /// Reclaim a bounded page of expired capacity leases.
     ReclaimExpiredCapacity {
         request: medulla_work_types::native_control::CapacityReclaimRequest,

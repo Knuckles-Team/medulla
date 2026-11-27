@@ -51,7 +51,8 @@
 use std::collections::BTreeMap;
 
 use medulla_types::transition_refused::{
-    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefusalReason,
+    TransitionRefused,
 };
 use serde::{Deserialize, Serialize};
 
@@ -88,6 +89,9 @@ pub enum CapacityResourceClass {
     Broker,
     /// Resident memory in bytes (placement headroom, MEDULLA-PLACEMENT-R001.8).
     Memory,
+    /// One cargo slot of a build host (MEDULLA-PLACEMENT-R786.1): the cell is
+    /// `build-slots:<host>`, each lease takes `amount = 1`.
+    BuildSlot,
 }
 
 /// The same four priority tiers `resource_priority.py::PriorityClass` defines,
@@ -110,14 +114,38 @@ pub enum LeasePriority {
     Orchestration,
     Hydration,
     BackgroundIngestion,
+    /// A land gate (MEDULLA-PLACEMENT-R786.1): the first served class of a build-slot cell.
+    LandGate,
+    /// A merge train: served after a land gate and before any lane.
+    Train,
+    /// An agent lane: the one build-slot class that never spends the reserved floor.
+    Lane,
 }
 
 impl LeasePriority {
-    /// True only for `BackgroundIngestion` — the one class a `CapacityCell`'s
+    /// False for `BackgroundIngestion` and `Lane` — the classes a `CapacityCell`'s
     /// `reserved_floor` is never available to (mirrors
     /// `PriorityClass.is_interactive_floor`'s "the one class that yields").
     pub fn may_spend_reserved_floor(self) -> bool {
-        !matches!(self, LeasePriority::BackgroundIngestion)
+        !matches!(
+            self,
+            LeasePriority::BackgroundIngestion | LeasePriority::Lane
+        )
+    }
+
+    /// True for the three build-slot classes.
+    pub fn is_build_slot_class(self) -> bool {
+        matches!(
+            self,
+            LeasePriority::LandGate | LeasePriority::Train | LeasePriority::Lane
+        )
+    }
+
+    /// Whether a cell of `resource_class` admits this priority (MEDULLA-PLACEMENT-R786.1): a
+    /// build-slot cell admits exactly the three build-slot classes and no other resource
+    /// class admits them.
+    pub fn allowed_for(self, resource_class: CapacityResourceClass) -> bool {
+        self.is_build_slot_class() == (resource_class == CapacityResourceClass::BuildSlot)
     }
 }
 
@@ -195,45 +223,76 @@ impl CapacityCell {
     }
 }
 
-/// Lifecycle state of one `CapacityLease` (MEDULLA-PLACEMENT-R782.1). A renewal is a
-/// count (`renewed_count`), not a state, and expiry is derived from `expires_at_ms` by
-/// `CapacityLease::is_expired`: a timestamp records a fact, not a state.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Lifecycle state of one `CapacityLease` (MEDULLA-PLACEMENT-R786.2). A renewal is a
+/// count (`renewed_count`), not a state, and a deadline passed before the sweeper stored
+/// `Expired` is derived by [`CapacityLease::effective_status`]: a timestamp records a
+/// fact, not a state. The retired stored texts `active` and `reclaimed` read as
+/// `Granted` and `Expired`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CapacityLeaseState {
-    Active,
+    /// Created and not yet placed: the one state a lease starts in.
+    Requested,
+    /// Waiting in its cell's fair queue for a slot.
+    Queued,
+    /// Holds its slot and has not started work.
+    #[serde(alias = "active")]
+    Granted,
+    /// Holds its slot and runs.
+    Running,
+    /// The holder gave the slot back (or cancelled its wait). Terminal.
     Released,
-    /// An `ReclaimExpired` sweep already returned this lease's amount to the
-    /// cell. Terminal, like `Released`.
-    Reclaimed,
+    /// A deadline passed and the sweeper returned the slot. Terminal.
+    #[serde(alias = "reclaimed")]
+    Expired,
+    /// An administrator took the slot back. Terminal.
+    Revoked,
 }
 
 impl CapacityLeaseState {
     fn is_terminal(self) -> bool {
         CAPACITY_LEASE_MACHINE.is_terminal(self)
     }
+
+    /// True while the lease counts against its cell's capacity.
+    pub fn holds_capacity(self) -> bool {
+        matches!(self, Self::Granted | Self::Running)
+    }
 }
 
-// MEDULLA-PLACEMENT-R782.1 — the capacity lease edge table and its one transition function.
+// MEDULLA-PLACEMENT-R786.2 — the capacity lease edge table and its one transition function.
 // CapacityLeaseMachine: the row's edge table. The ontology test compares it with state-machines-v1.ttl.
 /// An event of `CapacityLeaseMachine`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum CapacityLeaseEvent {
-    /// The `Renew` event.
+    /// The `Enqueue` event: the cell has no capacity now.
+    Enqueue,
+    /// The `Grant` event: the cell admits the lease.
+    Grant,
+    /// The `Start` event: the holder begins work.
+    Start,
+    /// The `Renew` event: the holder heartbeats.
     Renew,
-    /// The `Release` event.
+    /// The `Release` event: the holder gives the slot back or cancels its wait.
     Release,
-    /// The `Reclaim` event.
-    Reclaim,
+    /// The `Expire` event: the sweeper acts on a passed deadline (renamed from `Reclaim`).
+    Expire,
+    /// The `Revoke` event: an administrator takes the slot back.
+    Revoke,
 }
 
 impl MachineState for CapacityLeaseState {
     fn stored(self) -> &'static str {
         match self {
-            Self::Active => "active",
+            Self::Requested => "requested",
+            Self::Queued => "queued",
+            Self::Granted => "granted",
+            Self::Running => "running",
             Self::Released => "released",
-            Self::Reclaimed => "reclaimed",
+            Self::Expired => "expired",
+            Self::Revoked => "revoked",
         }
     }
 }
@@ -241,19 +300,66 @@ impl MachineState for CapacityLeaseState {
 impl MachineEvent for CapacityLeaseEvent {
     fn name(self) -> &'static str {
         match self {
+            Self::Enqueue => "Enqueue",
+            Self::Grant => "Grant",
+            Self::Start => "Start",
             Self::Renew => "Renew",
             Self::Release => "Release",
-            Self::Reclaim => "Reclaim",
+            Self::Expire => "Expire",
+            Self::Revoke => "Revoke",
         }
     }
 }
 
-/// Guard of `CapacityLeaseMachine`: can_renew holds: the owner matches and the lease is live.
+/// Guard of `CapacityLeaseMachine`: the cell has no capacity for the lease's priority now (B01).
+pub const CAPACITY_LEASE_GUARD_CELL_FULL: &str = "CellFull";
+/// Guard of `CapacityLeaseMachine`: the cell admits the lease now (B02).
+pub const CAPACITY_LEASE_GUARD_CELL_ADMITS: &str = "CellAdmits";
+/// Guard of `CapacityLeaseMachine`: the lease heads its priority's queue and the cell admits it (B03).
+pub const CAPACITY_LEASE_GUARD_HEADS_QUEUE: &str = "HeadsQueueAndCellAdmits";
+/// Guard of `CapacityLeaseMachine`: can_renew holds: the owner matches and the lease is live
+/// (B04 to B06).
 pub const CAPACITY_LEASE_GUARD_CAN_RENEW: &str = "CanRenew";
-/// Guard of `CapacityLeaseMachine`: can_release holds: the owner matches.
+/// Guard of `CapacityLeaseMachine`: can_release holds: the owner matches (B07 to B09).
 pub const CAPACITY_LEASE_GUARD_CAN_RELEASE: &str = "CanRelease";
-/// Guard of `CapacityLeaseMachine`: lease_until has passed; the sweeper acts.
+/// Guard of `CapacityLeaseMachine`: the caller holds `capacity:admin` (B10 to B12).
+pub const CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN: &str = "CallerHoldsAdmin";
+/// Guard of `CapacityLeaseMachine`: the deadline has passed; the sweeper acts (B13 to B15).
 pub const CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED: &str = "LeaseUntilPassed";
+
+/// The facts the guards of `CapacityLeaseMachine` read. A caller states each fact it has
+/// established; a fact it has not established is false, so the guard fails closed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CapacityLeaseFacts {
+    /// The caller's actor digest equals the lease's.
+    pub owner_matches: bool,
+    /// The lease's deadline has not passed.
+    pub live: bool,
+    /// The caller holds `capacity:admin`.
+    pub caller_holds_admin: bool,
+    /// The deadline of the lease's current state has passed.
+    pub deadline_passed: bool,
+    /// The cell admits the lease's priority and amount now.
+    pub cell_admits: bool,
+    /// The lease heads its priority's queue.
+    pub heads_queue: bool,
+}
+
+impl CapacityLeaseFacts {
+    /// Whether the named guard holds under these facts. An unknown name does not hold.
+    pub fn holds(&self, guard: &str) -> bool {
+        match guard {
+            CAPACITY_LEASE_GUARD_CELL_FULL => !self.cell_admits,
+            CAPACITY_LEASE_GUARD_CELL_ADMITS => self.cell_admits,
+            CAPACITY_LEASE_GUARD_HEADS_QUEUE => self.heads_queue && self.cell_admits,
+            CAPACITY_LEASE_GUARD_CAN_RENEW => self.owner_matches && self.live,
+            CAPACITY_LEASE_GUARD_CAN_RELEASE => self.owner_matches,
+            CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN => self.caller_holds_admin,
+            CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED => self.deadline_passed,
+            _ => false,
+        }
+    }
+}
 
 /// `CapacityLeaseMachine`: the closed edge table. Every other pair of state and event is refused.
 pub static CAPACITY_LEASE_MACHINE: MachineDef<
@@ -263,43 +369,143 @@ pub static CAPACITY_LEASE_MACHINE: MachineDef<
 > = MachineDef {
     name: "CapacityLeaseMachine",
     states: &[
-        CapacityLeaseState::Active,
+        CapacityLeaseState::Requested,
+        CapacityLeaseState::Queued,
+        CapacityLeaseState::Granted,
+        CapacityLeaseState::Running,
         CapacityLeaseState::Released,
-        CapacityLeaseState::Reclaimed,
+        CapacityLeaseState::Expired,
+        CapacityLeaseState::Revoked,
     ],
-    initial: CapacityLeaseState::Active,
-    terminals: &[CapacityLeaseState::Released, CapacityLeaseState::Reclaimed],
+    initial: CapacityLeaseState::Requested,
+    terminals: &[
+        CapacityLeaseState::Released,
+        CapacityLeaseState::Expired,
+        CapacityLeaseState::Revoked,
+    ],
     events: &[
+        CapacityLeaseEvent::Enqueue,
+        CapacityLeaseEvent::Grant,
+        CapacityLeaseEvent::Start,
         CapacityLeaseEvent::Renew,
         CapacityLeaseEvent::Release,
-        CapacityLeaseEvent::Reclaim,
+        CapacityLeaseEvent::Expire,
+        CapacityLeaseEvent::Revoke,
     ],
     guards: &[
+        CAPACITY_LEASE_GUARD_CELL_FULL,
+        CAPACITY_LEASE_GUARD_CELL_ADMITS,
+        CAPACITY_LEASE_GUARD_HEADS_QUEUE,
         CAPACITY_LEASE_GUARD_CAN_RENEW,
         CAPACITY_LEASE_GUARD_CAN_RELEASE,
+        CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN,
         CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED,
     ],
     edges: &[
         Edge {
-            id: "C01",
-            from: CapacityLeaseState::Active,
-            event: CapacityLeaseEvent::Renew,
-            guard: Some(CAPACITY_LEASE_GUARD_CAN_RENEW),
-            to: CapacityLeaseState::Active,
+            id: "B01",
+            from: CapacityLeaseState::Requested,
+            event: CapacityLeaseEvent::Enqueue,
+            guard: Some(CAPACITY_LEASE_GUARD_CELL_FULL),
+            to: CapacityLeaseState::Queued,
         },
         Edge {
-            id: "C02",
-            from: CapacityLeaseState::Active,
+            id: "B02",
+            from: CapacityLeaseState::Requested,
+            event: CapacityLeaseEvent::Grant,
+            guard: Some(CAPACITY_LEASE_GUARD_CELL_ADMITS),
+            to: CapacityLeaseState::Granted,
+        },
+        Edge {
+            id: "B03",
+            from: CapacityLeaseState::Queued,
+            event: CapacityLeaseEvent::Grant,
+            guard: Some(CAPACITY_LEASE_GUARD_HEADS_QUEUE),
+            to: CapacityLeaseState::Granted,
+        },
+        Edge {
+            id: "B04",
+            from: CapacityLeaseState::Granted,
+            event: CapacityLeaseEvent::Start,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RENEW),
+            to: CapacityLeaseState::Running,
+        },
+        Edge {
+            id: "B05",
+            from: CapacityLeaseState::Granted,
+            event: CapacityLeaseEvent::Renew,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RENEW),
+            to: CapacityLeaseState::Granted,
+        },
+        Edge {
+            id: "B06",
+            from: CapacityLeaseState::Running,
+            event: CapacityLeaseEvent::Renew,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RENEW),
+            to: CapacityLeaseState::Running,
+        },
+        Edge {
+            id: "B07",
+            from: CapacityLeaseState::Granted,
             event: CapacityLeaseEvent::Release,
             guard: Some(CAPACITY_LEASE_GUARD_CAN_RELEASE),
             to: CapacityLeaseState::Released,
         },
         Edge {
-            id: "C03",
-            from: CapacityLeaseState::Active,
-            event: CapacityLeaseEvent::Reclaim,
+            id: "B08",
+            from: CapacityLeaseState::Running,
+            event: CapacityLeaseEvent::Release,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RELEASE),
+            to: CapacityLeaseState::Released,
+        },
+        Edge {
+            id: "B09",
+            from: CapacityLeaseState::Queued,
+            event: CapacityLeaseEvent::Release,
+            guard: Some(CAPACITY_LEASE_GUARD_CAN_RELEASE),
+            to: CapacityLeaseState::Released,
+        },
+        Edge {
+            id: "B10",
+            from: CapacityLeaseState::Queued,
+            event: CapacityLeaseEvent::Revoke,
+            guard: Some(CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN),
+            to: CapacityLeaseState::Revoked,
+        },
+        Edge {
+            id: "B11",
+            from: CapacityLeaseState::Granted,
+            event: CapacityLeaseEvent::Revoke,
+            guard: Some(CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN),
+            to: CapacityLeaseState::Revoked,
+        },
+        Edge {
+            id: "B12",
+            from: CapacityLeaseState::Running,
+            event: CapacityLeaseEvent::Revoke,
+            guard: Some(CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN),
+            to: CapacityLeaseState::Revoked,
+        },
+        Edge {
+            id: "B13",
+            from: CapacityLeaseState::Queued,
+            event: CapacityLeaseEvent::Expire,
             guard: Some(CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED),
-            to: CapacityLeaseState::Reclaimed,
+            to: CapacityLeaseState::Expired,
+        },
+        Edge {
+            id: "B14",
+            from: CapacityLeaseState::Granted,
+            event: CapacityLeaseEvent::Expire,
+            guard: Some(CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED),
+            to: CapacityLeaseState::Expired,
+        },
+        Edge {
+            id: "B15",
+            from: CapacityLeaseState::Running,
+            event: CapacityLeaseEvent::Expire,
+            guard: Some(CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED),
+            to: CapacityLeaseState::Expired,
         },
     ],
 };
@@ -314,6 +520,37 @@ impl CapacityLeaseState {
     ) -> Result<Self, TransitionRefused> {
         transition(&CAPACITY_LEASE_MACHINE, self, event, guard_holds).map(|edge| edge.to)
     }
+
+    /// [`Self::apply`] with the guards answered from stated facts.
+    pub fn apply_with(
+        self,
+        event: CapacityLeaseEvent,
+        facts: &CapacityLeaseFacts,
+    ) -> Result<Self, TransitionRefused> {
+        self.apply(event, |guard| facts.holds(guard))
+    }
+}
+
+/// The newest transitions one lease keeps (`CapacityStatus` returns them in order).
+pub const MAX_LEASE_TRANSITIONS: usize = 50;
+
+/// One applied transition, recorded as a fact in the same write as the state it produced
+/// (MEDULLA-PLACEMENT-R786.6). It holds no secret and no command line.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CapacityTransitionRecord {
+    pub lease_id: String,
+    pub cell_id: String,
+    pub from: CapacityLeaseState,
+    pub event: CapacityLeaseEvent,
+    pub to: CapacityLeaseState,
+    pub actor_digest: String,
+    pub priority: LeasePriority,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queue_seq: Option<u64>,
+    pub at_ms: u64,
+    pub fence_token: u64,
 }
 
 /// One tenant's durable claim on a `CapacityCell`. Field set matches the lane
@@ -377,6 +614,18 @@ pub struct CapacityLease {
     pub token_budget: Option<u64>,
     pub idempotency_key: String,
     pub state: CapacityLeaseState,
+    /// The place in its cell's queue, taken when the lease enters `Queued`
+    /// (MEDULLA-PLACEMENT-R786.5): the next value of a per-cell monotonic counter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queue_seq: Option<u64>,
+    /// The deadline of a queued lease; the sweeper expires it after this
+    /// (MEDULLA-PLACEMENT-R786.4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub queue_expires_at_ms: Option<u64>,
+    /// The newest [`MAX_LEASE_TRANSITIONS`] applied transitions, oldest first
+    /// (MEDULLA-PLACEMENT-R786.6).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transitions: Vec<CapacityTransitionRecord>,
 }
 
 impl CapacityLease {
@@ -412,14 +661,74 @@ impl CapacityLease {
         Ok(())
     }
 
-    /// True once `now_ms` has reached `expires_at_ms` OR the lease is already
-    /// terminal-by-fiat (`Released`/`Reclaimed`/`Expired`). A caller must treat
-    /// an expired lease as fenced even if it never sees a `Reclaimed`
-    /// transition (the reclaim sweep is a cleanup, not the authority — the
-    /// authority is the timestamp comparison itself, so two independent
-    /// reclaimers can never race on "is it expired").
+    /// The deadline the current state is measured against: the queue deadline of a queued
+    /// lease, the holder deadline otherwise.
+    pub fn deadline_ms(&self) -> u64 {
+        match (self.state, self.queue_expires_at_ms) {
+            (CapacityLeaseState::Queued, Some(queue_deadline)) => queue_deadline,
+            _ => self.expires_at_ms,
+        }
+    }
+
+    /// Whether `now_ms` has reached the deadline of a lease that is not terminal.
+    pub fn deadline_passed(&self, now_ms: u64) -> bool {
+        now_ms >= self.deadline_ms()
+    }
+
+    /// The holder TTL this lease was requested with. Meaningful until its first grant, which
+    /// restarts the deadline from the grant instant.
+    pub fn ttl_ms(&self) -> u64 {
+        self.expires_at_ms.saturating_sub(self.issued_at_ms)
+    }
+
+    /// True once `now_ms` has reached the deadline OR the lease is already terminal. A caller
+    /// must treat an expired lease as fenced even if it never sees an `Expired`
+    /// transition (the sweep is a cleanup, not the authority — the authority is the
+    /// timestamp comparison itself, so two independent sweepers can never race on "is it
+    /// expired").
     pub fn is_expired(&self, now_ms: u64) -> bool {
-        self.state.is_terminal() || now_ms >= self.expires_at_ms
+        self.state.is_terminal() || self.deadline_passed(now_ms)
+    }
+
+    /// The state a read at `now_ms` reports: `Expired` for a non-terminal lease past its
+    /// deadline that the sweeper has not stored yet (MEDULLA-PLACEMENT-R782.1). A read-side
+    /// derivation only: nothing stores it.
+    pub fn effective_status(&self, now_ms: u64) -> CapacityLeaseState {
+        if !self.state.is_terminal() && self.deadline_passed(now_ms) {
+            CapacityLeaseState::Expired
+        } else {
+            self.state
+        }
+    }
+
+    /// Fire `event` on this lease: apply the machine under `facts`, store the state it
+    /// returns and record the transition (MEDULLA-PLACEMENT-R786.2 and R786.6). A refusal
+    /// leaves the lease unchanged and records nothing. This is the one writer of `state`.
+    pub fn fire(
+        &mut self,
+        event: CapacityLeaseEvent,
+        facts: &CapacityLeaseFacts,
+        at_ms: u64,
+    ) -> Result<CapacityLeaseState, TransitionRefused> {
+        let from = self.state;
+        let to = from.apply_with(event, facts)?;
+        self.state = to;
+        if self.transitions.len() >= MAX_LEASE_TRANSITIONS {
+            self.transitions.remove(0);
+        }
+        self.transitions.push(CapacityTransitionRecord {
+            lease_id: self.lease_id.clone(),
+            cell_id: self.cell_id.clone(),
+            from,
+            event,
+            to,
+            actor_digest: self.actor_digest.clone(),
+            priority: self.priority,
+            queue_seq: self.queue_seq,
+            at_ms,
+            fence_token: self.fence_token,
+        });
+        Ok(to)
     }
 }
 
@@ -438,7 +747,7 @@ pub enum CapacityDenial {
     /// The caller's `fence_token` does not match the ledger's live record for
     /// this `lease_id`. The other half of the fencing rejection.
     StaleFence,
-    /// The lease has reached `expires_at_ms` (or is already terminal); a
+    /// The lease has reached its deadline (or is already terminal); a
     /// renew/release/commit from an expired holder is rejected outright —
     /// nothing "keeps working" past expiry.
     LeaseExpired,
@@ -449,15 +758,90 @@ pub enum CapacityDenial {
     /// invariant): same key must mean same request, never a shape mismatch
     /// silently accepted.
     IdempotencyConflict,
+    /// The cell's resource class does not admit this priority (MEDULLA-PLACEMENT-R786.1): a
+    /// build-slot cell admits only `LandGate`, `Train` and `Lane`, and no other resource class
+    /// admits them. Wire code `PRIORITY_NOT_ALLOWED_FOR_RESOURCE`.
+    PriorityNotAllowedForResource {
+        priority: LeasePriority,
+        resource_class: CapacityResourceClass,
+    },
+    /// The machine has no edge for this state and event, or its guard failed
+    /// (MEDULLA-PLACEMENT-R786.3). Wire code `TRANSITION_REFUSED`.
+    TransitionRefused {
+        machine: String,
+        from: String,
+        event: String,
+        why: TransitionRefusalReason,
+    },
 }
 
-/// Bounded, in-memory reference ledger for ONE `CapacityCell`. This is the pure
+/// The wire code of [`CapacityDenial::PriorityNotAllowedForResource`].
+pub const PRIORITY_NOT_ALLOWED_FOR_RESOURCE: &str = "PRIORITY_NOT_ALLOWED_FOR_RESOURCE";
+
+impl From<TransitionRefused> for CapacityDenial {
+    fn from(refused: TransitionRefused) -> Self {
+        Self::TransitionRefused {
+            machine: refused.machine,
+            from: refused.from,
+            event: refused.event,
+            why: refused.reason,
+        }
+    }
+}
+
+/// The leases of one cell that wait in its queue and that the cell now admits, in the order
+/// they are granted (MEDULLA-PLACEMENT-R786.5). The one fair-queue policy: the store and the
+/// reference ledger both call it.
+///
+/// Classes are considered in rank order (`LandGate`, then `Train`, then `Lane`). Within a
+/// class the order is `queue_seq`, strictly first in first out: when the head of a class is
+/// not admitted, no later lease of that class is considered, so none overtakes it.
+/// `leased` is the amount the cell already lends; each granted lease adds its own amount
+/// before the next is priced. `Lane` never spends the reserved floor because
+/// [`CapacityCell::available_for`] refuses it.
+pub fn grant_order(cell: &CapacityCell, leased: u64, queued: &[&CapacityLease]) -> Vec<String> {
+    let mut by_rank: Vec<&CapacityLease> = queued
+        .iter()
+        .copied()
+        .filter(|lease| lease.state == CapacityLeaseState::Queued && lease.cell_id == cell.cell_id)
+        .collect();
+    by_rank.sort_by_key(|lease| (lease.priority, lease.queue_seq.unwrap_or(u64::MAX)));
+    let mut granted = Vec::new();
+    let mut leased = leased;
+    let mut blocked: Vec<LeasePriority> = Vec::new();
+    for lease in by_rank {
+        if blocked.contains(&lease.priority) {
+            continue;
+        }
+        if cell.available_for(lease.priority, leased) >= lease.amount {
+            leased = leased.saturating_add(lease.amount);
+            granted.push(lease.lease_id.clone());
+        } else {
+            blocked.push(lease.priority);
+        }
+    }
+    granted
+}
+
+/// What one sweep did: the leases it expired and the queued leases it then granted.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct CapacitySweep {
+    pub expired: Vec<String>,
+    pub granted: Vec<String>,
+}
+
+/// Bounded, in-memory reference ledger for the `CapacityCell`s it is shown. This is the pure
 /// algorithm a durable server-side store wraps (GOC-21-W04); it holds no I/O
 /// and is deliberately small enough to be exhaustively unit-tested here as this
 /// lane's fencing/fairness proof. A production store additionally persists
 /// every state transition durably before acking (mirrors `work_item.py`'s
 /// "commit-before-ack" discipline) — that persistence is out of this crate's
 /// scope (bottom of the DAG, no I/O).
+///
+/// A request for a build-slot cell that the cell cannot admit waits in the cell's fair queue
+/// (MEDULLA-PLACEMENT-R786.5); a request for any other resource class that cannot be
+/// admitted is denied `Exhausted` and never stored, so only build-slot leases pass through
+/// `Requested`/`Queued`.
 #[derive(Debug, Default)]
 pub struct CapacityLedger {
     leases: BTreeMap<String, CapacityLease>,
@@ -467,7 +851,14 @@ pub struct CapacityLedger {
     next_fence: u64,
     /// `(tenant_ref, idempotency_key) -> lease_id` replay table.
     idempotency: BTreeMap<(String, String), String>,
+    /// The next `queue_seq` of each cell.
+    next_queue_seq: BTreeMap<String, u64>,
+    queue_ttl_ms: u64,
 }
+
+/// How long a queued lease waits before the sweeper expires it (the knob
+/// `capacity.build_slot.queue_ttl_ms` default, MEDULLA-PLACEMENT-R786.4).
+pub const DEFAULT_QUEUE_TTL_MS: u64 = 7_200_000;
 
 /// Inputs for one atomic capacity admission attempt.
 ///
@@ -496,13 +887,23 @@ impl CapacityLedger {
             leases: BTreeMap::new(),
             next_fence: 1,
             idempotency: BTreeMap::new(),
+            next_queue_seq: BTreeMap::new(),
+            queue_ttl_ms: DEFAULT_QUEUE_TTL_MS,
         }
+    }
+
+    /// The same ledger with its queue deadline set to `queue_ttl_ms`.
+    pub fn with_queue_ttl_ms(mut self, queue_ttl_ms: u64) -> Self {
+        self.queue_ttl_ms = queue_ttl_ms;
+        self
     }
 
     fn active_leased_amount(&self, cell: &CapacityCell, now_ms: u64) -> u64 {
         self.leases
             .values()
-            .filter(|l| l.cell_id == cell.cell_id && !l.is_expired(now_ms))
+            .filter(|l| {
+                l.cell_id == cell.cell_id && l.state.holds_capacity() && !l.is_expired(now_ms)
+            })
             .map(|l| l.amount)
             .sum()
     }
@@ -512,7 +913,9 @@ impl CapacityLedger {
     /// stamps `lease_epoch = cell.epoch`. Idempotent: replaying the same
     /// `(tenant_ref, idempotency_key)` returns the SAME lease (never mints a
     /// second one) as long as the demand shape matches; a shape mismatch is
-    /// `IdempotencyConflict`.
+    /// `IdempotencyConflict`. A priority the cell's resource class does not admit is
+    /// `PriorityNotAllowedForResource`. The lease is `Granted` (edge B02) or, for a
+    /// build-slot cell without capacity, `Queued` (edge B01).
     pub fn try_acquire(
         &mut self,
         request: CapacityAcquireRequest<'_>,
@@ -545,10 +948,17 @@ impl CapacityLedger {
             }
             return Err(CapacityDenial::IdempotencyConflict);
         }
+        if !priority.allowed_for(cell.resource_class) {
+            return Err(CapacityDenial::PriorityNotAllowedForResource {
+                priority,
+                resource_class: cell.resource_class,
+            });
+        }
 
         let already = self.active_leased_amount(cell, now_ms);
         let available = cell.available_for(priority, already);
-        if available < amount {
+        let queues = cell.resource_class == CapacityResourceClass::BuildSlot;
+        if available < amount && !queues {
             return Err(CapacityDenial::Exhausted {
                 available,
                 requested: amount,
@@ -557,7 +967,7 @@ impl CapacityLedger {
 
         let fence_token = self.next_fence;
         self.next_fence += 1;
-        let lease = CapacityLease {
+        let mut lease = CapacityLease {
             schema_version: CAPACITY_LEASE_VERSION,
             lease_id: lease_id.clone(),
             work_item_id: work_item_id.to_string(),
@@ -575,16 +985,59 @@ impl CapacityLedger {
             cost_budget_micros: None,
             token_budget: None,
             idempotency_key: idempotency_key.to_string(),
-            state: CapacityLeaseState::Active,
+            state: CapacityLeaseState::Requested,
+            queue_seq: None,
+            queue_expires_at_ms: None,
+            transitions: Vec::new(),
         };
+        let admitted = available >= amount;
+        let event = if admitted {
+            CapacityLeaseEvent::Grant
+        } else {
+            let seq = self.next_queue_seq.entry(cell.cell_id.clone()).or_insert(0);
+            *seq += 1;
+            lease.queue_seq = Some(*seq);
+            lease.queue_expires_at_ms = Some(now_ms.saturating_add(self.queue_ttl_ms));
+            CapacityLeaseEvent::Enqueue
+        };
+        let facts = CapacityLeaseFacts {
+            cell_admits: admitted,
+            ..CapacityLeaseFacts::default()
+        };
+        lease.fire(event, &facts, now_ms)?;
         self.leases.insert(lease_id.clone(), lease.clone());
         self.idempotency.insert(replay_key, lease_id);
         Ok(lease)
     }
 
+    /// The fence and liveness checks every holder call shares: unknown lease, a deadline
+    /// already passed, a stale cell epoch, a fence that does not match.
+    fn check_holder(
+        lease: &CapacityLease,
+        fence_token: u64,
+        lease_epoch: u64,
+        cell_epoch: u64,
+        now_ms: u64,
+    ) -> Result<(), CapacityDenial> {
+        if lease.is_expired(now_ms) {
+            return Err(CapacityDenial::LeaseExpired);
+        }
+        if lease_epoch < cell_epoch {
+            return Err(CapacityDenial::StaleEpoch {
+                cell_epoch,
+                caller_epoch: lease_epoch,
+            });
+        }
+        if lease.fence_token != fence_token {
+            return Err(CapacityDenial::StaleFence);
+        }
+        Ok(())
+    }
+
     /// Renew: rejects a caller whose `fence_token`/`lease_epoch` do not match
     /// the ledger's live record, OR whose lease has already expired — an
     /// expired holder that "keeps working" is exactly the defect this rejects.
+    /// Edges B05 and B06; a queued or terminal lease is `TransitionRefused`.
     pub fn try_renew(
         &mut self,
         lease_id: &str,
@@ -598,30 +1051,60 @@ impl CapacityLedger {
             .leases
             .get_mut(lease_id)
             .ok_or(CapacityDenial::NotFound)?;
-        if lease.is_expired(now_ms) {
-            return Err(CapacityDenial::LeaseExpired);
+        if lease.state.is_terminal() {
+            // A terminal state refuses every event: the typed refusal is the answer.
+            lease.fire(
+                CapacityLeaseEvent::Renew,
+                &CapacityLeaseFacts::default(),
+                now_ms,
+            )?;
         }
-        if lease_epoch < cell_epoch {
-            return Err(CapacityDenial::StaleEpoch {
-                cell_epoch,
-                caller_epoch: lease_epoch,
-            });
-        }
-        if lease.fence_token != fence_token {
-            return Err(CapacityDenial::StaleFence);
-        }
-        let next = lease
-            .state
-            .apply(CapacityLeaseEvent::Renew, |_| true)
-            .map_err(|_refused| CapacityDenial::LeaseExpired)?;
+        Self::check_holder(lease, fence_token, lease_epoch, cell_epoch, now_ms)?;
+        let facts = CapacityLeaseFacts {
+            owner_matches: true,
+            live: true,
+            ..CapacityLeaseFacts::default()
+        };
+        lease.fire(CapacityLeaseEvent::Renew, &facts, now_ms)?;
         lease.expires_at_ms = now_ms + ttl_ms;
         lease.renewed_count += 1;
-        lease.state = next;
         Ok(lease.clone())
     }
 
-    /// Release: same fencing checks as renew, then transitions terminal and
-    /// frees capacity for the next admission.
+    /// Start: a granted lease begins work (edge B04). Same fencing checks as renew.
+    pub fn try_start(
+        &mut self,
+        lease_id: &str,
+        fence_token: u64,
+        lease_epoch: u64,
+        cell_epoch: u64,
+        now_ms: u64,
+    ) -> Result<CapacityLease, CapacityDenial> {
+        let lease = self
+            .leases
+            .get_mut(lease_id)
+            .ok_or(CapacityDenial::NotFound)?;
+        if lease.state.is_terminal() {
+            // A terminal state refuses every event: the typed refusal is the answer.
+            lease.fire(
+                CapacityLeaseEvent::Start,
+                &CapacityLeaseFacts::default(),
+                now_ms,
+            )?;
+        }
+        Self::check_holder(lease, fence_token, lease_epoch, cell_epoch, now_ms)?;
+        let facts = CapacityLeaseFacts {
+            owner_matches: true,
+            live: true,
+            ..CapacityLeaseFacts::default()
+        };
+        lease.fire(CapacityLeaseEvent::Start, &facts, now_ms)?;
+        Ok(lease.clone())
+    }
+
+    /// Release: same fencing checks as renew, then transitions terminal (edges B07 to B09).
+    /// The caller then runs [`Self::grant_next`] for the freed slot. A repeated release of a
+    /// released lease is `TransitionRefused` with `terminal_state`.
     pub fn try_release(
         &mut self,
         lease_id: &str,
@@ -635,44 +1118,99 @@ impl CapacityLedger {
             .get_mut(lease_id)
             .ok_or(CapacityDenial::NotFound)?;
         if lease.state.is_terminal() {
-            // Idempotent terminal commit (mirrors CommitDescriptor's
-            // idempotency invariant): a repeated release on an already-terminal
-            // lease resolves to a no-op success, never an error.
-            return Ok(());
+            // A terminal state refuses every event: the typed refusal is the answer.
+            lease.fire(
+                CapacityLeaseEvent::Release,
+                &CapacityLeaseFacts::default(),
+                now_ms,
+            )?;
         }
-        if lease.is_expired(now_ms) {
-            return Err(CapacityDenial::LeaseExpired);
-        }
-        if lease_epoch < cell_epoch {
-            return Err(CapacityDenial::StaleEpoch {
-                cell_epoch,
-                caller_epoch: lease_epoch,
-            });
-        }
-        if lease.fence_token != fence_token {
-            return Err(CapacityDenial::StaleFence);
-        }
-        lease.state = lease
-            .state
-            .apply(CapacityLeaseEvent::Release, |_| true)
-            .map_err(|_refused| CapacityDenial::LeaseExpired)?;
+        Self::check_holder(lease, fence_token, lease_epoch, cell_epoch, now_ms)?;
+        let facts = CapacityLeaseFacts {
+            owner_matches: true,
+            ..CapacityLeaseFacts::default()
+        };
+        lease.fire(CapacityLeaseEvent::Release, &facts, now_ms)?;
         Ok(())
     }
 
-    /// Sweep every non-terminal lease past `expires_at_ms` into `Reclaimed`.
-    /// Returns the reclaimed lease ids. Safe to call from multiple reclaimers
-    /// concurrently (in the durable store, this is the CAS-guarded sweep); here
-    /// it is simply idempotent per lease.
+    /// Revoke: an administrator takes a lease back (edges B10 to B12). `caller_holds_admin`
+    /// states the scope check the dispatch layer already made.
+    pub fn try_revoke(
+        &mut self,
+        lease_id: &str,
+        caller_holds_admin: bool,
+        now_ms: u64,
+    ) -> Result<CapacityLease, CapacityDenial> {
+        let lease = self
+            .leases
+            .get_mut(lease_id)
+            .ok_or(CapacityDenial::NotFound)?;
+        let facts = CapacityLeaseFacts {
+            caller_holds_admin,
+            ..CapacityLeaseFacts::default()
+        };
+        lease.fire(CapacityLeaseEvent::Revoke, &facts, now_ms)?;
+        Ok(lease.clone())
+    }
+
+    /// Fire `Expire` on every non-terminal lease past its deadline: a queued lease past
+    /// `queue_expires_at_ms`, a granted or running lease past `expires_at_ms`
+    /// (edges B13 to B15). Returns the expired lease ids. Idempotent per lease.
     pub fn reclaim_expired(&mut self, now_ms: u64) -> Vec<String> {
-        let mut reclaimed = Vec::new();
+        let mut expired = Vec::new();
         for (id, lease) in self.leases.iter_mut() {
-            let lapsed = now_ms >= lease.expires_at_ms;
-            if let Ok(next) = lease.state.apply(CapacityLeaseEvent::Reclaim, |_| lapsed) {
-                lease.state = next;
-                reclaimed.push(id.clone());
+            let facts = CapacityLeaseFacts {
+                deadline_passed: lease.deadline_passed(now_ms),
+                ..CapacityLeaseFacts::default()
+            };
+            if lease
+                .fire(CapacityLeaseEvent::Expire, &facts, now_ms)
+                .is_ok()
+            {
+                expired.push(id.clone());
             }
         }
-        reclaimed
+        expired
+    }
+
+    /// Grant every queued lease of `cell` that it now admits, in [`grant_order`] (edge B03).
+    /// Returns the granted lease ids in grant order.
+    pub fn grant_next(&mut self, cell: &CapacityCell, now_ms: u64) -> Vec<String> {
+        let leased = self.active_leased_amount(cell, now_ms);
+        let order = {
+            let queued: Vec<&CapacityLease> = self.leases.values().collect();
+            grant_order(cell, leased, &queued)
+        };
+        let mut granted = Vec::with_capacity(order.len());
+        for id in order {
+            let lease = self.leases.get_mut(&id).expect("ordered lease exists");
+            let facts = CapacityLeaseFacts {
+                cell_admits: true,
+                heads_queue: true,
+                ..CapacityLeaseFacts::default()
+            };
+            if lease
+                .fire(CapacityLeaseEvent::Grant, &facts, now_ms)
+                .is_ok()
+            {
+                // The holder's deadline starts at the grant, not at the request.
+                lease.expires_at_ms = now_ms + lease.ttl_ms();
+                granted.push(id);
+            }
+        }
+        granted
+    }
+
+    /// One sweeper pass: expire what passed its deadline, then grant queued leases into the
+    /// slots that freed (MEDULLA-PLACEMENT-R786.4 and R786.5).
+    pub fn sweep(&mut self, cells: &[&CapacityCell], now_ms: u64) -> CapacitySweep {
+        let expired = self.reclaim_expired(now_ms);
+        let mut granted = Vec::new();
+        for cell in cells {
+            granted.extend(self.grant_next(cell, now_ms));
+        }
+        CapacitySweep { expired, granted }
     }
 
     pub fn get(&self, lease_id: &str) -> Option<&CapacityLease> {
@@ -682,8 +1220,10 @@ impl CapacityLedger {
 
 #[cfg(test)]
 mod tests {
-    // MEDULLA-PLACEMENT-R782.1 — the capacity lease machine.
-    use super::{CapacityLeaseEvent, CapacityLeaseState, CAPACITY_LEASE_MACHINE};
+    // MEDULLA-PLACEMENT-R786.2 — the capacity lease machine.
+    use super::{
+        CapacityLeaseEvent, CapacityLeaseFacts, CapacityLeaseState, CAPACITY_LEASE_MACHINE,
+    };
     use medulla_types::transition_refused::{MachineState, TransitionRefusalReason};
 
     fn capacity_edge_case(
@@ -704,6 +1244,38 @@ mod tests {
             let refused = from.apply(event, |_| false).unwrap_err();
             assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed);
         }
+        // The same edge fires from the named facts, and from no others.
+        let facts = facts_for(edge.guard.unwrap_or_default());
+        assert_eq!(from.apply_with(event, &facts), Ok(to), "{id} facts");
+        // With no fact established the edge does not fire, except B01: a cell that has not
+        // been shown to admit the lease queues it, the safe side.
+        if edge.guard != Some(super::CAPACITY_LEASE_GUARD_CELL_FULL) {
+            assert!(from
+                .apply_with(event, &CapacityLeaseFacts::default())
+                .is_err());
+        }
+    }
+
+    /// The facts under which exactly `guard` holds.
+    fn facts_for(guard: &str) -> CapacityLeaseFacts {
+        let mut facts = CapacityLeaseFacts::default();
+        match guard {
+            super::CAPACITY_LEASE_GUARD_CELL_FULL => {}
+            super::CAPACITY_LEASE_GUARD_CELL_ADMITS => facts.cell_admits = true,
+            super::CAPACITY_LEASE_GUARD_HEADS_QUEUE => {
+                facts.cell_admits = true;
+                facts.heads_queue = true;
+            }
+            super::CAPACITY_LEASE_GUARD_CAN_RENEW => {
+                facts.owner_matches = true;
+                facts.live = true;
+            }
+            super::CAPACITY_LEASE_GUARD_CAN_RELEASE => facts.owner_matches = true,
+            super::CAPACITY_LEASE_GUARD_CALLER_IS_ADMIN => facts.caller_holds_admin = true,
+            super::CAPACITY_LEASE_GUARD_LEASE_UNTIL_PASSED => facts.deadline_passed = true,
+            other => panic!("unknown guard {other}"),
+        }
+        facts
     }
 
     /// Every (state, event) pair with no edge.
@@ -724,49 +1296,48 @@ mod tests {
         out
     }
 
-    // spec: MEDULLA-PLACEMENT-R782.1
-
-    #[test]
-    fn edge_c01_active_renew() {
-        capacity_edge_case(
-            "C01",
-            CapacityLeaseState::Active,
-            CapacityLeaseEvent::Renew,
-            CapacityLeaseState::Active,
-        );
+    macro_rules! edge_tests {
+        ($($name:ident, $id:literal, $from:ident, $event:ident, $to:ident;)*) => {$(
+            // spec: MEDULLA-PLACEMENT-R786.2
+            // spec: MEDULLA-PLACEMENT-R782.1
+            #[test]
+            fn $name() {
+                capacity_edge_case(
+                    $id,
+                    CapacityLeaseState::$from,
+                    CapacityLeaseEvent::$event,
+                    CapacityLeaseState::$to,
+                );
+            }
+        )*};
     }
 
-    // spec: MEDULLA-PLACEMENT-R782.1
-
-    #[test]
-    fn edge_c02_active_release() {
-        capacity_edge_case(
-            "C02",
-            CapacityLeaseState::Active,
-            CapacityLeaseEvent::Release,
-            CapacityLeaseState::Released,
-        );
+    edge_tests! {
+        edge_b01_requested_enqueue, "B01", Requested, Enqueue, Queued;
+        edge_b02_requested_grant, "B02", Requested, Grant, Granted;
+        edge_b03_queued_grant, "B03", Queued, Grant, Granted;
+        edge_b04_granted_start, "B04", Granted, Start, Running;
+        edge_b05_granted_renew, "B05", Granted, Renew, Granted;
+        edge_b06_running_renew, "B06", Running, Renew, Running;
+        edge_b07_granted_release, "B07", Granted, Release, Released;
+        edge_b08_running_release, "B08", Running, Release, Released;
+        edge_b09_queued_release, "B09", Queued, Release, Released;
+        edge_b10_queued_revoke, "B10", Queued, Revoke, Revoked;
+        edge_b11_granted_revoke, "B11", Granted, Revoke, Revoked;
+        edge_b12_running_revoke, "B12", Running, Revoke, Revoked;
+        edge_b13_queued_expire, "B13", Queued, Expire, Expired;
+        edge_b14_granted_expire, "B14", Granted, Expire, Expired;
+        edge_b15_running_expire, "B15", Running, Expire, Expired;
     }
 
+    // spec: MEDULLA-PLACEMENT-R786.2
     // spec: MEDULLA-PLACEMENT-R782.1
-
-    #[test]
-    fn edge_c03_active_reclaim() {
-        capacity_edge_case(
-            "C03",
-            CapacityLeaseState::Active,
-            CapacityLeaseEvent::Reclaim,
-            CapacityLeaseState::Reclaimed,
-        );
-    }
-
-    // spec: MEDULLA-PLACEMENT-R782.1
-
     #[test]
     fn every_illegal_pair_is_refused() {
         let machine = &CAPACITY_LEASE_MACHINE;
         let pairs = capacity_illegal_pairs();
-        assert!(!pairs.is_empty());
+        assert_eq!(machine.states.len() * machine.events.len(), 49);
+        assert_eq!(pairs.len(), 34, "49 pairs less the 15 edges");
         for (state, event) in pairs {
             let refused = state.apply(event, |_| true).unwrap_err();
             let expected = if machine.is_terminal(state) {
@@ -775,16 +1346,21 @@ mod tests {
                 TransitionRefusalReason::IllegalTransition
             };
             assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+            assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
         }
         for &terminal in machine.terminals {
             for &event in machine.events {
                 assert!(terminal.apply(event, |_| true).is_err());
             }
         }
+        // A renew after release is refused (MEDULLA-PLACEMENT-R782.1).
+        assert!(CapacityLeaseState::Released
+            .apply(CapacityLeaseEvent::Renew, |_| true)
+            .is_err());
     }
 
+    // spec: MEDULLA-PLACEMENT-R786.2
     // spec: MEDULLA-PLACEMENT-R782.1
-
     #[test]
     fn refusal_carries_machine_from_event() {
         let refused = CapacityLeaseState::Released
@@ -794,6 +1370,18 @@ mod tests {
         assert_eq!(refused.from, CapacityLeaseState::Released.stored());
         assert_eq!(refused.event, "Renew");
         assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+    }
+
+    /// The retired stored texts read as their successors; no other text is a state.
+    #[test]
+    fn retired_stored_texts_read_as_granted_and_expired() {
+        let read = |text: &str| serde_json::from_str::<CapacityLeaseState>(&format!("\"{text}\""));
+        assert_eq!(read("active").unwrap(), CapacityLeaseState::Granted);
+        assert_eq!(read("reclaimed").unwrap(), CapacityLeaseState::Expired);
+        assert!(read("renewed").is_err());
+        for &state in CAPACITY_LEASE_MACHINE.states {
+            assert_eq!(read(state.stored()).unwrap(), state);
+        }
     }
 
     /// Lines that assign the state field directly (`.<field> = <Type>::`), outside the
@@ -814,33 +1402,53 @@ mod tests {
         out
     }
 
+    // spec: MEDULLA-PLACEMENT-R786.3
     // spec: MEDULLA-PLACEMENT-R782.1
-
     #[test]
     fn no_writer_sets_state_outside_apply() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/capacity_lease.rs");
-        let source = std::fs::read_to_string(path).expect("writer source");
-        let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
-        assert!(
-            writes.is_empty(),
-            "direct state writes in src/capacity_lease.rs: {writes:?}"
-        );
-        let path = concat!(
+        let mut roots = vec![concat!(env!("CARGO_MANIFEST_DIR"), "/src/capacity_lease.rs").into()];
+        let store = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../medulla-resource-store/src/redb_store/capacity_lease.rs"
+            "/../medulla-resource-store/src/redb_store/capacity_lease"
         );
-        let source = std::fs::read_to_string(path).expect("writer source");
-        let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
-        assert!(writes.is_empty(), "direct state writes in ../medulla-resource-store/src/redb_store/capacity_lease.rs: {writes:?}");
+        roots.push(format!("{store}.rs"));
+        for entry in std::fs::read_dir(store).expect("store submodules") {
+            let path = entry.expect("entry").path();
+            if path.extension().is_some_and(|ext| ext == "rs") {
+                roots.push(path.to_string_lossy().into_owned());
+            }
+            if path.is_dir() {
+                for inner in std::fs::read_dir(&path).expect("nested submodules") {
+                    let inner = inner.expect("entry").path();
+                    if inner.extension().is_some_and(|ext| ext == "rs") {
+                        roots.push(inner.to_string_lossy().into_owned());
+                    }
+                }
+            }
+        }
+        assert!(roots.len() >= 3, "the scan must see the writer sources");
+        for path in roots {
+            let source = std::fs::read_to_string(&path).expect("writer source");
+            // A test module of its own file is the only place a literal state may be set.
+            if path.ends_with("tests.rs") || path.contains("/tests/") {
+                continue;
+            }
+            let writes = direct_state_writes(&source, "state", "CapacityLeaseState");
+            assert!(
+                writes.is_empty(),
+                "direct state writes in {path}: {writes:?}"
+            );
+        }
     }
 
     // spec: MEDULLA-PLACEMENT-R782.1
-
     #[test]
     fn every_transition_and_refusal_is_covered() {
         let machine = &CAPACITY_LEASE_MACHINE;
-        assert_eq!(machine.edges.len(), 3);
-        assert_eq!(machine.states.len(), 3);
+        assert_eq!(machine.edges.len(), 15);
+        assert_eq!(machine.states.len(), 7);
+        assert_eq!(machine.events.len(), 7);
+        assert_eq!(machine.terminals.len(), 3);
         let mut ids: Vec<_> = machine.edges.iter().map(|e| e.id).collect();
         ids.dedup();
         assert_eq!(ids.len(), machine.edges.len(), "edge ids are unique");
@@ -1276,5 +1884,304 @@ mod tests {
             .unwrap();
         lease.fence_token = 0;
         assert!(lease.validate().is_err());
+    }
+
+    fn slot_cell(capacity: u64, reserved_floor: u64) -> CapacityCell {
+        CapacityCell {
+            cell_id: "build-slots:r820".to_string(),
+            resource_class: CapacityResourceClass::BuildSlot,
+            capacity,
+            reserved_floor,
+            ..cell(1)
+        }
+    }
+
+    fn slot_request<'a>(
+        cell: &'a CapacityCell,
+        n: u32,
+        priority: LeasePriority,
+        now_ms: u64,
+        ttl_ms: u64,
+        keys: &'a [String],
+    ) -> CapacityAcquireRequest<'a> {
+        CapacityAcquireRequest {
+            cell,
+            lease_id: format!("lease-{n}"),
+            work_item_id: "wi-slot",
+            tenant_ref: "tenant-a",
+            actor_digest: "holder",
+            resource_class: CapacityResourceClass::BuildSlot,
+            amount: 1,
+            priority,
+            idempotency_key: &keys[n as usize],
+            now_ms,
+            ttl_ms,
+        }
+    }
+
+    fn keys() -> Vec<String> {
+        (0..16).map(|n| format!("key-{n}")).collect()
+    }
+
+    // spec: MEDULLA-PLACEMENT-R786.1
+    #[test]
+    fn build_slot_priorities_rank_and_only_land_gate_and_train_spend_the_floor() {
+        assert!(LeasePriority::LandGate < LeasePriority::Train);
+        assert!(LeasePriority::Train < LeasePriority::Lane);
+        assert!(LeasePriority::LandGate.may_spend_reserved_floor());
+        assert!(LeasePriority::Train.may_spend_reserved_floor());
+        assert!(!LeasePriority::Lane.may_spend_reserved_floor());
+        let cell = slot_cell(4, 1);
+        assert_eq!(cell.available_for(LeasePriority::LandGate, 1), 3);
+        assert_eq!(cell.available_for(LeasePriority::Train, 1), 3);
+        assert_eq!(cell.available_for(LeasePriority::Lane, 1), 2);
+        // Only the reserved slot is free: a lane is denied, the other two are admitted.
+        assert_eq!(cell.available_for(LeasePriority::Lane, 3), 0);
+        assert_eq!(cell.available_for(LeasePriority::LandGate, 3), 1);
+        assert_eq!(cell.available_for(LeasePriority::Train, 3), 1);
+        // The other resource classes refuse the three priorities, and a build-slot cell
+        // refuses the older ones.
+        let llm = cell_with(CapacityResourceClass::LlmGenerator);
+        let keys = keys();
+        let mut ledger = CapacityLedger::new();
+        for priority in [
+            LeasePriority::LandGate,
+            LeasePriority::Train,
+            LeasePriority::Lane,
+        ] {
+            let mut request = slot_request(&llm, 0, priority, 0, 1_000, &keys);
+            request.resource_class = CapacityResourceClass::LlmGenerator;
+            assert_eq!(
+                ledger.try_acquire(request),
+                Err(CapacityDenial::PriorityNotAllowedForResource {
+                    priority,
+                    resource_class: CapacityResourceClass::LlmGenerator,
+                })
+            );
+        }
+        let mut request = slot_request(&cell, 1, LeasePriority::Interactive, 0, 1_000, &keys);
+        request.priority = LeasePriority::Interactive;
+        assert!(matches!(
+            ledger.try_acquire(request),
+            Err(CapacityDenial::PriorityNotAllowedForResource { .. })
+        ));
+    }
+
+    fn cell_with(resource_class: CapacityResourceClass) -> CapacityCell {
+        CapacityCell {
+            resource_class,
+            ..cell(1)
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R786.4
+    #[test]
+    fn a_lease_that_stops_renewing_expires_and_returns_its_slot() {
+        let cell = slot_cell(1, 0);
+        let keys = keys();
+        let mut ledger = CapacityLedger::new();
+        let first = ledger
+            .try_acquire(slot_request(&cell, 1, LeasePriority::Lane, 0, 1_000, &keys))
+            .expect("granted");
+        assert_eq!(first.state, CapacityLeaseState::Granted);
+        let second = ledger
+            .try_acquire(slot_request(
+                &cell,
+                2,
+                LeasePriority::Lane,
+                10,
+                1_000,
+                &keys,
+            ))
+            .expect("queued");
+        assert_eq!(second.state, CapacityLeaseState::Queued);
+        // A heartbeat before the deadline moves the deadline; the sweep finds nothing.
+        let renewed = ledger
+            .try_renew(&first.lease_id, first.fence_token, 1, 1, 900, 1_000)
+            .expect("renews");
+        assert_eq!(renewed.expires_at_ms, 1_900);
+        assert_eq!(ledger.sweep(&[&cell], 1_500), CapacitySweep::default());
+        // The holder goes silent: past the deadline the sweep expires it and, in the same
+        // sweep, grants the next queued lease.
+        let swept = ledger.sweep(&[&cell], 2_000);
+        assert_eq!(swept.expired, vec![first.lease_id.clone()]);
+        assert_eq!(swept.granted, vec![second.lease_id.clone()]);
+        assert_eq!(
+            ledger.get(&first.lease_id).unwrap().state,
+            CapacityLeaseState::Expired
+        );
+        let granted = ledger.get(&second.lease_id).unwrap();
+        assert_eq!(granted.state, CapacityLeaseState::Granted);
+        assert_eq!(
+            granted.expires_at_ms, 3_000,
+            "the deadline starts at the grant"
+        );
+        // A renew by the expired holder is the terminal-state refusal that tells it to stop.
+        let refused = ledger
+            .try_renew(&first.lease_id, first.fence_token, 1, 1, 2_100, 1_000)
+            .unwrap_err();
+        assert!(matches!(
+            refused,
+            CapacityDenial::TransitionRefused {
+                why: TransitionRefusalReason::TerminalState,
+                ..
+            }
+        ));
+    }
+
+    // spec: MEDULLA-PLACEMENT-R786.4
+    #[test]
+    fn a_queued_lease_expires_at_its_queue_deadline() {
+        let cell = slot_cell(1, 0);
+        let keys = keys();
+        let mut ledger = CapacityLedger::new().with_queue_ttl_ms(500);
+        ledger
+            .try_acquire(slot_request(
+                &cell,
+                1,
+                LeasePriority::Lane,
+                0,
+                10_000,
+                &keys,
+            ))
+            .expect("granted");
+        let queued = ledger
+            .try_acquire(slot_request(
+                &cell,
+                2,
+                LeasePriority::Lane,
+                0,
+                10_000,
+                &keys,
+            ))
+            .expect("queued");
+        assert_eq!(queued.queue_expires_at_ms, Some(500));
+        assert_eq!(ledger.sweep(&[&cell], 499), CapacitySweep::default());
+        assert_eq!(ledger.sweep(&[&cell], 500).expired, vec![queued.lease_id]);
+    }
+
+    // spec: MEDULLA-PLACEMENT-R786.5
+    #[test]
+    fn land_gate_and_train_are_granted_before_lane_and_each_class_is_fifo() {
+        // Two slots, one reserved. A lane and a train fill the cell; four more queue.
+        let cell = slot_cell(2, 1);
+        let keys = keys();
+        let mut ledger = CapacityLedger::new();
+        let lane_holder = ledger
+            .try_acquire(slot_request(
+                &cell,
+                5,
+                LeasePriority::Lane,
+                0,
+                100_000,
+                &keys,
+            ))
+            .unwrap();
+        let train_holder = ledger
+            .try_acquire(slot_request(
+                &cell,
+                0,
+                LeasePriority::Train,
+                0,
+                100_000,
+                &keys,
+            ))
+            .unwrap();
+        assert_eq!(train_holder.state, CapacityLeaseState::Granted);
+        assert_eq!(lane_holder.state, CapacityLeaseState::Granted);
+        for (n, priority) in [
+            (1, LeasePriority::Lane),
+            (2, LeasePriority::Lane),
+            (3, LeasePriority::Train),
+            (4, LeasePriority::LandGate),
+        ] {
+            let lease = ledger
+                .try_acquire(slot_request(
+                    &cell,
+                    n,
+                    priority,
+                    u64::from(n),
+                    100_000,
+                    &keys,
+                ))
+                .unwrap();
+            assert_eq!(lease.state, CapacityLeaseState::Queued, "lease {n}");
+        }
+        // Everything queued is in the full order: the three classes by rank, each in
+        // arrival order, whatever the arrival order across classes was.
+        let wide = CapacityCell {
+            capacity: 6,
+            ..cell.clone()
+        };
+        let queued: Vec<&CapacityLease> = ledger.leases.values().collect();
+        assert_eq!(
+            grant_order(&wide, 1, &queued),
+            ["lease-4", "lease-3", "lease-1", "lease-2"]
+        );
+        // One free slot (the train holder's): the land gate takes it, not the earlier lanes.
+        ledger
+            .try_release(&train_holder.lease_id, train_holder.fence_token, 1, 1, 10)
+            .unwrap();
+        assert_eq!(ledger.grant_next(&cell, 11), ["lease-4"]);
+        // The land gate leaves: the train waiting behind the lanes goes first.
+        let gate = ledger.get("lease-4").unwrap().clone();
+        ledger
+            .try_release(&gate.lease_id, gate.fence_token, 1, 1, 12)
+            .unwrap();
+        assert_eq!(ledger.grant_next(&cell, 13), ["lease-3"]);
+        // The lane holder leaves: only the reserved slot is free and a lane never takes it.
+        ledger
+            .try_release(&lane_holder.lease_id, lane_holder.fence_token, 1, 1, 14)
+            .unwrap();
+        assert!(ledger.grant_next(&cell, 15).is_empty());
+        // The train leaves: both slots are free; the non-reserved one goes to the first lane
+        // and the second lane waits, because the other slot is the reserved one.
+        let train = ledger.get("lease-3").unwrap().clone();
+        ledger
+            .try_release(&train.lease_id, train.fence_token, 1, 1, 16)
+            .unwrap();
+        assert_eq!(ledger.grant_next(&cell, 17), ["lease-1"]);
+        assert_eq!(
+            ledger.get("lease-2").unwrap().state,
+            CapacityLeaseState::Queued
+        );
+    }
+
+    // spec: MEDULLA-PLACEMENT-R786.5
+    #[test]
+    fn a_blocked_head_blocks_its_own_class_only() {
+        let cell = slot_cell(2, 1);
+        let keys = keys();
+        let mut ledger = CapacityLedger::new();
+        for n in [0, 5] {
+            ledger
+                .try_acquire(slot_request(
+                    &cell,
+                    n,
+                    LeasePriority::Train,
+                    0,
+                    100_000,
+                    &keys,
+                ))
+                .unwrap();
+        }
+        for n in [1, 2] {
+            ledger
+                .try_acquire(slot_request(
+                    &cell,
+                    n,
+                    LeasePriority::Lane,
+                    1,
+                    100_000,
+                    &keys,
+                ))
+                .unwrap();
+        }
+        let queued: Vec<&CapacityLease> = ledger.leases.values().collect();
+        // Only the reserved slot is free: no lane is admitted, and the second lane does not
+        // overtake the first.
+        assert!(grant_order(&cell, 1, &queued).is_empty());
+        // Both slots free: the non-reserved slot goes to the first lane alone.
+        assert_eq!(grant_order(&cell, 0, &queued), ["lease-1"]);
     }
 }

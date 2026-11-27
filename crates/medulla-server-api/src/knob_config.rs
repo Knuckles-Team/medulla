@@ -439,6 +439,12 @@ knobs! {
     topology_analogy_min: f64 = "topology.analogy_min", F64(0.6), [0.1, 1.0], "ratio", Tunable;
     /// How long the capacity leases a committed topology plan acquires live (MEDULLA-DECISION-ENGINE-R113.2.5).
     topology_lease_ttl_ms: u64 = "topology.lease_ttl_ms", U64(900_000), [1_000, 86_400_000], "ms", Tunable;
+    /// How long a build-slot lease lives without a heartbeat before the sweeper expires it (MEDULLA-PLACEMENT-R786.4).
+    capacity_build_slot_ttl_ms: u64 = "capacity.build_slot.ttl_ms", U64(60_000), [10_000, 600_000], "ms", Tunable;
+    /// How long a build-slot lease waits in its cell's queue before the sweeper expires it (MEDULLA-PLACEMENT-R786.4).
+    capacity_build_slot_queue_ttl_ms: u64 = "capacity.build_slot.queue_ttl_ms", U64(7_200_000), [1_000, 604_800_000], "ms", Tunable;
+    /// Seconds between two capacity-lease sweeps (MEDULLA-PLACEMENT-R786.4).
+    capacity_sweep_secs: u64 = "capacity.sweep_secs", U64(5), [1, 3_600], "s", Tunable;
     /// Primitive graph edge cap (MEDULLA-DECISION-ENGINE-R036.100.2).
     primitive_max_edges: u64 = "primitive.max_edges", U64(256), [16, 1_024], "edges", Tunable;
     /// Most rows the steps and workflow parts of a composed execution answer keep (MEDULLA-CQ-ORCH-R008.2).

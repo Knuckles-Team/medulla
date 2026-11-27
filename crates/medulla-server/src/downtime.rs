@@ -357,6 +357,7 @@ pub fn lease_request(job_type: &DowntimeJobType, now_ms: i64) -> CapacityAcquire
         now_ms: now_ms.max(0) as u64,
         cost_budget_micros: None,
         token_budget: None,
+        queue_ttl_ms: None,
     }
 }
 

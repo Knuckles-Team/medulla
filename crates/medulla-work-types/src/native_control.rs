@@ -26,6 +26,14 @@ pub const MAX_CAPACITY_STATUS_ROWS: usize = 128;
 pub const MAX_CAPACITY_ID_BYTES: usize = 512;
 pub const MAX_CAPACITY_AMOUNT: u64 = 1_000_000_000;
 pub const MAX_CAPACITY_TTL_MS: u64 = 24 * 60 * 60 * 1_000;
+/// The longest `reason` of a `RevokeCapacity` request, in characters (MEDULLA-PLACEMENT-R786.7).
+pub const MAX_CAPACITY_REVOKE_REASON_CHARS: usize = 200;
+/// The `tenant_ref` the engine's own periodic sweep passes to `ReclaimExpiredCapacity` to
+/// reclaim across tenants (MEDULLA-PLACEMENT-R786.4). The served door refuses it: a caller's
+/// tenant is checked against its verified tenant before the method reaches the store.
+pub const CAPACITY_SWEEP_ALL_TENANTS: &str = "*";
+/// The longest a queued lease may wait: seven days.
+pub const MAX_CAPACITY_QUEUE_TTL_MS: u64 = 7 * 24 * 60 * 60 * 1_000;
 pub const MAX_CAPACITY_BUDGET: u64 = 1_000_000_000_000;
 pub const MAX_SUBMIT_BATCH: usize = 128;
 pub const MAX_SUBMIT_DEPENDENCIES: usize = 1_024;
@@ -54,6 +62,12 @@ pub enum CapacityDecision {
     Renewed,
     #[serde(rename = "reclaimed")]
     Reclaimed,
+    /// A granted lease began running (MEDULLA-PLACEMENT-R786.7).
+    #[serde(rename = "started")]
+    Started,
+    /// An administrator revoked the lease (MEDULLA-PLACEMENT-R786.7).
+    #[serde(rename = "revoked")]
+    Revoked,
     #[serde(rename = "exhausted")]
     Exhausted,
     #[serde(rename = "stale_epoch")]
@@ -108,6 +122,10 @@ pub struct CapacityAcquireRequest {
     pub now_ms: u64,
     pub cost_budget_micros: Option<u64>,
     pub token_budget: Option<u64>,
+    /// How long a lease that cannot be granted now waits in its cell's queue; absent means
+    /// the knob `capacity.build_slot.queue_ttl_ms` (MEDULLA-PLACEMENT-R786.4).
+    #[serde(default)]
+    pub queue_ttl_ms: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -121,6 +139,44 @@ pub struct CapacityLeaseMutationRequest {
     pub now_ms: u64,
     pub ttl_ms: Option<u64>,
     pub idempotency_key: Option<String>,
+}
+
+/// `RevokeCapacity` (MEDULLA-PLACEMENT-R786.7): an administrator takes one lease back. The
+/// caller's scope is `capacity:admin`; the lease must belong to `tenant_ref`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CapacityRevokeRequest {
+    pub schema_version: NativeControlSchemaVersion,
+    pub tenant_ref: String,
+    pub lease_id: String,
+    /// At most [`MAX_CAPACITY_REVOKE_REASON_CHARS`] characters and no control character.
+    pub reason: String,
+    pub now_ms: u64,
+}
+
+impl CapacityRevokeRequest {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.schema_version != NativeControlSchemaVersion::V1 {
+            return Err("capacity revoke schema_version must be 1".to_string());
+        }
+        for (field, value) in [
+            ("tenant_ref", &self.tenant_ref),
+            ("lease_id", &self.lease_id),
+        ] {
+            if value.trim().is_empty() || value.len() > MAX_CAPACITY_ID_BYTES {
+                return Err(format!("capacity revoke {field} is outside native bounds"));
+            }
+        }
+        if self.reason.chars().count() > MAX_CAPACITY_REVOKE_REASON_CHARS
+            || self.reason.chars().any(char::is_control)
+        {
+            return Err(format!(
+                "capacity revoke reason must be at most {MAX_CAPACITY_REVOKE_REASON_CHARS} characters with no control character"
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -166,6 +222,11 @@ pub struct CapacityAcquireResult {
     pub leases: Vec<CapacityLease>,
     pub available: Vec<CapacityAvailability>,
     pub message: Option<String>,
+    /// The place of the first queued lease among those still waiting in its cell, counted
+    /// from 1 (MEDULLA-PLACEMENT-R786.7). Absent when no lease of this answer is queued; a
+    /// build-slot request carries one demand, so it is that lease's place.
+    #[serde(default)]
+    pub queue_position: Option<u64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -206,6 +267,19 @@ pub struct CapacityStatusResult {
     pub cells: Vec<CapacityCell>,
     pub leases: Vec<CapacityLease>,
     pub next_cursor: Option<String>,
+    /// Per lease of `leases`, its newest transitions in order (MEDULLA-PLACEMENT-R786.6).
+    /// The lease rows themselves are returned without their history.
+    #[serde(default)]
+    pub transitions: Vec<CapacityLeaseTransitions>,
+}
+
+/// The newest transitions of one lease, oldest first.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CapacityLeaseTransitions {
+    pub lease_id: String,
+    pub entries: Vec<medulla_mutation_types::capacity_lease::CapacityTransitionRecord>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

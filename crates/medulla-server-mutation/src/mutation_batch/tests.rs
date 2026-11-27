@@ -566,6 +566,8 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("AcquireCapacity", "ControlPlane"),
     ("RenewCapacity", "ControlPlane"),
     ("ReleaseCapacity", "ControlPlane"),
+    ("StartCapacity", "ControlPlane"),
+    ("RevokeCapacity", "ControlPlane"),
     ("ReclaimExpiredCapacity", "ControlPlane"),
     ("UpdateCapacityCell", "ControlPlane"),
     ("ThrottleCapacityCell", "ControlPlane"),

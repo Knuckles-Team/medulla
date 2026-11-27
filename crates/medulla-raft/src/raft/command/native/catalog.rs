@@ -87,6 +87,8 @@ macro_rules! native_method_catalog {
             record AcquireCapacity => WorkItem,
             record RenewCapacity => WorkItem,
             record ReleaseCapacity => WorkItem,
+            record StartCapacity => WorkItem,
+            record RevokeCapacity => WorkItem,
             record ReclaimExpiredCapacity => WorkItem,
             record UpdateCapacityCell => WorkItem,
             record ThrottleCapacityCell => WorkItem,

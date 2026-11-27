@@ -67,6 +67,8 @@ pub fn append_native_capacity_ops(ops: &mut Vec<&'static str>, available: bool) 
             "AcquireCapacity",
             "RenewCapacity",
             "ReleaseCapacity",
+            "StartCapacity",
+            "RevokeCapacity",
             "ReclaimExpiredCapacity",
             "ReconcileCapacity",
             "CapacityStatus",

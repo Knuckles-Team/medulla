@@ -55,6 +55,8 @@ impl Method {
             Self::AcquireCapacity { .. }
             | Self::RenewCapacity { .. }
             | Self::ReleaseCapacity { .. }
+            | Self::StartCapacity { .. }
+            | Self::RevokeCapacity { .. }
             | Self::ReclaimExpiredCapacity { .. }
             | Self::UpdateCapacityCell { .. }
             | Self::ThrottleCapacityCell { .. } => MethodWriteFamily::CapacityLease,

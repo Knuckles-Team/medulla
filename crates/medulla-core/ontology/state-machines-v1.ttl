@@ -2381,9 +2381,11 @@
     :firedBy :ShardPlacementMachine_Event_Release .
 
 
+# spec: MEDULLA-PLACEMENT-R786.8
 # spec: MEDULLA-PLACEMENT-R782.2
-# The CapacityLease machine. The Rust edge table CAPACITY_LEASE_MACHINE is the same table; the ontology
-# test asserts equal edge sets.
+# The CapacityLease machine. The Rust edge table CAPACITY_LEASE_MACHINE is the same table (seven
+# states, seven events, fifteen edges B01 to B15; Released, Expired and Revoked are terminal); the
+# ontology test asserts equal edge sets.
 
 :CapacityLeaseState a owl:Class ;
     rdfs:label "CapacityLease State" ;
@@ -2410,22 +2412,69 @@
     rdfs:comment "A guard of the CapacityLease machine." ;
     rdfs:subClassOf :TransitionGuard .
 
+:CapacityLeaseTransitionRecord a owl:Class ;
+    rdfs:label "CapacityLease Transition Record" ;
+    rdfs:comment "One applied transition of a capacity lease, recorded in the same write as the state it produced (leaseId, cellId, fromState, toState, firedBy, atMs)." .
+
+:leaseId a owl:DatatypeProperty ;
+    rdfs:label "lease id" ;
+    rdfs:comment "The capacity lease a transition record belongs to." ;
+    rdfs:domain :CapacityLeaseTransitionRecord ;
+    rdfs:range xsd:string .
+
+:cellId a owl:DatatypeProperty ;
+    rdfs:label "cell id" ;
+    rdfs:comment "The capacity cell of the lease a transition record belongs to." ;
+    rdfs:domain :CapacityLeaseTransitionRecord ;
+    rdfs:range xsd:string .
+
+:atMs a owl:DatatypeProperty ;
+    rdfs:label "at ms" ;
+    rdfs:comment "The authority instant, in milliseconds, at which a transition was applied." ;
+    rdfs:domain :CapacityLeaseTransitionRecord ;
+    rdfs:range xsd:long .
+
 :CapacityLeaseMachine a :StateMachine ;
     rdfs:label "CapacityLease machine" ;
-    :initialState :CapacityLeaseMachine_Active ;
-    :hasState :CapacityLeaseMachine_Active, :CapacityLeaseMachine_Released, :CapacityLeaseMachine_Reclaimed .
+    :initialState :CapacityLeaseMachine_Requested ;
+    :hasState :CapacityLeaseMachine_Requested, :CapacityLeaseMachine_Queued, :CapacityLeaseMachine_Granted, :CapacityLeaseMachine_Running, :CapacityLeaseMachine_Released, :CapacityLeaseMachine_Expired, :CapacityLeaseMachine_Revoked .
 
-:CapacityLeaseMachine_Active a :CapacityLeaseState ;
-    rdfs:label "CapacityLease Active" ;
-    :storedForm "active" .
+:CapacityLeaseMachine_Requested a :CapacityLeaseState ;
+    rdfs:label "CapacityLease Requested" ;
+    :storedForm "requested" .
+
+:CapacityLeaseMachine_Queued a :CapacityLeaseState ;
+    rdfs:label "CapacityLease Queued" ;
+    :storedForm "queued" .
+
+:CapacityLeaseMachine_Granted a :CapacityLeaseState ;
+    rdfs:label "CapacityLease Granted" ;
+    :storedForm "granted" .
+
+:CapacityLeaseMachine_Running a :CapacityLeaseState ;
+    rdfs:label "CapacityLease Running" ;
+    :storedForm "running" .
 
 :CapacityLeaseMachine_Released a :CapacityLeaseTerminalState ;
     rdfs:label "CapacityLease Released" ;
     :storedForm "released" .
 
-:CapacityLeaseMachine_Reclaimed a :CapacityLeaseTerminalState ;
-    rdfs:label "CapacityLease Reclaimed" ;
-    :storedForm "reclaimed" .
+:CapacityLeaseMachine_Expired a :CapacityLeaseTerminalState ;
+    rdfs:label "CapacityLease Expired" ;
+    :storedForm "expired" .
+
+:CapacityLeaseMachine_Revoked a :CapacityLeaseTerminalState ;
+    rdfs:label "CapacityLease Revoked" ;
+    :storedForm "revoked" .
+
+:CapacityLeaseMachine_Event_Enqueue a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Enqueue" .
+
+:CapacityLeaseMachine_Event_Grant a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Grant" .
+
+:CapacityLeaseMachine_Event_Start a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Start" .
 
 :CapacityLeaseMachine_Event_Renew a :CapacityLeaseEvent ;
     rdfs:label "CapacityLease Renew" .
@@ -2433,44 +2482,159 @@
 :CapacityLeaseMachine_Event_Release a :CapacityLeaseEvent ;
     rdfs:label "CapacityLease Release" .
 
-:CapacityLeaseMachine_Event_Reclaim a :CapacityLeaseEvent ;
-    rdfs:label "CapacityLease Reclaim" .
+:CapacityLeaseMachine_Event_Expire a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Expire" .
+
+:CapacityLeaseMachine_Event_Revoke a :CapacityLeaseEvent ;
+    rdfs:label "CapacityLease Revoke" .
+
+:CapacityLeaseMachine_Guard_CellFull a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease CellFull" ;
+    rdfs:comment "Guard: the cell has no capacity for the lease's priority now." .
+
+:CapacityLeaseMachine_Guard_CellAdmits a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease CellAdmits" ;
+    rdfs:comment "Guard: the cell admits the lease now." .
+
+:CapacityLeaseMachine_Guard_HeadsQueueAndCellAdmits a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease HeadsQueueAndCellAdmits" ;
+    rdfs:comment "Guard: the lease heads its priority's queue and the cell admits it." .
 
 :CapacityLeaseMachine_Guard_CanRenew a :CapacityLeaseGuard ;
     rdfs:label "CapacityLease CanRenew" ;
-    rdfs:comment "Guard: can_renew holds: the owner matches and the lease is live." .
+    rdfs:comment "Guard: the owner matches and the lease is live." .
 
 :CapacityLeaseMachine_Guard_CanRelease a :CapacityLeaseGuard ;
     rdfs:label "CapacityLease CanRelease" ;
-    rdfs:comment "Guard: can_release holds: the owner matches." .
+    rdfs:comment "Guard: the owner matches." .
+
+:CapacityLeaseMachine_Guard_CallerHoldsAdmin a :CapacityLeaseGuard ;
+    rdfs:label "CapacityLease CallerHoldsAdmin" ;
+    rdfs:comment "Guard: the caller holds capacity:admin." .
 
 :CapacityLeaseMachine_Guard_LeaseUntilPassed a :CapacityLeaseGuard ;
     rdfs:label "CapacityLease LeaseUntilPassed" ;
-    rdfs:comment "Guard: lease_until has passed; the sweeper acts." .
+    rdfs:comment "Guard: the deadline has passed; the sweeper acts." .
 
-:CapacityLeaseMachine_C01 a :CapacityLeaseTransition ;
-    rdfs:label "CapacityLease C01" ;
-    :edgeId "C01" ;
-    :fromState :CapacityLeaseMachine_Active ;
-    :toState :CapacityLeaseMachine_Active ;
+:CapacityLeaseMachine_B01 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B01" ;
+    :edgeId "B01" ;
+    :fromState :CapacityLeaseMachine_Requested ;
+    :toState :CapacityLeaseMachine_Queued ;
+    :guardedBy :CapacityLeaseMachine_Guard_CellFull ;
+    :firedBy :CapacityLeaseMachine_Event_Enqueue .
+
+:CapacityLeaseMachine_B02 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B02" ;
+    :edgeId "B02" ;
+    :fromState :CapacityLeaseMachine_Requested ;
+    :toState :CapacityLeaseMachine_Granted ;
+    :guardedBy :CapacityLeaseMachine_Guard_CellAdmits ;
+    :firedBy :CapacityLeaseMachine_Event_Grant .
+
+:CapacityLeaseMachine_B03 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B03" ;
+    :edgeId "B03" ;
+    :fromState :CapacityLeaseMachine_Queued ;
+    :toState :CapacityLeaseMachine_Granted ;
+    :guardedBy :CapacityLeaseMachine_Guard_HeadsQueueAndCellAdmits ;
+    :firedBy :CapacityLeaseMachine_Event_Grant .
+
+:CapacityLeaseMachine_B04 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B04" ;
+    :edgeId "B04" ;
+    :fromState :CapacityLeaseMachine_Granted ;
+    :toState :CapacityLeaseMachine_Running ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRenew ;
+    :firedBy :CapacityLeaseMachine_Event_Start .
+
+:CapacityLeaseMachine_B05 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B05" ;
+    :edgeId "B05" ;
+    :fromState :CapacityLeaseMachine_Granted ;
+    :toState :CapacityLeaseMachine_Granted ;
     :guardedBy :CapacityLeaseMachine_Guard_CanRenew ;
     :firedBy :CapacityLeaseMachine_Event_Renew .
 
-:CapacityLeaseMachine_C02 a :CapacityLeaseTransition ;
-    rdfs:label "CapacityLease C02" ;
-    :edgeId "C02" ;
-    :fromState :CapacityLeaseMachine_Active ;
+:CapacityLeaseMachine_B06 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B06" ;
+    :edgeId "B06" ;
+    :fromState :CapacityLeaseMachine_Running ;
+    :toState :CapacityLeaseMachine_Running ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRenew ;
+    :firedBy :CapacityLeaseMachine_Event_Renew .
+
+:CapacityLeaseMachine_B07 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B07" ;
+    :edgeId "B07" ;
+    :fromState :CapacityLeaseMachine_Granted ;
     :toState :CapacityLeaseMachine_Released ;
     :guardedBy :CapacityLeaseMachine_Guard_CanRelease ;
     :firedBy :CapacityLeaseMachine_Event_Release .
 
-:CapacityLeaseMachine_C03 a :CapacityLeaseTransition ;
-    rdfs:label "CapacityLease C03" ;
-    :edgeId "C03" ;
-    :fromState :CapacityLeaseMachine_Active ;
-    :toState :CapacityLeaseMachine_Reclaimed ;
+:CapacityLeaseMachine_B08 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B08" ;
+    :edgeId "B08" ;
+    :fromState :CapacityLeaseMachine_Running ;
+    :toState :CapacityLeaseMachine_Released ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRelease ;
+    :firedBy :CapacityLeaseMachine_Event_Release .
+
+:CapacityLeaseMachine_B09 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B09" ;
+    :edgeId "B09" ;
+    :fromState :CapacityLeaseMachine_Queued ;
+    :toState :CapacityLeaseMachine_Released ;
+    :guardedBy :CapacityLeaseMachine_Guard_CanRelease ;
+    :firedBy :CapacityLeaseMachine_Event_Release .
+
+:CapacityLeaseMachine_B10 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B10" ;
+    :edgeId "B10" ;
+    :fromState :CapacityLeaseMachine_Queued ;
+    :toState :CapacityLeaseMachine_Revoked ;
+    :guardedBy :CapacityLeaseMachine_Guard_CallerHoldsAdmin ;
+    :firedBy :CapacityLeaseMachine_Event_Revoke .
+
+:CapacityLeaseMachine_B11 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B11" ;
+    :edgeId "B11" ;
+    :fromState :CapacityLeaseMachine_Granted ;
+    :toState :CapacityLeaseMachine_Revoked ;
+    :guardedBy :CapacityLeaseMachine_Guard_CallerHoldsAdmin ;
+    :firedBy :CapacityLeaseMachine_Event_Revoke .
+
+:CapacityLeaseMachine_B12 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B12" ;
+    :edgeId "B12" ;
+    :fromState :CapacityLeaseMachine_Running ;
+    :toState :CapacityLeaseMachine_Revoked ;
+    :guardedBy :CapacityLeaseMachine_Guard_CallerHoldsAdmin ;
+    :firedBy :CapacityLeaseMachine_Event_Revoke .
+
+:CapacityLeaseMachine_B13 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B13" ;
+    :edgeId "B13" ;
+    :fromState :CapacityLeaseMachine_Queued ;
+    :toState :CapacityLeaseMachine_Expired ;
     :guardedBy :CapacityLeaseMachine_Guard_LeaseUntilPassed ;
-    :firedBy :CapacityLeaseMachine_Event_Reclaim .
+    :firedBy :CapacityLeaseMachine_Event_Expire .
+
+:CapacityLeaseMachine_B14 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B14" ;
+    :edgeId "B14" ;
+    :fromState :CapacityLeaseMachine_Granted ;
+    :toState :CapacityLeaseMachine_Expired ;
+    :guardedBy :CapacityLeaseMachine_Guard_LeaseUntilPassed ;
+    :firedBy :CapacityLeaseMachine_Event_Expire .
+
+:CapacityLeaseMachine_B15 a :CapacityLeaseTransition ;
+    rdfs:label "CapacityLease B15" ;
+    :edgeId "B15" ;
+    :fromState :CapacityLeaseMachine_Running ;
+    :toState :CapacityLeaseMachine_Expired ;
+    :guardedBy :CapacityLeaseMachine_Guard_LeaseUntilPassed ;
+    :firedBy :CapacityLeaseMachine_Event_Expire .
 
 # spec: MEDULLA-PLACEMENT-R780.2
 # The LaneHold machine. The Rust edge table LANE_HOLD_MACHINE is the same table; the ontology

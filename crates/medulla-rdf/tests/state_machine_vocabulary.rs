@@ -907,9 +907,15 @@ fn shard_placement_machine_matches_edge_table() {
 }
 
 // spec: MEDULLA-PLACEMENT-R782.2
+// spec: MEDULLA-PLACEMENT-R786.8
 #[test]
 fn capacity_lease_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_mutation_types::capacity_lease::CAPACITY_LEASE_MACHINE);
+    let machine = &medulla_mutation_types::capacity_lease::CAPACITY_LEASE_MACHINE;
+    // The Turtle edge set equals the Rust table: 15 edges, 7 states, 3 of them terminal.
+    assert_eq!(machine.edges.len(), 15);
+    assert_eq!(machine.states.len(), 7);
+    assert_eq!(machine.terminals.len(), 3);
+    sm::assert_matches(machine);
 }
 // spec: MEDULLA-PLACEMENT-R782.2
 #[test]

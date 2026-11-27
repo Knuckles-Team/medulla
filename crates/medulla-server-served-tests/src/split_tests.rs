@@ -62,6 +62,8 @@ mod connector_pack_harness;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod deploy_record_served_tests;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+mod build_slot_lease_served_tests;
+#[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod agent_run_served_tests;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security", feature = "query"))]
 mod stored_query_workspace_tests;

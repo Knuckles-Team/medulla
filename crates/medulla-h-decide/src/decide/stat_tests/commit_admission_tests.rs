@@ -487,7 +487,7 @@ impl TopologyWorld {
             .await
             .iter()
             .filter(|lease| {
-                lease.state == medulla_mutation_types::capacity_lease::CapacityLeaseState::Active
+                lease.state == medulla_mutation_types::capacity_lease::CapacityLeaseState::Granted
             })
             .count()
     }
@@ -569,6 +569,7 @@ pub(in crate::decide) async fn block_cell(world: &TopologyWorld) {
                     now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
                     cost_budget_micros: None,
                     token_budget: None,
+                    queue_ttl_ms: None,
                 },
             },
         )

@@ -24,6 +24,10 @@ closed_error_codes! {
         CarrierInnerMethodRefused => "CARRIER_INNER_METHOD_REFUSED",
         PolicyNativeAuthorityRequired => "POLICY_NATIVE_AUTHORITY_REQUIRED",
         CapacityDenied => "CAPACITY_DENIED",
+        /// A capacity cell's resource class does not admit the request's priority: a build-slot
+        /// cell admits only `land_gate`, `train` and `lane`, and no other class admits them
+        /// (MEDULLA-PLACEMENT-R786.1).
+        PriorityNotAllowedForResource => "PRIORITY_NOT_ALLOWED_FOR_RESOURCE",
         UqlBudgetExceeded => "UQL_BUDGET_EXCEEDED",
         UqlUnsupported => "UQL_UNSUPPORTED",
         UqlCredentialBearingSpec => "UQL_CREDENTIAL_BEARING_SPEC",

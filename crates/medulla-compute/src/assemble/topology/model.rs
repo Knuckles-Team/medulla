@@ -45,6 +45,7 @@ pub(super) fn class_name(class: CapacityResourceClass) -> &'static str {
         CapacityResourceClass::Cpu => "cpu",
         CapacityResourceClass::Broker => "broker",
         CapacityResourceClass::Memory => "memory",
+        CapacityResourceClass::BuildSlot => "build_slot",
     }
 }
 

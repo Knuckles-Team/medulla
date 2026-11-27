@@ -102,6 +102,7 @@ impl LeaseHold {
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
             cost_budget_micros: None,
             token_budget: None,
+            queue_ttl_ms: None,
         };
         let bytes = backend
             .commit_capacity_lease(&ledger, Method::AcquireCapacity { request })

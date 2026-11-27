@@ -793,6 +793,8 @@ mod tests {
         ("AcquireCapacity", "dedicated engine-native capacity-cell CAS/lease transaction in dispatch.rs/redb_store/capacity_lease.rs"),
         ("RenewCapacity", "dedicated engine-native fenced capacity renewal transaction in dispatch.rs/redb_store/capacity_lease.rs"),
         ("ReleaseCapacity", "dedicated engine-native fenced capacity release transaction in dispatch.rs/redb_store/capacity_lease.rs"),
+        ("StartCapacity", "dedicated engine-native fenced capacity start transaction in dispatch.rs/redb_store/capacity_lease.rs"),
+        ("RevokeCapacity", "dedicated engine-native administrative capacity revoke transaction in dispatch.rs/redb_store/capacity_lease.rs"),
         ("ReclaimExpiredCapacity", "dedicated engine-native bounded expiry reclaim transaction in dispatch.rs/redb_store/capacity_lease.rs"),
         ("UpdateCapacityCell", "dedicated engine-native controller epoch-CAS transaction in dispatch.rs/redb_store/capacity_lease.rs"),
         ("ThrottleCapacityCell", "EH-406: dedicated engine-native AIMD step on one cell's throttle in redb_store/capacity_lease/throttle.rs, one admitted group like UpdateCapacityCell"),

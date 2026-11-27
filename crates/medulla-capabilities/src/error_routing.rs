@@ -65,6 +65,8 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
 
 /// A method-specific family wins over the wider domain family.
 const METHOD_PREFIXES: &[(&str, &[&str])] = &[
+    // MEDULLA-PLACEMENT-R786.1.
+    ("AcquireCapacity", &["PRIORITY_NOT_ALLOWED_FOR_RESOURCE"]),
     ("ArgumentMap", &["AIF_"]),
     ("LiveArtifact", &["LIVE_ARTIFACT_"]),
     // MEDULLA-FEDERATED-QUERY-R608.4.
@@ -2926,6 +2928,10 @@ pub const MACHINE_METHODS: &[&str] = &[
     "CancelWorkItem",
     "ReleaseWorkItemResources",
     "ReleaseCapacity",
+    // MEDULLA-PLACEMENT-R786.3: a refused edge of `CapacityLeaseMachine` is `TRANSITION_REFUSED`.
+    "RenewCapacity",
+    "StartCapacity",
+    "RevokeCapacity",
     "ResourceReservationStatus",
     // `Method::AnalyticsJob` exists only with the `jobs` feature.
     #[cfg(feature = "jobs")]

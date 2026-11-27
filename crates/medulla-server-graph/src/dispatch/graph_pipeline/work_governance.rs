@@ -145,9 +145,9 @@ fn capacity_owner_matches(method: &Method, verified_context: &VerifiedRequestCon
     let verified_owner = verified_context.principal_persistence_id();
     match method {
         Method::AcquireCapacity { request } => request.owner_digest == verified_owner,
-        Method::RenewCapacity { request } | Method::ReleaseCapacity { request } => {
-            request.owner_digest == verified_owner
-        }
+        Method::RenewCapacity { request }
+        | Method::ReleaseCapacity { request }
+        | Method::StartCapacity { request } => request.owner_digest == verified_owner,
         _ => true,
     }
 }
@@ -168,6 +168,16 @@ fn capacity_commit_result(method: &Method) -> fn(&[u8]) -> Result<ResultPayload,
         Method::ReleaseCapacity { .. } => {
             ResultPayload::of_receipt::<
                 medulla_protocol_types::result_contract::coordination::ReleaseCapacity,
+            >
+        }
+        Method::StartCapacity { .. } => {
+            ResultPayload::of_receipt::<
+                medulla_protocol_types::result_contract::coordination::StartCapacity,
+            >
+        }
+        Method::RevokeCapacity { .. } => {
+            ResultPayload::of_receipt::<
+                medulla_protocol_types::result_contract::coordination::RevokeCapacity,
             >
         }
         Method::ReclaimExpiredCapacity { .. } => {
@@ -239,15 +249,37 @@ pub async fn dispatch_op_capacity_ops(
         }
         // Keep each served write visible here: this is the response-producing
         // dispatch boundary, and the contract reachability gate audits its arms.
-        method @ (Method::AcquireCapacity { .. }
+        mut method @ (Method::AcquireCapacity { .. }
         | Method::RenewCapacity { .. }
         | Method::ReleaseCapacity { .. }
+        | Method::StartCapacity { .. }
+        | Method::RevokeCapacity { .. }
         | Method::ReclaimExpiredCapacity { .. }
         | Method::UpdateCapacityCell { .. }
         | Method::ThrottleCapacityCell { .. }) => {
+            apply_capacity_knob_defaults(&mut method);
             capacity_commit_response(backend, &fname, method, req_id).await
         }
         _ => unreachable!("capacity classifier and dispatch diverged"),
+    }
+}
+
+/// Fill what a capacity request left open from the registry knobs (MEDULLA-PLACEMENT-R786.4):
+/// the queue deadline of an acquire and the TTL of a renewal. A value the caller named wins.
+fn apply_capacity_knob_defaults(method: &mut Method) {
+    let knobs = medulla_server_api::knob_config::knobs();
+    match method {
+        Method::AcquireCapacity { request } => {
+            request
+                .queue_ttl_ms
+                .get_or_insert(knobs.capacity_build_slot_queue_ttl_ms);
+        }
+        Method::RenewCapacity { request } => {
+            request
+                .ttl_ms
+                .get_or_insert(knobs.capacity_build_slot_ttl_ms);
+        }
+        _ => {}
     }
 }
 

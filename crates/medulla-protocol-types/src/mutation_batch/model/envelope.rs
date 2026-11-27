@@ -493,9 +493,10 @@ fn identity_normalized_method(
         | Method::ReclaimWorkItemResources { request } => request.now_ms = 0,
         Method::UpdateResourceHost { request } => request.now_ms = 0,
         Method::AcquireCapacity { request } => request.now_ms = 0,
-        Method::RenewCapacity { request } | Method::ReleaseCapacity { request } => {
-            request.now_ms = 0
-        }
+        Method::RenewCapacity { request }
+        | Method::ReleaseCapacity { request }
+        | Method::StartCapacity { request } => request.now_ms = 0,
+        Method::RevokeCapacity { request } => request.now_ms = 0,
         Method::ReclaimExpiredCapacity { request } => request.now_ms = 0,
         Method::UpdateCapacityCell { request } => request.now_ms = 0,
         Method::ThrottleCapacityCell { request } => request.now_ms = 0,

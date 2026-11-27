@@ -93,6 +93,9 @@ _RESOURCE_AND_CAPACITY_WRITES = frozenset(
         "AcquireCapacity",
         "RenewCapacity",
         "ReleaseCapacity",
+        # MEDULLA-PLACEMENT-R786.7: the build-slot lease start and revoke.
+        "StartCapacity",
+        "RevokeCapacity",
         "ReclaimExpiredCapacity",
         "UpdateCapacityCell",
         # EH-406: the error-budget throttle step writes the same cell ledger.

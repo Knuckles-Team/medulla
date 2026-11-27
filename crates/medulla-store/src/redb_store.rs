@@ -148,7 +148,8 @@ pub mod operation_audit;
 // durable machinery through `crate::redb_store`, never through a second store.
 #[cfg(feature = "security")]
 pub use audit::{
-    append_audit_entry, prove_inclusion, provenance_anchor_commit, provenance_leaf_hashes,
+    append_audit_entry, append_audit_entry_with_line, prove_inclusion, provenance_anchor_commit,
+    provenance_leaf_hashes,
     verify_audit, AuditTailCache, ProvenanceAnchorCache,
 };
 #[cfg(feature = "security")]

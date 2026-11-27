@@ -31,6 +31,9 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `primitive.max_edges` | u64 | 256 | [16, 1024] | edges | Tunable | `MEDULLA_PRIMITIVE_MAX_EDGES` |
 | `topology.analogy_min` | f64 | 0.6 | [0.1, 1.0] | ratio | Tunable | `MEDULLA_TOPOLOGY_ANALOGY_MIN` |
 | `topology.lease_ttl_ms` | u64 | 900000 | [1000, 86400000] | ms | Tunable | `MEDULLA_TOPOLOGY_LEASE_TTL_MS` |
+| `capacity.build_slot.ttl_ms` | u64 | 60000 | [10000, 600000] | ms | Tunable | `MEDULLA_CAPACITY_BUILD_SLOT_TTL_MS` |
+| `capacity.build_slot.queue_ttl_ms` | u64 | 7200000 | [1000, 604800000] | ms | Tunable | `MEDULLA_CAPACITY_BUILD_SLOT_QUEUE_TTL_MS` |
+| `capacity.sweep_secs` | u64 | 5 | [1, 3600] | s | Tunable | `MEDULLA_CAPACITY_SWEEP_SECS` |
 | `topology.max_candidates` | u64 | 1000 | [1, 100000] | sets | Tunable | `MEDULLA_TOPOLOGY_MAX_CANDIDATES` |
 | `topology.max_nodes` | u64 | 200000 | [1000, 5000000] | nodes | Tunable | `MEDULLA_TOPOLOGY_MAX_NODES` |
 | `topology.max_edges` | u64 | 2000000 | [10000, 50000000] | edges | Tunable | `MEDULLA_TOPOLOGY_MAX_EDGES` |

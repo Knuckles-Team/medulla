@@ -37,7 +37,7 @@ mod blob_contract;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod storage_wire;
 
-/// The six native capacity writes. Keep admission, identity normalization and
+/// The eight native capacity writes. Keep admission, identity normalization and
 /// served dispatch on the same variant set.
 #[macro_export]
 macro_rules! capacity_lease_writes {
@@ -45,6 +45,8 @@ macro_rules! capacity_lease_writes {
         $crate::protocol::Method::AcquireCapacity { .. }
             | $crate::protocol::Method::RenewCapacity { .. }
             | $crate::protocol::Method::ReleaseCapacity { .. }
+            | $crate::protocol::Method::StartCapacity { .. }
+            | $crate::protocol::Method::RevokeCapacity { .. }
             | $crate::protocol::Method::ReclaimExpiredCapacity { .. }
             | $crate::protocol::Method::UpdateCapacityCell { .. }
             | $crate::protocol::Method::ThrottleCapacityCell { .. }

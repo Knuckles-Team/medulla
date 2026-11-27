@@ -94,6 +94,7 @@ class MethodPolicyRow:
 # SQL `medulla_zscore` / `medulla_ewma`.
 # 455 -> 456: EH-558's `RetireSealedRecord`, the owning op of a sealed record.
 # 456 -> 457: EH-572's owner-scoped `QueryForeignColumns` read.
+# R786.7 of the placement spec adds `StartCapacity` and `RevokeCapacity`.
 EXPECTED_DOMAIN_MODULES = (
     "cluster",
     "compute",

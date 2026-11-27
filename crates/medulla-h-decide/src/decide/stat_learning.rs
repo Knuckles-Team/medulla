@@ -760,6 +760,7 @@ async fn acquire_cycle_lease(
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         cost_budget_micros: None,
         token_budget: None,
+        queue_ttl_ms: None,
     };
     persistence
         .commit_capacity_lease(
@@ -849,6 +850,7 @@ async fn acquire_drift_lease(
         now_ms,
         cost_budget_micros: None,
         token_budget: None,
+        queue_ttl_ms: None,
     };
     persistence
         .commit_capacity_lease(

@@ -1268,6 +1268,61 @@ pub async fn downtime_tick(state: SharedState) {
     }
 }
 
+/// One capacity-lease sweep (MEDULLA-PLACEMENT-R786.4): in every resident graph, expire the
+/// leases whose deadline passed and grant the queued leases into the slots that freed, in
+/// one admitted group per graph. The method runs through the same persistence backend as a
+/// served `ReclaimExpiredCapacity`; its tenant is the engine's own all-tenants marker.
+pub async fn capacity_sweep_tick(state: SharedState) {
+    use medulla_kernel::kernel::persistence::ResidentProjectionHost;
+    use medulla_work_types::native_control::{
+        CapacityReclaimRequest, NativeControlSchemaVersion, CAPACITY_SWEEP_ALL_TENANTS,
+        MAX_CAPACITY_RECLAIM_BATCH,
+    };
+    let (backend, graphs) = {
+        let guard = state.read().await;
+        (
+            guard.persistence.clone(),
+            guard
+                .resident_graphs()
+                .into_iter()
+                .map(|(name, _core)| name)
+                .collect::<Vec<_>>(),
+        )
+    };
+    let Some(backend) = backend else {
+        return;
+    };
+    if !backend.supports_native_capacity_leases() {
+        return;
+    }
+    let now_ms = medulla_server_api::txn::now_ms();
+    for graph in graphs {
+        let request = CapacityReclaimRequest {
+            schema_version: NativeControlSchemaVersion::V1,
+            tenant_ref: CAPACITY_SWEEP_ALL_TENANTS.to_string(),
+            cell_id: None,
+            max_count: MAX_CAPACITY_RECLAIM_BATCH as u32,
+            now_ms,
+            cursor: None,
+        };
+        let fname = medulla_kernel::persist::sanitize(&graph);
+        let method = medulla_protocol_types::protocol::Method::ReclaimExpiredCapacity { request };
+        // Bounded: a hung writer must not stall the sweep of the other graphs.
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            backend.commit_capacity_lease(&fname, method),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {}
+            Ok(Err(error)) => {
+                tracing::warn!(%graph, %error, "capacity sweep: commit failed; will retry next tick")
+            }
+            Err(_) => tracing::warn!(%graph, "capacity sweep: commit timed out"),
+        }
+    }
+}
+
 pub async fn registry_reap_tick(state: SharedState) {
     let now_ms = medulla_server_api::txn::now_ms();
     let n = crate::registry_reaper::reap_expired_servers(&state, now_ms).await;

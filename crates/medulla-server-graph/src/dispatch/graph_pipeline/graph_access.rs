@@ -24,9 +24,10 @@ pub fn stamp_capacity_timestamp(method: &mut Method) {
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     match method {
         Method::AcquireCapacity { request } => request.now_ms = now_ms,
-        Method::RenewCapacity { request } | Method::ReleaseCapacity { request } => {
-            request.now_ms = now_ms
-        }
+        Method::RenewCapacity { request }
+        | Method::ReleaseCapacity { request }
+        | Method::StartCapacity { request } => request.now_ms = now_ms,
+        Method::RevokeCapacity { request } => request.now_ms = now_ms,
         Method::ReclaimExpiredCapacity { request } => request.now_ms = now_ms,
         Method::UpdateCapacityCell { request } => request.now_ms = now_ms,
         Method::ThrottleCapacityCell { request } => request.now_ms = now_ms,

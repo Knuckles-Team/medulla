@@ -1,0 +1,481 @@
+{
+  "version": 1,
+  "contract": "arbora specs/adaptive-capacity/contracts/capacity-lease-wire.md",
+  "owner_digest_note": "owner_digest is the verified caller's persistence id; arbora derives it from the verified caller and never takes it from a request field",
+  "methods": [
+    {
+      "name": "AcquireCapacity",
+      "scope": "capacity:lease",
+      "request": {
+        "method": "AcquireCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "work_item_id": "wi-lane-1",
+            "owner_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "idempotency_key": "key-lane-1",
+            "priority": "lane",
+            "demands": [
+              {
+                "cell_id": "build-slots:r820",
+                "resource_class": "build_slot",
+                "amount": 1
+              }
+            ],
+            "lease_id": null,
+            "ttl_ms": 60000,
+            "now_ms": 1000,
+            "cost_budget_micros": null,
+            "token_budget": null,
+            "queue_ttl_ms": 7200000
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "accepted",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "granted"
+          }
+        ],
+        "available": [
+          {
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "available": 1,
+            "requested": 1
+          }
+        ],
+        "message": null,
+        "queue_position": null
+      },
+      "note": "a free slot: the lease is granted"
+    },
+    {
+      "name": "AcquireCapacity",
+      "scope": "capacity:lease",
+      "request": {
+        "method": "AcquireCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "work_item_id": "wi-lane-1",
+            "owner_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "idempotency_key": "key-lane-2",
+            "priority": "lane",
+            "demands": [
+              {
+                "cell_id": "build-slots:r820",
+                "resource_class": "build_slot",
+                "amount": 1
+              }
+            ],
+            "lease_id": null,
+            "ttl_ms": 60000,
+            "now_ms": 1100,
+            "cost_budget_micros": null,
+            "token_budget": null,
+            "queue_ttl_ms": 7200000
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "accepted",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "queued",
+            "queue_seq": 3,
+            "queue_expires_at_ms": 7201000
+          }
+        ],
+        "available": [
+          {
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "available": 0,
+            "requested": 1
+          }
+        ],
+        "message": null,
+        "queue_position": 1
+      },
+      "note": "no free slot: the lease is queued, accepted and never refused; queue_position counts from 1"
+    },
+    {
+      "name": "StartCapacity",
+      "scope": "capacity:lease",
+      "request": {
+        "method": "StartCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "owner_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "leases": [
+              {
+                "lease_id": "lease-lane-1",
+                "lease_epoch": 1,
+                "fence_token": 7
+              }
+            ],
+            "now_ms": 2000,
+            "ttl_ms": 60000,
+            "idempotency_key": null
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "started",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "running"
+          }
+        ],
+        "message": null
+      }
+    },
+    {
+      "name": "RenewCapacity",
+      "scope": "capacity:lease",
+      "request": {
+        "method": "RenewCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "owner_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "leases": [
+              {
+                "lease_id": "lease-lane-1",
+                "lease_epoch": 1,
+                "fence_token": 7
+              }
+            ],
+            "now_ms": 2000,
+            "ttl_ms": 60000,
+            "idempotency_key": null
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "renewed",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 62000,
+            "renewed_count": 1,
+            "idempotency_key": "key-lane-1",
+            "state": "running"
+          }
+        ],
+        "message": null
+      }
+    },
+    {
+      "name": "ReleaseCapacity",
+      "scope": "capacity:lease",
+      "request": {
+        "method": "ReleaseCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "owner_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "leases": [
+              {
+                "lease_id": "lease-lane-1",
+                "lease_epoch": 1,
+                "fence_token": 7
+              }
+            ],
+            "now_ms": 2000,
+            "ttl_ms": 60000,
+            "idempotency_key": null
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "released",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "released"
+          }
+        ],
+        "message": null
+      }
+    },
+    {
+      "name": "RevokeCapacity",
+      "scope": "capacity:admin",
+      "request": {
+        "method": "RevokeCapacity",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "lease_id": "lease-lane-1",
+            "reason": "host drained for maintenance",
+            "now_ms": 3000
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "decision": "revoked",
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "revoked"
+          }
+        ],
+        "message": null
+      }
+    },
+    {
+      "name": "CapacityStatus",
+      "scope": "capacity:read",
+      "request": {
+        "method": "CapacityStatus",
+        "params": {
+          "request": {
+            "schema_version": "1",
+            "tenant_ref": "tenant-a",
+            "cell_id": null,
+            "lease_id": "lease-lane-1",
+            "max_count": 1,
+            "cursor": null
+          }
+        }
+      },
+      "reply": {
+        "schema_version": "1",
+        "cells": [],
+        "leases": [
+          {
+            "schema_version": 1,
+            "lease_id": "lease-lane-1",
+            "work_item_id": "wi-lane-1",
+            "tenant_ref": "tenant-a",
+            "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "cell_id": "build-slots:r820",
+            "resource_class": "build_slot",
+            "amount": 1,
+            "priority": "lane",
+            "fence_token": 7,
+            "lease_epoch": 1,
+            "issued_at_ms": 1000,
+            "expires_at_ms": 61000,
+            "renewed_count": 0,
+            "idempotency_key": "key-lane-1",
+            "state": "running"
+          }
+        ],
+        "next_cursor": "lease-lane-1",
+        "transitions": [
+          {
+            "lease_id": "lease-lane-1",
+            "entries": [
+              {
+                "lease_id": "lease-lane-1",
+                "cell_id": "build-slots:r820",
+                "from": "requested",
+                "event": "Grant",
+                "to": "granted",
+                "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "priority": "lane",
+                "at_ms": 1000,
+                "fence_token": 7
+              },
+              {
+                "lease_id": "lease-lane-1",
+                "cell_id": "build-slots:r820",
+                "from": "granted",
+                "event": "Start",
+                "to": "running",
+                "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "priority": "lane",
+                "at_ms": 1500,
+                "fence_token": 7
+              },
+              {
+                "lease_id": "lease-lane-1",
+                "cell_id": "build-slots:r820",
+                "from": "running",
+                "event": "Renew",
+                "to": "running",
+                "actor_digest": "principal:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "priority": "lane",
+                "at_ms": 2000,
+                "fence_token": 7
+              }
+            ]
+          }
+        ]
+      },
+      "note": "the lease with its newest 50 transitions, oldest first"
+    }
+  ],
+  "refusals": [
+    {
+      "code": "TRANSITION_REFUSED",
+      "method": "ReleaseCapacity",
+      "reason": "terminal_state",
+      "error": "TRANSITION_REFUSED: CapacityLeaseMachine refused 'Release' from 'released' (terminal_state)",
+      "fields": {
+        "machine": "CapacityLeaseMachine",
+        "from": "released",
+        "event": "Release",
+        "reason": "terminal_state"
+      },
+      "note": "a repeated release; a renew or start of an expired or revoked lease is the holder's stop signal"
+    },
+    {
+      "code": "TRANSITION_REFUSED",
+      "method": "RenewCapacity",
+      "reason": "terminal_state",
+      "error": "TRANSITION_REFUSED: CapacityLeaseMachine refused 'Renew' from 'revoked' (terminal_state)",
+      "fields": {
+        "machine": "CapacityLeaseMachine",
+        "from": "revoked",
+        "event": "Renew",
+        "reason": "terminal_state"
+      }
+    },
+    {
+      "code": "TRANSITION_REFUSED",
+      "method": "StartCapacity",
+      "reason": "illegal_transition",
+      "error": "TRANSITION_REFUSED: CapacityLeaseMachine refused 'Start' from 'queued' (illegal_transition)",
+      "fields": {
+        "machine": "CapacityLeaseMachine",
+        "from": "queued",
+        "event": "Start",
+        "reason": "illegal_transition"
+      }
+    },
+    {
+      "code": "TRANSITION_REFUSED",
+      "method": "ReleaseCapacity",
+      "reason": "guard_failed",
+      "error": "TRANSITION_REFUSED: CapacityLeaseMachine refused 'Release' from 'running' (guard_failed)",
+      "fields": {
+        "machine": "CapacityLeaseMachine",
+        "from": "running",
+        "event": "Release",
+        "reason": "guard_failed"
+      },
+      "note": "a non-owner"
+    },
+    {
+      "code": "PRIORITY_NOT_ALLOWED_FOR_RESOURCE",
+      "method": "AcquireCapacity",
+      "error": "PRIORITY_NOT_ALLOWED_FOR_RESOURCE: cell 'build-slots:r820' of resource class BuildSlot does not admit priority Interactive",
+      "fields": {}
+    },
+    {
+      "code": "CAPACITY_UNAVAILABLE",
+      "method": "AcquireCapacity",
+      "emitted": false,
+      "note": "not used for a queued request: a build-slot acquire against a full cell is answered accepted with state queued (see the second AcquireCapacity vector); the engine registers no such code"
+    },
+    {
+      "code": "ACCESS_DENIED",
+      "method": "RevokeCapacity",
+      "error": "ACCESS_DENIED",
+      "fields": {},
+      "note": "a caller without the scope the method needs is refused before any lease is read"
+    }
+  ]
+}

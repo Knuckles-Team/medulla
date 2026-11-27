@@ -86,8 +86,10 @@ fn required_capacity_controller_scope(method: &Method) -> Option<&'static str> {
         Method::AcquireCapacity { .. }
         | Method::RenewCapacity { .. }
         | Method::ReleaseCapacity { .. }
+        | Method::StartCapacity { .. }
         | Method::ReclaimExpiredCapacity { .. } => Some("capacity:lease"),
-        Method::UpdateCapacityCell { .. } => Some("capacity:admin"),
+        // MEDULLA-PLACEMENT-R786.7: revoking another holder's lease is administrative.
+        Method::UpdateCapacityCell { .. } | Method::RevokeCapacity { .. } => Some("capacity:admin"),
         // EH-406: the automatic controller's scope. It can only narrow a cell
         // or give back what it narrowed; widening past that is capacity:admin.
         Method::ThrottleCapacityCell { .. } => Some("capacity:throttle"),
@@ -285,9 +287,10 @@ fn requested_resource_tenant_ref(method: &Method) -> Option<&str> {
 fn requested_capacity_tenant_ref(method: &Method) -> Option<&str> {
     match method {
         Method::AcquireCapacity { request } => Some(request.tenant_ref.as_str()),
-        Method::RenewCapacity { request } | Method::ReleaseCapacity { request } => {
-            Some(request.tenant_ref.as_str())
-        }
+        Method::RenewCapacity { request }
+        | Method::ReleaseCapacity { request }
+        | Method::StartCapacity { request } => Some(request.tenant_ref.as_str()),
+        Method::RevokeCapacity { request } => Some(request.tenant_ref.as_str()),
         Method::ReclaimExpiredCapacity { request } => Some(request.tenant_ref.as_str()),
         Method::ReconcileCapacity { request } | Method::CapacityStatus { request } => {
             Some(request.tenant_ref.as_str())

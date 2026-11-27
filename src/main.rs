@@ -2052,6 +2052,19 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
         });
     }
 
+    // ── Capacity-lease sweep (MEDULLA-PLACEMENT-R786.4) ─────────────────────────────
+    // Every `capacity.sweep_secs` seconds expire the leases whose heartbeat deadline passed and
+    // grant the queued leases into the slots that freed. A holder that stops renewing loses
+    // its slot here instead of leaking it.
+    {
+        let capacity_state = state.clone();
+        spawn_periodic_sweep(
+            medulla_server_api::knob_config::knobs().capacity_sweep_secs,
+            "capacity_sweep",
+            move || server_startup::capacity_sweep_tick(capacity_state.clone()),
+        );
+    }
+
     // ── Downtime scheduler (MEDULLA-DURABLE-KERNEL-R101.3) ─────────────────────────
     // Every `downtime.tick_secs` seconds, lease and submit the downtime job types
     // that fit the open idle or declared window.

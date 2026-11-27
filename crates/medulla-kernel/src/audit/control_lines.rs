@@ -735,6 +735,18 @@ pub(super) fn capacity_audit_line(method: &Method) -> Option<String> {
             request.tenant_ref,
             request.leases.len()
         )),
+        Method::StartCapacity { request } => Some(format!(
+            "START_CAPACITY|{}|{}",
+            request.tenant_ref,
+            request.leases.len()
+        )),
+        // The reason is free text an administrator typed: the chain keeps its length, not it.
+        Method::RevokeCapacity { request } => Some(format!(
+            "REVOKE_CAPACITY|{}|{}|{}",
+            request.tenant_ref,
+            request.lease_id,
+            request.reason.chars().count()
+        )),
         Method::ReclaimExpiredCapacity { request } => Some(format!(
             "RECLAIM_EXPIRED_CAPACITY|{}|{}",
             request.tenant_ref, request.max_count

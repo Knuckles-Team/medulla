@@ -99,6 +99,8 @@ method_results! {
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;
     ReleaseCapacity(ReleaseCapacity) => Raw<CapacityMutationResult>;
+    StartCapacity(StartCapacity) => Raw<CapacityMutationResult>;
+    RevokeCapacity(RevokeCapacity) => Raw<CapacityMutationResult>;
     ReclaimExpiredCapacity(ReclaimExpiredCapacity) => Raw<CapacityReclaimResult>;
     ReconcileCapacity(ReconcileCapacity) => Raw<CapacityStatusResult>;
     CapacityStatus(CapacityStatus) => Raw<CapacityStatusResult>;
