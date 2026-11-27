@@ -11,7 +11,8 @@
 use medulla_identity_types::acl::RequestContextClaims;
 use medulla_identity_types::{
     identity::AuthenticateOutcome, identity::IdentityOp, identity::IdentityRefusal,
-    identity::IdentityReply, identity::IdentityStamp, identity::MfaOp, identity::MfaProvisioning,
+    identity::IdentityReply, identity::IdentityStamp, identity::LoginStateReleased,
+    identity::MfaOp, identity::MfaProvisioning, identity::TokenOp,
 };
 use medulla_server_api::state::ServerState;
 
@@ -31,6 +32,14 @@ pub fn finish(
     now_ms: u64,
     outcome: Outcome,
 ) -> Outcome {
+    if let IdentityOp::Token(TokenOp::ConsumeLoginState { .. }) = op {
+        return match outcome {
+            Ok(IdentityReply::LoginStateSealed { sealed }) => {
+                release_login_state(state, &sealed).map_err(|refusal| refusal.to_string())
+            }
+            other => other,
+        };
+    }
     let IdentityOp::Mfa(mfa) = op else {
         return outcome;
     };
@@ -76,5 +85,28 @@ fn provisioning(
         .map_or(principal, |user| user.username.as_str());
     Ok(IdentityReply::MfaProvisioning(MfaProvisioning {
         provisioning_uri: secrets::provisioning_uri(&secret, ISSUER, account),
+    }))
+}
+
+/// The nonce and PKCE verifier of a consumed login state, unsealed once here and never stored
+/// (MEDULLA-IDENTITY-R750).
+fn release_login_state(
+    state: &ServerState,
+    sealed: &str,
+) -> Result<IdentityReply<RequestContextClaims>, IdentityRefusal> {
+    let payload =
+        secrets::unseal(sealed, &state.auth_secret).map_err(|_| IdentityRefusal::Unstamped)?;
+    let payload: serde_json::Value =
+        serde_json::from_slice(&payload).map_err(|_| IdentityRefusal::Unstamped)?;
+    let text = |key: &str| {
+        payload
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+            .ok_or(IdentityRefusal::Unstamped)
+    };
+    Ok(IdentityReply::LoginState(LoginStateReleased {
+        nonce: text("nonce")?,
+        pkce_verifier: text("pkce_verifier")?,
     }))
 }

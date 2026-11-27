@@ -107,6 +107,10 @@ pub struct IdentityStore {
     /// Token hash → one-time token.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) one_time: BTreeMap<String, OneTimeToken>,
+    /// Digest of `<idp_id>\0<assertion_id>` → the moment the id stops being remembered
+    /// (MEDULLA-IDENTITY-R751).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) assertions: BTreeMap<String, u64>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) api_keys: BTreeMap<String, ApiKeyRecord>,
     /// Key id → public issuer key (MEDULLA-IDENTITY-R732).

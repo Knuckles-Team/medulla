@@ -385,3 +385,178 @@ fn verified_api_key_resolution_omits_session_record() {
         .get("session_record")
         .is_none());
 }
+
+fn register_state(hash: &str, ttl_ms: u64) -> (IdentityOp, IdentityStamp) {
+    let mut stamp = broker();
+    stamp.token_hashes = vec![hash.to_string()];
+    stamp.sealed_secret = Some(format!("sealed-{hash}"));
+    let op = IdentityOp::Token(TokenOp::RegisterLoginState {
+        request: LoginStateRegister {
+            state: Secret::default(),
+            nonce: Secret::default(),
+            pkce_verifier: Secret::default(),
+            ttl_ms,
+        },
+    });
+    (op, stamp)
+}
+
+fn consume_state(hash: &str) -> (IdentityOp, IdentityStamp) {
+    let mut stamp = broker();
+    stamp.token_hashes = vec![hash.to_string()];
+    let op = IdentityOp::Token(TokenOp::ConsumeLoginState {
+        request: LoginStateConsume {
+            state: Secret::default(),
+        },
+    });
+    (op, stamp)
+}
+
+// spec: MEDULLA-IDENTITY-R750
+#[test]
+fn a_login_state_exists_before_any_session_and_is_spent_once_within_its_ttl() {
+    let mut store = store_in(AuthMode::Local);
+    let (register, stamp) = register_state("s1", 600_000);
+    apply_kept(&mut store, &register, &stamp, NOW).unwrap();
+
+    // The same state is not registered twice.
+    assert_eq!(
+        apply_kept(&mut store, &register, &stamp, NOW),
+        Err(IdentityRefusal::Collision)
+    );
+    // A direct administrator cannot submit it: it is the broker's op.
+    let mut direct = admin();
+    direct.token_hashes = stamp.token_hashes.clone();
+    direct.sealed_secret = stamp.sealed_secret.clone();
+    let (other, _) = register_state("s2", 600_000);
+    assert_eq!(
+        apply_kept(&mut store, &other, &direct, NOW),
+        Err(IdentityRefusal::NotAuthorized)
+    );
+
+    // Consuming answers the sealed payload once; the second consume is spent.
+    let (consume, consume_stamp) = consume_state("s1");
+    assert_eq!(
+        apply_kept(&mut store, &consume, &consume_stamp, NOW + 1_000),
+        Ok(IdentityReply::LoginStateSealed {
+            sealed: "sealed-s1".to_string()
+        })
+    );
+    assert_eq!(
+        apply_kept(&mut store, &consume, &consume_stamp, NOW + 2_000),
+        Err(IdentityRefusal::TokenSpent)
+    );
+
+    // An unknown state, an expired state and a state of another purpose refuse alike.
+    let (unknown, unknown_stamp) = consume_state("never-registered");
+    assert_eq!(
+        apply_kept(&mut store, &unknown, &unknown_stamp, NOW),
+        Err(IdentityRefusal::TokenSpent)
+    );
+    let (register, stamp) = register_state("s3", 600_000);
+    apply_kept(&mut store, &register, &stamp, NOW).unwrap();
+    let (late, late_stamp) = consume_state("s3");
+    assert_eq!(
+        apply_kept(&mut store, &late, &late_stamp, NOW + 600_000),
+        Err(IdentityRefusal::TokenSpent),
+        "the state expires at its ttl on the apply clock"
+    );
+    let (register, stamp) = register_state("s6", 600_000);
+    apply_kept(&mut store, &register, &stamp, NOW).unwrap();
+    let (redeem_op, redeem_stamp) = redeem(&store, TokenPurpose::LoginState, "s6");
+    assert_eq!(
+        apply_kept(&mut store, &redeem_op, &redeem_stamp, NOW + 1_000),
+        Err(IdentityRefusal::InvalidRequest),
+        "a login state is spent only by consume_login_state"
+    );
+
+    // The ttl is bounded by ten minutes and is not zero.
+    for ttl in [0, 600_001] {
+        let (op, stamp) = register_state("s4", ttl);
+        assert_eq!(
+            apply_kept(&mut store, &op, &stamp, NOW),
+            Err(IdentityRefusal::InvalidRequest)
+        );
+    }
+    // A registration without its sealed payload is unstamped.
+    let (op, mut stamp) = register_state("s5", 1_000);
+    stamp.sealed_secret = None;
+    assert_eq!(
+        apply_kept(&mut store, &op, &stamp, NOW),
+        Err(IdentityRefusal::Unstamped)
+    );
+}
+
+fn register_assertion(idp_id: &str, assertion_id: &str, until_ms: u64) -> IdentityOp {
+    IdentityOp::Token(TokenOp::RegisterAssertion {
+        request: AssertionRegister {
+            idp_id: idp_id.to_string(),
+            assertion_id: assertion_id.to_string(),
+            not_on_or_after_ms: until_ms,
+        },
+    })
+}
+
+// spec: MEDULLA-IDENTITY-R751
+#[test]
+fn an_assertion_id_registers_once_until_it_expires() {
+    let mut store = store_in(AuthMode::Local);
+    let upsert = |idp_id: &str| {
+        IdentityOp::Idp(IdpOp::Upsert {
+            request: IdpConfig {
+                idp_id: idp_id.to_string(),
+                kind: IdpKind::Saml,
+                display_name: idp_id.to_string(),
+                enabled: true,
+                config_json: "{}".to_string(),
+                secret_ref: None,
+                jit_policy: JitPolicy::Deny,
+                email_domains: Vec::new(),
+                order: 0,
+                rules: Vec::new(),
+            },
+        })
+    };
+    apply_kept(&mut store, &upsert("saml-a"), &admin(), NOW).unwrap();
+    apply_kept(&mut store, &upsert("saml-b"), &admin(), NOW).unwrap();
+
+    let until = NOW + 300_000;
+    let first = register_assertion("saml-a", "_assertion-1", until);
+    assert_eq!(
+        apply_kept(&mut store, &first, &broker(), NOW),
+        Ok(IdentityReply::Done { changed: true })
+    );
+    // The second presentation of the same id is a replay, and another issuer's id is not.
+    assert_eq!(
+        apply_kept(&mut store, &first, &broker(), NOW + 1_000),
+        Err(IdentityRefusal::Replay)
+    );
+    let other_issuer = register_assertion("saml-b", "_assertion-1", until);
+    assert!(apply_kept(&mut store, &other_issuer, &broker(), NOW).is_ok());
+
+    // The id is forgotten once its NotOnOrAfter has passed, and an assertion that already
+    // expired, one that outlives the bound and an unknown issuer are refused.
+    let expired = register_assertion("saml-a", "_assertion-2", NOW);
+    assert_eq!(
+        apply_kept(&mut store, &expired, &broker(), NOW),
+        Err(IdentityRefusal::InvalidRequest)
+    );
+    let too_long = register_assertion("saml-a", "_assertion-3", NOW + 2 * 24 * 60 * 60 * 1000);
+    assert_eq!(
+        apply_kept(&mut store, &too_long, &broker(), NOW),
+        Err(IdentityRefusal::InvalidRequest)
+    );
+    let unknown = register_assertion("saml-z", "_assertion-4", until);
+    assert_eq!(
+        apply_kept(&mut store, &unknown, &broker(), NOW),
+        Err(IdentityRefusal::NotFound)
+    );
+    let again = register_assertion("saml-a", "_assertion-1", until + 600_000);
+    assert!(apply_kept(&mut store, &again, &broker(), until + 1).is_ok());
+
+    // Only the broker registers an assertion.
+    assert_eq!(
+        apply_kept(&mut store, &register_assertion("saml-a", "_x", until), &admin(), NOW),
+        Err(IdentityRefusal::NotAuthorized)
+    );
+}

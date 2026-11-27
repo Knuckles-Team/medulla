@@ -146,6 +146,41 @@ pub struct OneTimeTokenIssue {
     pub ttl_ms: u64,
 }
 
+/// `register_login_state` (MEDULLA-IDENTITY-R750): hold the pre-login state of one OIDC
+/// sign-in before any session exists. `state` is the high-entropy, caller-generated state
+/// parameter; the engine keeps only its hash and seals `nonce` and `pkce_verifier`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LoginStateRegister {
+    pub state: Secret,
+    pub nonce: Secret,
+    pub pkce_verifier: Secret,
+    /// At most [`MAX_LOGIN_STATE_LIFETIME_MS`](super::MAX_LOGIN_STATE_LIFETIME_MS).
+    pub ttl_ms: u64,
+}
+
+/// `consume_login_state` (MEDULLA-IDENTITY-R750): spend the state of one OIDC sign-in once.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LoginStateConsume {
+    pub state: Secret,
+}
+
+/// `register_assertion` (MEDULLA-IDENTITY-R751): remember one SAML assertion id until its
+/// `not_on_or_after_ms`, and refuse an id already remembered.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AssertionRegister {
+    /// The configured identity provider that issued the assertion.
+    pub idp_id: String,
+    pub assertion_id: String,
+    /// The assertion's `NotOnOrAfter`, in milliseconds since the epoch.
+    pub not_on_or_after_ms: u64,
+}
+
 /// `redeem_one_time_token`: spend a token for its purpose. A reset purpose
 /// sets `new_password`; `link_claim` links `link`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

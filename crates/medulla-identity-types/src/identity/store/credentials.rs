@@ -144,6 +144,7 @@ impl IdentityStore {
             expires_at_ms: ctx.now_ms.saturating_add(request.ttl_ms),
             used_at_ms: None,
             created_by: stamp.actor.principal_id.clone(),
+            sealed_payload: None,
         })?;
         self.audit_event(
             stamp,

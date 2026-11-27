@@ -6,7 +6,9 @@ use std::collections::BTreeSet;
 use super::super::audit::IdentityEvent;
 use super::super::model::{ApiKeyRecord, OneTimeToken, TokenPurpose, UserKind, UserStatus};
 use super::super::ops::TokenOp;
-use super::super::requests::{ApiKeyIssue, OneTimeTokenIssue, PasswordResetIssue, TokenRedeem};
+use super::super::requests::{
+    ApiKeyIssue, AssertionRegister, OneTimeTokenIssue, PasswordResetIssue, TokenRedeem,
+};
 use super::super::scope::ScopeClassifier;
 use super::super::stamp::IdentityStamp;
 use super::super::text::identifier;
@@ -15,6 +17,7 @@ use super::super::{
     normalize_username, IdentityRefusal, MAX_API_KEYS_PER_USER, MAX_API_KEY_LIFETIME_MS,
     MAX_ONE_TIME_TOKENS, MAX_ONE_TIME_TOKEN_LIFETIME_MS,
 };
+use super::super::{MAX_ASSERTION_IDS, MAX_ASSERTION_LIFETIME_MS, MAX_LOGIN_STATE_LIFETIME_MS};
 use super::{digest_hex, ApplyContext, IdentityStore};
 
 /// The throttle key of self-service reset requests for one username: a
@@ -33,7 +36,7 @@ fn purpose_names_principal(purpose: TokenPurpose) -> bool {
         | TokenPurpose::EmailVerify
         | TokenPurpose::LinkClaim
         | TokenPurpose::AdminReset => true,
-        TokenPurpose::Invite => false,
+        TokenPurpose::Invite | TokenPurpose::LoginState => false,
     }
 }
 
@@ -73,6 +76,13 @@ impl IdentityStore {
                 self.delete_scim_client(&request.id, stamp, ctx.now_ms)
             }
             TokenOp::IssueAdminReset { request } => self.issue_admin_reset(request, stamp, ctx),
+            TokenOp::RegisterLoginState { request } => {
+                self.register_login_state(request.ttl_ms, stamp, ctx.now_ms)
+            }
+            TokenOp::ConsumeLoginState { .. } => self.consume_login_state(stamp, ctx.now_ms),
+            TokenOp::RegisterAssertion { request } => {
+                self.register_assertion(request, ctx.now_ms)
+            }
         }
     }
 
@@ -90,6 +100,91 @@ impl IdentityStore {
         key.revoked_at_ms.get_or_insert(now_ms);
         self.audit_event(stamp, now_ms, IdentityEvent::ApiKeyRevoked, Some(key_id));
         Ok(IdentityReply::Done { changed })
+    }
+
+    /// Hold the pre-login state of one OIDC sign-in (MEDULLA-IDENTITY-R750). The boundary
+    /// hashed `state` and sealed the nonce and PKCE verifier; the record names no principal and
+    /// expires `ttl_ms` after the apply clock.
+    fn register_login_state(
+        &mut self,
+        ttl_ms: u64,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<IdentityReply, IdentityRefusal> {
+        if !(1..=MAX_LOGIN_STATE_LIFETIME_MS).contains(&ttl_ms) {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        let hash = stamp.token_hash(0)?.to_string();
+        let sealed = stamp
+            .sealed_secret
+            .clone()
+            .ok_or(IdentityRefusal::Unstamped)?;
+        self.prune_one_time(now_ms)?;
+        self.insert_one_time(OneTimeToken {
+            token_hash: hash,
+            purpose: TokenPurpose::LoginState,
+            principal_id: None,
+            expires_at_ms: now_ms.saturating_add(ttl_ms),
+            used_at_ms: None,
+            created_by: stamp.actor.principal_id.clone(),
+            sealed_payload: Some(sealed),
+        })?;
+        self.audit_event(stamp, now_ms, IdentityEvent::TokenIssued, None);
+        Ok(IdentityReply::Done { changed: true })
+    }
+
+    /// Spend the state of one OIDC sign-in once and answer its sealed payload. An unknown, spent
+    /// and expired state refuse alike (`IDENTITY_TOKEN_SPENT`), and the payload leaves the record
+    /// with the spend.
+    fn consume_login_state(
+        &mut self,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<IdentityReply, IdentityRefusal> {
+        let hash = stamp.token_hash(0)?.to_string();
+        self.spend_token(&hash, TokenPurpose::LoginState, stamp, now_ms)?;
+        let sealed = self
+            .one_time
+            .get_mut(&hash)
+            .and_then(|token| token.sealed_payload.take())
+            .ok_or(IdentityRefusal::TokenSpent)?;
+        self.audit_event(stamp, now_ms, IdentityEvent::TokenRedeemed, None);
+        Ok(IdentityReply::LoginStateSealed { sealed })
+    }
+
+    /// Remember one SAML assertion id until its `NotOnOrAfter` and refuse it a second time
+    /// (MEDULLA-IDENTITY-R751). The register-if-new check and the insert are one apply, so two
+    /// concurrent presentations of the same assertion cannot both pass.
+    fn register_assertion(
+        &mut self,
+        request: &AssertionRegister,
+        now_ms: u64,
+    ) -> Result<IdentityReply, IdentityRefusal> {
+        let id = request.assertion_id.trim();
+        let window = now_ms.saturating_add(MAX_ASSERTION_LIFETIME_MS);
+        if id.is_empty()
+            || id.len() > 512
+            || request.not_on_or_after_ms <= now_ms
+            || request.not_on_or_after_ms > window
+        {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        if !self.idps.contains_key(&request.idp_id) {
+            return Err(IdentityRefusal::NotFound);
+        }
+        self.assertions.retain(|_, until| *until > now_ms);
+        let key = digest_hex(
+            b"eg/identity-assertion/v1\0",
+            &format!("{}\0{id}", request.idp_id),
+        );
+        if self.assertions.contains_key(&key) {
+            return Err(IdentityRefusal::Replay);
+        }
+        if self.assertions.len() >= MAX_ASSERTION_IDS {
+            return Err(IdentityRefusal::Full);
+        }
+        self.assertions.insert(key, request.not_on_or_after_ms);
+        Ok(IdentityReply::Done { changed: true })
     }
 
     /// Drop spent and expired tokens; refuse when the table is still full.
@@ -153,6 +248,7 @@ impl IdentityStore {
             expires_at_ms: now_ms.saturating_add(request.ttl_ms),
             used_at_ms: None,
             created_by: stamp.actor.principal_id.clone(),
+            sealed_payload: None,
         })?;
         Ok(IdentityReply::ResetDelivery(ResetDelivery {
             email: Some(email),
@@ -198,6 +294,7 @@ impl IdentityStore {
             expires_at_ms: now_ms.saturating_add(request.ttl_ms),
             used_at_ms: None,
             created_by: issuer,
+            sealed_payload: None,
         })?;
         self.audit_event(
             stamp,
@@ -286,6 +383,8 @@ impl IdentityStore {
                 TokenPurpose::CredentialReset | TokenPurpose::AdminReset | TokenPurpose::LinkClaim,
                 None,
             ) => Err(IdentityRefusal::InvalidRequest),
+            // A login state is spent by `consume_login_state` alone, which answers its payload.
+            (TokenPurpose::LoginState, _) => Err(IdentityRefusal::InvalidRequest),
         }
     }
 

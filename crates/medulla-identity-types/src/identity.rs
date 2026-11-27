@@ -111,8 +111,9 @@ pub use projection::{
 };
 pub use relations::{SqlRelation, SqlType};
 pub use requests::{
-    ApiKeyIssue, ApiKeyUse, AuthenticateRequest, CreateUserRequest, ExternalLogin,
-    InitializeRequest, LinkRequest, MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue,
+    ApiKeyIssue, ApiKeyUse, AssertionRegister, AuthenticateRequest, CreateUserRequest,
+    ExternalLogin, InitializeRequest, LinkRequest, LoginStateConsume, LoginStateRegister,
+    MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue,
     PasswordChange, PasswordResetIssue, PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem,
     UserStatusChange, UserUpdate, WebauthnCredential, WebauthnUse,
 };
@@ -140,7 +141,7 @@ pub use text::{
     validate_principal_id, MIN_RECOVERY_CODE_CHARS, REPLICATION_SLOT_AGENT, RESERVED_AGENT_IDS,
 };
 pub use views::{
-    AuthenticateOutcome, AuthenticateResult, IdentityReply, MfaProvisioning, ResetDelivery,
+    AuthenticateOutcome, AuthenticateResult, IdentityReply, LoginStateReleased, MfaProvisioning, ResetDelivery,
     SessionLiveness, SessionView, UserView, WebauthnCredentialView,
 };
 pub use wire_login::{
@@ -202,6 +203,13 @@ pub const PASSWORD_HISTORY_DEPTH: usize = 5;
 pub const MAX_API_KEY_LIFETIME_MS: u64 = 365 * 24 * 60 * 60 * 1000;
 /// Longest one-time token lifetime (one day); link-claim codes use 10 min.
 pub const MAX_ONE_TIME_TOKEN_LIFETIME_MS: u64 = 24 * 60 * 60 * 1000;
+/// Longest pre-login state lifetime (ten minutes; MEDULLA-IDENTITY-R750).
+pub const MAX_LOGIN_STATE_LIFETIME_MS: u64 = 600_000;
+/// Most SAML assertion ids one store remembers; expired ids are dropped first
+/// (MEDULLA-IDENTITY-R751).
+pub const MAX_ASSERTION_IDS: usize = 16_384;
+/// Longest an assertion id is remembered past the moment it was registered (one day).
+pub const MAX_ASSERTION_LIFETIME_MS: u64 = 24 * 60 * 60 * 1000;
 /// Shortest accepted high-entropy token (caller-generated session ids,
 /// one-time tokens, API-key secrets): 32 characters of a URL-safe alphabet.
 pub const MIN_TOKEN_CHARS: usize = 32;

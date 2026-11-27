@@ -182,6 +182,16 @@ pub struct MfaProvisioning {
     pub provisioning_uri: String,
 }
 
+/// The pre-login state of one OIDC sign-in, released once by `consume_login_state`
+/// (MEDULLA-IDENTITY-R750).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LoginStateReleased {
+    pub nonce: String,
+    pub pkce_verifier: String,
+}
+
 /// A WebAuthn credential as the broker needs it to verify an assertion.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -272,6 +282,14 @@ pub enum IdentityReply<C = ()> {
     /// (MEDULLA-IDENTITY-R741). The store never builds it; the request boundary does, after the
     /// apply, from the sealed record.
     MfaProvisioning(MfaProvisioning),
+    /// `consume_login_state` as the store answers it: the sealed payload. The request boundary
+    /// unseals it after the apply and answers [`IdentityReply::LoginState`]; the plaintext is
+    /// never stored or replicated (MEDULLA-IDENTITY-R750).
+    LoginStateSealed {
+        sealed: String,
+    },
+    /// `consume_login_state`: the nonce and PKCE verifier, answered once.
+    LoginState(LoginStateReleased),
     /// `validate_policy`: the RBAC roles and grants a policy bundle lowers to
     /// (MEDULLA-IDENTITY-R702).
     PolicyCompiled {
@@ -325,6 +343,8 @@ impl IdentityReply {
             Self::ScimClient(value) => IdentityReply::ScimClient(value),
             Self::MfaChallenge(value) => IdentityReply::MfaChallenge(value),
             Self::MfaProvisioning(value) => IdentityReply::MfaProvisioning(value),
+            Self::LoginStateSealed { sealed } => IdentityReply::LoginStateSealed { sealed },
+            Self::LoginState(value) => IdentityReply::LoginState(value),
             Self::PolicyCompiled { roles, grants } => {
                 IdentityReply::PolicyCompiled { roles, grants }
             }

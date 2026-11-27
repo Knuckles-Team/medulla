@@ -220,6 +220,7 @@ impl IdentityStore {
             self.passwords.is_empty(),
             self.api_keys.is_empty(),
             self.one_time.is_empty(),
+            self.assertions.is_empty(),
             self.totp.is_empty(),
             self.recovery.is_empty(),
             self.webauthn.is_empty(),

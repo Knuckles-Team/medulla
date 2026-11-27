@@ -321,6 +321,18 @@ pub enum TokenOp {
         request: super::credentials::ScimClientUse,
     },
     /// An administrator's one-time reset token for a principal (MEDULLA-IDENTITY-R734).
+    /// Hold the pre-login state of one OIDC sign-in (MEDULLA-IDENTITY-R750).
+    RegisterLoginState {
+        request: super::requests::LoginStateRegister,
+    },
+    /// Spend that state once and answer its nonce and PKCE verifier (MEDULLA-IDENTITY-R750).
+    ConsumeLoginState {
+        request: super::requests::LoginStateConsume,
+    },
+    /// Remember one SAML assertion id; a second registration is a replay (MEDULLA-IDENTITY-R751).
+    RegisterAssertion {
+        request: super::requests::AssertionRegister,
+    },
     IssueAdminReset {
         request: super::credentials::AdminResetIssue,
     },
@@ -621,6 +633,13 @@ impl TokenOp {
             Self::DeleteScimClient { .. } => meta("delete_scim_client", true, OpAuthority::Admin),
             Self::VerifyScimClient { .. } => meta("verify_scim_client", false, OpAuthority::Broker),
             Self::IssueAdminReset { .. } => meta("issue_admin_reset", true, OpAuthority::Admin),
+            Self::RegisterLoginState { .. } => {
+                meta("register_login_state", true, OpAuthority::Broker)
+            }
+            Self::ConsumeLoginState { .. } => {
+                meta("consume_login_state", true, OpAuthority::Broker)
+            }
+            Self::RegisterAssertion { .. } => meta("register_assertion", true, OpAuthority::Broker),
         }
     }
 }

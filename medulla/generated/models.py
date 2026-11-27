@@ -9752,6 +9752,30 @@ class IdentityOpTokenIssueAdminReset(BaseModel):
     request: AdminResetIssue
 
 
+class IdentityOpTokenRegisterLoginState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["register_login_state"]
+    request: LoginStateRegister
+
+
+class IdentityOpTokenConsumeLoginState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["consume_login_state"]
+    request: LoginStateConsume
+
+
+class IdentityOpTokenRegisterAssertion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["register_assertion"]
+    request: AssertionRegister
+
+
 IdentityOpToken = Annotated[
     IdentityOpTokenIssueOneTime
     | IdentityOpTokenRedeemOneTime
@@ -9769,7 +9793,10 @@ IdentityOpToken = Annotated[
     | IdentityOpTokenUpdateScimClient
     | IdentityOpTokenDeleteScimClient
     | IdentityOpTokenVerifyScimClient
-    | IdentityOpTokenIssueAdminReset,
+    | IdentityOpTokenIssueAdminReset
+    | IdentityOpTokenRegisterLoginState
+    | IdentityOpTokenConsumeLoginState
+    | IdentityOpTokenRegisterAssertion,
     Field(discriminator="op"),
 ]
 
@@ -10309,6 +10336,20 @@ class IdentityReplyWireLoginRevoked(BaseModel):
     value: WireLoginRevoked
 
 
+class IdentityReplyLoginStateSealed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["login_state_sealed"]
+    value: LoginStateSealedValue
+
+
+class IdentityReplyLoginState(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["login_state"]
+    value: LoginStateReleased
+
+
 IdentityReply = Annotated[
     IdentityReplyApprovalKey
     | IdentityReplyDone
@@ -10338,7 +10379,9 @@ IdentityReply = Annotated[
     | IdentityReplyScimClients
     | IdentityReplyScimClient
     | IdentityReplyMfaChallenge
-    | IdentityReplyMfaProvisioning,
+    | IdentityReplyMfaProvisioning
+    | IdentityReplyLoginStateSealed
+    | IdentityReplyLoginState,
     Field(discriminator="kind"),
 ]
 
@@ -23423,6 +23466,42 @@ class ObjectRef(BaseModel):
     id: str
 
 
+class LoginStateRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    nonce: Secret
+    pkce_verifier: Secret
+    state: Secret
+    ttl_ms: Annotated[int, Field(ge=0)]
+
+
+class LoginStateConsume(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Secret
+
+
+class LoginStateReleased(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    nonce: str
+    pkce_verifier: str
+
+
+class LoginStateSealedValue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    sealed: str
+
+
+class AssertionRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    assertion_id: str
+    idp_id: str
+    not_on_or_after_ms: Annotated[int, Field(ge=0)]
+
+
 class OneTimeTokenIssue(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -31554,6 +31633,7 @@ class TokenPurpose(str, Enum):
     INVITE = "invite"
     LINK_CLAIM = "link_claim"
     ADMIN_RESET = "admin_reset"
+    LOGIN_STATE = "login_state"
 
 
 class TokenRedeem(BaseModel):
@@ -47128,7 +47208,17 @@ __all__ = [
     "IdentityOpTokenUpdateScimClient",
     "IdentityOpTokenDeleteScimClient",
     "IdentityOpTokenVerifyScimClient",
+    "IdentityOpTokenConsumeLoginState",
     "IdentityOpTokenIssueAdminReset",
+    "IdentityOpTokenRegisterAssertion",
+    "IdentityOpTokenRegisterLoginState",
+    "IdentityReplyLoginState",
+    "IdentityReplyLoginStateSealed",
+    "AssertionRegister",
+    "LoginStateConsume",
+    "LoginStateRegister",
+    "LoginStateReleased",
+    "LoginStateSealedValue",
     "IdentityOpMfaIssueChallenge",
     "IdentityOpMfaConsumeChallenge",
     "IdentityReplyApiKeys",

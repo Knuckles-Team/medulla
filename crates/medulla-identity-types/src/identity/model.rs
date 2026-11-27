@@ -350,6 +350,9 @@ pub enum TokenPurpose {
     Invite,
     LinkClaim,
     AdminReset,
+    /// An OIDC sign-in in flight: the record exists before any session and names no
+    /// principal; its sealed payload holds the nonce and PKCE verifier (MEDULLA-IDENTITY-R750).
+    LoginState,
 }
 
 /// A single-use token. Only its hash is stored.
@@ -364,6 +367,10 @@ pub struct OneTimeToken {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub used_at_ms: Option<u64>,
     pub created_by: String,
+    /// The sealed payload a [`TokenPurpose::LoginState`] token carries; the plaintext never
+    /// reaches the store (MEDULLA-IDENTITY-R750).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sealed_payload: Option<String>,
 }
 
 /// An API key. `key_id` is public (`gok_<id>`); only the secret's hash is

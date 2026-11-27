@@ -360,6 +360,28 @@ fn derive_token(op: &mut TokenOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>)
         TokenOp::IssueAdminReset { request } => {
             stamp.token_hashes = vec![take_token(&mut request.token, Floor::Issue)?];
         }
+        // The pre-login state: the state parameter is hashed, and the nonce and PKCE verifier are
+        // sealed into one blob the store keeps and the boundary unseals once, on consume
+        // (MEDULLA-IDENTITY-R750).
+        TokenOp::RegisterLoginState { request } => {
+            let state = take_token(&mut request.state, Floor::Issue)?;
+            let nonce = request.nonce.take();
+            let verifier = request.pkce_verifier.take();
+            if nonce.is_empty() || verifier.is_empty() {
+                return Err(IdentityRefusal::InvalidRequest);
+            }
+            let payload = serde_json::json!({"nonce": nonce, "pkce_verifier": verifier});
+            stamp.sealed_secret = Some(
+                secrets::seal(payload.to_string().as_bytes(), env.service_secret)
+                    .map_err(internal)?,
+            );
+            stamp.token_hashes = vec![state];
+        }
+        TokenOp::ConsumeLoginState { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.state, Floor::Lookup)?];
+        }
+        // An assertion id is no secret: the store keys it itself (MEDULLA-IDENTITY-R751).
+        TokenOp::RegisterAssertion { .. } => {}
     }
     Ok(())
 }
