@@ -48,7 +48,7 @@ pub async fn handle_branch_merge(
     };
     let plan = match step {
         ops::publish::MergeStep::Done(receipt) => {
-            return ops::merge_receipt_response(req.id, receipt)
+            return ops::merge_receipt_response(req.id, *receipt)
         }
         ops::publish::MergeStep::Apply(plan) => *plan,
     };

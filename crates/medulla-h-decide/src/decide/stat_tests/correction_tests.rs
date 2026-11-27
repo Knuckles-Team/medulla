@@ -172,7 +172,6 @@ async fn correction_reaches_the_handler() {
         record(correction("c1", ACTION, "right")),
     )
     .await
-    .ok()
     .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     let receipt = &recorded.receipt_id;
@@ -319,7 +318,6 @@ async fn correction_refusals_commit_nothing() {
         record(correction("c5", ACTION, "other text")),
     )
     .await
-    .ok()
     .expect("an invariant of another class does not govern it");
 
     // An oversized value is the shape error of R702.1.
@@ -354,7 +352,6 @@ async fn correction_reads_back_by_receipt() {
         record(correction("c1", ACTION, "right")),
     )
     .await
-    .ok()
     .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     commit(&core, &write);
@@ -370,7 +367,7 @@ async fn correction_reads_back_by_receipt() {
     let get = CorrectionOp::Get {
         receipt_id: receipt.clone(),
     };
-    let read = plan(&h, &corrector(TENANT), get).await.ok().expect("reads");
+    let read = plan(&h, &corrector(TENANT), get).await.expect("reads");
     let read: CorrectionRead = reply(&read);
     assert_eq!(read.receipt_id, receipt);
     assert_eq!(read.correction, stored(correction("c1", ACTION, "right")));
@@ -409,7 +406,6 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     rejection.source = CorrectionSource::ReviewRejection;
     let write = plan(&h, &corrector(TENANT), record(rejection))
         .await
-        .ok()
         .expect("plans");
     let recorded: CorrectionRecorded = reply(&write);
     assert_eq!(recorded.effect.outcome.value, 0.0);
@@ -447,14 +443,13 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     digests.source = CorrectionSource::ReviewComment;
     let write = plan(&h, &corrector(TENANT), record(digests.clone()))
         .await
-        .ok()
         .expect("plans");
     commit(&core, &write);
     let receipt = reply::<CorrectionRecorded>(&write).receipt_id;
     let get = CorrectionOp::Get {
         receipt_id: receipt,
     };
-    let read: CorrectionRead = reply(&plan(&h, &corrector(TENANT), get).await.ok().expect("reads"));
+    let read: CorrectionRead = reply(&plan(&h, &corrector(TENANT), get).await.expect("reads"));
     assert_eq!(read.correction, stored(digests));
     assert_eq!(read.correction.source, CorrectionSource::ReviewComment);
 }
@@ -469,7 +464,6 @@ async fn skill_corrections_feed_skill_eval_cases() {
     let human = correction("f1", "skill:triage@3", "ask for the order id first");
     let write = plan(&h, &corrector(TENANT), record(human))
         .await
-        .ok()
         .expect("plans");
     let cases: Vec<&Value> = write
         .operations
@@ -490,7 +484,6 @@ async fn skill_corrections_feed_skill_eval_cases() {
     rejection.source = CorrectionSource::ReviewRejection;
     let write = plan(&h, &corrector(TENANT), record(rejection))
         .await
-        .ok()
         .expect("plans");
     let case = write
         .operations
@@ -502,7 +495,6 @@ async fn skill_corrections_feed_skill_eval_cases() {
     let other = correction("f3", "answer:9", "better");
     let write = plan(&h, &corrector(TENANT), record(other))
         .await
-        .ok()
         .expect("plans");
     assert!(write
         .operations
@@ -526,7 +518,6 @@ async fn independent_outcomes_read_per_rule_candidate() {
     ] {
         let write = plan(&h, &corrector(TENANT), record(input))
             .await
-            .ok()
             .expect("plans");
         commit(&core, &write);
     }
@@ -536,7 +527,6 @@ async fn independent_outcomes_read_per_rule_candidate() {
         async move {
             let write = plan(h, &verified, CorrectionOp::Outcomes { rule_id })
                 .await
-                .ok()
                 .expect("reads");
             assert!(write.operations.is_empty(), "the read writes nothing");
             reply::<CorrectionOutcomes>(&write)
@@ -584,7 +574,6 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
     ] {
         let write = plan(&h, &corrector(TENANT), record(input))
             .await
-            .ok()
             .expect("plans");
         commit(&core, &write);
     }
@@ -628,7 +617,6 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
         CorrectionOp::Outcomes { rule_id: None },
     )
     .await
-    .ok()
     .expect("reads");
     let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
     assert_eq!(joined.correction_labels.len(), outcomes.len());
@@ -675,7 +663,6 @@ async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
     ] {
         let write = plan(&h, &corrector(TENANT), record(input))
             .await
-            .ok()
             .expect("plans");
         commit(&core, &write);
     }
@@ -685,7 +672,6 @@ async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
         CorrectionOp::Outcomes { rule_id: None },
     )
     .await
-    .ok()
     .expect("reads");
     let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
     assert_eq!(outcomes.len(), 1, "equal rule text is one candidate");

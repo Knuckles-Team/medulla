@@ -169,10 +169,11 @@ async fn commit_writes_vectors_and_lookup_reads_them() {
         .get_successors(&phrasing_node)
         .unwrap()
         .contains(&program_node));
-    let store = f.core.semantic_store.read();
-    assert!(store.get_embedding(&program_node).is_some());
-    assert!(store.get_embedding(&phrasing_node).is_some());
-    drop(store);
+    {
+        let store = f.core.semantic_store.read();
+        assert!(store.get_embedding(&program_node).is_some());
+        assert!(store.get_embedding(&phrasing_node).is_some());
+    }
     assert_eq!(run_rows(&f.h), 2, "the program and its index");
     assert!(!committed.replayed);
 

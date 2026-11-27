@@ -321,10 +321,7 @@ async fn golden_skill_drafts_have_fixed_program_digests() {
     let fetch = &program.steps.as_slice()[0];
     assert_eq!(fetch.next_node.as_deref(), Some("parse"));
     assert_eq!(fetch.edges.last().unwrap().label.as_deref(), Some("error"));
-    assert_eq!(
-        fetch.input_types.iter().copied().collect::<Vec<_>>(),
-        [TypeRef::Text]
-    );
+    assert_eq!(fetch.input_types.to_vec(), [TypeRef::Text]);
 
     // Four premises: the document and the step count are claims, the program is a proof, the
     // compiler is a definition. The record class is the weakest one.

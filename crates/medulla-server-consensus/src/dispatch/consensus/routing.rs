@@ -378,7 +378,7 @@ fn build_native_raft_request(
     routed: &medulla_raft::raft::multi::RoutedRaftHandle,
     command: medulla_raft::raft::NativeMutationCommand,
     identity_bootstrap: bool,
-) -> Result<medulla_raft::raft::RaftRequest, Response> {
+) -> Result<medulla_raft::raft::RaftRequest, Box<Response>> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = medulla_kernel::persist::sanitize(proposal.graph_name);
     let graph_scope = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
@@ -410,7 +410,7 @@ fn build_native_raft_request(
             },
         ) {
             Ok(mutation) => mutation,
-            Err(error) => return Err(Response::err(proposal.request_id, error)),
+            Err(error) => return Err(Box::new(Response::err(proposal.request_id, error))),
         };
     Ok(medulla_raft::raft::RaftRequest {
         graph_fname,
@@ -632,7 +632,7 @@ pub async fn propose_native_mutation(
     };
     let request = match build_native_raft_request(&proposal, &routed, command, identity_bootstrap) {
         Ok(request) => request,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     dispatch_native_raft_write(&proposal, coordination, multi, routed, request).await
 }

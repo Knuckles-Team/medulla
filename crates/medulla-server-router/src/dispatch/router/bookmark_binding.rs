@@ -8,8 +8,6 @@
 //! crate author the tenant's `bookmark` binding. A pack that does not declare `Bookmark` changes
 //! nothing, and a tenant that already has the binding keeps it.
 
-use super::*;
-
 use std::sync::Arc;
 
 use medulla_h_retrieve::bookmark_binding::{

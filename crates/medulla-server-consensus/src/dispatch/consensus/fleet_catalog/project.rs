@@ -222,7 +222,7 @@ fn component_ref(
             && inputs
                 .enabled_overrides
                 .get(&entry.component_id)
-                .map_or(true, |(enabled, _)| *enabled),
+                .is_none_or(|(enabled, _)| *enabled),
         entry_revision: entry.entry_revision,
         definition_digest: entry.definition_digest.clone(),
         acl: FleetRowAcl {

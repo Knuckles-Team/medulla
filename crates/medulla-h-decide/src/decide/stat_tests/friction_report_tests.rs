@@ -227,7 +227,7 @@ async fn refusals_write_nothing() {
     let who = all_scopes();
     let filed = file_three(&h, &core, &who).await;
     let group_ref = filed.group.group_ref.clone();
-    let code = |result: Result<PlannedWrite, String>| result.err().expect("must refuse");
+    let code = |result: Result<PlannedWrite, String>| result.expect_err("must refuse");
 
     let mut unknown = report("r9", "run-a", 5);
     unknown.skill_ref = "skill:nowhere@1".into();
@@ -475,7 +475,7 @@ async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
         .expect("moves");
         commit(&core, &write);
     }
-    let refuse = |result: Result<PlannedWrite, String>| result.err().expect("must refuse");
+    let refuse = |result: Result<PlannedWrite, String>| result.expect_err("must refuse");
 
     // A missing receipt and another tenant's receipt refuse alike: no existence oracle.
     let missing = refuse(

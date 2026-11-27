@@ -105,18 +105,18 @@ async fn submit_consensus_job_publication_commit(
 fn interpret_job_publication_commit(
     request_id: u64,
     outcome: Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>,
-) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Box<Response>> {
     match outcome {
         Ok(commit) => commit.validate().map(|()| commit).map_err(|error| {
-            Response::err(
+            Box::new(Response::err(
                 request_id,
                 format!("job publication target returned invalid receipt: {error}"),
-            )
+            ))
         }),
-        Err(error) => Err(Response::err(
+        Err(error) => Err(Box::new(Response::err(
             request_id,
             format!("job publication target commit failed: {error}"),
-        )),
+        ))),
     }
 }
 
@@ -124,13 +124,13 @@ fn interpret_job_publication_commit(
 pub async fn execute_consensus_job_publication(execution: JobPublicationExecution<'_>) -> Response {
     let prepared = match decode_job_publication(execution.request_id, execution.prepared_bytes) {
         Ok(prepared) => prepared,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let target_route = execution.multi.route_graph(&prepared.target_graph).await;
     let (commit_plan, finalize_receipt) =
         match build_job_publication_plans(execution.request_id, prepared.clone(), target_route) {
             Ok(plans) => plans,
-            Err(response) => return response,
+            Err(response) => return *response,
         };
     let committed = match submit_target_job_publication_commit(
         &execution,
@@ -141,7 +141,7 @@ pub async fn execute_consensus_job_publication(execution: JobPublicationExecutio
     .await
     {
         Ok(committed) => committed,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     let finalize = match build_job_publication_finalize(
         execution.request_id,
@@ -150,7 +150,7 @@ pub async fn execute_consensus_job_publication(execution: JobPublicationExecutio
         execution.server_secret,
     ) {
         Ok(command) => command,
-        Err(response) => return response,
+        Err(response) => return *response,
     };
     finalize_consensus_job_publication(
         &JobPublicationControl {
@@ -173,9 +173,9 @@ pub async fn execute_consensus_job_publication(execution: JobPublicationExecutio
 fn decode_job_publication(
     request_id: u64,
     prepared_bytes: &[u8],
-) -> Result<medulla_h_jobs::jobs::PreparedJobPublication, Response> {
+) -> Result<medulla_h_jobs::jobs::PreparedJobPublication, Box<Response>> {
     medulla_h_jobs::jobs::decode_prepared_job_publication(prepared_bytes)
-        .map_err(|error| Response::err(request_id, error))
+        .map_err(|error| Box::new(Response::err(request_id, error)))
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -183,7 +183,7 @@ fn build_job_publication_plans(
     request_id: u64,
     prepared: medulla_h_jobs::jobs::PreparedJobPublication,
     target_route: medulla_raft::raft::placement::PlacementRoute,
-) -> Result<(Vec<u8>, Vec<u8>), Response> {
+) -> Result<(Vec<u8>, Vec<u8>), Box<Response>> {
     let target_fence = target_route.placed.then_some(target_route.fencing_token());
     medulla_h_jobs::jobs::build_job_publication_commands(
         prepared,
@@ -191,7 +191,7 @@ fn build_job_publication_plans(
         target_route.epoch,
         target_fence,
     )
-    .map_err(|error| Response::err(request_id, error))
+    .map_err(|error| Box::new(Response::err(request_id, error)))
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -200,13 +200,13 @@ fn build_job_publication_commit(
     prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     commit_plan: &[u8],
     server_secret: &str,
-) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
+) -> Result<medulla_raft::raft::NativeMutationCommand, Box<Response>> {
     medulla_raft::raft::NativeMutationCommand::job_publication_commit(
         prepared.coordinator_id.clone(),
         commit_plan,
         server_secret,
     )
-    .map_err(|error| Response::err(request_id, error))
+    .map_err(|error| Box::new(Response::err(request_id, error)))
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -215,7 +215,7 @@ async fn submit_target_job_publication_commit(
     prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     target_route: medulla_raft::raft::placement::PlacementRoute,
     commit_plan: Vec<u8>,
-) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Box<Response>> {
     let target_fence = target_route.placed.then_some(target_route.fencing_token());
     let commit = build_job_publication_commit(
         execution.request_id,
@@ -249,13 +249,13 @@ fn build_job_publication_finalize(
     prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     finalize_receipt: &[u8],
     server_secret: &str,
-) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
+) -> Result<medulla_raft::raft::NativeMutationCommand, Box<Response>> {
     medulla_raft::raft::NativeMutationCommand::job_publication_finalize(
         prepared.coordinator_id.clone(),
         finalize_receipt,
         server_secret,
     )
-    .map_err(|error| Response::err(request_id, error))
+    .map_err(|error| Box::new(Response::err(request_id, error)))
 }
 
 /// The scheduler's control-group route for a job publication's finalize record.

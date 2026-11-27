@@ -88,7 +88,7 @@ async fn run(
 fn event(id: &str, skill: &str, user: &str, day: u64, run_id: &str, error: bool) -> Value {
     json!({
         "invocation_id": id, "tenant_id": "ignored", "skill_ref": skill, "skill_version": "3",
-        "chosen_by": if day % 2 == 0 { "agent" } else { "user" },
+        "chosen_by": if day.is_multiple_of(2) { "agent" } else { "user" },
         "principal_pseudonym": principal_pseudonym(TENANT, user, 1),
         "run_id": run_id, "started_ms": day * DAY, "ended_ms": day * DAY + 100 + day,
         "outcome": if error { json!({"error": {"code": "TOOL_TIMEOUT"}}) } else { json!("ok") },
@@ -228,8 +228,7 @@ async fn ingest_then_measures_round_trip() {
     assert_eq!(none.invocations, 0);
     let refused = run(&h, &reader_only(), ingest_op(vec![]))
         .await
-        .err()
-        .expect("refuses");
+        .expect_err("refuses");
     assert!(
         refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()),
         "{refused}"
@@ -334,7 +333,7 @@ async fn bad_event_refuses_whole_batch() {
     seed(&h).await;
     let caller = who();
     let good = event("g1", SKILL, "u1", 1, "run-a", false);
-    let refuse = |result: Result<PlannedWrite, String>| result.err().expect("must refuse");
+    let refuse = |result: Result<PlannedWrite, String>| result.expect_err("must refuse");
 
     let mut extra = event("b1", SKILL, "u1", 1, "run-a", false);
     extra["prompt"] = "please summarise my notes".into();
@@ -511,8 +510,7 @@ async fn peers_never_named_and_small_cohort_refused() {
         },
     )
     .await
-    .err()
-    .expect("refuses");
+    .expect_err("refuses");
     assert!(error.starts_with(PEER_COHORT_TOO_SMALL.as_str()), "{error}");
 }
 

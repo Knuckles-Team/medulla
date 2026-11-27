@@ -321,5 +321,5 @@ async fn flag_is_agent_asserted_and_linked_to_trace_and_correction() {
     assert_eq!(view.observed_in.as_deref(), Some(TRACE));
     assert_eq!(view.resolved_by.as_deref(), Some("correction:abc"));
     assert_eq!(view.flag.state, FlagState::Curated);
-    assert!(view.raised_by.len() > 0);
+    assert!(!view.raised_by.is_empty());
 }

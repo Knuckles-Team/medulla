@@ -179,7 +179,7 @@ async fn apply_replicated_transaction_prepare_inner(
     if let Err(response) =
         validate_replicated_prepare_tenant(request_id, authority, expected_tenant)
     {
-        return response;
+        return *response;
     }
     REPLICATED_APPLY
         .scope(
@@ -202,12 +202,12 @@ fn validate_replicated_prepare_tenant(
     request_id: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
     expected_tenant: Option<&str>,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if expected_tenant != Some(authority.tenant_scope.as_str()) {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             request_id,
             "transaction prepare tenant does not match replicated authority",
-        ));
+        )));
     }
     Ok(())
 }

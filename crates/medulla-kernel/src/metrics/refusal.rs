@@ -5,6 +5,7 @@
 //! scrape adds what changed since the last one, so the series never moves backwards and costs the
 //! refusal path nothing beyond one atomic add and one map update.
 
+#[cfg(feature = "metrics")]
 use super::KernelMetrics;
 
 #[cfg(feature = "metrics")]

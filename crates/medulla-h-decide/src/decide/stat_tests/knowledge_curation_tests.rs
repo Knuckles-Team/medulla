@@ -199,7 +199,7 @@ async fn run(
 }
 
 fn refused(result: Result<PlannedWrite, String>, code: &str) {
-    let error = result.err().expect("the operation must refuse");
+    let error = result.expect_err("the operation must refuse");
     assert!(error.starts_with(code), "{code} vs {error}");
 }
 

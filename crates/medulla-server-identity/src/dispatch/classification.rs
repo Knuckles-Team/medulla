@@ -371,7 +371,7 @@ async fn review(
     record.claim.state = next;
     record.before_markings = before.clone();
     record.after_markings = after.clone();
-    record.promoted_by = (next == ClaimState::Promoted).then(|| principal);
+    record.promoted_by = (next == ClaimState::Promoted).then_some(principal);
 
     // Everything that can refuse has been decided. The claim node moves first:
     // its compare-and-set on the state is what makes a second reviewer lose.

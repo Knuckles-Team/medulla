@@ -99,7 +99,7 @@ async fn failure_refusals_change_no_state() {
 
     // A pattern below the knob files no gap and is listed as skipped.
     seed_run(&core, 0, Some("trace-0"));
-    let write = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let write = plan(&h, TENANT, ingest()).await.expect("plans");
     assert!(write.operations.is_empty());
     let result: FailureIngestResult = reply(&write);
     assert!(result.filed.is_empty());
@@ -154,7 +154,7 @@ async fn gap_links_back_to_its_member_runs() {
     for index in 0..3 {
         seed_run(&core, index, Some(&format!("trace-{index}")));
     }
-    let write = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let write = plan(&h, TENANT, ingest()).await.expect("plans");
     let result: FailureIngestResult = reply(&write);
     assert_eq!(result.filed.len(), 1);
     let topic_id = result.filed[0].clone();
@@ -193,7 +193,7 @@ async fn gap_links_back_to_its_member_runs() {
         graph: GRAPH.into(),
         topic_id: topic_id.clone(),
     };
-    let read = plan(&h, TENANT, get).await.ok().expect("reads");
+    let read = plan(&h, TENANT, get).await.expect("reads");
     assert!(read.operations.is_empty());
     let topic: GapTopic = reply(&read);
     assert_eq!(topic.members, ["run-0", "run-1", "run-2"]);
@@ -237,7 +237,7 @@ async fn failures_cluster_and_gap_is_idempotent() {
     }
 
     // First ingest: one pattern of three runs, one gap filed.
-    let first = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let first = plan(&h, TENANT, ingest()).await.expect("plans");
     let result: FailureIngestResult = reply(&first);
     let signature = Signature("max_steps|search|tool_call".into());
     let topic_id = signature.topic_id();
@@ -252,7 +252,7 @@ async fn failures_cluster_and_gap_is_idempotent() {
     commit(&core, &first);
 
     // A repeat ingest plans nothing and files nothing.
-    let second = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let second = plan(&h, TENANT, ingest()).await.expect("plans");
     assert!(second.operations.is_empty());
     let repeat: FailureIngestResult = reply(&second);
     assert!(repeat.filed.is_empty());
@@ -268,7 +268,7 @@ async fn failures_cluster_and_gap_is_idempotent() {
     let error = refused(plan(&h, TENANT, mark()).await);
     assert!(error.starts_with(TOPIC_SOURCE_UNLINKED.as_str()), "{error}");
     link(&core, "doc:fix", &format!("gap:{topic_id}"), "COVERS");
-    let marked = plan(&h, TENANT, mark()).await.ok().expect("marks");
+    let marked = plan(&h, TENANT, mark()).await.expect("marks");
     assert_eq!(marked.operations.len(), 1);
     assert_eq!(marked.operations[0]["properties"]["status"], "addressed");
     assert_eq!(
@@ -278,13 +278,13 @@ async fn failures_cluster_and_gap_is_idempotent() {
     commit(&core, &marked);
 
     // An addressed gap is never reopened by a later ingest.
-    let third = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let third = plan(&h, TENANT, ingest()).await.expect("plans");
     assert!(third.operations.is_empty());
     let get = FailureOp::Get {
         graph: GRAPH.into(),
         topic_id: topic_id.clone(),
     };
-    let read = plan(&h, TENANT, get).await.ok().expect("reads");
+    let read = plan(&h, TENANT, get).await.expect("reads");
     let topic: GapTopic = reply(&read);
     assert_eq!(topic.members, ["run-0", "run-1", "run-2"]);
 
