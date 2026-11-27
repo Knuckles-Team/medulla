@@ -207,6 +207,7 @@ pub fn answer_spec_status(
             agent_identity: None,
             run_trace_id: None,
             git: None,
+            symbol_edit: None,
         })
         .collect();
     let mut ids = view.rows.clone();

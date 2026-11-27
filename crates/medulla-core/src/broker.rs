@@ -41,6 +41,7 @@ use message_machine::{MessageEvent, MessageFacts, MessageState};
 mod producer;
 mod routing;
 
+pub use producer::*;
 pub use routing::*;
 
 // Shared by the queue/stream implementation and the advisory consumer scan.

@@ -65,7 +65,7 @@ pub use node_history::{
     install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
 };
 pub use version_commits::VersionCommitLog;
-use schema_sources::{
+pub use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
     SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX, MAX_CORE_SCHEMA_SOURCES,
     MAX_SCHEMA_DOCUMENT_TRIPLES, MAX_TOTAL_DYNAMIC_SCHEMA_BYTES, OPERATOR_SOURCE_ID,
