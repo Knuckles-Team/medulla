@@ -117,6 +117,11 @@ fn to_rdf(triple: &Triple) -> Option<oxrdf::Triple> {
     let object: Term = match &triple.object {
         Object::Iri(iri) => oxrdf::NamedNode::new(iri.clone()).ok()?.into(),
         Object::Literal(value) => oxrdf::Literal::new_simple_literal(value.clone()).into(),
+        Object::Integer(value) => oxrdf::Literal::new_typed_literal(
+            value.to_string(),
+            oxrdf::vocab::xsd::NON_NEGATIVE_INTEGER,
+        )
+        .into(),
     };
     Some(oxrdf::Triple::new(subject, predicate, object))
 }
@@ -385,7 +390,7 @@ fn schema_digest_triples(catalog: &[Triple]) -> Vec<Triple> {
             .find(|t| t.subject == subject && t.predicate == predicate)
             .and_then(|t| match &t.object {
                 Object::Literal(value) => Some(value.as_str()),
-                Object::Iri(_) => None,
+                Object::Iri(_) | Object::Integer(_) => None,
             })
     }
     let (name, kind, nullable) = (
@@ -405,7 +410,7 @@ fn schema_digest_triples(catalog: &[Triple]) -> Vec<Triple> {
             .filter(|t| t.subject == resource && t.predicate == has_field)
             .filter_map(|t| match &t.object {
                 Object::Iri(field) => Some(field.as_str()),
-                Object::Literal(_) => None,
+                Object::Literal(_) | Object::Integer(_) => None,
             })
             .filter_map(|field| {
                 Some(DigestColumn {

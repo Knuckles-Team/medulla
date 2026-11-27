@@ -299,7 +299,7 @@ pub fn view_virtual(
     let outcome =
         medulla_virtual_graph::obda::run_outcome_virtual(&vg, &reg, &run.plan.sparql, &proj)?;
     let (vars, rows) = match outcome {
-        medulla_rdf::sparql::QueryOutcome::Solutions(res) => res.to_rows(),
+        medulla_rdf::sparql::QueryOutcome::Solutions(res) => res.to_text_rows(),
         _ => return Err("a view read answers with solutions".to_string()),
     };
     let pushed = log.lock().map(|log| log.clone()).unwrap_or_default();
