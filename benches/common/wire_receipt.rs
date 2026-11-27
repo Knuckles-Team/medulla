@@ -1,4 +1,4 @@
-//! Latency summary and receipt shape for the wire protocol benchmark
+//! Receipt shape for the wire protocol benchmark
 //! (MEDULLA-DURABLE-KERNEL-R042.5). One receipt per protocol carries p50, p99,
 //! the concurrent session count, the budget and whether the budget held.
 
@@ -6,6 +6,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::claim::write_receipt;
+use crate::latency_stats::{percentile, sorted};
 
 /// One protocol's measured case.
 pub struct WireCase {
@@ -19,14 +20,6 @@ pub struct WireCase {
     pub p99_budget_ms: f64,
     /// Per-operation latencies in milliseconds.
     pub samples_ms: Vec<f64>,
-}
-
-/// The nearest-rank percentile of an ascending-sorted slice.
-pub fn percentile(sorted: &[f64], fraction: f64) -> f64 {
-    if sorted.is_empty() {
-        return 0.0;
-    }
-    sorted[((sorted.len() - 1) as f64 * fraction).round() as usize]
 }
 
 impl WireCase {
@@ -55,12 +48,6 @@ impl WireCase {
             "within_budget": self.within_budget(),
         })
     }
-}
-
-fn sorted(samples: &[f64]) -> Vec<f64> {
-    let mut copy = samples.to_vec();
-    copy.sort_by(f64::total_cmp);
-    copy
 }
 
 /// Write one receipt per case to `<root>/<release>/<protocol>.json`.

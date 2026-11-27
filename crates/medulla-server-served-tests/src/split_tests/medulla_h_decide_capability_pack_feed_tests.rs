@@ -614,7 +614,7 @@ async fn withdrawn_pack_tool_leaves_the_tool_index() {
             build_pack_with(&[("b", Some(100)), ("c", Some(100))]),
             Some(PackHeadRef {
                 binding_revision: first.binding_revision,
-                pack_digest: first.pack_digest.clone(),
+                pack_digest: first.pack_digest,
             }),
         )
         .await;

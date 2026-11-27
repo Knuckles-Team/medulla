@@ -1793,16 +1793,6 @@ async fn cells(client: &tokio_postgres::Client, sql: &str) -> Vec<Vec<Option<Str
         .collect()
 }
 
-/// The view `name` is served incrementally and reads equal to `defining` after a commit.
-#[cfg(feature = "matview")]
-async fn assert_view_fresh(client: &tokio_postgres::Client, view: &str, defining: &str) {
-    assert_eq!(
-        cells(client, &format!("SELECT * FROM {view}")).await,
-        cells(client, defining).await,
-        "{view} must equal {defining}"
-    );
-}
-
 /// Each view of `pairs` reads, ordered by `region`, equal to its defining select.
 #[cfg(feature = "matview")]
 async fn read_ordered_pairs(client: &tokio_postgres::Client, pairs: &[(String, String)]) {

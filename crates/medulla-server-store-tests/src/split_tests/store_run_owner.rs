@@ -532,7 +532,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             shard,
             medulla_store_apply::redb_store::store_mutation::CompactCommitInput {
                 graph_fname: GRAPH,
-                batch: batch,
+                batch,
                 result_msgpack: None,
                 committed_at_ms: batch.created_at_ms,
                 write_count: None,

@@ -130,8 +130,6 @@ pub(super) fn worker_authority() -> CarrierAuthority {
 
 /// The generation a binding was driven to and the source entities it indexes.
 pub(super) struct LiveBinding {
-    /// The live generation the active pointer names.
-    pub(super) generation: u64,
     /// The source entity id of every indexed row, as the S1 intents name them.
     pub(super) entities: Vec<String>,
 }
@@ -239,11 +237,8 @@ pub(super) async fn drive_binding_to_live_generation(
             .await,
         );
     }
-    let generation = drive_signed_generation_to_live(state, &binding_id).await;
-    LiveBinding {
-        generation,
-        entities,
-    }
+    drive_signed_generation_to_live(state, &binding_id).await;
+    LiveBinding { entities }
 }
 
 /// Request ids of the helper start well above the ones the shared driver draws, so one state

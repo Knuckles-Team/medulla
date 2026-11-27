@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
 use medulla_catalog_types::open_metadata::{EXTERNAL_GUID_PROPERTY, EXTERNAL_VERSION_PROPERTY};
 use medulla_protocol_types::protocol::Method;

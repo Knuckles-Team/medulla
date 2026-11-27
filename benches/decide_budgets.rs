@@ -27,7 +27,7 @@ mod common;
 mod test_support;
 // The program fixtures of the served program job tests: the `decide/program` group compiles
 // the same 200-example corpus (MEDULLA-DECISION-ENGINE-R810.6).
-#[allow(dead_code, unused_imports)]
+#[allow(unused_imports)]
 #[path = "../tests/common/program_job_support.rs"]
 mod program_job_support;
 
@@ -2801,7 +2801,7 @@ fn bench_belief_revision(
                 evidence_id: format!("belief-e{claim}-{item}"),
                 claim_id: format!("belief-claim-{claim}"),
                 channel: Some(EvidenceChannel::Outcome),
-                supports: item % 3 != 0,
+                supports: !item.is_multiple_of(3),
                 weight_ppm: 50_000,
                 source_digest: format!("sha256:{claim:032x}{item:032x}"),
                 session_id: None,
@@ -3183,7 +3183,7 @@ fn bench_memory_scaling(
     };
     let h = rt.block_on(Harness::new());
     let remember = |n: usize| {
-        let needle = n % 1000 == 0;
+        let needle = n.is_multiple_of(1000);
         let record = MemoryRecord {
             memory_id: medulla_types::contract::ResourceId::new(format!("m:{n}")).unwrap(),
             tenant: medulla_types::contract::TenantId::new(TENANT).unwrap(),

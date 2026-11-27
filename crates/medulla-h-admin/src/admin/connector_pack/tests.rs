@@ -153,19 +153,6 @@ impl Served {
             .await
     }
 
-    /// Send `method` signed as `principal` of `tenant` with `scopes`, under `key`.
-    pub(in crate::admin) async fn call_as_tenant(
-        &self,
-        tenant: &str,
-        principal: &str,
-        scopes: &[&str],
-        key: &str,
-        method: Method,
-    ) -> Response {
-        self.call_as_tenant_on("__commons__", tenant, principal, scopes, key, method)
-            .await
-    }
-
     /// Send `method` as `tenant`'s already-verified context through the dispatch chokepoint,
     /// skipping the door's expected-tenant check (the fixed test policy admits one tenant), so
     /// a foreign tenant's call reaches the handlers.

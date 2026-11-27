@@ -142,7 +142,9 @@ async fn both_sides_changed_records_conflict_and_graph_wins() {
     // The source side: the same definition at revision 8 with a different task name.
     let source_document = INVOICE.replace("name=\"Check invoice\"", "name=\"Check (source)\"");
     let source = definition("8", &source_document);
-    let second = h.sync(PROCESS_MODEL_CLASS_IRI, &[source.clone()]).await;
+    let second = h
+        .sync(PROCESS_MODEL_CLASS_IRI, std::slice::from_ref(&source))
+        .await;
 
     assert_eq!(second.conflicts.len(), 1, "{:?}", second.conflicts);
     assert_eq!(second.conflicts[0].record_key, KEY);

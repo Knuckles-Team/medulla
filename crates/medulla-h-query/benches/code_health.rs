@@ -10,7 +10,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_ingestion_types::code_health::{sweep, CodeGraph};
 
 const SYMBOLS: usize = 100_000;

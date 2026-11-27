@@ -896,6 +896,7 @@ fn hex_val(b: u8) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 
     #[test]
     fn signed_update_inventory_is_deterministic_and_detects_variable_graphs() {

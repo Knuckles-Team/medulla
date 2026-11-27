@@ -237,7 +237,7 @@ async fn two_lanes_one_slot_queue_grant_and_expire_in_order() {
         )
         .await,
     );
-    assert_eq!(swept.reclaimed_lease_ids, [a.lease_id.clone()]);
+    assert_eq!(swept.reclaimed_lease_ids, std::slice::from_ref(&a.lease_id));
     let (expired, expired_events) = status(&served, &a).await;
     assert_eq!(expired.state, CapacityLeaseState::Expired);
     assert_eq!(expired_events.last(), Some(&CapacityLeaseEvent::Expire));

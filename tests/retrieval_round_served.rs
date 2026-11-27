@@ -230,7 +230,7 @@ async fn sufficiency_premise_lists_all_six_fields() {
     assert_eq!(value["round"], verdict.round);
     assert_eq!(
         value["verdict"],
-        serde_json::to_value(&verdict.verdict).expect("verdict value")
+        serde_json::to_value(verdict.verdict).expect("verdict value")
     );
     assert_eq!(
         value["repair"],
@@ -238,7 +238,7 @@ async fn sufficiency_premise_lists_all_six_fields() {
     );
     assert_eq!(
         value["fallback"],
-        serde_json::to_value(&verdict.fallback).expect("fallback value")
+        serde_json::to_value(verdict.fallback).expect("fallback value")
     );
 
     // A round without the part appends no sufficiency premise.

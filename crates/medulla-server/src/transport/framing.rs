@@ -254,23 +254,24 @@ where
     ) {
         return Err(FrameReadError::Closed(None));
     }
-    decode_request_payload(&payload, limits.msgpack_items).map_err(FrameReadError::Rejected)
+    decode_request_payload(&payload, limits.msgpack_items)
+        .map_err(|response| FrameReadError::Rejected(*response))
 }
 
 /// Decode the bounded native request body, preserving typed refusal and correlation.
-pub fn decode_request_payload(payload: &[u8], max_items: usize) -> Result<Request, Response> {
+pub fn decode_request_payload(payload: &[u8], max_items: usize) -> Result<Request, Box<Response>> {
     if validate_msgpack_frame(payload, max_items).is_err() {
-        return Err(Response::err(
+        return Err(Box::new(Response::err(
             recover_request_id(payload),
             "INVALID_ARGUMENT: invalid or over-complex request encoding",
-        ));
+        )));
     }
     match rmp_serde::from_slice(payload) {
         Ok(request) => Ok(request),
-        Err(_) => Err(Response::err(
+        Err(_) => Err(Box::new(Response::err(
             recover_request_id(payload),
             "INVALID_ARGUMENT: invalid request encoding",
-        )),
+        ))),
     }
 }
 

@@ -133,8 +133,9 @@ fn refused(response: Response) -> String {
     response.error.expect("the search must refuse")
 }
 
-fn slice<'a>(text: &'a str, start: u64, end: u64) -> &'a str {
-    std::str::from_utf8(&text.as_bytes()[start as usize..end as usize]).expect("a character range")
+fn slice(text: &str, start: u64, end: u64) -> &str {
+    text.get(start as usize..end as usize)
+        .expect("a character range")
 }
 
 /// Publish `policy` as a `DecisionPolicy` component of the test tenant, the way the

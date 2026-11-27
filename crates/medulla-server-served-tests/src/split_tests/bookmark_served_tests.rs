@@ -40,17 +40,36 @@ fn policy(max_hits: u32, max_relationships: u32) -> BookmarkQueryLimitPolicy {
     }
 }
 
-/// One bookmark envelope: the keys of the connector's bookmark payload.
-fn envelope(
-    key: &str,
-    offset: u64,
-    text: &str,
-    hashtags: &[&str],
-    mentions: &[&str],
-    tools: &[&str],
-    urls: &[&str],
+/// The link-bearing fields of a bookmark envelope; an absent kind is empty.
+struct Links<'a> {
+    hashtags: &'a [&'a str],
+    mentions: &'a [&'a str],
+    tools: &'a [&'a str],
+    urls: &'a [&'a str],
     domains: Value,
-) -> (String, Value) {
+}
+
+impl Default for Links<'_> {
+    fn default() -> Self {
+        Self {
+            hashtags: &[],
+            mentions: &[],
+            tools: &[],
+            urls: &[],
+            domains: json!([]),
+        }
+    }
+}
+
+/// One bookmark envelope: the keys of the connector's bookmark payload.
+fn envelope(key: &str, offset: u64, text: &str, links: Links<'_>) -> (String, Value) {
+    let Links {
+        hashtags,
+        mentions,
+        tools,
+        urls,
+        domains,
+    } = links;
     (
         format!("record-{key}"),
         json!({
@@ -79,21 +98,24 @@ fn two_bookmarks() -> Vec<(String, Value)> {
             "alpha",
             1,
             "a note on rust ownership",
-            &["rust"],
-            &[],
-            &["cargo"],
-            &["https://a.example/x"],
-            json!([["a.example", "A Site"]]),
+            Links {
+                hashtags: &["rust"],
+                tools: &["cargo"],
+                urls: &["https://a.example/x"],
+                domains: json!([["a.example", "A Site"]]),
+                ..Links::default()
+            },
         ),
         envelope(
             "beta",
             2,
             "a talk on wasm components",
-            &["rust", "wasm"],
-            &["bob"],
-            &[],
-            &[],
-            json!([["b.example", null]]),
+            Links {
+                hashtags: &["rust", "wasm"],
+                mentions: &["bob"],
+                domains: json!([["b.example", null]]),
+                ..Links::default()
+            },
         ),
     ]
 }
@@ -396,11 +418,10 @@ async fn search_pages_with_bound_cursor_and_unknown_metadata() {
         "gamma",
         3,
         "a post on sqlite internals",
-        &["sqlite"],
-        &[],
-        &[],
-        &[],
-        json!([]),
+        Links {
+            hashtags: &["sqlite"],
+            ..Links::default()
+        },
     );
     journey.served.ingest(STREAM, &as_records(&[late])).await;
     let changed = journey
@@ -648,11 +669,10 @@ async fn ingest_search_and_relations_share_one_snapshot() {
                 "delta",
                 4,
                 "a thread on vector indexes",
-                &["ann"],
-                &[],
-                &[],
-                &[],
-                json!([]),
+                Links {
+                    hashtags: &["ann"],
+                    ..Links::default()
+                },
             )]),
         )
         .await;
@@ -701,11 +721,10 @@ async fn ingest_search_and_relations_share_one_snapshot() {
                 "epsilon",
                 5,
                 "a note on three tags",
-                &["one", "two", "three"],
-                &[],
-                &[],
-                &[],
-                json!([]),
+                Links {
+                    hashtags: &["one", "two", "three"],
+                    ..Links::default()
+                },
             )]),
         )
         .await;

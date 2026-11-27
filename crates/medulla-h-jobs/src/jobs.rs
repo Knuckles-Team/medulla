@@ -1114,28 +1114,6 @@ async fn handle_resume(
     job_response::<medulla_protocol_types::result_contract::coordination::JobResume>(req_id, &job)
 }
 
-#[cfg(test)]
-mod read_rls_tests {
-    use super::*;
-
-    /// Locks in TODAY's classification for both currently-shipped kinds, so a
-    /// future change that flips one to graph-row-reading is a visible,
-    /// intentional diff here — not just a silent behavior change caught only
-    /// by `reads_graph_rows_server_side`'s own compile-time exhaustiveness.
-    #[test]
-    fn no_shipped_job_kind_reads_graph_rows_server_side_today() {
-        assert!(!reads_graph_rows_server_side(&JobKind::MineAssociate {
-            transactions: vec![],
-            min_support: 0.1,
-            min_confidence: 0.5,
-            algorithm: "fpgrowth".to_string(),
-        }));
-        assert!(!reads_graph_rows_server_side(&JobKind::ProgramOptimize {
-            request_msgpack: Vec::new(),
-        }));
-    }
-}
-
 /// One downtime job as a read of a selection shows it (MEDULLA-DURABLE-KERNEL-R101.5 4a):
 /// its state, attempts, checkpoint stage, lease and CPU use. `None` when the job store or the
 /// job is absent.
@@ -1184,4 +1162,26 @@ pub fn observe_downtime_job(
             .and_then(|output| output.usage.as_ref())
             .map(|usage| usage.cpu_ms),
     })
+}
+
+#[cfg(test)]
+mod read_rls_tests {
+    use super::*;
+
+    /// Locks in TODAY's classification for both currently-shipped kinds, so a
+    /// future change that flips one to graph-row-reading is a visible,
+    /// intentional diff here — not just a silent behavior change caught only
+    /// by `reads_graph_rows_server_side`'s own compile-time exhaustiveness.
+    #[test]
+    fn no_shipped_job_kind_reads_graph_rows_server_side_today() {
+        assert!(!reads_graph_rows_server_side(&JobKind::MineAssociate {
+            transactions: vec![],
+            min_support: 0.1,
+            min_confidence: 0.5,
+            algorithm: "fpgrowth".to_string(),
+        }));
+        assert!(!reads_graph_rows_server_side(&JobKind::ProgramOptimize {
+            request_msgpack: Vec::new(),
+        }));
+    }
 }

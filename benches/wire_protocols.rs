@@ -12,6 +12,8 @@
 
 #[path = "common/claim.rs"]
 mod claim;
+#[path = "common/latency_stats.rs"]
+mod latency_stats;
 #[path = "common/wire_receipt.rs"]
 mod wire_receipt;
 

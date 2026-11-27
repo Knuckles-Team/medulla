@@ -59,6 +59,9 @@ async fn import_body(served: &Served, connector: &str, body: &Value) -> PackImpo
     ok("Import", import(served, &pack, None).await)
 }
 
+/// One way to corrupt a valid schema body, with the violation it must raise.
+type SchemaCorruption = (PackViolationCode, Box<dyn Fn(&mut Value)>);
+
 // proves R097.2.7.3: External schema import wiring and refusals
 // spec: MEDULLA-TYPED-PACKS-R097.2.7.3
 #[tokio::test]
@@ -67,7 +70,7 @@ async fn refusals_leave_head_and_schema_unchanged() {
     let served = Served::new();
     bind(&served, connector, ADMIN).await;
 
-    let cases: Vec<(PackViolationCode, Box<dyn Fn(&mut Value)>)> = vec![
+    let cases: Vec<SchemaCorruption> = vec![
         (
             PackViolationCode::ExternalKindUnsupported,
             Box::new(|v| v["terms"][0]["kind"] = json!("blank_node")),

@@ -563,11 +563,6 @@ impl ContractHistory {
             .find(|r| r.contract.version.version == version)
     }
 
-    #[cfg(test)]
-    pub fn releases(&self) -> &[StoredRelease] {
-        &self.releases
-    }
-
     fn index_of(&self, version: &str) -> Result<usize, ContractDiffError> {
         self.releases
             .iter()

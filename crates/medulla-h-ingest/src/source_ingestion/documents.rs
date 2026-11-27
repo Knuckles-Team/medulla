@@ -871,10 +871,12 @@ mod tests {
             &rec,
             &blob_fields,
             4,
-            200,
-            &layout(),
-            &readers(),
-            &read_csv,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &read_csv,
+            },
         )
         .unwrap()
         .expect("the reader yields a document");
@@ -888,10 +890,12 @@ mod tests {
             &rec,
             &blob_fields,
             4,
-            200,
-            &layout(),
-            &readers(),
-            &missing,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &missing,
+            },
         )
         .unwrap_err()
         .to_string();
@@ -904,10 +908,12 @@ mod tests {
             &odd,
             &blob_fields,
             4,
-            200,
-            &layout(),
-            &readers(),
-            &read_csv,
+            &NormalizeEnv {
+                atom_max_tokens: 200,
+                layout: &layout(),
+                readers: &readers(),
+                read_blob: &read_csv,
+            },
         )
         .unwrap_err()
         .to_string();

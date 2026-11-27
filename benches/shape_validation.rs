@@ -8,16 +8,18 @@
 
 #[path = "common/claim.rs"]
 mod claim;
-#[path = "common/latency_receipt.rs"]
-mod latency_receipt;
-#[path = "common/wire_receipt.rs"]
-mod wire_receipt;
+#[path = "common/latency_stats.rs"]
+mod latency_stats;
+#[path = "common/receipt_fields.rs"]
+mod receipt_fields;
+#[path = "common/shape_receipt.rs"]
+mod shape_receipt;
 
 use std::time::Instant;
 
-use latency_receipt::{write_shape_receipt, ShapeBenchCase};
 use medulla_rdf::oxrdf::Graph;
 use medulla_shacl::{graph_from_turtle, validate, CompiledShapes};
+use shape_receipt::{write_shape_receipt, ShapeBenchCase};
 
 const SHAPE_COUNT: usize = 50;
 const WRITES: usize = 1_000;

@@ -289,7 +289,7 @@ pub fn run_planner_evolution(
         });
         if best
             .as_ref()
-            .map_or(true, |(held, _, _)| records.len() > *held)
+            .is_none_or(|(held, _, _)| records.len() > *held)
         {
             best = Some((records.len(), revision, receipts.len() - 1));
         }

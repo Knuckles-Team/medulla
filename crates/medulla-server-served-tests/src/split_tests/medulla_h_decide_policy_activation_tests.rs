@@ -120,7 +120,7 @@ fn activation(tenant: &str, change: PolicyChange, source: &str, receipt: &str) -
 async fn activation_requires_a_matching_receipt() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let set = {
-        let mut digests = vec![sha256_hex("no-secrets"), sha256_hex("no-force-push")];
+        let mut digests = [sha256_hex("no-secrets"), sha256_hex("no-force-push")];
         digests.sort();
         sha256_hex(&digests.join("\n"))
     };

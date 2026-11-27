@@ -207,7 +207,7 @@ async fn diebold_mariano_uql_matches_vectors() {
 async fn deflated_sharpe_uql_matches_vectors() {
     let mut s = Served::open();
     let returns: Vec<f64> = noise(3, 60).iter().map(|v| v * 0.01 + 0.002).collect();
-    s.append("s", &[returns.clone()]).await;
+    s.append("s", std::slice::from_ref(&returns)).await;
     let got = report(
         &mut s,
         "deflated_sharpe OF v0 TRIALS 10 OBSERVED 0.8",
@@ -409,7 +409,7 @@ async fn regime_hmm_uql_matches_vectors() {
             }
         })
         .collect();
-    s.append("s", &[returns.clone()]).await;
+    s.append("s", std::slice::from_ref(&returns)).await;
     let got = report(
         &mut s,
         "regime_hmm OF v0 STATES 2 ITER 50 TOL 0.0001",
@@ -489,7 +489,7 @@ async fn every_kernel_has_a_uql_spelling() {
 async fn rolling_z_score_uql_matches_vectors() {
     let mut s = Served::open();
     let values: Vec<f64> = noise(13, 6).iter().map(|v| v * 3.0).collect();
-    s.append("s", &[values.clone()]).await;
+    s.append("s", std::slice::from_ref(&values)).await;
     let rows = s
         .uql(&format!(
             "{SCAN} |> DERIVE zscore(v0, 3) AS out |> RETURN out"
@@ -521,7 +521,7 @@ async fn rolling_z_score_uql_matches_vectors() {
 async fn ewma_uql_matches_vectors() {
     let mut s = Served::open();
     let values: Vec<f64> = noise(14, 5).iter().map(|v| v + 2.0).collect();
-    s.append("s", &[values.clone()]).await;
+    s.append("s", std::slice::from_ref(&values)).await;
     let rows = s
         .uql(&format!(
             "{SCAN} |> DERIVE ewma(v0, 3) AS out |> RETURN out"

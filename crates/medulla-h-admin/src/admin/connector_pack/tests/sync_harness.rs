@@ -186,11 +186,6 @@ impl SyncHarness {
         }
     }
 
-    /// The connection IRI of the fixture.
-    pub(in crate::admin) fn connection(&self) -> &'static str {
-        self.spec.connection
-    }
-
     /// Open, fill and (when `complete`) complete one approved read pinned to the sync plan
     /// digest of `connection` and `class`.
     pub(in crate::admin) async fn read(
@@ -371,15 +366,5 @@ impl SyncHarness {
             self.served.call(&key, method).await
         };
         ok("Writeback", response)
-    }
-
-    /// The edges of the graph as `(source, target)` pairs.
-    pub(in crate::admin) async fn edge_pairs(&self) -> BTreeSet<(String, String)> {
-        let state = self.served.state.read().await;
-        let core = state.registry.get(self.spec.graph).unwrap().core.clone();
-        core.get_edges()
-            .into_iter()
-            .map(|(source, target, _)| (source, target))
-            .collect()
     }
 }

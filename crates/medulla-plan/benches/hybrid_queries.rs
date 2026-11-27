@@ -28,12 +28,12 @@
 #[allow(dead_code)]
 #[path = "../../../benches/common/claim.rs"]
 mod claim;
-#[allow(dead_code)]
 #[path = "../../../benches/common/latency_receipt.rs"]
 mod latency_receipt;
-#[allow(dead_code)]
-#[path = "../../../benches/common/wire_receipt.rs"]
-mod wire_receipt;
+#[path = "../../../benches/common/latency_stats.rs"]
+mod latency_stats;
+#[path = "../../../benches/common/receipt_fields.rs"]
+mod receipt_fields;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use medulla_exec::exec::{execute, PlanCtx};

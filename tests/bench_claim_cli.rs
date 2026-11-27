@@ -168,6 +168,15 @@ mod claim;
 #[path = "../benches/common/latency_receipt.rs"]
 mod latency_receipt;
 #[allow(dead_code)]
+#[path = "../benches/common/latency_stats.rs"]
+mod latency_stats;
+#[allow(dead_code)]
+#[path = "../benches/common/receipt_fields.rs"]
+mod receipt_fields;
+#[allow(dead_code)]
+#[path = "../benches/common/shape_receipt.rs"]
+mod shape_receipt;
+#[allow(dead_code)]
 #[path = "../benches/common/wire_receipt.rs"]
 mod wire_receipt;
 
@@ -227,9 +236,8 @@ fn one_receipt_per_protocol_with_session_count() {
 // spec: MEDULLA-DURABLE-KERNEL-R042.2
 #[test]
 fn receipt_carries_configuration_corpus_digest_p50_p99() {
-    use latency_receipt::{
-        record_target, write_cross_modal_receipt, CrossModalCase, RECEIPT_FIELD_MISSING,
-    };
+    use latency_receipt::{record_target, write_cross_modal_receipt, CrossModalCase};
+    use receipt_fields::RECEIPT_FIELD_MISSING;
 
     let case = |samples: Vec<f64>| CrossModalCase {
         case: "crossmodal_match_traverse_rank".into(),
@@ -301,7 +309,7 @@ fn receipt_carries_configuration_corpus_digest_p50_p99() {
 // spec: MEDULLA-DURABLE-KERNEL-R064
 #[test]
 fn shape_receipt_requires_both_variants() {
-    use latency_receipt::{write_shape_receipt, ShapeBenchCase, SHAPE_RECEIPT_VARIANT_MISSING};
+    use shape_receipt::{write_shape_receipt, ShapeBenchCase, SHAPE_RECEIPT_VARIANT_MISSING};
 
     let case = |memoized: Vec<f64>, parse: Vec<f64>| ShapeBenchCase {
         writes: 1_000,
