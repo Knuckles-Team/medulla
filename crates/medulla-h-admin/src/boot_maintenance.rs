@@ -29,6 +29,15 @@ use tokio::sync::RwLock;
 
 use medulla_server_api::state::ServerState;
 
+/// The task-registry entry of one maintenance job (MEDULLA-OBSERVE-R003.6).
+fn maintenance_task(name: &str) -> medulla_observe::registry::tasks::TaskSpec {
+    medulla_observe::registry::tasks::TaskSpec {
+        name: name.to_string(),
+        owner: "boot-maintenance".to_string(),
+        kind: medulla_observe::registry::tasks::TaskKind::Maintenance,
+    }
+}
+
 /// Spawn the post-bind maintenance tasks. Called from `serve_transports`
 /// after the primary listener(s) have bound — the one boot point where
 /// "the engine is up" is already true.
@@ -48,7 +57,9 @@ pub async fn spawn_post_bind_maintenance(state: Arc<RwLock<ServerState>>) {
 /// path up (MEDULLA-DURABLE-KERNEL-R006.4).
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
-    tokio::spawn(async move {
+    // A registered task (MEDULLA-OBSERVE-R003.6): `Introspect tasks` shows the reload while it
+    // runs and how it ended.
+    medulla_observe::spawn::spawn(maintenance_task("matview-reload"), async move {
         let started = Instant::now();
         let step = medulla_observe::startup().step("matview_reload", "");
         tracing::info!("post-bind maintenance: materialized-view reload started");
@@ -113,7 +124,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
     let Some(series) = series else {
         return;
     };
-    tokio::spawn(async move {
+    medulla_observe::spawn::spawn(maintenance_task("time-series-reconcile"), async move {
         let started = Instant::now();
         let step = medulla_observe::startup().step("time_series_reconcile", "");
         tracing::info!(

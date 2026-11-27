@@ -1001,3 +1001,229 @@ async fn one_trace_id_follows_a_request_into_its_spawned_task() {
         .expect("the finished task is listed");
     assert_eq!(listed["origin_request"], id);
 }
+
+/// Serializes the tests that start the boot maintenance: the task names it registers are unique
+/// in the process-wide registry, so two boots at once would not both be listed.
+static BOOT_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+// spec: MEDULLA-OBSERVE-R003.5
+#[tokio::test(flavor = "multi_thread")]
+async fn namespace_migration_task_and_steps_are_visible() {
+    let _boot = BOOT_LOCK.lock().await;
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let served = Served::new().await;
+    let graph = "observe:nsmig";
+    let created = served
+        .call(
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Agent,
+            },
+        )
+        .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(served.state.clone()).await;
+    let row = finished_task(medulla_h_admin::namespace_migration::TASK_NAME).await;
+    assert_eq!(
+        row.kind,
+        medulla_observe::registry::tasks::TaskKind::Migration
+    );
+    assert_eq!(row.owner, "h-admin");
+    // The graph is the task's cursor: the last graph the pass visited.
+    assert!(matches!(
+        row.cursor,
+        Some(medulla_observe::registry::tasks::ProgressCursor::Opaque(_))
+    ));
+    assert!(row.units_done >= 1);
+
+    // The pass recorded one startup step for the graph, with its outcome, and the page lists it.
+    let page = served.page(IntrospectSection::Startup).await;
+    let step = page
+        .rows
+        .iter()
+        .find(|row| row["name"] == "namespace_migration" && row["graph"] == graph)
+        .expect("the migration records one step for the graph");
+    assert_eq!(step["outcome"], "Skipped");
+    assert_eq!(step["detail"], "no retired namespace stored");
+    let listed = served.page(IntrospectSection::Tasks).await;
+    assert!(listed
+        .rows
+        .iter()
+        .any(|row| row["name"] == medulla_h_admin::namespace_migration::TASK_NAME
+            && row["kind"] == "Migration"));
+}
+
+// spec: MEDULLA-OBSERVE-R008.3
+#[tokio::test(flavor = "multi_thread")]
+async fn refused_commons_migration_is_recorded_and_degrades_readiness() {
+    let served = Served::new().await;
+    let graph = "observe:refused-migration";
+    let created = served
+        .call(
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Agent,
+            },
+        )
+        .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+    assert!(served.state.write().await.registry.evict_resident(graph));
+    {
+        // An identity policy that awaits its System bootstrap refuses the migration service's
+        // grant on the graph, so opening the cold graph for migration is refused.
+        let mut state = served.state.write().await;
+        state.local_anonymous = false;
+        state.isolation = medulla_isolation::isolation::IsolationLayer::new();
+    }
+
+    let report = medulla_h_admin::namespace_migration::run(&served.state).await;
+    let refusal = report
+        .refusals
+        .iter()
+        .find(|refusal| refusal.graph == graph)
+        .expect("the cold graph's migration is refused");
+    assert_eq!(refusal.code, "NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED");
+    assert!(refusal.detail.contains("NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED"));
+
+    // The step names the graph and ends Refused with the typed code.
+    let step = medulla_observe::startup()
+        .steps()
+        .into_iter()
+        .find(|step| step.name == "namespace_migration" && step.graph == graph)
+        .expect("the refused graph records its step");
+    assert_eq!(
+        step.outcome,
+        medulla_observe::startup::StepOutcome::Refused(
+            "NAMESPACE_MIGRATION_POLICY_UNBOOTSTRAPPED".to_string()
+        )
+    );
+    // The graph is degraded with the reason MIGRATION_REFUSED and names the migration task.
+    let readiness = medulla_observe::readiness().get(graph).expect("a readiness row");
+    assert_eq!(
+        readiness.state,
+        medulla_observe::machine::readiness::ReadinessState::Degraded
+    );
+    let reason = readiness.reason.expect("a degraded graph has a reason");
+    assert_eq!(reason.code, "MIGRATION_REFUSED");
+    assert_eq!(
+        reason.task.as_deref(),
+        Some(medulla_h_admin::namespace_migration::TASK_NAME)
+    );
+    medulla_observe::readiness().remove(graph);
+}
+
+// spec: MEDULLA-OBSERVE-R003.6
+#[tokio::test(flavor = "multi_thread")]
+async fn every_inventoried_background_task_is_registered_after_boot() {
+    let _boot = BOOT_LOCK.lock().await;
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let served = Served::new().await;
+    // The closed inventory of background tasks the boot starts, with the build condition under
+    // which each exists. A new background task joins this list in the change that registers it.
+    let inventory: [(&str, bool); 7] = [
+        ("namespace-migration", true),
+        ("matview-reload", cfg!(feature = "matview")),
+        (
+            "connector-pack-projection",
+            cfg!(all(feature = "redb", feature = "blob", feature = "shacl")),
+        ),
+        (
+            "connector-pack-projection-native",
+            cfg!(all(feature = "redb", feature = "blob", feature = "shacl")),
+        ),
+        (
+            "agent-library-projection",
+            cfg!(all(feature = "redb", feature = "rdf")),
+        ),
+        (
+            "agent-library-components",
+            cfg!(all(feature = "redb", feature = "rdf")),
+        ),
+        ("reasoning-projection", cfg!(feature = "redb")),
+    ];
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(served.state.clone()).await;
+    medulla_h_admin::connector_pack_projection::spawn(served.state.clone());
+    medulla_h_admin::agent_library_projection::spawn(served.state.clone());
+    medulla_h_retrieve::reasoning_projection::spawn(served.state.clone());
+
+    let page = served.introspect(IntrospectSection::Tasks, Some(500), None).await;
+    let page = page_of("Introspect tasks", page);
+    for (name, built) in inventory {
+        if !built {
+            continue;
+        }
+        let row = page
+            .rows
+            .iter()
+            .find(|row| row["name"] == name)
+            .unwrap_or_else(|| panic!("background task `{name}` is not registered after boot"));
+        assert!(
+            row["owner"].as_str().is_some_and(|owner| !owner.is_empty()),
+            "`{name}` names its owner"
+        );
+        assert!(
+            row["registered_location"].as_str().is_some_and(|at| at.contains(".rs:")),
+            "`{name}` records where it was registered"
+        );
+    }
+}
+
+// spec: MEDULLA-OBSERVE-R003.4
+#[tokio::test(flavor = "multi_thread")]
+async fn index_build_task_shows_cursor_in_introspect() {
+    let served = Served::new().await;
+    let graph = "observe:ann-index";
+    let created = served
+        .call(
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Agent,
+            },
+        )
+        .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+    // Enough embeddings that the graph qualifies for an ANN index build.
+    {
+        let state = served.state.read().await;
+        let entry = state
+            .registry
+            .all_entries()
+            .into_iter()
+            .find(|entry| entry.name == graph)
+            .expect("the graph is resident");
+        let mut store = entry.core.semantic_store.write();
+        for i in 0..(medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD + 64) {
+            let vector: Vec<f32> = (0..8)
+                .map(|axis| ((i * (axis + 3)) % 17) as f32 + 1.0)
+                .collect();
+            store
+                .add_embedding(format!("n{i}"), vector)
+                .expect("an embedding of the store's width");
+        }
+    }
+    let started =
+        medulla_server_graph::semantic_activation::sweep_resident_graphs_with(&served.state, None)
+            .await;
+    assert!(started >= 1, "the sweep started a build for the graph");
+
+    let name = medulla_server_graph::semantic_activation::ann_build_task_name(graph);
+    let finished = finished_task(&name).await;
+    assert_eq!(
+        finished.kind,
+        medulla_observe::registry::tasks::TaskKind::Index
+    );
+    assert_eq!(finished.owner, "semantic-index");
+    let page = served.page(IntrospectSection::Tasks).await;
+    let row = page
+        .rows
+        .iter()
+        .find(|row| row["name"] == name.as_str())
+        .expect("the build is listed");
+    assert_eq!(row["kind"], "Index");
+    assert_eq!(row["cursor"]["kind"], "counter");
+    assert!(row["cursor"]["value"].is_u64());
+}

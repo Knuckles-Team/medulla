@@ -6336,6 +6336,7 @@ dependencies = [
  "medulla-index-types",
  "medulla-kernel",
  "medulla-mutation-types",
+ "medulla-observe",
  "medulla-persistence",
  "medulla-plan",
  "medulla-protocol-types",

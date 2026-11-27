@@ -672,20 +672,26 @@ pub fn plan_graph(
     Ok(writes)
 }
 
-/// Run the migration over every registered graph as a background task.
+/// The name the migration registers under in the task registry (MEDULLA-OBSERVE-R003.5).
+pub const TASK_NAME: &str = "namespace-migration";
+
+/// The code a refusal carries when its text names no declared code.
+pub const MIGRATION_REFUSED: &str = "MIGRATION_REFUSED";
+
+/// Run the migration over every registered graph as a background task registered as
+/// `namespace-migration`; its cursor is the graph being visited (MEDULLA-OBSERVE-R003.5). The
+/// task ends `Failed` with the code `MIGRATION_REFUSED` when any graph was refused.
 pub(crate) fn spawn(state: Arc<RwLock<ServerState>>) {
-    tokio::spawn(async move {
-        let started = std::time::Instant::now();
-        let step = medulla_observe::startup().step("namespace_migration", "");
-        let report = run(&state).await;
-        if !report.refusals.is_empty() {
-            step.refused("NAMESPACE_MIGRATION_REFUSED");
-        } else if report.writes == 0 {
-            step.skipped("no retired namespace stored");
-        } else {
-            step.ok();
-        }
-        if report.writes > 0 || !report.refusals.is_empty() {
+    medulla_observe::spawn::spawn(
+        medulla_observe::registry::tasks::TaskSpec {
+            name: TASK_NAME.to_string(),
+            owner: "h-admin".to_string(),
+            kind: medulla_observe::registry::tasks::TaskKind::Migration,
+        },
+        async move {
+            let started = std::time::Instant::now();
+            let report = run(&state).await;
+            // The pass always logs one summary, also when it wrote nothing.
             tracing::info!(
                 graphs = report.graphs,
                 writes = report.writes,
@@ -695,31 +701,99 @@ pub(crate) fn spawn(state: Arc<RwLock<ServerState>>) {
                  (retired namespaces rewritten onto the one ontology base)",
                 started.elapsed().as_secs_f64()
             );
-        }
-        for refusal in &report.refusals {
-            tracing::warn!(%refusal, "ontology namespace migration refused");
-        }
-    });
+            for refusal in &report.refusals {
+                tracing::warn!(
+                    graph = %refusal.graph,
+                    code = %refusal.code,
+                    detail = %refusal.detail,
+                    "ontology namespace migration refused"
+                );
+            }
+            if report.refusals.is_empty() {
+                Ok(())
+            } else {
+                Err(format!(
+                    "{MIGRATION_REFUSED}: {} graph(s) refused",
+                    report.refusals.len()
+                ))
+            }
+        },
+    );
+}
+
+/// One graph the pass refused, with the typed code of its refusal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MigrationRefusal {
+    /// The graph that was refused.
+    pub graph: String,
+    /// The declared code of the refusal, or [`MIGRATION_REFUSED`] when the text names none.
+    pub code: String,
+    /// The refusal's text; it names the cause and never holds graph content.
+    pub detail: String,
 }
 
 /// What one migration pass did.
 #[derive(Debug, Default)]
-pub(crate) struct MigrationReport {
+pub struct MigrationReport {
+    /// Graphs the pass visited.
     pub graphs: usize,
+    /// Writes the pass submitted.
     pub writes: usize,
-    pub refusals: Vec<String>,
+    /// The graphs the pass refused, in the order it met them.
+    pub refusals: Vec<MigrationRefusal>,
     /// Every retired namespace found stored and rewritten, in the spelling of
     /// [`NAMESPACE_REWRITES`].
     pub namespaces: BTreeSet<&'static str>,
 }
 
-pub(crate) async fn run(state: &Arc<RwLock<ServerState>>) -> MigrationReport {
+/// The typed code a refusal text starts with, or [`MIGRATION_REFUSED`].
+fn refusal_code(text: &str) -> String {
+    use medulla_observe::spawn::FailureCode;
+    match text.to_string().failure_code().as_str() {
+        "INTERNAL" => MIGRATION_REFUSED.to_string(),
+        code => code.to_string(),
+    }
+}
+
+/// Run one migration pass over every registered graph. Each graph records one startup step
+/// (`namespace_migration`, with the graph) whose outcome is `Ok`, `Skipped` when it held no
+/// retired namespace, or `Refused(code)`; each graph is `Migrating` while it is visited, and a
+/// refused graph is `Degraded` with the reason `MIGRATION_REFUSED` (MEDULLA-OBSERVE-R008.3).
+pub async fn run(state: &Arc<RwLock<ServerState>>) -> MigrationReport {
+    use medulla_observe::machine::readiness::{DegradeReason, ReadinessEvent};
     let mut report = MigrationReport::default();
     let graphs = state.read().await.registry.list();
     for (graph, _) in graphs {
         report.graphs += 1;
-        if let Err(error) = migrate_graph(state, &graph, &mut report).await {
-            report.refusals.push(format!("{graph}: {error}"));
+        medulla_observe::spawn::progress(
+            medulla_observe::registry::tasks::ProgressCursor::opaque(graph.clone()),
+            report.graphs as u64,
+        );
+        let step = medulla_observe::startup().step("namespace_migration", &graph);
+        // A graph that is still opening is migrating while the pass visits it; a graph in any
+        // other state has no such edge and the refusal is the machine's answer.
+        let _ = medulla_observe::readiness().apply(&graph, ReadinessEvent::BeginMigrate, None);
+        let writes_before = report.writes;
+        match migrate_graph(state, &graph, &mut report).await {
+            Ok(()) if report.writes == writes_before => step.skipped("no retired namespace stored"),
+            Ok(()) => step.ok(),
+            Err(error) => {
+                let code = refusal_code(&error);
+                step.refused(&code);
+                let _ = medulla_observe::readiness().degrade(
+                    &graph,
+                    DegradeReason {
+                        code: MIGRATION_REFUSED.to_string(),
+                        task: Some(TASK_NAME.to_string()),
+                        detail: format!("namespace migration refused ({code})"),
+                    },
+                );
+                report.refusals.push(MigrationRefusal {
+                    graph: graph.clone(),
+                    code,
+                    detail: error,
+                });
+            }
         }
     }
     report

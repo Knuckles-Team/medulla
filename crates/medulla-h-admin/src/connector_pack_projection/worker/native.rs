@@ -70,7 +70,13 @@ enum Settle {
 
 pub(crate) async fn run(state: Arc<RwLock<ServerState>>) {
     let subscribed = AtomicBool::new(false);
+    let mut turns = 0_u64;
     loop {
+        turns += 1;
+        medulla_observe::spawn::progress(
+            medulla_observe::registry::tasks::ProgressCursor::Counter(turns),
+            turns,
+        );
         match sweep(&state, &subscribed).await {
             Ok(true) => {}
             Ok(false) => tokio::time::sleep(IDLE).await,

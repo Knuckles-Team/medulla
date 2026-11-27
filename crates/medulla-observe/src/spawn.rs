@@ -186,6 +186,13 @@ pub fn progress(cursor: ProgressCursor, units_done: u64) -> bool {
     true
 }
 
+/// A cloneable reporter of the job this call runs in, or `None` outside a job started by
+/// [`spawn`]. Code that hands its progress to a blocking thread takes the reporter first: a
+/// task-local does not follow the work onto another thread.
+pub fn current_reporter() -> Option<TaskProgress> {
+    CURRENT.try_with(TaskProgress::clone).ok()
+}
+
 /// The registered name of the job this call runs in, or `None` outside a job started by
 /// [`spawn`]. Lock sites use it to name a holder that is not a request (MEDULLA-OBSERVE-R006.4).
 pub fn current_task_name() -> Option<String> {

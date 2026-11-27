@@ -22,6 +22,7 @@ medulla-index-types = { path = "../medulla-index-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-observe = { path = "../medulla-observe" }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-server-api = { path = "../medulla-server-api" }

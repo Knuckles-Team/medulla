@@ -48,8 +48,24 @@ pub mod topology;
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
     #[cfg(all(feature = "redb", feature = "rdf"))]
     {
-        tokio::spawn(worker::run(Arc::clone(&state)));
-        tokio::spawn(worker::run_components(state));
+        // Both streams are registered tasks (MEDULLA-OBSERVE-R003.6); each reports one progress
+        // call per turn of its loop.
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: "agent-library-projection".to_string(),
+                owner: "h-admin".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Projection,
+            },
+            worker::run(Arc::clone(&state)),
+        );
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: "agent-library-components".to_string(),
+                owner: "h-admin".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Projection,
+            },
+            worker::run_components(state),
+        );
     }
     #[cfg(not(all(feature = "redb", feature = "rdf")))]
     drop(state);
@@ -341,7 +357,13 @@ pub mod worker {
 
     async fn run_stream(state: Arc<RwLock<ServerState>>, stream: Stream) {
         let subscribed = AtomicBool::new(false);
+        let mut turns = 0_u64;
         loop {
+            turns += 1;
+            medulla_observe::spawn::progress(
+                medulla_observe::registry::tasks::ProgressCursor::Counter(turns),
+                turns,
+            );
             match sweep_stream(&state, &subscribed, stream).await {
                 Ok(true) => {}
                 Ok(false) => tokio::time::sleep(IDLE).await,

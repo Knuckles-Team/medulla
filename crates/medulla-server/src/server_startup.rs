@@ -842,11 +842,22 @@ pub fn open_isolation_layer(
     isolation
 }
 
+/// The task-registry entry of a long-lived server task that reports no progress: an idle
+/// signal handler or watcher is healthy, and a task that never reports is never marked stalled
+/// (MEDULLA-OBSERVE-R003.6).
+fn server_task(name: &str) -> medulla_observe::registry::tasks::TaskSpec {
+    medulla_observe::registry::tasks::TaskSpec {
+        name: name.to_string(),
+        owner: "server".to_string(),
+        kind: medulla_observe::registry::tasks::TaskKind::Listener,
+    }
+}
+
 /// SIGTERM (a supervisor / `kill` / agent-utilities stopping the daemon) and
 /// SIGINT (Ctrl-C) both fire the same graceful signal. On non-unix only Ctrl-C
 /// is available.
 pub fn spawn_shutdown_signal_handler(coordinator: Arc<crate::transport::ShutdownCoordinator>) {
-    tokio::spawn(async move {
+    medulla_observe::spawn::spawn(server_task("shutdown-signal-handler"), async move {
         if wait_for_shutdown_signal().await {
             coordinator.trigger();
         }
@@ -902,7 +913,7 @@ pub fn spawn_idle_shutdown_watcher(
         secs
     );
     let idle_coord = coordinator.clone();
-    tokio::spawn(async move {
+    medulla_observe::spawn::spawn(server_task("idle-shutdown-watcher"), async move {
         crate::transport::run_idle_watcher(idle_coord, secs).await;
     });
 }
@@ -966,8 +977,17 @@ fn spawn_archiver(state: SharedState) {
         "archiver started: one pass every {}s, segments of at most {} bytes",
         policy.interval_s, policy.segment_bytes
     );
-    tokio::spawn(async move {
-        loop {
+    // A registered task (MEDULLA-OBSERVE-R003.6). A pass is every `archive.interval_s`, which can
+    // exceed the stall threshold, so the loop reports no progress and is never marked stalled.
+    medulla_observe::spawn::spawn(
+        medulla_observe::registry::tasks::TaskSpec {
+            name: "archiver".to_string(),
+            owner: "server".to_string(),
+            kind: medulla_observe::registry::tasks::TaskKind::Maintenance,
+        },
+        async move {
+        // The loop never ends; the unit pattern fixes the task's output type.
+        let () = loop {
             let persistence = state.read().await.persistence.clone();
             if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
                 match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
@@ -981,8 +1001,9 @@ fn spawn_archiver(state: SharedState) {
                 expire_archive(&archive, &policy).await;
             }
             tokio::time::sleep(std::time::Duration::from_secs(policy.interval_s)).await;
-        }
-    });
+        };
+        },
+    );
 }
 
 /// Segment retention (MEDULLA-ENGINE-PARITY-R016.4): after each pass, expire from every scope
@@ -1052,11 +1073,23 @@ pub async fn serve_transports(
         let tcp_state = state.clone();
         let tcp_shutdown = shutdown.clone();
         let tls = transports.tcp_tls;
-        tokio::spawn(async move {
-            if let Err(e) = crate::transport::serve_tcp(&addr, tcp_state, tcp_shutdown, tls).await {
-                tracing::error!("TCP server error ({:?})", e.kind());
-            }
-        });
+        // The secondary TCP accept loop is a registered task (MEDULLA-OBSERVE-R003.6). It
+        // reports no progress: an idle listener is healthy, and a task that never reports is
+        // never marked stalled.
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: "listener-tcp".to_string(),
+                owner: "server".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Listener,
+            },
+            async move {
+                if let Err(e) =
+                    crate::transport::serve_tcp(&addr, tcp_state, tcp_shutdown, tls).await
+                {
+                    tracing::error!("TCP server error ({:?})", e.kind());
+                }
+            },
+        );
     }
     let listener =
         crate::transport::bind_uds(&transports.socket_path, transports.socket_mode).await?;

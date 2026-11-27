@@ -34,8 +34,24 @@ use medulla_server_api::state::ServerState;
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
     #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
     {
-        tokio::spawn(worker::native::run(Arc::clone(&state)));
-        tokio::spawn(worker::run(state));
+        // Both sweeps are registered tasks (MEDULLA-OBSERVE-R003.6); each reports one progress
+        // call per turn of its loop.
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: "connector-pack-projection-native".to_string(),
+                owner: "h-admin".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Projection,
+            },
+            worker::native::run(Arc::clone(&state)),
+        );
+        medulla_observe::spawn::spawn(
+            medulla_observe::registry::tasks::TaskSpec {
+                name: "connector-pack-projection".to_string(),
+                owner: "h-admin".to_string(),
+                kind: medulla_observe::registry::tasks::TaskKind::Projection,
+            },
+            worker::run(state),
+        );
     }
     #[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
     drop(state);
@@ -101,7 +117,13 @@ pub mod worker {
 
     pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
         let subscribed = AtomicBool::new(false);
+        let mut turns = 0_u64;
         loop {
+            turns += 1;
+            medulla_observe::spawn::progress(
+                medulla_observe::registry::tasks::ProgressCursor::Counter(turns),
+                turns,
+            );
             match sweep(&state, &subscribed).await {
                 Ok(true) => {}
                 Ok(false) => tokio::time::sleep(IDLE).await,

@@ -192,7 +192,14 @@ where
 /// is on disk.
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
     #[cfg(feature = "redb")]
-    tokio::spawn(projection_loop(state));
+    medulla_observe::spawn::spawn(
+        medulla_observe::registry::tasks::TaskSpec {
+            name: "reasoning-projection".to_string(),
+            owner: "h-retrieve".to_string(),
+            kind: medulla_observe::registry::tasks::TaskKind::Projection,
+        },
+        projection_loop(state),
+    );
     #[cfg(not(feature = "redb"))]
     drop(state);
 }
@@ -209,7 +216,14 @@ struct ProjectionContext {
 
 #[cfg(feature = "redb")]
 async fn projection_loop(state: Arc<RwLock<ServerState>>) {
+    let mut turns = 0_u64;
     loop {
+        // One progress call per turn: the loop turns at least once a second.
+        turns += 1;
+        medulla_observe::spawn::progress(
+            medulla_observe::registry::tasks::ProgressCursor::Counter(turns),
+            turns,
+        );
         let Some(context) = projection_context(&state).await else {
             tokio::time::sleep(Duration::from_secs(1)).await;
             continue;

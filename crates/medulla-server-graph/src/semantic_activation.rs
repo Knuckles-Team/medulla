@@ -184,8 +184,8 @@ mod builds {
         running.len()
     }
 
-    /// Progress goes to the log until the background-task registry of
-    /// `MEDULLA-OBSERVE` exists (task T-OBSERVE-BIND).
+    /// Progress of a build goes to the log, and to the build's task row when the build is a
+    /// registered task ([`TaskSink`]).
     pub(super) struct LogSink {
         pub graph: String,
     }
@@ -202,6 +202,50 @@ mod builds {
                 "semantic ANN training progress"
             );
         }
+    }
+}
+
+/// The name a graph's ANN build registers under (MEDULLA-OBSERVE-R003.4).
+pub fn ann_build_task_name(graph: &str) -> String {
+    format!("ann-build:{graph}")
+}
+
+/// Forwards each training step to the registered build task as its cursor, and to the sink the
+/// caller named (MEDULLA-OBSERVE-R003.4): `Introspect tasks` shows how far the build has trained.
+pub struct TaskSink {
+    inner: Arc<dyn ProgressSink>,
+    reporter: medulla_observe::registry::tasks::TaskProgress,
+    steps: std::sync::atomic::AtomicU64,
+}
+
+impl TaskSink {
+    /// A sink reporting to `reporter` after `inner`.
+    pub fn new(
+        inner: Arc<dyn ProgressSink>,
+        reporter: medulla_observe::registry::tasks::TaskProgress,
+    ) -> Self {
+        Self {
+            inner,
+            reporter,
+            steps: std::sync::atomic::AtomicU64::new(0),
+        }
+    }
+
+    /// The training steps reported so far.
+    pub fn steps(&self) -> u64 {
+        self.steps.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+impl ProgressSink for TaskSink {
+    fn report(&self, progress: &medulla_numeric::cluster::Progress) {
+        self.inner.report(progress);
+        let step = u64::from(progress.step);
+        self.steps.store(step, std::sync::atomic::Ordering::Relaxed);
+        self.reporter.progress(
+            medulla_observe::registry::tasks::ProgressCursor::Counter(step),
+            step,
+        );
     }
 }
 
@@ -340,11 +384,37 @@ fn spawn_activation(
     cluster: ClusterConfig,
     sink: Option<Arc<dyn ProgressSink>>,
 ) {
-    tokio::spawn(async move {
-        let _ = tokio::task::spawn_blocking(move || {
-            activate_with(&name, &core, persist_dir.as_deref(), &cluster, sink);
+    // The build is a registered task: `Introspect tasks` lists `ann-build:<graph>` with the
+    // training step it reached (MEDULLA-OBSERVE-R003.4).
+    let spec = medulla_observe::registry::tasks::TaskSpec {
+        name: ann_build_task_name(&name),
+        owner: "semantic-index".to_string(),
+        kind: medulla_observe::registry::tasks::TaskKind::Index,
+    };
+    medulla_observe::spawn::spawn(spec, async move {
+        let reporter = medulla_observe::spawn::current_reporter();
+        let inner: Arc<dyn ProgressSink> = sink.unwrap_or_else(|| {
+            Arc::new(builds::LogSink {
+                graph: name.clone(),
+            })
+        });
+        let task_sink = reporter.map(|reporter| Arc::new(TaskSink::new(inner.clone(), reporter)));
+        let build_sink: Arc<dyn ProgressSink> = match &task_sink {
+            Some(task_sink) => task_sink.clone(),
+            None => inner,
+        };
+        let built = tokio::task::spawn_blocking(move || {
+            activate_with(&name, &core, persist_dir.as_deref(), &cluster, Some(build_sink))
         })
         .await;
+        // One progress call at the end, so a build too short to report a step still shows where
+        // it ended.
+        let steps = task_sink.as_ref().map_or(0, |sink| sink.steps());
+        medulla_observe::spawn::progress(
+            medulla_observe::registry::tasks::ProgressCursor::Counter(steps),
+            steps,
+        );
+        built.map(|_| ()).map_err(|error| format!("INTERNAL: the build task failed: {error}"))
     });
 }
 
