@@ -33,7 +33,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_BINARY="${ENGINE_SOURCE_BINARY:-${REPO_ROOT}/target/release/medulla-server}"
+SOURCE_BINARY="${ENGINE_SOURCE_BINARY:-${REPO_ROOT}/target/release-internal/medulla-server}"
 DESTINATION="${ENGINE_BIN_DEST:-}"
 PROMOTION_HOOK="${ENGINE_PROMOTION_HOOK:-}"
 BUILD_FEATURES="${ENGINE_BUILD_FEATURES:-full,ast-extended}"
@@ -74,10 +74,10 @@ if [[ "$DO_ACTIVATE" -eq 1 ]]; then
 fi
 
 if [[ "$DO_BUILD" -eq 1 ]]; then
-  echo "building full release artifact"
+  echo "building full internal release artifact"
   (
     cd "$REPO_ROOT"
-    cargo build --locked --release --features "$BUILD_FEATURES"
+    cargo build --locked --profile release-internal --features "$BUILD_FEATURES"
   )
 fi
 

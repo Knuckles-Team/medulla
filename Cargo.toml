@@ -2642,6 +2642,16 @@ panic = "unwind"
 debug = "line-tables-only"
 strip = "none"
 
+# Internal deploys (scripts/promote_engine.sh) build with this profile: thin LTO and 16
+# codegen units keep the optimized build fast. The published wheels keep `release` and
+# `release-server` (MEDULLA-CONTRACT-R068).
+[profile.release-internal]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+opt-level = 3
+panic = "unwind"
+
 [profile.release-tiny]
 inherits = "release"
 opt-level = "z"
