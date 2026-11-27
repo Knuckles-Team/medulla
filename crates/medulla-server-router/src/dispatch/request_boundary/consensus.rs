@@ -20,7 +20,7 @@ pub async fn check_cluster_placement_before_consensus(
         placement,
         medulla_server_api::state::PlacementAuthorityKind::Local
     ) {
-        return clustered_route_admission(req, &placement);
+        return clustered_route_admission(req, &placement).map_err(|response| *response);
     }
     Ok(())
 }
@@ -31,7 +31,7 @@ pub async fn check_cluster_placement_before_consensus(
 fn clustered_route_admission(
     req: &Request,
     placement: &medulla_server_api::state::PlacementAuthorityKind,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     use medulla_server_mutation::mutation::ClusterMutationRoute;
     match medulla_server_mutation::mutation::cluster_mutation_route(&req.method) {
         // `SelfRoutedAdmin` owns its OWN `MultiRaft`-presence check
@@ -43,22 +43,22 @@ fn clustered_route_admission(
         | ClusterMutationRoute::VolatileControl
         | ClusterMutationRoute::SelfRoutedAdmin => {}
         ClusterMutationRoute::LocalOnly => {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req.id,
                 medulla_server_mutation::mutation::LOCAL_ONLY_CLUSTER_REFUSAL,
-            ));
+            )));
         }
         ClusterMutationRoute::ConsensusGraph
         | ClusterMutationRoute::ConsensusNative
         | ClusterMutationRoute::ConsensusFanout
             if placement.missing_error().is_some() =>
         {
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req.id,
                 placement
                     .missing_error()
                     .expect("missing placement authority has a typed error"),
-            ));
+            )));
         }
         ClusterMutationRoute::ConsensusGraph
         | ClusterMutationRoute::ConsensusNative

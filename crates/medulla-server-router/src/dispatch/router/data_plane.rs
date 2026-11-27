@@ -599,10 +599,13 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
                     )
                 })
                 .map_err(|_| {
-                    Response::err(req_id, "KnowledgeStream policy authority is unavailable")
+                    Box::new(Response::err(
+                        req_id,
+                        "KnowledgeStream policy authority is unavailable",
+                    ))
                 })?;
                 let carrier = CarrierAuthority::from_verified(verified_context)
-                    .map_err(|denied| Response::err(req_id, denied))?;
+                    .map_err(|denied| Box::new(Response::err(req_id, denied)))?;
                 let lease = isolation
                     .mint_policy_decision_lease(
                         &mint_auth,
@@ -613,12 +616,15 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
                     .map_err(|error| match error {
                         medulla_isolation::isolation::MintLeaseError::StoreUnavailable
                         | medulla_isolation::isolation::MintLeaseError::StoreUnreadable => {
-                            Response::err(req_id, "KnowledgeStream policy authority is unavailable")
+                            Box::new(Response::err(
+                                req_id,
+                                "KnowledgeStream policy authority is unavailable",
+                            ))
                         }
                         medulla_isolation::isolation::MintLeaseError::UnknownActor
                         | medulla_isolation::isolation::MintLeaseError::AccessDenied => {
                             medulla_kernel::metrics::process().access_denied();
-                            Response::err(req_id, "ACCESS_DENIED")
+                            Box::new(Response::err(req_id, "ACCESS_DENIED"))
                         }
                     })?;
                 medulla_h_query::knowledge_stream::KnowledgeStreamAuthority::from_verified_with_lease(
@@ -628,13 +634,16 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
                     &carrier,
                     lease,
                     isolation.policy_store().ok_or_else(|| {
-                        Response::err(req_id, "KnowledgeStream policy authority is unavailable")
+                        Box::new(Response::err(
+                            req_id,
+                            "KnowledgeStream policy authority is unavailable",
+                        ))
                     })?,
                 )
-                .map_err(|error| Response::err(req_id, error))
+                .map_err(|error| Box::new(Response::err(req_id, error)))
             })() {
                 Ok(authority) => authority,
-                Err(response) => return response,
+                Err(response) => return *response,
             };
             #[cfg(not(feature = "security"))]
             let authority = {

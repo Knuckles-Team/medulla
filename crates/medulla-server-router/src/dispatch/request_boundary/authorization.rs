@@ -104,7 +104,7 @@ fn enforce_controller_scope(
     verified_context: &VerifiedRequestContext,
     required_scope: Option<&str>,
     authority: &str,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let Some(required_scope) = required_scope else {
         return Ok(());
     };
@@ -113,12 +113,12 @@ fn enforce_controller_scope(
         return Ok(());
     }
     medulla_kernel::metrics::process().access_denied();
-    Err(Response::err(
+    Err(Box::new(Response::err(
         req.id,
         format!(
             "ACCESS_DENIED: {authority} authority requires controller scope '{required_scope}'"
         ),
-    ))
+    )))
 }
 
 /// The scope a served agent bus method needs (MEDULLA-DURABLE-KERNEL-R095.1003).
@@ -154,17 +154,17 @@ pub(super) fn stamp_bus_identity(method: &mut Method, verified_context: &Verifie
 fn enforce_bus_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let Some(required_scope) = required_bus_scope(&req.method) else {
         return Ok(());
     };
     if let Method::BusRoster { tenant, .. } = &req.method {
         if tenant != verified_context.tenant() {
             medulla_kernel::metrics::process().access_denied();
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req.id,
                 "ACCESS_DENIED: BusRoster tenant must match verified request tenant",
-            ));
+            )));
         }
     }
     if verified_context.allows_action(required_scope) || verified_context.allows_action("kg:admin")
@@ -172,13 +172,13 @@ fn enforce_bus_scope(
         return Ok(());
     }
     medulla_kernel::metrics::process().access_denied();
-    Err(Response::err(
+    Err(Box::new(Response::err(
         req.id,
         format!(
             "{}: bus method requires scope '{required_scope}'",
             medulla_types::contract::ServerErrorCode::BusScopeRequired.as_str()
         ),
-    ))
+    )))
 }
 
 /// The scope a served memory snapshot method needs (MEDULLA-DURABLE-KERNEL-R085.5).
@@ -199,7 +199,7 @@ fn required_memory_scope(method: &Method) -> Option<&'static str> {
 fn enforce_memory_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let Some(required_scope) = required_memory_scope(&req.method) else {
         return Ok(());
     };
@@ -208,16 +208,16 @@ fn enforce_memory_scope(
         return Ok(());
     }
     medulla_kernel::metrics::process().access_denied();
-    Err(Response::err(
+    Err(Box::new(Response::err(
         req.id,
         medulla_types::contract::ServerErrorCode::MemsyncNotAvailable.as_str(),
-    ))
+    )))
 }
 
 fn check_resource_and_capacity_controller_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     enforce_bus_scope(req, verified_context)?;
     enforce_memory_scope(req, verified_context)?;
     // Resource authority is checked BEFORE capacity authority; a request that
@@ -263,7 +263,8 @@ async fn check_resource_and_capacity_scope(
                 ));
             }
         }
-        check_resource_and_capacity_controller_scope(req, verified_context)?;
+        check_resource_and_capacity_controller_scope(req, verified_context)
+            .map_err(|response| *response)?;
     }
     Ok(())
 }
@@ -336,7 +337,7 @@ fn check_cross_tenant_scope(
     req: &Request,
     verified_context: &VerifiedRequestContext,
     authority: DispatchAuthority,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if authority.state_machine_authorized || authority.identity_bootstrap {
         return Ok(());
     }
@@ -346,10 +347,10 @@ fn check_cross_tenant_scope(
         return Ok(());
     }
     medulla_kernel::metrics::process().access_denied();
-    Err(Response::err(
+    Err(Box::new(Response::err(
         req.id,
         "ACCESS_DENIED: resource tenant must match verified request tenant",
-    ))
+    )))
 }
 
 /// Whether the ledger admits `req`: its policy's action, or -- for an
@@ -380,7 +381,7 @@ fn check_batch_inner_scopes(
     req: &Request,
     verified_context: &VerifiedRequestContext,
     authority: DispatchAuthority,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     let Method::Batch { operations } = &req.method else {
         return Ok(());
     };
@@ -392,13 +393,13 @@ fn check_batch_inner_scopes(
         let policy = medulla_capabilities::policy(&inner);
         if !verified_context.allows_method(policy.authz_action, policy.mutates) {
             medulla_kernel::metrics::process().access_denied();
-            return Err(Response::err(
+            return Err(Box::new(Response::err(
                 req.id,
                 format!(
                     "ACCESS_DENIED: batch operation {index} requires scope '{}'",
                     policy.authz_action
                 ),
-            ));
+            )));
         }
     }
     Ok(())
@@ -436,7 +437,7 @@ pub async fn check_scope_and_admin_authority(
     // Bind ordinary callers to the verified request tenant before the native
     // backend sees the request.  Only an explicitly privileged aggregate reader
     // (for reconciliation) or `kg:admin` may inspect another tenant's rows.
-    check_cross_tenant_scope(req, verified_context, authority)?;
+    check_cross_tenant_scope(req, verified_context, authority).map_err(|response| *response)?;
     // A share is authorized by its owner or a `kg:admin` holder inside the share
     // transition, so it is exempt from the admin scope that gates the rest of
     // `RbacAdmin` (MEDULLA-IDENTITY-R023.13.3).
@@ -458,7 +459,7 @@ pub async fn check_scope_and_admin_authority(
             format!("ACCESS_DENIED: verified request context lacks required scope '{action}'"),
         ));
     }
-    check_batch_inner_scopes(req, verified_context, authority)?;
+    check_batch_inner_scopes(req, verified_context, authority).map_err(|response| *response)?;
     if !authority.state_machine_authorized
         && is_admin_authz_action(action)
         && !authority.identity_bootstrap
@@ -495,13 +496,13 @@ pub fn check_submit_work_item_context(
     req: &Request,
     verified_context: &VerifiedRequestContext,
     authority: DispatchAuthority,
-) -> Result<(), Response> {
+) -> Result<(), Box<Response>> {
     if authority.state_machine_authorized || authority.identity_bootstrap {
         return Ok(());
     }
     for context in submit_work_item_contexts(&req.method) {
         if let Err(error) = validate_submit_context(&req.graph, context, verified_context) {
-            return Err(Response::err(req.id, error));
+            return Err(Box::new(Response::err(req.id, error)));
         }
     }
     Ok(())

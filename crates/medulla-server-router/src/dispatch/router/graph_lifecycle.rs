@@ -51,7 +51,7 @@ pub async fn dispatch_graph_lifecycle_methods(
                 }
                 created
             }
-            Err(denied) => denied,
+            Err(denied) => *denied,
         },
 
         Method::DeleteGraph { graph_name } => match lifecycle_request(req, verified_context) {
@@ -64,7 +64,7 @@ pub async fn dispatch_graph_lifecycle_methods(
                 ))
                 .await
             }
-            Err(denied) => denied,
+            Err(denied) => *denied,
         },
 
         Method::ListGraphs => dispatch_boxed(list_graphs(state, verified_context, req.id)).await,
@@ -549,12 +549,12 @@ fn index_manifest_listing(
 fn lifecycle_request(
     req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
-) -> Result<GraphLifecycleRequest, Response> {
+) -> Result<GraphLifecycleRequest, Box<Response>> {
     GraphLifecycleRequest::verified(
         req.id,
         req.agent_id.clone(),
         verified_context,
         verified_context.idempotency_key().to_string(),
     )
-    .map_err(|denied| Response::err(req.id, denied))
+    .map_err(|denied| Box::new(Response::err(req.id, denied)))
 }

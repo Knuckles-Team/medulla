@@ -51,7 +51,7 @@ pub(super) async fn commit_asset(
 
 /// How many catalog emits failed after their record committed, read from the registered
 /// `medulla_catalog_emit_failures_total` series.
-#[cfg(feature = "rdf")]
+#[cfg(all(test, feature = "rdf"))]
 pub(super) fn emit_failures() -> u64 {
     medulla_kernel::metrics::process().catalog_emit_failures()
 }
@@ -127,10 +127,9 @@ async fn asset_evidence(
             evidence.graph_revision = Some(core.version());
         }
     }
-    let Ok(probe) = medulla_catalog::emit::emit_asset(
-        record.clone(),
-        &medulla_catalog::emit::AssetLinks::default(),
-    ) else {
+    let Ok(probe) =
+        medulla_catalog::emit::emit_asset(*record, &medulla_catalog::emit::AssetLinks::default())
+    else {
         return evidence;
     };
     let Some(subject) = probe.first().map(|triple| triple.subject.clone()) else {

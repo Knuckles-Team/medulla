@@ -77,10 +77,7 @@ pub(super) fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
         || state.owner_id.as_deref() == Some(actor.principal_id.as_str())
         || state.shared_scope == SCOPE_COMMONS
         || state.shared_scope == SCOPE_ORG
-        || state
-            .grants
-            .iter()
-            .any(|grantee| *grantee == actor.principal_id)
+        || state.grants.contains(&actor.principal_id)
 }
 
 /// Whether a write answer means the write took effect: a failed compare-and-set

@@ -541,7 +541,8 @@ async fn dispatch_preamble_checks(
     // remains in the post-removal receipt boundary.
     preflight_commit_owner(state, req.id, &req, verified_context).await?;
 
-    check_submit_work_item_context(&req, verified_context, authority)?;
+    check_submit_work_item_context(&req, verified_context, authority)
+        .map_err(|response| *response)?;
     check_agent_run_delegation(state, &req, verified_context, authority).await?;
 
     // Cluster writes cross consensus at the authenticated request boundary. The
