@@ -70,6 +70,13 @@ pub struct TopicFusion<'a> {
     pub current_corpus_revision: Option<u64>,
 }
 
+/// A fused ranking: the `(id, score)` pairs in fused order and the receipt that explains them,
+/// absent when no topic policy was bound.
+pub(crate) type FusedRanking = (
+    Vec<(String, f32)>,
+    Option<medulla_types::retrieval::TopicReceipt>,
+);
+
 /// MEDULLA-FEDERATED-QUERY-R040.2.3: the one fusion step every ranking leg takes after it
 /// has scored its whole candidate set and before the result is truncated. With no topic
 /// policy bound the dense ranking passes through unchanged. With one bound, the bound
@@ -81,13 +88,7 @@ pub(crate) fn fuse_ranked(
     ctx: &PlanCtx,
     query: &[f32],
     dense: Vec<(String, f32)>,
-) -> Result<
-    (
-        Vec<(String, f32)>,
-        Option<medulla_types::retrieval::TopicReceipt>,
-    ),
-    String,
-> {
+) -> Result<FusedRanking, String> {
     let Some(policy) = ctx.topic_policy else {
         return Ok((dense, None));
     };
@@ -150,16 +151,16 @@ pub(crate) fn fuse_ranked(
     }
     let scored = fuse_topic_dense_scored(&dense, &assignments, &topics, weight, retriever, current)
         .map_err(String::from)?;
-    let receipt = topic_receipt(
-        fusion.backend.id(),
-        fusion.backend.revision(),
-        &topics,
+    let receipt = topic_receipt(TopicReceiptInputs {
+        backend_id: fusion.backend.id(),
+        backend_revision: fusion.backend.revision(),
+        topics: &topics,
         weight,
         retriever,
-        &scored,
-        &assignments,
-        ctx.semantic.generation(),
-    );
+        scored: &scored,
+        assignments: &assignments,
+        source_vector_generation: ctx.semantic.generation(),
+    });
     Ok((
         scored
             .into_iter()
@@ -174,17 +175,30 @@ fn micros(value: f32) -> i64 {
     (f64::from(value) * 1_000_000.0).round() as i64
 }
 
-/// The receipt of one fusion: a component entry for every fused candidate, in fused order.
-fn topic_receipt(
-    backend_id: &str,
+/// What one fusion's receipt is built from.
+struct TopicReceiptInputs<'a> {
+    backend_id: &'a str,
     backend_revision: u64,
-    topics: &TopicResult,
+    topics: &'a TopicResult,
     weight: f32,
-    retriever: &EmbeddingSpaceRef,
-    scored: &[FusedScore],
-    assignments: &[DocumentTopicAssignment],
+    retriever: &'a EmbeddingSpaceRef,
+    scored: &'a [FusedScore],
+    assignments: &'a [DocumentTopicAssignment],
     source_vector_generation: u64,
-) -> medulla_types::retrieval::TopicReceipt {
+}
+
+/// The receipt of one fusion: a component entry for every fused candidate, in fused order.
+fn topic_receipt(inputs: TopicReceiptInputs<'_>) -> medulla_types::retrieval::TopicReceipt {
+    let TopicReceiptInputs {
+        backend_id,
+        backend_revision,
+        topics,
+        weight,
+        retriever,
+        scored,
+        assignments,
+        source_vector_generation,
+    } = inputs;
     use medulla_types::retrieval::{
         TopicAssignmentTrace, TopicComponentScore, TopicFusionPolicy, TopicReceipt,
         TopicResponsibility,
@@ -1207,16 +1221,16 @@ mod tests {
         let weight = 0.5_f32;
         let scored =
             fuse_topic_dense_scored(&dense, &assignments, &topics, weight, &space(), 7).unwrap();
-        let receipt = topic_receipt(
-            "stored_centroid",
-            7,
-            &topics,
+        let receipt = topic_receipt(TopicReceiptInputs {
+            backend_id: "stored_centroid",
+            backend_revision: 7,
+            topics: &topics,
             weight,
-            &space(),
-            &scored,
-            &assignments,
-            3,
-        );
+            retriever: &space(),
+            scored: &scored,
+            assignments: &assignments,
+            source_vector_generation: 3,
+        });
         assert_eq!(receipt.backend_id, "stored_centroid");
         assert_eq!(receipt.centroid_generation, 7);
         assert_eq!(receipt.space_tuple, format!("model|2|1"));

@@ -1040,8 +1040,14 @@ fn apply_result_shapes(ctx: &PlanCtx, rows: RowSet) -> Result<RowSet, String> {
     }
 }
 
+/// What a challenger run answers: the plan digest and the rows it produced.
+type ChallengerOutcome = Result<(String, RowSet), String>;
+
+/// A run of one plan under a context, the shape of both the real challenger and a test double.
+type ChallengerRunner = dyn Fn(Plan, &PlanCtx) -> ChallengerOutcome;
+
 /// The real challenger run: plan under the context's bound cost head, then execute.
-fn challenger_run(plan: Plan, ctx: &PlanCtx) -> Result<(String, RowSet), String> {
+fn challenger_run(plan: Plan, ctx: &PlanCtx) -> ChallengerOutcome {
     let optimized = plan_optimize(plan, ctx);
     let plan_digest = crate::learned_cost::plan_digest(&optimized.ops)?;
     let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
@@ -1057,7 +1063,7 @@ fn shadow_run(
     ctx: &PlanCtx,
     champion_rows: &RowSet,
     run: &crate::learned_cost::PlanExecutionRecord,
-    runner: &dyn Fn(Plan, &PlanCtx) -> Result<(String, RowSet), String>,
+    runner: &ChallengerRunner,
 ) {
     use crate::learned_cost as lc;
     let store = lc::PlanRecordStore::global();

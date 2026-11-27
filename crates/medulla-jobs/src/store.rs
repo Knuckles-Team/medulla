@@ -3222,6 +3222,34 @@ fn recover_pacing<G>(locked: std::sync::LockResult<G>) -> G {
     })
 }
 
+/// Appends the routing decision of a claim to the job: the first required capability of the job
+/// that the evidence names. A job with no such capability records none; the oldest decision is
+/// dropped past [`MAX_ROUTING_HISTORY`].
+fn record_routing(job: &mut AnalyticsJob, evidence: &RoutingEvidence) {
+    let Some(found) = job
+        .policy
+        .placement
+        .required_capabilities
+        .iter()
+        .find_map(|capability| evidence.by_capability.get(capability))
+    else {
+        return;
+    };
+    job.routing.push(
+        medulla_decision_types::decision::statistical::placement::RoutingDecision {
+            job_id: job.job_id.clone(),
+            required_capability: found.capability.clone(),
+            candidates: found.candidates.clone(),
+            chosen: evidence.chosen.clone(),
+            topology_generation: found.topology_generation,
+        },
+    );
+    if job.routing.len() > MAX_ROUTING_HISTORY {
+        let excess = job.routing.len() - MAX_ROUTING_HISTORY;
+        job.routing.drain(..excess);
+    }
+}
+
 // MEDULLA-CQ-ORCH-R811.3: the cutover proofs live beside the other crate tests and read the
 // store's private writers, so they are a child module of the store.
 #[cfg(test)]
@@ -4563,33 +4591,5 @@ mod tests {
         // forced, would collapse to the same tick window as a no-op.
         assert!(store.due_intents(1_000).unwrap().is_empty());
         assert!(!store.record_intent_tick("cold_offload", 1_000).unwrap());
-    }
-}
-
-/// Appends the routing decision of a claim to the job: the first required capability of the job
-/// that the evidence names. A job with no such capability records none; the oldest decision is
-/// dropped past [`MAX_ROUTING_HISTORY`].
-fn record_routing(job: &mut AnalyticsJob, evidence: &RoutingEvidence) {
-    let Some(found) = job
-        .policy
-        .placement
-        .required_capabilities
-        .iter()
-        .find_map(|capability| evidence.by_capability.get(capability))
-    else {
-        return;
-    };
-    job.routing.push(
-        medulla_decision_types::decision::statistical::placement::RoutingDecision {
-            job_id: job.job_id.clone(),
-            required_capability: found.capability.clone(),
-            candidates: found.candidates.clone(),
-            chosen: evidence.chosen.clone(),
-            topology_generation: found.topology_generation,
-        },
-    );
-    if job.routing.len() > MAX_ROUTING_HISTORY {
-        let excess = job.routing.len() - MAX_ROUTING_HISTORY;
-        job.routing.drain(..excess);
     }
 }

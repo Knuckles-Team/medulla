@@ -43,7 +43,7 @@ pub fn register_age_with_test_reader(
     name: impl Into<String>,
     spec: &ForeignSourceSpec,
     dsn: String,
-    reader: Arc<dyn Fn(&str, &str) -> Result<Vec<HashMap<String, String>>, String> + Send + Sync>,
+    reader: Arc<Reader>,
 ) -> Result<(), String> {
     register_age_with_reader(registry, name, spec, dsn, reader)
 }

@@ -525,7 +525,7 @@ fn commit_material(
     }
     if let Some(envelope) = rows.change {
         return Ok(CommitMaterial::ChangeEnvelope {
-            envelope: envelope.clone(),
+            envelope: Box::new(envelope.clone()),
             source_budget: rows.source_budget.cloned(),
         });
     }

@@ -398,11 +398,11 @@ fn sufficiency_premise(verdict: &SufficiencyVerdict) -> Result<RetrievalPremise,
         step: "sufficiency".into(),
         name: "retrieval.sufficiency".into(),
         value: serde_json::json!({
-            "verdict": encode(serde_json::to_value(&verdict.verdict))?,
+            "verdict": encode(serde_json::to_value(verdict.verdict))?,
             "evidence_count": verdict.evidence_count,
             "reason": verdict.reason,
             "repair": encode(serde_json::to_value(&verdict.repair))?,
-            "fallback": encode(serde_json::to_value(&verdict.fallback))?,
+            "fallback": encode(serde_json::to_value(verdict.fallback))?,
             "round": verdict.round,
         }),
     })

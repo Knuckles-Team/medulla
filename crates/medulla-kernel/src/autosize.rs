@@ -9,7 +9,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use medulla_resource::{
         default_node_cap, resolve_cpu_budget, resolve_memory_bytes, tier_for, Capacity, CpuLimit,
         MemoryLimit, Tier,

@@ -341,7 +341,10 @@ fn a_lease_that_stops_renewing_expires_and_returns_its_slot() {
     assert!(harness.sweep(1_500).reclaimed_lease_ids.is_empty());
     // Past it the sweep expires the silent holder and grants the queue head in the same pass.
     let swept = harness.sweep(2_000);
-    assert_eq!(swept.reclaimed_lease_ids, [first.lease_id.clone()]);
+    assert_eq!(
+        swept.reclaimed_lease_ids,
+        std::slice::from_ref(&first.lease_id)
+    );
     assert_eq!(harness.state(&first.lease_id), CapacityLeaseState::Expired);
     assert_eq!(harness.state(&second.lease_id), CapacityLeaseState::Granted);
     let granted = harness.status(&second.lease_id).leases[0].clone();

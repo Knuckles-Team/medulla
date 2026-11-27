@@ -7,7 +7,6 @@ use medulla_result_types::epistemic_operations::{
     ResourceReservationRecord,
 };
 use medulla_storage::ScopedOwnerTableMut;
-use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
 
 /// Authoritative reservation row.  The immutable WorkItem admission record is

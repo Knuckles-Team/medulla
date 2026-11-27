@@ -386,13 +386,12 @@ pub fn historical_risk(
     risk_report(view, seeds, spec, &filter, dir, hops, &Budget::default()).map(|r| r.risks)
 }
 
+/// The risks of a `PROPAGATE ... RISK HISTORY` stage and the warnings raised while computing them.
+pub type StageReport = (Vec<HistoricalRisk>, Vec<String>);
+
 /// The risk report of a `PROPAGATE` stage that carries `RISK HISTORY` over its input rows;
 /// `None` for any other op or a `PROPAGATE` without the tail.
-pub fn stage_report(
-    op: &Op,
-    input: &RowSet,
-    ctx: &PlanCtx,
-) -> Result<Option<(Vec<HistoricalRisk>, Vec<String>)>, String> {
+pub fn stage_report(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<Option<StageReport>, String> {
     let Op::Propagate {
         rel,
         dir,

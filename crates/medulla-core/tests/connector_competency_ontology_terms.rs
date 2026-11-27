@@ -1822,7 +1822,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.2
     #[test]
-    fn orderQty_declared() {
+    fn order_qty_declared() {
         assert_property(
             "orderQty",
             OWL_DATATYPE_PROPERTY,
@@ -1841,7 +1841,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.4
     #[test]
-    fn budgetLimit_declared() {
+    fn budget_limit_declared() {
         assert_property(
             "budgetLimit",
             OWL_DATATYPE_PROPERTY,
@@ -1860,7 +1860,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.6
     #[test]
-    fn chargedToBudget_declared() {
+    fn charged_to_budget_declared() {
         assert_property(
             "chargedToBudget",
             OWL_OBJECT_PROPERTY,
@@ -1871,7 +1871,7 @@ mod ontology_audit_finance_v1 {
 
     // spec: MEDULLA-CQ-CONN-R075.7
     #[test]
-    fn transactionAmount_declared() {
+    fn transaction_amount_declared() {
         assert_property(
             "transactionAmount",
             OWL_DATATYPE_PROPERTY,

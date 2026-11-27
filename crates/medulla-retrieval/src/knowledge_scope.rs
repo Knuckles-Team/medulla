@@ -60,9 +60,6 @@ pub fn scope_digest(scope: Option<&KnowledgeScope>) -> String {
     medulla_types::retrieval::sha256_hex(text.as_bytes())
 }
 
-/// The edge relationship from a source record to its container (MEDULLA-INGEST-WORKER-R904.1).
-const IN_CONTAINER: &str = "inContainer";
-
 fn node_props(
     core: &medulla_graph_core::graph::GraphCore,
     id: &str,

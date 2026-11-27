@@ -108,7 +108,7 @@ fn column_type(store: &TableStore) -> impl Fn(&str, &str) -> Option<ColumnType> 
             .get_schema(table)
             .ok()
             .flatten()
-            .and_then(|schema| schema.column(column).map(|c| c.ty.clone()))
+            .and_then(|schema| schema.column(column).map(|c| c.ty))
     }
 }
 

@@ -41,7 +41,7 @@ pub enum CommitMaterial {
     /// budget authority committed with it, so the replay re-commits the
     /// envelope, budget and governance rows the batch alone does not carry.
     ChangeEnvelope {
-        envelope: ChangeEnvelope,
+        envelope: Box<ChangeEnvelope>,
         source_budget: Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
     },
     /// A repository enrichment top-up: the MessagePack of the sealed

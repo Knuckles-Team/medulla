@@ -2,7 +2,6 @@
 //! same [`medulla_kernel::sealed_guard`] rules, judged against the stored rows inside the write
 //! transaction the generic write would commit in.
 
-use super::store_prelude::*;
 use super::*;
 use medulla_protocol_types::protocol::Method;
 use medulla_storage::ScopedOwnerTableMut;

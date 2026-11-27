@@ -158,6 +158,10 @@ pub fn check_champion_quality(measured: f64, min_quality: f64) -> Result<(), Ret
     }
 }
 
+/// A refused promotion: the prior champion, returned unchanged, and the refusal that kept it.
+/// Boxed in the error path so the success path of [`promote_champion`] stays small.
+pub type RefusedPromotion = (Option<RerankHeadArtifact>, RetrievalRefusal);
+
 /// Promote `candidate` over the `prior` champion: it must be bound to the round's revisions
 /// and reach `min_quality` nDCG@10 on the held-out set. On success the candidate is the new
 /// champion; on any refusal (`RETRIEVAL_POLICY_UNVERIFIED`) the `prior` champion stays and is
@@ -170,13 +174,13 @@ pub fn promote_champion(
     index_revision: &str,
     held_out: &[HeldOutQuery],
     min_quality: f64,
-) -> Result<RerankHeadArtifact, (Option<RerankHeadArtifact>, RetrievalRefusal)> {
+) -> Result<RerankHeadArtifact, Box<RefusedPromotion>> {
     let verdict = check_head_binding(&candidate, corpus_revision, index_revision)
         .and_then(|()| held_out_ndcg(&candidate, held_out))
         .and_then(|measured| check_champion_quality(measured, min_quality));
     match verdict {
         Ok(()) => Ok(candidate),
-        Err(refusal) => Err((prior, refusal)),
+        Err(refusal) => Err(Box::new((prior, refusal))),
     }
 }
 

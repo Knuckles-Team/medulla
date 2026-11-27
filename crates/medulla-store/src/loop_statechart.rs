@@ -398,7 +398,6 @@ where
     E: medulla_types::transition_refused::MachineEvent,
     G: 'static,
 {
-    use medulla_types::transition_refused::{MachineEvent, MachineState};
     StatechartDef {
         name: name.to_string(),
         schema_version: 1,

@@ -20,7 +20,6 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use medulla_query_types::wire::{Op, Plan, Pred};
 
     /// The plan AST round-trips through MessagePack (the wire format) unchanged —

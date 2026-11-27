@@ -36,8 +36,6 @@ use medulla_protocol_types::mutation_batch::{
 };
 #[cfg(any(test, feature = "test-support", feature = "security"))]
 use medulla_protocol_types::protocol::Method;
-#[cfg(any(test, feature = "test-support", feature = "security"))]
-use store_prelude::*;
 
 /// Durable rows are outside the native RPC frame validator and may be supplied
 /// by a corrupted, restored, or otherwise untrusted database file. Keep one

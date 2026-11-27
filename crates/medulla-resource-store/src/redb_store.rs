@@ -22,5 +22,4 @@ use medulla_result_types::epistemic_operations::{
     ResourceReservationSummary, ResourceReservationSummaryState, ResourceTargetSnapshot,
     ResourceTargetSnapshotKind,
 };
-use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;

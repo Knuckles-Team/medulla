@@ -2365,7 +2365,7 @@ fn distilled_head_activates_only_above_threshold() {
 
     // A below-threshold artifact refuses and the prior champion stays.
     let weak = fitted_head(vec![-1.0, 0.0]);
-    let (kept, refusal) = promote_champion(
+    let (kept, refusal) = *promote_champion(
         Some(champion.clone()),
         weak,
         "corpus-1",
@@ -2378,7 +2378,7 @@ fn distilled_head_activates_only_above_threshold() {
     assert_eq!(kept, Some(champion.clone()));
 
     // A stale artifact (another index revision) refuses the same way.
-    let (kept, refusal) = promote_champion(
+    let (kept, refusal) = *promote_champion(
         Some(champion.clone()),
         good,
         "corpus-1",

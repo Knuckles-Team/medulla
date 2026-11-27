@@ -75,7 +75,7 @@ fn column_type(store: &TableStore) -> impl Fn(&str, &str) -> Option<ColumnType> 
             .get_schema(table)
             .ok()
             .flatten()
-            .and_then(|schema| schema.column(column).map(|c| c.ty.clone()))
+            .and_then(|schema| schema.column(column).map(|c| c.ty))
     }
 }
 
@@ -204,18 +204,29 @@ fn percentile(sorted: &[f64], fraction: f64) -> f64 {
     sorted[index.min(sorted.len() - 1)]
 }
 
+/// The table one change run writes: its name, columns, key column and the column the updates set.
+struct ChangedTable<'a> {
+    table: &'a str,
+    cols: &'a [&'a str],
+    key: &'a str,
+    set_column: &'a str,
+}
+
 /// The commit times of `ROUNDS` rounds of one insert, one update and one delete of 1,000 rows
-/// each over `table`, in milliseconds, sorted. `fresh` is the first id the inserts use.
+/// each over `target`, in milliseconds, sorted. `fresh` is the first id the inserts use.
 fn change_times(
     store: &TableStore,
-    table: &str,
-    cols: &[&str],
-    key: &str,
-    set_column: &str,
+    target: &ChangedTable<'_>,
     fresh: i64,
     n: &mut u64,
     row: &dyn Fn(i64) -> Vec<Value>,
 ) -> Vec<f64> {
+    let ChangedTable {
+        table,
+        cols,
+        key,
+        set_column,
+    } = *target;
     let mut times = Vec::new();
     let mut next = fresh;
     for round in 0..ROUNDS as i64 {
@@ -292,11 +303,17 @@ fn orders_group(
     let regions = ["eu", "us", "apac", "latam"];
     let row = |id: i64| vec![json!(id), json!(regions[(id % 4) as usize]), json!(id % 9)];
     let cols = ["id", "region", "qty"];
-    let baseline = change_times(store, "orders", &cols, "id", "qty", *fresh, n, &row);
+    let orders = ChangedTable {
+        table: "orders",
+        cols: &cols,
+        key: "id",
+        set_column: "qty",
+    };
+    let baseline = change_times(store, &orders, *fresh, n, &row);
     *fresh += CHANGE_ROWS * ROUNDS as i64;
     let before = resident_bytes();
     create_view(store, select, n);
-    let with_view = change_times(store, "orders", &cols, "id", "qty", *fresh, n, &row);
+    let with_view = change_times(store, &orders, *fresh, n, &row);
     *fresh += CHANGE_ROWS * ROUNDS as i64;
     let growth = resident_bytes().saturating_sub(before);
     drop_view(store, n);
@@ -316,7 +333,13 @@ fn join_group(store: &TableStore, rows: i64, n: &mut u64) -> bool {
     let sale = move |sid: i64| vec![json!(sid), json!(sid % customers + 1), json!(sid % 9)];
     let cols = ["sid", "customer_id", "amount"];
     let mut fresh = rows + 1;
-    let baseline = change_times(store, "sales", &cols, "sid", "amount", fresh, n, &sale);
+    let sales = ChangedTable {
+        table: "sales",
+        cols: &cols,
+        key: "sid",
+        set_column: "amount",
+    };
+    let baseline = change_times(store, &sales, fresh, n, &sale);
     fresh += CHANGE_ROWS * ROUNDS as i64;
     let before = resident_bytes();
     create_view(
@@ -324,7 +347,7 @@ fn join_group(store: &TableStore, rows: i64, n: &mut u64) -> bool {
         "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid",
         n,
     );
-    let with_view = change_times(store, "sales", &cols, "sid", "amount", fresh, n, &sale);
+    let with_view = change_times(store, &sales, fresh, n, &sale);
     let growth = resident_bytes().saturating_sub(before);
     drop_view(store, n);
     emit(&Record {
