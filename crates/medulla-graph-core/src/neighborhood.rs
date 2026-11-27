@@ -212,7 +212,7 @@ pub fn walk<S: NeighborhoodSource + ?Sized>(
                 next_frontier.push(candidate.id.clone());
                 kept_total += 1;
             }
-            for link in &links {
+            for (link, _) in &links {
                 if visited.contains(&link.neighbor) {
                     push_edge(node, link, &mut seen_edges, &mut out.edges);
                 }
@@ -319,7 +319,7 @@ fn record_edges(
 
 fn push_edge(
     node: &str,
-    (link, _): &(NeighborLink, usize),
+    link: &NeighborLink,
     seen: &mut HashSet<NeighborhoodEdge>,
     edges: &mut Vec<NeighborhoodEdge>,
 ) {
