@@ -119,7 +119,7 @@ File: `crates/medulla-observe/src/registry/`.
 
 ## Scopes
 
-`observe:read` (class admin) for `Introspect`. `observe:profile` (class admin) for `Profile`.
+`observe:read` (class admin) for `Introspect`. `observe:profile` (class admin) for `Profile`. Both are operator-only at the dispatch chokepoint: a caller holding only `kg:read` or `kg:write` is refused, and the caller needs the exact scope, a domain wildcard, or `kg:admin`.
 
 ## Knobs (R011)
 

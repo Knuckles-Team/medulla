@@ -854,6 +854,9 @@ pub fn coarse_kg_admin_only(action: &str) -> bool {
         // A shared-namespace write reaches every principal of the tenant+graph:
         // only its own action or kg:admin grants it, never coarse kg:write.
         || action.ends_with(":shared:write")
+        // Runtime introspection and profiling (`observe:read`, `observe:profile`)
+        // return sampler output, task dumps and registry rows: operator-only.
+        || action.starts_with("observe:")
 }
 
 /// Deployment policy used to turn signed v2 claims into a trusted context.

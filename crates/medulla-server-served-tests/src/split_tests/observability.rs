@@ -1401,6 +1401,43 @@ async fn profile_samples_the_spinning_worker() {
     }
 }
 
+// spec: MEDULLA-OBSERVE-R010.1
+#[tokio::test(flavor = "multi_thread")]
+async fn observe_scopes_are_operator_only_at_the_dispatch_chokepoint() {
+    use medulla_types::introspect::ProfileKind;
+    let served = Served::new().await;
+    let profile = || Method::Profile {
+        kind: ProfileKind::TaskDump,
+        seconds: 0,
+    };
+    let introspect = || Method::Introspect {
+        section: IntrospectSection::Readiness,
+        limit: None,
+        cursor: None,
+    };
+    // A plain read bearer reaches neither the sampler nor the registry dump.
+    for method in [profile(), introspect()] {
+        let denied = served
+            .call_as("__commons__", method, vec!["kg:read".to_string()])
+            .await;
+        assert!(denied.error.is_some(), "a kg:read bearer was admitted");
+    }
+    // The admin aggregate is admitted: the call passes the scope gate and is
+    // answered by the handler itself.
+    let admitted = served
+        .call_as("__commons__", introspect(), vec!["kg:admin".to_string()])
+        .await;
+    assert!(admitted.error.is_none(), "{:?}", admitted.error);
+    let admitted = served
+        .call_as("__commons__", profile(), vec!["kg:admin".to_string()])
+        .await;
+    let error = admitted.error.unwrap_or_default();
+    assert!(
+        !error.contains("ACCESS_DENIED") && !error.contains("scope"),
+        "an admin was refused by the scope gate: {error}"
+    );
+}
+
 // spec: MEDULLA-OBSERVE-R010.3
 #[tokio::test(flavor = "multi_thread")]
 async fn task_dump_is_one_consistent_snapshot() {
