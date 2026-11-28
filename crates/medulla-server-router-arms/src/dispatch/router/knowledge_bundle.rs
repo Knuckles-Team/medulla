@@ -28,7 +28,7 @@ pub async fn serve_bundle_export(
 ) -> Response {
     #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
     {
-        medulla_h_admin::knowledge_bundle::handle_bundle_export(
+        medulla_h_admin_schema::knowledge_bundle::handle_bundle_export(
             state,
             req_id,
             verified,
@@ -67,7 +67,7 @@ pub async fn serve_bundle_import(
 ) -> Response {
     #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
     {
-        let plan = match medulla_h_admin::knowledge_bundle::plan_import(
+        let plan = match medulla_h_admin_schema::knowledge_bundle::plan_import(
             state,
             verified,
             &bundle_ref,
@@ -236,7 +236,7 @@ async fn commit_plan(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
-    plan: &medulla_h_admin::knowledge_bundle::ImportPlan,
+    plan: &medulla_h_admin_schema::knowledge_bundle::ImportPlan,
     import_id: &str,
     created: &mut Vec<String>,
 ) -> Result<(), String> {

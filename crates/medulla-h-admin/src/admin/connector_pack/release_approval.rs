@@ -70,7 +70,7 @@ pub async fn activate_held_release(
     let tenant = verified.tenant().to_string();
     let proposed_digest = proposed_digest.to_string();
     let cancel = medulla_server_api::request_scope::current();
-    let usage = super::import::release::GraphClassUsage {
+    let usage = medulla_h_admin_schema::admin::connector_pack::import::release::GraphClassUsage {
         state: Arc::clone(state),
     };
     medulla_server_api::api::dispatch_support::blocking_task(
@@ -85,7 +85,14 @@ pub async fn activate_held_release(
                         .to_string()
                 })?;
             let version = held.release.version.version.clone();
-            super::import::commit_staged(&store, &*blob.store, context, &held, &cancel, &usage)?;
+            medulla_h_admin_schema::admin::connector_pack::import::commit_staged(
+                &store,
+                &*blob.store,
+                context,
+                &held,
+                &cancel,
+                &usage,
+            )?;
             Ok(Some(version))
         },
     )

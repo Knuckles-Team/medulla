@@ -83,7 +83,7 @@ async fn observe(served: &Served, key: &str, pack: &(ConnectorPackIndex, Vec<u8>
     Observation {
         registry_revision: page.registry_revision,
         registry_digest: page.registry_digest,
-        registration_config_digest: super::super::catalog_authority::registration_config_digest(
+        registration_config_digest: medulla_h_admin_schema::admin::connector_pack::catalog_authority::registration_config_digest(
             view,
         )
         .unwrap(),

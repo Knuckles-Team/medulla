@@ -132,7 +132,7 @@ pub fn install_state_seams(state: &ServerState) {
     // L4 admin, decide.
     let _ = medulla_server_ops::api::admin::install_admin_seam(
         &state.seams,
-        std::sync::Arc::new(medulla_h_admin::admin::AdminSeam),
+        std::sync::Arc::new(medulla_h_admin_schema::admin::AdminSeam),
     );
     let _ = medulla_server_ops::api::admin::install_decide_seam(
         &state.seams,

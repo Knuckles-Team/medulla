@@ -139,7 +139,7 @@ The current connector pack schema is version 2. Compatible additions keep existi
 
 ##### Existing path to extend
 
-`crates/medulla-catalog-types/src/connector_pack/{index,digest,annotations,ops,result,record}.rs` defines the wire values and bounds. `crates/medulla-capabilities/src/domains/` owns method descriptors; `gen_contract` emits the public contract, receipt and clients. `crates/medulla-h-admin/src/admin/connector_pack/import/` validates and plans; `crates/medulla-persistence-records/src/connector_pack/` owns the head, membership, receipt, bindings, visibility and outbox; `crates/medulla-server-blob/src/blob/engine_bodies.rs` owns bodies; `crates/medulla-h-admin/src/connector_pack_projection.rs` and `crates/medulla-h-admin/src/graph_schema/attach_pack.rs` provide projection and schema attachment. `crates/medulla-h-admin/src/admin/component_content.rs` serves bodies. New code must enter through these paths, not create a second registry or a detached adapter.
+`crates/medulla-catalog-types/src/connector_pack/{index,digest,annotations,ops,result,record}.rs` defines the wire values and bounds. `crates/medulla-capabilities/src/domains/` owns method descriptors; `gen_contract` emits the public contract, receipt and clients. `crates/medulla-h-admin/src/admin/connector_pack/import/` validates and plans; `crates/medulla-persistence-records/src/connector_pack/` owns the head, membership, receipt, bindings, visibility and outbox; `crates/medulla-server-blob/src/blob/engine_bodies.rs` owns bodies; `crates/medulla-h-admin/src/connector_pack_projection.rs` and `crates/medulla-h-admin-schema/src/graph_schema/attach_pack.rs` provide projection and schema attachment. `crates/medulla-h-admin-schema/src/admin/component_content.rs` serves bodies. New code must enter through these paths, not create a second registry or a detached adapter.
 
 ##### Data flow and durable boundaries
 
@@ -235,7 +235,7 @@ Cross-repository rows: the `MERISTEM-HARNESS` row for the matched ablation runne
 
 #### Tool-contract facts on pack annotations (R045)
 
-Data flow: connector Graft SDK pack (`SCION-CONNECTOR-CONTROL-R045.1` to `.11`) → `PackAnnotations` (`crates/medulla-catalog-types/src/connector_pack/annotations.rs:46`) → `check_annotations` (`crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs:34`) → `tool_facts` (`crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs:21`) → `AgentComponentFacts::Tool` (`crates/medulla-agent-types/src/agent_component/facts.rs:198`) → `request_body` (`crates/medulla-h-decide/src/decide/stat_tool_subset.rs:99`) → `smallest_covering_subset` (`crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:58`) → `HarnessConfig` action space (`MEDULLA-DECISION-ENGINE-R128.9`).
+Data flow: connector Graft SDK pack (`SCION-CONNECTOR-CONTROL-R045.1` to `.11`) → `PackAnnotations` (`crates/medulla-catalog-types/src/connector_pack/annotations.rs:46`) → `check_annotations` (`crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs:34`) → `tool_facts` (`crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs:21`) → `AgentComponentFacts::Tool` (`crates/medulla-agent-types/src/agent_component/facts.rs:198`) → `request_body` (`crates/medulla-h-decide/src/decide/stat_tool_subset.rs:99`) → `smallest_covering_subset` (`crates/medulla-decision-types/src/decision/statistical/tool_subset.rs:58`) → `HarnessConfig` action space (`MEDULLA-DECISION-ENGINE-R128.9`).
 
 Types and fields: `side_effects` (`none`, `workspace_write`, `external_write`, `network`), `declared_by` (`connector`, `mcp_hint`, `certified`) and `schema_tokens` (positive integer) are new optional fields beside `read_only_hint` (`annotations.rs:58`). Safe defaults when absent: `read_only` false, `side_effects` external_write, `declared_by` connector, `schema_tokens` absent.
 
@@ -335,7 +335,7 @@ Reuse `core-foundation-v1.ttl` person, event and document terms without changing
 
 Data flow: typed crosswalk declarations -> generated RDF artifacts -> signed pack import -> schema attachment -> committed schema. Read flow: authenticated OntologyInspect -> revision-bound mappings and coverage. GraphSchemaClasses provides independent class and digest readback.
 
-The production pack route is `handle_connector_pack` -> `serve_import` -> `import::validate_and_commit`. Add validation before any new pack head becomes visible. `crates/medulla-h-admin/src/graph_schema.rs::apply_pack_source` checks composition before schema activation. `crates/medulla-h-sparql/src/rdf/dispatch.rs` routes OntologyInspect to its current inspection handler. Extend that handler and its generated DTO contract. The new domain crosswalk path has no production caller today; these requirements create the missing calls.
+The production pack route is `handle_connector_pack` -> `serve_import` -> `import::validate_and_commit`. Add validation before any new pack head becomes visible. `crates/medulla-h-admin-schema/src/graph_schema.rs::apply_pack_source` checks composition before schema activation. `crates/medulla-h-sparql/src/rdf/dispatch.rs` routes OntologyInspect to its current inspection handler. Extend that handler and its generated DTO contract. The new domain crosswalk path has no production caller today; these requirements create the missing calls.
 
 Use bounded pinned target declarations, not runtime vocabulary downloads. Preserve explicit relation direction and vocabulary revisions. For broadMatch the target is broader; for narrowMatch the target is narrower. The test specification fixes exact tuples, including conservative SeeAlso references for all three core metadata classes. Document includes physical documents, so its DigitalDocument reference cannot justify an exact match. These fixtures preserve existing core OWL axioms; they do not derive new axioms from crosswalks. Crosswalk relations do not generate identity or class-equivalence entailments. Reject conflicting or category-incompatible declarations before activation. Apply the existing bounded EL+/RL and tableau consistency checks to the resulting schema.
 
@@ -395,9 +395,9 @@ Inspection base: `38cae80eb37eba97a273e2a6259e2eb0dfe46b02`.
 |---|---|
 | `crates/medulla-agent-types/src/agent_component.rs:130` | Existing SystemPrompt/McpPrompt kinds, component identity, revisions and dependency pins. Reuse these types. |
 | `crates/medulla-agent-types/src/agent_component/facts.rs:395` | Existing static/dynamic variable validation. This does not establish full blueprint validation or rendering. |
-| `crates/medulla-h-admin/src/admin/agent.rs:142` | Authenticated component dispatch. Publish binds verified scope before the owner write at line 184. |
+| `crates/medulla-h-admin-schema/src/admin/agent.rs:142` | Authenticated component dispatch. Publish binds verified scope before the owner write at line 184. |
 | `crates/medulla-persistence-records/src/agent_component/write.rs:39` | Existing component publication authority. Extend it for validated native prompt bodies and replay. |
-| `crates/medulla-h-admin/src/admin/component_content.rs:55` | Tenant-scoped content lookup uses connector_pack_content_pointer and verifies engine-owned body bytes. |
+| `crates/medulla-h-admin-schema/src/admin/component_content.rs:55` | Tenant-scoped content lookup uses connector_pack_content_pointer and verifies engine-owned body bytes. |
 | `crates/medulla-server-blob/src/blob/engine_bodies.rs:202` | Existing verified engine-body reader. Reuse its digest and holder authority. |
 | `crates/medulla-h-admin/src/connector_pack_projection.rs` | Existing pack projection machinery. Native prompt projection requires an explicit admitted extension. |
 
@@ -550,7 +550,7 @@ The outbox consumer runs `project` (`crates/medulla-h-admin/src/connector_pack_p
 
 ##### Runtime ontology import (R103)
 
-A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
+A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin-schema/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
 
 #### MEDULLA-TYPED-PACKS-R104 — connect-time seed graph import
 
@@ -625,11 +625,11 @@ none
 
 ## Production caller chain
 
-- `Method::ConnectorPack` arm of `dispatch_catalog_admin_methods` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:150`) to `handle_connector_pack` (`crates/medulla-h-admin/src/admin/connector_pack.rs:43`) to `serve_import` (`connector_pack.rs:146`) to `validate_and_commit` (`crates/medulla-h-admin/src/admin/connector_pack/import.rs:48`) to `run_import` (`import.rs:66`) to `prepare` (`crates/medulla-h-admin/src/admin/connector_pack/import/planning.rs:95`).
+- `Method::ConnectorPack` arm of `dispatch_catalog_admin_methods` (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:150`) to `handle_connector_pack` (`crates/medulla-h-admin/src/admin/connector_pack.rs:43`) to `serve_import` (`connector_pack.rs:146`) to `validate_and_commit` (`crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs:48`) to `run_import` (`import.rs:66`) to `prepare` (`crates/medulla-h-admin-schema/src/admin/connector_pack/import/planning.rs:95`).
 - Commit to projection: the owner transaction leaves an outbox row; `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`) projects the head and `GraphSchema.AttachPack` attaches the pack schema.
-- Release contract check: `run_import` to `release::judge` to `GraphClassUsage::classes_in_use` (`crates/medulla-h-admin/src/admin/connector_pack/import/release.rs`), which selects the importing tenant's composing graphs from their recorded `Pack` schema-source tenant (resident sources, or `PersistenceBackend::graph_catalog_schema_sources` for a catalog-only graph) and reads the `type` label index or, for a graph that is not fully resident, the durable class node; see research.md "R107.4: which graphs the class-in-use check reads".
-- `AgentComponent` ops to `handle_agent_component` (`crates/medulla-h-admin/src/admin/agent.rs:99`) for content, render and receipt verification.
-- `GraphSchema` ops (`ImportOntology`, `WithdrawOntology`, `AttachApproved`) to `handle_gateway` (`crates/medulla-h-admin/src/graph_schema.rs:195`).
+- Release contract check: `run_import` to `release::judge` to `GraphClassUsage::classes_in_use` (`crates/medulla-h-admin-schema/src/admin/connector_pack/import/release.rs`), which selects the importing tenant's composing graphs from their recorded `Pack` schema-source tenant (resident sources, or `PersistenceBackend::graph_catalog_schema_sources` for a catalog-only graph) and reads the `type` label index or, for a graph that is not fully resident, the durable class node; see research.md "R107.4: which graphs the class-in-use check reads".
+- `AgentComponent` ops to `handle_agent_component` (`crates/medulla-h-admin-schema/src/admin/agent.rs:99`) for content, render and receipt verification.
+- `GraphSchema` ops (`ImportOntology`, `WithdrawOntology`, `AttachApproved`) to `handle_gateway` (`crates/medulla-h-admin-schema/src/graph_schema.rs:195`).
 - Class roll-up (`MEDULLA-TYPED-PACKS-R812`): served `GraphSchemaClasses` to `handle_classes` (`crates/medulla-server-ops/src/api/admin/terms.rs`) to `classes_page` to `scan_vocabulary`, which parses each composed source once for both the declared terms and their `rdfs:subClassOf` objects, to `term_view`, which sets `GraphSchemaTermView.superclasses` on class terms; `medulla/generated/graph_schema.py` mirrors the field.
 - Every graph write to `check_before_write` (`crates/medulla-server-api/src/icv_guard.rs:133`), which enforces the composed shapes.
 - Obsolete paths to delete: the `MEDULLA_ONTOLOGY_ORPHANS` switch and `OrphanPolicy::Warn` in `import/validation.rs`, and `PackWarningCode::OntologyOrphan` (`MEDULLA-TYPED-PACKS-R105.1`).

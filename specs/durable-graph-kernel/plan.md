@@ -1158,7 +1158,7 @@ none
 
 - Mutation outbox: the local owner writes delivery rows through `claim` (`crates/medulla-transaction/src/outbox/claim.rs:57`) and `ack` (`crates/medulla-transaction/src/outbox/cursor.rs:42`) on its own owner store handle; the replicated log never carries them (`MEDULLA-DURABLE-KERNEL-R005`).
 - Change envelope and feed: `ApplyChangeEnvelope` to `apply_one_change_envelope_inner` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs:611`) next to `CdcHub::emit` (`crates/medulla-server-cdc/src/cdc.rs:269`); the feed reads are downstream (`MEDULLA-DURABLE-KERNEL-R043.100`).
-- Lazy agent library open: admin handlers (`crates/medulla-h-admin/src/admin/agent.rs:51`) to `ensure_agent_library` (`crates/medulla-persistence-records/src/agent_library.rs:709`); boot never calls it before the listeners bind (`MEDULLA-DURABLE-KERNEL-R006`).
+- Lazy agent library open: admin handlers (`crates/medulla-h-admin-schema/src/admin/agent.rs:51`) to `ensure_agent_library` (`crates/medulla-persistence-records/src/agent_library.rs:709`); boot never calls it before the listeners bind (`MEDULLA-DURABLE-KERNEL-R006`).
 - Run checkpoint: `Method::PublishRunCheckpoint` to `try_handle` (`crates/medulla-h-jobs/src/work_item.rs:40`) to `commit_verified_work_item` (`work_item.rs:104`) to `crates/medulla-work-store/src/redb_store/work_item/checkpoint.rs::publish` (`MEDULLA-DURABLE-KERNEL-R028.1`).
 - Task queue: `Method::TaskQueueEnqueue`, `TaskQueueClaim` and `TaskQueueAck` to `crates/medulla-h-jobs/src/task_queue.rs` over `crates/medulla-jobs` (`MEDULLA-DURABLE-KERNEL-R072`).
 - Host-start grant: `Method::IssueHostStartGrant` to `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start.rs` (`MEDULLA-DURABLE-KERNEL-R030.1`).
@@ -1241,7 +1241,7 @@ Renewal reuses the ack ownership rule and the two ack refusal codes, so no secon
 
 ## Knowledge bundle (R877)
 
-Call path. `Method::BundleExport` and `Method::BundleImport` (new, `crates/medulla-protocol-types/src/protocol/method/method_11.rs`) → `dispatch_request_method` (`crates/medulla-server-router/src/dispatch/router.rs:269`) → new `crates/medulla-h-admin/src/knowledge_bundle.rs`. Export reads one snapshot of the row-projected store and stores the bundle through `BlobBegin`, `BlobChunkPut` and `BlobCommit`. Import reads the blob, verifies every digest, then commits one `MutationBatch`.
+Call path. `Method::BundleExport` and `Method::BundleImport` (new, `crates/medulla-protocol-types/src/protocol/method/method_11.rs`) → `dispatch_request_method` (`crates/medulla-server-router/src/dispatch/router.rs:269`) → new `crates/medulla-h-admin-schema/src/knowledge_bundle.rs`. Export reads one snapshot of the row-projected store and stores the bundle through `BlobBegin`, `BlobChunkPut` and `BlobCommit`. Import reads the blob, verifies every digest, then commits one `MutationBatch`.
 
 Reuse inventory. The triple part reuses the canonical N-Quads of MEDULLA-TYPED-PACKS-R104.2. The document part reuses the content-addressed blob store (R050, R059). Arbora serves the transfer through `ARBORA-OPS-R923`.
 

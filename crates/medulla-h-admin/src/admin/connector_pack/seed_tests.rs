@@ -8,8 +8,12 @@ use medulla_graph_core::graph::{
 };
 use medulla_types::contract::{Digest256, ResourceId};
 
-use super::seed::{
-    canonical_digest, prepare_seed_import, SeedImportOutcome, MAX_SEED_BYTES, MAX_SEED_TRIPLES,
+use {
+    medulla_h_admin_schema::admin::connector_pack::seed::canonical_digest,
+    medulla_h_admin_schema::admin::connector_pack::seed::prepare_seed_import,
+    medulla_h_admin_schema::admin::connector_pack::seed::SeedImportOutcome,
+    medulla_h_admin_schema::admin::connector_pack::seed::MAX_SEED_BYTES,
+    medulla_h_admin_schema::admin::connector_pack::seed::MAX_SEED_TRIPLES,
 };
 
 const SEED_NS: &str = "https://knuckles-team.github.io/ontology/connector-seed#";
@@ -223,7 +227,10 @@ fn no_writer_sets_content_outside_construction() {
     let assign = [".con", "tent="].concat();
     let compare = [".con", "tent=="].concat();
     for (name, source) in [
-        ("seed.rs", include_str!("seed.rs")),
+        (
+            "seed.rs",
+            include_str!("../../../../medulla-h-admin-schema/src/admin/connector_pack/seed.rs"),
+        ),
         ("seed_tests.rs", include_str!("seed_tests.rs")),
     ] {
         for (number, line) in source.lines().enumerate() {

@@ -184,7 +184,9 @@ async fn dispatch_cluster_admin_methods_arm_2(ctx: DispatchCtx<'_>, method: Meth
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match medulla_h_admin::raft_admin::try_handle(state, req_id, method).await {
+                    match medulla_h_admin_schema::raft_admin::try_handle(state, req_id, method)
+                        .await
+                    {
                         Ok(resp) => resp,
                         // Unreachable: both variants matched above are raft-admin methods.
                         Err(_) => Response::err(req_id, "raft-admin dispatch routing error"),
@@ -346,7 +348,7 @@ pub async fn dispatch_agent_library_methods(
                 // Placed on the heap like `dispatch_boxed`, which only takes a `Response` future:
                 // this one answers the outcome that also names the published entry.
                 let outcome = Box::pin(async {
-                    medulla_h_admin::admin::handle_agent_library(
+                    medulla_h_admin_schema::admin::handle_agent_library(
                         state,
                         req.id,
                         verified_context,
@@ -387,8 +389,13 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_graph(state, req.id, verified_context, op)
-                        .await
+                    medulla_h_admin_schema::admin::handle_agent_graph(
+                        state,
+                        req.id,
+                        verified_context,
+                        op,
+                    )
+                    .await
                 })
                 .await
             }
@@ -405,7 +412,7 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_component(
+                    medulla_h_admin_schema::admin::handle_agent_component(
                         state,
                         req.id,
                         verified_context,
@@ -489,7 +496,7 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::concept_lineage::handle(
+                    medulla_h_admin_schema::admin::concept_lineage::handle(
                         state,
                         req.id,
                         verified_context,
@@ -512,7 +519,7 @@ pub async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    medulla_h_admin::admin::handle_agent_template(
+                    medulla_h_admin_schema::admin::handle_agent_template(
                         state,
                         req.id,
                         verified_context,

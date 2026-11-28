@@ -934,7 +934,7 @@ pub struct Transports {
 async fn spawn_post_bind_workers(state: SharedState) {
     // MEDULLA-OBSERVE-R009.2: one INFO line says which build serves, the same fields
     // `Introspect build` returns.
-    medulla_h_admin::admin::introspect::log_build_identity();
+    medulla_h_admin_schema::admin::introspect::log_build_identity();
     // MEDULLA-OBSERVE-R005.2: the stall watchdog is a registered task of the process.
     medulla_observe::watchdog::spawn_watchdog();
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;

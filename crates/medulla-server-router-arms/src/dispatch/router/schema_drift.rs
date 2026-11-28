@@ -188,8 +188,11 @@ pub async fn repair_propose(
         // The shadow check stored its report on the graph in its own commit: read its counts.
         let shadow_check = {
             let (core, _) = read_graph(state, req, verified).await?;
-            medulla_h_admin::graph_schema::shadow_check_summary(&core, &proposal.candidate_digest)
-                .ok_or_else(|| {
+            medulla_h_admin_schema::graph_schema::shadow_check_summary(
+                &core,
+                &proposal.candidate_digest,
+            )
+            .ok_or_else(|| {
                 "INVALID_ARGUMENT: the shadow check stored no report for the candidate".to_string()
             })?
         };

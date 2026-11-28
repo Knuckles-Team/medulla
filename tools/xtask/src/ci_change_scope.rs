@@ -57,7 +57,7 @@ fn path_gate_table() -> Vec<(&'static str, Vec<&'static str>)> {
             with_toolchain(&[
                 "crates/medulla-core/ontology/",
                 "src/server/graph_schema/",
-                "crates/medulla-h-admin/src/graph_schema.rs",
+                "crates/medulla-h-admin-schema/src/graph_schema.rs",
             ]),
         ),
         (

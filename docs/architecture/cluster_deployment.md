@@ -240,7 +240,7 @@ confirm there before declaring the cluster production-live:
    into `add_group_learner` (`crates/medulla-raft/src/raft/multi.rs`, add-learner only, no
    promotion) + `change_group_voters` (the promotion/rebalance half), both now
    reachable at runtime as `Method::RaftAddLearner` /
-   `Method::RaftChangeMembership` (`crates/medulla-h-admin/src/raft_admin.rs`), gated
+   `Method::RaftChangeMembership` (`crates/medulla-h-admin-schema/src/raft_admin.rs`), gated
    `admin:cluster` and leader-only — a follower answers `OPERATION_REDIRECTED`
    naming the current leader, exactly like `PlacementRoute`'s stale-route
    redirect. `remove_group_member` still has no wire Method (out of scope here;

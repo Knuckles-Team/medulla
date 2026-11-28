@@ -79,14 +79,14 @@ Every row's regression test must pass against an exact merged head, as PACK-06/0
 
 | Requirement | Native regression | Result |
 | --- | --- | --- |
-| MEDULLA-TYPED-PACKS-R042.1 | `crates/medulla-h-admin/src/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` and `foreign_terms_warn_and_stay_only_in_the_declared_partition`: both typed fields accept native terms and retain exact foreign claims with warnings. Native typos, roots, wrong kinds, invalid schemes, and malformed typed lists refuse. | Eight production-module tests passed on 2026-10-11 with Rust 1.96.0 and cached `medulla_types` and `serde_json` dependencies. Restoring the old scheme check makes the invalid-scheme test fail at `provides: 1vendor:search`. |
+| MEDULLA-TYPED-PACKS-R042.1 | `crates/medulla-h-admin-schema/src/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` and `foreign_terms_warn_and_stay_only_in_the_declared_partition`: both typed fields accept native terms and retain exact foreign claims with warnings. Native typos, roots, wrong kinds, invalid schemes, and malformed typed lists refuse. | Eight production-module tests passed on 2026-10-11 with Rust 1.96.0 and cached `medulla_types` and `serde_json` dependencies. Restoring the old scheme check makes the invalid-scheme test fail at `provides: 1vendor:search`. |
 | MEDULLA-TYPED-PACKS-R042.2 | `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog`. `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import`. | Both signed, served native regressions pass. Exact source, commands and results are in `../decision-engine/evidence/gr1080-native-20261011/final-native-results.json`. This focused slice does not verify the parent. |
 
 The native harness loads the unchanged production module path with `#[path]`; it uses no behavior substitutes. To repeat from the repository root with compatible cached Rust dependencies:
 
 ```sh
 work=$(mktemp -d)
-printf '#[path = "%s/crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs"]\nmod annotations;\n' "$PWD" > "$work/native.rs"
+printf '#[path = "%s/crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs"]\nmod annotations;\n' "$PWD" > "$work/native.rs"
 rustc --test --edition=2021 "$work/native.rs" \
   -L "dependency=$CACHED_RUST_DEPS" \
   --extern "medulla_types=$(find "$CACHED_RUST_DEPS" -name 'libeg_types-*.rlib' -print -quit)" \
@@ -115,10 +115,10 @@ The following tests cover existing native validation and digest behavior. They d
 
 | Source and proving test | Required observation |
 |---|---|
-| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modalities_accept_native_terms_for_tools_prompts_and_skills` | Both fields accept native terms for all three entry kinds and round-trip without loss. |
-| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modalities_refuse_foreign_roots_typos_and_wrong_kinds` | Both fields refuse foreign, root, typo, wrong-kind, relative, and empty IRIs with the typed code. |
-| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_lists_enforce_wire_types_and_both_size_edges` | Zero and 64 elements pass; 65 elements, null, scalars, and non-string elements refuse. |
-| `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` | Rust replays committed full/empty vectors. Reordering and duplication preserve identity; content and direction changes do not. |
+| `crates/medulla-h-admin-schema/src/admin/connector_pack/import/modality_tests.rs::modalities_accept_native_terms_for_tools_prompts_and_skills` | Both fields accept native terms for all three entry kinds and round-trip without loss. |
+| `crates/medulla-h-admin-schema/src/admin/connector_pack/import/modality_tests.rs::modalities_refuse_foreign_roots_typos_and_wrong_kinds` | Both fields refuse foreign, root, typo, wrong-kind, relative, and empty IRIs with the typed code. |
+| `crates/medulla-h-admin-schema/src/admin/connector_pack/import/modality_tests.rs::modality_lists_enforce_wire_types_and_both_size_edges` | Zero and 64 elements pass; 65 elements, null, scalars, and non-string elements refuse. |
+| `crates/medulla-h-admin-schema/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` | Rust replays committed full/empty vectors. Reordering and duplication preserve identity; content and direction changes do not. |
 | `tests/test_connector_pack_client.py::test_modality_annotations_replay_golden_vector_and_affect_identity` | Python replays the full vector. Both fields change tool, prompt, and skill pack identity. |
 
 TP-10, TP-11, and applicable quality gates remain required on the merged exact head.
@@ -137,8 +137,8 @@ These partial regressions intentionally carry no acceptance binding that would m
 - `MEDULLA-TYPED-PACKS-R045.1`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip`.
 - `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults`.
 - `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors`.
-- `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused`.
-- `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
+- `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused`.
+- `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
@@ -239,7 +239,7 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R002.10 | A receipt verified against the live head returns ok. | An invalid, stale, substituted or wrong-scope receipt returns `PROMPT_RECEIPT_INVALID`; the zero-dispatch proof is MERISTEM-HARNESS-CYCLE-R076. | `tests/test_prompt_blueprints_served.py::test_receipt_verdicts` |
 | MEDULLA-TYPED-PACKS-R002.11 | Current and historical revisions, graph links and verified body bytes survive restart. | A refused stale update leaves the previous durable head intact. | `tests/test_prompt_blueprints_served.py::test_prompt_restart_readback` |
 | MEDULLA-TYPED-PACKS-R094.1 | A generated Python client reads exact verified pack body bytes. | A refusal-only dispatch arm fails this acceptance. | `tests/test_connector_pack_content.py::test_stable_content_returns_body` |
-| MEDULLA-TYPED-PACKS-R094.2 | `BlueprintExport` carries the full `AgentComponentEntry` at the pinned revision and the verified body bytes unchanged. | An omitted field, a changed revision, a changed body byte, an unknown revision without `COMPONENT_REVISION_UNKNOWN` or another tenant without `ACCESS_DENIED` fails. | `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export`; `crates/medulla-h-admin/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown` |
+| MEDULLA-TYPED-PACKS-R094.2 | `BlueprintExport` carries the full `AgentComponentEntry` at the pinned revision and the verified body bytes unchanged. | An omitted field, a changed revision, a changed body byte, an unknown revision without `COMPONENT_REVISION_UNKNOWN` or another tenant without `ACCESS_DENIED` fails. | `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export`; `crates/medulla-h-admin-schema/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown` |
 | MEDULLA-TYPED-PACKS-R094.3 | Changing one field creates one new revision and preserves every other field. | Concurrent writers cannot overwrite a newer head (`STALE_AGENT_LIBRARY_REVISION`); a pack-owned `mcp:` id refuses `RESERVED_COMPONENT_ID`; an envelope that changes kind or provenance refuses `BLUEPRINT_IDENTITY_CHANGED` and a digest mismatch `BLUEPRINT_MALFORMED`. | `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import` |
 | MEDULLA-TYPED-PACKS-R094.4 | Replay produces no extra revision, holder or outbox event. | A conflicting retry (same idempotency key, other content) refuses `IDEMPOTENCY_CONFLICT` and preserves the prior committed result. | `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` |
 | MEDULLA-TYPED-PACKS-R094.5 | The new revision contains the one intended change and all unchanged values. | Stale import and denied-tenant cases preserve both historical and current readback. | `tests/test_prompt_blueprints_served.py::test_blueprint_roundtrip_restart` |
@@ -357,9 +357,9 @@ No test named here has run; names describe acceptance obligations, not evidence.
 - `MEDULLA-TYPED-PACKS-R102`: Rollup closes when every child `.1` to `.7` passes its proving test.
 - `MEDULLA-TYPED-PACKS-R102.1`: `crates/medulla-shacl/tests/connector_pack_shapes.rs::surface_shapes_accept_valid_and_refuse_invalid`.
 - `MEDULLA-TYPED-PACKS-R102.2`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_follow_pack_head`.
-- `MEDULLA-TYPED-PACKS-R102.3`: `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused`.
+- `MEDULLA-TYPED-PACKS-R102.3`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused`.
 - `MEDULLA-TYPED-PACKS-R102.4`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::outbox_consumer_writes_surface_nodes`.
-- `MEDULLA-TYPED-PACKS-R102.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged`.
+- `MEDULLA-TYPED-PACKS-R102.5`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged`.
 - `MEDULLA-TYPED-PACKS-R102.6`: `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_carry_pack_digest`.
 - `MEDULLA-TYPED-PACKS-R102.7`: `tests/typed_packs/test_connector_surface_rdf_served.py::test_surface_query_follows_pack_head`.
 - `MEDULLA-TYPED-PACKS-R103`: Rollup closes when every child `.1` to `.6` passes its proving test.
@@ -485,7 +485,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
   - UQL equivalents return the same rows, for example `MATCH (s:StewardshipAssignment)-[:assignedTo]->(a {id: X}) RETURN s.principal, s.role`.
 - `MEDULLA-TYPED-PACKS-R107`: See each child.
 - `MEDULLA-TYPED-PACKS-R107.1`: `crates/medulla-types/tests/pack_contract.rs::version_grant_and_break_round_trip`.
-- `MEDULLA-TYPED-PACKS-R107.2`: `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::non_breaking_applies_breaking_waits_and_queries_use_active_version`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::every_legal_and_illegal_release_transition_is_typed`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::the_ontology_describes_the_same_release_machine`.
+- `MEDULLA-TYPED-PACKS-R107.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/contract_diff.rs::tests::non_breaking_applies_breaking_waits_and_queries_use_active_version`; `crates/medulla-h-admin-schema/src/admin/connector_pack/contract_diff.rs::tests::every_legal_and_illegal_release_transition_is_typed`; `crates/medulla-h-admin-schema/src/admin/connector_pack/contract_diff.rs::tests::the_ontology_describes_the_same_release_machine`.
 - `MEDULLA-TYPED-PACKS-R107.3`: `tests/typed_packs/test_pack_contract_served.py::test_diff_runs_in_import_before_commit`.
 - `MEDULLA-TYPED-PACKS-R107.4`: `tests/typed_packs/test_pack_contract_served.py::test_breaking_and_in_use_refuse`, `tests/typed_packs/test_pack_contract_served.py::test_other_tenant_data_never_blocks_a_withdrawal`.
 - `MEDULLA-TYPED-PACKS-R107.5`: `tests/typed_packs/test_pack_contract_served.py::test_receipt_carries_digests_break_count_and_request`. Additive receipt: both contract digests and `break_count` 0; breaking answer: `held` with the break count and the change request.
@@ -555,17 +555,17 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - `MEDULLA-TYPED-PACKS-R105.10`: `tests/test_core_ontology_closed.py::test_every_core_class_reaches_the_root`.
 - `MEDULLA-TYPED-PACKS-R105.10.1`: `tests/test_core_ontology_closed.py::test_every_core_class_reaches_the_root`.
 - `MEDULLA-TYPED-PACKS-R105.10.2`: `tests/test_core_ontology_closed.py::test_every_core_class_has_one_home`.
-- `MEDULLA-TYPED-PACKS-R105.10.3`: `tests/test_core_ontology_closed.py::test_no_local_name_repeats_across_core_namespaces`; `crates/medulla-h-admin/src/namespace_migration.rs::tests::every_retired_term_maps_to_a_live_term_under_the_one_base`.
+- `MEDULLA-TYPED-PACKS-R105.10.3`: `tests/test_core_ontology_closed.py::test_no_local_name_repeats_across_core_namespaces`; `crates/medulla-h-admin-schema/src/namespace_migration.rs::tests::every_retired_term_maps_to_a_live_term_under_the_one_base`.
 - `MEDULLA-TYPED-PACKS-R105.10.4`: `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::core_sources_cover_every_packaged_module`.
-- `MEDULLA-TYPED-PACKS-R700.7`: `crates/medulla-h-admin/src/admin/connector_pack/import/front_matter.rs::the_skill_type_is_closed`
+- `MEDULLA-TYPED-PACKS-R700.7`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/front_matter.rs::the_skill_type_is_closed`
 - `MEDULLA-TYPED-PACKS-R700.8`: `tests/packs/test_skill_graph_pack_served.py::test_graph_files_import_and_limit_refuses`
 - `MEDULLA-TYPED-PACKS-R701.1`: `crates/medulla-catalog-types/tests/skill_graph.rs::layer_round_trip_and_reject_foreign_iri`
-- `MEDULLA-TYPED-PACKS-R701.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/skill_graph.rs::tests::layer_iri_and_rollup_checked_in_one_pass`
+- `MEDULLA-TYPED-PACKS-R701.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/skill_graph.rs::tests::layer_iri_and_rollup_checked_in_one_pass`
 - `MEDULLA-TYPED-PACKS-R701.3`: `tests/packs/test_skill_graph_pack_served.py::test_layer_classes_read_through_core_class`
 - `MEDULLA-TYPED-PACKS-R701.4`: `tests/packs/test_skill_graph_pack_served.py::test_layer_refusals_leave_state_unchanged`
 - `MEDULLA-TYPED-PACKS-R701.5`: `tests/packs/test_skill_graph_pack_served.py::test_layered_graph_imports_and_orphan_layer_refuses`
 - `MEDULLA-TYPED-PACKS-R700.1`: `crates/medulla-catalog-types/tests/skill_graph.rs::manifest_report_candidate_round_trip_and_reject_bad_digest`
-- `MEDULLA-TYPED-PACKS-R700.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/skill_graph.rs::tests::single_pass_rules_and_violation_cap_on_10_1000_100000_entries`
+- `MEDULLA-TYPED-PACKS-R700.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/skill_graph.rs::tests::single_pass_rules_and_violation_cap_on_10_1000_100000_entries`
 - `MEDULLA-TYPED-PACKS-R700.3`: `tests/packs/test_skill_graph_pack_served.py::test_bundle_validated_in_import_and_candidate_renders_on_demand`
 - `MEDULLA-TYPED-PACKS-R700.4`: `tests/packs/test_skill_graph_pack_served.py::test_hash_index_and_entry_refusals_leave_state_unchanged`
 - `MEDULLA-TYPED-PACKS-R700.9`: Retired; see R700.3 and R700.4.
@@ -576,7 +576,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 
 - `MEDULLA-TYPED-PACKS-R001`: `digest.rs::pack_digest` (planned); `tests/test_connector_pack_contract.py::test_pack_index_entry_contract` (planned)
 - `MEDULLA-TYPED-PACKS-R001.1`: `crates/medulla-catalog-types/src/connector_pack/index.rs::tests::index_entry_round_trip_and_refusals` (planned)
-- `MEDULLA-TYPED-PACKS-R001.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::check_annotations` (existing); `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::section_ranges_are_checked_without_wrapping` (existing)
+- `MEDULLA-TYPED-PACKS-R001.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::check_annotations` (existing); `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::section_ranges_are_checked_without_wrapping` (existing)
 - `MEDULLA-TYPED-PACKS-R001.3`: `crates/medulla-capabilities/tests/contract_registry.rs::every_wire_variant_has_exactly_one_descriptor_and_vice_versa` (existing); `crates/medulla-catalog-types/src/connector_pack/ops.rs::tests::operation_and_result_shapes_are_stable` (planned)
 - `MEDULLA-TYPED-PACKS-R001.4`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
 - `MEDULLA-TYPED-PACKS-R001.5`: `tests/test_connector_pack_client.py::test_pack_digest_matches_the_rust_golden_vector` (existing); `tests/test_connector_pack_contract.py::test_python_client_matches_pack_vectors` (planned)
@@ -592,7 +592,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R002.3`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entries` (existing)
 - `MEDULLA-TYPED-PACKS-R002.4`: `crates/medulla-h-admin/src/admin/connector_pack/tests/withdrawal.rs::withdrawn_tool_leaves_search_but_keeps_historical_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entries` (existing)
 - `MEDULLA-TYPED-PACKS-R002.5`: `crates/medulla-h-admin/src/admin/connector_pack/reconcile.rs::serve` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::the_reconciler_releases_an_orphan_body_and_keeps_every_held_one` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::orphan_grace_fault` (planned)
-- `MEDULLA-TYPED-PACKS-R002.6`: `crates/medulla-h-admin/src/admin/component_content.rs::handle_component_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::verified_body_read` (planned)
+- `MEDULLA-TYPED-PACKS-R002.6`: `crates/medulla-h-admin-schema/src/admin/component_content.rs::handle_component_content` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/storage_acceptance.rs::verified_body_read` (planned)
 - `MEDULLA-TYPED-PACKS-R002.7`: `crates/medulla-persistence-records/src/agent_component.rs::tests::prompt_publish_commits_one_holder_with_its_revision`, `tests/test_prompt_blueprints_served.py::test_prompt_owner_commit`
 - `MEDULLA-TYPED-PACKS-R002.8`: `crates/medulla-h-admin/src/connector_pack_projection.rs::project` (existing); `tests/test_prompt_blueprints_served.py::test_prompt_graph_projection` (planned); `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::a_stale_event_projects_the_current_head_and_commits_nothing` (planned)
 - `MEDULLA-TYPED-PACKS-R002.9`: `tests/test_prompt_blueprints_served.py::test_prompt_render_route`
@@ -608,7 +608,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R010`: `crates/medulla-catalog-types/src/connector_pack/ops.rs::tests::pack_admission_exposes_only_import_with_no_staged_protocol_variant` (existing)
 - `MEDULLA-TYPED-PACKS-R011`: `crates/medulla-persistence-ops/src/store_upgrade/tests.rs::the_server_refuses_an_upgradable_store_and_names_the_command` (existing)
 - `MEDULLA-TYPED-PACKS-R012`: `crates/medulla-server-mutation/src/mutation.rs::pack_and_agent_layer_write_methods_are_the_local_only_five` (existing)
-- `MEDULLA-TYPED-PACKS-R013`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::the_split_rule_rejects_eg_typos_and_keeps_foreign_claims` (existing)
+- `MEDULLA-TYPED-PACKS-R013`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::the_split_rule_rejects_eg_typos_and_keeps_foreign_claims` (existing)
 - `MEDULLA-TYPED-PACKS-R014`: `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::an_absent_entry_is_withdrawn_and_returns_under_the_same_id` (existing)
 - `MEDULLA-TYPED-PACKS-R015`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::an_environment_importer_is_a_bootstrap_default_superseded_by_an_admin_bind` (existing)
 - `MEDULLA-TYPED-PACKS-R016`: `crates/medulla-agent-types/src/agent_component.rs::package_version_leaves_the_v4_digest_and_v3_rows_still_validate` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::a_server_contract_version_change_revises_its_pin` (existing)
@@ -619,16 +619,16 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R022`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R023`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R024`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R025`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::section_ranges_are_checked_without_wrapping` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R025`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::section_ranges_are_checked_without_wrapping` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R026`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R027`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R028`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::json_budget_rejects_excess_depth` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R029`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::skill_frontmatter_refuses_yaml_expansion_features` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R028`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::json_budget_rejects_excess_depth` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R029`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::skill_frontmatter_refuses_yaml_expansion_features` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R030`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R031`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R032`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R033`: `crates/medulla-rdf/src/pack/tests.rs::triple_budget_boundary_is_inclusive` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::ontology_imports_are_closed_over_pack_entries` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
-- `MEDULLA-TYPED-PACKS-R034`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::tests::duplicate_named_shapes_can_be_detected_across_files` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import/validation.rs::tests::only_a_constraint_query_service_clause_is_refused` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R032`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R033`: `crates/medulla-rdf/src/pack/tests.rs::triple_budget_boundary_is_inclusive` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::ontology_imports_are_closed_over_pack_entries` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
+- `MEDULLA-TYPED-PACKS-R034`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::tests::duplicate_named_shapes_can_be_detected_across_files` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import/validation.rs::tests::only_a_constraint_query_service_clause_is_refused` (existing); `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R035`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R036`: `tests/test_connector_pack_planted.py::test_planted_defect_is_refused_by_its_rule` (existing)
 - `MEDULLA-TYPED-PACKS-R037`: `crates/medulla-agent-types/src/agent_component.rs::tests::agent_component_draft_validate_accepts_valid_and_refuses_invalid_fields` (existing)
@@ -638,32 +638,32 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R041`: `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::pack_import_refusals_leave_state_unchanged` (existing)
 - `MEDULLA-TYPED-PACKS-R041.1`: `crates/medulla-persistence-records/src/connector_pack/undecodable.rs::tests::an_undecodable_stored_pack_row_refuses_with_its_typed_code_and_reason`; `crates/medulla-h-admin/src/admin/connector_pack/tests/undecodable.rs::an_undecodable_stored_pack_refuses_typed_and_a_reimport_replaces_it`
 - `MEDULLA-TYPED-PACKS-R041.2`: `crates/medulla-h-admin/src/admin/connector_pack/tests/undecodable.rs::an_undecodable_stored_pack_refuses_typed_and_a_reimport_replaces_it`
-- `MEDULLA-TYPED-PACKS-R042.1`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::check_annotations` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import/desired.rs::DesiredBuilder::draft` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` (existing)
-- `MEDULLA-TYPED-PACKS-R042.2`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::run_import` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import/desired.rs::DesiredBuilder::draft` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import` (existing)
-- `MEDULLA-TYPED-PACKS-R043`: `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` (existing)
-- `MEDULLA-TYPED-PACKS-R044`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
+- `MEDULLA-TYPED-PACKS-R042.1`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::check_annotations` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import/desired.rs::DesiredBuilder::draft` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import/capability_tests.rs::both_capability_fields_refuse_relative_and_invalid_scheme_claims` (existing)
+- `MEDULLA-TYPED-PACKS-R042.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import.rs::run_import` (existing); `crates/medulla-h-admin-schema/src/admin/connector_pack/import/desired.rs::DesiredBuilder::draft` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import` (existing)
+- `MEDULLA-TYPED-PACKS-R043`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` (existing)
+- `MEDULLA-TYPED-PACKS-R044`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
 - `MEDULLA-TYPED-PACKS-R045`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget` (planned)
 - `MEDULLA-TYPED-PACKS-R045.1`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip` (existing)
-- `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::facts` (existing); `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults` (existing)
+- `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::facts` (existing); `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults` (existing)
 - `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors` (existing)
-- `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused` (existing)
-- `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven` (existing)
+- `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused` (existing)
+- `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven` (existing)
 - `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tool_subset.rs::request_body` (existing); `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains` (existing)
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-reasoner/src/rules/capability/tests.rs::a_read_only_claim_is_certified_only_by_a_trusted_declarer`
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
 - `MEDULLA-TYPED-PACKS-R045.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget`
-- `MEDULLA-TYPED-PACKS-R046`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
-- `MEDULLA-TYPED-PACKS-R047`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
+- `MEDULLA-TYPED-PACKS-R046`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
+- `MEDULLA-TYPED-PACKS-R047`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
 - `MEDULLA-TYPED-PACKS-R048`: `tests/typed_packs/test_model_harness_facts.py::test_model_profile_facts_round_trip` (planned)
-- `MEDULLA-TYPED-PACKS-R048.1`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::context_window_zero_is_refused_by_the_pack_validator` (existing); `crates/medulla-core/tests/harness_shapes.rs::model_fact_shapes_reject_non_positive_context_window` (existing)
+- `MEDULLA-TYPED-PACKS-R048.1`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::context_window_zero_is_refused_by_the_pack_validator` (existing); `crates/medulla-core/tests/harness_shapes.rs::model_fact_shapes_reject_non_positive_context_window` (existing)
 - `MEDULLA-TYPED-PACKS-R048.2`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::measured_fact_requires_run_ref` (existing)
 - `MEDULLA-TYPED-PACKS-R048.3`: `crates/medulla-agent-types/src/agent_component.rs::tests::absent_shell_proficiency_keeps_digest` (existing)
 - `MEDULLA-TYPED-PACKS-R048.4`: `crates/medulla-agent-types/src/agent_component.rs::tests::measured_model_facts_change_digest` (existing)
 - `MEDULLA-TYPED-PACKS-R048.5`: `tests/typed_packs/test_model_harness_facts.py::test_model_profile_round_trip` (existing)
 - `MEDULLA-TYPED-PACKS-R049`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::contract_pin_tests::server_pin_digest_carries_the_declared_sdk_contract_pin_opaquely` (existing)
 - `MEDULLA-TYPED-PACKS-R050`: `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::a_server_contract_version_change_revises_its_pin` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::a_package_release_with_identical_content_is_unchanged` (existing)
-- `MEDULLA-TYPED-PACKS-R051`: `crates/medulla-h-admin/src/graph_schema.rs::handle_gateway` (existing); `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::composed_digest_is_ordered_and_excludes_provenance_time` (existing); `tests/packs/test_schema_attach_served.py::test_attach_detach_and_conflict` (planned)
+- `MEDULLA-TYPED-PACKS-R051`: `crates/medulla-h-admin-schema/src/graph_schema.rs::handle_gateway` (existing); `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::composed_digest_is_ordered_and_excludes_provenance_time` (existing); `tests/packs/test_schema_attach_served.py::test_attach_detach_and_conflict` (planned)
 - `MEDULLA-TYPED-PACKS-R052`: `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::the_worker_consumes_an_import_and_the_operator_can_rewind_it` (existing)
 - `MEDULLA-TYPED-PACKS-R053`: `crates/medulla-h-admin/src/graph_schema/tests.rs::attach_pack_into_a_spare_graph_copies_a_static_snapshot` (existing); `tests/packs/test_schema_attach_served.py::test_static_attach_reports_staleness` (planned)
 - `MEDULLA-TYPED-PACKS-R054`: `crates/medulla-transaction/src/tests/outbox.rs::a_consumer_may_not_change_the_topic_its_cursor_already_names` (existing)
@@ -674,7 +674,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R059`: `crates/medulla-h-admin/src/graph_schema/tests.rs::attach_validates_its_own_writes_and_never_scans_existing_data` (existing); `tests/packs/test_schema_attach_served.py::test_attach_does_not_scan_existing_data` (planned)
 - `MEDULLA-TYPED-PACKS-R061`: `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::low_level_source_seam_enforces_the_document_bound` (existing)
 - `MEDULLA-TYPED-PACKS-R062`: `crates/medulla-raft/src/raft/command/native/catalog.rs::tests::graph_schema_records_replicate_as_graph_state` (existing); `tests/packs/test_schema_attach_served.py::test_schema_replicates` (planned)
-- `MEDULLA-TYPED-PACKS-R064`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
+- `MEDULLA-TYPED-PACKS-R064`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
 - `MEDULLA-TYPED-PACKS-R065`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::contract_pin_tests::server_pin_digest_carries_the_declared_sdk_contract_pin_opaquely` (existing)
 - `MEDULLA-TYPED-PACKS-R066.1`: `crates/medulla-core/tests/harness_shapes.rs::model_fact_shapes_reject_missing_run` (existing); `tests/typed_packs/test_model_harness_facts.py::test_shapes_reject_missing_run` (planned)
 - `MEDULLA-TYPED-PACKS-R066.2`: `crates/medulla-shacl/tests/swarm_topology_shapes.rs::shell_centric_must_be_boolean` (existing)
@@ -702,8 +702,8 @@ Each line binds one row to its proving test. A test marked planned does not exis
 
 - **MEDULLA-TYPED-PACKS-R093.1:** `crates/medulla-rdf/src/mapping/parsing.rs::tests::independent_parses_do_not_collide_on_repeated_blank_labels` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R093.2:** `tests/typed_packs/test_reproject_blank_nodes_served.py::test_reused_member_labels_stay_isolated_and_digest_repeats` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R094.2:** `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export` and `crates/medulla-h-admin/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown`. Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R094.3:** `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import`; Rust L2 `crates/medulla-h-admin/src/admin/component_content.rs::import_envelope_and_identity_checks_name_their_codes`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R094.2:** `tests/test_prompt_blueprints_served.py::test_lossless_blueprint_export` and `crates/medulla-h-admin-schema/src/admin/component_content.rs::tests::export_pins_revision_and_refuses_unknown`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R094.3:** `tests/test_prompt_blueprints_served.py::test_modified_blueprint_import`; Rust L2 `crates/medulla-h-admin-schema/src/admin/component_content.rs::import_envelope_and_identity_checks_name_their_codes`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.4:** `tests/test_prompt_blueprints_served.py::test_blueprint_retry_identity` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.5:** `tests/test_prompt_blueprints_served.py::test_blueprint_roundtrip_restart` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R094.6:** `tests/test_prompt_blueprints_served.py::test_prompt_proposal_has_no_authority` (planned). Proves the row at its served entry point; no receipt is asserted.
@@ -732,7 +732,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R100.101:** `tests/typed_packs/test_skill_compatibility_admission_served.py::test_breaking_upgrade_requires_exact_consumer_migration`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R001.100:** `tests/typed_packs/test_connector_nested_schema_served.py::test_nested_schema_evolution_preserves_digest` and `::test_incompatible_nested_schema_refuses_before_dispatch`. Proves the row at its served entry point.
 - **MEDULLA-TYPED-PACKS-R002.12:** `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::native_component_event_projects`. Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R002.13:** `crates/medulla-h-admin/src/admin/prompt_receipt.rs::tests::receipt_verification`. Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R002.13:** `crates/medulla-h-admin-schema/src/admin/prompt_receipt.rs::tests::receipt_verification`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R002.13:** `tests/test_prompt_blueprints_served.py::test_receipt_verdicts`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R071.2:** `crates/medulla-core/tests/ontology_modules_extend_core.rs::no_module_imports_core_and_every_class_reaches_core` (planned). Proves the row at its served entry point; no receipt is asserted. It also asserts every module class has an `rdfs:subClassOf` path to a core class (the 208 formerly unrooted classes included).
 - **MEDULLA-TYPED-PACKS-R071.2:** `tests/typed_packs/test_ontology_corpus_served.py::test_modules_extend_core_through_subclass` (planned). Proves the row at its served entry point; no receipt is asserted.
@@ -741,9 +741,9 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R101.2:** `crates/medulla-shacl/tests/connector_pack_shapes.rs::each_contract_shape_accepts_valid_and_refuses_invalid` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R102:** `tests/typed_packs/test_connector_surface_rdf_served.py::test_surface_query_follows_pack_head` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R102.2:** `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_follow_pack_head` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R102.3:** `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R102.3:** `crates/medulla-h-admin-schema/src/admin/connector_pack/import/contract_tests.rs::core_class_redeclaration_is_refused` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R102.4:** `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::outbox_consumer_writes_surface_nodes` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R102.5:** `crates/medulla-h-admin/src/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R102.5:** `crates/medulla-h-admin-schema/src/admin/connector_pack/import/contract_tests.rs::surface_refusals_leave_state_unchanged` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R102.6:** `crates/medulla-h-admin/src/connector_pack_projection/surface_tests.rs::surface_nodes_carry_pack_digest` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R102.7:** `tests/typed_packs/test_connector_surface_rdf_served.py::test_surface_query_follows_pack_head`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R103:** `tests/typed_packs/test_runtime_ontology_import_served.py::test_import_revise_withdraw_end_to_end` (planned). Proves the row at its served entry point; no receipt is asserted.

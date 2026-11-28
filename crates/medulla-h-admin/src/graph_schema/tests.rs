@@ -1,6 +1,9 @@
-use super::*;
+use std::sync::Arc;
+
 use medulla_catalog_types::connector_pack::ids::pack_projection_graph_name;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
+use medulla_graph_core::graph::GraphCore;
+use medulla_h_admin_schema::graph_schema::*;
 
 /// The verified tenant every pack attach in these tests is recorded under.
 const PACK_TENANT: &str = "tenant:test";
@@ -844,16 +847,17 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
 
     // The stored report is exactly what the import-side function computes over
     // the same set and the same pin: one function, one answer.
-    let pinned = crate::admin::connector_pack::import::vocabulary::pin_composed(
+    let pinned = medulla_h_admin_schema::admin::connector_pack::import::vocabulary::pin_composed(
         &medulla_graph_core::graph::GraphSchemaSources::default(),
         &sources,
     )
     .unwrap();
-    let recomputed = crate::admin::connector_pack::import::crosswalk::coverage_of_set(
-        &stored.crosswalks,
-        &pinned,
-    )
-    .unwrap();
+    let recomputed =
+        medulla_h_admin_schema::admin::connector_pack::import::crosswalk::coverage_of_set(
+            &stored.crosswalks,
+            &pinned,
+        )
+        .unwrap();
     assert_eq!(&recomputed, coverage);
 
     // A repeat activation of the same head changes nothing.

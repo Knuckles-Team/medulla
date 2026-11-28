@@ -216,7 +216,7 @@ async fn write_revision(
     }
     let source = medulla_types::contract::ResourceId::new(NATIVE_SOURCE)
         .map_err(|error| Settle::Reject(OutboxRejectReason::InvalidEvent, error.to_string()))?;
-    crate::graph_schema::resident_internal_graph(
+    medulla_h_admin_schema::graph_schema::resident_internal_graph(
         state,
         0,
         &verified,
@@ -226,7 +226,7 @@ async fn write_revision(
     .await
     .map_err(classify)?;
     let graph_name = graph.to_string();
-    crate::graph_schema::commit_internal_graph_write(
+    medulla_h_admin_schema::graph_schema::commit_internal_graph_write(
         state,
         0,
         &verified,

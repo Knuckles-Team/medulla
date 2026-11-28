@@ -266,7 +266,7 @@ none
 
 - Server bootstrap to `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs:207`) to the `data-platform` `CoreSpec` (line 1130), which loads `data_platform-v1.ttl` and its shapes into every graph's composed schema.
 - Ingest worker write to the mutation gateway SHACL validation under the composed shapes, which enforces the closed secret shapes, the denylist and the mode guards.
-- `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs::handle_gateway`) attaches an approved `dp:StoreMapping`; the operation-bound reader of `MEDULLA-FEDERATED-QUERY-R073` calls the operation it names from `crates/medulla-federation/src/federation_opt/run.rs::foreign_scan`.
+- `GraphSchema.AttachApproved` (`crates/medulla-h-admin-schema/src/graph_schema/approved.rs::handle_gateway`) attaches an approved `dp:StoreMapping`; the operation-bound reader of `MEDULLA-FEDERATED-QUERY-R073` calls the operation it names from `crates/medulla-federation/src/federation_opt/run.rs::foreign_scan`.
 - Obsolete paths to delete: none; every row adds to an existing path.
 
 ## Cross-repo seams

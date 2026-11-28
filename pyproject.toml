@@ -441,6 +441,7 @@ units = [
 name = "handlers"
 units = [
   "medulla-h-admin",
+  "medulla-h-admin-schema",
   "medulla-h-compute",
   "medulla-h-decide",
   "medulla-h-graph",

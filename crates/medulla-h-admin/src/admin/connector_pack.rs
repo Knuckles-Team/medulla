@@ -22,24 +22,21 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
+use medulla_h_admin_schema::admin::connector_pack::catalog_authority;
+#[cfg(all(feature = "redb", feature = "blob"))]
+use medulla_h_admin_schema::admin::connector_pack::import;
+
 pub(crate) mod admin;
 mod approval;
-mod catalog_authority;
 mod conformance;
-#[cfg(feature = "shacl")]
-pub(crate) mod contract_diff;
-#[cfg(all(feature = "redb", feature = "blob"))]
-pub(crate) mod import;
 pub(crate) mod reconcile;
-pub(crate) mod release_approval;
-pub(crate) mod reproject;
-#[cfg(all(feature = "rdf", feature = "shacl"))]
-pub(crate) mod seed;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod release_approval;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod reproject;
 #[cfg(all(test, feature = "rdf", feature = "shacl"))]
 mod seed_tests;
 mod self_served_catalog;
-#[cfg(feature = "rdf")]
-mod surface_vocab;
 #[cfg(all(test, feature = "redb", feature = "blob"))]
 pub(in crate::admin) mod tests;
 

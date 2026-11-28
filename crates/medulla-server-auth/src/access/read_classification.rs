@@ -503,18 +503,18 @@ pub(super) const REASON_SOURCE_INGESTION_MARKER: &str =
 // `medulla_capabilities` catalog; no durable substrates are read, so it serves
 // in every build, including non-`redb`.
 pub(super) const REASON_CONTRACT_CATALOG_METADATA: &str =
-    "DescribeContract answers from the static medulla_capabilities catalog (medulla_h_admin::admin::describe_contract, routed by the control-plane admin arm in dispatch/router/control_plane.rs): one bounded page of method descriptors, the scope registry on the first page and the contract catalog digest on every page -- no durable substrates are read and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the contract:read scope";
+    "DescribeContract answers from the static medulla_capabilities catalog (medulla_h_admin_schema::admin::describe_contract, routed by the control-plane admin arm in dispatch/router/control_plane.rs): one bounded page of method descriptors, the scope registry on the first page and the contract catalog digest on every page -- no durable substrates are read and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the contract:read scope";
 
 // MEDULLA-OBSERVE-R006.1: `Introspect` reads the process's own runtime registries (tasks,
 // per-graph readiness and the sections that follow); the rows describe the engine, not
 // graph content, and carry no payload and no token, so there is no row for RLS to filter.
 pub(super) const REASON_RUNTIME_INTROSPECTION: &str =
-    "Introspect answers from the process-wide runtime registries of medulla_observe (medulla_h_admin::admin::introspect, routed by the control-plane admin arm in dispatch/router/control_plane.rs): rows describe the engine's own tasks, readiness and runtime, carry no payload and no token, and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the observe:read scope";
+    "Introspect answers from the process-wide runtime registries of medulla_observe (medulla_h_admin_schema::admin::introspect, routed by the control-plane admin arm in dispatch/router/control_plane.rs): rows describe the engine's own tasks, readiness and runtime, carry no payload and no token, and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the observe:read scope";
 
 // MEDULLA-OBSERVE-R010.1: `Profile` samples the process's own threads or snapshots the same
 // runtime registries as `Introspect`; frames and rows describe the engine, never graph content.
 pub(super) const REASON_RUNTIME_PROFILE: &str =
-    "Profile answers from the process itself (medulla_h_admin::admin::profile, routed by the control-plane admin arm in dispatch/router/control_plane.rs): folded stacks of the engine's own threads, or a snapshot of the runtime registries; it holds no graph content and no token, so there is no row for RLS to filter.";
+    "Profile answers from the process itself (medulla_h_admin_schema::admin::profile, routed by the control-plane admin arm in dispatch/router/control_plane.rs): folded stacks of the engine's own threads, or a snapshot of the runtime registries; it holds no graph content and no token, so there is no row for RLS to filter.";
 
 // RF-ADR-010 DL-4: `Decide` reads its candidates from ONE tenant-bound
 // agent_library.redb snapshot through `AgentComponent.Search`'s accessor, and

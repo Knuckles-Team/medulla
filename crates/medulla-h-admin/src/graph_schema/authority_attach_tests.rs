@@ -45,7 +45,7 @@ fn attach(core: &GraphCore, ontology: String) -> Result<(), String> {
         "ontology_ttl": ontology,
     }))
     .expect("an attach op");
-    super::apply(core, "g", &op).map(drop)
+    medulla_h_admin_schema::graph_schema::apply(core, "g", &op).map(drop)
 }
 
 // spec: MEDULLA-SRC-AUTH-R002.5

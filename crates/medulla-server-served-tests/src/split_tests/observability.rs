@@ -749,7 +749,7 @@ async fn build_section_reports_version_sha_build_id_features() {
         .collect();
     assert_eq!(features, info.features);
     // The startup log line names the same build: it runs without a subscriber and without panic.
-    medulla_h_admin::admin::introspect::log_build_identity();
+    medulla_h_admin_schema::admin::introspect::log_build_identity();
 }
 
 // spec: MEDULLA-OBSERVE-R006.5
@@ -1080,7 +1080,7 @@ async fn namespace_migration_task_and_steps_are_visible() {
     assert!(created.error.is_none(), "{:?}", created.error);
 
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(served.state.clone()).await;
-    let row = finished_task(medulla_h_admin::namespace_migration::TASK_NAME).await;
+    let row = finished_task(medulla_h_admin_schema::namespace_migration::TASK_NAME).await;
     assert_eq!(
         row.kind,
         medulla_observe::registry::tasks::TaskKind::Migration
@@ -1104,7 +1104,7 @@ async fn namespace_migration_task_and_steps_are_visible() {
     assert_eq!(step["detail"], "no retired namespace stored");
     let listed = served.page(IntrospectSection::Tasks).await;
     assert!(listed.rows.iter().any(|row| row["name"]
-        == medulla_h_admin::namespace_migration::TASK_NAME
+        == medulla_h_admin_schema::namespace_migration::TASK_NAME
         && row["kind"] == "Migration"));
 }
 
@@ -1132,7 +1132,7 @@ async fn refused_commons_migration_is_recorded_and_degrades_readiness() {
         state.isolation = medulla_isolation::isolation::IsolationLayer::new();
     }
 
-    let report = medulla_h_admin::namespace_migration::run(&served.state).await;
+    let report = medulla_h_admin_schema::namespace_migration::run(&served.state).await;
     let refusal = report
         .refusals
         .iter()
@@ -1167,7 +1167,7 @@ async fn refused_commons_migration_is_recorded_and_degrades_readiness() {
     assert_eq!(reason.code, "MIGRATION_REFUSED");
     assert_eq!(
         reason.task.as_deref(),
-        Some(medulla_h_admin::namespace_migration::TASK_NAME)
+        Some(medulla_h_admin_schema::namespace_migration::TASK_NAME)
     );
     medulla_observe::readiness().remove(graph);
 }
@@ -1203,7 +1203,7 @@ async fn every_inventoried_background_task_is_registered_after_boot() {
     ];
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(served.state.clone()).await;
     medulla_h_admin::connector_pack_projection::spawn(served.state.clone());
-    medulla_h_admin::agent_library_projection::spawn(served.state.clone());
+    medulla_h_admin_schema::agent_library_projection::spawn(served.state.clone());
     medulla_h_retrieve::reasoning_projection::spawn(served.state.clone());
 
     let page = served

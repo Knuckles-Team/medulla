@@ -37,7 +37,7 @@ crates/medulla-virtual-graph/src/source_selection/trust.rs  existing: trust mark
 crates/medulla-identity-types/src/authority_audit.rs        existing: AuthorityAudit, SourceRole, NotUsedReason
 crates/medulla-graph-core/src/graph/schema_sources.rs       existing: attach check for approval claims
 crates/medulla-mutation-types/src/governed_change.rs        existing: source-authority kind
-crates/medulla-h-admin/src/graph_schema/approved.rs         existing: AttachApproved
+crates/medulla-h-admin-schema/src/graph_schema/approved.rs         existing: AttachApproved
 crates/medulla-federation/src/federation.rs                 existing: ConnectedSources added here
 crates/medulla-h-query-read/src/query/source_coverage.rs              new: SourceCoverage handler
 crates/medulla-types/src/source_coverage.rs                 new: request and reply types
@@ -86,7 +86,7 @@ answer rows + provenance (source, record id, as-of) + "sources used and why" (fr
 |---|---|
 | Vocabulary and shapes | Medulla, `crates/medulla-core/ontology/virtual_graph-v1.ttl`, `virtual_graph-v1.shapes.ttl` (loaded as the core sources `virtual-graph` and `virtual-graph-shapes` by `crates/medulla-graph-core/src/graph/schema_sources.rs`) |
 | Authority-aware selection, abstention and audit types | Medulla, `crates/medulla-virtual-graph/src/source_selection.rs` and `source_selection/live.rs` (extend; no new planner) |
-| Approval of authority | Medulla, governed-change ledger `crates/medulla-mutation-types/src/governed_change.rs` plus `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) |
+| Approval of authority | Medulla, governed-change ledger `crates/medulla-mutation-types/src/governed_change.rs` plus `GraphSchema.AttachApproved` (`crates/medulla-h-admin-schema/src/graph_schema/approved.rs`) |
 | Registered, connected source lookup | Medulla, owner-scoped foreign catalog (`MEDULLA-FEDERATED-QUERY-R013`), variants in `crates/medulla-query-types/src/wire_query_modalities.rs` |
 | Printing the audit block | Arbora (cross-repo row) |
 
@@ -142,7 +142,7 @@ All terms go in `crates/medulla-core/ontology/virtual_graph-v1.ttl` (namespace `
 - **Read path:** `medulla_virtual_graph::source_selection` holds `AuthorityRow` (parsed from the composed graph schema sources: `GraphSchemaSources` in `crates/medulla-graph-core/src/graph/schema_sources.rs`). It also gains a `ConnectedSources` view built from the owner-scoped foreign catalog of the calling tenant and actor. `select_sources` takes both. The fixture type stays for unit tests; the live read is the "later child" the module doc names, and it is where this spec plugs in.
 - **Connected check:** a row is *connected* when its connection's `vg:foreignSourceName` resolves in the caller's catalog scope (R013) to a spec whose kind matches `vg:authorityContract` (R073 variants `Api`, `Mcp`, `A2a`, `GraphQl`; the existing SQL, Iceberg, Spark and SPARQL source kinds map to `virtual-graph`). A name that exists only under another principal counts as unconnected for this caller, with the R013 refusal kept for execution.
 - **Scopes:** only existing scopes: `kg:read` style read scope of the select method; `governance:propose` for proposing. One new approver scope, `governance:approve-source-authority`, is a BLOCKED dependency below (owner: engine identity, `MEDULLA-IDENTITY-R004` generated scope registry; it cannot be hand-added).
-- **Approval path:** `GOVERNED_KINDS` in `crates/medulla-mutation-types/src/governed_change.rs` holds one kind. A second kind `governed.source-authority` (proposer `governance:propose`, approver `governance:approve-source-authority`, two-person rule already built in) is the approval record. `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) currently renders repair shapes only (`render_repair_shapes`, error "needs a repair operation"); it gains a second candidate type "authority" whose candidate bytes are the authority Turtle and whose digest the approval lease binds (`verify_schema_approval` already binds kind, target and `candidate_digest`).
+- **Approval path:** `GOVERNED_KINDS` in `crates/medulla-mutation-types/src/governed_change.rs` holds one kind. A second kind `governed.source-authority` (proposer `governance:propose`, approver `governance:approve-source-authority`, two-person rule already built in) is the approval record. `GraphSchema.AttachApproved` (`crates/medulla-h-admin-schema/src/graph_schema/approved.rs`) currently renders repair shapes only (`render_repair_shapes`, error "needs a repair operation"); it gains a second candidate type "authority" whose candidate bytes are the authority Turtle and whose digest the approval lease binds (`verify_schema_approval` already binds kind, target and `candidate_digest`).
 - **Pack entry:** a connector pack's ontology section is bounded Turtle (`MEDULLA-TYPED-PACKS-R033`), SHACL cross-validated (`R035`), and attaches as a `pack:<connector>` schema source (`SchemaSourceOrigin::Pack`, `schema_sources.rs` line 410). A new attach-time check refuses `vg:approved true` inside a `Pack` or `Ingestion` origin source (D3).
 
 ### Decisions
@@ -267,7 +267,7 @@ none
 ## Production caller chain
 
 - `Method::SourceCoverage` (new) → `crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs:338` → `medulla_h_sparql::foreign_source_handlers::try_handle` (`crates/medulla-h-sparql/src/foreign_source_handlers.rs:30`) → `source_coverage::handle` → `fixture_from_schema_sources` (`crates/medulla-virtual-graph/src/source_selection/live.rs:198`) → `select_sources_with` (`source_selection.rs:596`) → `audit_from` (line 1190).
-- `Method::GraphSchema` with `AttachApproved` → `crates/medulla-h-admin/src/graph_schema/approved.rs::handle_gateway` → `admit` → `verify_schema_approval` (`crates/medulla-catalog-types/src/graph_schema/approval.rs:93`).
+- `Method::GraphSchema` with `AttachApproved` → `crates/medulla-h-admin-schema/src/graph_schema/approved.rs::handle_gateway` → `admit` → `verify_schema_approval` (`crates/medulla-catalog-types/src/graph_schema/approval.rs:93`).
 - `Method::AddNode` → `crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` → trust mark stamp (new).
 - Obsolete path to delete: the silent overwrite of a second mapping on one class, already replaced by a list in `CoverageFixture`.
 

@@ -933,8 +933,8 @@ mod tests {
         ("CatalogRemove", "prepared/committed admin MutationBatch saga around the durable tenant catalog"),
         ("RebalanceExecute", "prepared/committed admin MutationBatch saga around cluster-wide rebalance"),
         ("Restore", "prepared/committed admin MutationBatch saga around online restore/PITR"),
-        ("RaftAddLearner", "leader-only openraft add_learner via medulla_h_admin::raft_admin::try_handle against MultiRaft directly -- no GraphCore/graph_name in scope, cluster-wide like Reshard/CatalogAssign above"),
-        ("RaftChangeMembership", "leader-only openraft change_membership via medulla_h_admin::raft_admin::try_handle against MultiRaft directly -- no GraphCore/graph_name in scope, cluster-wide like Reshard/CatalogAssign above"),
+        ("RaftAddLearner", "leader-only openraft add_learner via medulla_h_admin_schema::raft_admin::try_handle against MultiRaft directly -- no GraphCore/graph_name in scope, cluster-wide like Reshard/CatalogAssign above"),
+        ("RaftChangeMembership", "leader-only openraft change_membership via medulla_h_admin_schema::raft_admin::try_handle against MultiRaft directly -- no GraphCore/graph_name in scope, cluster-wide like Reshard/CatalogAssign above"),
         // W2.5 fleet server registry: self-translates into `Method::AddNode` against
         // `__commons__` from its own top-level dispatch.rs arm (see the
         // `Method::RegisterServer` match), exactly like `ApplyMultisigMutation` above

@@ -258,7 +258,7 @@ mod tests {
             (
                 "import/planning.rs",
                 include_str!(
-                    "../../../medulla-h-admin/src/admin/connector_pack/import/planning.rs"
+                    "../../../medulla-h-admin-schema/src/admin/connector_pack/import/planning.rs"
                 ),
             ),
         ];

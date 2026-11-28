@@ -38,7 +38,7 @@ crates/medulla-core/ontology/sdd-v1.ttl                     existing: spec class
 crates/medulla-core/src/spec_folder.rs                      new: SpecNodeKind, classify_spec_file, parse_requirement_rows
 crates/medulla-core/src/spec_folder/policy.rs               new: parse_policy_document, synthesize_policy_candidates
 crates/medulla-graph-core/src/graph/schema_sources.rs       existing: core_specs entries for the sources
-crates/medulla-h-admin/src/agent_library_projection.rs      new: projection worker beside connector_pack_projection.rs
+crates/medulla-h-admin-schema/src/agent_library_projection.rs      new: projection worker beside connector_pack_projection.rs
 crates/medulla-h-graph/src/harness_admission.rs             existing: run-trace, step, window, unit and gap admission
 crates/medulla-h-query/src/query/                           existing: Uql; new run_views.rs, run_trace_export.rs, session_query.rs
 crates/medulla-h-decide/src/decide/                         existing: assemble.rs, candidates.rs, commit.rs; new family files
@@ -47,7 +47,7 @@ crates/medulla-work-types/src/orchestration/                existing: mod.rs, im
 crates/medulla-result-types/src/outcome_bundle.rs           existing: StepRecord, step_digest, CodeWalkthrough
 crates/medulla-types/src/                                   new: harness_metrics.rs, harness_session.rs, run_observation.rs, durable_unit.rs, policy_document.rs, run_trace_export.rs
 crates/medulla-mutation-types/src/                          existing: harness_metrics.rs; new evolution_metrics.rs (R010.100)
-crates/medulla-h-admin/src/agent_library_projection.rs     existing: entry worker; new component worker (R003.6)
+crates/medulla-h-admin-schema/src/agent_library_projection.rs     existing: entry worker; new component worker (R003.6)
 crates/medulla-rdf/tests/orchestration_vocabulary.rs        existing: reasoner and shape tests
 tests/orchestration/                                        existing: served Python tests
 ```

@@ -1,6 +1,6 @@
 //! Workflow registry read proofs (MEDULLA-DECISION-ENGINE-R166.3, R166.4).
 
-use super::read_from_core;
+use medulla_h_admin_schema::admin::read_from_core;
 use medulla_graph_core::graph::GraphCore;
 use medulla_work_types::orchestration::workflows::{
     WorkflowIdentity, WorkflowLifecycle, WorkflowRegistrationEntry, WorkflowRegistryError,

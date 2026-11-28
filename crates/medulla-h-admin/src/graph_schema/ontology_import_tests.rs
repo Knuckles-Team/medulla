@@ -1,6 +1,6 @@
 //! Runtime ontology import (MEDULLA-TYPED-PACKS-R103.2 to R103.5).
 
-use super::*;
+use medulla_h_admin_schema::graph_schema::*;
 
 use medulla_types::contract::ResourceId;
 

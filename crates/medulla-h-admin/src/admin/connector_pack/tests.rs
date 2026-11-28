@@ -34,9 +34,6 @@ use medulla_server_auth::auth::dispatch_test_on_heap;
 mod admin;
 mod concept_lineage;
 mod content_model;
-#[cfg(all(feature = "owl", feature = "shacl"))]
-#[path = "import/contract_tests.rs"]
-mod contract_tests;
 mod embedding_set;
 mod external_schema;
 mod model_input_capabilities;

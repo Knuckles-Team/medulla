@@ -11,8 +11,8 @@ const JOB_CRATES: [&str; 1] = ["medulla-persistence"];
 /// spawns work that is not a job (a connection handler, a request task): the file is scanned, the
 /// crate is not. Code after the first `#[cfg(test)]` of a file is test code and is not scanned.
 const JOB_FILES: [&str; 7] = [
-    "medulla-h-admin/src/agent_library_projection.rs",
-    "medulla-h-admin/src/namespace_migration.rs",
+    "medulla-h-admin-schema/src/agent_library_projection.rs",
+    "medulla-h-admin-schema/src/namespace_migration.rs",
     "medulla-h-admin/src/boot_maintenance.rs",
     "medulla-h-admin/src/connector_pack_projection.rs",
     "medulla-h-retrieve/src/reasoning_projection.rs",

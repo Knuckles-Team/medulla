@@ -88,9 +88,9 @@ crates/medulla-capabilities/src/scopes.rs                   existing (R006.1, R0
 crates/medulla-server-graph/src/dispatch/graph_pipeline/graph_access.rs existing (R001.1)
 crates/medulla-server-router/src/dispatch/request_boundary.rs existing (R002.3, R006.2)
 crates/medulla-server-router/src/dispatch/router/service_control.rs existing (R007.2, R007.3)
-crates/medulla-h-admin/src/admin/introspect.rs              new (R006.1, R006.5, R008.4)
-crates/medulla-h-admin/src/admin/profile.rs                 new (R010.1, R010.3)
-crates/medulla-h-admin/src/namespace_migration.rs           existing (R003.5, R008.3)
+crates/medulla-h-admin-schema/src/admin/introspect.rs              new (R006.1, R006.5, R008.4)
+crates/medulla-h-admin-schema/src/admin/profile.rs                 new (R010.1, R010.3)
+crates/medulla-h-admin-schema/src/namespace_migration.rs           existing (R003.5, R008.3)
 crates/medulla-h-admin/src/boot_maintenance.rs              existing (R003.6)
 crates/medulla-persistence/src/cold_offload.rs              existing (R003.3, MEDULLA-DURABLE-KERNEL-R873.1)
 crates/medulla-store-apply/src/redb_store/dump.rs           existing (MEDULLA-DURABLE-KERNEL-R873.2)
@@ -222,7 +222,7 @@ Code shapes: new logic goes into the new files listed above. No function takes m
 - Boot: `serve_transports` (`crates/medulla-server/src/server_startup.rs:850`) → `spawn_post_bind_maintenance` (`crates/medulla-h-admin/src/boot_maintenance.rs:35`) → `namespace_migration::spawn` (`namespace_migration.rs:259`).
 - Health: `Method::Health` → `health_response` (`crates/medulla-server-router/src/dispatch/router/service_control.rs:62`) → `ReadinessRegistry::report`.
 - Probe: `GET /readyz` → `control_response` (`crates/medulla-server-obs/src/obs/http/mod.rs:356`).
-- Introspect: transport → `dispatch` → admin arm (`crates/medulla-h-admin/src/admin.rs:67`) → `introspect::handle`.
+- Introspect: transport → `dispatch` → admin arm (`crates/medulla-h-admin-schema/src/admin.rs:67`) → `introspect::handle`.
 - Locks: `lock_graph` (`crates/medulla-server-api/src/routed_write_coalescer.rs:352`) and `timed_read` (`crates/medulla-server-graph/src/dispatch/shared.rs:223`) → `LockSite::acquire`.
 - Logs: `medulla_kernel::otel::init` (`crates/medulla-kernel/src/otel.rs:52`, `:107`).
 - Release: `.github/workflows/release.yml` job `server-binary` (line 149) → `scripts/split_release_symbols.sh` → release assets.

@@ -13,7 +13,7 @@ Arbora calls the served `ConnectorPack.import` with a connector pack that may ca
 
 ## Authoritative types
 
-`ConnectorPackOp` and the pack result types in `crates/medulla-catalog-types/src/connector_pack/`. The seed wire types are `SeedPart` and `SeedGraphImport` in `crates/medulla-catalog-types/src/connector_pack/seed_graph.rs`; the plan is `SeedImportPlan` in `crates/medulla-h-admin/src/admin/connector_pack/seed.rs`.
+`ConnectorPackOp` and the pack result types in `crates/medulla-catalog-types/src/connector_pack/`. The seed wire types are `SeedPart` and `SeedGraphImport` in `crates/medulla-catalog-types/src/connector_pack/seed_graph.rs`; the plan is `SeedImportPlan` in `crates/medulla-h-admin-schema/src/admin/connector_pack/seed.rs`.
 
 ## Test vectors
 

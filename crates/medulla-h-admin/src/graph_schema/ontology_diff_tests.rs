@@ -1,12 +1,23 @@
 //! Ontology diff and impact (MEDULLA-TYPED-PACKS-R804.2).
 
-use super::ontology_diff::{diff_axioms, impact, ImpactSnapshot, SchemaSide};
-use super::ontology_diff_serve::{change_requests_of, diff_ontology};
-use super::ontology_import::{import_ontology, OntologyAuthority};
 use medulla_catalog_source_types::ontology_diff::ChangeImpact;
 use medulla_catalog_types::graph_schema::{DiffTarget, GraphSchemaOp};
 use medulla_graph_core::graph::GraphCore;
+use medulla_h_admin_schema::graph_schema::ontology_diff_serve::{
+    diff_ontology, CHANGE_REQUEST_LABEL,
+};
 use medulla_types::contract::{Digest256, ResourceId};
+use serde_json::Value;
+use {
+    medulla_h_admin_schema::graph_schema::ontology_diff::diff_axioms,
+    medulla_h_admin_schema::graph_schema::ontology_diff::impact,
+    medulla_h_admin_schema::graph_schema::ontology_diff::ImpactSnapshot,
+    medulla_h_admin_schema::graph_schema::ontology_diff::SchemaSide,
+};
+use {
+    medulla_h_admin_schema::graph_schema::ontology_import::import_ontology,
+    medulla_h_admin_schema::graph_schema::ontology_import::OntologyAuthority,
+};
 
 const PREFIXES: &str = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix ex: <http://example.org/onto#> .\n";
 
@@ -402,4 +413,16 @@ fn diff_refusals() {
     // A refusal writes nothing.
     assert_eq!(core.schema_sources().composed_digest(), digest);
     assert_eq!(core.version(), version);
+}
+
+/// The change requests `tenant` holds, oldest key first.
+fn change_requests_of(core: &GraphCore, tenant: &str) -> Vec<Value> {
+    let mut found: Vec<(String, Value)> = core
+        .get_nodes_by_label(CHANGE_REQUEST_LABEL, 0)
+        .into_iter()
+        .filter_map(|(id, bytes)| Some((id, rmp_serde::from_slice::<Value>(&bytes).ok()?)))
+        .filter(|(_, value)| value["tenant"].as_str() == Some(tenant))
+        .collect();
+    found.sort_by(|left, right| left.0.cmp(&right.0));
+    found.into_iter().map(|(_, value)| value).collect()
 }

@@ -636,7 +636,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 |---|---|
 | `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench/work_items.rs::run_owner_recovery` |
-| `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` |
+| `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin-schema/src/admin/concept_lineage.rs::handle` |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::read_changes` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700.2` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::step_examines_batch_in_id_order` (planned) |
@@ -798,9 +798,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 
 - `MEDULLA-DURABLE-KERNEL-R877`: `tests/durable/test_bundle_served.py::test_export_import_round_trip_between_tenants` (planned, L4): proves a knowledge bundle moves one scoped dataset between deployments (rollup). The owning change adds it at this exact path.
 - `MEDULLA-DURABLE-KERNEL-R877.1`: `crates/medulla-types/src/knowledge_bundle.rs::tests::manifest_round_trips_and_digest_covers_every_part` (planned, L1): proves model: the bundle manifest and parts. The owning change adds it at this exact path.
-- `MEDULLA-DURABLE-KERNEL-R877.2`: `crates/medulla-h-admin/src/knowledge_bundle.rs::tests::export_then_plan_carries_every_part_and_remaps_documents` (planned, L3): proves behavior: export reads one snapshot, import commits one batch. The owning change adds it at this exact path.
-- `MEDULLA-DURABLE-KERNEL-R877.2`: `crates/medulla-h-admin/src/knowledge_bundle.rs::tests::export_hides_rls_nodes_and_import_is_atomic` (planned, L3): proves behavior: a hidden row never enters a bundle and a failed part leaves the target unchanged. The owning change adds it at this exact path.
-- `MEDULLA-DURABLE-KERNEL-R877.3`: `crates/medulla-h-admin/src/knowledge_bundle.rs::tests::each_refusal_names_its_code_and_writes_nothing` (planned, L2): proves refusal: bundle codes. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.2`: `crates/medulla-h-admin-schema/src/knowledge_bundle.rs::tests::export_then_plan_carries_every_part_and_remaps_documents` (planned, L3): proves behavior: export reads one snapshot, import commits one batch. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.2`: `crates/medulla-h-admin-schema/src/knowledge_bundle.rs::tests::export_hides_rls_nodes_and_import_is_atomic` (planned, L3): proves behavior: a hidden row never enters a bundle and a failed part leaves the target unchanged. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.3`: `crates/medulla-h-admin-schema/src/knowledge_bundle.rs::tests::each_refusal_names_its_code_and_writes_nothing` (planned, L2): proves refusal: bundle codes. The owning change adds it at this exact path.
 - `MEDULLA-DURABLE-KERNEL-R877.3`: `tests/bundle_import_recovery_served.rs::a_crashed_import_is_deleted_by_the_recovery_pass` (planned, L3): proves refusal: durable import state. The owning change adds it at this exact path.
 - `MEDULLA-DURABLE-KERNEL-R877.3`: `crates/medulla-server-auth/src/access/importing.rs::tests::a_marked_graph_is_hidden_outside_its_own_import_only` (planned, L2): proves refusal: an `importing` graph is hidden from every read outside its own import.
 - `MEDULLA-DURABLE-KERNEL-R877.3`: `tests/bundle_import_recovery_served.rs::a_restarted_process_hides_a_marked_graph_before_any_recovery_pass` (planned, L3): proves refusal: a restarted process hides a marked graph before any recovery pass.

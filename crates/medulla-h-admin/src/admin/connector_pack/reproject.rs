@@ -1,7 +1,9 @@
 //! Re-drive the graph projection of a connector's current committed pack head.
 
-#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_catalog_types::{connector_pack::PackEntryKind, connector_pack::PackProjectionState};
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+use medulla_h_admin_schema::admin::connector_pack::reproject::surface;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_persistence_records::connector_pack::projection::ConnectorPackProjectionPlan;
 #[cfg(all(feature = "blob", feature = "redb", feature = "shacl"))]
@@ -43,12 +45,7 @@ pub(crate) static INJECT_BLOB_UNAVAILABLE: std::sync::Mutex<
 > = std::sync::Mutex::new(std::collections::BTreeMap::new());
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-mod capability;
-#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-pub(crate) mod surface;
-
-#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-use crate::graph_schema::PackProjectionDocuments;
+use medulla_h_admin_schema::graph_schema::PackProjectionDocuments;
 
 pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
@@ -240,7 +237,7 @@ async fn commit_schema_projection(
     plan: &ConnectorPackProjectionPlan,
     documents: PackProjectionDocuments,
 ) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
-    crate::graph_schema::commit_pack_projection(
+    medulla_h_admin_schema::graph_schema::commit_pack_projection(
         state,
         req_id,
         verified,
@@ -407,7 +404,7 @@ fn blob_read_failure(error: String) -> String {
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn push_schema_document(
-    target: &mut Vec<crate::graph_schema::PackSchemaDocument>,
+    target: &mut Vec<medulla_h_admin_schema::graph_schema::PackSchemaDocument>,
     total_length: &mut usize,
     uri: &str,
     document: &str,
@@ -418,7 +415,7 @@ fn push_schema_document(
     if length > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
         return Err("SCHEMA_SOURCES_TOO_LARGE: pack schema exceeds source bound".into());
     }
-    target.push(crate::graph_schema::PackSchemaDocument {
+    target.push(medulla_h_admin_schema::graph_schema::PackSchemaDocument {
         uri: uri.to_string(),
         body: Arc::from(document),
     });

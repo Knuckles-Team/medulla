@@ -413,7 +413,7 @@ reverifications:
       SUPERSEDED, not relocated -- the function was deleted by commit 064f2d04 (confirmed an
       ancestor of this lane's HEAD) before the crate rename even happened, replaced by
       `crates/medulla-transaction/src/replay.rs`'s two-identity design, and its proposed
-      compensation deletions have also already happened (`crates/medulla-h-admin/src/admin.rs:1301`
+      compensation deletions have also already happened (`crates/medulla-h-admin-schema/src/admin.rs:1301`
       literally reads `// `admin_saga_request_stamp` is DELETED, not moved.`, citing
       `OperationReplayIdentity` as the replacement). NEITHER decision's `status` was changed
       (`proposed` stays `proposed`) -- matching a fix's SHAPE by reading source is not the
@@ -3527,7 +3527,7 @@ components:
       owned_errors: 132
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
-        - "crates/medulla-h-admin/src/admin.rs (18)"
+        - "crates/medulla-h-admin-schema/src/admin.rs (18)"
         - "crates/medulla-server-ops/src/api/query_txn/txn_intent.rs (15)"
         - "crates/medulla-server/src/registry_reaper.rs (12)"
         - "crates/medulla-server/src/transport.rs (11)"
@@ -4934,7 +4934,7 @@ wiring_decisions:
         - "crates/medulla-server-cluster-tests/src/split_tests/raft_cluster.rs (37) -- medulla.cluster-replication"
         - "crates/medulla-server-cluster-tests/src/split_tests/xshard_harness.rs (21) -- medulla.cluster-replication"
         - "crates/medulla-h-retrieve/src/reasoning_projection.rs (21) -- medulla.epistemic (counted under its owner)"
-        - "crates/medulla-h-admin/src/admin.rs (19) -- medulla.server-dispatch"
+        - "crates/medulla-h-admin-schema/src/admin.rs (19) -- medulla.server-dispatch"
         - "crates/medulla-h-txn/src/sqlite_file.rs (18) -- medulla.server-dispatch"
       note_on_eg_binary_composition: >-
         41 = 37 in tests/, benches/ and examples/ plus 4 in src/lib.rs, src/main.rs,
@@ -5117,7 +5117,7 @@ wiring_decisions:
          `IDEMPOTENCY_CONFLICT: key was already used by a different mutation`."
       - "Four call sites inside the crate: apply.rs:12, apply.rs:51, saga.rs:49, saga.rs:110.
          Re-exported at lib.rs:120."
-      - "Compensation 1 (production): crates/medulla-h-admin/src/admin.rs:607-635. `admin_saga_request_stamp`
+      - "Compensation 1 (production): crates/medulla-h-admin-schema/src/admin.rs:607-635. `admin_saga_request_stamp`
          reuses the ORIGINAL attempt's expected_graph_version / request_id / created_at_ms when a
          record already exists, and only a genuine first attempt reads live state. Its own doc
          says re-deriving them live 'makes a legitimate replay's freshly-compiled batch
@@ -5159,7 +5159,7 @@ wiring_decisions:
          version_expectation equals the stored one, with its own distinct error message, so a
          caller that re-derived the OCC value gets told exactly that instead of a generic
          IDEMPOTENCY_CONFLICT."
-      - "Delete crates/medulla-h-admin/src/admin.rs's `admin_saga_request_stamp` (:628+) and its callers'
+      - "Delete crates/medulla-h-admin-schema/src/admin.rs's `admin_saga_request_stamp` (:628+) and its callers'
          use of it; delete the equivalent block at crates/medulla-lane-store/src/redb_store/development_lane.rs:6553-6570."
       - "Add a store-level test: prepare a saga, then replay it with a DIFFERENT req_id and a
          later created_at_ms, and assert it REPLAYS rather than conflicting. No such test exists
@@ -5179,7 +5179,7 @@ wiring_decisions:
       verify_replay_identity` across the whole tree today finds it ONLY inside a comment
       in `crates/medulla-store-apply-tests/src/development_lane_tests/test_fixture.rs:137` -- zero live call sites.
       SUBSTANTIVELY, this decision's finding and fix APPEAR ALREADY LANDED, verified by
-      direct reading, not inference: `crates/medulla-h-admin/src/admin.rs:1301` now reads
+      direct reading, not inference: `crates/medulla-h-admin-schema/src/admin.rs:1301` now reads
       literally `// `admin_saga_request_stamp` is DELETED, not moved.`, with a comment
       explaining the replacement is `OperationReplayIdentity`, which 'structurally
       excludes' timestamp/request-id/OCC-expectation -- the exact shape this decision's

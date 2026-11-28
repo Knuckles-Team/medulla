@@ -746,7 +746,7 @@ async fn dispatch_catalog_admin_methods(
                 unreachable!("only Register mutates");
             };
             dispatch_boxed(async {
-                medulla_h_admin::admin::handle_workflow_registry_read(
+                medulla_h_admin_schema::admin::handle_workflow_registry_read(
                     state,
                     req.id,
                     &req.graph,
@@ -982,7 +982,7 @@ async fn dispatch_catalog_admin_methods(
         }
         Method::PublishSkillPackage { request } => {
             dispatch_boxed(async {
-                medulla_h_admin::admin::handle_publish_skill_package(
+                medulla_h_admin_schema::admin::handle_publish_skill_package(
                     state,
                     req.id,
                     verified_context,
@@ -1037,7 +1037,7 @@ async fn unregistered_workflow(
 ) -> Option<Response> {
     for identity in identities {
         let response = dispatch_boxed(async {
-            medulla_h_admin::admin::handle_workflow_registry_read(
+            medulla_h_admin_schema::admin::handle_workflow_registry_read(
                 ctx.state,
                 ctx.req.id,
                 &ctx.req.graph,

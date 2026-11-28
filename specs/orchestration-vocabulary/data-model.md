@@ -32,7 +32,7 @@ This file names the records and graph terms that the rows add. Each entity has o
 
 - Source: an `AgentComponentEntry` of kind `A2aAgentCard`, with the optional `agent_kind` attribute (an `:AgentKind` IRI).
 - Triples: `a :A2AAgentCard`, `:memberOfLibrary`, `:providesCapability` per declared capability, `:hasAgentKind`.
-- Owner: `crates/medulla-h-admin/src/agent_library_projection/map.rs` (`project_component`, MEDULLA-ORCH-VOCAB-R003.6).
+- Owner: `crates/medulla-h-admin-schema/src/agent_library_projection/map.rs` (`project_component`, MEDULLA-ORCH-VOCAB-R003.6).
 
 ### Definition records
 

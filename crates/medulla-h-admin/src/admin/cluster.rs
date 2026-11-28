@@ -20,16 +20,25 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
-use super::backup::{
-    cleanup_backup_stage, cleanup_restore_retry_stage, create_private_directory, now_secs,
-    opaque_ref, resolve_backup_destination, resolve_backup_source,
-};
-use super::saga::{
-    catalog_saga, live_graph_loads, no_catalog, rebalance_opts, rebalance_plan_report,
-    reshard_report,
-};
 use medulla_server_ops::api::admin::saga::begin_admin_saga_with_nonce;
 use medulla_server_ops::api::admin::saga::finish_admin_saga;
+use {
+    medulla_h_admin_schema::admin::backup::cleanup_backup_stage,
+    medulla_h_admin_schema::admin::backup::cleanup_restore_retry_stage,
+    medulla_h_admin_schema::admin::backup::create_private_directory,
+    medulla_h_admin_schema::admin::backup::now_secs,
+    medulla_h_admin_schema::admin::backup::opaque_ref,
+    medulla_h_admin_schema::admin::backup::resolve_backup_destination,
+    medulla_h_admin_schema::admin::backup::resolve_backup_source,
+};
+use {
+    medulla_h_admin_schema::admin::saga::catalog_saga,
+    medulla_h_admin_schema::admin::saga::live_graph_loads,
+    medulla_h_admin_schema::admin::saga::no_catalog,
+    medulla_h_admin_schema::admin::saga::rebalance_opts,
+    medulla_h_admin_schema::admin::saga::rebalance_plan_report,
+    medulla_h_admin_schema::admin::saga::reshard_report,
+};
 
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
@@ -44,16 +53,18 @@ pub async fn try_handle(
     // The served contract read needs no durable substrates (MEDULLA-CONTRACT-R054):
     // serve it before the backend gate.
     if let Method::DescribeContract { .. } = method {
-        return Ok(super::describe_contract::handle(req_id, method));
+        return Ok(medulla_h_admin_schema::admin::describe_contract::handle(
+            req_id, method,
+        ));
     }
     // The runtime introspection reads process registries, never a substrate
     // (MEDULLA-OBSERVE-R006.1): serve it before the backend gate too.
     if let Method::Introspect { .. } = method {
-        return Ok(super::introspect::handle(state, req_id, method).await);
+        return Ok(medulla_h_admin_schema::admin::introspect::handle(state, req_id, method).await);
     }
     // The profile samples the process or reads the same registries: no substrate either.
     if let Method::Profile { .. } = method {
-        return Ok(super::profile::handle(req_id, method).await);
+        return Ok(medulla_h_admin_schema::admin::profile::handle(req_id, method).await);
     }
     // Keep the backend owner alive across every async helper call.
     let backend_arc = { state.read().await.persistence.clone() };

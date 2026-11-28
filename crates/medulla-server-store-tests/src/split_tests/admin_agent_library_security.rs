@@ -4,8 +4,8 @@ use medulla_agent_types::agent_library::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
 };
-use medulla_h_admin::admin::backup_bundle_name;
-use medulla_h_admin::admin::bind_agent_library_draft;
+use medulla_h_admin_schema::admin::backup_bundle_name;
+use medulla_h_admin_schema::admin::bind_agent_library_draft;
 use medulla_identity_types::acl::RequestContextClaims;
 use medulla_persistence_records::agent_library::context::bind_agent_library_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;

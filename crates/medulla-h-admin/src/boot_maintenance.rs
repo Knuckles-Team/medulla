@@ -48,7 +48,7 @@ pub async fn spawn_post_bind_maintenance(state: Arc<RwLock<ServerState>>) {
     // this boot is recorded, and this boot's report is stored once its boot tasks have ended.
     #[cfg(feature = "redb")]
     load_previous_startup_reports(&state).await;
-    crate::namespace_migration::spawn(state.clone());
+    medulla_h_admin_schema::namespace_migration::spawn(state.clone());
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
     spawn_matview_reload(state.clone());
     #[cfg(all(feature = "redb", feature = "tsdb"))]
@@ -60,7 +60,7 @@ pub async fn spawn_post_bind_maintenance(state: Arc<RwLock<ServerState>>) {
 /// The tasks whose end closes the boot report.
 #[cfg(feature = "redb")]
 pub const BOOT_TASKS: [&str; 3] = [
-    crate::namespace_migration::TASK_NAME,
+    medulla_h_admin_schema::namespace_migration::TASK_NAME,
     "matview-reload",
     "time-series-reconcile",
 ];

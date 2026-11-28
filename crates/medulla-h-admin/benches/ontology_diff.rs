@@ -10,9 +10,12 @@
 //! Run: `cargo bench -p medulla-h-admin --features shacl --bench ontology_diff`
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_h_admin::graph_schema::ontology_diff::{diff_axioms, SchemaSide};
 use std::hint::black_box;
 use std::time::{Duration, Instant};
+use {
+    medulla_h_admin_schema::graph_schema::ontology_diff::diff_axioms,
+    medulla_h_admin_schema::graph_schema::ontology_diff::SchemaSide,
+};
 
 const AXIOMS: usize = 5_000;
 const CHURN: usize = 250;

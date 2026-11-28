@@ -419,7 +419,7 @@ The following fixtures are planned and unexecuted. Their producer-only tests rem
 | MEDULLA-DECISION-ENGINE-R079.4 | `crates/medulla-h-admin/src/admin/connector_pack/tests/sql_columns.rs::sql_column_kinds_and_cardinality_control_embedding` | L3 served `SourceIngest` |
 | MEDULLA-DECISION-ENGINE-R079.5 | `tests/test_decision_ingestion_acceptance.py::test_retrieval_feedback_demotes_unused_content` | SPECIFIED; no executed integration proof |
 | MEDULLA-DECISION-ENGINE-R080.2 | `tests/test_decision_ingestion_acceptance.py::test_real_extractors_follow_the_lowest_sufficient_rung` | SPECIFIED; no executed integration proof |
-| MEDULLA-DECISION-ENGINE-R102.2 | `crates/medulla-h-admin/src/graph_schema/approved/tests.rs::schema_repair_requires_real_shadow_ingest_before_activation` | SPECIFIED; no executed integration proof |
+| MEDULLA-DECISION-ENGINE-R102.2 | `crates/medulla-h-admin-schema/src/graph_schema/approved/tests.rs::schema_repair_requires_real_shadow_ingest_before_activation` | SPECIFIED; no executed integration proof |
 
 ## Retention acceptance
 

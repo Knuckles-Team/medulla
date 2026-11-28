@@ -154,7 +154,7 @@ none
 - `Method::Uql` to `dispatch_sql_query` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`), the entry of the agent-claims program.
 - `Method::SourceCoverage` (planned, `MEDULLA-SRC-AUTH-R004.6.1`) to `crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs` to `medulla_h_sparql::foreign_source_handlers::try_handle` to `source_coverage.rs::handle` (planned) to `select_sources_with` (`crates/medulla-virtual-graph/src/source_selection.rs:596`), the first production caller of source selection.
 - `Method::SupplyChainImpact` and `Method::CrossSourceQuestion` (new) to the same `try_handle` to `supply_chain_impact.rs::handle` and `cross_source_question.rs::handle` (new) to `select_sources_with` and the report assemblers of `crates/medulla-source-types/src/`.
-- `GraphSchema.AttachApproved` (`crates/medulla-h-admin/src/graph_schema/approved.rs`) attaches the seed rows under `Operator` origin.
+- `GraphSchema.AttachApproved` (`crates/medulla-h-admin-schema/src/graph_schema/approved.rs`) attaches the seed rows under `Operator` origin.
 - Obsolete paths to delete: none; every row adds to an existing path.
 
 ## Cross-repo seams

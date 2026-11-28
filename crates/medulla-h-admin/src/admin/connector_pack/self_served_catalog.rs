@@ -45,14 +45,15 @@ async fn attest(
     verified: &VerifiedRequestContext,
     request: medulla_catalog_types::connector_pack::McpSelfServedCatalogAttestRequest,
 ) -> Result<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding, String> {
-    use super::catalog_authority::{
-        admit_catalog_write, observed_registration, require_catalog_attester, ObservedRegistration,
-    };
     use medulla_catalog_types::connector_pack::{
         pack_component_id, self_served_candidate, self_served_component_revision,
         validate_connector, PackEntryKind, SelfServedAttester,
     };
     use medulla_persistence_records::connector_pack::catalog_authority::published_server_content;
+    use {
+        medulla_h_admin_schema::admin::connector_pack::catalog_authority::admit_catalog_write,
+        medulla_h_admin_schema::admin::connector_pack::catalog_authority::require_catalog_attester,
+    };
 
     require_catalog_attester(verified, &request.context.tenant_id, true)?;
     validate_connector(&request.connector)?;
@@ -62,8 +63,13 @@ async fn attest(
     // pack lock, so no import interleaves with a re-pin. Then the registry
     // lock, held until the authority rows commit, as on the mounted path.
     let _pack_guard = super::tenant_pack_lock(verified.tenant()).await?;
-    let (_registry_guard, store, context) =
-        admit_catalog_write(state, req_id, verified, observed_registration!(request)).await?;
+    let (_registry_guard, store, context) = admit_catalog_write(
+        state,
+        req_id,
+        verified,
+        medulla_h_admin_schema::observed_registration!(request),
+    )
+    .await?;
     super::authorize_importer(&store, verified, &request.connector)?;
     let component_id = pack_component_id(
         request.connector.as_str(),

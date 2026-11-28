@@ -45,7 +45,7 @@ crates/medulla-isolation/src/isolation/                      existing: identity 
 crates/medulla-identity-types/src/identity/                  existing: ops, store, segment; new: mode.rs, ownership.rs, metadata.rs, delegation.rs
 crates/medulla-identity-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
 crates/medulla-h-query-read/src/query/segment_filter.rs           new: visible-unit filter and point-read check
-crates/medulla-h-admin/src/admin/ownership.rs                new: ownership plan handler
+crates/medulla-h-admin-schema/src/admin/ownership.rs                new: ownership plan handler
 crates/medulla-server-router/src/dispatch/router/identity_access.rs  existing: Identity, RbacAdmin and access arms
 crates/medulla-capabilities/src/                             existing: scope registry and method descriptors
 tests/identity/                                              new: served tests

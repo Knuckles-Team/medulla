@@ -9,7 +9,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_agent_types::agent_component::{
     AgentComponentDraft, AgentComponentEntry, AgentComponentKind, DraftPublication, DraftSubject,
 };
-use medulla_h_admin::agent_library_projection::map::project_component;
+use medulla_h_admin_schema::agent_library_projection::map::project_component;
 use std::hint::black_box;
 
 fn card() -> AgentComponentEntry {
