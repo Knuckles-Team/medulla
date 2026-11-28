@@ -6,14 +6,16 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_ingest::source_ingestion::action_record::{
-    action_node_id, admit_actions, ActionReads,
-};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_action_record::{ActionKind, ActionRecordItem, FactUseItem};
 use medulla_types::contract::BoundedVec;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
+use {
+    medulla_h_ingest_repository::source_ingestion::action_record::action_node_id,
+    medulla_h_ingest_repository::source_ingestion::action_record::admit_actions,
+    medulla_h_ingest_repository::source_ingestion::action_record::ActionReads,
+};
 
 const TENANT: &str = "tenant-a";
 const FACT: &str = "fact:invoice-7";

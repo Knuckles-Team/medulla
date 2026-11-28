@@ -8,7 +8,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use super::ModalityAuthority;
 use medulla_protocol_types::protocol::ResultPayload;
 
-pub(super) fn encode_authority(authority: &ModalityAuthority) -> Result<ResultPayload, String> {
+pub fn encode_authority(authority: &ModalityAuthority) -> Result<ResultPayload, String> {
     ResultPayload::of::<results::ServedModalityAuthority>(results::ServedModalityAuthorityResult {
         tenant_ref: authority.scope.tenant_ref.as_str().to_owned(),
         access_policy_ref: authority.scope.access_policy_ref.as_str().to_owned(),
@@ -17,36 +17,34 @@ pub(super) fn encode_authority(authority: &ModalityAuthority) -> Result<ResultPa
     })
 }
 
-pub(super) fn encode_ingest_result(outcome: ApplyOutcome) -> Result<ResultPayload, String> {
+pub fn encode_ingest_result(outcome: ApplyOutcome) -> Result<ResultPayload, String> {
     apply_outcome::<results::ServedModalityIngest>(outcome)
 }
 
-pub(super) fn encode_ingest_stream_result(
-    outcomes: Vec<ApplyOutcome>,
-) -> Result<ResultPayload, String> {
+pub fn encode_ingest_stream_result(outcomes: Vec<ApplyOutcome>) -> Result<ResultPayload, String> {
     let outcomes = outcomes.into_iter().map(apply_outcome_body).collect();
     ResultPayload::of::<results::ServedModalityIngestStream>(outcomes)
 }
 
-pub(super) fn encode_query_page<T>(page: ServedPage<T>) -> Result<ResultPayload, String>
+pub fn encode_query_page<T>(page: ServedPage<T>) -> Result<ResultPayload, String>
 where
     T: Serialize,
 {
     ResultPayload::of_dynamic::<results::ServedModalityQuery, _>(&page)
 }
 
-pub(super) fn encode_native_query_page<T>(page: ServedPage<T>) -> Result<ResultPayload, String>
+pub fn encode_native_query_page<T>(page: ServedPage<T>) -> Result<ResultPayload, String>
 where
     T: Serialize,
 {
     ResultPayload::of_dynamic::<results::ServedModalityNativeQuery, _>(&page)
 }
 
-pub(super) fn encode_delete_result(outcome: ApplyOutcome) -> Result<ResultPayload, String> {
+pub fn encode_delete_result(outcome: ApplyOutcome) -> Result<ResultPayload, String> {
     apply_outcome::<results::ServedModalityDelete>(outcome)
 }
 
-pub(super) fn encode_lifecycle_result(
+pub fn encode_lifecycle_result(
     outcome: ApplyOutcome,
     restore: bool,
 ) -> Result<ResultPayload, String> {
@@ -57,7 +55,7 @@ pub(super) fn encode_lifecycle_result(
     }
 }
 
-pub(super) fn encode_events(events: Vec<ServedEvent>) -> Result<ResultPayload, String> {
+pub fn encode_events(events: Vec<ServedEvent>) -> Result<ResultPayload, String> {
     let events = events
         .into_iter()
         .map(event_body)
@@ -65,7 +63,7 @@ pub(super) fn encode_events(events: Vec<ServedEvent>) -> Result<ResultPayload, S
     ResultPayload::of::<results::ServedModalityEvents>(events)
 }
 
-pub(super) fn encode_runtime_stats(stats: ServedRuntimeStats) -> Result<ResultPayload, String> {
+pub fn encode_runtime_stats(stats: ServedRuntimeStats) -> Result<ResultPayload, String> {
     ResultPayload::of::<results::ServedModalityStats>(results::ServedModalityStatsResult {
         active_records: stats.active_records,
         total_records: stats.total_records,
@@ -79,13 +77,13 @@ pub(super) fn encode_runtime_stats(stats: ServedRuntimeStats) -> Result<ResultPa
     })
 }
 
-pub(super) fn encode_tombstone_collection(collected: usize) -> Result<ResultPayload, String> {
+pub fn encode_tombstone_collection(collected: usize) -> Result<ResultPayload, String> {
     ResultPayload::of::<results::ServedModalityCollectTombstones>(
         results::ServedModalityTombstoneCollection { collected },
     )
 }
 
-pub(super) fn encode_capability_report(
+pub fn encode_capability_report(
     component_pass: usize,
     component_not_applicable: usize,
     component_total: usize,
@@ -141,7 +139,7 @@ fn event_kind(value: ServedEventKind) -> Result<results::ServedModalityEventKind
     transcode(value)
 }
 
-pub(super) fn transcode<T, U>(value: T) -> Result<U, String>
+pub fn transcode<T, U>(value: T) -> Result<U, String>
 where
     T: Serialize,
     U: DeserializeOwned,

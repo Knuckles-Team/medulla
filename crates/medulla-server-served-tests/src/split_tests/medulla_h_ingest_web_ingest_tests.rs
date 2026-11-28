@@ -172,7 +172,7 @@ fn retrieved_at_parses_numbers_and_rfc3339() {
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R651.7.7
 #[test]
 fn removed_chunks_supersede_their_facts_and_leave_no_dangling_grounding() {
-    use medulla_h_ingest::source_ingestion::facts::chunk_facts_id;
+    use medulla_h_ingest_repository::source_ingestion::facts::chunk_facts_id;
     use std::collections::BTreeMap;
 
     let tenant = "tenant-scope";

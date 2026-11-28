@@ -15,9 +15,6 @@ use std::sync::Arc;
 use medulla_catalog_types::graph_schema::approval::approved_candidate_digest;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_ingest::source_ingestion::drift_methods::{
-    approved_proposal, get, list, repair_proposal, source_id_of, QuarantineRow,
-};
 use medulla_protocol_types::result_contract::ingestion::{
     SchemaDriftGet as SchemaDriftGetResult, SchemaDriftList as SchemaDriftListResult,
     SchemaRepairApprove as SchemaRepairApproveResult,
@@ -34,6 +31,14 @@ use medulla_source_types::schema_drift_methods::{
 };
 use serde_json::{Map, Value};
 use tokio::sync::RwLock;
+use {
+    medulla_h_ingest_repository::source_ingestion::drift_methods::approved_proposal,
+    medulla_h_ingest_repository::source_ingestion::drift_methods::get,
+    medulla_h_ingest_repository::source_ingestion::drift_methods::list,
+    medulla_h_ingest_repository::source_ingestion::drift_methods::repair_proposal,
+    medulla_h_ingest_repository::source_ingestion::drift_methods::source_id_of,
+    medulla_h_ingest_repository::source_ingestion::drift_methods::QuarantineRow,
+};
 
 const MAX_QUARANTINES_READ: usize = 100_000;
 

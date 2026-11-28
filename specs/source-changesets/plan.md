@@ -43,10 +43,10 @@ crates/medulla-server-auth/src/access/path_grant.rs   new: check
 crates/medulla-h-ingest/src/source_changeset.rs       new: accept, import, export
 crates/medulla-h-ingest/src/source_tree.rs            new: read_tree
 crates/medulla-h-ingest/src/source_history.rs         new: history handlers
-crates/medulla-h-ingest/src/gate_verdict.rs           new: record
-crates/medulla-h-ingest/src/source_bisect.rs          new: bisect handler
+crates/medulla-h-ingest-repository/src/gate_verdict.rs           new: record
+crates/medulla-h-ingest-repository/src/source_bisect.rs          new: bisect handler
 crates/medulla-h-ingest/src/source_symbol_edit.rs     new: handle_submit_symbol_edit
-crates/medulla-h-ingest/src/repository_index.rs       existing: reindex_changeset added
+crates/medulla-h-ingest-repository/src/repository_index.rs       existing: reindex_changeset added
 tests/simulation/source_changesets.rs                 new: seeded simulation
 benches/source_symbol_edit.rs                         new: nightly bench
 ```

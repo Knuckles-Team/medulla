@@ -14,7 +14,7 @@ use medulla_graph_core::graph::GraphCore;
 /// legacy snapshot and its exported rows together while the durable row writes
 /// and read-back proof run as one cohesive migration phase.
 #[allow(dead_code)]
-pub(super) fn migrate_partition_to_rows<T>(
+pub fn migrate_partition_to_rows<T>(
     core: &GraphCore,
     authority: &ModalityAuthority,
     modality: ServedModalityKind,

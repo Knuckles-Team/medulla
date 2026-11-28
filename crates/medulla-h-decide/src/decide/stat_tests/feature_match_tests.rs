@@ -27,7 +27,7 @@ const HIDDEN_COMMIT: &str = "fedcba9876543210fedcba9876543210fedcba98";
 async fn index_commits(h: &Harness) {
     assert!(medulla_server_ops::api::ingest::install_ingest_seam(
         &h.state.read().await.seams,
-        Arc::new(medulla_h_ingest::repository_index::IngestSeam),
+        Arc::new(medulla_h_ingest_repository::repository_index::IngestSeam),
     ));
     let mut guard = h.state.write().await;
     guard

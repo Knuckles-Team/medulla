@@ -251,7 +251,11 @@ pub(super) fn transcript_methods(
         "message_count": validated.messages.len(),
     });
     if let Some(map) = thread_properties.as_object_mut() {
-        for (key, value) in super::permissions::restricted_read_access(TRANSCRIPT_READ_ACTION) {
+        for (key, value) in
+            medulla_h_ingest_repository::source_ingestion::permissions::restricted_read_access(
+                TRANSCRIPT_READ_ACTION,
+            )
+        {
             map.insert(key.into(), value);
         }
     }
@@ -274,7 +278,11 @@ pub(super) fn transcript_methods(
         if let Some(speaker) = &message.speaker {
             properties.insert("speaker".into(), speaker.as_str().into());
         }
-        for (key, value) in super::permissions::restricted_read_access(TRANSCRIPT_READ_ACTION) {
+        for (key, value) in
+            medulla_h_ingest_repository::source_ingestion::permissions::restricted_read_access(
+                TRANSCRIPT_READ_ACTION,
+            )
+        {
             properties.insert(key.into(), value);
         }
         properties.insert("sequence".into(), sequence.into());

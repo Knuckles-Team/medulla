@@ -12,7 +12,10 @@ use std::time::{Duration, Instant};
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_enrich::links::{HttpRoute, ServiceOwnership};
 use medulla_enrich::Id;
-use medulla_h_ingest::repository_index::enrich::hooks::{link_methods, HookInputs};
+use {
+    medulla_h_ingest_repository::repository_index::enrich::hooks::link_methods,
+    medulla_h_ingest_repository::repository_index::enrich::hooks::HookInputs,
+};
 
 const ROUTES: u64 = 50_000;
 const SERVICES: u64 = 200;

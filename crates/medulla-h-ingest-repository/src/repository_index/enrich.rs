@@ -214,7 +214,7 @@ fn relation(edge_type: &str) -> Option<(EdgeRelation, Rung)> {
 
 /// The R011 communities of the committed call graph, through the shared
 /// community detector (no second detector), labelled under `digest`.
-pub(super) fn communities(
+pub fn communities(
     symbols: &BTreeSet<String>,
     calls: &[(String, String)],
     digest: &str,
@@ -251,7 +251,7 @@ pub(super) fn communities(
 /// `assignment` (entity to community label), under the rung and node shape the
 /// enrichment run writes; the one writer of feature nodes, also used by the
 /// changeset re-index (MEDULLA-SCM-R006).
-pub(super) fn feature_methods(assignment: &BTreeMap<Id, String>) -> Result<Vec<Method>, String> {
+pub fn feature_methods(assignment: &BTreeMap<Id, String>) -> Result<Vec<Method>, String> {
     let mut methods = Vec::new();
     for feature in medulla_enrich::code::features_from_communities(assignment)
         .map_err(|error| error.to_string())?
@@ -689,11 +689,7 @@ mod worker {
     const LEASE_MS: u64 = 10 * 60 * 1_000;
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
 
-    pub(super) async fn run(
-        state: Arc<RwLock<ServerState>>,
-        timeout_ms: u64,
-        history: HistoryConfig,
-    ) {
+    pub async fn run(state: Arc<RwLock<ServerState>>, timeout_ms: u64, history: HistoryConfig) {
         let mut next_graph = 0_usize;
         loop {
             match sweep(&state, &mut next_graph, timeout_ms, history).await {

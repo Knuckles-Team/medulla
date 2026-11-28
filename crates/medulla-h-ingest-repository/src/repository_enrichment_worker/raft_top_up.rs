@@ -337,7 +337,7 @@ async fn exact_pending_record(
 /// matrix passes. The authenticated transport nonce is consumed by Raft's
 /// replicated request and never derived from the proposal.
 #[allow(dead_code)]
-pub(crate) async fn propose_top_up(
+pub async fn propose_top_up(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     request_id: u64,

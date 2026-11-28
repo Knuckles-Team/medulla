@@ -405,7 +405,7 @@ where
     Ok(outcomes)
 }
 
-pub(super) fn ingest_stream(
+pub fn ingest_stream(
     core: &GraphCore,
     authority: &ModalityAuthority,
     modality: ServedModalityKind,

@@ -1945,11 +1945,11 @@ fn append_policy_candidates(
         .filter_map(|op| op["properties"]["path"].as_str().map(str::to_owned))
         .collect();
     for op in
-        super::policy_candidates::synthesize_policy_candidates(repo, commit, files, &policy_paths)
+        medulla_h_ingest_repository::source_ingestion::policy_candidates::synthesize_policy_candidates(repo, commit, files, &policy_paths)
     {
         result
             .nodes
-            .push(super::policy_candidates::candidate_index_node(&op));
+            .push(medulla_h_ingest_repository::source_ingestion::policy_candidates::candidate_index_node(&op));
     }
 }
 

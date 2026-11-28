@@ -378,7 +378,7 @@ async fn record_gate_verdict(
         } else {
             None
         };
-        let write = medulla_h_ingest::gate_verdict::record(
+        let write = medulla_h_ingest_repository::gate_verdict::record(
             request,
             changeset_known,
             tree_digest.as_deref(),
@@ -892,7 +892,7 @@ async fn file_defect_write(
     request: FileDefectRequest,
 ) -> Result<DefectWrite, String> {
     let existing = load_defects(state, target, &request.repo).await?;
-    Ok(medulla_h_ingest::defect_intake::file_defect(
+    Ok(medulla_h_ingest_repository::defect_intake::file_defect(
         existing, request,
     ))
 }

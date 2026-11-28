@@ -13,10 +13,14 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_h_ingest::ingest_drain::{on_ingest_drain_ack, start_drain, DrainAckOutcome};
 use medulla_ingestion_types::ingest_drain::{route_ingest_graph, DrainAck, RouteInputs};
 use medulla_jobs::{JobStore, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome};
 use medulla_source_types::ingest_job::{task_id, IngestJobEnvelope};
+use {
+    medulla_h_ingest_repository::ingest_drain::on_ingest_drain_ack,
+    medulla_h_ingest_repository::ingest_drain::start_drain,
+    medulla_h_ingest_repository::ingest_drain::DrainAckOutcome,
+};
 
 const PAGES: usize = 500;
 const ROUTES: usize = 20_000;

@@ -237,7 +237,7 @@ pub fn find_layer_cycle(edges: &BTreeSet<(String, String)>) -> Option<Vec<String
     None
 }
 
-pub(super) fn node(id: String, node_type: &str, properties: &[(&str, &str)]) -> ExtractedNode {
+pub fn node(id: String, node_type: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {
         node_id: id,
         node_type: node_type.to_string(),
@@ -248,7 +248,7 @@ pub(super) fn node(id: String, node_type: &str, properties: &[(&str, &str)]) -> 
     }
 }
 
-pub(super) fn edge(source: String, target: String, edge_type: &str) -> ExtractedEdge {
+pub fn edge(source: String, target: String, edge_type: &str) -> ExtractedEdge {
     ExtractedEdge {
         source,
         target,

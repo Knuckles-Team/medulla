@@ -140,7 +140,7 @@ pub async fn dispatch_graph_op_inner(
     ctx: GraphOpContext<'_>,
     mut method: Method,
     #[cfg(feature = "modality-serving")] modality_authority: Option<
-        medulla_h_ingest::modality::ModalityAuthority,
+        medulla_h_ingest_repository::modality::ModalityAuthority,
     >,
     #[cfg(feature = "knowledge-batch")] knowledge_stream_authority: Option<
         medulla_h_query::knowledge_stream::KnowledgeStreamAuthority,
@@ -284,7 +284,7 @@ pub struct GraphOpRouting<'a> {
     #[cfg(feature = "redb")]
     pub graph_incarnation_id: &'a String,
     #[cfg(feature = "modality-serving")]
-    pub modality_authority: &'a Option<medulla_h_ingest::modality::ModalityAuthority>,
+    pub modality_authority: &'a Option<medulla_h_ingest_repository::modality::ModalityAuthority>,
     #[cfg(feature = "knowledge-batch")]
     pub knowledge_stream_authority:
         &'a Option<medulla_h_query::knowledge_stream::KnowledgeStreamAuthority>,

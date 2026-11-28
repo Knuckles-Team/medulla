@@ -4,35 +4,11 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "asr-whisper")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod asr;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "blob")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod blob;
-
-/// The context read over stored knowledge atoms (MEDULLA-INGEST-WORKER-R003.3).
-pub mod atom_context;
-
 /// Served data-prep declarations (MEDULLA-INGEST-WORKER-R001.1007).
 pub mod data_prep_declaration;
 
-/// Chunked source drains: a chain of bounded page tasks over the one task queue
-/// (MEDULLA-INGEST-WORKER-R605.2).
-pub mod ingest_drain;
-/// Served ingest queue entry: enqueue maps onto the served task queue with
-/// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
-pub mod ingest_queue;
 /// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
 pub mod ingest_readback;
-/// Per-span embedding admission (MEDULLA-DECISION-ENGINE-R079.2, R079.3).
-pub mod ingestion_admission;
-/// Producing-rung recording and overwrite resistance for ingest producers
-/// (MEDULLA-DECISION-ENGINE-R080.2).
-pub mod ingestion_rung;
 /// Dataset lineage ingest (MEDULLA-UNIFIED-DATA-PLANE-R702.3).
 pub mod lineage;
 /// Served meeting transcript revisions and summaries
@@ -40,38 +16,11 @@ pub mod lineage;
 #[allow(missing_docs)] // fields mirror the medulla-types wire contracts
 pub mod meeting_transcript;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "modality-serving")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod modality;
-
-/// The ontology slice one extraction unit needs (MEDULLA-INGEST-WORKER-R913).
-#[cfg(all(feature = "blob", feature = "decide"))]
-pub mod ontology_slice;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod repository_enrichment_worker;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod repository_index;
-
-/// Lowering of the served `SemanticEnrich` writes (MEDULLA-DECISION-ENGINE-R614.3).
-#[allow(missing_docs)]
-pub mod semantic_enrichment;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod source_batch;
-
 /// Blob phase and path-set acceptance of source-changeset intake
 /// (MEDULLA-SCM-R001, MEDULLA-SCM-R003.1).
 #[cfg(feature = "blob")]
 pub mod source_changeset;
 
-pub mod source_bisect;
 /// `ReadTree` handler and the tree checkpoint written with an accepted
 /// changeset (MEDULLA-SCM-R004).
 #[cfg(feature = "blob")]
@@ -83,12 +32,6 @@ pub mod source_revert;
 /// (MEDULLA-SCM-R013.4).
 #[cfg(feature = "blob")]
 pub mod source_symbol_edit;
-// MEDULLA-ORCH-VOCAB-R009.101.1: the harness session index admission.
-pub mod harness_session;
-// MEDULLA-SCM-R008 — gate verdicts are sealed records.
-/// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).
-pub mod defect_intake;
-pub mod gate_verdict;
 
 /// The graph read of a served `SpecStatus` (MEDULLA-SDLC-R005.3).
 pub mod lifecycle_status;
@@ -119,7 +62,3 @@ pub mod document_delete;
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod web_ingest;
-
-// The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
-#[cfg(test)]
-use medulla_test_ambient_auth as _;

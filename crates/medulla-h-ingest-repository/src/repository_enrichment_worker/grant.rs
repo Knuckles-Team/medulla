@@ -3,7 +3,7 @@
 use medulla_isolation::isolation::IsolationLayer;
 
 #[cfg(any(test, not(feature = "raft")))]
-pub(super) const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
+pub const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
 
 #[cfg(any(test, not(feature = "raft")))]
 fn role_for(graph: &str) -> String {
@@ -14,7 +14,7 @@ fn role_for(graph: &str) -> String {
 /// Grant only the graph named by a verified, held enrichment outbox lease.
 /// Idempotent across retries and restart; never consumes an unbootstrapped
 /// identity policy.
-pub(super) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
+pub fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
     if isolation.identity_bootstrap_pending() {
         return Err("REPOSITORY_ENRICHMENT_POLICY_UNBOOTSTRAPPED".into());
     }
@@ -77,7 +77,7 @@ fn caller_has_authority(
 /// caller must fetch `retained` from persistence; only the follower's atomic
 /// compare and swap makes that read authoritative at commit time.
 #[allow(dead_code)]
-pub(super) fn bind_top_up_identity(
+pub fn bind_top_up_identity(
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     isolation: &IsolationLayer,
     graph_type: medulla_protocol_types::protocol::GraphType,

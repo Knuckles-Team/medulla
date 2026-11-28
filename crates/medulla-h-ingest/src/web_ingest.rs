@@ -30,9 +30,16 @@ use medulla_source_types::{
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
-use super::ingestion_admission::{admit_unit, exact_digest};
-use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
 use medulla_protocol_types::protocol::Method;
+use {
+    medulla_h_ingest_repository::ingestion_admission::admit_unit,
+    medulla_h_ingest_repository::ingestion_admission::exact_digest,
+};
+use {
+    medulla_h_ingest_repository::repository_index::stored_value,
+    medulla_h_ingest_repository::repository_index::EnvelopeLabels,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 pub const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
 pub const CHUNK_TYPE: &str = "DocumentChunk";
@@ -192,8 +199,10 @@ pub fn outranking_rung(document_id: &str, records: &[(String, Vec<u8>)]) -> Opti
         .iter()
         .filter_map(|(_, bytes)| medulla_types::msgpack::decode_property_value(bytes).ok())
         .filter(|value| value["document_id"].as_str() == Some(document_id))
-        .filter_map(|value| crate::ingestion_rung::stored_rung(&value))
-        .filter(|stored| crate::ingestion_rung::outranked(Some(*stored), PRODUCING_RUNG))
+        .filter_map(|value| medulla_h_ingest_repository::ingestion_rung::stored_rung(&value))
+        .filter(|stored| {
+            medulla_h_ingest_repository::ingestion_rung::outranked(Some(*stored), PRODUCING_RUNG)
+        })
         .min()
 }
 
@@ -350,7 +359,9 @@ pub fn prior_fact_supersession(
         .iter()
         .flat_map(|earlier| earlier.chunk_ids.iter().cloned())
         .collect();
-    super::source_ingestion::facts::supersede_removed_chunks(tenant, &chunk_ids, read)
+    medulla_h_ingest_repository::source_ingestion::facts::supersede_removed_chunks(
+        tenant, &chunk_ids, read,
+    )
 }
 
 /// The section tree of a held Document and its verification: `Paged` when the text
@@ -483,8 +494,8 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
             "admissions": plan.admissions,
             "embedded_units": plan.embedded_units,
             "demoted_classes": plan.demoted_classes,
-            (crate::ingestion_rung::PRODUCING_RUNG):
-                crate::ingestion_rung::rung_label(PRODUCING_RUNG),
+            (medulla_h_ingest_repository::ingestion_rung::PRODUCING_RUNG):
+                medulla_h_ingest_repository::ingestion_rung::rung_label(PRODUCING_RUNG),
         }),
     )?);
     methods.push(edge(plan.document_id, &record_id, HAS_ENRICHMENT)?);

@@ -300,7 +300,7 @@ def main() -> None:
         )
     )
     jobs = read_module_tree("crates/medulla-h-jobs/src/jobs.rs", root_dir=ROOT)
-    blob_handler = read("crates/medulla-h-ingest/src/blob.rs")
+    blob_handler = read("crates/medulla-h-ingest-repository/src/blob.rs")
     blob_state = read("crates/medulla-server-blob/src/blob/mod.rs")
     # `store.rs` split into holders/gc/manifest/policy/uploads/format submodules
     # (PB4, blob CAS hardening): walk the declared tree, as `jobs` already does

@@ -7,8 +7,11 @@ use medulla_enrich::semantic::{
 };
 use medulla_enrich::Id;
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_ingest::semantic_enrichment::{lower_fit, stored_topics};
 use medulla_protocol_types::protocol::Method;
+use {
+    medulla_h_ingest_repository::semantic_enrichment::lower_fit,
+    medulla_h_ingest_repository::semantic_enrichment::stored_topics,
+};
 
 fn id(value: &str) -> Id {
     Id::new(value).unwrap()

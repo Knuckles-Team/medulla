@@ -10,14 +10,14 @@ use medulla_tables::schema::Column;
 use medulla_tables::schema::ColumnType;
 use medulla_tables::schema::TableSchema;
 
-pub(super) struct Fixture {
-    pub(super) directory: PathBuf,
-    pub(super) owner: CarrierAuthority,
-    pub(super) schema: TableSchema,
+pub struct Fixture {
+    pub directory: PathBuf,
+    pub owner: CarrierAuthority,
+    pub schema: TableSchema,
 }
 
 impl Fixture {
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Self::for_tenant("tenant-a")
     }
 
@@ -25,7 +25,7 @@ impl Fixture {
     /// path derives its tenant scope from the verified envelope's own tenant
     /// claim, so an end-to-end test must build the catalog under the tenant the
     /// deployment's request-context policy expects, not the direct-call default.
-    pub(super) fn for_tenant(tenant: &str) -> Self {
+    pub fn for_tenant(tenant: &str) -> Self {
         let directory = medulla_server_auth::sql_tables::test_persist_dir();
         let owner = authority("alice", tenant, "owner", true);
         let schema = TableSchema::new(
@@ -44,7 +44,7 @@ impl Fixture {
         }
     }
 
-    pub(super) fn store(&self) -> TableStore {
+    pub fn store(&self) -> TableStore {
         medulla_server_auth::sql_tables::tenant_table_store(
             self.owner.tenant_scope(),
             &self.directory,
@@ -52,7 +52,7 @@ impl Fixture {
         .unwrap()
     }
 
-    pub(super) fn grant_insert(&self, agent: &str) {
+    pub fn grant_insert(&self, agent: &str) {
         grant(
             &self.directory,
             &self.owner,
@@ -64,7 +64,7 @@ impl Fixture {
         .unwrap();
     }
 
-    pub(super) fn evict_tenant(&self, tenant: &str) {
+    pub fn evict_tenant(&self, tenant: &str) {
         use medulla_server_auth::sql_tables::evict_for_test;
         use medulla_server_auth::sql_tables::tenant_acl_path_for_test;
         use medulla_server_auth::sql_tables::tenant_table_path_for_test;
@@ -72,7 +72,7 @@ impl Fixture {
         evict_for_test(&tenant_acl_path_for_test(tenant, &self.directory));
     }
 
-    pub(super) fn enable_rls(&self) {
+    pub fn enable_rls(&self) {
         medulla_server_auth::sql_catalog_acl::set_row_level_column(
             &self.directory,
             &self.owner,
@@ -83,7 +83,7 @@ impl Fixture {
         .unwrap();
     }
 
-    pub(super) fn request(&self, stamp: &str) -> SqlSourceBatchRequest {
+    pub fn request(&self, stamp: &str) -> SqlSourceBatchRequest {
         let target = SqlSourceTarget {
             table: "issues",
             columns: &["id", "owner_tag", "payload"],
@@ -119,12 +119,7 @@ impl Drop for Fixture {
     }
 }
 
-pub(super) fn verified(
-    agent: &str,
-    tenant: &str,
-    key: &str,
-    write: bool,
-) -> VerifiedRequestContext {
+pub fn verified(agent: &str, tenant: &str, key: &str, write: bool) -> VerifiedRequestContext {
     let template = VerifiedRequestContext::verified_for_test_with_scopes(
         agent,
         tenant,
@@ -137,11 +132,11 @@ pub(super) fn verified(
     VerifiedRequestContext::from_verified_claims(claims, key.into())
 }
 
-pub(super) fn authority(agent: &str, tenant: &str, key: &str, write: bool) -> CarrierAuthority {
+pub fn authority(agent: &str, tenant: &str, key: &str, write: bool) -> CarrierAuthority {
     CarrierAuthority::from_verified(&verified(agent, tenant, key, write)).unwrap()
 }
 
-pub(super) fn submit(
+pub fn submit(
     fixture: &Fixture,
     carrier: &CarrierAuthority,
     request: SqlSourceBatchRequest,

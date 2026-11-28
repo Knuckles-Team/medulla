@@ -19,7 +19,10 @@ use medulla_source_types::meeting_transcript::{
 
 use super::context::{context_node_id, current_final, StoredContext};
 use super::{encode, head_method, segment_node_id};
-use crate::repository_index::{stored_value, IndexWriteSet};
+use {
+    medulla_h_ingest_repository::repository_index::stored_value,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 /// Node type of one committed summary.
 pub const SUMMARY_TYPE: &str = "MeetingSummary";

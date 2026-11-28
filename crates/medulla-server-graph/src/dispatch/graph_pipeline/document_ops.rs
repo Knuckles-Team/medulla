@@ -168,7 +168,7 @@ pub async fn apply_cascade(
         Err(response) => return response,
     };
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
+    let envelope = match medulla_h_ingest_repository::repository_index::build_labelled_envelope(
         &commit_ctx,
         write_set,
         &delete::LABELS,

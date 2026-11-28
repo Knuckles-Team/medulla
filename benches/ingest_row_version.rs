@@ -11,10 +11,13 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_h_ingest::source_ingestion::row_version::{
-    admit_row_version, HeldRowVersion, RowVersionIds, RowVersionMember,
-};
 use medulla_types::contract::Digest256;
+use {
+    medulla_h_ingest_repository::source_ingestion::row_version::admit_row_version,
+    medulla_h_ingest_repository::source_ingestion::row_version::HeldRowVersion,
+    medulla_h_ingest_repository::source_ingestion::row_version::RowVersionIds,
+    medulla_h_ingest_repository::source_ingestion::row_version::RowVersionMember,
+};
 
 const BATCHES: usize = 10;
 const ROWS: usize = 1_024;

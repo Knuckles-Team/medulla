@@ -115,5 +115,9 @@ fn select(
             }
         }
     }
-    medulla_h_ingest::atom_context::atom_context(query, budget_of(token_budget), &visible)
+    medulla_h_ingest_repository::atom_context::atom_context(
+        query,
+        budget_of(token_budget),
+        &visible,
+    )
 }

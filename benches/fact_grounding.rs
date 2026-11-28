@@ -12,8 +12,12 @@
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 
-use medulla_h_ingest::source_ingestion::facts::{admit_facts, build_grounding_cache, DecodedFacts};
 use medulla_ingestion_types::extracted_fact::{ExtractedFact, FactBatch};
+use {
+    medulla_h_ingest_repository::source_ingestion::facts::admit_facts,
+    medulla_h_ingest_repository::source_ingestion::facts::build_grounding_cache,
+    medulla_h_ingest_repository::source_ingestion::facts::DecodedFacts,
+};
 
 const BATCHES: usize = 10;
 const FACTS: usize = 1_024;

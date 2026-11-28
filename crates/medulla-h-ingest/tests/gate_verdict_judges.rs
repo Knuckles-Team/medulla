@@ -1,6 +1,6 @@
 //! Gate verdict records and their `judges` edge (MEDULLA-SCM-R008, MEDULLA-SDLC-R012.7).
 
-use medulla_h_ingest::gate_verdict::record;
+use medulla_h_ingest_repository::gate_verdict::record;
 use medulla_source_types::gate_verdict::{
     landing_gate_check, tree_listing_digest, GateVerdictRecord, LandingPolicy,
 };

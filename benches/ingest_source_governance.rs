@@ -12,7 +12,7 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_h_ingest::source_ingestion::governance::admit_record_governance;
+use medulla_h_ingest_repository::source_ingestion::governance::admit_record_governance;
 use medulla_source_types::source_ingestion::MAX_SOURCE_RECORDS;
 
 const BATCHES: usize = 10;

@@ -38,7 +38,10 @@ use {
     medulla_catalog_source_types::lineage::LineageResult,
 };
 
-use super::repository_index::{EnvelopeLabels, IndexWriteSet};
+use {
+    medulla_h_ingest_repository::repository_index::EnvelopeLabels,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 /// The labels a lineage envelope is sealed under.
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {

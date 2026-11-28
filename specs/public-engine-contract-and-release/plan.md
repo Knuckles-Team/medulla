@@ -379,14 +379,14 @@ Upward references to resolve (15 module pairs, 21 references): `decide::stat_log
 
 Upward references to resolve (5 module pairs, 9 references): `admin::agent` (crate medulla-h-admin-schema) uses `admin::component_content` (crate medulla-h-admin) x4; `graph_schema` (crate medulla-h-admin-schema) uses `admin::connector_pack::import::crosswalk` (crate medulla-h-admin) x2; `graph_schema` (crate medulla-h-admin-schema) uses `admin::connector_pack::reproject` (crate medulla-h-admin) x1; `admin::agent` (crate medulla-h-admin-schema) uses `admin::skill_source_edit` (crate medulla-h-admin) x1; `admin::connector_pack::import::validation` (crate medulla-h-admin-schema) uses `connector_pack_projection` (crate medulla-h-admin) x1.
 
-#### `medulla-h-ingest`: 38,145 lines into 2 crates
+#### `medulla-h-ingest`: 39,090 lines into 2 crates
 
 | Target crate | Lines | Modules (paths under `src/`, `::` form) |
 |---|---|---|
-| `medulla-h-ingest-repository` | 18,148 | ./{(root),asr,atom_context,blob,defect_intake,gate_verdict,harness_session,ingest_drain,ingest_queue,ingestion_admission,ingestion_rung,modality,ontology_slice,repository_enrichment_worker,repository_index,semantic_enrichment,source_batch,source_bisect}; source_ingestion/{action_record,bookmark,containers,drift_gate,drift_methods,facts,governance,media_derivation,media_tag,permissions,policy_candidates,proposals,quality,row_version,skill_document} |
-| `medulla-h-ingest` | 19,997 | ./{data_prep_declaration,document_delete,ingest_readback,lifecycle_status,lifecycle_tests,lineage,meeting_transcript,paper_ingest,source_changeset,source_history,source_ingestion,source_revert,source_symbol_edit,source_tree,web_ingest}; source_ingestion/{documents,spec_projection,sweep,transcript} |
+| `medulla-h-ingest-repository` | 17,278 | ./{(root),asr,atom_context,blob,defect_intake,gate_verdict,harness_session,ingest_drain,ingest_queue,ingestion_admission,ingestion_rung,modality,ontology_slice,repository_enrichment_worker,repository_index,semantic_enrichment,source_batch,source_bisect,source_ingestion}; modality/{dispatch,ingest,migration,response}; repository_enrichment_worker/{grant,raft_top_up}; repository_index/{changeset,delta,ecosystem,enrich,scope_facts}; repository_index/enrich/{fingerprint,hooks}; source_batch/{authorization,tests}; source_batch/tests/{served,support}; source_ingestion/{action_record,bookmark,containers,drift_gate,drift_methods,facts,governance,permissions,policy_candidates,row_version,skill_document} |
+| `medulla-h-ingest` | 21,812 | ./{(root),data_prep_declaration,document_delete,ingest_readback,lifecycle_status,lifecycle_tests,lineage,meeting_transcript,paper_ingest,source_changeset,source_history,source_ingestion,source_revert,source_symbol_edit,source_tree,web_ingest}; meeting_transcript/{commit,context,read}; paper_ingest/{cites,map,validate}; source_changeset/{git,provenance}; source_ingestion/{documents,media_derivation,media_tag,proposals,quality,spec_projection,sweep,transcript}; web_ingest/{tests} |
 
-Upward references: none.
+Upward references: none. Items a lower module used from a higher one moved down with their module, or the using module moved up, as the table lists.
 
 #### `medulla-h-graph`: 36,273 lines into 2 crates
 

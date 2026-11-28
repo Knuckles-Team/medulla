@@ -508,7 +508,7 @@ reviewed_on = "2026-09-27"
 reason = """The reactivation predicate binds a proposed enrichment revision to its old source authority: tenant, graph, repository, source envelope, snapshot digest, prior policy, and verified top-up action. The development-lane predicate checks whether a durable resource hold still matches the intent's owner, session, fairness and quota policy, disk estimate, TTL, input fingerprint, and reservation. They compare different domain types and failure conditions; their common structure is a sequence of field equality checks, with no shared policy or useful abstraction."""
 
 [[pair]]
-left_file = "crates/medulla-h-ingest/src/repository_enrichment_worker/grant.rs"
+left_file = "crates/medulla-h-ingest-repository/src/repository_enrichment_worker/grant.rs"
 left_name = "retained_source_matches"
 left_digest = "sha256:3a1973570415b455bb7bae0156f56a650f23bd34eb1ec1b62a866a41e19d58c0"
 right_file = "crates/medulla-resource-store/src/redb_store/resource/fingerprint.rs"

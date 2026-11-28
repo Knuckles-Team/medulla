@@ -50,7 +50,7 @@ pub struct ModalityReplicationRequest<'a> {
     pub core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     pub method: Method,
-    pub authority: &'a medulla_h_ingest::modality::ModalityAuthority,
+    pub authority: &'a medulla_h_ingest_repository::modality::ModalityAuthority,
 }
 
 /// Only the current placement leader may prepare a modality mutation; a
@@ -370,7 +370,7 @@ pub async fn build_modality_raft_command(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
     staged: &medulla_graph_core::graph::GraphCore,
-    authority: &medulla_h_ingest::modality::ModalityAuthority,
+    authority: &medulla_h_ingest_repository::modality::ModalityAuthority,
     graph_fname: &str,
     payload: &ResultPayload,
 ) -> Result<medulla_raft::raft::SanitizedModalityRaftCommand, Response> {
@@ -516,7 +516,7 @@ pub async fn prepare_and_replicate_modality(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
     op: medulla_types::ServedModalityOp,
-    authority: &medulla_h_ingest::modality::ModalityAuthority,
+    authority: &medulla_h_ingest_repository::modality::ModalityAuthority,
     batch_id: String,
     graph_fname: String,
 ) -> Response {
@@ -524,7 +524,7 @@ pub async fn prepare_and_replicate_modality(
         Ok(staged) => staged,
         Err(response) => return response,
     };
-    let payload = match medulla_h_ingest::modality::handle(&staged, authority, op) {
+    let payload = match medulla_h_ingest_repository::modality::handle(&staged, authority, op) {
         Ok(payload) => payload,
         Err(error) => return Response::err(ctx.req_id, error),
     };

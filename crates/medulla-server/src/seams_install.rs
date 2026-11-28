@@ -117,7 +117,7 @@ pub fn install_state_seams(state: &ServerState) {
     // L3 ingest, graph, jobs, compute.
     let _ = medulla_server_ops::api::ingest::install_ingest_seam(
         &state.seams,
-        std::sync::Arc::new(medulla_h_ingest::repository_index::IngestSeam),
+        std::sync::Arc::new(medulla_h_ingest_repository::repository_index::IngestSeam),
     );
     let _ = medulla_server_ops::api::ingest::install_graph_seam(
         &state.seams,

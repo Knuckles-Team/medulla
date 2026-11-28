@@ -77,3 +77,7 @@ def test_server_router_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.11")
 def test_h_query_split_is_within_budget() -> None:
     _assert_split(["medulla-h-query-read", "medulla-h-query"])
+# spec: MEDULLA-CONTRACT-R067.9
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.9")
+def test_h_ingest_split_is_within_budget() -> None:
+    _assert_split(["medulla-h-ingest-repository", "medulla-h-ingest"])

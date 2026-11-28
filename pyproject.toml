@@ -445,6 +445,7 @@ units = [
   "medulla-h-decide",
   "medulla-h-graph",
   "medulla-h-ingest",
+  "medulla-h-ingest-repository",
   "medulla-h-jobs",
   "medulla-h-mining",
   "medulla-h-packs",

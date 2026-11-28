@@ -45,32 +45,22 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-mod bookmark;
-pub mod containers;
-#[cfg(all(feature = "redb", feature = "blob"))]
 use crate::paper_ingest;
 #[cfg(all(feature = "redb", feature = "blob"))]
-pub mod action_record;
+use medulla_h_ingest_repository::source_ingestion::{
+    action_record, bookmark, containers, drift_gate, facts, governance, permissions, row_version,
+    skill_document,
+};
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
-pub mod drift_gate;
-pub mod drift_methods;
-#[cfg(all(feature = "redb", feature = "blob"))]
-pub mod facts;
-pub mod governance;
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod media_derivation;
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod media_tag;
-pub mod permissions;
-pub mod policy_candidates;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod quality;
-pub mod row_version;
-#[cfg(all(feature = "redb", feature = "blob"))]
-pub mod skill_document;
 pub mod spec_projection;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod transcript;
@@ -153,13 +143,13 @@ pub struct PreparedSourceIngestion {
     drift: Vec<medulla_source_types::source_ingestion::StreamDrift>,
     /// The column values that entered the embedding set and the columns that
     /// did not (R079.4, R079.6); replayed from the committed receipt.
-    embedding_set: crate::ingestion_admission::EmbeddingSet,
+    embedding_set: medulla_h_ingest_repository::ingestion_admission::EmbeddingSet,
 }
 
 impl PreparedSourceIngestion {
     /// The embedding set `prepare` built from the admitted columns
     /// (MEDULLA-DECISION-ENGINE-R079.6).
-    pub fn embedding_set(&self) -> &crate::ingestion_admission::EmbeddingSet {
+    pub fn embedding_set(&self) -> &medulla_h_ingest_repository::ingestion_admission::EmbeddingSet {
         &self.embedding_set
     }
 }
@@ -1617,7 +1607,7 @@ fn permission_receipt_method(
 fn admitted_embedding_set(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     raw_admissions: &[RawAdmissionReceipt],
-) -> crate::ingestion_admission::EmbeddingSet {
+) -> medulla_h_ingest_repository::ingestion_admission::EmbeddingSet {
     let admitted: BTreeSet<(&str, &str)> = raw_admissions
         .iter()
         .map(|raw| (raw.stream.as_str(), raw.record_id.as_str()))
@@ -1625,7 +1615,7 @@ fn admitted_embedding_set(
     let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
         &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
     );
-    crate::ingestion_admission::build_embedding_set(
+    medulla_h_ingest_repository::ingestion_admission::build_embedding_set(
         batch.records.iter().filter(|record| {
             admitted.contains(&(record.stream.as_str(), record.record_id.as_str()))
         }),
@@ -3443,7 +3433,7 @@ fn receipt_method(
     reconciliation: &ReconciliationPlan,
     admissions: &RawAdmissions<'_>,
     reports: ReceiptReports<'_>,
-    embedding_set: &crate::ingestion_admission::EmbeddingSet,
+    embedding_set: &medulla_h_ingest_repository::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
     let ReceiptReports {
         governance,
@@ -4252,7 +4242,7 @@ fn prepared_replay(
         committed_graph_version,
         drift: Vec::new(),
         quarantine: None,
-        embedding_set: crate::ingestion_admission::EmbeddingSet {
+        embedding_set: medulla_h_ingest_repository::ingestion_admission::EmbeddingSet {
             entries: replay_optional_receipt_value(&receipt, "embedding_set")?,
             exclusions: replay_optional_receipt_value(&receipt, "column_exclusions")?,
         },

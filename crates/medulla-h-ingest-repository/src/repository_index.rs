@@ -98,7 +98,7 @@ pub const REDACTED_HOST_IDENTITY: &str = "[redacted: host identity]";
 /// repository-snapshot rule refuses such text, and one quoted address must not
 /// refuse a whole repository batch, so the VALUE is replaced; the rule itself
 /// is unchanged and still screens every committed value.
-pub(crate) fn stored_value(value: &str) -> &str {
+pub fn stored_value(value: &str) -> &str {
     if medulla_protocol_types::change_envelope::admits_repository_text(value) {
         value
     } else {
@@ -177,11 +177,7 @@ impl IndexWriteSet {
     /// Digest-key an engine-lowered write-set: the envelope id is `prefix`
     /// followed by the framed digest of the encoded methods, so an unchanged
     /// write-set replays. Refused whole past one commit's budget.
-    pub(crate) fn from_methods(
-        prefix: &str,
-        domain: &[u8],
-        methods: Vec<Method>,
-    ) -> Result<Self, String> {
+    pub fn from_methods(prefix: &str, domain: &[u8], methods: Vec<Method>) -> Result<Self, String> {
         let encoded = rmp_serde::to_vec_named(&methods)
             .map_err(|error| format!("engine write-set encoding failed: {error}"))?;
         check_commit_budget(&encoded, methods.len())?;
@@ -199,7 +195,7 @@ impl IndexWriteSet {
     /// is `prefix` followed by `digest_hex`, so one source digest names one
     /// derived envelope and a replay commits nothing new. Refused whole past
     /// one commit's budget.
-    pub(crate) fn with_digest(
+    pub fn with_digest(
         prefix: &str,
         digest_hex: &str,
         methods: Vec<Method>,

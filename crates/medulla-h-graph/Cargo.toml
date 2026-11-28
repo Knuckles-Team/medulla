@@ -65,7 +65,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-server-blob = { path = "../medulla-server-blob", optional = true }
 medulla-document = { path = "../medulla-document" }
-medulla-h-ingest = { path = "../medulla-h-ingest" }
+medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
 medulla-finance = { path = "../medulla-finance", optional = true }
 medulla-finance-quant = { path = "../medulla-finance-quant", optional = true }
 medulla-finance-market = { path = "../medulla-finance-market", optional = true }

@@ -119,7 +119,7 @@ pub fn apply_delta(
 
 /// The one write-preceding check of a delta: nothing lowers, stages or commits
 /// until the base binds.
-pub(super) fn refuse_mismatched_base(
+pub fn refuse_mismatched_base(
     delta: &IndexDelta,
     current: Option<&RepositoryGeneration>,
 ) -> Result<(), String> {

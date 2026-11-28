@@ -34,8 +34,8 @@ mod imp {
         ProjectionRule, HOLDOUT_BP_DEFAULT,
     };
     use medulla_enrich::{EnrichError, Id};
-    use medulla_h_ingest::repository_index::IndexWriteSet;
-    use medulla_h_ingest::semantic_enrichment as lower;
+    use medulla_h_ingest_repository::repository_index::IndexWriteSet;
+    use medulla_h_ingest_repository::semantic_enrichment as lower;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::decision_jobs::{decode_artifact, record_key};
     use medulla_server_api::knob_config::knobs;
@@ -487,7 +487,7 @@ mod imp {
             Err(response) => return response,
         };
         let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-        let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
+        let envelope = match medulla_h_ingest_repository::repository_index::build_labelled_envelope(
             &commit_ctx,
             write_set,
             &lower::LABELS,

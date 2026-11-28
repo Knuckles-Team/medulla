@@ -1,7 +1,7 @@
 //! MEDULLA-SDLC-R003.3: one filing seats the stored defects of its repository in the defect
 //! book and answers the touched defect.
 
-use medulla_h_ingest::defect_intake::file_defect;
+use medulla_h_ingest_repository::defect_intake::file_defect;
 use medulla_source_types::lifecycle::{
     DefectFileOutcome, DefectIntake, DefectStatus, FileDefectRequest,
 };

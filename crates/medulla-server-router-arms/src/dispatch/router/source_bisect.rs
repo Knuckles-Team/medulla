@@ -14,7 +14,6 @@ mod served {
     use super::super::read_path_history::RegistryHistory;
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
-    use medulla_h_ingest::source_bisect::{read_window, step};
     use medulla_mutation_types::branch::BranchRef;
     use medulla_server_auth::access::path_grant;
     use medulla_server_graph::dispatch::shared::{
@@ -28,6 +27,10 @@ mod served {
     use medulla_work_types::step_verdict::VerificationVerdict;
     use serde_json::Value;
     use std::collections::BTreeMap;
+    use {
+        medulla_h_ingest_repository::source_bisect::read_window,
+        medulla_h_ingest_repository::source_bisect::step,
+    };
 
     /// Serve `Method::BisectStep`.
     pub async fn handle_bisect_step(

@@ -235,7 +235,7 @@ property blob is wrong). Listed as its own P0 in the gaps report (Wave 5).
   ships `blob.redb` + the full begin/chunk/commit/fetch/ref/unref/gc protocol END-TO-END:
   `crates/medulla-server-blob/src/blob/store.rs` (`RedbChunkStore` CAS — group-commit, dedup, mark-and-sweep
   refcount GC, capped page cache for bounded RSS), `crates/medulla-server-blob/src/blob/mod.rs` (`BlobCursors` +
-  TTL reaper), `crates/medulla-h-ingest/src/blob.rs` (handler on the blocking pool), and the
+  TTL reaper), `crates/medulla-h-ingest-repository/src/blob.rs` (handler on the blocking pool), and the
   `Blob*` dispatch routing in `crates/medulla-server-router/src/dispatch.rs`. Bounded-memory proven by
   `store::tests::bounded_memory_large_blob_group_commit` and the dispatch-level streamed-blob
   test. `blob-s3` fronts the SAME `ChunkStore` trait with an object-store backend.

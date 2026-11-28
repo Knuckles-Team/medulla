@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_enrich::history::{ChangeKind, CommitRecord, FileChange, HistoryConfig};
 use medulla_enrich::Id;
-use medulla_h_ingest::repository_index::enrich::hooks::history_methods;
+use medulla_h_ingest_repository::repository_index::enrich::hooks::history_methods;
 
 const COMMITS: u64 = 100_000;
 const FILES: u64 = 2_000;

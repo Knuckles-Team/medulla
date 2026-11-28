@@ -17,7 +17,7 @@ use medulla_source_types::meeting_transcript::{
 use medulla_types::contract::Digest256;
 
 use super::{encode, transcript_node_id};
-use crate::repository_index::IndexWriteSet;
+use medulla_h_ingest_repository::repository_index::IndexWriteSet;
 
 /// Node type of one stored summary context.
 pub const CONTEXT_TYPE: &str = "SummaryContext";

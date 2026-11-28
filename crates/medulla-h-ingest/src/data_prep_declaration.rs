@@ -21,7 +21,10 @@ use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
 use serde_json::json;
 
-use super::repository_index::{EnvelopeLabels, IndexWriteSet};
+use {
+    medulla_h_ingest_repository::repository_index::EnvelopeLabels,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 /// Node type of one stored declaration.
 pub const DECLARATION_NODE_TYPE: &str = "DataPrepDeclaration";

@@ -3,9 +3,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_h_ingest::source_ingestion::facts::{build_grounding_cache, with_reasoner_closure};
 use medulla_ingestion_types::extracted_fact::{ExtractedFact, GroundingResult};
 use medulla_ingestion_types::ingest_rules::ground_fact;
+use {
+    medulla_h_ingest_repository::source_ingestion::facts::build_grounding_cache,
+    medulla_h_ingest_repository::source_ingestion::facts::with_reasoner_closure,
+};
 
 const FLAT_ONTOLOGY: &str = r#"
     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .

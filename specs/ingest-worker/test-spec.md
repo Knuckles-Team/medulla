@@ -25,7 +25,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R001.4.1` | `crates/medulla-storage/src/owner/lineage_tests.rs::jobs_before_task_queue_is_a_frozen_predecessor`; `crates/medulla-jobs/src/store/task_queue.rs::tests::task_queue_load_counts_queued_running_and_oldest`; `crates/medulla-h-jobs/src/task_queue.rs::tests::ingest_task_keeps_its_digest_id_and_reserved_queue_refuses` | L2 | planned |
 | `MEDULLA-INGEST-WORKER-R001.9` | `tests/ingest/test_ingest_queue_served.py::test_failed_job_retries_then_dead_letters`; `crates/medulla-source-types/src/ingest_job.rs::tests::ack_decision_redelivers_then_dead_letters`; `crates/medulla-jobs/src/store/task_queue.rs::tests::dead_letter_ack_fails_task_and_parks_item_in_one_commit`; `crates/medulla-storage/src/owner/lineage_tests.rs::jobs_before_task_dead_letter_is_a_frozen_predecessor` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.10` | `tests/ingest/test_ingest_queue_served.py::test_hydration_kinds_use_hydration_queue` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R001.11` | `tests/ingest/test_ingest_queue_served.py::test_full_queue_refuses_and_depth_is_unchanged`; `crates/medulla-h-ingest/src/ingest_queue.rs::tests::depth_report_orders_queues_and_saturates_age` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R001.11` | `tests/ingest/test_ingest_queue_served.py::test_full_queue_refuses_and_depth_is_unchanged`; `crates/medulla-h-ingest-repository/src/ingest_queue.rs::tests::depth_report_orders_queues_and_saturates_age` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.12` | `tests/ingest/test_ingest_queue_served.py::test_lapsed_lease_redelivers_then_exhausts`; `crates/medulla-source-types/src/ingest_job.rs::tests::claim_exhaustion_is_after_max_attempts` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R001.13` | `crates/medulla-kernel/src/metrics/tests.rs::ingest_metrics_after_success_retry_dead_letter` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R001.14` | `tests/ingest/test_ingest_worker_contract_served.py::test_runner_call_sequence` | L4 | planned |
@@ -69,8 +69,8 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R604.5` | `crates/medulla-kernel/src/metrics/tests.rs::lane_gauges_after_success_and_refusal` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R604.6` | `benches/ingest_claim_admit.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R605.1` | `crates/medulla-ingestion-types/src/ingest_drain.rs::tests::types_round_trip_and_reject_bad_ids` | L1 | planned |
-| `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest/src/ingest_drain.rs::tests::ack_with_cursor_enqueues_next_page` | L3 | planned |
-| `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest/src/ingest_drain.rs::tests::a_crash_between_ack_steps_never_stalls_the_drain` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest-repository/src/ingest_drain.rs::tests::ack_with_cursor_enqueues_next_page` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest-repository/src/ingest_drain.rs::tests::a_crash_between_ack_steps_never_stalls_the_drain` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R605.3` | `tests/ingest/test_source_drain_served.py::test_ingest_lands_in_the_routed_graph` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R605.4` | `tests/ingest/test_source_drain_served.py::test_redelivered_page_is_dropped` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R605.5` | `tests/ingest/test_source_drain_served.py::test_drain_chains_pages_and_reports` | L4 | planned |
@@ -93,7 +93,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R700.10` | `crates/medulla-document/tests/readers_formats.rs::eml_subject_and_body_become_fragments` | L2 | planned |
 | `MEDULLA-INGEST-WORKER-R701.1` | `crates/medulla-ingestion-types/src/extracted_fact.rs::tests::golden_vector_round_trips_and_invalid_shapes_are_rejected` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.2` | `crates/medulla-types/tests/ingest_rules.rs::grounding_repairs_direction_and_deduper_scales_linearly` | L2 | exists |
-| `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | exists |
+| `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest-repository/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R701.4` | `crates/medulla-types/tests/ingest_rules.rs::a_fact_without_evidence_is_refused_and_an_unfit_fact_stays_an_ungrounded_claim` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.5` | `tests/ingest/test_fact_grounding_served.py::test_unchanged_content_is_unchanged` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R701.6` | `tests/ingest/test_fact_grounding_served.py::test_direction_repair_and_ungrounded_claims` | L4 | exists |
@@ -106,19 +106,19 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R702.5` | `tests/ingest/test_lsh_dedup_served.py::test_link_stores_similarity_estimate` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R702.6` | `tests/ingest/test_lsh_dedup_served.py::test_near_duplicates_link_and_distinct_pass` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R900.1` | `crates/medulla-ingestion-types/src/source_governance.rs::tests::record_governance_round_trips_and_rejects_invalid_shapes` | L1 | exists |
-| `MEDULLA-INGEST-WORKER-R900.2` | `crates/medulla-h-ingest/src/source_ingestion/governance.rs::tests::public_restricted_marked_and_hold_records` | L2 | exists |
+| `MEDULLA-INGEST-WORKER-R900.2` | `crates/medulla-h-ingest-repository/src/source_ingestion/governance.rs::tests::public_restricted_marked_and_hold_records` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R900.3` | `tests/ingest/test_source_governance_served.py::test_policy_and_access_exist_with_the_node` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R900.4` | `crates/medulla-types/tests/ingest_rules.rs::conflicting_or_retention_less_governance_is_refused` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R900.5` | `tests/ingest/test_source_governance_served.py::test_receipt_counts_governed_refused_marked` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R900.6` | `benches/ingest_source_governance.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R901.1` | `crates/medulla-ingestion-types/src/source_governance.rs::tests::source_row_version_round_trips_and_rejects_empty_table` | L1 | planned |
-| `MEDULLA-INGEST-WORKER-R901.2` | `crates/medulla-h-ingest/src/source_ingestion/row_version.rs::tests::first_newer_and_replayed_versions` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R901.2` | `crates/medulla-h-ingest-repository/src/source_ingestion/row_version.rs::tests::first_newer_and_replayed_versions` | L2 | planned |
 | `MEDULLA-INGEST-WORKER-R901.3` | `tests/ingest/test_row_version_served.py::test_versioned_record_reads_back_its_locus` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R901.4` | `crates/medulla-types/tests/ingest_rules.rs::non_integer_or_decreasing_row_versions_are_refused` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R901.5` | `tests/ingest/test_row_version_served.py::test_receipt_counts_stored_superseded_refused` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R901.6` | `benches/ingest_row_version.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R902.1` | `crates/medulla-types/tests/source_governance.rs::access_snapshot_round_trips` | L4 | exists |
-| `MEDULLA-INGEST-WORKER-R902.2` | `crates/medulla-h-ingest/src/source_ingestion/permissions.rs::tests::access_batch_leaves_content_unchanged` | L2 | exists |
+| `MEDULLA-INGEST-WORKER-R902.2` | `crates/medulla-h-ingest-repository/src/source_ingestion/permissions.rs::tests::access_batch_leaves_content_unchanged` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R902.3.1` | `crates/medulla-source-types/src/source_ingestion/tests.rs::batch_kind_requires_matching_extension` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R902.4` | `crates/medulla-types/tests/ingest_rules.rs::unknown_records_and_oversized_groups_are_refused` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R902.5` | `tests/ingest/test_source_permission_sync_served.py::test_stale_restricted_record_fails_closed` | L4 | exists |

@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use medulla_graph_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
-use medulla_h_ingest::ontology_slice::slice_for_unit;
+use medulla_h_ingest_repository::ontology_slice::slice_for_unit;
 use medulla_ingestion_types::ingestion_wire::OntologySliceRequest;
 
 const NS: &str = "http://example.org/o#";

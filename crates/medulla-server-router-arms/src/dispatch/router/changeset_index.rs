@@ -8,13 +8,6 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_ingest::repository_index::changeset::{
-    generation_node_id, reindex_changeset, stored_generation, ChangesetFile, StoredEdge,
-    StoredIndex, StoredLookup, StoredNode,
-};
-use medulla_h_ingest::repository_index::enrich::fingerprint::{
-    fingerprint_node_id, stored_fingerprint,
-};
 use medulla_h_ingest::source_changeset::{BlobIo, ChunkStoreBlobs};
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -25,6 +18,20 @@ use medulla_server_graph::dispatch::shared::{authorized_graph_read, ensure_graph
 use medulla_source_types::source_changeset::{Changeset, ChangesetIndex, PathOp};
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
+use {
+    medulla_h_ingest_repository::repository_index::changeset::generation_node_id,
+    medulla_h_ingest_repository::repository_index::changeset::reindex_changeset,
+    medulla_h_ingest_repository::repository_index::changeset::stored_generation,
+    medulla_h_ingest_repository::repository_index::changeset::ChangesetFile,
+    medulla_h_ingest_repository::repository_index::changeset::StoredEdge,
+    medulla_h_ingest_repository::repository_index::changeset::StoredIndex,
+    medulla_h_ingest_repository::repository_index::changeset::StoredLookup,
+    medulla_h_ingest_repository::repository_index::changeset::StoredNode,
+};
+use {
+    medulla_h_ingest_repository::repository_index::enrich::fingerprint::fingerprint_node_id,
+    medulla_h_ingest_repository::repository_index::enrich::fingerprint::stored_fingerprint,
+};
 
 /// The most file nodes of one repository graph the stored-index read lists.
 const MAX_FILES: usize = 10_000_000;

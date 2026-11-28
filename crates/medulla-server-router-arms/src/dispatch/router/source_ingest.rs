@@ -118,7 +118,7 @@ async fn ingest_queue_depth(ctx: DispatchCtx<'_>, queue: Option<String>) -> Resp
         loads.push((name, load));
     }
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
-    let report = medulla_h_ingest::ingest_queue::queue_depth_report(&loads, now_ms);
+    let report = medulla_h_ingest_repository::ingest_queue::queue_depth_report(&loads, now_ms);
     Response::ok(
         req_id,
         ResultPayload::of::<coordination_results::IngestQueueDepth>(report),
@@ -157,14 +157,14 @@ async fn handle_ingest_enqueue(
         },
         None => 0,
     };
-    let caller = medulla_h_ingest::ingest_queue::IngestCaller {
+    let caller = medulla_h_ingest_repository::ingest_queue::IngestCaller {
         persist_dir,
         tenant: tenant.to_string(),
         principal: ctx.verified_context.principal().to_string(),
     };
     let policy =
         medulla_source_types::ingest_job::IngestRetryPolicy::from_limits(&config.ingest_retry);
-    match medulla_h_ingest::ingest_queue::enqueue_ingest_job(
+    match medulla_h_ingest_repository::ingest_queue::enqueue_ingest_job(
         jobs,
         &caller,
         &envelope,
@@ -358,7 +358,7 @@ async fn start_source_drain(
         }
     };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
-    let started = match medulla_h_ingest::ingest_drain::start_drain(
+    let started = match medulla_h_ingest_repository::ingest_drain::start_drain(
         tenant,
         &connector,
         &stream,
@@ -379,7 +379,7 @@ async fn start_source_drain(
     };
     let agent = ctx.verified_context.agent_id();
     let write = |record: &medulla_ingestion_types::ingest_drain::DrainRecord| {
-        medulla_h_ingest::ingest_drain::drain_node_operation(record, agent)
+        medulla_h_ingest_repository::ingest_drain::drain_node_operation(record, agent)
     };
     let operation = match write(&started.record) {
         Ok(operation) => operation,
@@ -425,7 +425,10 @@ async fn read_drain(
     .await
     .ok()
     .flatten()?;
-    medulla_h_ingest::ingest_drain::drain_from_node(&properties, ctx.verified_context.tenant())
+    medulla_h_ingest_repository::ingest_drain::drain_from_node(
+        &properties,
+        ctx.verified_context.tenant(),
+    )
 }
 
 /// Store `record` as the drain node of the control graph.
@@ -441,7 +444,7 @@ async fn write_drain(
         caller: ctx.req.agent_id.as_deref(),
         verified: ctx.verified_context,
     };
-    let operation = medulla_h_ingest::ingest_drain::drain_node_operation(
+    let operation = medulla_h_ingest_repository::ingest_drain::drain_node_operation(
         record,
         ctx.verified_context.agent_id(),
     )?;
@@ -479,8 +482,12 @@ async fn source_drain_status(ctx: DispatchCtx<'_>, drain_id: String) -> Response
 /// is harmless (see [`run_drain_ack_plan`]). A caller without the live lease writes nothing.
 #[cfg(feature = "jobs")]
 pub async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Response {
-    use medulla_h_ingest::ingest_drain::{drain_ack_plan, on_ingest_drain_ack, DrainAckOutcome};
     use medulla_work_types::task_queue::TaskOutcome;
+    use {
+        medulla_h_ingest_repository::ingest_drain::drain_ack_plan,
+        medulla_h_ingest_repository::ingest_drain::on_ingest_drain_ack,
+        medulla_h_ingest_repository::ingest_drain::DrainAckOutcome,
+    };
     let req_id = ctx.req.id;
     let Method::TaskQueueAck {
         task_id,
@@ -594,9 +601,9 @@ pub async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Response {
 async fn run_drain_ack_plan(
     ctx: DispatchCtx<'_>,
     plain: Method,
-    plan: Vec<medulla_h_ingest::ingest_drain::DrainAckStep>,
+    plan: Vec<medulla_h_ingest_repository::ingest_drain::DrainAckStep>,
 ) -> Response {
-    use medulla_h_ingest::ingest_drain::DrainAckStep;
+    use medulla_h_ingest_repository::ingest_drain::DrainAckStep;
     let req_id = ctx.req.id;
     let mut answer = None;
     for step in plan {

@@ -48,7 +48,7 @@ fn state(
 
 async fn commit(
     ctx: GraphOpRouting<'_>,
-    write_set: medulla_h_ingest::repository_index::IndexWriteSet,
+    write_set: medulla_h_ingest_repository::repository_index::IndexWriteSet,
     answer: Response,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
@@ -56,7 +56,7 @@ async fn commit(
         Err(response) => return response,
     };
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
+    let envelope = match medulla_h_ingest_repository::repository_index::build_labelled_envelope(
         &commit_ctx,
         write_set,
         &transcript::LABELS,

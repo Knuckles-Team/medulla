@@ -9,10 +9,13 @@
 
 use super::process_compile::{batch, refuse};
 use super::*;
-use medulla_h_ingest::harness_session::{admit_batch, index_revision};
 use medulla_protocol_types::result_contract::coordination::IndexHarnessSessionBatch;
 use medulla_server_api::knob_config::knobs;
 use medulla_types::harness_session::SESSION_CONTENT_CHANGED;
+use {
+    medulla_h_ingest_repository::harness_session::admit_batch,
+    medulla_h_ingest_repository::harness_session::index_revision,
+};
 
 /// The `Route::IndexHarnessSessionBatch` entry.
 pub(super) async fn handle_index_harness_session_batch(

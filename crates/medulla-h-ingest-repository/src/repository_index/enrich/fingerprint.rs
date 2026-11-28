@@ -59,7 +59,7 @@ pub(super) fn file_fingerprints(rows: &[Row]) -> Vec<StructuralFingerprint> {
 /// The fingerprint of one file from its `SYMBOL` rows `(id, properties)`: the
 /// one definition of the content and structure hashes, shared by the committed
 /// rows above and the changeset re-index (MEDULLA-SCM-R006).
-pub(in crate::repository_index) fn symbol_fingerprint(
+pub fn symbol_fingerprint(
     path_id: Id,
     mut symbols: Vec<(&str, &BTreeMap<String, String>)>,
 ) -> StructuralFingerprint {

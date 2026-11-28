@@ -28,7 +28,7 @@ const SUBJECT_DOMAIN: &[u8] = b"eg/source-record-subjects";
 /// these properties alone ([`medulla_graph_core::rls`]), so `kg:read` reaches it through no
 /// generic read (GetNode, a query or a stream), not only through the typed read. A System
 /// caller bypasses the gate as it bypasses every row rule.
-pub(super) fn restricted_read_access(action: &str) -> [(&'static str, serde_json::Value); 3] {
+pub fn restricted_read_access(action: &str) -> [(&'static str, serde_json::Value); 3] {
     [
         ("source_access_public", serde_json::Value::Bool(false)),
         ("source_access_read_roles", serde_json::json!([action])),

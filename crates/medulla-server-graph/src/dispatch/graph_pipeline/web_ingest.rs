@@ -36,12 +36,13 @@ fn slice_ontology(
         Some(embedder) => embedder.embed(text),
         None => Err("no text embedder is bound".to_string()),
     };
-    let bound: Option<medulla_h_ingest::ontology_slice::SliceEmbedder<'_>> = if embedder.is_some() {
-        Some(&embed)
-    } else {
-        None
-    };
-    match medulla_h_ingest::ontology_slice::slice_for_unit(
+    let bound: Option<medulla_h_ingest_repository::ontology_slice::SliceEmbedder<'_>> =
+        if embedder.is_some() {
+            Some(&embed)
+        } else {
+            None
+        };
+    match medulla_h_ingest_repository::ontology_slice::slice_for_unit(
         ctx.core.schema_sources().as_ref(),
         request,
         bound,
@@ -108,11 +109,11 @@ async fn enrich(
             req_id,
             format!(
                 "RUNG_OUTRANKED: Document '{doc_id}' holds a {} fact; an embedding candidate does not replace it",
-                medulla_h_ingest::ingestion_rung::rung_label(stored)
+                medulla_h_ingest_repository::ingestion_rung::rung_label(stored)
             ),
         );
     }
-    let chunk_classes = medulla_h_ingest::ingestion_admission::chunk_classes(&records);
+    let chunk_classes = medulla_h_ingest_repository::ingestion_admission::chunk_classes(&records);
     let (current, prior) = web::prior_enrichments(&doc_id, &document.digest_hex, records);
     if let Some(record) = current {
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);
@@ -138,7 +139,7 @@ async fn enrich(
     };
     let demoted_labels: Vec<String> = demoted
         .iter()
-        .map(|class| medulla_h_ingest::ingestion_admission::class_label(*class))
+        .map(|class| medulla_h_ingest_repository::ingestion_admission::class_label(*class))
         .collect();
     let max_bytes = medulla_server_api::knob_config::knobs().scheduler_document_max_bytes;
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
@@ -194,8 +195,9 @@ async fn enrich(
             medulla_types::msgpack::decode_property_value(&bytes).ok()
         };
         // The same ChunkFacts scope key the facts batch handler derives.
-        let scope =
-            medulla_h_ingest::source_ingestion::facts::chunk_facts_scope(ctx.verified_context);
+        let scope = medulla_h_ingest_repository::source_ingestion::facts::chunk_facts_scope(
+            ctx.verified_context,
+        );
         match web::prior_fact_supersession(&scope, &prior, &read) {
             Ok(methods) => methods,
             Err(error) => return Response::err(req_id, error),
@@ -297,10 +299,9 @@ async fn demoted_classes(
         ctx.verified_context.tenant(),
         now_ms.saturating_sub(knobs.demote_window_ms),
     )?;
-    let usage = medulla_h_ingest::ingestion_admission::class_usage(chunk_classes, &cited);
-    Ok(medulla_h_ingest::ingestion_admission::demoted_classes(
-        &usage, knobs,
-    ))
+    let usage =
+        medulla_h_ingest_repository::ingestion_admission::class_usage(chunk_classes, &cited);
+    Ok(medulla_h_ingest_repository::ingestion_admission::demoted_classes(&usage, knobs))
 }
 
 /// An entity document (`application/json` or `application/ld+json`) lowers to
@@ -379,8 +380,8 @@ async fn resolve_alignment_mapping(
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 async fn commit(
     ctx: GraphOpRouting<'_>,
-    write_set: medulla_h_ingest::repository_index::IndexWriteSet,
-    labels: &medulla_h_ingest::repository_index::EnvelopeLabels,
+    write_set: medulla_h_ingest_repository::repository_index::IndexWriteSet,
+    labels: &medulla_h_ingest_repository::repository_index::EnvelopeLabels,
     mut receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
     extraction_digest: Option<&str>,
 ) -> Response {
@@ -389,7 +390,7 @@ async fn commit(
         Err(response) => return response,
     };
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
+    let envelope = match medulla_h_ingest_repository::repository_index::build_labelled_envelope(
         &commit_ctx,
         write_set,
         labels,
@@ -454,7 +455,7 @@ async fn enqueue_extraction(
         },
         None => 0,
     };
-    let caller = medulla_h_ingest::ingest_queue::IngestCaller {
+    let caller = medulla_h_ingest_repository::ingest_queue::IngestCaller {
         persist_dir,
         tenant: tenant.to_string(),
         principal: ctx.verified_context.principal().to_string(),
@@ -471,7 +472,7 @@ async fn enqueue_extraction(
             attempt: 0,
             page: None,
         };
-        match medulla_h_ingest::ingest_queue::enqueue_ingest_job(
+        match medulla_h_ingest_repository::ingest_queue::enqueue_ingest_job(
             jobs.clone(),
             &caller,
             &envelope,

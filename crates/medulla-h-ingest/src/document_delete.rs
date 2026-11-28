@@ -12,7 +12,10 @@ use medulla_query_types::document_ops::{
 };
 use serde_json::json;
 
-use super::repository_index::{EnvelopeLabels, IndexWriteSet};
+use {
+    medulla_h_ingest_repository::repository_index::EnvelopeLabels,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 const ENVELOPE_PREFIX: &str = "document-delete:";
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {

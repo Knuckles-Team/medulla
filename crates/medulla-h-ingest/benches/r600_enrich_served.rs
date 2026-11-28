@@ -16,11 +16,15 @@ use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_enrich::history::HistoryConfig;
-use medulla_h_ingest::repository_index::enrich::{run_after_commit, FollowOn, FollowOnScope};
-use medulla_h_ingest::repository_index::repository_envelope;
+use medulla_h_ingest_repository::repository_index::repository_envelope;
 use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_protocol_types::protocol::Method;
+use {
+    medulla_h_ingest_repository::repository_index::enrich::run_after_commit,
+    medulla_h_ingest_repository::repository_index::enrich::FollowOn,
+    medulla_h_ingest_repository::repository_index::enrich::FollowOnScope,
+};
 
 const SYMBOLS: usize = 200_000;
 const SAMPLES: usize = 10;

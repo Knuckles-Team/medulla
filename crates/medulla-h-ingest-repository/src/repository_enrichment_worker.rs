@@ -36,7 +36,7 @@ mod grant;
     feature = "security"
 ))]
 #[path = "repository_enrichment_worker/raft_top_up.rs"]
-pub(crate) mod raft_top_up;
+pub mod raft_top_up;
 
 /// Start one bounded graph sweep loop only when its native commit path is local.
 pub fn spawn(state: Arc<RwLock<ServerState>>) {
@@ -85,7 +85,7 @@ mod worker {
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
     const SERVICE: &str = "repository-enrichment-v1";
 
-    pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
+    pub async fn run(state: Arc<RwLock<ServerState>>) {
         let mut next_graph = 0_usize;
         loop {
             match sweep(&state, &mut next_graph).await {

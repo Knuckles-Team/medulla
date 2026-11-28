@@ -12,7 +12,7 @@ use medulla_server_auth::sql_catalog_acl::ACCESS_DENIED;
 /// snapshot. Unlike literal SQL INSERT, this closed ingestion contract requires
 /// an explicit matching RLS stamp so its canonical request and replay identity
 /// stay unchanged.
-pub(super) fn authorize_source_insert(
+pub fn authorize_source_insert(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     request: &SqlSourceBatchRequest,

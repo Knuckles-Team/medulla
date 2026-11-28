@@ -1,4 +1,4 @@
-use medulla_h_ingest::repository_index::repository_envelope;
+use medulla_h_ingest_repository::repository_index::repository_envelope;
 // EH-280 — the lowered write-set is deterministic and tombstones remove.
 
 use std::collections::HashMap;
@@ -6,8 +6,12 @@ use std::collections::HashMap;
 use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use medulla_protocol_types::change_envelope::MaterialClass;
 
-use medulla_h_ingest::repository_index::{lower, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY};
 use medulla_protocol_types::protocol::Method;
+use {
+    medulla_h_ingest_repository::repository_index::lower,
+    medulla_h_ingest_repository::repository_index::BATCH_TOO_LARGE,
+    medulla_h_ingest_repository::repository_index::REDACTED_HOST_IDENTITY,
+};
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {

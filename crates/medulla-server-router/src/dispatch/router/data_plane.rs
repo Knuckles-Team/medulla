@@ -181,7 +181,7 @@ pub async fn dispatch_sql_source_methods(
 ) -> ControlFlow<Response, Method> {
     ControlFlow::Break(match method {
         Method::SqlSourceBatch { batch } => {
-            dispatch_boxed(medulla_h_ingest::source_batch::handle(
+            dispatch_boxed(medulla_h_ingest_repository::source_batch::handle(
                 ctx.state,
                 ctx.req.id,
                 ctx.verified_context,
@@ -223,7 +223,7 @@ async fn dispatch_store_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match medulla_h_ingest::blob::try_handle(
+                    match medulla_h_ingest_repository::blob::try_handle(
                         state,
                         req_id,
                         &carrier,
@@ -533,13 +533,13 @@ async fn dispatch_served_modality_method(ctx: DispatchCtx<'_>, method: Method) -
                 {
                     let auth_secret = timed_read(state).await.auth_secret.clone();
                     let authority =
-                        match medulla_h_ingest::modality::ModalityAuthority::from_verified(
-                            &auth_secret,
-                            verified_context.claims(),
-                        ) {
-                            Ok(authority) => authority,
-                            Err(error) => return Response::err(req_id, error),
-                        };
+                    match medulla_h_ingest_repository::modality::ModalityAuthority::from_verified(
+                        &auth_secret,
+                        verified_context.claims(),
+                    ) {
+                        Ok(authority) => authority,
+                        Err(error) => return Response::err(req_id, error),
+                    };
                     dispatch_served_modality(
                         state,
                         &req_graph,

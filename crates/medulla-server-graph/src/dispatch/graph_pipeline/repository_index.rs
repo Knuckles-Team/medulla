@@ -238,11 +238,13 @@ async fn index_scoped(
     let generation = ctx
         .core
         .get_node_properties(
-            &medulla_h_ingest::repository_index::changeset::generation_node_id(
+            &medulla_h_ingest_repository::repository_index::changeset::generation_node_id(
                 &scope.repository_id,
             ),
         )
-        .and_then(|blob| medulla_h_ingest::repository_index::changeset::read_generation(&blob));
+        .and_then(|blob| {
+            medulla_h_ingest_repository::repository_index::changeset::read_generation(&blob)
+        });
     // MEDULLA-ORCH-VOCAB-R012.7.2: the commit a policy candidate cites is the revision of
     // the indexed branch's ref (its first ref when no ref carries the branch name).
     let commit = scope
@@ -261,10 +263,14 @@ async fn index_scoped(
                 medulla_compute::parser::branch_index::index_branches(files.clone(), &scope)?;
             // MEDULLA-REPO-INGEST-R801: packages and layers lower beside the
             // entity nodes; a layer cycle refuses the batch before any commit.
-            medulla_h_ingest::repository_index::ecosystem::project(&files, &mut result)?;
+            medulla_h_ingest_repository::repository_index::ecosystem::project(&files, &mut result)?;
             // MEDULLA-REPO-INGEST-R601.3 / R602.3: commits, routes, IaC resources
             // and service prefixes lower beside them for the enrichment hooks.
-            medulla_h_ingest::repository_index::scope_facts::project(&files, &scope, &mut result)?;
+            medulla_h_ingest_repository::repository_index::scope_facts::project(
+                &files,
+                &scope,
+                &mut result,
+            )?;
             // MEDULLA-SDLC-R014.2: changed spec artifact files lower beside them as
             // requirement records, so they commit in the same envelope.
             medulla_h_ingest::source_ingestion::spec_projection::project_spec_artifacts(
@@ -277,7 +283,7 @@ async fn index_scoped(
                 &mut result,
             )?;
             // MEDULLA-SCM-R006: a full index is the baseline of the changeset chain.
-            medulla_h_ingest::repository_index::changeset::stamp_generation(
+            medulla_h_ingest_repository::repository_index::changeset::stamp_generation(
                 &mut result,
                 &scope.repository_id,
                 generation.as_ref(),
@@ -417,8 +423,8 @@ pub fn commit_context<'a>(
     ctx: &GraphOpRouting<'a>,
     placement_epoch: u64,
     fencing_token: Option<u64>,
-) -> medulla_h_ingest::repository_index::IndexCommitContext<'a> {
-    medulla_h_ingest::repository_index::IndexCommitContext {
+) -> medulla_h_ingest_repository::repository_index::IndexCommitContext<'a> {
+    medulla_h_ingest_repository::repository_index::IndexCommitContext {
         request_id: ctx.req_id,
         graph_name: ctx.graph_name,
         tenant_scope: ctx.tenant_scope,
@@ -437,7 +443,7 @@ pub async fn route_repository_index(
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Response {
-    let follow_on_scope = medulla_h_ingest::repository_index::enrich::FollowOnScope {
+    let follow_on_scope = medulla_h_ingest_repository::repository_index::enrich::FollowOnScope {
         tenant: ctx.tenant_scope.to_string(),
         graph: ctx.graph_name.to_string(),
         repository_id: scope.repository_id.clone(),
@@ -456,13 +462,15 @@ pub async fn route_repository_index(
         .filter(|node| node.node_id.starts_with(&requirement_prefix))
         .map(|node| node.node_id.clone())
         .collect();
-    let write_set = match medulla_h_ingest::repository_index::lower(&result) {
+    let write_set = match medulla_h_ingest_repository::repository_index::lower(&result) {
         Ok(write_set) => write_set,
         Err(error) => return Response::err(ctx.req_id, error),
     };
     let envelope_id = write_set.envelope_id.clone();
     match already_committed(&ctx, &envelope_id).await {
-        Ok(true) => return medulla_h_ingest::repository_index::respond(ctx.req_id, result),
+        Ok(true) => {
+            return medulla_h_ingest_repository::repository_index::respond(ctx.req_id, result)
+        }
         Ok(false) => {}
         Err(response) => return response,
     }
@@ -473,7 +481,7 @@ pub async fn route_repository_index(
     };
     // MEDULLA-REPO-INGEST-R600.3: the durable follow-on work item commits in
     // this batch's own outbox and is claimed after the index commits.
-    let follow_on = match medulla_h_ingest::repository_index::enrich::follow_on_intent(
+    let follow_on = match medulla_h_ingest_repository::repository_index::enrich::follow_on_intent(
         &envelope_id,
         follow_on_scope,
     ) {
@@ -496,7 +504,7 @@ pub async fn route_repository_index(
     // previous batch's follow-on enrichment) must not refuse this batch.
     let held = crate::dispatch::change_envelope::lock_graph_for_lowering(ctx.graph_name).await;
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match medulla_h_ingest::repository_index::build_envelope_with_outbox(
+    let envelope = match medulla_h_ingest_repository::repository_index::build_envelope_with_outbox(
         &commit_ctx,
         write_set,
         outbox,
@@ -515,7 +523,7 @@ pub async fn route_repository_index(
     #[cfg(not(all(feature = "ast", feature = "redb")))]
     let commit =
         crate::dispatch::change_envelope::apply_lowered_change_envelope(ctx, held, envelope).await;
-    let response = medulla_h_ingest::repository_index::finish(result, commit);
+    let response = medulla_h_ingest_repository::repository_index::finish(result, commit);
     if response.refusal_text().is_some() {
         return response;
     }
@@ -646,7 +654,7 @@ mod tests {
             }],
             ..Default::default()
         };
-        let envelope = medulla_h_ingest::repository_index::repository_envelope(&result)
+        let envelope = medulla_h_ingest_repository::repository_index::repository_envelope(&result)
             .expect("repository envelope");
         let error = preflight_request_msgpack(&Method::ApplyChangeEnvelope {
             envelope: Box::new(envelope),

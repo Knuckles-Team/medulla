@@ -4,7 +4,7 @@ Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
 ## Summary
 
-The engine owns the ingest queue, its policy and every admission rule. The runner process belongs to the connector SDK, and arbora hosts it. Two served paths carry the work. The queue path (`IngestEnqueue`, `IngestQueueDepth`, `TaskQueueClaim`, `TaskQueueAck`) enters at `crates/medulla-server-router` and runs in `crates/medulla-h-ingest/src/ingest_queue.rs`. The batch path (`SourceIngest`) enters at `crates/medulla-server-graph` and runs in `crates/medulla-h-ingest/src/source_ingestion.rs`. Each batch kind has one admission function in `crates/medulla-h-ingest/src/source_ingestion/`.
+The engine owns the ingest queue, its policy and every admission rule. The runner process belongs to the connector SDK, and arbora hosts it. Two served paths carry the work. The queue path (`IngestEnqueue`, `IngestQueueDepth`, `TaskQueueClaim`, `TaskQueueAck`) enters at `crates/medulla-server-router` and runs in `crates/medulla-h-ingest-repository/src/ingest_queue.rs`. The batch path (`SourceIngest`) enters at `crates/medulla-server-graph` and runs in `crates/medulla-h-ingest/src/source_ingestion.rs`. Each batch kind has one admission function in `crates/medulla-h-ingest/src/source_ingestion/`.
 
 ```text
 runner (SDK) --> register_worker > admit_worker_task > TaskQueueClaim > TaskQueueRenew > TaskQueueAck
@@ -15,11 +15,11 @@ connector    --> SourceIngest > prepare > resolve_mappings > match batch.kind > 
 | Concern | Owning code | Rows |
 |---|---|---|
 | Job types, lanes, retry | `crates/medulla-source-types/src/ingest_job.rs` | `MEDULLA-INGEST-WORKER-R001.1` to `MEDULLA-INGEST-WORKER-R001.8` |
-| Queue producer and depth report | `crates/medulla-h-ingest/src/ingest_queue.rs`, router arms in `crates/medulla-server-router/src/dispatch/router/source_ingest.rs` | `MEDULLA-INGEST-WORKER-R001.4`, `MEDULLA-INGEST-WORKER-R001.4.1`, `MEDULLA-INGEST-WORKER-R001.11` |
+| Queue producer and depth report | `crates/medulla-h-ingest-repository/src/ingest_queue.rs`, router arms in `crates/medulla-server-router/src/dispatch/router/source_ingest.rs` | `MEDULLA-INGEST-WORKER-R001.4`, `MEDULLA-INGEST-WORKER-R001.4.1`, `MEDULLA-INGEST-WORKER-R001.11` |
 | Ingest ack and claim rules (pure) | `crates/medulla-source-types/src/ingest_job.rs` (`on_ingest_ack`, `on_ingest_claim`, `ingest_lane_of_queue`) | `MEDULLA-INGEST-WORKER-R001.9`, `MEDULLA-INGEST-WORKER-R001.12` |
 | Task store, load, dead letter, claim admission | `crates/medulla-jobs/src/store/task_queue.rs`, `crates/medulla-h-jobs/src/task_queue.rs`, `crates/medulla-h-jobs/src/worker_admission.rs` | `MEDULLA-INGEST-WORKER-R001.4.1`, `MEDULLA-INGEST-WORKER-R001.9`, `MEDULLA-INGEST-WORKER-R001.12`, `MEDULLA-INGEST-WORKER-R604.3` |
 | Metrics | `crates/medulla-kernel/src/metrics/ingest.rs` | `MEDULLA-INGEST-WORKER-R001.13`, `MEDULLA-INGEST-WORKER-R604.5` |
-| Drains | `crates/medulla-h-ingest/src/ingest_drain.rs` | `MEDULLA-INGEST-WORKER-R605.2` |
+| Drains | `crates/medulla-h-ingest-repository/src/ingest_drain.rs` | `MEDULLA-INGEST-WORKER-R605.2` |
 | Documents and transcripts | `crates/medulla-h-ingest/src/source_ingestion/documents.rs`, `transcript.rs` | `MEDULLA-INGEST-WORKER-R003.8`, `MEDULLA-INGEST-WORKER-R003.14` |
 | Readers and dedup | `crates/medulla-document/src/fragment.rs`, `crates/medulla-compute/src/sketch.rs` | `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R702.1` |
 | Governance, permissions, sweep, containers | `crates/medulla-h-ingest/src/source_ingestion/` | `MEDULLA-INGEST-WORKER-R900.2`, `MEDULLA-INGEST-WORKER-R902.2`, `MEDULLA-INGEST-WORKER-R903.2`, `MEDULLA-INGEST-WORKER-R904.3` |
@@ -164,7 +164,7 @@ none
 
 ## Production caller chain
 
-- `Method::IngestEnqueue` arm (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods`, new) to `enqueue_ingest_job` (`crates/medulla-h-ingest/src/ingest_queue.rs`, new) to `jobs_seam` (`crates/medulla-server-ops/src/api/ingest.rs`) to `JobsSeam::enqueue_ingest_task` (`crates/medulla-h-jobs/src/jobs.rs`) to `JobStore::submit_task` (R001.4.1).
+- `Method::IngestEnqueue` arm (`crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods`, new) to `enqueue_ingest_job` (`crates/medulla-h-ingest-repository/src/ingest_queue.rs`, new) to `jobs_seam` (`crates/medulla-server-ops/src/api/ingest.rs`) to `JobsSeam::enqueue_ingest_task` (`crates/medulla-h-jobs/src/jobs.rs`) to `JobStore::submit_task` (R001.4.1).
 - `Method::TaskQueueAck` and `TaskQueueClaim` arms of `MEDULLA-DURABLE-KERNEL-R072` (`crates/medulla-h-jobs/src/task_queue.rs::ack` and `claim`) to the pure `on_ingest_ack` and `on_ingest_claim` of `crates/medulla-source-types/src/ingest_job.rs`; the claim first runs `admit_reserved_worker_task` over `worker_admission::admission_inputs` (R604.3).
 - `Method::SourceIngest` (`crates/medulla-protocol-types/src/protocol/method/method_10.rs`) to `route_source_ingestion_or_resources` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs`) to `route_source_ingestion_dispatch` to `route_source_ingestion_request` to `prepare` (`crates/medulla-h-ingest/src/source_ingestion.rs`) to the admission function for the batch kind, then `apply_one_change_envelope` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs`) and `finish`.
 - `Method::AtomContext`, `Method::SourceDrainStatus` and `Method::IngestQueueDepth` arms of `source_ingest.rs` (new) to `atom_context`, `drain_status` and `queue_depth_report` (fed by `JobsApi::task_queue_load`) in `crates/medulla-h-ingest/src/`.
@@ -181,7 +181,7 @@ none
 ## Subclass grounding, ontology slice and induction from instance data (R701.8 to R701.10, R913, R002.8 to R002.10)
 
 - R701.8 and R701.9: `admit_facts` builds `GroundingCache` once per batch. The builder reads the `rdfs:subClassOf` closure from the warm reasoner of MEDULLA-INCREMENTAL-VIEWS-R011. `ground` (`crates/medulla-ingestion-types/src/ingest_rules.rs:221`) tests the superclass set instead of equality.
-- R913: new `Method::OntologySlice` → router arm beside the ingest arms → new `crates/medulla-h-ingest/src/ontology_slice.rs::slice_for_unit`. The SDK worker calls it once per unit before its model call.
+- R913: new `Method::OntologySlice` → router arm beside the ingest arms → new `crates/medulla-h-ingest-repository/src/ontology_slice.rs::slice_for_unit`. The SDK worker calls it once per unit before its model call.
 - R002.8 to R002.10: the SDK worker sends `InstanceProfile` in a `proposals` batch. `SourceIngest` prepare routes it to `judge_proposal` (`ingest_rules.rs:331`). The draft rule of R002.2 is unchanged.
 
 Reuse inventory. The slice reuses the one text embedder of the Uql path and candidate-local BM25 (`medulla-decision-stats`). It adds no index. The profile reuses the proposal types of R002.1.

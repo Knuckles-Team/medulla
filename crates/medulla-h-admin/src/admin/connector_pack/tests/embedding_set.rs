@@ -21,7 +21,7 @@ use super::{Served, ADMIN, TENANT};
 async fn prepared_embedding_set(
     served: &Served,
     request: SourceIngestionRequest,
-) -> medulla_h_ingest::ingestion_admission::EmbeddingSet {
+) -> medulla_h_ingest_repository::ingestion_admission::EmbeddingSet {
     let verified = VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, TENANT, &["*"]);
     let tenant_scope = CarrierAuthority::from_verified(&verified)
         .expect("verified carrier authority")

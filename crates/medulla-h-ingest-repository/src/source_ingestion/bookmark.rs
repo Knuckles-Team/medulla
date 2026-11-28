@@ -7,7 +7,7 @@
 use medulla_protocol_types::protocol::Method;
 
 /// The ontology class a bookmark record resolves to.
-pub(super) const BOOKMARK_CLASS: &str = "Bookmark";
+pub const BOOKMARK_CLASS: &str = "Bookmark";
 
 /// The envelope keys stored as compact JSON arrays of strings.
 const ARRAY_KEYS: [(&str, &str, &str, &str); 3] = [
@@ -17,12 +17,12 @@ const ARRAY_KEYS: [(&str, &str, &str, &str); 3] = [
 ];
 
 /// What one bookmark record writes: its node, the entity nodes it names and the edges to them.
-pub(super) struct BookmarkMapping {
-    pub(super) node_id: String,
-    pub(super) properties: serde_json::Map<String, serde_json::Value>,
+pub struct BookmarkMapping {
+    pub node_id: String,
+    pub properties: serde_json::Map<String, serde_json::Value>,
     /// Entity node id with its `AddNode`; the caller writes each id once per batch.
-    pub(super) entities: Vec<(String, Method)>,
-    pub(super) edges: Vec<Method>,
+    pub entities: Vec<(String, Method)>,
+    pub edges: Vec<Method>,
 }
 
 fn text(payload: &serde_json::Value, key: &str) -> Result<String, String> {
@@ -92,7 +92,7 @@ fn entity(
 
 /// Map one bookmark record. `source_id` is the connector stream id of the record; `receipt_id` and
 /// `receipt_digest` are the envelope id and digest of the `SourceIngest` commit that writes the node.
-pub(super) fn map_bookmark(
+pub fn map_bookmark(
     payload: &serde_json::Value,
     source_id: &str,
     receipt_id: &str,

@@ -19,7 +19,11 @@ use medulla_source_types::meeting_transcript::{
     MeetingTranscriptRevision, MeetingTranscriptRevisionReceipt, TranscriptRevisionOp,
 };
 
-use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
+use {
+    medulla_h_ingest_repository::repository_index::stored_value,
+    medulla_h_ingest_repository::repository_index::EnvelopeLabels,
+    medulla_h_ingest_repository::repository_index::IndexWriteSet,
+};
 
 /// The labels every meeting transcript envelope is sealed under.
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {

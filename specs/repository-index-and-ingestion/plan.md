@@ -4,7 +4,7 @@ Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
 ## Summary
 
-Medulla indexes a repository snapshot and ingests governed source observations through one writer. `Method::IndexRepository` and `Method::SourceIngest` enter at the dispatch boundary of `crates/medulla-server-router`, pass the graph ACL in `crates/medulla-server-graph`, and lower in `crates/medulla-h-ingest` to one `ChangeEnvelope` that commits in one durable transaction. Native parsing and resolution commit first. Heavy enrichment runs afterwards as durable, budgeted work through `crates/medulla-enrich`. The reuse candidates are the branch parser in `crates/medulla-compute/src/parser/`, the mutation outbox and the enrichment worker in `crates/medulla-h-ingest/src/repository_enrichment_worker.rs`.
+Medulla indexes a repository snapshot and ingests governed source observations through one writer. `Method::IndexRepository` and `Method::SourceIngest` enter at the dispatch boundary of `crates/medulla-server-router`, pass the graph ACL in `crates/medulla-server-graph`, and lower in `crates/medulla-h-ingest` to one `ChangeEnvelope` that commits in one durable transaction. Native parsing and resolution commit first. Heavy enrichment runs afterwards as durable, budgeted work through `crates/medulla-enrich`. The reuse candidates are the branch parser in `crates/medulla-compute/src/parser/`, the mutation outbox and the enrichment worker in `crates/medulla-h-ingest-repository/src/repository_enrichment_worker.rs`.
 
 ## Technical Context
 
@@ -29,7 +29,7 @@ Medulla indexes a repository snapshot and ingests governed source observations t
 ## Project Structure
 
 ```text
-crates/medulla-h-ingest/src/repository_index.rs        existing: lowering, commit budget, envelope build
+crates/medulla-h-ingest-repository/src/repository_index.rs        existing: lowering, commit budget, envelope build
 crates/medulla-h-ingest/src/source_ingestion.rs        existing: SourceIngest prepare and finish
 crates/medulla-h-ingest/src/web_ingest.rs              existing: document chunks
 crates/medulla-h-ingest/src/repository_index/          new: enrich.rs (run_after_commit)
@@ -201,7 +201,7 @@ Shapes: lowering stays in `repository_index.rs`; a new write path reuses `Change
 
 ## Production caller chain
 
-A caller sends `Method::IndexRepository` or `Method::SourceIngest`. `crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods` hands scoped and durable work to `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_dispatch` (`:415`). That function routes to `repository_index.rs::route_repository_index` (`:208`) or `route_source_ingestion_request` (`:467`). The handlers in `crates/medulla-h-ingest/src/repository_index.rs` (`lower` `:115`, `finish` `:303`) and `source_ingestion.rs` (`prepare` `:167`, `finish` `:1743`) build the envelope and commit it through the mutation gateway. Post-commit enrichment attaches in `finish` through `run_after_commit`. Envelope applies enter through `crates/medulla-server-router/src/dispatch/router/data_plane.rs` (`:673`) and `crates/medulla-server-graph/src/dispatch/change_envelope.rs::apply_one_change_envelope` (`:588`). No alternate graph mutation path may stay once its callers use this path.
+A caller sends `Method::IndexRepository` or `Method::SourceIngest`. `crates/medulla-server-router/src/dispatch/router/source_ingest.rs::dispatch_source_ingest_methods` hands scoped and durable work to `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_dispatch` (`:415`). That function routes to `repository_index.rs::route_repository_index` (`:208`) or `route_source_ingestion_request` (`:467`). The handlers in `crates/medulla-h-ingest-repository/src/repository_index.rs` (`lower` `:115`, `finish` `:303`) and `source_ingestion.rs` (`prepare` `:167`, `finish` `:1743`) build the envelope and commit it through the mutation gateway. Post-commit enrichment attaches in `finish` through `run_after_commit`. Envelope applies enter through `crates/medulla-server-router/src/dispatch/router/data_plane.rs` (`:673`) and `crates/medulla-server-graph/src/dispatch/change_envelope.rs::apply_one_change_envelope` (`:588`). No alternate graph mutation path may stay once its callers use this path.
 
 ## Cross-repo seams
 
