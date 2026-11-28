@@ -8,7 +8,7 @@ All terms live in the core namespace `https://knuckles-team.github.io/ontology/c
 
 | Class | Parent | Meaning |
 |---|---|---|
-| `:Machine` | `bfo:0000004` | A physical or virtual computing machine with one stable identity |
+| `:Machine` | `bfo:0000004` | A physical or virtual computing machine with one stable identity. The canonical machine carries `:identityTier`. A connector view of a machine does not |
 | `:MachineComponent` | `bfo:0000030` | A part of a machine. Abstract |
 | `:CentralProcessor` | `:MachineComponent` | One processor package |
 | `:MemoryModule` | `:MachineComponent` | One memory module |

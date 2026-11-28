@@ -74,6 +74,12 @@ Inventory records enter through the existing source ingestion method `SourceInge
 
 The identity, lifecycle and hosts-file functions are Rust. Arbora must not copy them. The `medulla.engine` module exposes them as pure functions. A replay therefore needs no network and no engine process.
 
+## Decision 9: connector host classes are views of a canonical machine
+
+A connector host class rolls up as a subclass of `core:Machine`, as the roll-up rule requires. A connector record is still a separate node from the canonical machine. It points at the canonical machine with `core:observes`. The canonical machine is the node that carries `core:identityTier`. A query for machines selects on that property. This keeps one canonical node per machine when reasoning also types the connector views as machines.
+
+Alternative rejected: give every connector record the canonical IRI as its node id. A connector that holds only a hostname derives a hostname-tier IRI, which differs from the hardware-tier IRI the build derives. The result is two machine nodes again.
+
 ## Open point resolved: a retired flag replaces a deletion
 
 The hosts file may mark a host `retired`. An erased entry makes the next reconcile drop the machine and its history. A flag keeps the history and drives the machine through the lifecycle first.
