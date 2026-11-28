@@ -631,7 +631,7 @@ fn part_shapes_accept_valid_parts_and_refuse_each_violation() {
     let other = "<urn:machine:serial:106926c48469ff7da8c08bc3b320aeb8>";
     let shared = format!(
         "{}{other} a :Machine ; :machineName \"beta\" ; :identityTier \"serial\" ; :machineKey \"serial:SN-0001\" ; :machineLifecycleState \"active\" ; :hasAccelerator <urn:machine-part:Accelerator> .\n",
-        part("Accelerator", ":acceleratorKind \"gpu\"").replace("", "")
+        part("Accelerator", ":acceleratorKind \"gpu\"")
     );
     assert_refused(
         &format!("{}{shared}", machine_node("")),
@@ -990,11 +990,8 @@ fn the_graph_after_ingest_conforms_to_the_machine_shapes() {
     assert_conforms(&stored_graph(&set));
 
     // The Rust check and the SHACL shapes refuse the same broken records.
-    let mutations: [(
-        &str,
-        fn(&mut medulla_source_types::machine::records::InventoryRecordSet),
-        &str,
-    ); 3] = [
+    type Mutation = fn(&mut medulla_source_types::machine::records::InventoryRecordSet);
+    let mutations: [(&str, Mutation, &str); 3] = [
         (
             "an unknown lifecycle state",
             |s| {

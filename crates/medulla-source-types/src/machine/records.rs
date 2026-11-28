@@ -379,7 +379,7 @@ pub fn check_machine(entity: &InventoryEntity) -> Result<(), MachineShapeRefused
             "A machine has at least one :machineKey of the form <kind>:<value>.",
         ));
     }
-    if texts(props, "systemUuid").map_or(true, |uuids| uuids.len() > 1) {
+    if texts(props, "systemUuid").is_none_or(|uuids| uuids.len() > 1) {
         return Err(refused(id, "A machine has at most one :systemUuid."));
     }
     let states = texts(props, MACHINE_LIFECYCLE_STATE_PROPERTY).unwrap_or_default();
