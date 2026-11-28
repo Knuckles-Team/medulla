@@ -7,9 +7,10 @@
 # fan-manager policy (MEDULLA-SUPPLY-VOCAB-R006.7), not from this table.
 
 @prefix : <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix core: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <https://knuckles-team.github.io/ontology/test/host-limit#> .
 
-ex:referenceHost a :Host .
+ex:referenceHost a core:Machine .
 
 ex:diskThreshold a :HostLimit ;
     :limitOf ex:referenceHost ;

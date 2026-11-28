@@ -579,7 +579,7 @@ class exists (a stored breach would go stale between fetches).""" ;
 
 :Node a owl:Class ;
     rdfs:label "Orchestration Node" ;
-    rdfs:comment "A cluster member: the orchestration-layer counterpart of a kg:Machine, linked to it via :isHost." ;
+    rdfs:comment "An orchestration-layer node: a cluster member that is the counterpart of a kg:Machine, linked to it via :isHost." ;
     rdfs:subClassOf kg:ConfigurationItem .
 
 :Pod a owl:Class ;

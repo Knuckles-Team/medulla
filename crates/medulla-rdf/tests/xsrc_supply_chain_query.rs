@@ -331,7 +331,7 @@ fn the_vulnerable_image_question_plans_to_exactly_the_named_sources() {
 #[test]
 fn the_capability_host_limit_question_plans_to_exactly_the_named_sources() {
     let fixture = include_str!("fixtures/xsrc_capability_host_limit.sparql");
-    for class in ["BusinessCapability", "Workload", "Host"] {
+    for class in ["BusinessCapability", "Workload", "Machine"] {
         assert!(
             fixture.contains(class),
             "the question asks for the {class} class"
