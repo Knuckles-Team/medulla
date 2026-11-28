@@ -198,8 +198,8 @@ const CHECKS: &[Check] = &[
         name: crate_size_budget::NAME,
         summary: crate_size_budget::SUMMARY,
         run: crate_size_budget::run,
-        // Not yet green: MEDULLA-CONTRACT-R067.14 flips this once the crates are split.
-        standalone: true,
+        // Enforced by `cargo xtask checks` in CI (MEDULLA-CONTRACT-R067.14).
+        standalone: false,
         needs_git: false,
     },
     Check {

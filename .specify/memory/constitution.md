@@ -40,7 +40,7 @@ A requirement row states a latency budget and a memory budget and names the benc
 
 Each crate has one responsibility and stays at or below the crate size limit. A crate that grows past the limit is split before new features land in it. Crate dependencies are acyclic and layered downward, as `scripts/crate_split/manifest.toml` states. The facade crate holds only re-exports, bindings and binaries. Handler crates are siblings with no edges between them. A change never adds a re-export to preserve an old path. The change updates every caller instead.
 
-**Enforced by:** `scripts/check_crate_graph.py` for the layers, the sibling rule and the facade rule. The same gate enforces the size limit once the crate split lands.
+**Enforced by:** `scripts/check_crate_graph.py` for the layers, the sibling rule and the facade rule. `cargo xtask crate-size-budget` enforces the size limit.
 
 **Plan check:** Does the change keep each touched crate under the size limit, add no dependency edge against the layers and leave no re-export of an old path?
 

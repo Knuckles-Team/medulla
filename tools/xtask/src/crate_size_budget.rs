@@ -160,6 +160,22 @@ mod tests {
         assert_eq!(check(&members[1..]).expect("25,000 lines passes"), 1);
     }
 
+    // spec: MEDULLA-CONTRACT-R067.14
+    #[test]
+    fn crate_size_budget_holds_for_this_repository() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .ancestors()
+            .nth(2)
+            .expect("tools/xtask sits two levels below the workspace root");
+        let members = members(root).expect("the workspace lists its members");
+        check(&members).expect("every workspace crate holds at most 25,000 lines");
+        let registered = crate::CHECKS
+            .iter()
+            .find(|c| c.name == NAME)
+            .expect("crate-size-budget is a registered check");
+        assert!(!registered.standalone, "`cargo xtask checks` must run it");
+    }
+
     #[test]
     fn counts_every_rs_file_under_src_and_names_the_largest() {
         let a = lines(3);

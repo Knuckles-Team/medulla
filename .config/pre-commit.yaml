@@ -298,6 +298,13 @@ repos:
     pass_filenames: false
     always_run: true
     stages: [manual]  # compiles: `cargo xtask checks` runs it in CI
+  - id: crate-size-budget
+    name: No workspace crate holds more than 25,000 lines of Rust
+    entry: cargo xtask crate-size-budget
+    language: system
+    pass_filenames: false
+    always_run: true
+    stages: [pre-push]
   - id: epistemic-operations-protocol
     name: Epistemic Operations manifest ⇄ Rust DTO parity
     entry: python3 scripts/check_epistemic_operations_protocol.py
