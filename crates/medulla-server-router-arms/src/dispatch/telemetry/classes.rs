@@ -2,7 +2,7 @@
 //! (EH-408 / EH-410).
 //!
 //! A node takes part in binding when its class is subsumed by one of the
-//! target classes (`kg:Server`, `infrastructure:Service`, `infrastructure:Host`,
+//! target classes (`kg:Server`, `infrastructure:Service`, `kg:Machine`,
 //! `infrastructure:Workload`, `infrastructure:Pod`, `kg:Agent`) under the
 //! request graph's own
 //! composed schema -- the immutable core corpus plus any attached sources --
@@ -41,7 +41,7 @@ use medulla_server_api::schema_compose::validate_and_compose;
 const TARGET_CLASSES: [EntityClass; 6] = [
     EntityClass::Server,
     EntityClass::Service,
-    EntityClass::Host,
+    EntityClass::Machine,
     EntityClass::Deployment,
     EntityClass::Agent,
     EntityClass::Pod,

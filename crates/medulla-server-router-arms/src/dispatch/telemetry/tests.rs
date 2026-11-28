@@ -91,7 +91,7 @@ fn the_ontology_decides_which_node_types_bind() {
     for (node_type, class) in [
         ("Server", EntityClass::Server),
         ("Service", EntityClass::Service),
-        ("Host", EntityClass::Host),
+        ("Machine", EntityClass::Machine),
         ("Workload", EntityClass::Deployment),
         ("Agent", EntityClass::Agent),
     ] {

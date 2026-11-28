@@ -42,7 +42,7 @@ fn every_entity_class_resolves_through_its_declared_key() {
         ),
         (
             log_with(&[("host.name", "node-a")]),
-            entity(EntityClass::Host, "host:node-a"),
+            entity(EntityClass::Machine, "host:node-a"),
             "otel.host",
         ),
         (
@@ -68,6 +68,22 @@ fn every_entity_class_resolves_through_its_declared_key() {
     for (signal, expected, rule) in cases {
         assert_eq!(directory.resolve(&signal), bound(expected, rule));
     }
+}
+
+// spec: MEDULLA-MACHINE-R001.4
+#[test]
+fn host_name_binds_to_a_machine() {
+    let machine = entity(EntityClass::Machine, "host:node-a");
+    assert_eq!(
+        directory().resolve(&log_with(&[("host.name", "node-a")])),
+        bound(machine, "otel.host")
+    );
+    // The class is the core machine class, declared in the core namespace.
+    assert_eq!(
+        EntityClass::Machine.class_iri(),
+        "https://knuckles-team.github.io/ontology/core#Machine"
+    );
+    assert_eq!(EntityClass::Machine.label(), "Machine");
 }
 
 #[test]
@@ -151,7 +167,7 @@ fn a_signal_without_any_resolution_key_is_unresolved() {
 fn an_individual_is_indexed_only_under_rules_of_its_own_class() {
     // A host that (wrongly) declares a service.name is not a service.
     let entities = [declared(
-        EntityClass::Host,
+        EntityClass::Machine,
         "host:x",
         &[("service.name", "checkout")],
     )];

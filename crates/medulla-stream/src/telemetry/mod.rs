@@ -6,7 +6,7 @@
 //! 1. [`signal`] — every stored log record, Prometheus sample and span is
 //!    normalised into a [`TelemetrySignal`] (time, attributes, measure).
 //! 2. [`binding`] — declared [`ResolutionRule`]s bind each signal to the
-//!    Server / Service / Host / Deployment / Agent individual it came from, or
+//!    Server / Service / Machine / Deployment / Agent individual it came from, or
 //!    report it [`Unresolved`] with the reason; nothing is guessed.
 //! 3. [`rollup`] — bound signals roll up per entity and window into
 //!    [`BehaviourObservation`]s with provenance.

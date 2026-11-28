@@ -1,6 +1,6 @@
 //! Telemetry → ontology entity binding (EH-408).
 //!
-//! A signal is bound to the Server, Service, Host, Deployment or Agent it came
+//! A signal is bound to the Server, Service, Machine, Deployment or Agent it came
 //! from through **declared resolution keys**: a [`ResolutionRule`] names an
 //! entity class and the attribute names whose values identify one individual of
 //! it (`service.name`, `k8s.namespace.name` + `k8s.deployment.name`, `job`, …).
@@ -34,8 +34,8 @@ pub enum EntityClass {
     Server,
     /// `infrastructure:Service`.
     Service,
-    /// `infrastructure:Host`.
-    Host,
+    /// `kg:Machine` -- the canonical machine class; a signal binds to it by `host.name`.
+    Machine,
     /// `infrastructure:Workload` — the Deployment/StatefulSet/DaemonSet controller.
     Deployment,
     /// `kg:Agent`.
@@ -55,7 +55,7 @@ impl EntityClass {
         match self {
             EntityClass::Server => ("Server", KG_NAMESPACE),
             EntityClass::Service => ("Service", INFRASTRUCTURE_NAMESPACE),
-            EntityClass::Host => ("Host", INFRASTRUCTURE_NAMESPACE),
+            EntityClass::Machine => ("Machine", KG_NAMESPACE),
             EntityClass::Deployment => ("Workload", INFRASTRUCTURE_NAMESPACE),
             EntityClass::Agent => ("Agent", KG_NAMESPACE),
             EntityClass::Pod => ("Pod", INFRASTRUCTURE_NAMESPACE),
@@ -135,7 +135,7 @@ impl ResolutionPolicy {
                 ),
                 ResolutionRule::new("otel.service", EntityClass::Service, &["service.name"]),
                 ResolutionRule::new("prometheus.job", EntityClass::Service, &["job"]),
-                ResolutionRule::new("otel.host", EntityClass::Host, &["host.name"]),
+                ResolutionRule::new("otel.host", EntityClass::Machine, &["host.name"]),
                 ResolutionRule::new("otel.server", EntityClass::Server, &["server.address"]),
             ],
         }
