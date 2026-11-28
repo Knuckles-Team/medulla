@@ -59,7 +59,7 @@ pub fn authorized_read_store_for_query(
 ) -> Result<AuthorizedReadStore, String> {
     let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
     let narrowing = match medulla_sql::sql::user_ann_decision(query, &tenant)? {
-        UserAnnDecision::Pushdown(pushdown) => Some(pushdown),
+        UserAnnDecision::Pushdown(pushdown) => Some(*pushdown),
         UserAnnDecision::Declined(reason) => {
             tracing::debug!(
                 ?reason,

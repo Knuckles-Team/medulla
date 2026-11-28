@@ -181,12 +181,12 @@ impl AnnPushdown {
         {
             return UserAnnDecision::Declined(AnnDeclineReason::UnsupportedFilter);
         }
-        UserAnnDecision::Pushdown(UserAnnPushdown {
+        UserAnnDecision::Pushdown(Box::new(UserAnnPushdown {
             index: self.index.clone(),
             query_vector: self.query_vector.clone(),
             rows: self.plan.k.saturating_add(shape.offset),
             filter: shape.filter.clone(),
-        })
+        }))
     }
 }
 
@@ -230,7 +230,7 @@ pub enum UserAnnDecision {
     /// the whole relation.
     Declined(AnnDeclineReason),
     /// Narrow the named table through the maintained authority.
-    Pushdown(UserAnnPushdown),
+    Pushdown(Box<UserAnnPushdown>),
 }
 
 /// Decide `sql` against the ANN indexes registered in `store`.

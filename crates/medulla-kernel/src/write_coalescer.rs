@@ -583,20 +583,20 @@ impl GraphWriter {
     ///
     /// * `Ok(())` — accepted; the worker will apply it under a batch txn and reply on
     ///   the op's oneshot.
-    /// * `Err(op)` — the bounded queue is full (backpressure) OR the worker is gone.
+    /// * `Err(op)` (boxed, so the error path stays small) — the bounded queue is full (backpressure) OR the worker is gone.
     ///   The caller must reject the request with `BUSY`; it must NOT apply `op` inline.
     ///   An accepted queue ticket is the sole authority for this graph's write order,
     ///   so an overflow path cannot overtake work already admitted ahead of it.
-    pub fn try_enqueue(&self, op: WriteOp) -> Result<(), WriteOp> {
+    pub fn try_enqueue(&self, op: WriteOp) -> Result<(), Box<WriteOp>> {
         // CONCEPT:MEDULLA-KG.compute.parse-resolve-span — stamp the enqueue instant here (the moment the producer
         // hands the op off) so the worker measures the true enqueue→acquire wait.
         let queued_bytes = op.approx_bytes();
         let tx = &self.tx;
-        self.state.try_enqueue(op, queued_bytes, |ticket, op| {
-            tx.try_send((ticket, (Instant::now(), op)))
+        self.state.try_enqueue(Box::new(op), queued_bytes, |ticket, op| {
+            tx.try_send((ticket, (Instant::now(), *op)))
                 .map_err(|error| match error {
                     mpsc::error::TrySendError::Full((_, (_, op)))
-                    | mpsc::error::TrySendError::Closed((_, (_, op))) => op,
+                    | mpsc::error::TrySendError::Closed((_, (_, op))) => Box::new(op),
                 })
         })
     }

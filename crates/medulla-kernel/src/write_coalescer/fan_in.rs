@@ -61,7 +61,7 @@ async fn enqueue_draining(
     pending: &mut Vec<oneshot::Receiver<WriteOutcome>>,
 ) {
     while let Err(returned) = writer.try_enqueue(op) {
-        op = returned;
+        op = *returned;
         match pending.pop() {
             Some(front) => {
                 let _ = front.await;

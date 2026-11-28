@@ -30,7 +30,7 @@ pub(crate) struct BoundDelegation {
 
 #[cfg(feature = "redb")]
 pub(crate) enum AdmissionError {
-    Response(Response),
+    Response(Box<Response>),
     Message(String),
 }
 
@@ -58,7 +58,7 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
 
     match admit_request(ctx, *request).await {
         Ok(response) => Ok(response),
-        Err(AdmissionError::Response(response)) => Ok(response),
+        Err(AdmissionError::Response(response)) => Ok(*response),
         Err(AdmissionError::Message(error)) => Ok(Response::err(req_id, error)),
     }
 }
@@ -70,7 +70,7 @@ pub(crate) async fn admit_request(
 ) -> Result<Response, AdmissionError> {
     let (placement_epoch, placement_fence, clustered) = placement_authority(&ctx)
         .await
-        .map_err(AdmissionError::Response)?;
+        .map_err(|response| AdmissionError::Response(Box::new(response)))?;
 
     // The native stable-key record is the first domain decision. A committed
     // replay must remain serviceable after the Agent Library head is retired;
@@ -248,7 +248,7 @@ pub(crate) async fn submit_native(
         )
         .await;
         if response.error.is_some() {
-            return Err(AdmissionError::Response(response));
+            return Err(AdmissionError::Response(Box::new(response)));
         }
         return response.result.ok_or_else(|| {
             AdmissionError::Message(
