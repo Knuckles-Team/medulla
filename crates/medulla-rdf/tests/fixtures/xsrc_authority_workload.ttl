@@ -46,26 +46,26 @@ ex:containerimage-portainer a vg:SourceAuthority ; vg:authoritativeSource ex:por
     vg:authorityRank 2 ; vg:authorityContract "mcp" .
 
 ex:containermanager-host a vg:VirtualMapping ; vg:mapsContract ex:containermanager-contract ;
-    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:mapsOntologyClass kg:Machine ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
     vg:approved true ; vg:hasPredicateFieldPair ex:containermanager-host-p0 .
 ex:containermanager-host-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
 ex:host-containermanager a vg:SourceAuthority ; vg:authoritativeSource ex:containermanager ;
-    vg:authorityFor infra:Host ; vg:authorityMapping ex:containermanager-host ;
+    vg:authorityFor kg:Machine ; vg:authorityMapping ex:containermanager-host ;
     vg:authorityRank 1 ; vg:authorityContract "mcp" .
 
 ex:portainer-host a vg:VirtualMapping ; vg:mapsContract ex:portainer-contract ;
-    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:mapsOntologyClass kg:Machine ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
     vg:approved true ; vg:hasPredicateFieldPair ex:portainer-host-p0 .
 ex:portainer-host-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
 ex:host-portainer a vg:SourceAuthority ; vg:authoritativeSource ex:portainer ;
-    vg:authorityFor infra:Host ; vg:authorityMapping ex:portainer-host ;
+    vg:authorityFor kg:Machine ; vg:authorityMapping ex:portainer-host ;
     vg:authorityRank 2 ; vg:authorityContract "mcp" .
 
 ex:systemsmanager-host-hardware a vg:VirtualMapping ; vg:mapsContract ex:systemsmanager-contract ;
-    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "machine" ; vg:keyField "machine.id" ;
+    vg:mapsOntologyClass kg:Machine ; vg:mapsEntity "machine" ; vg:keyField "machine.id" ;
     vg:approved true ; vg:hasPredicateFieldPair ex:systemsmanager-host-hardware-p0 .
 ex:systemsmanager-host-hardware-p0 a vg:PredicateFieldPair ; vg:predicate infra:temperatureCelsius ; vg:field "machine.temperature" .
 ex:host-systemsmanager-hardware a vg:SourceAuthority ; vg:authoritativeSource ex:systemsmanager ;
-    vg:authorityFor infra:Host ; vg:authorityMapping ex:systemsmanager-host-hardware ;
+    vg:authorityFor kg:Machine ; vg:authorityMapping ex:systemsmanager-host-hardware ;
     vg:authorityFacet infra:temperatureCelsius ;
     vg:authorityRank 1 ; vg:authorityContract "mcp" .

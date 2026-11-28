@@ -60,5 +60,5 @@ placement:Target a owl:Class ;
 # --- Hosts ------------------------------------------------------------------
 
 placement:Host a owl:Class ;
-    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:subClassOf kg:DomainEntity, kg:Machine ;
     rdfs:comment "One host with its declared resource budget and heavy capabilities (MEDULLA-PLACEMENT-R700.3)." .

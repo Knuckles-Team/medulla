@@ -177,6 +177,7 @@ fn component_version_vulnerability_and_uses_component_shapes() {
     let valid = format!(
         "{SUPPLY_SHAPE_DATA_PREFIX}
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 
 ex:openssl111k a kg:ComponentVersion ;
     kg:supplyChainVersionOf ex:openssl ;
@@ -240,6 +241,7 @@ ex:openssl111k a kg:ComponentVersion ."
     let non_service = format!(
         "{SUPPLY_SHAPE_DATA_PREFIX}
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 
 ex:checkoutWorkload a infra:Workload ;
     kg:usesComponent ex:openssl111k .
@@ -705,6 +707,7 @@ const INFRA_SHAPES: &str = include_str!("../ontology/infrastructure-v1.shapes.tt
 
 const INFRA_DATA_PREFIX: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex:    <https://knuckles-team.github.io/ontology/test/host-limit#> .
 "#;
 
@@ -730,7 +733,7 @@ ex:diskLimit a infra:HostLimit ;
     infra:readingValue 1200000000000 ;
     infra:limitValue 2000000000000 .
 
-ex:rackHost a infra:Host ."
+ex:rackHost a kg:Machine ."
     );
     let report =
         medulla_shacl::validate_turtle(INFRA_SHAPES, &valid).expect("valid fixture parses");
@@ -746,7 +749,7 @@ ex:diskLimit a infra:HostLimit ;
     infra:limitOf ex:rackHost ;
     infra:limitKind \"disk\" ;
     infra:readingValue 1200000000000 .
-ex:rackHost a infra:Host ."
+ex:rackHost a kg:Machine ."
     );
     let report =
         medulla_shacl::validate_turtle(INFRA_SHAPES, &missing_limit).expect("fixture parses");
@@ -776,7 +779,7 @@ ex:diskLimit a infra:HostLimit ;
     infra:limitKind \"fan\" ;
     infra:readingValue 1200000000000 ;
     infra:limitValue 2000000000000 .
-ex:rackHost a infra:Host ."
+ex:rackHost a kg:Machine ."
     );
     let report =
         medulla_shacl::validate_turtle(INFRA_SHAPES, &unknown_kind).expect("fixture parses");
@@ -2092,6 +2095,7 @@ ex:acmeCustomer a kg:Customer ;
 
 const HOST_PAIR_PREFIX: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex:    <https://knuckles-team.github.io/ontology/test/host-pair#> .
 "#;
@@ -2122,19 +2126,19 @@ fn host_limit_pair_shape() {
         assert!(report.conforms, "{body}: {:?}", report.results);
     };
     // A host with neither reading, and hosts with each complete pair.
-    accepts("ex:h a infra:Host .");
+    accepts("ex:h a kg:Machine .");
     accepts(
-        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 ; infra:temperatureLimitCelsius 85 .",
+        "ex:h a kg:Machine ; infra:temperatureCelsius 61.5 ; infra:temperatureLimitCelsius 85 .",
     );
-    accepts("ex:h a infra:Host ; infra:capacityUtilization 0.4 ; infra:capacityLimit 1 .");
+    accepts("ex:h a kg:Machine ; infra:capacityUtilization 0.4 ; infra:capacityLimit 1 .");
     // A limit without a reading is not a violation.
-    accepts("ex:h a infra:Host ; infra:temperatureLimitCelsius 85 .");
+    accepts("ex:h a kg:Machine ; infra:temperatureLimitCelsius 85 .");
     // A reading with no limit is refused, for both pairs.
     for body in [
-        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 .",
-        "ex:h a infra:Host ; infra:capacityUtilization 0.4 .",
-        "ex:h a infra:Host ; infra:temperatureCelsius 61.5 ; infra:capacityLimit 1 .",
-        "ex:h a infra:Host ; infra:capacityUtilization 0.4 ; infra:temperatureLimitCelsius 85 .",
+        "ex:h a kg:Machine ; infra:temperatureCelsius 61.5 .",
+        "ex:h a kg:Machine ; infra:capacityUtilization 0.4 .",
+        "ex:h a kg:Machine ; infra:temperatureCelsius 61.5 ; infra:capacityLimit 1 .",
+        "ex:h a kg:Machine ; infra:capacityUtilization 0.4 ; infra:temperatureLimitCelsius 85 .",
     ] {
         refuses_with_message(
             INFRA_SHAPES,

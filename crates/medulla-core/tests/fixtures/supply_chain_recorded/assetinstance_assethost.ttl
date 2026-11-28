@@ -9,4 +9,4 @@
 ex:ci-001 a kg:AssetInstance ;
     infra:assetHost ex:host-001 .
 
-ex:host-001 a infra:Host .
+ex:host-001 a kg:Machine .

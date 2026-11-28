@@ -10,6 +10,7 @@
 
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 
 ex:acmeSupplier a :Supplier .
@@ -24,7 +25,7 @@ ex:psuAsset a :AssetInstance .
 
 ex:psuAsset :assetHost ex:rackHost .
 
-ex:rackHost a infra:Host .
+ex:rackHost a kg:Machine .
 
 ex:payrollService a infra:Service .
 

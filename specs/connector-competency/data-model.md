@@ -35,7 +35,7 @@ Every term a competency row reads is either reused from an open vocabulary (W3C,
 | `opportunityOwner` | R054.1 | mint in commercial-v1.ttl on `:Opportunity`; `skos:closeMatch prov:wasAttributedTo` |
 | `opportunityStage` | R054.1 | mint in commercial-v1.ttl on `:Opportunity`; no equivalent |
 | `contactEmail` | R063.2 | reuse `schema:email` on `:Person`; nothing minted |
-| `hostAddress` | R061.1 | mint in infrastructure-v1.ttl on `:Host`; no equivalent |
+| `hostAddress` | R061.1 | mint in infrastructure-v1.ttl on `core:Machine`; no equivalent |
 | `inZone` | R061.1 | mint in infrastructure-v1.ttl on `:DnsRecord`; no equivalent |
 | `heartbeatStatus` | R064.1 (read by R057.2, R064.2) | mint in it4it_delivery-v1.ttl on `:Heartbeat`; no equivalent |
 | `lastRouteErrorAt` | R064.2 | mint in infrastructure-v1.ttl on `:ProxyRoute`; no equivalent |
@@ -47,4 +47,4 @@ Every term a competency row reads is either reused from an open vocabulary (W3C,
 | `calorieTarget` | R066.2 | mint in nutrition-v1.ttl on `:MealPlanEntry`; no equivalent |
 | `usesImage` (container-to-image link) | R013.1 | mint in infrastructure-v1.ttl, `:Container` to `:ContainerImage`; no equivalent |
 | `dp:metricValue` | R014.1 | mint in data_platform-v1.ttl on `dp:EvaluationResult` (`xsd:decimal`); no equivalent |
-| `:Fan` (fan term) | R020.1 | mint class in infrastructure-v1.ttl extending `kg:HardwareNode`; no equivalent |
+| `:Fan` (fan term) | R020.1 | mint class in infrastructure-v1.ttl extending `core:Machine`; no equivalent |

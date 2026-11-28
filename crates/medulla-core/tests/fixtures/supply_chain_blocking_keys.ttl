@@ -8,6 +8,7 @@
 
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix ex: <https://knuckles-team.github.io/ontology/test/supply-chain#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -63,11 +64,11 @@ ex:serviceUrlHostname a ex:BlockingKey ;
 ex:serviceNamespaceName a ex:BlockingKey ;
     rdfs:label "namespace plus name" .
 
-# infra:Host: systems-manager HardwareNode, fan-manager ManagedHost,
+# kg:Machine: systems-manager HardwareNode, fan-manager ManagedHost,
 # ERPNext asset, CMDB CI.
 ex:hostKeys a ex:BlockingKeySet ;
-    rdfs:label "infra:Host blocking keys" ;
-    ex:appliesTo infra:Host ;
+    rdfs:label "kg:Machine blocking keys" ;
+    ex:appliesTo kg:Machine ;
     ex:hasKey ex:hostHostname, ex:hostBmcAddress, ex:hostSerialNumber .
 
 ex:hostHostname a ex:BlockingKey ;

@@ -5,11 +5,12 @@
 # decision D6).
 PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 
 SELECT ?capability ?service ?workload ?host ?reading ?limit WHERE {
   ?capability a :BusinessCapability .
   ?workload a infra:Workload .
-  ?host a infra:Host ;
+  ?host a kg:Machine ;
         infra:temperatureCelsius ?reading ;
         infra:temperatureLimitCelsius ?limit .
   ?service :supportsCapability ?capability ;

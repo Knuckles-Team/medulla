@@ -129,12 +129,13 @@ fn local(cell: &str) -> &str {
 
 const FAN_DUTY_FIXTURE: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:fan-manager:fixture/> .
 
 # host-1: fan duty above 80 while the temperature sits above its p95 threshold.
-f:host-1 a infra:Host .
+f:host-1 a kg:Machine .
 f:trend-host1 a infra:HealthTrend ;
     infra:affectsEntity f:host-1 ;
     infra:signal "fan_duty_pct" ;
@@ -153,7 +154,7 @@ f:baseline-host1 a infra:HealthBaseline ;
     infra:p95 "65.0"^^xsd:decimal .
 
 # host-2: fan duty above 80 but the temperature inside its baseline — no row.
-f:host-2 a infra:Host .
+f:host-2 a kg:Machine .
 f:trend-host2 a infra:HealthTrend ;
     infra:affectsEntity f:host-2 ;
     infra:signal "fan_duty_pct" ;
@@ -172,7 +173,7 @@ f:baseline-host2 a infra:HealthBaseline ;
     infra:p95 "65.0"^^xsd:decimal .
 
 # host-3: temperature above its baseline but the fan duty below 80 — no row.
-f:host-3 a infra:Host .
+f:host-3 a kg:Machine .
 f:trend-host3 a infra:HealthTrend ;
     infra:affectsEntity f:host-3 ;
     infra:signal "fan_duty_pct" ;
@@ -193,9 +194,10 @@ f:baseline-host3 a infra:HealthBaseline ;
 
 const FAN_DUTY_QUERY: &str = r#"
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?host ?fanDuty ?temp ?p95 ?source ?record ?asof WHERE {
-  ?host a infra:Host .
+  ?host a kg:Machine .
   ?trend a infra:HealthTrend ;
          infra:affectsEntity ?host ;
          infra:signal "fan_duty_pct" ;
@@ -262,6 +264,7 @@ fn home_assistant_out_of_range_sensors_answer() {
     // 2026-01-03T00:00:00Z, so the last-24-hours window starts 2026-01-02T00:00:00Z.
     let fixture = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:home-assistant:fixture/> .
@@ -309,6 +312,7 @@ f:sensor-idle a infra:Entity .
         &view,
         r#"
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?entity ?signal ?observed ?p95 ?source ?record ?asof WHERE {
   ?entity a infra:Entity .
@@ -454,16 +458,17 @@ SELECT ?m1 ?m2 ?attendee WHERE {
 
 const FAN_CROSS_FIXTURE: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:fan-manager-cross:fixture/> .
 
 # Hosts as systems-manager records: the shared `host` concept the sources link through.
-f:host-1 a infra:Host ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-1" .
-f:host-2 a infra:Host ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-2" .
-f:host-3 a infra:Host ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-3" .
-f:host-4 a infra:Host ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-4" .
-f:host-5 a infra:Host ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-5" .
+f:host-1 a kg:Machine ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-1" .
+f:host-2 a kg:Machine ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-2" .
+f:host-3 a kg:Machine ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-3" .
+f:host-4 a kg:Machine ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-4" .
+f:host-5 a kg:Machine ; dc:source "systems-manager" ; dc:identifier "sm:rec:host-5" .
 
 # fan-manager: one-hour fan-duty windows starting 2026-01-02T06:00:00Z.
 f:trend-host-1 a infra:HealthTrend ; infra:affectsEntity f:host-1 ; infra:signal "fan_duty_pct" ;
@@ -513,9 +518,10 @@ f:alert-host-5 a infra:HealthAnomaly ; infra:affectsEntity f:host-5 ; infra:sign
 // `observedAt` .. `observedAt + windowS`, both pinned to one day.
 const FAN_CROSS_QUERY: &str = r#"
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?host ?fanMax ?alertTemp ?hostSource ?hostRecord ?fanSource ?fanRecord ?alertSource ?alertRecord ?asof WHERE {
-  ?host a infra:Host ; dc:source ?hostSource ; dc:identifier ?hostRecord .
+  ?host a kg:Machine ; dc:source ?hostSource ; dc:identifier ?hostRecord .
   ?trend a infra:HealthTrend ; infra:affectsEntity ?host ; infra:signal "fan_duty_pct" ;
          infra:max ?fanMax ; infra:windowS ?windowS ; infra:observedAt ?ts ;
          dc:source ?fanSource ; dc:identifier ?fanRecord .
@@ -634,6 +640,7 @@ fn fan_manager_acceptance_through_declared_contracts() {
 const CONTAINER_RESTART_FIXTURE: &str = r#"
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:container-manager:fixture/> .
@@ -687,6 +694,7 @@ fn container_manager_repeated_restarts_answer() {
         r#"
 PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?entity ?restarts ?image ?imageRef ?source ?record ?asof WHERE {
   VALUES ?kind { infra:Container infra:Workload }
@@ -734,6 +742,7 @@ SELECT ?entity ?restarts ?image ?imageRef ?source ?record ?asof WHERE {
 
 const UPTIME_DOWN_FIXTURE: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:uptime:fixture/> .
@@ -774,6 +783,7 @@ f:slow-slow a infra:HealthAnomaly ; infra:affectsEntity f:svc-slow ; infra:signa
 // when the monitor went down and `observed` the seconds it stayed down.
 const UPTIME_DOWN_QUERY: &str = r#"
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?service ?downSeconds ?source ?record ?asof WHERE {
   ?service a infra:Service .
@@ -823,6 +833,7 @@ fn uptime_services_down_in_window_answer() {
 
 const UPTIME_CROSS_FIXTURE: &str = r#"
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix dc: <http://purl.org/dc/terms/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix f: <urn:eg-cq-conn:uptime-cross:fixture/> .
@@ -870,6 +881,7 @@ f:route-error-mail a infra:HealthAnomaly ; infra:affectsEntity f:route-mail ; in
 // one day, on the service itself (Grafana) or on a route to it (Caddy).
 const UPTIME_CROSS_QUERY: &str = r#"
 PREFIX infra: <https://knuckles-team.github.io/ontology/infrastructure#>
+PREFIX kg: <https://knuckles-team.github.io/ontology/core#>
 PREFIX dc: <http://purl.org/dc/terms/>
 SELECT ?service ?evidence ?source ?record ?downSource ?downRecord ?asof WHERE {
   ?service a infra:Service .

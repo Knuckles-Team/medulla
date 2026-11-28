@@ -17,11 +17,11 @@
     rdfs:range xsd:anyURI .
 
 :availableCPU a owl:DatatypeProperty ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range xsd:float .
 
 :availableMemoryMB a owl:DatatypeProperty ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range xsd:integer .
 
 :blueprintName a owl:DatatypeProperty ;
@@ -60,21 +60,21 @@
     rdfs:range xsd:string .
 
 :hasGPU a owl:DatatypeProperty ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range xsd:boolean .
 
 :hostIP a owl:DatatypeProperty ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range xsd:string .
 
 :hostName a owl:DatatypeProperty ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range xsd:string .
 
 :hostsSoftware a owl:ObjectProperty ;
     rdfs:label "hosts software" ;
     rdfs:comment "Inverse of deployedOn." ;
-    rdfs:domain :InfrastructureHost ;
+    rdfs:domain :Machine ;
     rdfs:range :CompanySoftware ;
     owl:inverseOf :deployedOn .
 
@@ -136,9 +136,9 @@ CONCEPT:ECO-4.13 — Company Infrastructure Orchestration""" ;
 
 :deployedOn a owl:ObjectProperty ;
     rdfs:label "deployed on" ;
-    rdfs:comment "Links software to its infrastructure host." ;
+    rdfs:comment "Links software to the machine it runs on." ;
     rdfs:domain :CompanySoftware ;
-    rdfs:range :InfrastructureHost .
+    rdfs:range :Machine .
 
 :DeploymentBlueprint a owl:Class ;
     rdfs:label "Deployment Blueprint" ;
@@ -146,11 +146,6 @@ CONCEPT:ECO-4.13 — Company Infrastructure Orchestration""" ;
 company software. Part of the infrastructure-blueprints skill-graph.
 CONCEPT:ECO-4.14 — Infrastructure Blueprint Library""" ;
     rdfs:subClassOf bfo:0000031 .
-
-:InfrastructureHost a owl:Class ;
-    rdfs:label "Infrastructure Host" ;
-    rdfs:comment "A physical or virtual server in the company infrastructure." ;
-    rdfs:subClassOf bfo:0000004 .
 
 :CompanySoftware a owl:Class ;
     rdfs:label "Company Software" ;

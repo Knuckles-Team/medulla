@@ -788,6 +788,7 @@ CONCEPT:AU-KG.identity.asset-occurrence.""" ;
 
 :Server a owl:Class ;
     rdfs:label "Server" ;
+    rdfs:comment "A running software server that offers a service. It runs on a :Machine." ;
     rdfs:subClassOf [ a owl:Restriction ;
             owl:onProperty :locatedIn ;
             owl:someValuesFrom :Place ],

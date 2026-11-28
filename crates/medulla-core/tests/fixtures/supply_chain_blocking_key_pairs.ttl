@@ -27,7 +27,7 @@ ex:serviceKeys a ex:BlockingKeySet ;
     ex:hasKey [ ex:keyName "namespace+name" ; ex:rank 3 ; ex:exact false ] .
 
 ex:hostKeys a ex:BlockingKeySet ;
-    ex:forConcept infra:Host ;
+    ex:forConcept kg:Machine ;
     ex:hasKey [ ex:keyName "hostname" ; ex:rank 1 ; ex:exact false ] ;
     ex:hasKey [ ex:keyName "BMC address" ; ex:rank 2 ; ex:exact false ] ;
     ex:hasKey [ ex:keyName "serial number" ; ex:rank 3 ; ex:exact false ] .

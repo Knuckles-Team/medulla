@@ -142,7 +142,7 @@ fn container_or_pod_runs_on_path_infers_no_supplier_service_edge() {
                 :realizedByAsset ex:psuAsset .
             ex:psuAsset a :AssetInstance ;
                 :assetHost ex:rackHost .
-            ex:rackHost a infra:Host .
+            ex:rackHost a :Machine .
             ex:someContainer infra:containerRunsOn ex:rackHost .
             ex:somePod infra:podRunsOn ex:rackHost .
             "#,

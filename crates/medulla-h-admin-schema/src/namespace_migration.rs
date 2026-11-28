@@ -39,10 +39,11 @@ const MIGRATION_SERVICE: &str = "namespace-migration";
 /// legacy product tokens merge into one concept each, so both token paths map to
 /// the same prefix.
 pub const NAMESPACE_REWRITES: &[(&str, &str)] = &[
-    // The legacy `au:` alias: two names live in core, everything else in infrastructure.
+    // The legacy `au:` alias: three names live in core (the machine class among them), everything
+    // else in infrastructure.
     (
         "http://agent-utilities.dev/ontology#HardwareNode",
-        medulla_types::ontology_iri!("core#HardwareNode"),
+        medulla_types::ontology_iri!("core#Machine"),
     ),
     (
         "http://agent-utilities.dev/ontology#Agent",
@@ -54,7 +55,7 @@ pub const NAMESPACE_REWRITES: &[(&str, &str)] = &[
     ),
     (
         "https://agent-utilities.dev/ontology#HardwareNode",
-        medulla_types::ontology_iri!("core#HardwareNode"),
+        medulla_types::ontology_iri!("core#Machine"),
     ),
     (
         "https://agent-utilities.dev/ontology#Agent",
@@ -356,6 +357,33 @@ pub const RETIRED_TERMS: &[(&str, &str)] = &[
     (
         medulla_types::ontology_iri!("infrastructure#Incident"),
         medulla_types::ontology_iri!("core#Incident"),
+    ),
+    // MEDULLA-MACHINE-R001.2, R003.3: one machine class and one set of hardware part terms in
+    // the core namespace. The three host classes merge into `core#Machine`; the duplicate
+    // interface, accelerator and interface-link terms move to their core counterparts.
+    (
+        medulla_types::ontology_iri!("infrastructure#Host"),
+        medulla_types::ontology_iri!("core#Machine"),
+    ),
+    (
+        medulla_types::ontology_iri!("core#InfrastructureHost"),
+        medulla_types::ontology_iri!("core#Machine"),
+    ),
+    (
+        medulla_types::ontology_iri!("core#HardwareNode"),
+        medulla_types::ontology_iri!("core#Machine"),
+    ),
+    (
+        medulla_types::ontology_iri!("infrastructure#NetworkInterface"),
+        medulla_types::ontology_iri!("core#NetworkInterface"),
+    ),
+    (
+        medulla_types::ontology_iri!("infrastructure#GPUAccelerator"),
+        medulla_types::ontology_iri!("core#Accelerator"),
+    ),
+    (
+        medulla_types::ontology_iri!("infrastructure#hasInterface"),
+        medulla_types::ontology_iri!("core#hasNetworkInterface"),
     ),
 ];
 
@@ -1073,7 +1101,7 @@ mod tests {
             ("http://knuckles.team/kg", "core"),
             (
                 "http://knuckles.team/kg/infrastructure#Host",
-                "infrastructure#Host",
+                "core#Machine",
             ),
             ("http://knuckles.team/kg/commercial", "commercial"),
             (
@@ -1113,7 +1141,7 @@ mod tests {
             ),
             (
                 "http://agent-utilities.dev/ontology#HardwareNode",
-                "core#HardwareNode",
+                "core#Machine",
             ),
             (
                 "https://agent-utilities.dev/ontology#PlatformService",

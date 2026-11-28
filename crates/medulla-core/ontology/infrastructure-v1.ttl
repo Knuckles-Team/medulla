@@ -24,7 +24,7 @@
 :BladeServer a owl:Class ;
     rdfs:label "Blade Server" ;
     rdfs:comment "A blade compute node housed in a chassis." ;
-    rdfs:subClassOf kg:HardwareNode .
+    rdfs:subClassOf kg:Machine .
 
 :Chassis a owl:Class ;
     rdfs:label "Chassis" ;
@@ -33,7 +33,7 @@
 
 :ContainerImage a owl:Class ;
     rdfs:label "Container Image" ;
-    rdfs:comment """An OCI container image / DockerHub repository tag-set, published from a
+    rdfs:comment """An OCI container image repository tag-set, published from a
 :ContainerRegistry and contained by a :Repository namespace (CONCEPT:KG-2.155).""" ;
     rdfs:subClassOf bfo:0000031, kg:SoftwareComponent .
 
@@ -44,8 +44,7 @@
 
 :Device a owl:Class ;
     rdfs:label "Device" ;
-    rdfs:comment """A physical/logical Home-Assistant device grouping one or more
-:Entity states (CONCEPT:KG-2.160).""" ;
+    rdfs:comment """A physical or logical device that groups one or more :Entity states.""" ;
     rdfs:subClassOf bfo:0000004 .
 
 :DnsRecord a owl:Class ;
@@ -66,7 +65,7 @@
 
 :Entity a owl:Class ;
     rdfs:label "Home Assistant Entity" ;
-    rdfs:comment """A Home-Assistant entity (entity_id + state + attributes) that is
+    rdfs:comment """A device-platform entity (entity_id + state + attributes) that is
 part_of a :Device (CONCEPT:KG-2.160).""" ;
     rdfs:subClassOf bfo:0000031 .
 
@@ -97,7 +96,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :OperatingSystem a owl:Class ;
     rdfs:label "Operating System" ;
-    rdfs:comment "The OS instance (e.g. Ubuntu) running on a :Host — the OS layer of the unified infrastructure model, producing CPU/mem/disk/load/update/log-error health signals." ;
+    rdfs:comment "The OS instance (e.g. Ubuntu) running on a kg:Machine — the OS layer of the unified infrastructure model, producing CPU/mem/disk/load/update/log-error health signals." ;
     rdfs:subClassOf bfo:0000004 .
 
 :PlatformService a owl:Class ;
@@ -107,23 +106,23 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :Tunnel a owl:Class ;
     rdfs:label "Tunnel" ;
-    rdfs:comment """An SSH/proxy tunnel a :Host connects via to reach an upstream
+    rdfs:comment """An SSH/proxy tunnel a kg:Machine connects via to reach an upstream
 (CONCEPT:KG-2.158).""" ;
     rdfs:subClassOf bfo:0000015 .
 
 :DeploymentWorkload a owl:Class ;
     rdfs:label "Deployment" ;
-    rdfs:comment "A Kubernetes Deployment: the :Workload controller that keeps a replica set of stateless :Pod replicas at its declared spec (producer: container-manager). EH-410: telemetry carrying its k8s.namespace.name + k8s.deployment.name binds to it as a :Workload." ;
+    rdfs:comment "A replicated-deployment controller: the :Workload controller that keeps a replica set of stateless :Pod replicas at its declared spec (producer: container-manager). EH-410: telemetry carrying its k8s.namespace.name + k8s.deployment.name binds to it as a :Workload." ;
     rdfs:subClassOf :Workload .
 
 :K8sService a owl:Class ;
     rdfs:label "Kubernetes Service" ;
-    rdfs:comment "A Kubernetes Service: the stable network identity in front of a set of :Pod replicas (producer: container-manager) -- a :Service of the service-health layer." ;
+    rdfs:comment "A cluster service: the stable network identity in front of a set of :Pod replicas (producer: container-manager) -- a :Service of the service-health layer." ;
     rdfs:subClassOf :Service .
 
 :SwarmService a owl:Class ;
     rdfs:label "Swarm Service" ;
-    rdfs:comment "A Docker Swarm service: a replicated container service with a routed virtual IP (producer: container-manager) -- a :Service of the service-health layer." ;
+    rdfs:comment "A replicated container service with a routed virtual IP (producer: container-manager) -- a :Service of the service-health layer." ;
     rdfs:subClassOf :Service .
 
 :Workload a owl:Class ;
@@ -133,11 +132,11 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :affectsEntity a owl:ObjectProperty ;
     rdfs:label "affects entity" ;
-    rdfs:comment "Links a :HealthTrend, :HealthBaseline, :HealthAnomaly, or kg:Incident to the entity it concerns — deliberately polymorphic (the entity may be a :Host, :Node, :Pod, :Workload, :Service, :Endpoint, :NetworkPath, :Tunnel, or :OperatingSystem, from any layer)." .
+    rdfs:comment "Links a :HealthTrend, :HealthBaseline, :HealthAnomaly, or kg:Incident to the entity it concerns — deliberately polymorphic (the entity may be a kg:Machine, :Node, :Pod, :Workload, :Service, :Endpoint, :NetworkPath, :Tunnel, or :OperatingSystem, from any layer)." .
 
 :attachedStorage a owl:ObjectProperty ;
     rdfs:label "attached storage" ;
-    rdfs:domain kg:HardwareNode ;
+    rdfs:domain kg:Machine ;
     rdfs:range :StorageArray .
 
 :avg a owl:DatatypeProperty ;
@@ -178,17 +177,17 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :connectedToFabric a owl:ObjectProperty ;
     rdfs:label "connected to fabric" ;
-    rdfs:domain kg:HardwareNode ;
+    rdfs:domain kg:Machine ;
     rdfs:range :FabricSwitch .
 
 :connects a owl:ObjectProperty ;
     rdfs:label "connects" ;
-    rdfs:comment "Links a :NetworkPath to each :Host (or :Tunnel) endpoint it traverses." ;
+    rdfs:comment "Links a :NetworkPath to each kg:Machine (or :Tunnel) endpoint it traverses." ;
     rdfs:domain :NetworkPath .
 
 :connectsVia a owl:ObjectProperty ;
     rdfs:label "connects via" ;
-    rdfs:domain kg:HardwareNode ;
+    rdfs:domain kg:Machine ;
     rdfs:range :VPNTunnel .
 
 :cooledBy a owl:ObjectProperty ;
@@ -258,13 +257,8 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :hasAccelerator a owl:ObjectProperty ;
     rdfs:label "has accelerator" ;
-    rdfs:domain kg:HardwareNode ;
-    rdfs:range :GPUAccelerator .
-
-:hasInterface a owl:ObjectProperty ;
-    rdfs:label "has interface" ;
-    rdfs:domain kg:HardwareNode ;
-    rdfs:range :NetworkInterface .
+    rdfs:domain kg:Machine ;
+    rdfs:range kg:Accelerator .
 
 :hasPhase a owl:ObjectProperty ;
     rdfs:label "has phase" ;
@@ -284,9 +278,9 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :isHost a owl:ObjectProperty ;
     rdfs:label "is host" ;
-    rdfs:comment "Links an orchestration :Node to the physical/reachable :Host it runs on." ;
+    rdfs:comment "Links an orchestration :Node to the physical/reachable kg:Machine it runs on." ;
     rdfs:domain :Node ;
-    rdfs:range :Host .
+    rdfs:range kg:Machine .
 
 :kind a owl:DatatypeProperty ;
     rdfs:label "kind" ;
@@ -336,7 +330,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 
 :mountedIn a owl:ObjectProperty ;
     rdfs:label "mounted in" ;
-    rdfs:domain kg:HardwareNode ;
+    rdfs:domain kg:Machine ;
     rdfs:range :Rack .
 
 :observed a owl:DatatypeProperty ;
@@ -406,7 +400,7 @@ part_of a :Device (CONCEPT:KG-2.160).""" ;
 :runsOn a owl:ObjectProperty ;
     rdfs:label "runs on" ;
     rdfs:comment "Links a container or service to its host hardware." ;
-    rdfs:range kg:HardwareNode .
+    rdfs:range kg:Machine .
 
 :runtime a owl:DatatypeProperty ;
     rdfs:label "container runtime" ;
@@ -467,7 +461,7 @@ to another (e.g., from direct container management to orchestrator-managed).""" 
 
 :vramGb a owl:DatatypeProperty ;
     rdfs:label "VRAM (GB)" ;
-    rdfs:domain :GPUAccelerator ;
+    rdfs:domain kg:Accelerator ;
     rdfs:range xsd:float .
 
 :windowS a owl:DatatypeProperty ;
@@ -488,32 +482,32 @@ to another (e.g., from direct container management to orchestrator-managed).""" 
 :temperatureCelsius a owl:DatatypeProperty ;
     rdfs:label "temperature (Celsius)" ;
     rdfs:comment "A host's current temperature reading in Celsius." ;
-    rdfs:domain :Host ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:decimal .
 
 :temperatureLimitCelsius a owl:DatatypeProperty ;
     rdfs:label "temperature limit (Celsius)" ;
     rdfs:comment "The declared ceiling a host's temperature must not exceed. The limit is stated as data on the host, never hard-coded in a query." ;
-    rdfs:domain :Host ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:decimal .
 
 :capacityUtilization a owl:DatatypeProperty ;
     rdfs:label "capacity utilization" ;
     rdfs:comment "A host's utilization of a declared capacity limit (disk, memory or cpu) as a fraction in [0,1]; 1 means the declared limit is reached." ;
-    rdfs:domain :Host ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:decimal .
 
 :capacityLimit a owl:DatatypeProperty ;
     rdfs:label "capacity limit" ;
     rdfs:comment "The declared capacity ceiling (disk, memory or cpu) a host's :capacityUtilization is measured against. The limit is stated as data on the host, never hard-coded in a query." ;
-    rdfs:domain :Host ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:decimal .
 
 :limitOf a owl:ObjectProperty ;
     rdfs:label "limit of" ;
     rdfs:comment "Links a HostLimit row to the host it constrains." ;
     rdfs:domain :HostLimit ;
-    rdfs:range :Host .
+    rdfs:range kg:Machine .
 
 :limitKind a owl:DatatypeProperty ;
     rdfs:label "limit kind" ;
@@ -566,12 +560,6 @@ BFO:GenericallyDependentContinuant.""" ;
     rdfs:comment "A network fabric switch (InfiniBand, RoCE, high-speed Ethernet)." ;
     rdfs:subClassOf bfo:0000030 .
 
-:Host a owl:Class ;
-    rdfs:label "Host" ;
-    rdfs:comment """A reachable host in the tunnel-manager inventory (an addressable compute
-node, possibly reached through a :Tunnel). CONCEPT:KG-2.158.""" ;
-    rdfs:subClassOf kg:HardwareNode .
-
 :HostLimit a owl:Class ;
     rdfs:label "Host Limit" ;
     rdfs:comment """One normalized (reading, limit) pair on a host: a virtual row, not stored
@@ -584,24 +572,19 @@ class exists (a stored breach would go stale between fetches).""" ;
     rdfs:comment "An agent exporting metrics to an observability stack." ;
     rdfs:subClassOf bfo:0000004 .
 
-:NetworkInterface a owl:Class ;
-    rdfs:label "Network Interface" ;
-    rdfs:comment "A host NIC with MAC/IP bindings." ;
-    rdfs:subClassOf bfo:0000004 .
-
 :NetworkPath a owl:Class ;
     rdfs:label "Network Path" ;
-    rdfs:comment "A measured route between two :Host (or :Tunnel endpoints) carrying reachability/RTT/packet-loss health signals (producer: tunnel-manager). BFO:Process — a path is traversed, not static." ;
+    rdfs:comment "A measured route between two kg:Machine (or :Tunnel endpoints) carrying reachability/RTT/packet-loss health signals (producer: the tunnel connector). BFO:Process — a path is traversed, not static." ;
     rdfs:subClassOf bfo:0000015 .
 
 :Node a owl:Class ;
     rdfs:label "Orchestration Node" ;
-    rdfs:comment "A cluster/orchestrator member (Kubernetes Node, Swarm node) — the orchestration-layer counterpart of a :Host, linked to it via :isHost." ;
-    rdfs:subClassOf kg:HardwareNode .
+    rdfs:comment "A cluster member: the orchestration-layer counterpart of a kg:Machine, linked to it via :isHost." ;
+    rdfs:subClassOf kg:ConfigurationItem .
 
 :Pod a owl:Class ;
     rdfs:label "Pod" ;
-    rdfs:comment "A scheduled group of one or more containers on a :Node (Kubernetes Pod or equivalent orchestrator unit); links to its :Node via :runsOn." ;
+    rdfs:comment "A scheduled group of one or more containers on a :Node (a cluster Pod or equivalent orchestrator unit); links to its :Node via :runsOn." ;
     rdfs:subClassOf bfo:0000004 .
 
 :PowerDistribution a owl:Class ;
@@ -632,13 +615,8 @@ class exists (a stored breach would go stale between fetches).""" ;
 :DeploymentPrerequisite a owl:Class ;
     rdfs:label "Deployment Prerequisite" ;
     rdfs:comment """A system-level dependency required before deployment can proceed
-(Docker Engine, Python, Git, etc.). BFO:IndependentContinuant.""" ;
+(a container engine, Python, Git, etc.). BFO:IndependentContinuant.""" ;
     rdfs:subClassOf bfo:0000004 .
-
-:GPUAccelerator a owl:Class ;
-    rdfs:label "GPU Accelerator" ;
-    rdfs:comment "A GPU or other hardware accelerator (FPGA, TPU, DPU)." ;
-    rdfs:subClassOf bfo:0000030 .
 
 :MCPServerDeployment a owl:Class ;
     rdfs:label "MCP Server Deployment" ;
@@ -664,7 +642,7 @@ network endpoint URL.""" ;
 
 :ContainerStack a owl:Class ;
     rdfs:label "Container Stack" ;
-    rdfs:comment "A logical grouping of containers (Compose stack, Swarm service, K8s Deployment)." ;
+    rdfs:comment "A logical grouping of containers (Compose stack, replicated service, cluster Deployment)." ;
     rdfs:subClassOf bfo:0000004 .
 
 :Service a owl:Class ;
@@ -679,7 +657,7 @@ network endpoint URL.""" ;
 
 :Container a owl:Class ;
     rdfs:label "Container" ;
-    rdfs:comment "A running container instance (Docker, Podman, containerd, CRI-O)." ;
+    rdfs:comment "A running container instance of an OCI runtime." ;
     rdfs:subClassOf bfo:0000004 .
 
 :DeploymentPhase a owl:Class ;
@@ -710,10 +688,10 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
 
 :serviceRunsOn a owl:ObjectProperty ;
     rdfs:label "runs on (service)" ;
-    rdfs:comment "Links an independently typed :Service record to the :Host it runs on. A source maps it only from a Service record, never from a container or pod path, so the supply-chain physical chain cannot retype an endpoint as a Service." ;
+    rdfs:comment "Links an independently typed :Service record to the kg:Machine it runs on. A source maps it only from a Service record, never from a container or pod path, so the supply-chain physical chain cannot retype an endpoint as a Service." ;
     rdfs:subPropertyOf :runsOn ;
     rdfs:domain :Service ;
-    rdfs:range :Host .
+    rdfs:range kg:Machine .
 
 :Namespace a owl:Class ;
     rdfs:label "Namespace" ;
@@ -792,9 +770,9 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
 
 :ranAgainstHost a owl:ObjectProperty ;
     rdfs:label "ran against host" ;
-    rdfs:comment "Links an Ansible Tower :AutomationJob run to the inventory :Host it ran against." ;
+    rdfs:comment "Links an Ansible Tower :AutomationJob run to the inventory kg:Machine it ran against." ;
     rdfs:domain :AutomationJob ;
-    rdfs:range :Host .
+    rdfs:range kg:Machine .
 
 :jobFromTemplate a owl:ObjectProperty ;
     rdfs:label "job from template" ;
@@ -887,14 +865,14 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
 
 :lastConnectionStatus a owl:DatatypeProperty ;
     rdfs:label "last connection status" ;
-    rdfs:comment "The outcome of the last remote connection to a :Host: ok or failed." ;
-    rdfs:domain :Host ;
+    rdfs:comment "The outcome of the last remote connection to a kg:Machine: ok or failed." ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:string .
 
 :lastConnectionError a owl:DatatypeProperty ;
     rdfs:label "last connection error" ;
-    rdfs:comment "The error text of the last failed remote connection to a :Host." ;
-    rdfs:domain :Host ;
+    rdfs:comment "The error text of the last failed remote connection to a kg:Machine." ;
+    rdfs:domain kg:Machine ;
     rdfs:range xsd:string .
 
 :stackInEnvironment a owl:ObjectProperty ;
@@ -939,7 +917,6 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
 # Every class of this module above reaches the core class kg:System through rdfs:subClassOf.
 <https://knuckles-team.github.io/ontology/infrastructure#BladeServer> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
-<https://knuckles-team.github.io/ontology/infrastructure#Host> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
 <https://knuckles-team.github.io/ontology/infrastructure#K8sService> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
 <https://knuckles-team.github.io/ontology/infrastructure#Node> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .
 <https://knuckles-team.github.io/ontology/infrastructure#Service> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#System> .

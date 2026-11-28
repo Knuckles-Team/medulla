@@ -21,7 +21,7 @@ The report types of `MEDULLA-CQ-XSRC-R006` and the served question types of `MED
 ## Ontology additions
 
 - `crates/medulla-core/ontology/supply_chain-v1.ttl`: `:Supplier` (subclass of `:Vendor`), `:SupplyChainItem`, `:suppliesItem`, `:SoftwareComponent`, `:ComponentVersion`, `:publishedBy`, `:Vulnerability`, `:affectsComponent`, `:usesComponent`, `:suppliesService` and `:serviceSupplier` (`MEDULLA-CQ-XSRC-R002` to `R004`).
-- `infrastructure-v1.ttl`: `:temperatureCelsius`, `:temperatureLimitCelsius` and `:capacityUtilization` on `:Host` (`MEDULLA-CQ-XSRC-R008.2.1`); the limits of disk, memory and cpu are `infra:HostLimit` rows (`MEDULLA-SUPPLY-VOCAB-R004.1`).
+- `infrastructure-v1.ttl`: `:temperatureCelsius`, `:temperatureLimitCelsius` and `:capacityUtilization` on `core:Machine` (`MEDULLA-CQ-XSRC-R008.2.1`); the limits of disk, memory and cpu are `infra:HostLimit` rows (`MEDULLA-SUPPLY-VOCAB-R004.1`).
 - `commercial-v1.ttl`: `:CustomerContract` and `:coversService` (`MEDULLA-CQ-XSRC-R008.3.1`); the canonical `kg:Change` is reused, no commercial `:ChangeRequest` is added.
 
 ## Request and response types

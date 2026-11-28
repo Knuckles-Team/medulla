@@ -1,5 +1,6 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix kg: <https://knuckles-team.github.io/ontology/core#> .
 @prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -114,12 +115,12 @@ xsaa:workload-portainer a vg:SourceAuthority ;
 
 xsaa:host-lgtm a vg:SourceAuthority ;
     vg:authoritativeSource xsaa:lgtm ;
-    vg:authorityFor infra:Host ;
+    vg:authorityFor kg:Machine ;
     vg:authorityRank 1 .
 
 xsaa:host-systems-manager a vg:SourceAuthority ;
     vg:authoritativeSource xsaa:systems-manager ;
-    vg:authorityFor infra:Host ;
+    vg:authorityFor kg:Machine ;
     vg:authorityRank 2 .
 
 # --- Business capabilities (LeanIX is the maintained catalogue, ArchiMate the

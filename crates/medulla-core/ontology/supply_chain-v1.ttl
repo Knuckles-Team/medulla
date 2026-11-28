@@ -35,9 +35,9 @@
 
 :assetHost a owl:ObjectProperty ;
     rdfs:label "asset host" ;
-    rdfs:comment "Links a deployed AssetInstance to the infrastructure Host it runs on. Asserted only through an approved owl:sameAs or a CMDB CI link." ;
+    rdfs:comment "Links a deployed AssetInstance to the Machine it runs on. Asserted only through an approved owl:sameAs or a CMDB CI link." ;
     rdfs:domain :AssetInstance ;
-    rdfs:range infra:Host .
+    rdfs:range :Machine .
 
 :SoftwareComponent a owl:Class ;
     rdfs:label "Software Component" ;

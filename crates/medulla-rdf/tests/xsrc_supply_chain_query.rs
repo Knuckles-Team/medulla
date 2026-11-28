@@ -118,7 +118,7 @@ fn seed_rows() -> Vec<SeedRow> {
     rows
 }
 
-/// The ontology IRI of a plan helper class shorthand (`infra:Host` style).
+/// The ontology IRI of a plan helper class shorthand (an `infra:` prefix, or a bare core local name).
 fn plan_class(class: &str) -> String {
     if let Some(local) = class.strip_prefix("infra:") {
         format!("{INFRA}{local}")
@@ -339,10 +339,10 @@ fn the_capability_host_limit_question_plans_to_exactly_the_named_sources() {
     }
     assert_no_connector_name(fixture, "R008.2.3");
     assert_fixture_parses(fixture);
-    let plan_fixture = plan_fixture_for(&["BusinessCapability", "infra:Workload", "infra:Host"]);
+    let plan_fixture = plan_fixture_for(&["BusinessCapability", "infra:Workload", "Machine"]);
     let (_, all) = plan_and_collect(
         &plan_fixture,
-        &["BusinessCapability", "infra:Workload", "infra:Host"],
+        &["BusinessCapability", "infra:Workload", "Machine"],
     );
     assert_eq!(
         all,
