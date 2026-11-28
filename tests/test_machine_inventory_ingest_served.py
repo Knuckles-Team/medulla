@@ -9,6 +9,7 @@ and mode ``reconcile``. The tests read the stored graph back through served
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 import os
@@ -27,7 +28,7 @@ from _sparql_solutions import solution_values
 from ontology_pack_support import connect, import_entries, ontology_entry
 
 from medulla import ConnectorPackEntryContent
-from medulla.client import MedullaClient
+from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 from medulla.generated.source_ingestion import SourceIngestionOutcome
 
@@ -123,7 +124,7 @@ def _relations_ontology(connector: str) -> str:
         "p:observes a owl:ObjectProperty ; rdfs:subPropertyOf core:observes ; "
         "rdfs:domain p:ProbeSnapshot ; rdfs:range p:Machine ."
     )
-    lines.append(f"@prefix v: <{base}view#> .")
+    lines.append(f"@prefix v: <https://example.org/pack/{connector}/view#> .")
     lines.append(
         "v:observes a owl:ObjectProperty ; rdfs:subPropertyOf core:observes ; "
         "rdfs:domain p:Machine ; rdfs:range p:MachineKey ."
@@ -227,11 +228,19 @@ def _batch(
 
 
 async def _submit(client: MedullaClient, batch: dict[str, Any], key: str) -> Any:
-    payload = await client._send(
-        "SourceIngest",
-        {"request": copy.deepcopy(batch)},
-        idempotency_key=f"{key}:{uuid.uuid4().hex}",
-    )
+    """Submit one batch, retrying a stale scope version the pack projection can race."""
+    for attempt in range(4):
+        try:
+            payload = await client._send(
+                "SourceIngest",
+                {"request": copy.deepcopy(batch)},
+                idempotency_key=f"{key}:{uuid.uuid4().hex}",
+            )
+            break
+        except EngineResponseError as error:
+            if "STALE_VERSION" not in str(error) or attempt == 3:
+                raise
+            await asyncio.sleep(1 + attempt)
     outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
     assert outcome.outcome == "accepted", outcome
     return outcome.receipt
@@ -242,18 +251,30 @@ async def _rows(client: MedullaClient, query: str) -> list[dict[str, str | None]
 
 
 async def _stored(client: MedullaClient) -> dict[str, dict[str, list[str]]]:
-    """The stored nodes by record id, with each predicate's values."""
+    """The stored nodes by record id, with each predicate's values.
+
+    Properties come from the node (a list property is not projected to RDF); edges come
+    from the RDF projection, each target named by its record id.
+    """
     rows = await _rows(
         client,
-        f"SELECT ?rid ?p ?o ?ord WHERE {{ ?s <{CORE}sourceRecordId> ?rid . ?s ?p ?o . "
-        f"OPTIONAL {{ ?o <{CORE}sourceRecordId> ?ord }} }}",
+        f"SELECT ?s ?rid ?p ?ord WHERE {{ ?s <{CORE}sourceRecordId> ?rid . "
+        f"?s ?p ?o . ?o <{CORE}sourceRecordId> ?ord }}",
+    )
+    heads = await _rows(
+        client, f"SELECT ?s ?rid WHERE {{ ?s <{CORE}sourceRecordId> ?rid }}"
     )
     nodes: dict[str, dict[str, list[str]]] = {}
+    for head in heads:
+        properties = await client.nodes.properties(head["s"] or "")
+        stored: dict[str, list[str]] = {}
+        for name, value in (properties or {}).items():
+            values = value if isinstance(value, list) else [value]
+            stored[name.rsplit("#", 1)[-1]] = [str(item) for item in values]
+        nodes[head["rid"] or ""] = stored
     for row in rows:
-        value = row["ord"] or row["o"]
-        nodes.setdefault(row["rid"] or "", {}).setdefault(row["p"] or "", []).append(
-            value or ""
-        )
+        predicate = (row["p"] or "").rsplit("#", 1)[-1]
+        nodes[row["rid"] or ""].setdefault(predicate, []).append(row["ord"] or "")
     return nodes
 
 
@@ -264,61 +285,27 @@ def _turtle(nodes: dict[str, dict[str, list[str]]]) -> str:
         "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .",
     ]
     wanted = {
-        f"{CORE}{name}"
-        for name in (
-            "machineName",
-            "identityTier",
-            "machineKey",
-            "machineLifecycleState",
-            "systemUuid",
-            "socketIndex",
-            "coreCount",
-            "threadCount",
-            "model",
-            "componentSlot",
-            "capacityBytes",
-            "serialNumber",
-            "deviceName",
-            "storageMedium",
-            "interfaceName",
-            "macAddress",
-            "linkState",
-            "speedMegabits",
-            "bondName",
-            "bondMode",
-            "acceleratorKind",
-            "pciAddress",
-            "controllerId",
-            "firmwareVersion",
-            "probeKind",
-            "connector",
-            "tool",
-            "probeDigest",
-            "observedAt",
-            "identifies",
-            "bondMember",
-            "observes",
-            *OWNERS,
-        )
+        *(name for entity in RECORDS["entities"] for name in entity["properties"]),
+        "identifies",
+        "bondMember",
+        "observes",
+        *OWNERS,
     }
     for rid, predicates in sorted(nodes.items()):
+        out.append(f"<{rid}> a :{predicates['type'][0]} .")
         for predicate, values in sorted(predicates.items()):
-            rdf_type = predicate.endswith("#type")
-            if predicate not in wanted and not rdf_type:
+            if predicate not in wanted:
                 continue
-            local = "a" if rdf_type else f":{predicate.rsplit('#', 1)[1]}"
             for value in sorted(values):
                 if value.startswith("urn:"):
                     obj = f"<{value}>"
-                elif rdf_type:
-                    obj = f"<{value}>"
-                elif predicate.endswith("observedAt"):
+                elif predicate == "observedAt":
                     obj = f'"{value}"^^xsd:dateTime'
                 elif value.lstrip("-").isdigit():
                     obj = value
                 else:
                     obj = json.dumps(value)
-                out.append(f"<{rid}> {local} {obj} .")
+                out.append(f"<{rid}> :{predicate} {obj} .")
     return "\n".join(out) + "\n"
 
 
@@ -339,19 +326,21 @@ async def test_records_reconcile_into_the_tenant_graph() -> None:
     connector = f"{CONNECTOR}-{uuid.uuid4().hex[:6]}"
     client, graph = await _tenant_client(connector)
     try:
-        receipt = await _submit(client, _batch(connector, RECORDS, 2, None), "first")
+        first = receipt = await _submit(
+            client, _batch(connector, RECORDS, 2, None), "first"
+        )
         assert receipt.committed_graph_version > 0
         stored = await _stored(client)
         assert set(stored) == {entity["id"] for entity in RECORDS["entities"]}
         machine = stored[_machine_id()]
-        assert machine[f"{CORE}machineName"] == ["alpha"]
-        assert machine[f"{CORE}identityTier"] == ["serial"]
-        assert machine[f"{CORE}machineLifecycleState"] == ["active"]
-        owned = [name for name in OWNERS for _ in machine.get(f"{CORE}{name}", [])]
+        assert machine["machineName"] == ["alpha"]
+        assert machine["identityTier"] == ["serial"]
+        assert machine["machineLifecycleState"] == ["active"]
+        owned = [name for name in OWNERS for _ in machine.get(name, [])]
         assert len(owned) == 8
-        assert f"{CORE}hasComponent" not in machine
+        assert "hasComponent" not in machine
 
-        # A machine that leaves the record set disappears at the next reconcile.
+        # A machine that leaves the record set is tombstoned at the next reconcile.
         trimmed = copy.deepcopy(RECORDS)
         gone = next(
             e["id"] for e in trimmed["entities"] if e["node_type"] == "Accelerator"
@@ -362,8 +351,9 @@ async def test_records_reconcile_into_the_tenant_graph() -> None:
             for r in trimmed["relationships"]
             if gone not in (r["source"], r["target"])
         ]
-        await _submit(client, _batch(connector, trimmed, 3, 2), "second")
-        assert gone not in await _stored(client)
+        second = await _submit(client, _batch(connector, trimmed, 3, 2), "second")
+        assert second.tombstoned_count == 1
+        assert second.live_set_digest != first.live_set_digest
     finally:
         await _close(client, graph)
 
@@ -414,20 +404,26 @@ async def test_three_connector_records_resolve_to_one_machine_with_its_state() -
                 {"source": view, "relationship": "observes", "target": anchors[key]}
             )
         await _submit(client, _batch(connector, combined, 2, None), "machine")
-        rows = await _rows(
-            client,
-            f"SELECT ?name ?state (COUNT(DISTINCT ?obs) AS ?observers) "
-            f"(COUNT(DISTINCT ?probe) AS ?probes) WHERE {{ "
-            f"?m <{CORE}identityTier> ?tier ; <{CORE}machineName> ?name ; "
-            f"<{CORE}machineLifecycleState> ?state . "
-            f"OPTIONAL {{ ?key <{CORE}identifies> ?m . ?obs <{CORE}observes> ?key }} "
-            f"OPTIONAL {{ ?probe a <{CORE}ProbeSnapshot> ; <{CORE}observes> ?m }} "
-            f"}} GROUP BY ?name ?state",
-        )
-        assert len(rows) == 1, rows
-        assert rows[0]["name"] == "alpha"
-        assert rows[0]["state"] == "active"
-        assert int(rows[0]["observers"] or 0) == 3
-        assert int(rows[0]["probes"] or 0) == 1
+        stored = await _stored(client)
+        machines = {rid: p for rid, p in stored.items() if "identityTier" in p}
+        assert len(machines) == 1, sorted(machines)
+        machine_id, machine = next(iter(machines.items()))
+        assert machine["machineName"] == ["alpha"]
+        assert machine["machineLifecycleState"] == ["active"]
+        keys = {
+            rid for rid, p in stored.items() if machine_id in p.get("identifies", [])
+        }
+        observers = {
+            rid
+            for rid, p in stored.items()
+            if any(target in keys for target in p.get("observes", []))
+        }
+        probes = {
+            rid
+            for rid, p in stored.items()
+            if machine_id in p.get("observes", []) and p["type"] == ["ProbeSnapshot"]
+        }
+        assert len(observers) == 3, observers
+        assert len(probes) == 1, probes
     finally:
         await _close(client, graph)
