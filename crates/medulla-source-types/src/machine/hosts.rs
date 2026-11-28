@@ -13,10 +13,12 @@ use std::net::IpAddr;
 use serde::{Deserialize, Serialize};
 use serde_yaml_ng::Value;
 
-use super::identity::{normalize_key, MachineKeyKind};
 use super::identity::MachineKey;
+use super::identity::{normalize_key, MachineKeyKind};
 use super::lifecycle::MachineLifecycleState;
-use super::records::{canonical_digest, canonical_text, machine_entity, InventoryEntity, MachineShapeRefused};
+use super::records::{
+    canonical_digest, canonical_text, machine_entity, InventoryEntity, MachineShapeRefused,
+};
 
 /// The schema tag of a hosts file.
 pub const HOSTS_FILE_SCHEMA: &str = "hosts/v1";
@@ -199,8 +201,8 @@ fn child(pointer: &str, token: &str) -> String {
 
 /// Parse and validate a hosts file.
 pub fn parse_hosts_file(yaml: &str) -> Result<HostsFile, HostsFileRefused> {
-    let root: Value = serde_yaml_ng::from_str(yaml)
-        .map_err(|_| Refusal::at(Reason::MalformedYaml, ""))?;
+    let root: Value =
+        serde_yaml_ng::from_str(yaml).map_err(|_| Refusal::at(Reason::MalformedYaml, ""))?;
     reject_secret_keys(&root, "")?;
     validate_root(&root)?;
     serde_yaml_ng::from_value(root).map_err(|_| Refusal::at(Reason::MalformedYaml, ""))
@@ -235,7 +237,11 @@ fn mapping<'a>(value: &'a Value, pointer: &str) -> Result<&'a serde_yaml_ng::Map
         .ok_or_else(|| Refusal::at(Reason::MalformedYaml, pointer))
 }
 
-fn check_keys(map: &serde_yaml_ng::Mapping, allowed: &[&str], pointer: &str) -> Result<(), Refusal> {
+fn check_keys(
+    map: &serde_yaml_ng::Mapping,
+    allowed: &[&str],
+    pointer: &str,
+) -> Result<(), Refusal> {
     for key in map.keys() {
         let name = key.as_str().unwrap_or_default();
         if !allowed.contains(&name) {
@@ -285,7 +291,10 @@ fn validate_host(host: &Value, pointer: &str, seen: &mut BTreeSet<String>) -> Re
     validate_pins(map.get("identity"), &child(pointer, "identity"))?;
     match map.get("retired") {
         None | Some(Value::Bool(_)) => Ok(()),
-        Some(_) => Err(Refusal::at(Reason::MalformedYaml, &child(pointer, "retired"))),
+        Some(_) => Err(Refusal::at(
+            Reason::MalformedYaml,
+            &child(pointer, "retired"),
+        )),
     }
 }
 
@@ -326,7 +335,10 @@ fn validate_addresses(map: &serde_yaml_ng::Mapping, pointer: &str) -> Result<(),
             for (index, item) in items.iter().enumerate() {
                 let good = item.as_str().is_some_and(valid_address);
                 if !good {
-                    return Err(Refusal::at(Reason::BadAddress, &child(&list_pointer, &index.to_string())));
+                    return Err(Refusal::at(
+                        Reason::BadAddress,
+                        &child(&list_pointer, &index.to_string()),
+                    ));
                 }
             }
         }
@@ -335,7 +347,10 @@ fn validate_addresses(map: &serde_yaml_ng::Mapping, pointer: &str) -> Result<(),
     match map.get("management_address") {
         None => Ok(()),
         Some(value) if value.as_str().is_some_and(valid_address) => Ok(()),
-        Some(_) => Err(Refusal::at(Reason::BadAddress, &child(pointer, "management_address"))),
+        Some(_) => Err(Refusal::at(
+            Reason::BadAddress,
+            &child(pointer, "management_address"),
+        )),
     }
 }
 
@@ -354,7 +369,10 @@ fn validate_labels(value: Option<&Value>, pointer: &str) -> Result<(), Refusal> 
         Some(Value::Sequence(items)) => {
             for (index, item) in items.iter().enumerate() {
                 if !item.as_str().is_some_and(valid_label) {
-                    return Err(Refusal::at(Reason::BadRole, &child(pointer, &index.to_string())));
+                    return Err(Refusal::at(
+                        Reason::BadRole,
+                        &child(pointer, &index.to_string()),
+                    ));
                 }
             }
             Ok(())
@@ -368,10 +386,13 @@ fn valid_reference(text: &str) -> bool {
     let Some((scheme, rest)) = text.split_once("://") else {
         return false;
     };
-    let scheme_ok = scheme.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
-        && scheme
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'+' | b'.' | b'-'));
+    let scheme_ok = scheme
+        .as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_lowercase)
+        && scheme.bytes().all(|b| {
+            b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'+' | b'.' | b'-')
+        });
     scheme_ok && !rest.is_empty() && !rest.chars().any(char::is_whitespace)
 }
 
@@ -468,7 +489,11 @@ pub struct NormalizedHosts {
 }
 
 fn sorted_unique<I: IntoIterator<Item = String>>(items: I) -> Vec<String> {
-    items.into_iter().collect::<BTreeSet<_>>().into_iter().collect()
+    items
+        .into_iter()
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
 }
 
 fn pin(kind: MachineKeyKind, raw: &Option<String>) -> Option<String> {
@@ -519,14 +544,23 @@ pub fn normalize_hosts_file(yaml: &str) -> Result<NormalizedHosts, HostsFileRefu
 impl NormalizedHost {
     /// The identity keys of the host: its pins and its name.
     pub fn keys(&self) -> Vec<MachineKey> {
-        let mut keys = vec![MachineKey { kind: MachineKeyKind::Hostname, value: self.name.clone() }];
+        let mut keys = vec![MachineKey {
+            kind: MachineKeyKind::Hostname,
+            value: self.name.clone(),
+        }];
         let pins = [
             (MachineKeyKind::SystemUuid, &self.identity.system_uuid),
             (MachineKeyKind::SystemSerial, &self.identity.system_serial),
-            (MachineKeyKind::ManagementControllerId, &self.identity.management_mac),
+            (
+                MachineKeyKind::ManagementControllerId,
+                &self.identity.management_mac,
+            ),
         ];
         keys.extend(pins.into_iter().filter_map(|(kind, value)| {
-            value.as_ref().map(|value| MachineKey { kind, value: value.clone() })
+            value.as_ref().map(|value| MachineKey {
+                kind,
+                value: value.clone(),
+            })
         }));
         keys
     }
@@ -599,7 +633,9 @@ schema: hosts/v1
     }
 
     fn one_host(extra: &str) -> String {
-        format!("schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: [alpha.example]\n{extra}")
+        format!(
+            "schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: [alpha.example]\n{extra}"
+        )
     }
 
     // spec: MEDULLA-MACHINE-R006.1
@@ -607,20 +643,59 @@ schema: hosts/v1
     fn each_refusal_reason_has_a_fixture_and_never_echoes_the_value() {
         use HostsFileRefusalReason as R;
         let cases: [(R, String, &str); 11] = [
-            (R::SchemaVersion, "schema: hosts/v2\nhosts: []\n".into(), "/schema"),
-            (R::UnknownField, one_host("    flavour: cherry\n"), "/hosts/0/flavour"),
+            (
+                R::SchemaVersion,
+                "schema: hosts/v2\nhosts: []\n".into(),
+                "/schema",
+            ),
+            (
+                R::UnknownField,
+                one_host("    flavour: cherry\n"),
+                "/hosts/0/flavour",
+            ),
             (
                 R::DuplicateName,
-                format!("{}  - name: alpha\n    addresses: [b.example]\n", one_host("")),
+                format!(
+                    "{}  - name: alpha\n    addresses: [b.example]\n",
+                    one_host("")
+                ),
                 "/hosts/1/name",
             ),
-            (R::BadName, "schema: hosts/v1\nhosts:\n  - name: Al_pha\n    addresses: [a.example]\n".into(), "/hosts/0/name"),
-            (R::NoAddress, "schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: []\n".into(), "/hosts/0/addresses"),
-            (R::BadAddress, "schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: [not_a_host!]\n".into(), "/hosts/0/addresses/0"),
-            (R::BadReference, one_host("    credentials:\n      ssh: no-scheme-here\n"), "/hosts/0/credentials/ssh"),
-            (R::BadRole, one_host("    roles: [Bad_Role]\n"), "/hosts/0/roles/0"),
-            (R::SecretField, one_host("    credentials:\n      password: hunter2-secret-value\n"), "/hosts/0/credentials/password"),
-            (R::EmptyHosts, "schema: hosts/v1\nhosts: []\n".into(), "/hosts"),
+            (
+                R::BadName,
+                "schema: hosts/v1\nhosts:\n  - name: Al_pha\n    addresses: [a.example]\n".into(),
+                "/hosts/0/name",
+            ),
+            (
+                R::NoAddress,
+                "schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: []\n".into(),
+                "/hosts/0/addresses",
+            ),
+            (
+                R::BadAddress,
+                "schema: hosts/v1\nhosts:\n  - name: alpha\n    addresses: [not_a_host!]\n".into(),
+                "/hosts/0/addresses/0",
+            ),
+            (
+                R::BadReference,
+                one_host("    credentials:\n      ssh: no-scheme-here\n"),
+                "/hosts/0/credentials/ssh",
+            ),
+            (
+                R::BadRole,
+                one_host("    roles: [Bad_Role]\n"),
+                "/hosts/0/roles/0",
+            ),
+            (
+                R::SecretField,
+                one_host("    credentials:\n      password: hunter2-secret-value\n"),
+                "/hosts/0/credentials/password",
+            ),
+            (
+                R::EmptyHosts,
+                "schema: hosts/v1\nhosts: []\n".into(),
+                "/hosts",
+            ),
             (R::MalformedYaml, "schema: [unclosed\n".into(), ""),
         ];
         for (reason, yaml, pointer) in cases {
@@ -629,12 +704,20 @@ schema: hosts/v1
             assert_eq!(error.pointer, pointer, "{yaml}");
             assert_eq!(error.code, "HOSTS_FILE_INVALID");
             let record = serde_json::to_string(&error).unwrap();
-            for echoed in ["hunter2-secret-value", "not_a_host!", "Al_pha", "no-scheme-here", "Bad_Role", "cherry"] {
+            for echoed in [
+                "hunter2-secret-value",
+                "not_a_host!",
+                "Al_pha",
+                "no-scheme-here",
+                "Bad_Role",
+                "cherry",
+            ] {
                 let mentioned = record.contains(echoed) && !pointer.contains(echoed);
                 assert!(!mentioned, "{reason:?} echoes {echoed}");
             }
         }
-        let secret_deep = one_host("    identity:\n      system_serial: x\n    labels:\n      - api_key: abcd\n");
+        let secret_deep =
+            one_host("    identity:\n      system_serial: x\n    labels:\n      - api_key: abcd\n");
         assert_eq!(refusal(&secret_deep).reason, R::SecretField);
         assert!(refusal("- just\n- a list\n").reason == R::MalformedYaml);
     }
@@ -648,7 +731,10 @@ schema: hosts/v1
             management_address: Some("m.example".into()),
             roles: vec!["r".into()],
             groups: vec!["g".into()],
-            credentials: Some(HostCredentials { ssh: Some("v://x".into()), management: Some("v://y".into()) }),
+            credentials: Some(HostCredentials {
+                ssh: Some("v://x".into()),
+                management: Some("v://y".into()),
+            }),
             identity: Some(HostIdentityPins {
                 system_uuid: Some("u".into()),
                 system_serial: Some("s".into()),
@@ -656,7 +742,10 @@ schema: hosts/v1
             }),
             retired: Some(false),
         };
-        let file = HostsFile { schema: HOSTS_FILE_SCHEMA.into(), hosts: vec![host] };
+        let file = HostsFile {
+            schema: HOSTS_FILE_SCHEMA.into(),
+            hosts: vec![host],
+        };
         let json = serde_json::to_value(&file).unwrap();
         let keys = |v: &serde_json::Value| -> Vec<String> {
             let mut keys: Vec<String> = v.as_object().unwrap().keys().cloned().collect();
@@ -675,11 +764,15 @@ schema: hosts/v1
         let mut identity_keys = IDENTITY_KEYS.map(String::from).to_vec();
         identity_keys.sort();
         assert_eq!(keys(&json["hosts"][0]["identity"]), identity_keys);
-        assert!(serde_json::from_str::<HostsFile>(r#"{"schema":"hosts/v1","hosts":[],"x":1}"#).is_err());
+        assert!(
+            serde_json::from_str::<HostsFile>(r#"{"schema":"hosts/v1","hosts":[],"x":1}"#).is_err()
+        );
         #[cfg(feature = "contract-schema")]
         {
             let schema = serde_json::to_value(schemars::schema_for!(HostsFile)).unwrap();
-            let defs = schema["$defs"]["HostEntry"]["properties"].as_object().unwrap();
+            let defs = schema["$defs"]["HostEntry"]["properties"]
+                .as_object()
+                .unwrap();
             let mut fields: Vec<String> = defs.keys().cloned().collect();
             fields.sort();
             assert_eq!(fields, host_keys);
@@ -691,7 +784,10 @@ schema: hosts/v1
     fn two_orderings_of_one_file_normalize_to_identical_bytes() {
         let first = normalize_hosts_file(VALID).unwrap();
         let second = normalize_hosts_file(VALID_REORDERED).unwrap();
-        let (a, b) = (normalized_hosts_json(&first), normalized_hosts_json(&second));
+        let (a, b) = (
+            normalized_hosts_json(&first),
+            normalized_hosts_json(&second),
+        );
         assert_eq!(a, b);
         assert_eq!(hosts_digest(&first), hosts_digest(&second));
         assert!(hosts_digest(&first).starts_with("sha256:"));
@@ -703,8 +799,14 @@ schema: hosts/v1
         assert_eq!(alpha.credentials.ssh, None);
         let beta = &first.hosts[1];
         assert_eq!(beta.addresses, ["10.0.0.2", "beta.example"]);
-        assert_eq!(beta.identity.system_uuid.as_deref(), Some("123e4567-e89b-12d3-a456-426614174000"));
-        assert_eq!(beta.identity.management_mac.as_deref(), Some("aa:bb:cc:dd:ee:01"));
+        assert_eq!(
+            beta.identity.system_uuid.as_deref(),
+            Some("123e4567-e89b-12d3-a456-426614174000")
+        );
+        assert_eq!(
+            beta.identity.management_mac.as_deref(),
+            Some("aa:bb:cc:dd:ee:01")
+        );
         assert!(a.contains("\"system_serial\":null"));
     }
     // spec: MEDULLA-MACHINE-R006.2
@@ -715,7 +817,10 @@ schema: hosts/v1
         for host in &hosts.hosts {
             let entity = host_machine_entity("tenant-1", host, MachineLifecycleState::Commissioned)
                 .unwrap_or_else(|e| panic!("{} is refused: {e}", host.name));
-            assert_eq!(entity.properties["machineName"], crate::machine::records::PropertyValue::Text(host.name.clone()));
+            assert_eq!(
+                entity.properties["machineName"],
+                crate::machine::records::PropertyValue::Text(host.name.clone())
+            );
             // The same host in another tenant is another machine only through the host name key.
             assert!(entity.id.starts_with("urn:machine:"));
         }

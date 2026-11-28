@@ -289,7 +289,13 @@ pub fn transition_id(machine_iri: &str, edge_id: &str, evidence_digest: &str) ->
 }
 
 /// The five stored lifecycle states, as the machine shape lists them.
-const STORED_STATES: [&str; 5] = ["commissioned", "active", "draining", "maintenance", "retired"];
+const STORED_STATES: [&str; 5] = [
+    "commissioned",
+    "active",
+    "draining",
+    "maintenance",
+    "retired",
+];
 
 /// A record that would fail its shape in the engine. The messages carry the wording of the
 /// `:MachineShape` constraint that the record would break.
@@ -328,7 +334,9 @@ fn is_machine_iri(id: &str) -> bool {
     };
     MachineKeyKind::from_tag(tier).is_some()
         && digest.len() == 32
-        && digest.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+        && digest
+            .bytes()
+            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
 /// Check one `Machine` entity against the constraints of `:MachineShape`; every other entity
@@ -340,30 +348,46 @@ pub fn check_machine(entity: &InventoryEntity) -> Result<(), MachineShapeRefused
     let id = entity.id.as_str();
     let props = &entity.properties;
     if !is_machine_iri(id) {
-        return Err(refused(id, "A canonical machine is an IRI of the form urn:machine:<tier>:<32 hex digits>."));
+        return Err(refused(
+            id,
+            "A canonical machine is an IRI of the form urn:machine:<tier>:<32 hex digits>.",
+        ));
     }
     let names = texts(props, "machineName").unwrap_or_default();
     if names.len() != 1 || names[0].is_empty() {
-        return Err(refused(id, "A machine has exactly one non-empty :machineName."));
+        return Err(refused(
+            id,
+            "A machine has exactly one non-empty :machineName.",
+        ));
     }
     let tiers = texts(props, "identityTier").unwrap_or_default();
     if tiers.len() != 1 || MachineKeyKind::from_tag(&tiers[0]).is_none() {
-        return Err(refused(id, "A machine has exactly one :identityTier: uuid, serial, bmc or host."));
+        return Err(refused(
+            id,
+            "A machine has exactly one :identityTier: uuid, serial, bmc or host.",
+        ));
     }
     let keys = texts(props, "machineKey").unwrap_or_default();
     let well_formed = |key: &String| {
-        key.split_once(':')
-            .is_some_and(|(kind, value)| MachineKeyKind::from_tag(kind).is_some() && !value.is_empty())
+        key.split_once(':').is_some_and(|(kind, value)| {
+            MachineKeyKind::from_tag(kind).is_some() && !value.is_empty()
+        })
     };
     if keys.is_empty() || !keys.iter().all(well_formed) {
-        return Err(refused(id, "A machine has at least one :machineKey of the form <kind>:<value>."));
+        return Err(refused(
+            id,
+            "A machine has at least one :machineKey of the form <kind>:<value>.",
+        ));
     }
     if texts(props, "systemUuid").map_or(true, |uuids| uuids.len() > 1) {
         return Err(refused(id, "A machine has at most one :systemUuid."));
     }
     let states = texts(props, MACHINE_LIFECYCLE_STATE_PROPERTY).unwrap_or_default();
     if states.len() != 1 || !STORED_STATES.contains(&states[0].as_str()) {
-        return Err(refused(id, "A machine has exactly one :machineLifecycleState of the five stored states."));
+        return Err(refused(
+            id,
+            "A machine has exactly one :machineLifecycleState of the five stored states.",
+        ));
     }
     Ok(())
 }
@@ -382,7 +406,10 @@ pub fn machine_entity(
         .filter_map(|candidate| normalize_key(candidate.kind, &candidate.value).ok())
         .collect();
     let Some(chosen) = select_key(&valid) else {
-        return Err(refused(name, "A machine has at least one :machineKey of the form <kind>:<value>."));
+        return Err(refused(
+            name,
+            "A machine has at least one :machineKey of the form <kind>:<value>.",
+        ));
     };
     let mut keys: Vec<String> = valid
         .iter()
@@ -391,11 +418,23 @@ pub fn machine_entity(
     keys.sort();
     keys.dedup();
     let mut properties = BTreeMap::new();
-    properties.insert("machineName".to_string(), PropertyValue::Text(name.to_string()));
-    properties.insert("identityTier".to_string(), PropertyValue::Text(chosen.kind.tag().to_string()));
+    properties.insert(
+        "machineName".to_string(),
+        PropertyValue::Text(name.to_string()),
+    );
+    properties.insert(
+        "identityTier".to_string(),
+        PropertyValue::Text(chosen.kind.tag().to_string()),
+    );
     properties.insert("machineKey".to_string(), PropertyValue::List(keys));
-    if let Some(uuid) = valid.iter().find(|key| key.kind == MachineKeyKind::SystemUuid) {
-        properties.insert("systemUuid".to_string(), PropertyValue::Text(uuid.value.clone()));
+    if let Some(uuid) = valid
+        .iter()
+        .find(|key| key.kind == MachineKeyKind::SystemUuid)
+    {
+        properties.insert(
+            "systemUuid".to_string(),
+            PropertyValue::Text(uuid.value.clone()),
+        );
     }
     properties.insert(
         MACHINE_LIFECYCLE_STATE_PROPERTY.to_string(),
@@ -448,7 +487,9 @@ impl InventoryRecordSet {
                 if count != 1 {
                     return Err(refused(
                         &entity.id,
-                        &format!("A part is the object of exactly one :{owner}: this part has {count}."),
+                        &format!(
+                            "A part is the object of exactly one :{owner}: this part has {count}."
+                        ),
                     ));
                 }
             }
@@ -457,7 +498,10 @@ impl InventoryRecordSet {
         for relationship in &self.relationships {
             let name = relationship.relationship.as_str();
             if !OTHERS.contains(&name) && !owners.iter().any(|(_, owner)| *owner == name) {
-                return Err(refused(&relationship.source, &format!("The relationship {name} is not declared.")));
+                return Err(refused(
+                    &relationship.source,
+                    &format!("The relationship {name} is not declared."),
+                ));
             }
         }
         Ok(())
@@ -497,7 +541,10 @@ pub fn component_ids(
                 .natural_key_properties()
                 .iter()
                 .find_map(|name| natural_text(part, name));
-            let key = named.or_else(|| kind.has_ordinal().then(|| format!("ordinal:{}", ordinal[index])));
+            let key = named.or_else(|| {
+                kind.has_ordinal()
+                    .then(|| format!("ordinal:{}", ordinal[index]))
+            });
             key.map(|key| component_id(machine_iri, kind, &key))
         })
         .collect()
@@ -546,11 +593,23 @@ mod tests {
                     ),
                 ],
             ),
-            entity("urn:machine-key:host:bb", "MachineKey", &[("machineKey", text("host:alpha"))]),
+            entity(
+                "urn:machine-key:host:bb",
+                "MachineKey",
+                &[("machineKey", text("host:alpha"))],
+            ),
         ];
         set.relationships = vec![
-            relationship("urn:machine-key:host:bb", "identifies", "urn:machine:serial:aa"),
-            relationship("urn:machine:serial:aa", "hasProcessor", "urn:machine-part:cc"),
+            relationship(
+                "urn:machine-key:host:bb",
+                "identifies",
+                "urn:machine:serial:aa",
+            ),
+            relationship(
+                "urn:machine:serial:aa",
+                "hasProcessor",
+                "urn:machine-part:cc",
+            ),
         ];
         set
     }
@@ -562,8 +621,10 @@ mod tests {
         let mut second = sample();
         second.entities.reverse();
         second.relationships.reverse();
-        if let Some(PropertyValue::List(items)) =
-            second.entities.iter_mut().find_map(|e| e.properties.get_mut("machineRole"))
+        if let Some(PropertyValue::List(items)) = second
+            .entities
+            .iter_mut()
+            .find_map(|e| e.properties.get_mut("machineRole"))
         {
             items.reverse();
         }
@@ -583,7 +644,10 @@ mod tests {
                 r#""target":"urn:machine-part:cc"}],"schema":"inventory-records/v1"}"#
             )
         );
-        assert_eq!(canonical_digest(bytes.as_bytes()), canonical_digest(canonical_json(&second).as_bytes()));
+        assert_eq!(
+            canonical_digest(bytes.as_bytes()),
+            canonical_digest(canonical_json(&second).as_bytes())
+        );
         assert!(canonical_digest(b"").starts_with("sha256:e3b0c44298fc1c14"));
         assert_eq!(canonical_digest(b"abc").len(), 71);
     }
@@ -591,7 +655,8 @@ mod tests {
     // spec: MEDULLA-MACHINE-R006.3
     #[test]
     fn canonical_text_sorts_keys_at_every_depth_and_escapes_text() {
-        let value = serde_json::json!({"b": {"z": 1, "a": [{"y": true, "x": null}]}, "a": "q\"\n\u{e9}"});
+        let value =
+            serde_json::json!({"b": {"z": 1, "a": [{"y": true, "x": null}]}, "a": "q\"\n\u{e9}"});
         assert_eq!(
             canonical_text(&value),
             "{\"a\":\"q\\\"\\n\u{e9}\",\"b\":{\"a\":[{\"x\":null,\"y\":true}],\"z\":1}}"
@@ -635,47 +700,98 @@ mod tests {
             }
             part
         };
-        let parts = [nic(Some("aa:bb:cc:dd:ee:01"), Some("eth0")), nic(None, Some("eth1")), nic(None, None)];
+        let parts = [
+            nic(Some("aa:bb:cc:dd:ee:01"), Some("eth0")),
+            nic(None, Some("eth1")),
+            nic(None, None),
+        ];
         let ids = component_ids(machine, ComponentKind::Nic, &parts);
-        assert_eq!(ids[0], Some(component_id(machine, ComponentKind::Nic, "aa:bb:cc:dd:ee:01")));
-        assert_eq!(ids[1], Some(component_id(machine, ComponentKind::Nic, "eth1")));
+        assert_eq!(
+            ids[0],
+            Some(component_id(
+                machine,
+                ComponentKind::Nic,
+                "aa:bb:cc:dd:ee:01"
+            ))
+        );
+        assert_eq!(
+            ids[1],
+            Some(component_id(machine, ComponentKind::Nic, "eth1"))
+        );
         // `{}` sorts after `{"..."`, so the empty record is ordinal 2.
-        assert_eq!(ids[2], Some(component_id(machine, ComponentKind::Nic, "ordinal:2")));
+        assert_eq!(
+            ids[2],
+            Some(component_id(machine, ComponentKind::Nic, "ordinal:2"))
+        );
         let bond = component_ids(machine, ComponentKind::Bond, &[BTreeMap::new()]);
         assert_eq!(bond, vec![None]);
-        let cpu = component_ids(machine, ComponentKind::Processor, &[BTreeMap::new(), BTreeMap::new()]);
+        let cpu = component_ids(
+            machine,
+            ComponentKind::Processor,
+            &[BTreeMap::new(), BTreeMap::new()],
+        );
         assert_eq!(cpu.len(), 2);
         assert_eq!(ComponentKind::from_tag("nic"), Some(ComponentKind::Nic));
         assert_eq!(ComponentKind::from_tag("gpu"), None);
     }
     fn uuid_key() -> MachineKey {
-        MachineKey { kind: MachineKeyKind::SystemUuid, value: "4c4c4544-0042-3510-8051-b8c04f4d4e32".into() }
+        MachineKey {
+            kind: MachineKeyKind::SystemUuid,
+            value: "4c4c4544-0042-3510-8051-b8c04f4d4e32".into(),
+        }
     }
 
     fn host_key(name: &str) -> MachineKey {
-        MachineKey { kind: MachineKeyKind::Hostname, value: name.into() }
+        MachineKey {
+            kind: MachineKeyKind::Hostname,
+            value: name.into(),
+        }
     }
 
     // spec: MEDULLA-MACHINE-R006.3
     #[test]
     fn a_built_machine_passes_the_machine_shape_and_an_unshaped_one_is_refused() {
-        let built = machine_entity("t1", "alpha", &[host_key("alpha"), uuid_key()], MachineLifecycleState::Commissioned)
-            .expect("a machine with a valid key is produced");
+        let built = machine_entity(
+            "t1",
+            "alpha",
+            &[host_key("alpha"), uuid_key()],
+            MachineLifecycleState::Commissioned,
+        )
+        .expect("a machine with a valid key is produced");
         assert!(built.id.starts_with("urn:machine:uuid:"));
         assert_eq!(built.properties["identityTier"], text("uuid"));
-        assert_eq!(built.properties["machineLifecycleState"], text("commissioned"));
+        assert_eq!(
+            built.properties["machineLifecycleState"],
+            text("commissioned")
+        );
         assert!(check_machine(&built).is_ok());
         // No valid key: the placeholder uuid is not a key.
-        let placeholder = MachineKey { kind: MachineKeyKind::SystemUuid, value: "00000000-0000-0000-0000-000000000000".into() };
-        let refused = machine_entity("t1", "alpha", &[placeholder], MachineLifecycleState::Active).unwrap_err();
+        let placeholder = MachineKey {
+            kind: MachineKeyKind::SystemUuid,
+            value: "00000000-0000-0000-0000-000000000000".into(),
+        };
+        let refused = machine_entity("t1", "alpha", &[placeholder], MachineLifecycleState::Active)
+            .unwrap_err();
         assert!(refused.message.contains("at least one :machineKey"));
         // Each constraint of the shape refuses its own violation.
         let broken: [(&str, PropertyValue, &str); 5] = [
             ("machineName", text(""), "non-empty :machineName"),
             ("identityTier", text("rack"), ":identityTier"),
-            ("machineKey", PropertyValue::List(vec!["serial".into()]), "<kind>:<value>"),
-            ("systemUuid", PropertyValue::List(vec!["a".into(), "b".into()]), "at most one :systemUuid"),
-            ("machineLifecycleState", text("asleep"), ":machineLifecycleState"),
+            (
+                "machineKey",
+                PropertyValue::List(vec!["serial".into()]),
+                "<kind>:<value>",
+            ),
+            (
+                "systemUuid",
+                PropertyValue::List(vec!["a".into(), "b".into()]),
+                "at most one :systemUuid",
+            ),
+            (
+                "machineLifecycleState",
+                text("asleep"),
+                ":machineLifecycleState",
+            ),
         ];
         for (name, value, fragment) in broken {
             let mut entity = built.clone();
@@ -685,26 +801,58 @@ mod tests {
         }
         let mut renamed = built.clone();
         renamed.id = "urn:machine:serial:not-hex".into();
-        assert!(check_machine(&renamed).unwrap_err().message.contains("urn:machine:<tier>"));
+        assert!(check_machine(&renamed)
+            .unwrap_err()
+            .message
+            .contains("urn:machine:<tier>"));
     }
 
     // spec: MEDULLA-MACHINE-R006.3
     #[test]
     fn a_record_set_needs_one_owner_property_per_part_and_declared_relationships() {
-        let machine = machine_entity("t1", "alpha", &[host_key("alpha")], MachineLifecycleState::Active).unwrap();
+        let machine = machine_entity(
+            "t1",
+            "alpha",
+            &[host_key("alpha")],
+            MachineLifecycleState::Active,
+        )
+        .unwrap();
         let part_id = component_id(&machine.id, ComponentKind::Accelerator, "0000:01:00.0");
         let mut set = InventoryRecordSet::new();
-        set.entities = vec![machine.clone(), entity(&part_id, "Accelerator", &[("acceleratorKind", text("gpu"))])];
-        assert!(set.check_shapes().unwrap_err().message.contains("this part has 0"));
-        set.relationships = vec![relationship(&machine.id, ComponentKind::Accelerator.owner_relationship(), &part_id)];
+        set.entities = vec![
+            machine.clone(),
+            entity(&part_id, "Accelerator", &[("acceleratorKind", text("gpu"))]),
+        ];
+        assert!(set
+            .check_shapes()
+            .unwrap_err()
+            .message
+            .contains("this part has 0"));
+        set.relationships = vec![relationship(
+            &machine.id,
+            ComponentKind::Accelerator.owner_relationship(),
+            &part_id,
+        )];
         assert!(set.check_shapes().is_ok());
         set.relationships[0].relationship = "hasComponent".into();
-        assert!(set.check_shapes().unwrap_err().message.contains("this part has 0"));
+        assert!(set
+            .check_shapes()
+            .unwrap_err()
+            .message
+            .contains("this part has 0"));
         set.relationships[0].relationship = "hasProcessor".into();
         assert!(set.check_shapes().is_err());
         set.relationships[0].relationship = "ownsEverything".into();
         assert!(set.check_shapes().is_err());
-        for kind in [ComponentKind::Processor, ComponentKind::Memory, ComponentKind::Storage, ComponentKind::Nic, ComponentKind::Bond, ComponentKind::Accelerator, ComponentKind::Management] {
+        for kind in [
+            ComponentKind::Processor,
+            ComponentKind::Memory,
+            ComponentKind::Storage,
+            ComponentKind::Nic,
+            ComponentKind::Bond,
+            ComponentKind::Accelerator,
+            ComponentKind::Management,
+        ] {
             assert!(kind.owner_relationship().starts_with("has"));
             assert_ne!(kind.owner_relationship(), "hasComponent");
         }

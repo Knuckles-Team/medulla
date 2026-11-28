@@ -160,7 +160,9 @@ fn normalize_controller_id(raw: &str) -> Result<String, MachineKeyRefusalReason>
         return Err(MachineKeyRefusalReason::Empty);
     }
     let digits = controller_digits(&text).ok_or(MachineKeyRefusalReason::Malformed)?;
-    let octets: Vec<&str> = (0..6).map(|index| &digits[index * 2..index * 2 + 2]).collect();
+    let octets: Vec<&str> = (0..6)
+        .map(|index| &digits[index * 2..index * 2 + 2])
+        .collect();
     if octets.iter().all(|octet| *octet == "00") || octets.iter().all(|octet| *octet == "ff") {
         return Err(MachineKeyRefusalReason::Placeholder);
     }
@@ -240,7 +242,10 @@ pub fn machine_iri(tenant: &str, key: &MachineKey) -> String {
 /// the tenant graph isolates the anchor.
 pub fn machine_key_iri(key: &MachineKey) -> String {
     let tag = key.kind.tag();
-    format!("urn:machine-key:{tag}:{}", digest_prefix(&[tag, &key.value]))
+    format!(
+        "urn:machine-key:{tag}:{}",
+        digest_prefix(&[tag, &key.value])
+    )
 }
 
 #[cfg(test)]
@@ -315,9 +320,15 @@ mod tests {
     #[test]
     fn hostname_iri_differs_across_tenants() {
         let host = key(MachineKeyKind::Hostname, "node-1.example");
-        assert_ne!(machine_iri("tenant-a", &host), machine_iri("tenant-b", &host));
+        assert_ne!(
+            machine_iri("tenant-a", &host),
+            machine_iri("tenant-b", &host)
+        );
         let serial = key(MachineKeyKind::SystemSerial, "SN-0001");
-        assert_eq!(machine_iri("tenant-a", &serial), machine_iri("tenant-b", &serial));
+        assert_eq!(
+            machine_iri("tenant-a", &serial),
+            machine_iri("tenant-b", &serial)
+        );
     }
 
     // spec: MEDULLA-MACHINE-R002.4
@@ -338,20 +349,56 @@ mod tests {
         use MachineKeyKind as K;
         use MachineKeyRefusalReason as R;
         let table: [(K, &str, Result<&str, R>); 30] = [
-            (K::SystemUuid, "123E4567-E89B-12D3-A456-426614174000", Ok("123e4567-e89b-12d3-a456-426614174000")),
-            (K::SystemUuid, "  123e4567-e89b-12d3-a456-426614174000 ", Ok("123e4567-e89b-12d3-a456-426614174000")),
-            (K::SystemUuid, "123e4567e89b12d3a456426614174000", Err(R::Malformed)),
-            (K::SystemUuid, "123e4567-e89b-12d3-a456-42661417400g", Err(R::Malformed)),
+            (
+                K::SystemUuid,
+                "123E4567-E89B-12D3-A456-426614174000",
+                Ok("123e4567-e89b-12d3-a456-426614174000"),
+            ),
+            (
+                K::SystemUuid,
+                "  123e4567-e89b-12d3-a456-426614174000 ",
+                Ok("123e4567-e89b-12d3-a456-426614174000"),
+            ),
+            (
+                K::SystemUuid,
+                "123e4567e89b12d3a456426614174000",
+                Err(R::Malformed),
+            ),
+            (
+                K::SystemUuid,
+                "123e4567-e89b-12d3-a456-42661417400g",
+                Err(R::Malformed),
+            ),
             (K::SystemUuid, "", Err(R::Empty)),
             (K::SystemUuid, "   ", Err(R::Empty)),
-            (K::SystemUuid, "00000000-0000-0000-0000-000000000000", Err(R::Placeholder)),
-            (K::SystemUuid, "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF", Err(R::Placeholder)),
-            (K::SystemUuid, "03000200-0400-0500-0006-000700080009", Err(R::Placeholder)),
-            (K::SystemUuid, "00020003-0004-0005-0006-000700080009", Err(R::Placeholder)),
+            (
+                K::SystemUuid,
+                "00000000-0000-0000-0000-000000000000",
+                Err(R::Placeholder),
+            ),
+            (
+                K::SystemUuid,
+                "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF",
+                Err(R::Placeholder),
+            ),
+            (
+                K::SystemUuid,
+                "03000200-0400-0500-0006-000700080009",
+                Err(R::Placeholder),
+            ),
+            (
+                K::SystemUuid,
+                "00020003-0004-0005-0006-000700080009",
+                Err(R::Placeholder),
+            ),
             (K::SystemSerial, "  abc   123 ", Ok("ABC 123")),
             (K::SystemSerial, "sn\t0001", Ok("SN 0001")),
             (K::SystemSerial, "", Err(R::Empty)),
-            (K::SystemSerial, "To Be Filled By O.E.M.", Err(R::Placeholder)),
+            (
+                K::SystemSerial,
+                "To Be Filled By O.E.M.",
+                Err(R::Placeholder),
+            ),
             (K::SystemSerial, "Default String", Err(R::Placeholder)),
             (K::SystemSerial, "NONE", Err(R::Placeholder)),
             (K::SystemSerial, "N/A", Err(R::Placeholder)),
@@ -360,24 +407,52 @@ mod tests {
             (K::SystemSerial, "0", Err(R::Placeholder)),
             (K::SystemSerial, "123456789", Err(R::Placeholder)),
             (K::SystemSerial, "AB\u{7}C", Err(R::Malformed)),
-            (K::ManagementControllerId, "AA-BB-CC-DD-EE-01", Ok("aa:bb:cc:dd:ee:01")),
-            (K::ManagementControllerId, "aabbccddee01", Ok("aa:bb:cc:dd:ee:01")),
-            (K::ManagementControllerId, "aa:bb:cc:dd:ee", Err(R::Malformed)),
-            (K::ManagementControllerId, "00:00:00:00:00:00", Err(R::Placeholder)),
-            (K::ManagementControllerId, "FF-FF-FF-FF-FF-FF", Err(R::Placeholder)),
+            (
+                K::ManagementControllerId,
+                "AA-BB-CC-DD-EE-01",
+                Ok("aa:bb:cc:dd:ee:01"),
+            ),
+            (
+                K::ManagementControllerId,
+                "aabbccddee01",
+                Ok("aa:bb:cc:dd:ee:01"),
+            ),
+            (
+                K::ManagementControllerId,
+                "aa:bb:cc:dd:ee",
+                Err(R::Malformed),
+            ),
+            (
+                K::ManagementControllerId,
+                "00:00:00:00:00:00",
+                Err(R::Placeholder),
+            ),
+            (
+                K::ManagementControllerId,
+                "FF-FF-FF-FF-FF-FF",
+                Err(R::Placeholder),
+            ),
             (K::Hostname, "Node-1.Example.", Ok("node-1.example")),
             (K::Hostname, "bad_name", Err(R::Malformed)),
             (K::Hostname, "a..b", Err(R::Malformed)),
         ];
         for (kind, raw, expected) in table {
             let got = normalize_key(kind, raw).map(|k| k.value);
-            let want = expected.map(str::to_string).map_err(|reason| MachineKeyRefused { kind, reason });
+            let want = expected
+                .map(str::to_string)
+                .map_err(|reason| MachineKeyRefused { kind, reason });
             assert_eq!(got, want, "{kind:?} {raw:?}");
         }
         assert_eq!(normalize_key(K::Hostname, "").unwrap_err().reason, R::Empty);
-        assert_eq!(normalize_key(K::Hostname, ".").unwrap_err().reason, R::Empty);
+        assert_eq!(
+            normalize_key(K::Hostname, ".").unwrap_err().reason,
+            R::Empty
+        );
         let long = format!("{}.example", "a".repeat(250));
-        assert_eq!(normalize_key(K::Hostname, &long).unwrap_err().reason, R::Malformed);
+        assert_eq!(
+            normalize_key(K::Hostname, &long).unwrap_err().reason,
+            R::Malformed
+        );
         assert_eq!(
             normalize_key(K::SystemUuid, "").unwrap_err().to_string(),
             "uuid:empty"

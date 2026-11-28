@@ -1304,7 +1304,9 @@ fn core_specs() -> &'static [CoreSpec] {
             module: "machine",
             version: 1,
             shapes: None,
-            ontology: Some(include_str!("../../../medulla-core/ontology/machine-v1.ttl")),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/machine-v1.ttl"
+            )),
         },
         CoreSpec {
             module: "machine-shapes",

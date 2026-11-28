@@ -383,7 +383,13 @@ mod tests {
         let stored: Vec<&str> = machine.states.iter().map(|s| s.stored()).collect();
         assert_eq!(
             stored,
-            ["commissioned", "active", "draining", "maintenance", "retired"]
+            [
+                "commissioned",
+                "active",
+                "draining",
+                "maintenance",
+                "retired"
+            ]
         );
         assert_eq!(S::from_stored("draining"), Some(S::Draining));
         assert_eq!(S::from_stored("Draining"), None);
@@ -416,10 +422,18 @@ mod tests {
             (S::Retired, ready, None),
             (S::Retired, retire, None),
             (S::Retired, evacuated, None),
-            (S::Active, facts(|f| f.health_failing = true), Some(E::Drain)),
+            (
+                S::Active,
+                facts(|f| f.health_failing = true),
+                Some(E::Drain),
+            ),
         ];
         for (state, evidence, want) in rows {
-            assert_eq!(derive_event(state, &evidence), want, "{state:?} {evidence:?}");
+            assert_eq!(
+                derive_event(state, &evidence),
+                want,
+                "{state:?} {evidence:?}"
+            );
         }
         // The derivation and the table agree on every state over all 64 fact sets: a derived
         // event fires an edge, and no event derives only when no edge of the state fires.
@@ -533,6 +547,9 @@ mod tests {
             }
         }
         assert!(scanned > 1000, "the scan reached only {scanned} files");
-        assert!(offenders.is_empty(), "lifecycle state written outside apply: {offenders:?}");
+        assert!(
+            offenders.is_empty(),
+            "lifecycle state written outside apply: {offenders:?}"
+        );
     }
 }

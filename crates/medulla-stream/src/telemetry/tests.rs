@@ -60,7 +60,11 @@ pub(super) fn estate() -> Vec<DeclaredEntity> {
                 ("k8s.deployment.name", "cart"),
             ],
         ),
-        declared(EntityClass::Machine, "host:node-a", &[("host.name", "node-a")]),
+        declared(
+            EntityClass::Machine,
+            "host:node-a",
+            &[("host.name", "node-a")],
+        ),
         declared(
             EntityClass::Pod,
             "pod:shop/cart-1",
