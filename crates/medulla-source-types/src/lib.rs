@@ -93,3 +93,5 @@ pub mod stored_query;
 pub mod business_digest;
 pub mod catalog_queries;
 pub mod schema_drift_methods;
+// MEDULLA-MACHINE — canonical machine identity, lifecycle machine, hosts file and inventory records.
+pub mod machine;

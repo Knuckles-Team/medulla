@@ -1,0 +1,23 @@
+{
+  "iri_vectors": [
+    {"kind": "uuid", "raw": "123E4567-E89B-12D3-A456-426614174000", "tenant": "tenant-a", "normalized": "123e4567-e89b-12d3-a456-426614174000", "iri": "urn:machine:uuid:d1c2987bf12e8996acbc7828e5d417f9"},
+    {"kind": "serial", "raw": "  abc   123 ", "tenant": "tenant-a", "normalized": "ABC 123", "iri": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d"},
+    {"kind": "bmc", "raw": "AA-BB-CC-DD-EE-01", "tenant": "tenant-a", "normalized": "aa:bb:cc:dd:ee:01", "iri": "urn:machine:bmc:7ed5f3e345f5057249d850266ed1dc84"},
+    {"kind": "host", "raw": "Node-1.Example.", "tenant": "tenant-a", "normalized": "node-1.example", "iri": "urn:machine:host:bee191710c8bd12296a5e402bdf9f43e"},
+    {"kind": "host", "raw": "Node-1.Example.", "tenant": "tenant-b", "normalized": "node-1.example", "iri": "urn:machine:host:b84ef4959aa8c354baf8b92bf786dbc3"},
+    {"kind": "serial", "raw": "SN-0001", "tenant": "tenant-a", "normalized": "SN-0001", "iri": "urn:machine:serial:106926c48469ff7da8c08bc3b320aeb8"},
+    {"kind": "host", "raw": "alpha", "tenant": "tenant-a", "normalized": "alpha", "iri": "urn:machine:host:c9faaf568305e0a90e726ca4b4807c73"}
+  ],
+  "preference_vectors": [
+    {"keys": [{"kind": "uuid", "value": "00000000-0000-0000-0000-000000000000"}, {"kind": "serial", "value": "SN-0001"}, {"kind": "host", "value": "alpha"}], "selects": {"kind": "serial", "value": "SN-0001"}},
+    {"keys": [{"kind": "host", "value": "alpha"}, {"kind": "bmc", "value": "AA-BB-CC-DD-EE-01"}], "selects": {"kind": "bmc", "value": "aa:bb:cc:dd:ee:01"}},
+    {"keys": [], "selects": null}
+  ],
+  "anchor_vectors": [
+    {"kind": "uuid", "value": "123e4567-e89b-12d3-a456-426614174000", "iri": "urn:machine-key:uuid:fadf2b3c7a3b8eaf74b9d3045973e1ce"},
+    {"kind": "serial", "value": "ABC 123", "iri": "urn:machine-key:serial:ce4057006ad7685b67a799f0743e2911"},
+    {"kind": "bmc", "value": "aa:bb:cc:dd:ee:01", "iri": "urn:machine-key:bmc:84d46b5bb6df3515f700478db20f68e2"},
+    {"kind": "host", "value": "node-1.example", "iri": "urn:machine-key:host:11165384ff7580ae5652b6a2bae3f5dd"},
+    {"kind": "host", "value": "alpha", "iri": "urn:machine-key:host:41097ff758a2bcf28635c4da73d9fa18"}
+  ]
+}
