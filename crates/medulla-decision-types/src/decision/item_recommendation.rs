@@ -16,7 +16,7 @@ pub const ENCODER_MISSING: RefusalCode = RefusalCode::new("ENCODER_MISSING");
 /// current digest.
 pub const ENCODER_STALE: RefusalCode = RefusalCode::new("ENCODER_STALE");
 
-/// The `item_recommendation` family table; it joins `codes::FAMILY_TABLES`.
+/// The `item_recommendation` family table; it joins `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     EMPTY_CATALOG,
     DIMENSION_MISMATCH,

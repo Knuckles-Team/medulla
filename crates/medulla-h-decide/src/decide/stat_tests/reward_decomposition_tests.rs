@@ -360,7 +360,7 @@ async fn reward_refusals() {
     assert_eq!(persisted_files(&dir), before);
     for code in medulla_decision_types::decision::reward::REFUSALS {
         assert_eq!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)
         );
     }

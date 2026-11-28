@@ -288,7 +288,7 @@ async fn population_refusals() {
         .chain(medulla_decision_types::decision::population::FANOUT_REFUSALS)
     {
         assert_eq!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)
         );
     }

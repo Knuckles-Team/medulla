@@ -23,7 +23,7 @@ pub const FUSION_POLICY_ABSENT: &str = "FUSION_POLICY_ABSENT";
 /// A retrieval receipt cites a record ref that no longer reads back as cited.
 pub const BRANCH_READBACK_STALE: &str = "BRANCH_READBACK_STALE";
 
-/// Every refusal code of the branch-outcome family; joins `codes::FAMILY_TABLES`
+/// Every refusal code of the branch-outcome family; joins `code_registry::FAMILY_TABLES`
 /// under `QuestionKind::BranchOutcome`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(BRANCH_MISSING),

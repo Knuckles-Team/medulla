@@ -2804,7 +2804,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
         // not a machine method (MEDULLA-ORCH-VOCAB-R811.8), so only MACHINE_METHODS
         // add TRANSITION_REFUSED.
         codes.extend(
-            medulla_decision_types::decision::codes::registered()
+            medulla_decision_types::decision::code_registry::registered()
                 .map(|code| code.as_str())
                 .filter(|code| *code != TRANSITION_REFUSED),
         );

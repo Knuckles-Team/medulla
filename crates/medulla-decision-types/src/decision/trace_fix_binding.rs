@@ -301,7 +301,7 @@ mod tests {
 
         for refusal in REFUSALS {
             assert_eq!(
-                crate::decision::codes::resolve(refusal.as_str()),
+                crate::decision::code_registry::resolve(refusal.as_str()),
                 Some(*refusal)
             );
         }

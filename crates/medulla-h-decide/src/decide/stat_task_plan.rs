@@ -34,7 +34,7 @@ use std::collections::BTreeMap;
 use super::stat_log::{
     context_digest_of, evaluations_of, visible_entries, visible_entry, LogReader,
 };
-use medulla_decision_types::decision::codes;
+use medulla_decision_types::decision::code_registry;
 use medulla_decision_types::decision::statistical::TypedParam;
 use medulla_decision_types::decision::task_plan::skill_plan::{
     SkillPlanKnobs, EMPTY_SKILL_INDEX, NO_SKILL_FOR_SUBTASK,
@@ -96,7 +96,7 @@ fn abstention(message: &str, param: &str) -> Option<Planned> {
     {
         return None;
     }
-    let code = codes::resolve(code)?;
+    let code = code_registry::resolve(code)?;
     let subject = if code.as_str() == EMPTY_SKILL_INDEX {
         "skill_index".to_string()
     } else {

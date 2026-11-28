@@ -51,7 +51,7 @@ pub const PARAM_EVIDENCE_CURRENT: &str = "evidence_current";
 /// Prefix of the answer option: the JSON of the [`CouncilResult`] follows.
 pub const ANSWER_PREFIX: &str = "council_result:";
 
-/// Every refusal code of the family; joins `codes::FAMILY_TABLES` under
+/// Every refusal code of the family; joins `code_registry::FAMILY_TABLES` under
 /// `QuestionKind::CouncilCoordination`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(COUNCIL_INCOMPLETE_INPUT),

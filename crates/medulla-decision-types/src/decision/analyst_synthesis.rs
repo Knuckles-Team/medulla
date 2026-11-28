@@ -29,7 +29,7 @@ pub const DECISION_ROLE_ABSENT: &str = "DECISION_ROLE_ABSENT";
 /// The request's plan digest is not the plan the analysts ran.
 pub const SYNTHESIS_PLAN_MISMATCH: &str = "SYNTHESIS_PLAN_MISMATCH";
 
-/// Every refusal code of the synthesis family; joins `codes::FAMILY_TABLES`
+/// Every refusal code of the synthesis family; joins `code_registry::FAMILY_TABLES`
 /// under `QuestionKind::AnalystSynthesis`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(UNRESOLVED_CONFLICT),

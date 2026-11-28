@@ -3,7 +3,7 @@
 //!
 //! A `SourceIngest` record whose mapped class is a research paper is checked before any of its
 //! nodes are admitted; a refused paper writes nothing and its siblings in the envelope still
-//! commit. Collected by `medulla_decision_types::decision::codes::module_tables`
+//! commit. Collected by `medulla_decision_types::decision::code_registry::module_tables`
 //! (MEDULLA-DECISION-ENGINE-R010.100), so no code here repeats a shared or foreign code.
 
 use serde::{Deserialize, Serialize};

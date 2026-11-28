@@ -1,7 +1,7 @@
 //! Refusal codes of the participant memory family
 //! (MEDULLA-DECISION-ENGINE-R010.100.4).
 //!
-//! Collected by `medulla_decision_types::decision::codes::module_tables` and the
+//! Collected by `medulla_decision_types::decision::code_registry::module_tables` and the
 //! uniqueness test, so no code here repeats a shared or foreign code.
 
 use crate::refusal_code::RefusalCode;

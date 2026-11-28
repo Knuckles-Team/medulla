@@ -326,7 +326,10 @@ mod tests {
             assert_eq!(refusal.code().as_str(), *code);
             assert!(refusal.to_string().starts_with(&format!("{code}: ")));
             assert!(REFUSALS.contains(&refusal.code()));
-            assert_eq!(crate::decision::codes::resolve(code), Some(refusal.code()));
+            assert_eq!(
+                crate::decision::code_registry::resolve(code),
+                Some(refusal.code())
+            );
         }
         let unique: std::collections::BTreeSet<_> = REFUSALS.iter().collect();
         assert_eq!(unique.len(), REFUSALS.len());
@@ -348,11 +351,11 @@ mod tests {
         assert_eq!(listed, declared);
         // The codes the spec says do not exist stay unregistered.
         assert_eq!(
-            crate::decision::codes::resolve("PACKAGE_RUN_SET_INCOMPLETE"),
+            crate::decision::code_registry::resolve("PACKAGE_RUN_SET_INCOMPLETE"),
             None
         );
         assert_eq!(
-            crate::decision::codes::resolve("PACKAGE_POLICY_MISMATCH"),
+            crate::decision::code_registry::resolve("PACKAGE_POLICY_MISMATCH"),
             None
         );
     }

@@ -31,6 +31,7 @@ pub mod capability_designation;
 pub mod capability_rank;
 pub mod changeset_review;
 pub mod checker_feedback;
+pub mod code_registry;
 pub mod codes;
 pub mod coding_agent;
 pub mod command_config;

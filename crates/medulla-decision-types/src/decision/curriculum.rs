@@ -83,7 +83,7 @@ pub const CURRICULUM_THRESHOLD_BELOW_FLOOR: RefusalCode =
     RefusalCode::new("CURRICULUM_THRESHOLD_BELOW_FLOOR");
 
 /// The `REFUSALS` table of the `curriculum_promotion` family, registered in
-/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
+/// `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
 pub const REFUSALS: &[RefusalCode] = &[
     CURRICULUM_WINDOW_INCOMPLETE,
     CURRICULUM_THRESHOLD_BELOW_FLOOR,

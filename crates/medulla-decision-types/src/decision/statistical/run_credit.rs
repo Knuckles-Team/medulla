@@ -213,7 +213,7 @@ impl RunOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::codes;
+    use crate::decision::code_registry;
 
     fn step(idx: u32, reward: i32) -> StepRecord {
         StepRecord {
@@ -286,7 +286,7 @@ mod tests {
         assert!(!weight.admits(&KnobValue::DecimalMicros(9_999)));
         assert!(!weight.admits(&KnobValue::DecimalMicros(500_001)));
         for code in REFUSALS {
-            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(code_registry::resolve(code.as_str()), Some(*code));
         }
         let spec = &KNOBS[0];
         assert!(spec.admits(&spec.default));

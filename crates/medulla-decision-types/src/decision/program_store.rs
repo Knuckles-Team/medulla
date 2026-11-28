@@ -231,7 +231,7 @@ impl crate::decision::record::outcome::DecisionRefusal for NoProgram {
 }
 
 /// Every refusal code of the program-lookup family; joins
-/// `codes::FAMILY_TABLES` under `QuestionKind::ProgramLookup`.
+/// `code_registry::FAMILY_TABLES` under `QuestionKind::ProgramLookup`.
 pub const REFUSALS: &[RefusalCode] = &[
     PROGRAM_TOO_LONG,
     RUN_NOT_SUCCESSFUL,

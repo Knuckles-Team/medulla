@@ -8,11 +8,14 @@
 
 use serde::Serialize;
 
-use super::policy::DecisionPolicy;
 use super::record::{CandidateFacts, DecisionInputs, DecisionRecord};
 use super::statistical::StatisticalDecisionRecord;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
+
+pub use policy_part::{digest_text_hex, policy_digest, DECISION_POLICY_DIGEST_DOMAIN};
+
+mod policy_part;
 
 /// Domain of a verifier receipt (MEDULLA-DECISION-ENGINE-R138.100.2).
 pub const VERIFIER_RECEIPT_DIGEST_DOMAIN: &str = "medulla/verifier-receipt/v1";
@@ -35,8 +38,6 @@ pub const DECISION_CATALOG_DIGEST_DOMAIN: &str = "eg/decision-catalog/v1";
 pub const TRAJECTORY_DERIVATION_DIGEST_DOMAIN: &str = "eg/trajectory-derivation/v1";
 /// Domain of a verified trace (MEDULLA-DECISION-ENGINE-R753.751).
 pub const STEP_TRACE_DIGEST_DOMAIN: &str = "eg/step-trace/v1";
-/// Domain of a decision policy body.
-pub const DECISION_POLICY_DIGEST_DOMAIN: &str = "eg/decision-policy/v1";
 /// Domain of a local-model certification attestation body
 /// (MEDULLA-DECISION-ENGINE-R142.100).
 pub const LOCAL_CERTIFICATION_DIGEST_DOMAIN: &str = "eg/local-certification/v1";
@@ -49,14 +50,6 @@ struct CatalogMember<'a> {
     component_id: &'a str,
     definition_digest: &'a str,
     lifecycle: AgentLibraryLifecycle,
-}
-
-/// `digest_text` without the `sha256:` prefix: 64 lowercase hex characters.
-pub fn digest_text_hex<T: Serialize>(domain: &str, value: &T) -> String {
-    let text = digest_text(domain, value);
-    text.strip_prefix(DIGEST_TEXT_PREFIX)
-        .map(str::to_string)
-        .unwrap_or(text)
 }
 
 /// The digest of one assembly record.
@@ -90,11 +83,6 @@ pub fn statistical_record_digest(record: &StatisticalDecisionRecord) -> String {
 /// The digest of a decision's input set.
 pub fn inputs_digest(inputs: &DecisionInputs) -> String {
     digest_text(DECISION_INPUTS_DIGEST_DOMAIN, inputs)
-}
-
-/// The digest of a decision policy body.
-pub fn policy_digest(policy: &DecisionPolicy) -> String {
-    digest_text(DECISION_POLICY_DIGEST_DOMAIN, policy)
 }
 
 /// The digest of the candidate catalog a decision was taken against.

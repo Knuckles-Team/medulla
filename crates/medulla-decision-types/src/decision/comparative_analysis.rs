@@ -34,7 +34,7 @@ pub const COMPARATIVE_STAGE_EXCEEDS_TOTAL: RefusalCode =
     RefusalCode::new("COMPARATIVE_STAGE_EXCEEDS_TOTAL");
 
 /// The `REFUSALS` table of the `comparative_analysis_plan` family, registered
-/// in `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R139.4).
+/// in `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R139.4).
 pub const REFUSALS: &[RefusalCode] = &[
     COMPARATIVE_STALE_INPUT,
     COMPARATIVE_CANDIDATE_INVALID,

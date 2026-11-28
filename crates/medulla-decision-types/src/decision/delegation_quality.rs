@@ -251,7 +251,7 @@ pub const DELEGATION_INSUFFICIENT_SAMPLES: RefusalCode =
     crate::decision::delegation::DELEGATION_INSUFFICIENT_SAMPLES;
 
 /// The delegation quality refusals, registered with the decision refusal
-/// registry (`codes::module_tables`); each is also a `StatisticalErrorCode`.
+/// registry (`code_registry::module_tables`); each is also a `StatisticalErrorCode`.
 pub const REFUSALS: &[RefusalCode] = &[
     DELEGATION_WINDOW_STALE,
     DELEGATION_WINDOW_UNSTABLE,

@@ -26,7 +26,7 @@ pub const REFRESH_REGION_BUDGET: RefusalCode = RefusalCode::new("REFRESH_REGION_
 pub const SHARD_SWAP_CONFLICT: RefusalCode = RefusalCode::new("SHARD_SWAP_CONFLICT");
 
 /// The drift refusals, registered with the decision refusal registry
-/// (`codes::module_tables`); each is also a `StatisticalErrorCode`.
+/// (`code_registry::module_tables`); each is also a `StatisticalErrorCode`.
 pub const REFUSALS: &[RefusalCode] = &[
     DRIFT_POLICY_MISSING,
     REFRESH_REGION_BUDGET,

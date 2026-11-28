@@ -26,7 +26,7 @@ pub const POPULATION_SPREAD_INVALID: RefusalCode = RefusalCode::new("POPULATION_
 pub const FANOUT_BUDGET_TOO_LOW: RefusalCode = RefusalCode::new("FANOUT_BUDGET_TOO_LOW");
 
 /// The `REFUSALS` table of the `population_drift` family, registered in
-/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R752.752).
+/// `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R752.752).
 pub const DRIFT_REFUSALS: &[RefusalCode] = &[DRIFT_EMPTY_WINDOW, DRIFT_WINDOW_TOO_LARGE];
 /// The `REFUSALS` table of the `fanout_width` family.
 pub const FANOUT_REFUSALS: &[RefusalCode] = &[POPULATION_SPREAD_INVALID, FANOUT_BUDGET_TOO_LOW];

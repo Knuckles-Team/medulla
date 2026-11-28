@@ -31,7 +31,7 @@ pub const SKILL_WORKFLOW_CYCLE: RefusalCode = RefusalCode::new("SKILL_WORKFLOW_C
 /// Request refusal: more than [`MAX_PROGRAM_STEPS`] steps.
 pub const SKILL_WORKFLOW_TOO_LONG: RefusalCode = RefusalCode::new("SKILL_WORKFLOW_TOO_LONG");
 
-/// Every refusal code of the `skill_workflow_compile` family; joins `codes::FAMILY_TABLES`
+/// Every refusal code of the `skill_workflow_compile` family; joins `code_registry::FAMILY_TABLES`
 /// under `QuestionKind::SkillWorkflowCompile`.
 pub const REFUSALS: &[RefusalCode] = &[
     SKILL_WORKFLOW_AMBIGUOUS,

@@ -55,7 +55,7 @@ pub const CATALOG_TOO_LARGE: RefusalCode = RefusalCode::new("CATALOG_TOO_LARGE")
 pub const UNKNOWN_ROLE: RefusalCode = RefusalCode::new("UNKNOWN_ROLE");
 
 /// Every refusal code of the tool-relevance family; joins
-/// `codes::FAMILY_TABLES` under `QuestionKind::ToolRelevance`. The covering
+/// `code_registry::FAMILY_TABLES` under `QuestionKind::ToolRelevance`. The covering
 /// subset refusals are the shared `TOOL_SUBSET_CAPABILITY_UNCOVERABLE` and
 /// `TOOL_SUBSET_BUDGET_EXCEEDED` of `codes`.
 pub const REFUSALS: &[RefusalCode] = &[

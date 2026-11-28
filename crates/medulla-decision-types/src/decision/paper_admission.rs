@@ -88,7 +88,7 @@ pub enum PaperAdmissionRefusal {
     Duplicate { digest: String },
 }
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("PAPER_SNAPSHOT_STALE"),
     RefusalCode::new("PAPER_DUPLICATE"),

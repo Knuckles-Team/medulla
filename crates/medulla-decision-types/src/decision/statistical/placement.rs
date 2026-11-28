@@ -191,7 +191,7 @@ pub const CAPACITY_UNAVAILABLE: &str = "CAPACITY_UNAVAILABLE";
 pub const NO_CAPABLE_HOST: &str = "NO_CAPABLE_HOST";
 
 /// The `placement` family's refusal table (MEDULLA-PLACEMENT-R001.10), registered in
-/// `codes::FAMILY_TABLES`. The abstentions (`INFEASIBLE`, `UNKNOWN_FACT`,
+/// `code_registry::FAMILY_TABLES`. The abstentions (`INFEASIBLE`, `UNKNOWN_FACT`,
 /// `POLICY_LOOSENING`) are the fixed `AbstainReason` codes.
 pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] = &[
     medulla_types::refusal_code::RefusalCode::new(PLACEMENT_FACTS_INVALID),

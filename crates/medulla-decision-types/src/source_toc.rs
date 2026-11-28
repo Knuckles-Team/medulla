@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// Every refusal code of the `ReadSpan` family
 /// (MEDULLA-DECISION-ENGINE-R153.4). Collected by
-/// `medulla_decision_types::decision::codes::module_tables`.
+/// `medulla_decision_types::decision::code_registry::module_tables`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("SPAN_INVERTED"),
     RefusalCode::new("SPAN_OUT_OF_BOUNDS"),

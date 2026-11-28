@@ -1183,7 +1183,7 @@ fn a_decomposition_cycle_is_left_to_the_shipped_cycle_check() {
 // spec: MEDULLA-DECISION-ENGINE-R134.6
 #[test]
 fn every_planner_code_is_registered_upper_snake() {
-    use crate::decision::codes::resolve;
+    use crate::decision::code_registry::resolve;
     for code in super::TASK_PLAN_REFUSALS {
         assert_eq!(resolve(code.as_str()), Some(*code));
         assert!(code

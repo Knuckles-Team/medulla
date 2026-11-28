@@ -223,7 +223,7 @@ async fn undeclared_fields_refuse() {
     assert_eq!(stored_files(&dir), before);
     for code in REFUSALS {
         assert_eq!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)
         );
     }

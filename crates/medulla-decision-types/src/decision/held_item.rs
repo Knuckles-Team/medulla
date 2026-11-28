@@ -325,7 +325,7 @@ pub enum HeldItemRefusal {
     CritiqueMissing { item_ref: String },
 }
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("HELD_ITEM_UNKNOWN"),
     RefusalCode::new("DIGEST_MISMATCH"),

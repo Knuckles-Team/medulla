@@ -173,13 +173,13 @@ impl RetrievalPlanRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::codes;
+    use crate::decision::code_registry;
 
     // spec: MEDULLA-DECISION-ENGINE-R029.1
     #[test]
     fn binding_refusals_are_registered() {
         for code in REFUSALS {
-            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(code_registry::resolve(code.as_str()), Some(*code));
         }
     }
 

@@ -6,7 +6,7 @@
 //! decision crates. The decision plane collects every table and refuses a code
 //! declared twice. On the wire a code is its upper-snake string; decoding a
 //! string back into a registered code is done by the registry that owns the
-//! tables (`medulla_decision_types::decision::codes::resolve`), not here.
+//! tables (`medulla_decision_types::decision::code_registry::resolve`), not here.
 
 use serde::{Serialize, Serializer};
 

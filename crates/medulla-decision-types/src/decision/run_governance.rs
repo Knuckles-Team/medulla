@@ -185,7 +185,7 @@ impl QuotaRequest {
 /// A requested quota above the fixed ceiling.
 pub const QUOTA_ABOVE_CEILING: RefusalCode = RefusalCode::new("QUOTA_ABOVE_CEILING");
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[QUOTA_ABOVE_CEILING];
 
 /// Why a quota request is refused.

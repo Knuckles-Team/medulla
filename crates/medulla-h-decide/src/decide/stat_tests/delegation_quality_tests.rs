@@ -323,7 +323,7 @@ async fn stale_window_refuses() {
     // Every refusal code is registered and is also a request refusal code.
     for code in REFUSALS {
         assert!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()).is_some(),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()).is_some(),
             "{code:?} is registered"
         );
         assert!(

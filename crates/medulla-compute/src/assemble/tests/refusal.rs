@@ -2,7 +2,7 @@
 //! (MEDULLA-DECISION-ENGINE-R010.100.2).
 
 use medulla_compute_assemble::assemble::AssembleError;
-use medulla_decision_types::decision::codes;
+use medulla_decision_types::decision::code_registry;
 use medulla_decision_types::decision::record::outcome::{
     AbstainReason, RefusalOrigin, RefusalSurface,
 };
@@ -17,7 +17,7 @@ fn assembly_refusals_fold_under_the_assemble_origin() {
         let folded = AbstainReason::from_refusal(RefusalOrigin::ASSEMBLE, &refusal);
         assert_eq!(folded.code().as_str(), code.as_str());
         assert_eq!(
-            codes::resolve(code.as_str()),
+            code_registry::resolve(code.as_str()),
             Some(folded.code()),
             "{code} is registered"
         );

@@ -43,7 +43,7 @@ pub const WINNER_A: &str = "candidate_a";
 /// The answer naming candidate B the winner.
 pub const WINNER_B: &str = "candidate_b";
 
-/// Every refusal code of the family; joins `codes::FAMILY_TABLES` under
+/// Every refusal code of the family; joins `code_registry::FAMILY_TABLES` under
 /// `QuestionKind::ResolveConflict`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(CONFLICT_UNRESOLVED),

@@ -102,7 +102,7 @@ impl CapacityRefusalCode {
     }
 }
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     CapacityRefusalCode::DigestInvalid.code(),
     CapacityRefusalCode::MeasurementInvalid.code(),

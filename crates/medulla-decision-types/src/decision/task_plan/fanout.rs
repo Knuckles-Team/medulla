@@ -49,7 +49,7 @@ pub const ARTIFACT_SCHEMA_MISMATCH: RefusalCode = RefusalCode::new("ARTIFACT_SCH
 /// The delivered artifact's digest is not the digest of the stored readback.
 pub const ARTIFACT_DIGEST_MISMATCH: RefusalCode = RefusalCode::new("ARTIFACT_DIGEST_MISMATCH");
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RAW_RETURN_REFUSED,
     SUMMARY_OVERSIZED,

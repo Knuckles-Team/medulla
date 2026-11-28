@@ -63,7 +63,7 @@ pub const DISCLOSURE_SET_UNDEFINED: RefusalCode = RefusalCode::new("DISCLOSURE_S
 /// The refusal codes the `instruction_disclosure` family declares: the event
 /// computation's (MEDULLA-DECISION-ENGINE-R143.2), the event question's
 /// (R143.3-R143.5) and the served question's (R137.100). The table is
-/// registered in `codes::FAMILY_TABLES`.
+/// registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     DISCLOSURE_PRIOR_MISSING,
     DISCLOSURE_PRIOR_UNEXPECTED,
@@ -463,7 +463,10 @@ mod version_tests {
     #[test]
     fn declared_refusals_are_registered_statistical_codes() {
         for code in REFUSALS {
-            assert_eq!(super::super::codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(
+                super::super::code_registry::resolve(code.as_str()),
+                Some(*code)
+            );
             assert!(StatisticalErrorCode::ALL
                 .iter()
                 .any(|known| known.as_str() == code.as_str()));

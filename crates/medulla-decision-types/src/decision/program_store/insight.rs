@@ -77,7 +77,7 @@ pub const MISSING_SOURCE_RUN: RefusalCode = RefusalCode::new("MISSING_SOURCE_RUN
 pub const UNKNOWN_CONTEXT_SIGNATURE: RefusalCode = RefusalCode::new("UNKNOWN_CONTEXT_SIGNATURE");
 
 /// Every refusal code of the insight-selection family; joins
-/// `codes::FAMILY_TABLES` under `QuestionKind::InsightSelection`.
+/// `code_registry::FAMILY_TABLES` under `QuestionKind::InsightSelection`.
 pub const REFUSALS: &[RefusalCode] = &[MISSING_SOURCE_RUN, UNKNOWN_CONTEXT_SIGNATURE];
 
 /// The decision-artifact prefix every stored insight lives under.

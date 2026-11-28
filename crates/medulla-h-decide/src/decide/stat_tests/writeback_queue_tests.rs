@@ -324,14 +324,15 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
 // spec: MEDULLA-DECISION-ENGINE-R615.4
 #[tokio::test]
 async fn unapproved_release_refuses_without_partial_write() {
+    use medulla_decision_types::decision::code_registry;
     use medulla_decision_types::decision::codes::{
-        self, CONNECTOR_WRITE_BACK, PROPOSAL_UNAPPROVED, WRITEBACK_SOURCE_CONFLICT,
+        CONNECTOR_WRITE_BACK, PROPOSAL_UNAPPROVED, WRITEBACK_SOURCE_CONFLICT,
     };
     // Both codes are registered in the connector_write_back family table.
     assert!(CONNECTOR_WRITE_BACK.contains(&PROPOSAL_UNAPPROVED));
     assert!(CONNECTOR_WRITE_BACK.contains(&WRITEBACK_SOURCE_CONFLICT));
     assert_eq!(
-        codes::resolve("PROPOSAL_UNAPPROVED"),
+        code_registry::resolve("PROPOSAL_UNAPPROVED"),
         Some(PROPOSAL_UNAPPROVED)
     );
 

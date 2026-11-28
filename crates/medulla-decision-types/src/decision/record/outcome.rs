@@ -106,15 +106,9 @@ impl RefusalOrigin {
     pub const ASSEMBLE: Self = Self::Surface(RefusalSurface::Assemble);
 }
 
-/// A typed refusal enum of the decision plane. Each variant maps to exactly one
-/// registered code (`crate::decision::codes`), so no refusal reaches the wire as
-/// a catch-all (MEDULLA-DECISION-ENGINE-R010.100.2).
-pub trait DecisionRefusal {
-    /// The registered code of this refusal.
-    fn code(&self) -> RefusalCode;
-    /// The human detail that accompanies the code.
-    fn detail(&self) -> String;
-}
+pub use refusal::DecisionRefusal;
+
+mod refusal;
 
 use medulla_types::refusal_code::RefusalCode;
 
@@ -123,7 +117,7 @@ pub(crate) fn deserialize_registered<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<RefusalCode, D::Error> {
     let text = String::deserialize(deserializer)?;
-    crate::decision::codes::resolve(&text)
+    crate::decision::code_registry::resolve(&text)
         .ok_or_else(|| serde::de::Error::custom(format!("unregistered refusal code `{text}`")))
 }
 
@@ -223,6 +217,7 @@ pub enum DecisionOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::decision::code_registry;
     use crate::decision::codes;
     use crate::decision::errors::DecisionErrorCode;
 
@@ -233,7 +228,7 @@ mod tests {
         all.extend(codes::SHARED.iter().map(|code| code.as_str()));
         all.extend(codes::FOLDED.iter().map(|code| code.as_str()));
         all.extend(codes::PROMOTION.iter().map(|code| code.as_str()));
-        for (_, table) in codes::FAMILY_TABLES {
+        for (_, table) in code_registry::FAMILY_TABLES {
             all.extend(table.iter().map(|code| code.as_str()));
         }
         all.extend(
@@ -248,7 +243,7 @@ mod tests {
                 .chain(crate::decision::statistical::retrieval_generation::REFUSALS.iter())
                 .map(|code| code.as_str()),
         );
-        for (_, table) in codes::module_tables() {
+        for (_, table) in code_registry::module_tables() {
             all.extend(table.iter().map(|code| code.as_str()));
         }
         let mut sorted = all.clone();
@@ -324,7 +319,7 @@ mod tests {
                 "{} is not registered",
                 code.as_str()
             );
-            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(code_registry::resolve(code.as_str()), Some(*code));
         }
         let head = HeadKindRefusal::NotAStatisticalHead { name: "llm".into() };
         let refusals: Vec<(&str, RefusalCode)> = vec![
@@ -374,7 +369,7 @@ mod tests {
                 code.as_str()
             );
             assert!(
-                codes::resolve(code.as_str()).is_some(),
+                code_registry::resolve(code.as_str()).is_some(),
                 "{name} does not resolve"
             );
             // The typed variants of one enum map to distinct codes: no

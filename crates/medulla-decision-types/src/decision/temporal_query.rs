@@ -76,7 +76,7 @@ pub const TEMPORAL_CONTEXT_MISSING: RefusalCode = RefusalCode::new("TEMPORAL_CON
 pub const TEMPORAL_BASIS_UNMAPPABLE: RefusalCode = RefusalCode::new("TEMPORAL_BASIS_UNMAPPABLE");
 
 /// The `REFUSALS` table of the `temporal_basis` family, registered in
-/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R146.4).
+/// `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R146.4).
 pub const REFUSALS: &[RefusalCode] = &[
     TEMPORAL_CONTEXT_MISSING,
     TEMPORAL_WINDOW_INVALID,

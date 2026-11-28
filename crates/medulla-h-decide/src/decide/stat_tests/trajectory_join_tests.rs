@@ -258,7 +258,7 @@ async fn join_refusals() {
 
     for code in medulla_decision_types::decision::trajectory_verdict::JOIN_REFUSALS {
         assert_eq!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)
         );
     }

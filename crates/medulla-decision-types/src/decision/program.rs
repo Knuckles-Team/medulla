@@ -66,12 +66,12 @@ mod tests {
     fn program_codes_are_registered_and_do_not_repeat_the_promotion_code() {
         for code in REFUSALS {
             assert!(
-                super::super::codes::resolve(code.as_str()).is_some(),
+                super::super::code_registry::resolve(code.as_str()).is_some(),
                 "{} is not registered",
                 code.as_str()
             );
         }
         assert!(!REFUSALS.contains(&EVAL_SET_NOT_INDEPENDENT));
-        assert!(super::super::codes::resolve(EVAL_SET_NOT_INDEPENDENT.as_str()).is_some());
+        assert!(super::super::code_registry::resolve(EVAL_SET_NOT_INDEPENDENT.as_str()).is_some());
     }
 }

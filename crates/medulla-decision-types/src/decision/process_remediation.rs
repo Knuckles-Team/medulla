@@ -63,7 +63,7 @@ fn seconds(policy: &DecisionPolicy, index: usize) -> u64 {
     }
 }
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("LIVENESS_EVIDENCE_STALE"),
     RefusalCode::new("LIVENESS_EVIDENCE_MISMATCH"),

@@ -25,7 +25,7 @@ pub const REVIEW_FINDING_OUTSIDE_CHANGESET: RefusalCode =
     RefusalCode::new("REVIEW_FINDING_OUTSIDE_CHANGESET");
 
 /// The `REFUSALS` table of the `changeset_review` family, registered in
-/// `codes::FAMILY_TABLES`.
+/// `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     REVIEW_REVISION_MISSING,
     REVIEW_CLASS_UNSUPPORTED,

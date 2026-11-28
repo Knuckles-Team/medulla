@@ -96,7 +96,7 @@ pub enum ToolActionRefusal {
     TrustMarkMissing { content_ref: String },
 }
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[RefusalCode::new("TRUST_MARK_MISSING")];
 
 impl DecisionRefusal for ToolActionRefusal {

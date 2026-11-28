@@ -55,7 +55,7 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_types::process_import::COMPILE_REFUSALS.contains(&code),
         medulla_types::process_import::EXPORT_REFUSALS.contains(&code),
         // The decision plane's family and module refusal tables.
-        medulla_decision_types::decision::codes::resolve(code).is_some(),
+        medulla_decision_types::decision::code_registry::resolve(code).is_some(),
     ]
     .into_iter()
     .any(|known| known)

@@ -25,7 +25,7 @@ pub const DISTILLED_FIDELITY_BELOW_FLOOR: RefusalCode =
     RefusalCode::new("DISTILLED_FIDELITY_BELOW_FLOOR");
 
 /// The distilled ranking refusals, registered with the decision refusal
-/// registry (`codes::module_tables`); each is also a `StatisticalErrorCode`.
+/// registry (`code_registry::module_tables`); each is also a `StatisticalErrorCode`.
 /// `IDEMPOTENCY_CONFLICT` (an upload with a different score for a stored
 /// document) is the existing statistical code of that meaning.
 pub const REFUSALS: &[RefusalCode] = &[

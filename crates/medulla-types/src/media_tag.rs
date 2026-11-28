@@ -1,7 +1,7 @@
 //! The value of a media tag feature (MEDULLA-MEDIA-VOCAB-R001.100.2).
 //!
 //! A `SourceIngest` batch carries one `media_tag` feature per tag; its `value_msgpack` decodes
-//! to [`MediaTagValue`]. Collected by `medulla_decision_types::decision::codes::module_tables`
+//! to [`MediaTagValue`]. Collected by `medulla_decision_types::decision::code_registry::module_tables`
 //! (MEDULLA-DECISION-ENGINE-R010.100), so no code here repeats a shared or foreign code.
 
 use serde::{Deserialize, Serialize};

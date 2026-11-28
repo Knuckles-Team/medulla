@@ -114,7 +114,7 @@ fn knob_revision_refusals() {
 // spec: MEDULLA-DECISION-ENGINE-R179.8
 #[test]
 fn participant_knobs_are_registered_and_tunable() {
-    use medulla_decision_types::decision::knobs::REGISTRY;
+    use medulla_decision_types::decision::knob_families::REGISTRY;
     let revision = |name: &str, value: KnobValue| BTreeMap::from([(KnobName::new(name), value)]);
     for (name, inside, outside) in [
         ("memory.derive_batch_turns", 16, 65),

@@ -26,7 +26,7 @@ pub const PARADIGMS: [(&str, &str); 4] = [
     ("statistical", "reasoning:statistical"),
 ];
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[RefusalCode::new("PARADIGM_NONE_ADMISSIBLE")];
 
 /// `PARADIGM_NONE_ADMISSIBLE`.

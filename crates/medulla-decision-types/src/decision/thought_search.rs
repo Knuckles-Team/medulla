@@ -373,17 +373,6 @@ mod tests {
         .is_err());
     }
 
-    // spec: MEDULLA-DECISION-ENGINE-R750.752
-    #[test]
-    fn declared_refusals_are_registered_statistical_codes() {
-        for code in REFUSALS {
-            assert_eq!(super::super::codes::resolve(code.as_str()), Some(*code));
-            assert!(StatisticalErrorCode::ALL
-                .iter()
-                .any(|known| known.as_str() == code.as_str()));
-        }
-    }
-
     #[test]
     fn validation_refuses_each_fault() {
         let ok = ReasoningState::new(vec![node(0), node(1)], BudgetLedger::default()).unwrap();

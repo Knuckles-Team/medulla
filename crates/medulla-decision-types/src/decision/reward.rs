@@ -34,7 +34,7 @@ pub const REWARD_ADVANTAGE_UNDEFINED: RefusalCode = RefusalCode::new("REWARD_ADV
 pub const REWARD_TOO_MANY_STEPS: RefusalCode = RefusalCode::new("REWARD_TOO_MANY_STEPS");
 
 /// The `REFUSALS` table of the `reward_decomposition` family, registered in
-/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
+/// `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R751.752).
 pub const REFUSALS: &[RefusalCode] = &[
     REWARD_HTN_TOO_DEEP,
     REWARD_HTN_INVALID,

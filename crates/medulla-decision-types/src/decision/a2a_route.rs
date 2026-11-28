@@ -16,7 +16,7 @@ pub enum A2aRouteRefusal {
     GraphUnknown { requested: String },
 }
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("A2A_GRAPH_UNKNOWN"),
     RefusalCode::new("A2A_REQUEST_MISSING"),

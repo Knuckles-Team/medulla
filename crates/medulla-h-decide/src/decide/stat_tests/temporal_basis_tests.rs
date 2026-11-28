@@ -224,7 +224,7 @@ async fn missing_time_refuses() {
     // All three codes are registered.
     for code in REFUSALS {
         assert_eq!(
-            medulla_decision_types::decision::codes::resolve(code.as_str()),
+            medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)
         );
     }

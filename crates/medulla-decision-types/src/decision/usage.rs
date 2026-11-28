@@ -1,7 +1,7 @@
 //! Refusal codes of the per-tenant usage ledger (MEDULLA-DECISION-ENGINE-R801.4).
 //!
 //! The ledger is not a question family, so its table is not keyed by a
-//! question kind; `codes::resolve` reads it beside the shared codes. A code is
+//! question kind; `code_registry::resolve` reads it beside the shared codes. A code is
 //! returned before any ledger row is written.
 
 use medulla_types::refusal_code::RefusalCode;
@@ -38,12 +38,13 @@ pub const REFUSALS: &[RefusalCode] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::decision::code_registry;
     use crate::decision::codes;
 
     #[test]
     fn usage_codes_are_registered_and_distinct() {
         for code in REFUSALS {
-            assert_eq!(codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(code_registry::resolve(code.as_str()), Some(*code));
             assert!(!codes::SHARED.contains(code));
         }
         let unique: std::collections::BTreeSet<_> = REFUSALS.iter().collect();

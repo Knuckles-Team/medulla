@@ -187,7 +187,7 @@ pub const FIELD_REQUIRED_MISSING: RefusalCode = RefusalCode::new("FIELD_REQUIRED
 pub const FIELD_PATH_INVALID: RefusalCode = RefusalCode::new("FIELD_PATH_INVALID");
 
 /// The `REFUSALS` table of the `field_shielding` family, registered in
-/// `codes::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R162.4).
+/// `code_registry::FAMILY_TABLES` (MEDULLA-DECISION-ENGINE-R162.4).
 pub const REFUSALS: &[RefusalCode] = &[
     FIELD_UNDECLARED,
     FIELD_SHIELDED,

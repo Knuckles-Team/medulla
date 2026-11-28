@@ -107,7 +107,7 @@ pub const RESEARCH_NO_BUDGET: RefusalCode = RefusalCode::new("RESEARCH_NO_BUDGET
 pub const RESEARCH_DEPTH_EXCEEDED: RefusalCode = RefusalCode::new("RESEARCH_DEPTH_EXCEEDED");
 
 /// Every refusal code of the `research_next` family; joins
-/// `codes::FAMILY_TABLES` under `QuestionKind::ResearchNext`.
+/// `code_registry::FAMILY_TABLES` under `QuestionKind::ResearchNext`.
 pub const REFUSALS: &[RefusalCode] = &[RESEARCH_NO_BUDGET, RESEARCH_DEPTH_EXCEEDED];
 
 /// The option id the answer reserves for "stop reading".

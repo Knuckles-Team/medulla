@@ -78,7 +78,7 @@ pub fn min_gain_ppm(policy: &DecisionPolicy) -> u64 {
     micros(policy, &KNOBS[1])
 }
 
-/// The family's refusal table, registered in `codes::FAMILY_TABLES`.
+/// The family's refusal table, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("TECHNIQUE_EVIDENCE_MISSING"),
     RefusalCode::new("TECHNIQUE_EVIDENCE_MISMATCH"),

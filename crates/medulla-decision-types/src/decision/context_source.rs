@@ -14,7 +14,7 @@ pub const CONTEXT_BUDGET_MISSING: RefusalCode = RefusalCode::new("CONTEXT_BUDGET
 /// A source declares no usable token cost.
 pub const CONTEXT_TOKENS_UNKNOWN: RefusalCode = RefusalCode::new("CONTEXT_TOKENS_UNKNOWN");
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     CONTEXT_SOURCE_DUPLICATE,
     CONTEXT_BUDGET_MISSING,
@@ -30,7 +30,10 @@ mod tests {
     #[test]
     fn declared_refusals_are_registered_statistical_codes() {
         for code in REFUSALS {
-            assert_eq!(super::super::codes::resolve(code.as_str()), Some(*code));
+            assert_eq!(
+                super::super::code_registry::resolve(code.as_str()),
+                Some(*code)
+            );
             assert!(StatisticalErrorCode::ALL
                 .iter()
                 .any(|known| known.as_str() == code.as_str()));

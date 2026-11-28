@@ -3,7 +3,7 @@
 //!
 //! `Method::BookmarkSemanticSearch` and `Method::BookmarkRelations` parse these types at their
 //! handlers. Every response returns the [`BookmarkBinding`] of the one index revision and graph
-//! snapshot it read. Collected by `medulla_decision_types::decision::codes::module_tables`
+//! snapshot it read. Collected by `medulla_decision_types::decision::code_registry::module_tables`
 //! (MEDULLA-DECISION-ENGINE-R010.100), so no code here repeats a shared or foreign code.
 
 use std::collections::BTreeMap;

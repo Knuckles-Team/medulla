@@ -31,7 +31,7 @@ pub const TRAJECTORY_IMPROVEMENT_UNPROVEN: &str = "TRAJECTORY_IMPROVEMENT_UNPROV
 pub const TRAJECTORY_DECISION_UNKNOWN: &str = "TRAJECTORY_DECISION_UNKNOWN";
 
 /// Every refusal code of the trajectory-ladder family; joins
-/// `codes::FAMILY_TABLES` under `QuestionKind::TrajectoryLadder`.
+/// `code_registry::FAMILY_TABLES` under `QuestionKind::TrajectoryLadder`.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(TRAJECTORY_NO_LEGAL_RUNG),
     RefusalCode::new(TRAJECTORY_BASELINE_MISSING),

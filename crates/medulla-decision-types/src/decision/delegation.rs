@@ -23,7 +23,7 @@ pub const DELEGATION_MIXED_REVISIONS: RefusalCode = RefusalCode::new("DELEGATION
 /// The newest outcome is older than `delegation.max_age`.
 pub const DELEGATION_STALE_EVIDENCE: RefusalCode = RefusalCode::new("DELEGATION_STALE_EVIDENCE");
 
-/// The `REFUSALS` table of the family, registered in `codes::FAMILY_TABLES`.
+/// The `REFUSALS` table of the family, registered in `code_registry::FAMILY_TABLES`.
 pub const REFUSALS: &[RefusalCode] = &[
     DELEGATION_INSUFFICIENT_SAMPLES,
     DELEGATION_BELOW_THRESHOLD,
