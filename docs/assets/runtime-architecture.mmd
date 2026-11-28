@@ -3,6 +3,7 @@ flowchart LR
   WebUI["Overstory web UI<br/>browser experience"]
   TUI["Tuig<br/>REST capabilities"]
   Genius["Axil<br/>desktop cockpit"]
+  City["Arbora City<br/>3D ecosystem city"]
   Messaging["Messaging channels<br/>chat and voice"]
   Clients["MCP / REST / A2A clients"]
   Arbora["Arbora<br/>governed runtime gateway and composition host"]
@@ -20,6 +21,8 @@ flowchart LR
   WebUI --> Arbora
   TUI -->|REST| Arbora
   Genius --> Arbora
+  WebUI -->|embeds| City
+  Genius -->|embeds| City
   Messaging -->|hosted co-service| Arbora
   Arbora --> AU
   AU --> EG

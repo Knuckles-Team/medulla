@@ -14,6 +14,8 @@ EXPECTED_CONNECTORS = {
     "M310 100V135": ((310, 100), (310, 135)),
     "M500 100V135": ((500, 100), (500, 135)),
     "M692 100V135": ((692, 100), (692, 135)),
+    "M120 225V275": ((120, 225), (120, 275)),
+    "M430 225V235H380V275": ((430, 225), (380, 275)),
     "M780 180H825": ((780, 180), (825, 180)),
     "M780 285H825": ((780, 285), (825, 285)),
     "M1050 305V335": ((1050, 305), (1050, 335)),
@@ -28,6 +30,7 @@ BOXES = (
     (225, 135, 395, 225),
     (415, 135, 585, 225),
     (605, 135, 780, 225),
+    (35, 275, 395, 365),
     (415, 245, 780, 325),
     (825, 135, 1275, 305),
     (825, 335, 1275, 435),
@@ -89,7 +92,7 @@ def test_runtime_svg_has_all_entrypoint_flows() -> None:
     svg_root = _runtime_svg()
     flows = _runtime_flows(svg_root)
 
-    assert len(list(flows)) == 12
+    assert len(list(flows)) == 14
     assert list(svg_root).index(flows) == len(list(svg_root)) - 1
     path_values = [path.attrib["d"] for path in flows]
     assert path_values == list(EXPECTED_CONNECTORS)
@@ -148,6 +151,9 @@ def test_runtime_svg_labels_match_mermaid_source() -> None:
         "Tuig",
         "Axil",
         "Messaging",
+        "Arbora City",
+        "3D ecosystem city",
+        "embedded by Overstory and Axil",
         "Arbora",
         "governed runtime gateway",
         "Meristem",
@@ -160,6 +166,8 @@ def test_runtime_svg_labels_match_mermaid_source() -> None:
         assert label.split()[0] in mermaid
     for edge in (
         "WebUI --> Arbora",
+        "WebUI -->|embeds| City",
+        "Genius -->|embeds| City",
         "TUI -->|REST| Arbora",
         "Arbora --> AU",
         "AU --> EG",
