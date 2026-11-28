@@ -642,7 +642,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R051 | `crates/medulla-sql-tests/tests/iceberg_federation_scan.rs::a_partitioned_table_is_scanned_through_the_provider_with_files_pruned` | exists |
 | MEDULLA-FEDERATED-QUERY-R052 | `crates/medulla-plan/src/engine_peer_tests.rs::a_verified_pushdown_narrows_the_transfer_without_changing_the_answer` | exists |
 | MEDULLA-FEDERATED-QUERY-R054 | `crates/medulla-h-sparql/src/federation/mod.rs::service_and_peer_fanout_refuse_one_disallowed_target_through_the_one_guard` | exists |
-| MEDULLA-FEDERATED-QUERY-R055 | `crates/medulla-rdf/src/sparql/multivalue_tests.rs::both_values_of_one_property_bind` | exists |
+| MEDULLA-FEDERATED-QUERY-R055 | `crates/medulla-rdf/src/sparql/multivalue_tests.rs::both_values_of_one_property_bind` and `::a_list_valued_node_property_projects_one_triple_per_element` | exists |
 | MEDULLA-FEDERATED-QUERY-R056 | `crates/medulla-mining/src/mining/causal_impact.rs::two_sided_p_keeps_relative_accuracy_in_the_far_tail` | exists |
 | MEDULLA-FEDERATED-QUERY-R057 | `tests/test_federated_query_file_size.py::test_sql_provider_module_is_within_file_size_limit` | exists |
 | MEDULLA-FEDERATED-QUERY-R058.1 | `crates/medulla-nlq/src/nl.rs::r058_plan_only_returns_candidate_without_executing` | exists |

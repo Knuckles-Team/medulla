@@ -70,3 +70,76 @@ fn a_constant_object_matches_a_second_value() {
     let subjects = column("SELECT ?s WHERE { ?s ex:name \"Alys\" }", "s");
     assert_eq!(subjects.len(), 1, "{subjects:?}");
 }
+
+/// A native node whose `machineKey` is stored as a list, beside a scalar property, a
+/// typed element and elements that carry no term (a nested list and a null).
+fn list_property_view() -> medulla_graph_core::graph::GraphView {
+    let core = medulla_graph_core::graph::GraphCore::new();
+    let mut txn = core.txn();
+    txn.add_node(
+        "m1".into(),
+        rmp_serde::to_vec_named(&serde_json::json!({
+            "type": "machine",
+            "label": "rack-one",
+            "machineKey": [
+                "mac:aa",
+                "serial:bb",
+                {"value": "7", "datatype": "http://www.w3.org/2001/XMLSchema#integer"},
+                ["nested"],
+                null
+            ],
+            "emptyList": []
+        }))
+        .unwrap(),
+    );
+    drop(txn);
+    core.analysis_snapshot()
+}
+
+fn list_column(query: &str, var: &str) -> Vec<String> {
+    let view = list_property_view();
+    let text = format!("PREFIX ex: <http://example.org/>\n{query}");
+    let mut out: Vec<String> = execute(
+        &Dataset::new(&view, Vec::new()),
+        &text,
+        &Projection::from_wire("http://example.org/", "camel"),
+        None,
+    )
+    .unwrap()
+    .into_table()
+    .solutions
+    .iter()
+    .filter_map(|s| s.get(var).map(|b| b.display_text().to_string()))
+    .collect();
+    out.sort();
+    out
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R055
+#[test]
+fn a_list_valued_node_property_projects_one_triple_per_element() {
+    let by_predicate = list_column("SELECT ?k WHERE { ?s ex:machineKey ?k }", "k");
+    assert_eq!(by_predicate, vec!["7", "mac:aa", "serial:bb"]);
+
+    let by_wildcard = list_column(
+        "SELECT ?k WHERE { ?s ?p ?k FILTER (?p = ex:machineKey) }",
+        "k",
+    );
+    assert_eq!(by_wildcard, by_predicate, "the full ?s ?p ?o scan agrees");
+
+    let by_value = list_column("SELECT ?s WHERE { ?s ex:machineKey \"serial:bb\" }", "s");
+    assert_eq!(
+        by_value,
+        vec!["<http://example.org/m1>"],
+        "one element matches by value"
+    );
+
+    let scalar = list_column("SELECT ?l WHERE { ?s ex:label ?l }", "l");
+    assert_eq!(scalar, vec!["rack-one"], "a scalar property is unchanged");
+
+    let empty = list_column("SELECT ?e WHERE { ?s ex:emptyList ?e }", "e");
+    assert!(
+        empty.is_empty(),
+        "an empty list projects no triple: {empty:?}"
+    );
+}

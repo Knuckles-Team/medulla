@@ -251,28 +251,34 @@ async def _rows(client: MedullaClient, query: str) -> list[dict[str, str | None]
 
 
 async def _stored(client: MedullaClient) -> dict[str, dict[str, list[str]]]:
-    """The stored nodes by record id, with each predicate's values.
+    """The stored nodes by record id, with each predicate's values, read through SPARQL.
 
-    Properties come from the node (a list property is not projected to RDF); edges come
-    from the RDF projection, each target named by its record id.
+    A literal property (a list property included, one triple per element) comes from the
+    node's RDF projection, and the class from its mapping reference; each edge target is
+    named by its record id.
     """
-    rows = await _rows(
+    heads = await _rows(
+        client, f"SELECT ?s ?rid WHERE {{ ?s <{CORE}sourceRecordId> ?rid }}"
+    )
+    nodes: dict[str, dict[str, list[str]]] = {head["rid"] or "": {} for head in heads}
+    literals = await _rows(
+        client,
+        f"SELECT ?rid ?p ?o WHERE {{ ?s <{CORE}sourceRecordId> ?rid . "
+        f"?s ?p ?o FILTER(isLiteral(?o)) }}",
+    )
+    for row in literals:
+        predicate = (row["p"] or "").rsplit("#", 1)[-1]
+        nodes[row["rid"] or ""].setdefault(predicate, []).append(row["o"] or "")
+    # The class is the last segment of the mapping reference each record carries.
+    for stored in nodes.values():
+        reference = stored["sourceMappingReference"][0]
+        stored["type"] = [reference.rsplit("/", 1)[-1]]
+    edges = await _rows(
         client,
         f"SELECT ?s ?rid ?p ?ord WHERE {{ ?s <{CORE}sourceRecordId> ?rid . "
         f"?s ?p ?o . ?o <{CORE}sourceRecordId> ?ord }}",
     )
-    heads = await _rows(
-        client, f"SELECT ?s ?rid WHERE {{ ?s <{CORE}sourceRecordId> ?rid }}"
-    )
-    nodes: dict[str, dict[str, list[str]]] = {}
-    for head in heads:
-        properties = await client.nodes.properties(head["s"] or "")
-        stored: dict[str, list[str]] = {}
-        for name, value in (properties or {}).items():
-            values = value if isinstance(value, list) else [value]
-            stored[name.rsplit("#", 1)[-1]] = [str(item) for item in values]
-        nodes[head["rid"] or ""] = stored
-    for row in rows:
+    for row in edges:
         predicate = (row["p"] or "").rsplit("#", 1)[-1]
         nodes[row["rid"] or ""].setdefault(predicate, []).append(row["ord"] or "")
     return nodes

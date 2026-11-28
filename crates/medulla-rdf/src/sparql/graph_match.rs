@@ -360,9 +360,12 @@ pub(super) fn match_triple_pattern_literals(
 
 /// Every `(property key, literal cell)` a node blob asserts (EH-583): each ordinary
 /// property plus EVERY value parked in the reserved multivalue cell, which is where a
-/// subject's second-and-later values of one predicate live. `type`/`node_type` (the
-/// `rdf:type` synthesis / engine bookkeeping) are not literal triples. Reading only the
-/// ordinary keys would bind just the first value of a multi-valued property.
+/// subject's second-and-later values of one predicate live. A list-valued property (a
+/// JSON array at an ordinary key, as a record ingest stores `machineKey`) contributes
+/// one cell per element under the same key; element order is not significant, and an
+/// element that is itself a list yields no cell. `type`/`node_type` (the `rdf:type`
+/// synthesis / engine bookkeeping) are not literal triples. Reading only the ordinary
+/// keys would bind just the first value of a multi-valued property.
 pub(super) fn literal_cells(
     obj: &serde_json::Map<String, serde_json::Value>,
 ) -> impl Iterator<Item = (&str, &serde_json::Value)> {
@@ -377,7 +380,13 @@ pub(super) fn literal_cells(
         });
     obj.iter()
         .filter(|(k, _)| !matches!(k.as_str(), "type" | "node_type" | RDF_MULTI_VALUE_KEY))
-        .map(|(k, cell)| (k.as_str(), cell))
+        .flat_map(|(k, cell)| {
+            let elements = match cell {
+                serde_json::Value::Array(items) => items.as_slice(),
+                single => std::slice::from_ref(single),
+            };
+            elements.iter().map(move |element| (k.as_str(), element))
+        })
         .chain(extras)
 }
 
