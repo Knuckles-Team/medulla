@@ -2,3 +2,4 @@
 //! and the inventory record set. Every function is pure.
 
 pub mod identity;
+pub mod lifecycle;
