@@ -1054,3 +1054,4 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1045 MEDULLA-DECISION-ENGINE-R038.6 Held-item answer checklist and the engine-recorded critique
 - [ ] T1046 MEDULLA-DECISION-ENGINE-R802.7 Web page selection answer names its decision
 - [ ] T1047 MEDULLA-DECISION-ENGINE-R902 A committed decision emits one decision observer event
+- [ ] T1051 MEDULLA-DECISION-ENGINE-R805.15 Served write: an operator reviews a revision proposal
