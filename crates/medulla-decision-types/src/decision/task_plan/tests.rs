@@ -1180,28 +1180,6 @@ fn a_decomposition_cycle_is_left_to_the_shipped_cycle_check() {
         .starts_with("PLAN_CYCLE"));
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R134.6
-#[test]
-fn every_planner_code_is_registered_upper_snake() {
-    use crate::decision::code_registry::resolve;
-    for code in super::TASK_PLAN_REFUSALS {
-        assert_eq!(resolve(code.as_str()), Some(*code));
-        assert!(code
-            .as_str()
-            .bytes()
-            .all(|b| b.is_ascii_uppercase() || b == b'_'));
-    }
-    for raised in [
-        "EMPTY_PLAN",
-        "PLAN_CYCLE",
-        "DISCONNECTED_OUTPUT",
-        "BINDING_NOT_DEPENDENCY",
-        "PLAN_PARAMETER_CONFLICT",
-    ] {
-        assert!(resolve(raised).is_some(), "{raised} is registered");
-    }
-}
-
 // spec: MEDULLA-DECISION-ENGINE-R134.101
 #[test]
 fn final_artifact_is_covered_by_the_digest_and_validated() {

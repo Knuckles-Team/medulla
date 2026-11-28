@@ -453,3 +453,28 @@ mod thought_search_registration_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod task_plan_registration_tests {
+    // spec: MEDULLA-DECISION-ENGINE-R134.6
+    #[test]
+    fn every_planner_code_is_registered_upper_snake() {
+        use super::resolve;
+        for code in crate::decision::task_plan::TASK_PLAN_REFUSALS {
+            assert_eq!(resolve(code.as_str()), Some(*code));
+            assert!(code
+                .as_str()
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b == b'_'));
+        }
+        for raised in [
+            "EMPTY_PLAN",
+            "PLAN_CYCLE",
+            "DISCONNECTED_OUTPUT",
+            "BINDING_NOT_DEPENDENCY",
+            "PLAN_PARAMETER_CONFLICT",
+        ] {
+            assert!(resolve(raised).is_some(), "{raised} is registered");
+        }
+    }
+}
