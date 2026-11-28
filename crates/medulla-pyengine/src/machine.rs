@@ -334,7 +334,8 @@ mod tests {
         let ids =
             machine_component_ids("urn:machine:host:1", "bond", r#"[{"bondName":"bond0"},{}]"#);
         let ids: serde_json::Value = serde_json::from_str(&ids.unwrap()).unwrap();
-        assert!(ids[0].is_null() && ids[1].is_null());
+        assert!(ids[0].as_str().unwrap().starts_with("urn:machine-part:"));
+        assert!(ids[1].is_null());
         assert!(machine_component_ids("m", "gpu", "[]").is_err());
         let host = r#"{"name":"alpha","addresses":["a.example"],"management_address":null,"roles":[],"groups":[],"credentials":{"ssh":null,"management":null},"identity":{"system_uuid":null,"system_serial":"SN-0001","management_mac":null},"retired":false}"#;
         let entity: serde_json::Value =
