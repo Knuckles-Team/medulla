@@ -11,15 +11,25 @@
 //! `shielding.max_depth` knob each abstain with a registered code naming the
 //! path. `Decide` reads no store and writes nothing.
 
-use medulla_decision_types::decision::field_shielding::{
-    max_depth, release_projection, FieldShieldingRequest,
-};
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::field_shielding::max_depth,
+    medulla_decision_statistical_types::decision::field_shielding::release_projection,
+    medulla_decision_statistical_types::decision::field_shielding::FieldShieldingRequest,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -87,7 +97,7 @@ fn conclude_projection(
 impl DecisionFamily for FieldShieldingFamily {
     fn validate_candidates(
         &self,
-        options: &[medulla_decision_types::decision::statistical::declared::DeclaredOption],
+        options: &[medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption],
         _principal: &str,
     ) -> Result<(), String> {
         single_option(options, RELEASE_OPTION)

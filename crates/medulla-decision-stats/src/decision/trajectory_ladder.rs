@@ -9,16 +9,25 @@
 
 use std::cmp::Ordering;
 
-use medulla_decision_types::decision::statistical::dataset::{
-    ItemLabel, LabelSource, LabelledItem,
-};
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::trajectory_ladder::{
-    decision_digest_prefix, PairedVerdict, RungChoice, TrajectoryLadderRequest, TrajectoryRung,
-    Winner, TRAJECTORY_ARM_MISSING, TRAJECTORY_BASELINE_MISSING, TRAJECTORY_NO_LEGAL_RUNG,
-    TRAJECTORY_SNAPSHOT_MISMATCH,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::decision_digest_prefix,
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::RungChoice,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryLadderRequest,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryRung,
+    medulla_decision_program_types::decision::trajectory_ladder::Winner,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_ARM_MISSING,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_BASELINE_MISSING,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_NO_LEGAL_RUNG,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_SNAPSHOT_MISMATCH,
+};
 
 /// Why the ladder cannot choose a rung.
 #[derive(Debug, Clone, PartialEq, Eq)]

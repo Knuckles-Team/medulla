@@ -15,13 +15,13 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_types::contract::UqlCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_decision_types::decision::DecisionErrorCode::ALL
+        medulla_decision_statistical_types::decision::DecisionErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_decision_types::decision::usage::REFUSALS
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_decision_types::decision::statistical::StatisticalErrorCode::ALL
+        medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_work_types::orchestration::HarnessVocabularyErrorCode::ALL
@@ -39,7 +39,7 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_catalog_types::connector_pack::result::PackWriteErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_decision_types::solve::SolveErrorCode::ALL
+        medulla_decision_policy_types::solve::SolveErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_result_types::evidence_forest::ForestErrorCode::ALL

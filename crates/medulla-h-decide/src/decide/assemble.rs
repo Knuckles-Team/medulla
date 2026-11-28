@@ -8,7 +8,7 @@
 //! through `DecisionCommit`.
 
 use super::SharedState;
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::request::AssemblyRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -75,7 +75,7 @@ pub(super) async fn assemble_for(
     graph: &str,
     verified: &VerifiedRequestContext,
     request: AssemblyRequest,
-) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
+) -> Result<medulla_decision_types::decision::request::AssemblyResult, String> {
     use {
         medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
         medulla_compute_assemble::assemble::RecordIdentity,
@@ -95,7 +95,7 @@ pub(super) async fn assemble_for(
             &request,
             medulla_server_api::knob_config::knobs().primitive_max_edges,
         )?;
-        medulla_decision_types::decision::evidence_stream::validate(
+        medulla_decision_policy_types::decision::evidence_stream::validate(
             request.evidence_streams.as_slice(),
         )
         .map_err(|refused| refused.message())?;
@@ -136,8 +136,8 @@ pub(super) async fn assemble_for(
     // The one system-prompt slot narrows to the connector prompt that covers the required
     // capabilities (MEDULLA-DECISION-ENGINE-R814.3); the selection is evidence of the record.
     let (entries, prompt_selection) = {
-        use medulla_decision_types::decision::knob_families::prompt_candidate::KNOBS;
-        use medulla_decision_types::decision::knobs::KnobValue;
+        use medulla_decision_policy_types::decision::knob_families::prompt_candidate::KNOBS;
+        use medulla_decision_statistical_types::decision::knobs::KnobValue;
         let min_match_micros = match policy.knob(&KNOBS[0]) {
             KnobValue::DecimalMicros(micros) => micros,
             // The knob is a decimal; a pinned policy of another shape keeps the default 1.0.
@@ -266,8 +266,9 @@ pub(super) async fn assemble_for(
         coding_agent_plan(&assembly.record, coding_agent.as_ref(), receipt_age_limit_s);
     let rendered_prompts = render_prompts(prompts.as_slice(), &definitions, assembly.agents.len())?;
     let result = telemetry::stage(Stage::Record, FAMILY, tenant, || {
-        Ok::<_, String>(medulla_decision_types::decision::AssemblyResult {
-            schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
+        Ok::<_, String>(medulla_decision_types::decision::request::AssemblyResult {
+            schema_version:
+                medulla_decision_types::decision::request::ASSEMBLY_RESULT_SCHEMA_VERSION,
             record: assembly.record,
             graph: assembly.graph,
             agents: medulla_types::contract::BoundedVec::new(assembly.agents)
@@ -294,10 +295,10 @@ pub(super) async fn assemble_for(
 /// refusal returns its `TEMPLATE_SLOT_*` code as `CODE: detail`.
 #[cfg(feature = "decide")]
 fn render_prompts(
-    prompts: &[medulla_decision_types::decision::PromptAssignment],
+    prompts: &[medulla_decision_types::decision::request::PromptAssignment],
     definitions: &super::definitions_read::ReadDefinitions,
     agents: usize,
-) -> Result<Vec<medulla_decision_types::decision::RenderedPrompt>, String> {
+) -> Result<Vec<medulla_decision_types::decision::request::RenderedPrompt>, String> {
     use medulla_work_types::orchestration::definitions::{render_digest, render_template};
     prompts
         .iter()
@@ -322,7 +323,7 @@ fn render_prompts(
                     template.id
                 )
             })?;
-            Ok(medulla_decision_types::decision::RenderedPrompt {
+            Ok(medulla_decision_types::decision::request::RenderedPrompt {
                 agent_slot: assignment.agent_slot,
                 template_id: template.id.clone(),
                 template_digest: template.digest.clone(),
@@ -371,7 +372,7 @@ pub(crate) fn restrict_to_allowlist(
 ) -> Result<
     (
         Vec<medulla_agent_types::agent_component::AgentComponentEntry>,
-        medulla_decision_types::decision::coding_agent::ProfileConstraint,
+        medulla_decision_program_types::decision::coding_agent::ProfileConstraint,
     ),
     String,
 > {
@@ -398,7 +399,7 @@ pub(crate) fn restrict_to_allowlist(
     };
     Ok((
         kept,
-        medulla_decision_types::decision::coding_agent::ProfileConstraint {
+        medulla_decision_program_types::decision::coding_agent::ProfileConstraint {
             profile_id: profile.profile_id.clone(),
             revision: profile.revision,
             removed: bounded(removed, "removed tools")?,
@@ -411,13 +412,13 @@ pub(crate) fn restrict_to_allowlist(
 /// one; the pure decision already refused anything that does not compose.
 #[cfg(feature = "decide")]
 fn coding_agent_plan(
-    record: &medulla_decision_types::decision::DecisionRecord,
-    request: Option<&medulla_decision_types::decision::coding_agent::CodingAgentRequest>,
+    record: &medulla_decision_types::decision::record::DecisionRecord,
+    request: Option<&medulla_decision_program_types::decision::coding_agent::CodingAgentRequest>,
     limit_s: Option<u64>,
-) -> Option<medulla_decision_types::decision::coding_agent::CodingAgentPlan> {
+) -> Option<medulla_decision_program_types::decision::coding_agent::CodingAgentPlan> {
     if !matches!(
         record.outcome,
-        medulla_decision_types::decision::DecisionOutcome::Solved { .. }
+        medulla_decision_types::decision::record::DecisionOutcome::Solved { .. }
     ) {
         return None;
     }
@@ -442,7 +443,7 @@ pub(crate) fn assembly_refusal(
 /// that declares nothing) is refused with `MODEL_MEDIA_CAPABILITY_UNKNOWN`.
 #[cfg(feature = "decide")]
 pub(crate) fn selected_model(
-    record: &medulla_decision_types::decision::DecisionRecord,
+    record: &medulla_decision_types::decision::record::DecisionRecord,
     entries: &[medulla_agent_types::agent_component::AgentComponentEntry],
     required: &[medulla_agent_types::agent_component::ModelInputMediaType],
 ) -> Result<
@@ -453,7 +454,10 @@ pub(crate) fn selected_model(
     String,
 > {
     use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind};
-    use medulla_decision_types::decision::{DecisionErrorCode, DecisionOutcome};
+    use {
+        medulla_decision_statistical_types::decision::DecisionErrorCode,
+        medulla_decision_types::decision::record::DecisionOutcome,
+    };
 
     let DecisionOutcome::Solved { slots, .. } = &record.outcome else {
         return Ok((None, None));
@@ -590,9 +594,9 @@ async fn audit_scope_refusal(
 fn resolve_policy(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     request: &AssemblyRequest,
-) -> Result<medulla_decision_types::decision::DecisionPolicy, String> {
+) -> Result<medulla_decision_statistical_types::decision::DecisionPolicy, String> {
     use medulla_agent_types::agent_component::DecisionPolicyRef;
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     match &request.policy {
         DecisionPolicyRef::Default => Ok(DecisionPolicy::engine_default()),
         DecisionPolicyRef::Pinned { component } => {
@@ -609,12 +613,12 @@ fn resolve_policy(
 #[cfg(feature = "decide")]
 pub(crate) fn audit_line(
     action: &'static str,
-    record: &medulla_decision_types::decision::DecisionRecord,
+    record: &medulla_decision_types::decision::record::DecisionRecord,
     verified: &VerifiedRequestContext,
 ) {
     let outcome = match &record.outcome {
-        medulla_decision_types::decision::DecisionOutcome::Solved { .. } => "solved",
-        medulla_decision_types::decision::DecisionOutcome::Abstained { .. } => "abstained",
+        medulla_decision_types::decision::record::DecisionOutcome::Solved { .. } => "solved",
+        medulla_decision_types::decision::record::DecisionOutcome::Abstained { .. } => "abstained",
     };
     tracing::info!(
         target: DECIDE_AUDIT_TARGET,

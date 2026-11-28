@@ -8,8 +8,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::{StepContract, StepShield};
 use medulla_types::contract::{BoundedVec, Digest256};
+use {
+    medulla_decision_types::decision::request::StepContract,
+    medulla_decision_types::decision::request::StepShield,
+};
 
 /// The refusal code of a step schema that no longer matches its source revision.
 pub(crate) const SHIELD_SCHEMA_STALE: &str = "SHIELD_SCHEMA_STALE";
@@ -92,7 +95,7 @@ fn slot_digest(slot: &str) -> Vec<u8> {
 /// An unknown step id refuses `INVALID_PARAMS`.
 pub(crate) fn check_steps_exist(
     contracts: &[StepContract],
-    steps: &[medulla_decision_types::decision::AssemblyStep],
+    steps: &[medulla_decision_types::decision::record::AssemblyStep],
 ) -> Result<(), String> {
     let known: BTreeSet<&str> = steps.iter().map(|step| step.step.as_str()).collect();
     match contracts

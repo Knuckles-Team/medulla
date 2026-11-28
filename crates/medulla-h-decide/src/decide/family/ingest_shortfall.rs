@@ -5,15 +5,29 @@
 //! goals (`goal:<id>`) and the eligible purge candidates (`purge:<id>`), see
 //! `decision::ingest_shortfall`. Advisory; `Decide` writes nothing.
 
-use medulla_decision_types::decision::ingest_shortfall::{
-    allocate, purges, window_fact, Goal, PurgeCandidate, ALLOCATION_OPTION, GOAL_PREFIX,
-    PARAM_BUDGET, PARAM_GOALS, PARAM_PURGE_CANDIDATES, PARAM_WINDOW, PURGE_PREFIX,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::DecideRequest;
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::ingest_throughput::ThroughputWindow;
+use {
+    medulla_decision_statistical_types::decision::ingest_shortfall::allocate,
+    medulla_decision_statistical_types::decision::ingest_shortfall::purges,
+    medulla_decision_statistical_types::decision::ingest_shortfall::window_fact,
+    medulla_decision_statistical_types::decision::ingest_shortfall::Goal,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PurgeCandidate,
+    medulla_decision_statistical_types::decision::ingest_shortfall::ALLOCATION_OPTION,
+    medulla_decision_statistical_types::decision::ingest_shortfall::GOAL_PREFIX,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PARAM_BUDGET,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PARAM_GOALS,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PARAM_PURGE_CANDIDATES,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PARAM_WINDOW,
+    medulla_decision_statistical_types::decision::ingest_shortfall::PURGE_PREFIX,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

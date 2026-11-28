@@ -5,7 +5,6 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::{DecisionCommitRequest, DecisionCommitResult};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_isolation::rbac_persist::RbacPolicyStore;
 use medulla_persistence::redb_backend::RedbBackend;
@@ -21,6 +20,10 @@ use medulla_server_api::state::ServerState;
 use medulla_types::reservation_machine::ReservationState as AdmissionState;
 use medulla_types::reservation_machine::{ReservationEvent, ReservationState};
 use tokio::sync::RwLock;
+use {
+    medulla_decision_types::decision::request::DecisionCommitRequest,
+    medulla_decision_types::decision::request::DecisionCommitResult,
+};
 
 use crate::decide::commit::admission::Admitted;
 use crate::decide::commit::certified::{Coordinator, REQUEST_NOW_MS};
@@ -503,16 +506,18 @@ impl TopologyWorld {
             context: commit_context(&self.store, TENANT, key, nonce),
             expected_catalog_digest: record.inputs.catalog_digest.clone(),
             record,
-            topology: Some(medulla_decision_types::decision::TopologyCommitEvidence {
-                capacity_graph: LEDGER.into(),
-                evidence: medulla_persistence_records::decision_record::tests::evidence_request(
-                    &self.store,
-                    TENANT,
-                    &self.assembly,
-                    &format!("{key}-graph"),
-                    graph_nonce,
-                ),
-            }),
+            topology: Some(
+                medulla_decision_types::decision::request::TopologyCommitEvidence {
+                    capacity_graph: LEDGER.into(),
+                    evidence: medulla_persistence_records::decision_record::tests::evidence_request(
+                        &self.store,
+                        TENANT,
+                        &self.assembly,
+                        &format!("{key}-graph"),
+                        graph_nonce,
+                    ),
+                },
+            ),
             retry_of: None,
             approval: None,
         }

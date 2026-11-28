@@ -6,17 +6,30 @@
 use std::time::Instant;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalDecisionRecord,
-    StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::team_coordination::ChannelSignal;
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
-};
+use medulla_decision_program_types::decision::team_coordination::ChannelSignal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_types::contract::{BoundedVec, OpaqueId};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;
@@ -249,8 +262,11 @@ async fn malformed_team_questions_are_refused() {
 // spec: MEDULLA-DECISION-ENGINE-R170.4
 #[tokio::test]
 async fn team_refusals() {
-    use medulla_decision_types::decision::codes::{
-        TEAM_MEMBER_UNBOUND, TEAM_NO_FALLBACK_AVAILABLE, TEAM_SIGNAL_MISSING, TEAM_SIGNAL_STALE,
+    use {
+        medulla_decision_statistical_types::decision::codes::TEAM_MEMBER_UNBOUND,
+        medulla_decision_statistical_types::decision::codes::TEAM_NO_FALLBACK_AVAILABLE,
+        medulla_decision_statistical_types::decision::codes::TEAM_SIGNAL_MISSING,
+        medulla_decision_statistical_types::decision::codes::TEAM_SIGNAL_STALE,
     };
     let h = Harness::new().await;
     let pin = publish_route_schema(&h).0;

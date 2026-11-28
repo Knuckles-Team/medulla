@@ -14,34 +14,59 @@
 //! record (`stat_promotion::qualified_champion`).
 
 use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, PromotionVerdict};
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::promotion::{
     regression_rollback, subject_gate, PromotionGate,
 };
 use medulla_decision_stats_records::decision::promotion_tier::tier_gate;
-use medulla_decision_types::decision::codes::{
-    ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
-    CANARY_TRAFFIC_OUT_OF_BOUNDS,
-};
-use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
-use medulla_decision_types::decision::promotion_answer::{PromotionAnswer, PromotionAnswerVerdict};
-use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierContext, TierKnobs, TierReview, PARAM_TIER_REVIEWER, PLATFORM_TEAM,
-    PREMISE_ALWAYS_ON, PREMISE_TARGET,
-};
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
-use medulla_decision_types::skill_eval::{
-    CompileState, ModelCompile, CANARY_TRAFFIC_MAX_PPM, CANARY_TRAFFIC_MIN_PPM,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::OpaqueId;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
+use {
+    medulla_decision_policy_types::skill_eval::CompileState,
+    medulla_decision_policy_types::skill_eval::ModelCompile,
+    medulla_decision_policy_types::skill_eval::CANARY_TRAFFIC_MAX_PPM,
+    medulla_decision_policy_types::skill_eval::CANARY_TRAFFIC_MIN_PPM,
+};
+use {
+    medulla_decision_statistical_types::decision::codes::ABLATION_NOISE_BAND_MISSING,
+    medulla_decision_statistical_types::decision::codes::ABLATION_WITHIN_NOISE,
+    medulla_decision_statistical_types::decision::codes::CANARY_NO_CHAMPION,
+    medulla_decision_statistical_types::decision::codes::CANARY_TRAFFIC_OUT_OF_BOUNDS,
+};
+use {
+    medulla_decision_statistical_types::decision::promotion_answer::PromotionAnswer,
+    medulla_decision_statistical_types::decision::promotion_answer::PromotionAnswerVerdict,
+};
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::SkillTier,
+    medulla_decision_statistical_types::decision::promotion_tier::TierContext,
+    medulla_decision_statistical_types::decision::promotion_tier::TierKnobs,
+    medulla_decision_statistical_types::decision::promotion_tier::TierReview,
+    medulla_decision_statistical_types::decision::promotion_tier::PARAM_TIER_REVIEWER,
+    medulla_decision_statistical_types::decision::promotion_tier::PLATFORM_TEAM,
+    medulla_decision_statistical_types::decision::promotion_tier::PREMISE_ALWAYS_ON,
+    medulla_decision_statistical_types::decision::promotion_tier::PREMISE_TARGET,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 use {
     medulla_decision_stats_records::decision::skill_eval::canary_verdict,
     medulla_decision_stats_records::decision::skill_eval::check_traffic,
@@ -633,9 +658,9 @@ fn canary(
     facts.push(format!("canary:verdict={}", verdict.as_str()));
     facts.push(format!("compile:stale={stale}"));
     let chosen = match verdict {
-        medulla_decision_types::skill_eval::CanaryVerdict::Ramp => Some(ask.option.clone()),
-        medulla_decision_types::skill_eval::CanaryVerdict::Hold => None,
-        medulla_decision_types::skill_eval::CanaryVerdict::Rollback => {
+        medulla_decision_policy_types::skill_eval::CanaryVerdict::Ramp => Some(ask.option.clone()),
+        medulla_decision_policy_types::skill_eval::CanaryVerdict::Hold => None,
+        medulla_decision_policy_types::skill_eval::CanaryVerdict::Rollback => {
             Some(format!("rollback:{}", ask.option))
         }
     };

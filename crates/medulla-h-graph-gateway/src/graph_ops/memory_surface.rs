@@ -28,10 +28,6 @@ use medulla_decision_memory::memory::episodes::{
     episodes_visible_at, first_session_overlap, valid_episode, RecordStamp,
 };
 use medulla_decision_stats_records::decision::memory as kernel;
-use medulla_decision_types::decision::knob_families::memory::{
-    ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, SEARCH_STATE_MAX_BYTES, TENANT_MAX_BYTES,
-};
-use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_modality::media_memory::match_derivation;
 use medulla_protocol_types::result_contract::graph::{
@@ -49,6 +45,16 @@ use medulla_work_types::memory::{
 };
 use medulla_work_types::memory::{MemoryKind, NoteView, SessionNoteBody};
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_policy_types::decision::knob_families::memory::ENTRY_MAX_BYTES,
+    medulla_decision_policy_types::decision::knob_families::memory::PROMOTE_MIN_SUPPORT,
+    medulla_decision_policy_types::decision::knob_families::memory::SEARCH_STATE_MAX_BYTES,
+    medulla_decision_policy_types::decision::knob_families::memory::TENANT_MAX_BYTES,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 use {
     medulla_decision_stats_records::decision::session_note::annotate_notes_with,
     medulla_decision_stats_records::decision::session_note::NoteKnobs,

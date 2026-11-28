@@ -1,5 +1,5 @@
 use super::*;
-use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
 
 fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])
@@ -274,7 +274,7 @@ fn every_policy_operation_and_receipt_round_trips() {
         champion_revision_ref: Some(id("polver:base")),
         evaluation_set_digest: digest(16),
         evaluator_digest: digest(17),
-        evaluator_kind: medulla_decision_types::decision::held_out::GraderKind::Annotation,
+        evaluator_kind: medulla_decision_policy_types::decision::held_out::GraderKind::Annotation,
         held_out_trajectory_ids: medulla_types::contract::BoundedVec::new(vec![id(
             "poltraj:held-1",
         )])
@@ -392,9 +392,9 @@ fn outcome_refusal_enums_map_to_folded_codes() {
     use crate::decision::answer_ranking::AnswerRankingRefusal as Ranking;
     use crate::decision::context_budget::{ContextBudgetLimit, ContextBudgetRefusal as Budget};
     use crate::decision::rapid_r056::CertificateRefusal as Certificate;
-    use medulla_decision_types::decision::codes;
-    use medulla_decision_types::decision::defect_triage::TriageAbstainReason as Triage;
-    use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+    use medulla_decision_statistical_types::decision::codes;
+    use medulla_decision_statistical_types::decision::defect_triage::TriageAbstainReason as Triage;
+    use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 
     fn all_folded(refusals: &[&dyn DecisionRefusal]) {
         let mut seen = std::collections::BTreeSet::new();

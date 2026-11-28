@@ -14,15 +14,8 @@ use medulla_agent_types::agent_component::{
     AgentComponentFacts, AgentComponentKind, AgentComponentPublishRequest, ModalityFacts,
     ModelInputCapabilities, ModelInputMediaType, PromptMode,
 };
-use medulla_decision_types::decision::coding_agent::{
-    CodingAgentRequest, SkillTransformation, VerifiedAgentFact,
-};
 use medulla_decision_types::decision::primitive::{
     EFFECTS_ATTRIBUTE, INPUT_SCHEMA_ATTRIBUTE, OUTPUT_SCHEMA_ATTRIBUTE,
-};
-use medulla_decision_types::decision::{
-    AssemblyRequest, AssemblyRequirements, AssemblyResult, DecisionOutcome, LibraryCandidateScope,
-    PremiseClass, PrimitiveEdge, PrimitiveReplacement, ResolutionKind, Violation,
 };
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
@@ -32,6 +25,23 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::coding_agent::CodingAgentRequest,
+    medulla_decision_program_types::decision::coding_agent::SkillTransformation,
+    medulla_decision_program_types::decision::coding_agent::VerifiedAgentFact,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::ResolutionKind,
+    medulla_decision_types::decision::request::AssemblyRequest,
+    medulla_decision_types::decision::request::AssemblyRequirements,
+    medulla_decision_types::decision::request::AssemblyResult,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+    medulla_decision_types::decision::request::PrimitiveEdge,
+    medulla_decision_types::decision::request::PrimitiveReplacement,
+};
 
 pub(in crate::decide) const TENANT: &str = "tenant-media";
 pub(in crate::decide) const ASKER: &str = "asker";
@@ -905,7 +915,7 @@ fn coding_request(
 /// Verifies MEDULLA-DECISION-ENGINE-R036.101: a verified agent composes with ordered skills.
 #[tokio::test]
 async fn coding_agent_plan_orders_skills_and_refuses_stale_receipts() {
-    use medulla_decision_types::decision::PremiseClass;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
     let h = harness().await;
     seed(&h.store, None);
     let receipt = digest('9');

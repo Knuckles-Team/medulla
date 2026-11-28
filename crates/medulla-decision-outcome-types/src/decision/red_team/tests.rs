@@ -41,7 +41,7 @@ fn red_team_records_round_trip() {
     assert!(serde_json::from_value::<ProbeVerdict>(serde_json::json!("breached")).is_err());
     assert_eq!(
         serde_json::to_value(
-            medulla_decision_types::decision::statistical::QuestionKind::ProbeVerdict
+            medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::ProbeVerdict
         )
         .unwrap(),
         "probe_verdict"

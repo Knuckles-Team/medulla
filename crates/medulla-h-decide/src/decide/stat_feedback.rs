@@ -10,12 +10,12 @@
 //! event older than a stored revision of its id is refused. Every check runs
 //! before the write, so a refusal writes nothing.
 
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::statistical::feedback::{
     feedback_key, feedback_prefix, FeedbackEvent, StoredFeedback, FEEDBACK_EVIDENCE_MISMATCH,
     FEEDBACK_JOIN_INCOMPLETE, FEEDBACK_SOURCE_STALE, KNOBS,
 };
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::refusal_code::RefusalCode;
 
 use super::stat_executor::ExecutionContext;

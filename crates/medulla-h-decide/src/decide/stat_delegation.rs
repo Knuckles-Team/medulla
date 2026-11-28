@@ -9,13 +9,19 @@
 //! not written, and the answer is the stored artifact. A refused submission
 //! returns before any write.
 
-use medulla_decision_types::decision::delegation_quality::{
-    admit_delegation, artifact_key, check_request, replaces_window, DelegationKnobs,
-    DelegationQualityOutcome, DelegationQualityRequest, StoredDelegation,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_policy_types::decision::delegation_quality::admit_delegation,
+    medulla_decision_policy_types::decision::delegation_quality::artifact_key,
+    medulla_decision_policy_types::decision::delegation_quality::check_request,
+    medulla_decision_policy_types::decision::delegation_quality::replaces_window,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationKnobs,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationQualityOutcome,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationQualityRequest,
+    medulla_decision_policy_types::decision::delegation_quality::StoredDelegation,
+};
 
 use super::stat_support::resolve_policy;
 

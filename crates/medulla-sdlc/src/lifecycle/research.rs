@@ -7,13 +7,15 @@
 //! `Source: <record_id> (read at <digits>)`, the digits being the read time in epoch
 //! milliseconds. The entry lands only as a pull request through the gates (R017.4).
 
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
-};
 use medulla_source_types::lifecycle::{
     sha256_hex, EvidenceKind, LifecycleRefusal, Proposal, ProposalKind,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 /// The target prefix of a research entry.
 pub const RESEARCH_TARGET_PREFIX: &str = "research:";

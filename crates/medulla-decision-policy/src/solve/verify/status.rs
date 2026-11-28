@@ -2,9 +2,12 @@
 
 use super::error::{StatusDefect, Verdict, VerifyError};
 use super::tree::Evidence;
-use medulla_decision_types::solve::certificate::{Certificate, SolveStatus};
-use medulla_decision_types::solve::spec::RowId;
+use medulla_decision_policy_types::solve::spec::RowId;
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+};
 
 /// Facts established independently of the claimed status.
 pub(super) struct Verified {

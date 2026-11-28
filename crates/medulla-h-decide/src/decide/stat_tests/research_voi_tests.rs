@@ -6,14 +6,22 @@
 use super::kernel_family_support::{decide_as_other_tenant, facts};
 use super::path_preference_tests::pins;
 use super::*;
-use medulla_decision_types::decision::research_voi::{
-    ResearchStop, RESEARCH_DEPTH_EXCEEDED, RESEARCH_NO_BUDGET, STOP_OPTION_ID,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
 };
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
+use {
+    medulla_decision_statistical_types::decision::research_voi::ResearchStop,
+    medulla_decision_statistical_types::decision::research_voi::RESEARCH_DEPTH_EXCEEDED,
+    medulla_decision_statistical_types::decision::research_voi::RESEARCH_NO_BUDGET,
+    medulla_decision_statistical_types::decision::research_voi::STOP_OPTION_ID,
 };
-use medulla_decision_types::decision::ResolutionKind;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const ONE: i64 = 1 << 32;
 

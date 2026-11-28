@@ -13,13 +13,17 @@ mod test_support;
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::claims::{
-    ClaimOp, ClaimPerspective, ClaimState, EvidenceChannel, ObserverRef,
-};
 use medulla_h_jobs::memory_event_publisher::publish_claim_events;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_work_types::participant::ParticipantId;
 use medulla_work_types::participant::{Participant, ParticipantKind};
+use {
+    medulla_decision_statistical_types::claims::ClaimOp,
+    medulla_decision_statistical_types::claims::ClaimPerspective,
+    medulla_decision_statistical_types::claims::ClaimState,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+    medulla_decision_statistical_types::claims::ObserverRef,
+};
 
 const SECRET: &str = "memory-event-recovery-secret";
 const ENCRYPTION_KEY: &str = "memory-event-recovery-encryption-key-0123456789";

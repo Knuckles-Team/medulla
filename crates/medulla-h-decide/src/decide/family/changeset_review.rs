@@ -13,16 +13,31 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::changeset_review::{
-    changed_files_digest, FindingDisposition, ReviewClass, ReviewFinding, Severity, CLASS_PREFIX,
-    SEVERITY_PREFIX,
-};
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, StatisticalErrorCode, TypedValue,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_policy_types::decision::changeset_review::changed_files_digest,
+    medulla_decision_policy_types::decision::changeset_review::FindingDisposition,
+    medulla_decision_policy_types::decision::changeset_review::ReviewClass,
+    medulla_decision_policy_types::decision::changeset_review::ReviewFinding,
+    medulla_decision_policy_types::decision::changeset_review::Severity,
+    medulla_decision_policy_types::decision::changeset_review::CLASS_PREFIX,
+    medulla_decision_policy_types::decision::changeset_review::SEVERITY_PREFIX,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 use {
     medulla_decision_stats_records::decision::changeset_review::block_severity,
     medulla_decision_stats_records::decision::changeset_review::filter_findings,

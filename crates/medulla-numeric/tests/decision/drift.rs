@@ -11,7 +11,10 @@ use medulla_decision_types::{
     decision::statistical::head::HeadKind,
     decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
-use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 use super::common::bounded;
 

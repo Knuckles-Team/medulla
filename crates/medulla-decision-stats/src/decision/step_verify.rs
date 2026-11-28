@@ -11,11 +11,20 @@
 //! `Compromised` verdict and at most `knob verify.max_inconclusive`
 //! inconclusive ones. Pure functions of their inputs.
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::digest::step_trace_digest;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::trajectory_verdict::{
-    is_sha256_hex, AdmissionVerdict, ProbeResult, ProbeVerdict, RecoveryAction, StepCheck,
-    StepOutcome, StepVerdict, TraceStep, VerifyKnobs, MAX_STEP_EVIDENCE,
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::is_sha256_hex,
+    medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::ProbeResult,
+    medulla_decision_statistical_types::decision::trajectory_verdict::ProbeVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::RecoveryAction,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepCheck,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepOutcome,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TraceStep,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyKnobs,
+    medulla_decision_statistical_types::decision::trajectory_verdict::MAX_STEP_EVIDENCE,
 };
 
 /// A step verdict, the recovery a failed step selects and the ids of the
@@ -316,7 +325,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R121.100
     #[test]
     fn a_wide_interval_is_uncertain_and_withholds_the_steps_after_it() {
-        use medulla_decision_types::decision::trajectory_verdict::CheckInterval;
+        use medulla_decision_statistical_types::decision::trajectory_verdict::CheckInterval;
         let (steps, mut checks) = trace(&[true, true, true]);
         // A tight interval verifies the last step.
         checks[1].interval = Some(CheckInterval {

@@ -9,15 +9,24 @@
 //! returns a partial plan: a configuration it cannot honour is a typed
 //! refusal naming the registered code.
 
-use medulla_decision_types::decision::comparative_analysis::{
-    ComparativeAnalysisPlan, ComparativeAnalysisRequest, ComparativeAnalysisStage,
-    ComparativeKnobs, ComparativeStageBudget, COMPARATIVE_BUDGET_INVALID,
-    COMPARATIVE_IMPORTANCE_INVALID, COMPARATIVE_STAGE_EXCEEDS_TOTAL, COMPARATIVE_THRESHOLD_ORDER,
-};
-use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisRequest,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisStage,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeKnobs,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeStageBudget,
+    medulla_decision_statistical_types::decision::comparative_analysis::COMPARATIVE_BUDGET_INVALID,
+    medulla_decision_statistical_types::decision::comparative_analysis::COMPARATIVE_IMPORTANCE_INVALID,
+    medulla_decision_statistical_types::decision::comparative_analysis::COMPARATIVE_STAGE_EXCEEDS_TOTAL,
+    medulla_decision_statistical_types::decision::comparative_analysis::COMPARATIVE_THRESHOLD_ORDER,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 /// The domain of a plan digest.
 pub const PLAN_DIGEST_DOMAIN: &str = "eg/comparative-analysis-plan/v1";
@@ -195,8 +204,8 @@ pub fn plan_comparative_analysis(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::comparative_analysis::ComparativeCandidate;
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::comparative_analysis::ComparativeCandidate;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
 
     const DIGEST: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 

@@ -5,21 +5,36 @@
 
 use super::*;
 use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::program_store::{RunRecord, RunRecordStored, StoredRun};
+use medulla_decision_types::decision::record::ResolutionKind;
 use medulla_decision_types::decision::statistical::head::{
     DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadKind, DECISION_HEAD_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::statistical::log::{
     DecisionLogEntry, EntryInputs, RecordVisibility, DECISION_LOG_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::trajectory_ladder::{
-    PairedVerdict, RungChoice, TrajectoryLadderRequest, TrajectoryRung, Winner,
-};
-use medulla_decision_types::decision::ResolutionKind;
-use medulla_decision_types::decision::{DecisionPolicy, QuantScaleTag, QuantisedValue};
 use medulla_persistence_records::decision_jobs::{encode_artifact, record_key};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+};
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::RungChoice,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryLadderRequest,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryRung,
+    medulla_decision_program_types::decision::trajectory_ladder::Winner,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 const FOREIGN: &str = "tenant-foreign";
 const SNAPSHOT: &str = "snapshot-digest-1";
@@ -361,9 +376,10 @@ async fn paired_verdict_requires_complete_arms() {
 
 /// The ladder head's feature schema: exactly `width` and `depth`.
 fn ladder_schema(h: &Harness) -> (ComponentDependency, String) {
-    use medulla_decision_types::decision::statistical::body::encode_body;
-    use medulla_decision_types::decision::statistical::features::{
-        FeatureSchemaBody, FEATURE_SCHEMA_VERSION,
+    use medulla_decision_program_types::decision::statistical::body::encode_body;
+    use {
+        medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+        medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
     };
     let body = FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
@@ -385,9 +401,9 @@ fn verdict_fit(
     pin: &ComponentDependency,
     key: &str,
     gold_set_digest: String,
-) -> medulla_decision_types::decision::DecisionFitRequest {
+) -> medulla_decision_types::decision::jobs::DecisionFitRequest {
     use medulla_decision_types::decision::jobs::{DatasetSource, LabelRegime};
-    medulla_decision_types::decision::DecisionFitRequest {
+    medulla_decision_types::decision::jobs::DecisionFitRequest {
         tenant_id: TENANT.to_string(),
         idempotency_key: key.to_string(),
         head_kind: HeadKind::ListwiseLogistic,
@@ -406,13 +422,13 @@ fn verdict_fit(
 
 async fn submit(
     h: &Harness,
-    request: medulla_decision_types::decision::DecisionFitRequest,
+    request: medulla_decision_types::decision::jobs::DecisionFitRequest,
 ) -> medulla_protocol_types::protocol::Response {
     super::super::jobs::handle_decision_fit(
         &h.state,
         7,
         &verified(),
-        medulla_decision_types::decision::DecisionFitOp::Submit {
+        medulla_decision_types::decision::jobs::DecisionFitOp::Submit {
             request: Box::new(request),
         },
     )
@@ -422,7 +438,7 @@ async fn submit(
 // spec: MEDULLA-DECISION-ENGINE-R134.12.1
 #[tokio::test]
 async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
-    use medulla_decision_types::decision::DecisionJobRecord;
+    use medulla_decision_types::decision::jobs::DecisionJobRecord;
     let h = Harness::new().await;
     let (pin, schema_digest) = ladder_schema(&h);
 
@@ -478,8 +494,9 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
         tie.features.as_slice(),
         [4 << 32, 2 << 32, 1 << 32, 1 << 32]
     );
-    let medulla_decision_types::decision::statistical::dataset::ItemLabel::Gold {
-        acceptable, ..
+    let medulla_decision_policy_types::decision::statistical::dataset::ItemLabel::Gold {
+        acceptable,
+        ..
     } = &tie.label
     else {
         panic!("a verdict is a gold label")
@@ -494,7 +511,8 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
     let digest = super::super::stat_jobs::dataset_digest(&dataset).unwrap();
     let job: DecisionJobRecord =
         decode(submit(&h, verdict_fit(&pin, "fit-verdicts", digest.clone())).await).unwrap();
-    let medulla_decision_types::decision::DecisionJobOutput::Fit { draft, .. } = succeeded(&job)
+    let medulla_decision_types::decision::jobs::DecisionJobOutput::Fit { draft, .. } =
+        succeeded(&job)
     else {
         panic!("fit output")
     };
@@ -536,7 +554,8 @@ async fn fit_reads_stored_verdicts_as_the_ladder_dataset() {
     let digest = super::super::stat_jobs::dataset_digest(&grown).unwrap();
     let job: DecisionJobRecord =
         decode(submit(&h, verdict_fit(&pin, "fit-verdicts-grown", digest)).await).unwrap();
-    let medulla_decision_types::decision::DecisionJobOutput::Fit { draft, .. } = succeeded(&job)
+    let medulla_decision_types::decision::jobs::DecisionJobOutput::Fit { draft, .. } =
+        succeeded(&job)
     else {
         panic!("fit output")
     };

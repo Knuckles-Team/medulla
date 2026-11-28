@@ -10,21 +10,31 @@
 use std::collections::BTreeSet;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_policy_types::decision::knob_families::trajectory;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::trajectory_ladder::{choose_rung, improvement_proven};
-use medulla_decision_types::decision::knob_families::trajectory;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, StatisticalErrorCode, StatisticalOutcome,
-};
-use medulla_decision_types::decision::trajectory_ladder::{
-    PairedVerdict, TrajectoryLadderRequest, MAX_RUNGS, TRAJECTORY_IMPROVEMENT_UNPROVEN,
-    VERDICT_PREFIX,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryLadderRequest,
+    medulla_decision_program_types::decision::trajectory_ladder::MAX_RUNGS,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_IMPROVEMENT_UNPROVEN,
+    medulla_decision_program_types::decision::trajectory_ladder::VERDICT_PREFIX,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

@@ -3,9 +3,9 @@
 //! Declared candidates must each name a registered ingestion lane
 //! (MEDULLA-DECISION-ENGINE-R030); the gate runs at the candidates stage.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_program_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 use super::DecisionFamily;
 

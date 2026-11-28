@@ -457,7 +457,7 @@ fn check_decision(
         .attributes
         .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
     {
-        let approval: medulla_decision_types::decision::approval::RecommendationApproval =
+        let approval: medulla_decision_policy_types::decision::approval::RecommendationApproval =
             serde_json::from_str(receipt)
                 .map_err(|_| mismatch("the stored approval receipt is unreadable".to_owned()))?;
         if approval.record_id != snapshot.decision_id

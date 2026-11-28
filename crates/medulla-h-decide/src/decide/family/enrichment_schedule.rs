@@ -3,11 +3,14 @@
 //! Declared candidates may not declare a negative `enrichment.cost_q32`
 //! (MEDULLA-DECISION-ENGINE-R031); the gate runs at the candidates stage.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::enrichment_schedule::{
-    EnrichmentCandidate, EnrichmentScheduleRequest, COST_KEY, EXPECTED_VALUE_KEY,
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::EnrichmentCandidate,
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::EnrichmentScheduleRequest,
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::COST_KEY,
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 use super::DecisionFamily;
 

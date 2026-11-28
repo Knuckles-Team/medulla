@@ -25,22 +25,32 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::knob_families::placement::PlanKnobs;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_decision_types::decision::statistical::placement::HeavyCapability;
 use medulla_decision_types::decision::statistical::placement_plan::{
     HostBudget, PlacementPlan, ServiceMove, ServicePlacement, ServiceSpec,
 };
-use medulla_decision_types::decision::AbstainReason;
 use medulla_types::contract::BoundedVec;
 
 use super::model::{Model, MAX_VARIABLES};
-use medulla_decision_types::solve::certificate::{
-    SolveStatus, SolverConfig, SolverConfigSpec, DEFAULT_CERTIFICATE_LEAVES,
-};
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 use medulla_query_types::solve_scalar::{Scalar, Sha256Digest};
+use {
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+    medulla_decision_policy_types::solve::certificate::SolverConfigSpec,
+    medulla_decision_policy_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES,
+};
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveTerm,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 /// Digest domain of a plan in which every service stays (no program is built).
 const STAY_PLAN_DOMAIN: &str = "medulla/placement-plan/stay/v1";

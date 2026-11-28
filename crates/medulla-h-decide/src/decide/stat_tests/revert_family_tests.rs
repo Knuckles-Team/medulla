@@ -5,12 +5,19 @@
 use std::time::Instant;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalDecisionRecord,
-    StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
-};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;

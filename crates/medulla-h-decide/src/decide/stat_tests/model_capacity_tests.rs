@@ -3,7 +3,7 @@
 //! limits they leave; it never exceeds the declared ceiling.
 
 use super::*;
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::decision::record::AbstainReason;
 
 fn observations(rows: &[(u64, u64, &str)]) -> String {
     let rows: Vec<serde_json::Value> = rows

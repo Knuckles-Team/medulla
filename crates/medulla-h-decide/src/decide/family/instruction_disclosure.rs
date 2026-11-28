@@ -17,19 +17,28 @@
 
 use std::collections::BTreeSet;
 
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::instruction_disclosure::{
     instruction_version_prefix, instructions_hash, scan_limit, timeout_s, DisclosureEvent,
     DisclosureTiming, DisclosureTrigger, InstructionVersion, DISCLOSURE_SET_UNDEFINED,
 };
 use medulla_decision_types::decision::record::outcome::AbstainReason;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, StatisticalErrorCode, StatisticalOutcome,
-    TypedValue,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 use {
     medulla_decision_stats_records::decision::instruction_disclosure::next_disclosure_event,
     medulla_decision_stats_records::decision::instruction_disclosure::DisclosureInput,
@@ -157,7 +166,10 @@ struct AskedEvent<'a> {
 /// The one declared option of an event request.
 fn event_option(
     request: &DecideRequest,
-) -> Result<&medulla_decision_types::decision::statistical::declared::DeclaredOption, String> {
+) -> Result<
+    &medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    String,
+> {
     match &request.candidates {
         CandidateSource::Declared { options } if options.len() == 1 => Ok(&options.as_slice()[0]),
         _ => Err(invalid(

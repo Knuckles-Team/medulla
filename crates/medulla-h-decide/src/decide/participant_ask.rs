@@ -10,7 +10,6 @@
 
 use super::SharedState;
 use medulla_decision_stats_records::decision::participant_card::confidence_ppm;
-use medulla_decision_types::claims::{ClaimRecord, EvidenceChannel};
 use medulla_decision_types::decision::knob_families::participant::default_u64;
 use medulla_decision_types::decision::record::outcome::{AbstainReason, RefusalSurface};
 use medulla_decision_types::participant_memory::{ParticipantAnswer, ParticipantQuestion};
@@ -18,6 +17,10 @@ use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination::ParticipantReadAsk;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::claims::ClaimRecord,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+};
 use {
     medulla_decision_stats_records::decision::participant_ask::cite,
     medulla_decision_stats_records::decision::participant_ask::ground,
@@ -78,7 +81,7 @@ async fn ask(
     verified: &VerifiedRequestContext,
     question: &ParticipantQuestion,
 ) -> Result<ParticipantAnswer, String> {
-    use medulla_decision_types::claims::ObserverRef;
+    use medulla_decision_statistical_types::claims::ObserverRef;
     use {
         medulla_h_graph_gateway::graph_ops::participant_surface::participant_exists,
         medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,

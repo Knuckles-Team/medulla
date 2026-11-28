@@ -5,18 +5,25 @@
 //! abstain with their registered codes and write nothing.
 
 use super::*;
-use medulla_decision_types::decision::skill_upgrade_request::{
-    SkillUpgradeReceipt, SkillUpgradeRequest, UpgradeSubjectKind,
-    SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION, SKILL_UPGRADE_DIGEST_MISMATCH,
-    SKILL_UPGRADE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_types::contract::{Digest256, OpaqueId};
 use {
     medulla_catalog_source_types::consumer_contract::ConsumerContractSchema,
     medulla_catalog_source_types::consumer_contract::ContractField,
+};
+use {
+    medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt,
+    medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeRequest,
+    medulla_decision_program_types::decision::skill_upgrade_request::UpgradeSubjectKind,
+    medulla_decision_program_types::decision::skill_upgrade_request::SKILL_UPGRADE_BREAKING_WITHOUT_MIGRATION,
+    medulla_decision_program_types::decision::skill_upgrade_request::SKILL_UPGRADE_DIGEST_MISMATCH,
+    medulla_decision_program_types::decision::skill_upgrade_request::SKILL_UPGRADE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
 };
 
 fn contract(fields: &[(&str, &str, bool)]) -> ConsumerContractSchema {

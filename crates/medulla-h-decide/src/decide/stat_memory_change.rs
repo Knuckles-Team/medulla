@@ -10,23 +10,33 @@
 
 use std::sync::Arc;
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats_records::decision::memory_rewrite::evaluate_rewrite;
-use medulla_decision_types::decision::memory_benchmark::{
-    BenchmarkKnobs, BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt,
-    MemoryChangeBenchmarkRequest, RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
-    MEMORY_RECEIPT_NOT_ADMIT, MEMORY_RECEIPT_REQUIRED, MEMORY_RECEIPT_STALE,
-};
-use medulla_decision_types::decision::memory_rewrite::{
-    MemoryRewriteEvaluation, MemoryRewriteKnobs, MemoryRewriteProposal, RewriteVerdict,
-    MEMORY_REVISION_STALE,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionJobOutput;
+use medulla_decision_types::decision::jobs::DecisionJobOutput;
 use medulla_mutation_types::memory_sync::DocId;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkKnobs,
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkVerdictKind,
+    medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
+    medulla_decision_statistical_types::decision::memory_benchmark::MemoryBenchmarkReceipt,
+    medulla_decision_statistical_types::decision::memory_benchmark::MemoryChangeBenchmarkRequest,
+    medulla_decision_statistical_types::decision::memory_benchmark::RunMetricsReceipt,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_BENCHMARK_SCHEMA_VERSION,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_RECEIPT_NOT_ADMIT,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_RECEIPT_REQUIRED,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_RECEIPT_STALE,
+};
+use {
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteEvaluation,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteKnobs,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteProposal,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteVerdict,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REVISION_STALE,
+};
 use {
     medulla_decision_stats_records::decision::memory_benchmark::benchmark,
     medulla_decision_stats_records::decision::memory_benchmark::BenchmarkVerdict,

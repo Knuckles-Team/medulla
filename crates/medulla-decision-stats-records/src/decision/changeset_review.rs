@@ -5,11 +5,17 @@
 //! `review.filter_confidence_max`. A `medium`, `high` or `critical` finding is
 //! never filtered. Every finding keeps a disposition; nothing is dropped.
 
-use medulla_decision_types::decision::changeset_review::{
-    FindingDisposition, ReviewFinding, Severity,
+use medulla_decision_statistical_types::decision::DecisionPolicy;
+use {
+    medulla_decision_policy_types::decision::changeset_review::FindingDisposition,
+    medulla_decision_policy_types::decision::changeset_review::ReviewFinding,
+    medulla_decision_policy_types::decision::changeset_review::Severity,
 };
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_decision_types::decision::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// The `review.*` knobs. The blocking severity is `Fixed`.
 pub const KNOBS: &[KnobSpec] = &[
@@ -80,8 +86,8 @@ pub fn filter_findings<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::changeset_review::ReviewClass;
-    use medulla_decision_types::decision::knobs::KnobName;
+    use medulla_decision_policy_types::decision::changeset_review::ReviewClass;
+    use medulla_decision_statistical_types::decision::knobs::KnobName;
 
     fn finding(severity: Severity, confidence: u16, doubt: Option<&str>) -> ReviewFinding {
         ReviewFinding {

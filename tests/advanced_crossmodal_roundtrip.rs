@@ -2292,7 +2292,7 @@ async fn epistemic_status_returns_every_facet_over_rpc() {
     // authority
     assert_eq!(
         status.authority.source_reliability,
-        medulla_decision_types::decision::reputation::SourceReliability::Absent
+        medulla_decision_policy_types::decision::reputation::SourceReliability::Absent
     );
     assert_eq!(status.authority.attack_multiplier, 1.5);
     assert_eq!(status.authority.prior_strength, 2.0);

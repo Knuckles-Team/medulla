@@ -9,18 +9,24 @@
 //! and a bootstrap interval seeded by the dataset digest, so the same dataset
 //! always gives the same report.
 
-use medulla_decision_types::decision::statistical::dataset::{
-    ItemLabel, LabelledDataset, LabelledItem,
-};
-use medulla_decision_types::decision::{FeaturePowerReport, IcInterval, QuantScaleTag};
 use medulla_numeric::evaluation::skill::{
     bootstrap_ic_interval, ic_decay, information_coefficient_checked, information_ratio,
 };
 use medulla_numeric::series::window::{pearson, ranks};
 use medulla_query_types::solve_scalar::digest_text;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_types::decision::replay::FeaturePowerReport,
+    medulla_decision_types::decision::replay::IcInterval,
+};
 
 use super::quant::{item_rows, q32, raw_value};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use {
     medulla_decision_stats_records::decision::refusal::bounded,
     medulla_decision_stats_records::decision::refusal::Refusal,

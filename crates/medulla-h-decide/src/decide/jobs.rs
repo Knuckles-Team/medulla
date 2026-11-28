@@ -13,7 +13,7 @@ pub async fn handle_decision_fit(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    op: medulla_decision_types::decision::DecisionFitOp,
+    op: medulla_decision_types::decision::jobs::DecisionFitOp,
 ) -> Response {
     #[cfg(feature = "decide")]
     {
@@ -31,7 +31,7 @@ pub async fn handle_decision_eval(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    op: medulla_decision_types::decision::DecisionEvalOp,
+    op: medulla_decision_types::decision::jobs::DecisionEvalOp,
 ) -> Response {
     #[cfg(feature = "decide")]
     {
@@ -50,7 +50,7 @@ pub async fn handle_skill_eval(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     graph: &str,
-    request: medulla_decision_types::skill_eval::SkillEvalRequest,
+    request: medulla_decision_policy_types::skill_eval::SkillEvalRequest,
 ) -> Result<super::planned_write::PlannedWrite, String> {
     #[cfg(feature = "decide")]
     {
@@ -86,7 +86,7 @@ pub async fn handle_held_item_critique(
 pub async fn handle_skill_eval_case_add(
     verified: &VerifiedRequestContext,
     graph: &str,
-    request: medulla_decision_types::skill_eval::SkillEvalCaseAddRequest,
+    request: medulla_decision_policy_types::skill_eval::SkillEvalCaseAddRequest,
 ) -> Result<super::planned_write::PlannedWrite, String> {
     #[cfg(feature = "decide")]
     {

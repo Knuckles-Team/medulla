@@ -2,9 +2,13 @@
 //! placement request may only tighten. The pinned policy supplies them; a
 //! knob left unpinned is no cap at all.
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::policy::DecisionPolicy;
 use crate::decision::statistical::placement::{PlacementPolicy, PlacementTarget};
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// No cost cap: the knob's own upper bound.
 pub const NO_COST_CAP: i64 = i64::MAX;
@@ -112,7 +116,7 @@ pub fn policy_from_knobs(policy: &DecisionPolicy) -> PlacementPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::knobs::KnobName;
+    use medulla_decision_statistical_types::decision::knobs::KnobName;
 
     // spec: MEDULLA-PLACEMENT-R001.7
     #[test]

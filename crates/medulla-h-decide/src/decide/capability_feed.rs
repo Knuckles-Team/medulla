@@ -35,10 +35,7 @@ use medulla_catalog_types::connector_pack::{
     PackSurfaceEvent, PackSurfaceFacts, CONNECTOR_PACK_SURFACE_TOPIC,
 };
 use medulla_decision_memory::memory::capability_index::{CapabilityIndex, IndexRefusal};
-use medulla_decision_types::decision::capability_designation::{
-    CapabilityRecord, DesignationKnobs, EntityKind, PackOrigin,
-};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_persistence_records::agent_component::AGENT_COMPONENT_OUTBOX_TOPIC;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -46,6 +43,12 @@ use medulla_transaction::OutboxWrite;
 use medulla_transaction::{OutboxClaimBudget, OutboxRejectReason};
 use medulla_types::contract::{OpaqueId, TenantId};
 use tokio::sync::RwLock;
+use {
+    medulla_decision_policy_types::decision::capability_designation::CapabilityRecord,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::EntityKind,
+    medulla_decision_policy_types::decision::capability_designation::PackOrigin,
+};
 
 pub use super::stat_designation::shared_capability_index;
 use super::stat_generation_cycle::ConfiguredEmbedder;

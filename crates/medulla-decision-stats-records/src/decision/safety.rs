@@ -5,8 +5,12 @@
 //! violated bound in `bound_id` order names the verdict, so the verdict does
 //! not depend on the order the caller listed bounds or measurements in.
 
-use medulla_decision_types::decision::safety::{
-    BoundCheck, BoundOutcome, SafetyBound, SafetyMeasurement, SafetyVerdict,
+use {
+    medulla_decision_statistical_types::decision::safety::BoundCheck,
+    medulla_decision_statistical_types::decision::safety::BoundOutcome,
+    medulla_decision_statistical_types::decision::safety::SafetyBound,
+    medulla_decision_statistical_types::decision::safety::SafetyMeasurement,
+    medulla_decision_statistical_types::decision::safety::SafetyVerdict,
 };
 
 /// Check every bound against the measurements. Returns one [`BoundCheck`] per
@@ -64,7 +68,7 @@ fn check_one(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::safety::BoundComparison;
+    use medulla_decision_statistical_types::decision::safety::BoundComparison;
 
     const NOW: u64 = 10_000_000;
     const AGE: u64 = 3_600_000;

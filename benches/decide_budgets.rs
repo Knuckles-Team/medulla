@@ -44,56 +44,18 @@ use medulla_compute_assemble::assemble::admit_topology;
 use medulla_decision_outcome_types::decision::concentration::{
     concentration_verdict, ConcentrationPolicy, EditFact,
 };
+use medulla_decision_statistical_types::belief_revision::BeliefReviseRequest;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
 use medulla_decision_stats::decision::trajectory_join::join;
 use medulla_decision_stats_records::decision::population::wasserstein1;
 use medulla_decision_stats_records::decision::reward::decompose;
-use medulla_decision_types::belief_revision::BeliefReviseRequest;
-use medulla_decision_types::claims::{ClaimOp, EvidenceChannel};
-use medulla_decision_types::decision::autonomy::{AutonomyRequest, IrreversibilityClass};
-use medulla_decision_types::decision::curriculum::{
-    CurriculumRequest, CurriculumStage, PromotionPolicy,
-};
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::population::{DriftRequest, DriftWindow};
-use medulla_decision_types::decision::program_store::{
-    compile_program, program_key, ProgramKnobs, MAX_PROGRAM_STEPS,
-};
 use medulla_decision_types::decision::request::LibraryCandidateScope;
-use medulla_decision_types::decision::reward::{
-    RewardDecompositionRequest, RewardKnobs, StepSignal, MAX_REWARD_STEPS,
-};
-use medulla_decision_types::decision::run_governance::{
-    RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
-};
-use medulla_decision_types::decision::skill_evolution::{PARAM_REQUESTED_SKILLS, PARAM_USED_TERMS};
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::statistical::distilled::{DistilledUpload, TeacherJudgment};
-use medulla_decision_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-};
 use medulla_decision_types::decision::statistical::harness_config::{
     HarnessConfigEvaluationEvidence, HarnessEvidenceLimits,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
-use medulla_decision_types::decision::statistical::writeback::{
-    ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
-    StatisticalDecisionRecord, StatisticalQuestion, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask};
-use medulla_decision_types::decision::thought_search::{
-    BudgetLedger, ReasoningState, ReasoningStrategy, ThoughtNode, ThoughtSearchKnobs,
-    MAX_THOUGHT_LEAVES,
-};
-use medulla_decision_types::decision::trajectory_verdict::{
-    JoinRequest, StepCheck, TraceStep as VerifyStep, TrajectoryEntry, VerifyRequest,
-    MAX_TRAJECTORIES,
-};
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, decode, publish_route_schema, request, Harness, TENANT,
 };
@@ -107,6 +69,104 @@ use medulla_types::edit_machine::EditStatus;
 use medulla_types::evidence_class::EvidenceClass;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
+use {
+    medulla_decision_policy_types::decision::curriculum::CurriculumRequest,
+    medulla_decision_policy_types::decision::curriculum::CurriculumStage,
+    medulla_decision_policy_types::decision::curriculum::PromotionPolicy,
+};
+use {
+    medulla_decision_policy_types::decision::population::DriftRequest,
+    medulla_decision_policy_types::decision::population::DriftWindow,
+};
+use {
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_REQUESTED_SKILLS,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_USED_TERMS,
+};
+use {
+    medulla_decision_program_types::decision::program_store::compile_program,
+    medulla_decision_program_types::decision::program_store::program_key,
+    medulla_decision_program_types::decision::program_store::ProgramKnobs,
+    medulla_decision_program_types::decision::program_store::MAX_PROGRAM_STEPS,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_program_types::decision::statistical::writeback::ProposalInput,
+    medulla_decision_program_types::decision::statistical::writeback::QueuedProposalInput,
+    medulla_decision_program_types::decision::statistical::writeback::RiskTier,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+};
+use {
+    medulla_decision_statistical_types::claims::ClaimOp,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+};
+use {
+    medulla_decision_statistical_types::decision::autonomy::AutonomyRequest,
+    medulla_decision_statistical_types::decision::autonomy::IrreversibilityClass,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::reward::RewardDecompositionRequest,
+    medulla_decision_statistical_types::decision::reward::RewardKnobs,
+    medulla_decision_statistical_types::decision::reward::StepSignal,
+    medulla_decision_statistical_types::decision::reward::MAX_REWARD_STEPS,
+};
+use {
+    medulla_decision_statistical_types::decision::run_governance::RunOutcome,
+    medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
+    medulla_decision_statistical_types::decision::run_governance::StepKind,
+    medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+    medulla_decision_statistical_types::decision::run_governance::TraceArgument,
+    medulla_decision_statistical_types::decision::run_governance::TraceScalar,
+    medulla_decision_statistical_types::decision::run_governance::TraceStep,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::distilled::DistilledUpload,
+    medulla_decision_statistical_types::decision::statistical::distilled::TeacherJudgment,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::thought_search::BudgetLedger,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningState,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningStrategy,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtNode,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchKnobs,
+    medulla_decision_statistical_types::decision::thought_search::MAX_THOUGHT_LEAVES,
+};
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::JoinRequest,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepCheck,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TraceStep as VerifyStep,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TrajectoryEntry,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyRequest,
+    medulla_decision_statistical_types::decision::trajectory_verdict::MAX_TRAJECTORIES,
+};
 
 /// Every registered family timed with the generic fixture request. The
 /// reward-decomposition, population-drift, curriculum-promotion and autonomy-verdict families have their own served
@@ -616,7 +676,7 @@ fn bench_defect_triage(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::decision::defect_triage::TriageDefectRequest;
+    use medulla_decision_statistical_types::decision::defect_triage::TriageDefectRequest;
     use medulla_source_types::lifecycle::{
         defect_node_id, Defect, DefectIntake, DefectStatus, Severity, Symptom,
         DEFECT_RECORD_PROPERTY,
@@ -1091,11 +1151,12 @@ fn bench_insight_selection(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::decision::program_store::insight::{
-        Insight, INSIGHT_SCHEMA_VERSION,
-    };
-    use medulla_decision_types::decision::program_store::RunRecord;
+    use medulla_decision_program_types::decision::program_store::RunRecord;
     use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use {
+        medulla_decision_statistical_types::decision::program_store::insight::Insight,
+        medulla_decision_statistical_types::decision::program_store::insight::INSIGHT_SCHEMA_VERSION,
+    };
 
     let (h, mut asked) = rt.block_on(fixture(QuestionKind::InsightSelection));
     for index in 0..INSIGHT_ROWS {
@@ -1676,8 +1737,11 @@ const RARE_CAPABILITY: &str = "cap:rare";
 fn designation_record(
     tenant: &medulla_types::contract::TenantId,
     index: usize,
-) -> medulla_decision_types::decision::capability_designation::CapabilityRecord {
-    use medulla_decision_types::decision::capability_designation::{CapabilityRecord, EntityKind};
+) -> medulla_decision_policy_types::decision::capability_designation::CapabilityRecord {
+    use {
+        medulla_decision_policy_types::decision::capability_designation::CapabilityRecord,
+        medulla_decision_policy_types::decision::capability_designation::EntityKind,
+    };
     // Eight capabilities per record; every 25th record (4 %) also holds the
     // rare one, so a filter on it selects at most 5 % of the records.
     let mut capabilities: std::collections::BTreeSet<String> = (0..8)
@@ -1721,8 +1785,8 @@ fn bench_capability_designation(
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
     use medulla_decision_memory::memory::capability_index::{CapabilityIndex, ShardLimits};
-    use medulla_decision_types::decision::capability_designation::DesignationKnobs;
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_policy_types::decision::capability_designation::DesignationKnobs;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     use std::collections::{BTreeMap as Map, BTreeSet as Set};
 
     let knobs = DesignationKnobs::from_policy(&DecisionPolicy::engine_default());
@@ -2034,11 +2098,16 @@ fn bench_load_set(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::decision::capability_designation::{
-        CapabilityRecord, EntityKind, PackOrigin,
-    };
-    use medulla_decision_types::decision::load_set::{LoadSetQuestion, LOAD_SET_PARAM};
     use medulla_h_decide::decide::capability_feed::shared_capability_index;
+    use {
+        medulla_decision_policy_types::decision::capability_designation::CapabilityRecord,
+        medulla_decision_policy_types::decision::capability_designation::EntityKind,
+        medulla_decision_policy_types::decision::capability_designation::PackOrigin,
+    };
+    use {
+        medulla_decision_policy_types::decision::load_set::LoadSetQuestion,
+        medulla_decision_policy_types::decision::load_set::LOAD_SET_PARAM,
+    };
 
     let (h, asked) = rt.block_on(fixture(QuestionKind::LoadSet));
     let tenant = medulla_types::contract::TenantId::new(TENANT).unwrap();
@@ -2157,8 +2226,10 @@ fn bench_usage_guidance(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::decision::usage_guidance::{
-        USAGE_GUIDANCE_CONNECTOR_PARAM, USAGE_GUIDANCE_GRAPH_PARAM, USAGE_GUIDANCE_JOB_CLASS_PARAM,
+    use {
+        medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_CONNECTOR_PARAM,
+        medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_GRAPH_PARAM,
+        medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_JOB_CLASS_PARAM,
     };
 
     let (h, asked) = rt.block_on(fixture(QuestionKind::UsageGuidance));
@@ -2236,7 +2307,11 @@ fn bench_entry_trust(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::decision::entry_types::{EntryTrust, RetrievedEntry, TrustTier};
+    use {
+        medulla_decision_statistical_types::decision::entry_types::EntryTrust,
+        medulla_decision_statistical_types::decision::entry_types::RetrievedEntry,
+        medulla_decision_statistical_types::decision::entry_types::TrustTier,
+    };
     const SOURCE: &str = "sha256:bench-source";
     let (h, mut asked) = rt.block_on(fixture(QuestionKind::Route));
     let mut policy = DecisionPolicy::engine_default();
@@ -2299,7 +2374,10 @@ fn bench_failure_patterns(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
+    use {
+        medulla_decision_statistical_types::failure_patterns::FailureIngestResult,
+        medulla_decision_statistical_types::failure_patterns::FailureOp,
+    };
     let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
         "decider",
     )));
@@ -2400,8 +2478,11 @@ fn bench_correction(
     rt: &Runtime,
     report: &mut BTreeMap<String, serde_json::Value>,
 ) {
-    use medulla_decision_types::correction::{
-        CorrectionInput, CorrectionNearest, CorrectionOp, CorrectionRecorded,
+    use {
+        medulla_decision_policy_types::correction::CorrectionInput,
+        medulla_decision_policy_types::correction::CorrectionNearest,
+        medulla_decision_policy_types::correction::CorrectionOp,
+        medulla_decision_policy_types::correction::CorrectionRecorded,
     };
     let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation(
         "decider",
@@ -2448,7 +2529,7 @@ fn bench_correction(
         before: "the wrong answer".into(),
         after: "the right answer".into(),
         at_ms: 1_700_000_000_000,
-        source: medulla_decision_types::correction::CorrectionSource::Human,
+        source: medulla_decision_policy_types::correction::CorrectionSource::Human,
     };
     let record = || {
         call(CorrectionOp::Record {
@@ -2934,8 +3015,10 @@ fn bench_skill_evolution(
 /// revision's rollout set. The default budgets of `benches/baselines/decide.json` apply.
 fn bench_paired_rollouts(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
     use medulla_decision_stats::decision::promotion::paired_rollout_evidence;
-    use medulla_decision_types::decision::skill_evolution::{
-        Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
+    use {
+        medulla_decision_policy_types::decision::skill_evolution::Rollout,
+        medulla_decision_policy_types::decision::skill_evolution::RolloutSet,
+        medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_SET_SCHEMA_VERSION,
     };
     let set = RolloutSet {
         schema_version: ROLLOUT_SET_SCHEMA_VERSION,
@@ -3778,13 +3861,15 @@ const PROCESS_PLAN_STEPS: usize = 60;
 /// `plan_explicit_tasks`. Budget in `group_budgets`: p99 at most 30 ms.
 fn bench_process_plan(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
     use medulla_compute_assemble::process_plan::plan::plan_from_workflow;
-    use medulla_decision_types::decision::process_plan::{
-        BindingSource, BindingTarget, StepBinding,
-    };
-    use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
+    use medulla_decision_program_types::decision::task_plan::plan_explicit_tasks;
     use medulla_types::process_import::{
         CanonicalFlow, CanonicalStep, CanonicalWorkflow, ProcessSourceSystem, SourceTrace,
         StepKind as ProcessStepKind,
+    };
+    use {
+        medulla_decision_statistical_types::decision::process_plan::BindingSource,
+        medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+        medulla_decision_statistical_types::decision::process_plan::StepBinding,
     };
     let step = |id: String, kind: ProcessStepKind| CanonicalStep {
         id: id.clone(),

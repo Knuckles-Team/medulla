@@ -9,13 +9,9 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats_records::decision::retrieval::Verdict;
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::body::canonical_body_bytes,
-    decision::statistical::body::content_digest_of,
-};
 use medulla_decision_types::{
     decision::statistical::retrieval_generation::GenerationBootstrapReceipt,
     decision::statistical::retrieval_generation::GenerationEvalItem,
@@ -24,6 +20,10 @@ use medulla_decision_types::{
     decision::statistical::retrieval_generation::GenerationReceipt,
     decision::statistical::retrieval_generation::GENERATION_RECEIPT_SCHEMA_VERSION,
     decision::statistical::retrieval_generation::MAX_GENERATION_TOP_K,
+};
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
 };
 use {
     medulla_decision_stats_records::decision::adapter::to_q16,

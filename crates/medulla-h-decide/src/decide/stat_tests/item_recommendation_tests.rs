@@ -2,7 +2,7 @@
 //! pause steps refine the query toward the history, so the ranking over a
 //! seeded catalog of four clusters never loses NDCG.
 
-use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
+use medulla_decision_program_types::decision::knob_families::recommend::RecommendKnobs;
 use {
     medulla_decision_stats_records::decision::recommend::encode_catalog,
     medulla_decision_stats_records::decision::recommend::fit_codebooks,
@@ -86,11 +86,11 @@ mod served {
     use super::super::path_preference_tests::pins;
     use super::super::retrieval_tests::learn;
     use super::super::*;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
     use medulla_decision_types::decision::statistical::retrieval::{
         LearningRecorded, LearningWrite,
     };
     use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-    use medulla_decision_types::decision::PremiseClass;
     use medulla_types::evidence_class::EvidenceClass;
 
     const CATALOG: &str = "catalog-items";
@@ -159,7 +159,7 @@ mod served {
         };
         assert_eq!((fitted.items, fitted.dimension), (24, 4));
         assert_eq!(fitted.catalog_digest.len(), 64);
-        let key = medulla_decision_types::decision::item_recommendation::encoder_key(
+        let key = medulla_decision_statistical_types::decision::item_recommendation::encoder_key(
             CATALOG,
             &fitted.catalog_digest,
         );

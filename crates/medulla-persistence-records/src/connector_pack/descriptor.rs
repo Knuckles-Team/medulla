@@ -14,11 +14,12 @@ use medulla_agent_types::agent_component::capability_descriptor::{
     derived_reliability, ApprovalClass, CapabilityDescriptor, DataPort, Locality, SideEffectClass,
     CAPABILITY_DESCRIPTOR_VERSION,
 };
-use medulla_decision_types::decision::capability_designation::{
-    DESCRIPTOR_APPROVAL_CLASS_MISSING, DESCRIPTOR_SIDE_EFFECT_MISSING,
-};
 use medulla_rdf::oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 use medulla_types::contract::{ResourceId, ScopeKind, TenantId};
+use {
+    medulla_decision_policy_types::decision::capability_designation::DESCRIPTOR_APPROVAL_CLASS_MISSING,
+    medulla_decision_policy_types::decision::capability_designation::DESCRIPTOR_SIDE_EFFECT_MISSING,
+};
 
 /// The connector-pack vocabulary namespace.
 pub const CP: &str = medulla_types::ontology_iri!("connector-pack#");

@@ -8,9 +8,13 @@
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::agent_ontology::satisfies;
-use medulla_decision_types::{
-    decision::AssemblyConstraints, decision::CandidateFacts, decision::DecisionInputs,
-    decision::Elimination, decision::ObjectiveLevelKind, decision::Violation,
+use {
+    medulla_decision_statistical_types::decision::record::premise::Elimination,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::request::AssemblyConstraints,
 };
 
 use super::facts::{self, Declared};

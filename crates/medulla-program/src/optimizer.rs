@@ -554,7 +554,7 @@ pub struct OptimizationResult {
     /// The held-out evidence of the selected candidate, read by the promotion
     /// gate (MEDULLA-DECISION-ENGINE-R810.7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub held_out: Option<medulla_decision_types::decision::held_out::HeldOutEvidence>,
+    pub held_out: Option<medulla_decision_policy_types::decision::held_out::HeldOutEvidence>,
     pub candidates: Vec<ProgramCandidate>,
     #[serde(default)]
     pub plans: Vec<OptimizationPlan>,

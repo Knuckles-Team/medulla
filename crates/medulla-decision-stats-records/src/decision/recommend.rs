@@ -12,7 +12,7 @@
 use medulla_decision_outcome_types::decision::recommend::{
     RecommendedItem, SemanticId, MAX_PAUSE_STEPS,
 };
-use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
+use medulla_decision_program_types::decision::knob_families::recommend::RecommendKnobs;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};

@@ -25,21 +25,18 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_policy_types::decision::reputation::SourceReliability;
+use medulla_decision_statistical_types::decision::QuantScaleTag;
+use medulla_decision_statistical_types::decision::TraceFidelityLevel;
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
 use medulla_decision_stats::{
     decision::track_record::executed_forecast, decision::track_record::track_records,
     decision::track_record::ResolvedForecast, decision::track_record::TrackRecord,
 };
-use medulla_decision_types::decision::reputation::SourceReliability;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::QuantScaleTag;
-use medulla_decision_types::decision::TraceFidelityLevel;
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogEntry, decision::statistical::log::StoredEvaluation,
-};
-use medulla_decision_types::{
-    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalErrorCode,
 };
 use medulla_numeric::calibration::ProperScores;
 use medulla_numeric::detkernel::Level;
@@ -49,6 +46,10 @@ use medulla_numeric::risk::{
 };
 use medulla_tables::schema::ColumnType;
 use serde_json::Value;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+};
 
 use super::stat_log::{executed_option, joined, LogReader, MAX_LOG_ROWS};
 use super::stat_slate::evaluated_slates;

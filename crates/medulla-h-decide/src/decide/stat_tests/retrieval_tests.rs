@@ -6,7 +6,6 @@
 use super::consumer_tests::{declared, declared_abstention, declared_request, score_schema};
 use super::log_tests::log_op;
 use super::*;
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
     decision::statistical::retrieval::LearningWrite, decision::statistical::retrieval::PathEdge,
@@ -15,6 +14,10 @@ use medulla_decision_types::{
     decision::statistical::retrieval::ReturnedEvidence,
 };
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+};
 
 pub(super) async fn learn(
     h: &Harness,

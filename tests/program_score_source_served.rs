@@ -16,7 +16,7 @@ mod test_support;
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::held_out::GraderKind;
+use medulla_decision_policy_types::decision::held_out::GraderKind;
 use medulla_modality::{Classification, OpaqueRef, PolicyEnvelope, PrivacyAttestation};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_program::{

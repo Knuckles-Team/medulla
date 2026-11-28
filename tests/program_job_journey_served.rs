@@ -25,13 +25,10 @@ mod test_support;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
-use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningRecorded, LearningWrite, PointerMovement, PointerRef,
-};
-use medulla_decision_types::decision::statistical::{
-    DecisionBatch, QuestionKind, TypedParam, TypedValue,
 };
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, publish_route_schema_in, Harness,
@@ -41,6 +38,12 @@ use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use program_job_support::{
     champion_target, evaluation_of, first_string_with_prefix, node_properties, program_ref,
     run_program_job, sized_program_request, GRAPH, SECRET,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
 };
 
 /// Train and test examples of the 200-example corpus; the test split holds more

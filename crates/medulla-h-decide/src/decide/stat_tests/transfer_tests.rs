@@ -5,11 +5,13 @@
 
 use super::retrieval_tests::{clone_executed, clone_record, executed_template};
 use super::*;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 use medulla_decision_types::decision::statistical::log::OutcomeAggregate;
-use medulla_decision_types::decision::transfer::{
-    BackboneBinding, TransferEstimate, TransferRequest,
+use {
+    medulla_decision_policy_types::decision::transfer::BackboneBinding,
+    medulla_decision_policy_types::decision::transfer::TransferEstimate,
+    medulla_decision_policy_types::decision::transfer::TransferRequest,
 };
-use medulla_decision_types::decision::PremiseClass;
 
 fn skill() -> String {
     "c".repeat(64)
@@ -220,7 +222,7 @@ async fn skill_rows(
     h: &Harness,
     who: &str,
     tenant: &str,
-) -> Result<Vec<medulla_decision_types::decision::transfer::SkillCandidateRow>, String> {
+) -> Result<Vec<medulla_decision_policy_types::decision::transfer::SkillCandidateRow>, String> {
     let op = DecisionLogOp::Aggregate {
         request: OutcomeAggregateRequest {
             tenant_id: tenant.to_string(),

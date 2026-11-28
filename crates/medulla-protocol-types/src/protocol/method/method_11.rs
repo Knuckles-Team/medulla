@@ -96,7 +96,7 @@ $($variants)*
     /// complete ancestry (MEDULLA-DECISION-ENGINE-R133.7.3). Scope `trace:read`;
     /// the content fields need `trace:read-content`.
     TraceCritique {
-        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+        query: medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery,
     },
     /// One bounded page of `tenant`'s WorkItems, optionally of one `kind`.
     /// Pages by the limit / scan / byte bounds of `AgentComponent.Search`; an
@@ -714,7 +714,7 @@ $($variants)*
     /// caller's graph view, so a hidden node yields no fact. See
     /// [`medulla_decision_types::context_facts`].
     ContextFacts {
-        request: medulla_decision_types::context_facts::ContextFactsRequest,
+        request: medulla_decision_statistical_types::context_facts::ContextFactsRequest,
     },
     // ── Source spans (MEDULLA-DECISION-ENGINE-R153) ──
     /// A bounded line range of one ingested text source, located through the

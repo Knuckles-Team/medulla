@@ -6,15 +6,27 @@
 //! another run or evidence the clock cannot have observed is a coded refusal.
 //! Advisory; `Decide` writes nothing.
 
-use medulla_decision_types::decision::process_remediation::{
-    verdict, Liveness, EVIDENCE_MISMATCH, PARAM_CPU_TIME_MS, PARAM_EVIDENCE_RUN_ID,
-    PARAM_HOLDS_CHILD_OUTPUT, PARAM_LAST_PROGRESS_MS, PARAM_OBSERVED_AT_MS, PARAM_OUTPUT_BYTES,
-    PARAM_RUN_ID, REMEDIATION_OPTION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_policy_types::decision::process_remediation::verdict,
+    medulla_decision_policy_types::decision::process_remediation::Liveness,
+    medulla_decision_policy_types::decision::process_remediation::EVIDENCE_MISMATCH,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_CPU_TIME_MS,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_EVIDENCE_RUN_ID,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_HOLDS_CHILD_OUTPUT,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_LAST_PROGRESS_MS,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_OBSERVED_AT_MS,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_OUTPUT_BYTES,
+    medulla_decision_policy_types::decision::process_remediation::PARAM_RUN_ID,
+    medulla_decision_policy_types::decision::process_remediation::REMEDIATION_OPTION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

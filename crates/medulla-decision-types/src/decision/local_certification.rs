@@ -12,8 +12,8 @@ use medulla_query_types::solve_scalar::digest_text;
 use serde::{Deserialize, Serialize};
 
 use super::digest::LOCAL_CERTIFICATION_DIGEST_DOMAIN;
-use super::record::outcome::DecisionRefusal;
-use super::statistical::ranking_eval::PinnedSet;
+use medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_types::refusal_code::RefusalCode;
 
 /// The wire schema version of a certification request and attestation.

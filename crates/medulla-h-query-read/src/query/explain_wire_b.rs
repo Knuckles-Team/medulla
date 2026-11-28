@@ -580,7 +580,7 @@ pub fn rank_by_provenance_wire(
 #[cfg(all(test, feature = "epistemic-causal"))]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::reputation::SourceReliability;
+    use medulla_decision_policy_types::decision::reputation::SourceReliability;
     use medulla_exec::exec::DecisionSource;
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::RetrievalCandidateWire;

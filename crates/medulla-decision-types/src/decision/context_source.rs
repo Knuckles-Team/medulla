@@ -24,7 +24,7 @@ pub const REFUSALS: &[RefusalCode] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::statistical::StatisticalErrorCode;
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
     // spec: MEDULLA-DECISION-ENGINE-R029.2.2
     #[test]

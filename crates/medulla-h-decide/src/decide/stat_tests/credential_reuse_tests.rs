@@ -3,8 +3,11 @@
 //! abstains when no binding accompanies it.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use {
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const FAR_FUTURE_MS: u64 = u64::MAX / 2;
 

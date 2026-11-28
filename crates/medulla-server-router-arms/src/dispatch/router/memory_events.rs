@@ -8,7 +8,7 @@
 //! commits. A publish failure is logged under its code and leaves the committed claim as it is.
 
 use super::*;
-use medulla_decision_types::memory_events::MemoryEvent;
+use medulla_decision_statistical_types::memory_events::MemoryEvent;
 
 /// Serve `Method::Claims` and announce the committed transitions.
 pub async fn serve_claims_and_publish(
@@ -16,7 +16,7 @@ pub async fn serve_claims_and_publish(
     graph: &str,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    op: medulla_decision_types::claims::ClaimOp,
+    op: medulla_decision_statistical_types::claims::ClaimOp,
 ) -> Response {
     let served =
         medulla_h_decide::decide::handle_claims_planned(state, req_id, graph, verified, op).await;

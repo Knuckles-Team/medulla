@@ -1,14 +1,25 @@
 //! Model, scalar and config validation, and exactness of the scalarisation.
 
 use medulla_decision_policy::solve::model::{Location, Model, ModelError};
-use medulla_decision_types::solve::certificate::{ConfigError, SolverConfig, SolverConfigSpec};
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 use medulla_query_types::solve_scalar::{Scalar, Sha256Digest};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use {
+    medulla_decision_policy_types::solve::certificate::ConfigError,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+    medulla_decision_policy_types::solve::certificate::SolverConfigSpec,
+};
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveTerm,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 use super::support::{level_key, model, random_model};
 

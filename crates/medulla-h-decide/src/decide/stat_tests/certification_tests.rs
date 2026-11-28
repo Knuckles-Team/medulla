@@ -4,11 +4,11 @@
 
 use super::*;
 use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
+use medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet;
 use medulla_decision_types::decision::local_certification::{
     CriterionResult, LocalCertificationRequest, LocalSkillPins, RunReceipt, SkillClassification,
     LOCAL_CERTIFICATION_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::statistical::ranking_eval::PinnedSet;
 
 const FOREIGN: &str = "tenant-foreign";
 const PREFIX: &str = "local_certification/";

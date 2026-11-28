@@ -5,8 +5,8 @@
 //! coded refusals; a foreign tenant is refused before any read.
 
 use super::*;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::serving_technique::KNOBS;
+use medulla_decision_program_types::decision::serving_technique::KNOBS;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 
 fn text(name: &str, value: &str) -> TypedParam {
     TypedParam {
@@ -80,7 +80,8 @@ async fn verdict_follows_receipts_and_knobs() {
     // Equal metrics clear the zero gain floor; a slight gain below a raised
     // floor holds.
     let pinned = |name: &str, value: i64| {
-        let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+        let mut policy =
+            medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
         let spec = KNOBS.iter().find(|k| k.name == name).unwrap();
         policy
             .knobs

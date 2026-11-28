@@ -5,13 +5,24 @@
 //! stop on the node budget.
 
 use super::*;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::thought_search::{
-    BudgetLedger, ReasoningState, ReasoningStrategy, ThoughtNode, ThoughtSearchAnswer, KNOBS,
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, QuantScaleTag, ResolutionKind,
+use {
+    medulla_decision_statistical_types::decision::thought_search::BudgetLedger,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningState,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningStrategy,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtNode,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchAnswer,
+    medulla_decision_statistical_types::decision::thought_search::KNOBS,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
 };
 
 fn policy(strategies: &[(&str, ReasoningStrategy)]) -> DecisionPolicy {

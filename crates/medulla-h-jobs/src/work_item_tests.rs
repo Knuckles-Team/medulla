@@ -568,8 +568,8 @@ fn nested_trace() -> [serde_json::Value; 4] {
 fn critique(
     root: &str,
     tenant: &str,
-) -> medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery {
-    medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery {
+) -> medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery {
+    medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery {
         tenant: tenant.into(),
         root_node_id: root.into(),
         snapshot_id: "snapshot:1".into(),
@@ -584,8 +584,8 @@ fn critique(
 async fn read_critique_page(
     state: &Arc<RwLock<ServerState>>,
     id: u64,
-    query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
-) -> medulla_decision_types::decision::recursive_trace::TraceCritiquePage {
+    query: medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery,
+) -> medulla_decision_program_types::decision::recursive_trace::TraceCritiquePage {
     let response = call(
         state,
         id,
@@ -597,7 +597,7 @@ async fn read_critique_page(
 }
 
 fn page_ids(
-    nodes: &[medulla_decision_types::decision::recursive_trace::TraceCritiqueNode],
+    nodes: &[medulla_decision_program_types::decision::recursive_trace::TraceCritiqueNode],
 ) -> Vec<&str> {
     nodes.iter().map(|node| node.node_id.as_str()).collect()
 }

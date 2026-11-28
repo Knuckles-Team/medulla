@@ -101,7 +101,7 @@ An operator watches a long build. Each run reports its state, step, budget, shif
 
 ## Assumptions
 
-- `MEDULLA-DECISION-ENGINE-R179` keeps the `KnobSpec` table form in `crates/medulla-decision-types/src/decision/knobs.rs`.
+- `MEDULLA-DECISION-ENGINE-R179` keeps the `KnobSpec` table form in `crates/medulla-decision-statistical-types/src/decision/knobs.rs`.
 - The background-task progress registry is specified in parallel by `MEDULLA-OBSERVE` in `specs/engine-observability/`. R004.3 binds its provider row by ID before R004.3 is implemented.
 - The thresholds of SC-001, SC-002 and SC-006 are starting values. The R010 bench measurement on this platform replaces them.
 - Serving-time distance scoring and its accelerator seam stay with the vector index owner. Only training moves.

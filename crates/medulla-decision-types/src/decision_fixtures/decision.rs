@@ -1,7 +1,7 @@
 //! Decide-layer fixtures shared by medulla-types' own derivation tests and
 //! medulla-compute's assembly tests.
 
-use crate::decision::CandidateFacts;
+use crate::decision::record::CandidateFacts;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
@@ -118,8 +118,13 @@ pub fn tool_entry_with_cost_latency(
 
 /// The BM25 text feature over a component's `summary`, scored against the
 /// request's `query` parameter; abstains when either is missing.
-pub fn summary_text_feature() -> crate::decision::statistical::features::FeatureSpec {
-    use crate::decision::statistical::features::{FeatureKind, FeatureSpec, MissingValue};
+pub fn summary_text_feature(
+) -> medulla_decision_program_types::decision::statistical::features::FeatureSpec {
+    use {
+        medulla_decision_program_types::decision::statistical::features::FeatureKind,
+        medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+        medulla_decision_program_types::decision::statistical::features::MissingValue,
+    };
     FeatureSpec {
         name: "text".to_string(),
         kind: FeatureKind::TextBm25 {
@@ -133,7 +138,7 @@ pub fn summary_text_feature() -> crate::decision::statistical::features::Feature
 #[cfg(test)]
 mod tests {
     use super::tool_entry_with_cost_latency;
-    use crate::decision::CandidateFacts;
+    use crate::decision::record::CandidateFacts;
 
     // spec: MEDULLA-DECISION-ENGINE-R061.1
     #[test]

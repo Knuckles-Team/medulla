@@ -46,6 +46,8 @@ medulla-raft = { path = "../medulla-raft" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }

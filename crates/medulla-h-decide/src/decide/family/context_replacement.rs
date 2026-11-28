@@ -6,16 +6,23 @@
 //! registered refusal. The scores are the caller's, so they are claims.
 //! `Decide` is evaluate-only and writes nothing.
 
+use medulla_decision_policy_types::decision::knob_families::context;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::context_replacement::{
     PairedContextEvaluation, ReplacementRefusal,
 };
-use medulla_decision_types::decision::knob_families::context;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, TypedValue};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 

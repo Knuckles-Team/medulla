@@ -12,8 +12,8 @@ use medulla_agent_types::agent_component::{
 };
 use std::sync::Arc;
 
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::harness_config::{
     decide_action_space, decide_context_policy, decide_plan_scaffold, ActionSpace, ContextPolicy,
     HarnessConfigAnswer, HarnessConfigEvaluationEvidence, HarnessConfigRequestBody,
@@ -22,14 +22,6 @@ use medulla_decision_types::decision::statistical::harness_config::{
 };
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::tool_subset::ToolSubsetRefusal;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, ScoredOption, StatisticalDecisionRecord, StatisticalErrorCode,
-    StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, CandidateSourceRecord, DecisionPolicy, PremiseClass, PremiseProvenance,
-    PremiseRef, QuantScaleTag, QuantisedValue,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_identity_types::assistant_profile::AssistantProfile;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -37,6 +29,25 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateSourceRecord,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::DecisionFamily;
 use crate::decide::candidates::DECLARED_OPTIONS_DOMAIN;
@@ -483,7 +494,7 @@ fn wire<T: serde::Serialize>(value: &T) -> String {
 }
 
 fn fraction(
-    part: &HarnessPart<medulla_decision_types::decision::numeric::UnitRationalWire>,
+    part: &HarnessPart<medulla_decision_statistical_types::decision::numeric::UnitRationalWire>,
 ) -> String {
     let value = selected(part);
     format!("{}/{}", value.numerator(), value.denominator())
@@ -1025,7 +1036,8 @@ fn derive_config(
         tool_subset,
     };
     answer.validate().map_err(invalid_parameter)?;
-    let digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     let basis = Basis {
         body: &body,
         facts: &facts,
@@ -1390,7 +1402,8 @@ pub(crate) fn replay(
             "re-deriving the configuration gives another outcome",
         ));
     }
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     let derived_premises: Vec<PremiseRef> = executed
         .family_premises
         .iter()

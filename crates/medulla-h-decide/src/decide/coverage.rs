@@ -48,7 +48,7 @@ pub(super) async fn coverage_for(
         decision::coverage::CapabilityCoverageResult,
         decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION,
     };
-    use medulla_decision_types::decision::LibraryCandidateScope;
+    use medulla_decision_types::decision::request::LibraryCandidateScope;
 
     if request.tenant_id != verified.tenant() {
         return Err("ACCESS_DENIED: coverage tenant must match the verified request tenant".into());

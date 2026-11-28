@@ -8,9 +8,13 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::process_plan::{BindingSource, BindingTarget, StepBinding};
 use medulla_decision_types::decision::tool_relevance::AssignedTool;
 use medulla_types::process_import::{CanonicalStep, StepKind};
+use {
+    medulla_decision_statistical_types::decision::process_plan::BindingSource,
+    medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+    medulla_decision_statistical_types::decision::process_plan::StepBinding,
+};
 
 /// What the `ToolRelevance` family answers for one step: its ranked tools, best first.
 pub type RelevanceAnswer = Vec<AssignedTool>;

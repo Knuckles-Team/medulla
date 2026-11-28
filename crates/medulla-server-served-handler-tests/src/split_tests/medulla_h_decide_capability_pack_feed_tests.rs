@@ -500,15 +500,20 @@ async fn projection_commit_upserts_pack_records() {
 /// `ToolRelevance` answer carries.
 async fn tool_ranking(served: &Served, task: &str) -> (Vec<String>, u64, String) {
     use medulla_agent_types::agent_component::DecisionPolicyRef;
-    use medulla_decision_types::decision::statistical::{
-        DecideRequest, DecisionBatch, QuestionKind, QuestionSafety, StatisticalOutcome, TypedParam,
-        TypedValue,
-    };
     use medulla_decision_types::decision::tool_relevance::ToolAssignmentRequest;
     use medulla_h_decide::decide::stat_test_support::{publish_route_schema_in, request, Harness};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::authority_context::VerifiedRequestContext;
+    use {
+        medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+        medulla_decision_types::decision::statistical::DecideRequest,
+        medulla_decision_types::decision::statistical::DecisionBatch,
+        medulla_decision_types::decision::statistical::QuestionSafety,
+        medulla_decision_types::decision::statistical::StatisticalOutcome,
+        medulla_decision_types::decision::statistical::TypedParam,
+        medulla_decision_types::decision::statistical::TypedValue,
+    };
 
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let h = Harness {

@@ -6,8 +6,11 @@
 
 use std::path::PathBuf;
 
-use medulla_decision_types::solve::ModelSpec;
-use medulla_decision_types::{decision::CostBudget, decision::DecisionRecord};
+use medulla_decision_policy_types::solve::ModelSpec;
+use {
+    medulla_decision_types::decision::record::DecisionRecord,
+    medulla_decision_types::decision::request::CostBudget,
+};
 
 use super::fixture::*;
 use {

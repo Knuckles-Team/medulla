@@ -14,29 +14,42 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::jobs::ClassCoverage, decision::jobs::ClassLabelMetrics,
     decision::jobs::PromotionMetrics,
 };
-use medulla_decision_types::{decision::StatisticalPolicy, decision::UnitRationalWire};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+};
 
 use medulla_decision_outcome_types::decision::promotion::{
     ChampionPointer, PromotionVerdict, RollbackDecision, BOOTSTRAP_LEVEL, BOOTSTRAP_RESAMPLES,
     KNOBS as PROMOTION_KNOBS, MEASURED_FACT_MIN_CASES, MIN_CASES, MIN_MARGIN, REGRESSION_MARGIN,
     REGRESSION_WINDOW,
 };
-use medulla_decision_types::decision::codes::{
-    ADOPTION_NOT_PROVEN, EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
-    PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED, REVIEW_NOT_INDEPENDENT,
-};
-use medulla_decision_types::decision::held_out::{HeldOutEvidence, ReceiptKind, RevisionSubject};
-use medulla_decision_types::decision::knob_families::retrieval::adopt_margin_micros;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::skill_evolution::RolloutSet;
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_policy_types::decision::knob_families::retrieval::adopt_margin_micros;
+use medulla_decision_policy_types::decision::skill_evolution::RolloutSet;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
+use {
+    medulla_decision_statistical_types::decision::codes::ADOPTION_NOT_PROVEN,
+    medulla_decision_statistical_types::decision::codes::EVAL_SET_NOT_INDEPENDENT,
+    medulla_decision_statistical_types::decision::codes::MEASUREMENT_NOT_NEWER,
+    medulla_decision_statistical_types::decision::codes::PROMOTION_EVAL_TOO_SMALL,
+    medulla_decision_statistical_types::decision::codes::PROMOTION_JUDGE_ONLY,
+    medulla_decision_statistical_types::decision::codes::PROMOTION_NO_BASELINE,
+    medulla_decision_statistical_types::decision::codes::REVIEW_APPROVAL_REQUIRED,
+    medulla_decision_statistical_types::decision::codes::REVIEW_NOT_INDEPENDENT,
+};
 
 use super::head_eval::top_index;
 use super::quant::{exact_wire, level, q32, unit_wire};
@@ -430,7 +443,7 @@ pub fn paired_rollout_evidence(set: &RolloutSet, policy: &DecisionPolicy) -> Hel
     };
     HeldOutEvidence {
         schema_version:
-            medulla_decision_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+            medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
         subject: RevisionSubject::Program {
             program_ref: set.program_ref.clone(),
         },
@@ -444,7 +457,7 @@ pub fn paired_rollout_evidence(set: &RolloutSet, policy: &DecisionPolicy) -> Hel
         delta_ppm,
         case_count: cases as u64,
         independent: true,
-        grader_kind: medulla_decision_types::decision::held_out::GraderKind::TraceMetric,
+        grader_kind: medulla_decision_policy_types::decision::held_out::GraderKind::TraceMetric,
         measurement: None,
         review: None,
     }
@@ -547,17 +560,27 @@ pub fn subject_gate(
 #[cfg(test)]
 mod gate_tests {
     use medulla_decision_outcome_types::decision::promotion::{KNOBS, MEASURED_FACT_MIN_CASES};
-    use medulla_decision_types::decision::codes::{
-        EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
-        PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED,
-        REVIEW_NOT_INDEPENDENT,
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
+    use {
+        medulla_decision_policy_types::decision::held_out::DefinitionKind,
+        medulla_decision_policy_types::decision::held_out::GraderKind,
+        medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+        medulla_decision_policy_types::decision::held_out::MeasurementWindow,
+        medulla_decision_policy_types::decision::held_out::ReceiptKind,
+        medulla_decision_policy_types::decision::held_out::ReviewApproval,
+        medulla_decision_policy_types::decision::held_out::RevisionSubject,
+        medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
     };
-    use medulla_decision_types::decision::held_out::{
-        DefinitionKind, GraderKind, HeldOutEvidence, MeasurementWindow, ReceiptKind,
-        ReviewApproval, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+    use {
+        medulla_decision_statistical_types::decision::codes::EVAL_SET_NOT_INDEPENDENT,
+        medulla_decision_statistical_types::decision::codes::MEASUREMENT_NOT_NEWER,
+        medulla_decision_statistical_types::decision::codes::PROMOTION_EVAL_TOO_SMALL,
+        medulla_decision_statistical_types::decision::codes::PROMOTION_JUDGE_ONLY,
+        medulla_decision_statistical_types::decision::codes::PROMOTION_NO_BASELINE,
+        medulla_decision_statistical_types::decision::codes::REVIEW_APPROVAL_REQUIRED,
+        medulla_decision_statistical_types::decision::codes::REVIEW_NOT_INDEPENDENT,
     };
-    use medulla_decision_types::decision::knobs::KnobValue;
-    use medulla_decision_types::decision::DecisionPolicy;
 
     use super::{challenger_wins, subject_gate, PromotionGate};
 
@@ -760,17 +783,21 @@ mod gate_tests {
         assert!(KNOBS
             .iter()
             .filter(|spec| spec.name.starts_with("governed_set."))
-            .all(|spec| spec.safety == medulla_decision_types::decision::knobs::KnobSafety::Fixed));
+            .all(|spec| spec.safety
+                == medulla_decision_statistical_types::decision::knobs::KnobSafety::Fixed));
     }
 }
 
 #[cfg(test)]
 mod class_metric_tests {
-    use medulla_decision_types::{
-        decision::QuantScaleTag, decision::QuantisedValue, decision::StatisticalPolicy,
-        decision::TraceFidelityLevel, decision::UnitRationalWire,
-    };
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_statistical_types::decision::QuantScaleTag,
+        medulla_decision_statistical_types::decision::QuantisedValue,
+        medulla_decision_statistical_types::decision::StatisticalPolicy,
+        medulla_decision_statistical_types::decision::TraceFidelityLevel,
+        medulla_decision_statistical_types::decision::UnitRationalWire,
+    };
 
     use super::{Observation, Protocol};
 
@@ -870,12 +897,16 @@ mod tests {
     use medulla_decision_outcome_types::decision::promotion::{
         ChampionPointer, PromotionVerdict, KNOBS, REGRESSION_MARGIN, REGRESSION_WINDOW,
     };
-    use medulla_decision_types::decision::held_out::{
-        GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-    };
-    use medulla_decision_types::decision::knobs::KnobValue;
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     use medulla_types::contract::OpaqueId;
+    use {
+        medulla_decision_policy_types::decision::held_out::GraderKind,
+        medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+        medulla_decision_policy_types::decision::held_out::ReceiptKind,
+        medulla_decision_policy_types::decision::held_out::RevisionSubject,
+        medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+    };
 
     use super::regression_rollback;
 
@@ -993,8 +1024,10 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R654.2
     #[test]
     fn paired_bootstrap_is_deterministic_across_thread_counts() {
-        use medulla_decision_types::decision::skill_evolution::{
-            Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
+        use {
+            medulla_decision_policy_types::decision::skill_evolution::Rollout,
+            medulla_decision_policy_types::decision::skill_evolution::RolloutSet,
+            medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_SET_SCHEMA_VERSION,
         };
         let rollouts: Vec<Rollout> = (0..60u64)
             .map(|index| Rollout {

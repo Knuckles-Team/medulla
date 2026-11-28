@@ -9,7 +9,7 @@
 //! graph gateway under the caller's verified context. A repeat `Ingest` plans
 //! nothing and an addressed gap is never reopened.
 
-use medulla_decision_types::failure_patterns::FailureOp;
+use medulla_decision_statistical_types::failure_patterns::FailureOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -39,11 +39,6 @@ mod served {
     use medulla_decision_stats::decision::usage_guidance::{
         order_steps, OrderError, PlanStep, UsageKnobs,
     };
-    use medulla_decision_types::failure_patterns::{
-        FailureIngestResult, FailureOp, FailurePattern, FailureRecord, GapStatus, GapTopic,
-        Signature, SkippedPattern, FAILURE_NO_RUN_TRACE, MAX_FAILURE_STEPS,
-        PATTERN_BELOW_MIN_COUNT, TOPIC_NOT_FOUND, TOPIC_SOURCE_UNLINKED,
-    };
     use medulla_epistemic::failure_patterns::{cluster, is_recurring, ClusterParams};
     use medulla_graph_core::graph::GraphView;
     use medulla_protocol_types::protocol::ResultPayload;
@@ -55,6 +50,21 @@ mod served {
     use medulla_types::gap_topic_machine::{GapStatusKind, GapTopicEvent};
     use medulla_types::transition_refused::MachineState;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_statistical_types::failure_patterns::FailureIngestResult,
+        medulla_decision_statistical_types::failure_patterns::FailureOp,
+        medulla_decision_statistical_types::failure_patterns::FailurePattern,
+        medulla_decision_statistical_types::failure_patterns::FailureRecord,
+        medulla_decision_statistical_types::failure_patterns::GapStatus,
+        medulla_decision_statistical_types::failure_patterns::GapTopic,
+        medulla_decision_statistical_types::failure_patterns::Signature,
+        medulla_decision_statistical_types::failure_patterns::SkippedPattern,
+        medulla_decision_statistical_types::failure_patterns::FAILURE_NO_RUN_TRACE,
+        medulla_decision_statistical_types::failure_patterns::MAX_FAILURE_STEPS,
+        medulla_decision_statistical_types::failure_patterns::PATTERN_BELOW_MIN_COUNT,
+        medulla_decision_statistical_types::failure_patterns::TOPIC_NOT_FOUND,
+        medulla_decision_statistical_types::failure_patterns::TOPIC_SOURCE_UNLINKED,
+    };
 
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};

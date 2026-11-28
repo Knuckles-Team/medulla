@@ -119,9 +119,10 @@ async fn enrich(
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);
         return respond(req_id, receipt);
     }
-    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
-        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
-    );
+    let knobs =
+        medulla_decision_policy_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
+            &medulla_decision_statistical_types::decision::policy::DecisionPolicy::engine_default(),
+        );
     let demoted = match demoted_classes(&ctx, &chunk_classes, &knobs).await {
         Ok(demoted) => demoted,
         Err(error) => return Response::err(req_id, error),
@@ -283,11 +284,13 @@ async fn demoted_classes(
     ctx: &GraphOpRouting<'_>,
     chunk_classes: &std::collections::BTreeMap<
         String,
-        medulla_decision_types::decision::ingestion_admission::ContentClass,
+        medulla_decision_policy_types::decision::ingestion_admission::ContentClass,
     >,
-    knobs: &medulla_decision_types::decision::ingestion_admission::AdmissionKnobs,
+    knobs: &medulla_decision_policy_types::decision::ingestion_admission::AdmissionKnobs,
 ) -> Result<
-    std::collections::BTreeSet<medulla_decision_types::decision::ingestion_admission::ContentClass>,
+    std::collections::BTreeSet<
+        medulla_decision_policy_types::decision::ingestion_admission::ContentClass,
+    >,
     String,
 > {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;

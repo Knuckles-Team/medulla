@@ -40,7 +40,7 @@ async fn state_edges(h: &Harness, edges: &[(&str, &str, &str)]) {
     }
 }
 
-fn asking(tasks: &[&str]) -> medulla_decision_types::decision::AssemblyRequest {
+fn asking(tasks: &[&str]) -> medulla_decision_types::decision::request::AssemblyRequest {
     let mut asked = request(Vec::new());
     asked.requirements.tasks =
         medulla_types::contract::BoundedVec::new(tasks.iter().map(|t| t.to_string()).collect())
@@ -119,8 +119,11 @@ async fn step_cycle_refuses_step_order_cycle() {
 
 /// A step contract over a nested input schema: `customer.name` and `note` are declared,
 /// each with one source slot.
-fn shield_contract(step_id: &str) -> medulla_decision_types::decision::StepContract {
-    use medulla_decision_types::decision::{SourceSlotMap, StepContract};
+fn shield_contract(step_id: &str) -> medulla_decision_types::decision::request::StepContract {
+    use {
+        medulla_decision_types::decision::request::SourceSlotMap,
+        medulla_decision_types::decision::request::StepContract,
+    };
     let schema = serde_json::json!({
         "type": "object",
         "properties": {

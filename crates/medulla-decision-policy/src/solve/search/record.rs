@@ -1,9 +1,17 @@
 //! Pre-order recording of the search tree as a certificate proof.
 
 use super::state::{row_id, var_id};
-use medulla_decision_types::solve::certificate::{DualEntry, LagrangeDual, LeafProof, ProofNode};
-use medulla_decision_types::solve::spec::{Relation, RowId};
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::DualEntry,
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::LeafProof,
+    medulla_decision_policy_types::solve::certificate::ProofNode,
+};
+use {
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::RowId,
+};
 
 /// Records proof nodes until the leaf limit is passed, then only tracks the
 /// minimum bound-leaf value.

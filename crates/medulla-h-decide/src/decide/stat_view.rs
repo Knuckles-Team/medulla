@@ -261,7 +261,8 @@ impl medulla_exec::exec::DecisionSource for DecisionViews {
     fn learned_reliability(
         &self,
         subject: &str,
-    ) -> Result<medulla_decision_types::decision::reputation::SourceReliability, String> {
+    ) -> Result<medulla_decision_policy_types::decision::reputation::SourceReliability, String>
+    {
         super::stat_reputation::learned_reliability(&self.store, &self.reader, subject)
     }
 
@@ -288,7 +289,7 @@ mod decision_column_tests {
         let served: Vec<&str> = super::DECISION_COLUMNS.iter().map(|c| c.0).collect();
         assert_eq!(
             served,
-            medulla_decision_types::decision::DECISION_LOG_COLUMNS
+            medulla_decision_statistical_types::decision::DECISION_LOG_COLUMNS
         );
     }
 }

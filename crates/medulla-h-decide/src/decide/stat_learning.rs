@@ -47,16 +47,10 @@ use super::stat_run_credit::record_run;
 use super::stat_support::{invalid_parameter, refusal};
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::drift::DriftThresholds;
-use medulla_decision_types::decision::held_out::RevisionSubject;
-use medulla_decision_types::decision::statistical::retrieval_drift::{
-    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftKind,
-    DriftPolicyNode, DriftRefreshed, DriftSignal, FiringShard, RefreshPlan, RefreshPriority,
-    ScheduledRefresh, ShardGenerationNode, ShardSwap, DRIFT_REFRESH_RECEIPT_NODE_TYPE,
-    RETRIEVAL_DRIFT_SCHEMA_VERSION, SHARD_GENERATION_NODE_TYPE,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::read_pointer;
@@ -67,6 +61,24 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_work_types::native_control::{
     CapacityAcquireRequest, CapacityDemand, NativeControlSchemaVersion,
+};
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::drift_refresh_receipt_node_id,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::shard_generation_node_id,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftEvaluated,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftKind,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftPolicyNode,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftRefreshed,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftSignal,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::FiringShard,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPlan,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::ScheduledRefresh,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::ShardGenerationNode,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::ShardSwap,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DRIFT_REFRESH_RECEIPT_NODE_TYPE,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RETRIEVAL_DRIFT_SCHEMA_VERSION,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::SHARD_GENERATION_NODE_TYPE,
 };
 
 /// What a learning write resolved before its blocking store work.
@@ -700,7 +712,8 @@ impl Serving<'_> {
                     if state.active.is_some() && state.stack.is_empty() {
                         return Err(format!(
                             "{}: no earlier champion to return to",
-                            medulla_decision_types::decision::codes::ROLLBACK_NO_PARENT.as_str()
+                            medulla_decision_statistical_types::decision::codes::ROLLBACK_NO_PARENT
+                                .as_str()
                         ));
                     }
                 }

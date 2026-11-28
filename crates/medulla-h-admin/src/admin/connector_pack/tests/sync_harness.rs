@@ -18,11 +18,14 @@ use medulla_catalog_types::foreign_read::{
     ForeignReadOpenResult, ForeignReadRow, FOREIGN_READ_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-use medulla_decision_types::decision::statistical::writeback::{WritebackOp, WritebackOutcome};
 use medulla_graph_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
 use medulla_protocol_types::protocol::{GraphType, Method, Response};
 use medulla_source_types::source_sync::SyncReport;
 use medulla_virtual_graph::source_sync::sync_plan_digest;
+use {
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOutcome,
+};
 
 use super::{
     approve_source, bind, build_pack, head_of, imported, ok, tool, Content, Served, ADMIN, TENANT,

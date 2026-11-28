@@ -1,52 +1,77 @@
 //! Evaluate-only explicit DAG planning. EG derives a plan; the host admits it.
 
-use medulla_decision_types::decision::task_plan::skill_binding::SKILL_BINDING_PARAM;
-use medulla_decision_types::decision::task_plan::trajectory::TRAJECTORY_PARAM;
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
-    decision::statistical::StatisticalOutcome, decision::statistical::TypedValue,
-};
-use medulla_decision_types::{
-    decision::task_plan::control_fact, decision::task_plan::plan_explicit_tasks,
-    decision::task_plan::task_bindings, decision::task_plan::TaskPlan,
-    decision::task_plan::TaskPlanTask,
-};
-use medulla_decision_types::{
-    decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
-};
+use medulla_decision_policy_types::decision::task_plan::skill_binding::SKILL_BINDING_PARAM;
+use medulla_decision_program_types::decision::task_plan::trajectory::TRAJECTORY_PARAM;
 use medulla_ingestion_types::skill_plan::skill_binding_stale;
 use medulla_types::contract::{BoundedVec, Digest256, ServerErrorCode};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_program_types::decision::task_plan::control_fact,
+    medulla_decision_program_types::decision::task_plan::plan_explicit_tasks,
+    medulla_decision_program_types::decision::task_plan::task_bindings,
+    medulla_decision_program_types::decision::task_plan::TaskPlan,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_library::lifecycle::AgentLibraryLifecycle;
 use medulla_decision_stats::decision::skill_plan::{
     plan_over_skills, relevance_reaches, skill_relevances, SkillDocument,
 };
-use medulla_decision_types::decision::task_plan::skill_tree::{
-    rank_skill_tree, OutcomeRef, PriorOutcome, SkillCandidate, SkillHierarchy, SkillTreeKnobs,
-    TaskSkillTree, PARENT_ATTRIBUTE, STALE_OUTCOME_EVIDENCE,
-};
 use medulla_query_types::solve_scalar::digest_text;
 use std::collections::BTreeMap;
+use {
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::rank_skill_tree,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::OutcomeRef,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::PriorOutcome,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::SkillCandidate,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::SkillHierarchy,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::SkillTreeKnobs,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::TaskSkillTree,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::PARENT_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::task_plan::skill_tree::STALE_OUTCOME_EVIDENCE,
+};
 
 use super::stat_log::{
     context_digest_of, evaluations_of, visible_entries, visible_entry, LogReader,
 };
 use medulla_decision_types::decision::code_registry;
 use medulla_decision_types::decision::statistical::TypedParam;
-use medulla_decision_types::decision::task_plan::skill_plan::{
-    SkillPlanKnobs, EMPTY_SKILL_INDEX, NO_SKILL_FOR_SUBTASK,
+use {
+    medulla_decision_program_types::decision::task_plan::attach_critical_chain,
+    medulla_decision_program_types::decision::task_plan::attach_horizons,
+    medulla_decision_program_types::decision::task_plan::decompose_task,
+    medulla_decision_program_types::decision::task_plan::CriticalPathKnobs,
+    medulla_decision_program_types::decision::task_plan::DecomposeKnobs,
+    medulla_decision_program_types::decision::task_plan::HorizonKnobs,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
 };
-use medulla_decision_types::decision::task_plan::{
-    attach_critical_chain, attach_horizons, decompose_task, CriticalPathKnobs, DecomposeKnobs,
-    HorizonKnobs, TaskPlanProposal,
+use {
+    medulla_decision_program_types::decision::task_plan::NO_SPECIALIST_FOR_SUBTASK,
+    medulla_decision_program_types::decision::task_plan::PLAN_PARAMETER_CONFLICT,
 };
-use medulla_decision_types::decision::task_plan::{
-    NO_SPECIALIST_FOR_SUBTASK, PLAN_PARAMETER_CONFLICT,
+use {
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanKnobs,
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::EMPTY_SKILL_INDEX,
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::NO_SKILL_FOR_SUBTASK,
 };
-use medulla_decision_types::decision::{DecisionPolicy, LibraryCandidateScope};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
 
 use super::candidates::library_candidates;
 use super::stat_executor::ExecutionContext;
@@ -288,7 +313,7 @@ fn outcome_evidence(
     context: &str,
     pins: &[OutcomeRef],
 ) -> Result<Vec<RecordOutcomes>, String> {
-    use medulla_decision_types::decision::task_plan::skill_tree::MAX_OUTCOME_REFS;
+    use medulla_decision_statistical_types::decision::task_plan::skill_tree::MAX_OUTCOME_REFS;
     let shares_context =
         |record: &medulla_decision_types::decision::statistical::StatisticalDecisionRecord| {
             record.caller_principal == reader.principal
@@ -444,7 +469,7 @@ fn visible_to(row: &serde_json::Map<String, serde_json::Value>, tenant: &str) ->
 /// The pinned skill binding of a request, when it carries one.
 pub(super) fn skill_binding_of(
     request: &DecideRequest,
-) -> Option<&medulla_decision_types::decision::task_plan::skill_binding::SkillBindingPin> {
+) -> Option<&medulla_decision_policy_types::decision::task_plan::skill_binding::SkillBindingPin> {
     request.params.iter().find_map(|param| match &param.value {
         TypedValue::SkillBinding(pin) if param.name == SKILL_BINDING_PARAM => Some(pin.as_ref()),
         _ => None,
@@ -746,7 +771,7 @@ pub(super) fn premises(plan: &TaskPlan, notes: &PlanNotes) -> Vec<PremiseRef> {
 /// saying whether the engine chose the operator.
 fn assignment_premises(plan: &TaskPlan, notes: &PlanNotes) -> Vec<PremiseRef> {
     let independent =
-        medulla_decision_types::decision::task_plan::independent_ids(plan.tasks.as_slice());
+        medulla_decision_program_types::decision::task_plan::independent_ids(plan.tasks.as_slice());
     let mut out: Vec<PremiseRef> = plan
         .tasks
         .iter()

@@ -7,7 +7,7 @@ Medulla compiles a pinned skill document into a typed task plan and stores the r
 
 ## Wire shape
 
-`Method::SourceIngest` with record kind `skill_document` returns a receipt that names the `SkillCompilation` digests. A plan read returns the `TaskPlan` of `crates/medulla-decision-types/src/decision/task_plan.rs`, or a refusal when the binding is stale. An index job carries `max_working_bytes`, which the host grant (`ARBORA-CAPACITY-R753`) bounds.
+`Method::SourceIngest` with record kind `skill_document` returns a receipt that names the `SkillCompilation` digests. A plan read returns the `TaskPlan` of `crates/medulla-decision-program-types/src/decision/task_plan.rs`, or a refusal when the binding is stale. An index job carries `max_working_bytes`, which the host grant (`ARBORA-CAPACITY-R753`) bounds.
 
 ## Refusal codes
 

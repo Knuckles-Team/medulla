@@ -27,12 +27,17 @@
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_ontology::is_capability;
 use medulla_decision_outcome_types::decision::derivation::RequiredCapability;
-use medulla_decision_types::{
-    decision::AbstainReason, decision::CandidateFacts, decision::DecisionInputs,
+use {
+    medulla_decision_policy_types::solve::ConstraintBody,
+    medulla_decision_policy_types::solve::ConstraintSpec,
+    medulla_decision_policy_types::solve::ModelSpec,
+    medulla_decision_policy_types::solve::Relation, medulla_decision_policy_types::solve::Term,
+    medulla_decision_policy_types::solve::VarId,
 };
-use medulla_decision_types::{
-    solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec, solve::Relation, solve::Term,
-    solve::VarId,
+use {
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
 };
 
 use super::facts::{self, Declared};

@@ -5,11 +5,21 @@
 
 use medulla_decision_policy::solve::model::Model;
 use medulla_decision_policy::solve::{verify, StatusDefect, VerifyError};
-use medulla_decision_types::solve::certificate::{
-    BoundProof, Certificate, DualEntry, Incumbent, LagrangeDual, LeafProof, ProofNode, SolveStatus,
-};
-use medulla_decision_types::solve::spec::{RowId, VarId};
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::BoundProof,
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::DualEntry,
+    medulla_decision_policy_types::solve::certificate::Incumbent,
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::LeafProof,
+    medulla_decision_policy_types::solve::certificate::ProofNode,
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+};
+use {
+    medulla_decision_policy_types::solve::spec::RowId,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 use super::support::{model, odd_cycle_cover, rejection, solve_and_verify, wide_config};
 

@@ -10,7 +10,7 @@ use super::*;
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
+use medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
 use medulla_protocol_types::result_contract::ingestion::{
     DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
     DeliveryOpen as DeliveryOpenResult, DeliveryReport as DeliveryReportResult,
@@ -55,7 +55,7 @@ async fn commit_would_dispatch(
     target: &SdlcTarget<'_>,
     record: WouldDispatch,
 ) -> Result<LifecycleRecordStored, String> {
-    use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordWrite;
+    use medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordWrite;
     use medulla_decision_types::decision::statistical::log::DecisionLogOp;
     let response = medulla_h_decide::decide::handle_decision_log(
         state,

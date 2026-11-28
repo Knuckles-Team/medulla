@@ -6,13 +6,26 @@
 //! set by expected value minus cost, and an empty legal set abstains
 //! `PARADIGM_NONE_ADMISSIBLE`. Evaluate-only: `Decide` writes nothing.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::reasoning_paradigm::{
-    legal_paradigms, NoParadigmAdmissible, COST_KEY, EXPECTED_VALUE_KEY, PARADIGMS, PARAM_TASK_TAGS,
-};
-use medulla_decision_types::decision::statistical::{CandidateSource, DecideRequest, QuestionKind};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::legal_paradigms,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::NoParadigmAdmissible,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::COST_KEY,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::EXPECTED_VALUE_KEY,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::PARADIGMS,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::PARAM_TASK_TAGS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+};
 
 use crate::decide::candidates::declared_number;
 use crate::decide::stat_executor::{

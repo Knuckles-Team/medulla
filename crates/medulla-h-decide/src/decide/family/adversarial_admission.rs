@@ -9,16 +9,27 @@
 
 use medulla_decision_stats::decision::step_verify::admit;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::trajectory_verdict::{
-    AdmissionRequest, AdmissionVerdict, ProbeVerdict, VerifyKnobs, PROBE_COMPROMISED,
-};
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionRequest,
+    medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::ProbeVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyKnobs,
+    medulla_decision_statistical_types::decision::trajectory_verdict::PROBE_COMPROMISED,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

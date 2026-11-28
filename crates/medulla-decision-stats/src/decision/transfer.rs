@@ -8,20 +8,29 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::decision::statistical::log::StoredEvaluation;
-use medulla_decision_types::decision::transfer::{
-    BackboneRate, SkillCandidateRow, TransferEstimate, TransferRequest, BACKBONE_DUPLICATE,
-    BACKBONE_MISSING, TRANSFER_SAMPLES_BELOW_MIN, TRANSFER_SCHEMA_VERSION,
-    TRANSFER_TOO_FEW_BACKBONES,
-};
-use medulla_decision_types::decision::{
-    PremiseClass, PremiseProvenance, PremiseRef, TraceFidelityLevel,
-};
 use medulla_numeric::{
     risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts,
     risk::PoolTree,
 };
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::transfer::BackboneRate,
+    medulla_decision_policy_types::decision::transfer::SkillCandidateRow,
+    medulla_decision_policy_types::decision::transfer::TransferEstimate,
+    medulla_decision_policy_types::decision::transfer::TransferRequest,
+    medulla_decision_policy_types::decision::transfer::BACKBONE_DUPLICATE,
+    medulla_decision_policy_types::decision::transfer::BACKBONE_MISSING,
+    medulla_decision_policy_types::decision::transfer::TRANSFER_SAMPLES_BELOW_MIN,
+    medulla_decision_policy_types::decision::transfer::TRANSFER_SCHEMA_VERSION,
+    medulla_decision_policy_types::decision::transfer::TRANSFER_TOO_FEW_BACKBONES,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
+};
 
 use super::aggregate::{label_use, LabelUse};
 use super::quant::q32;
@@ -235,9 +244,10 @@ pub fn robust_transfer(
         }
         // Compare the quantised values, so a tie is exact; ids iterate in order.
         if lowest.is_none_or(
-            |(best, _): (medulla_decision_types::decision::QuantisedValue, &str)| {
-                rate.value < best.value
-            },
+            |(best, _): (
+                medulla_decision_statistical_types::decision::QuantisedValue,
+                &str,
+            )| { rate.value < best.value },
         ) {
             lowest = Some((rate, *id));
         }
@@ -257,7 +267,7 @@ pub fn robust_transfer(
         skill_key: request.skill_key.clone(),
         per_backbone: BoundedVec::new(per_backbone).map_err(|detail| {
             Refusal::new(
-                medulla_decision_types::decision::statistical::StatisticalErrorCode::ParameterInvalid,
+                medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode::ParameterInvalid,
                 detail,
             )
         })?,
@@ -271,9 +281,9 @@ pub fn robust_transfer(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
+    use medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity;
+    use medulla_decision_policy_types::decision::transfer::BackboneBinding;
     use medulla_decision_types::decision::statistical::log::DecisionOutcomeEvaluation;
-    use medulla_decision_types::decision::transfer::BackboneBinding;
     use medulla_types::evidence_class::EvidenceClass;
 
     const SKILL: &str = "a";

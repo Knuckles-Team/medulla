@@ -10,12 +10,16 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::promotion::{challenger_wins, regression_rollback};
-use medulla_decision_types::decision::held_out::{
-    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::OpaqueId;
+use {
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 
 const CASES: usize = 10_000;
 const BUDGET_P99_US: u128 = 20;

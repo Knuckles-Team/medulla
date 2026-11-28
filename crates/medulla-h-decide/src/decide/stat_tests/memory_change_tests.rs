@@ -3,17 +3,27 @@
 //! head, the resolved policy and the dataset; a receipt never changes memory.
 
 use super::*;
-use medulla_decision_types::decision::memory_benchmark::{
-    BenchmarkDataset, BenchmarkQuery, ChangeKind, MemoryChangeBenchmarkRequest, QueryResult,
-    RevisionRef as BenchRevision, RunResults, MEMORY_BENCHMARK_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::memory_rewrite::{
-    HistoryEntry, MemoryRewriteProposal, RevisionRef, RewriteHistory, RewriteVerdict,
-    MEMORY_REWRITE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::DecisionJobStatusRequest;
+use medulla_decision_types::decision::jobs::DecisionJobStatusRequest;
 use medulla_mutation_types::memory_sync::{DocId, RequestId, SyncAction, SyncRequest, SyncStamp};
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkDataset,
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkQuery,
+    medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
+    medulla_decision_statistical_types::decision::memory_benchmark::MemoryChangeBenchmarkRequest,
+    medulla_decision_statistical_types::decision::memory_benchmark::QueryResult,
+    medulla_decision_statistical_types::decision::memory_benchmark::RevisionRef as BenchRevision,
+    medulla_decision_statistical_types::decision::memory_benchmark::RunResults,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_BENCHMARK_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::memory_rewrite::HistoryEntry,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteProposal,
+    medulla_decision_statistical_types::decision::memory_rewrite::RevisionRef,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteHistory,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteVerdict,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REWRITE_SCHEMA_VERSION,
+};
 
 const DOC: &str = "memory:served-1";
 const GRAPH: &str = "default";
@@ -183,7 +193,7 @@ async fn benchmark(h: &Harness, request: MemoryChangeBenchmarkRequest) -> Decisi
 
 fn evaluation(
     job: &DecisionJobRecord,
-) -> &medulla_decision_types::decision::memory_rewrite::MemoryRewriteEvaluation {
+) -> &medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteEvaluation {
     match succeeded(job) {
         DecisionJobOutput::MemoryRewrite { evaluation } => evaluation,
         other => panic!("a rewrite output, got {other:?}"),
@@ -192,7 +202,7 @@ fn evaluation(
 
 fn receipt(
     job: &DecisionJobRecord,
-) -> &medulla_decision_types::decision::memory_benchmark::MemoryBenchmarkReceipt {
+) -> &medulla_decision_statistical_types::decision::memory_benchmark::MemoryBenchmarkReceipt {
     match succeeded(job) {
         DecisionJobOutput::MemoryBenchmark { receipt } => receipt,
         other => panic!("a benchmark output, got {other:?}"),
@@ -221,8 +231,8 @@ async fn rewrite_admit_and_discard_through_decision_eval() {
     assert_eq!(admitted.verdict, RewriteVerdict::Admit);
     assert_eq!(admitted.fidelity_q4, 10_000);
     let premises = admitted.premises(
-        &medulla_decision_types::decision::memory_rewrite::MemoryRewriteKnobs::from_policy(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
+        &medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteKnobs::from_policy(
+            &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
         ),
     );
     assert!(premises

@@ -12,11 +12,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_agent_types::agent_component::{facts::ValidatedPrompt, frame_pins};
 use medulla_decision_outcome_types::decision::prompt_candidate::PromptCandidate;
 use medulla_decision_types::decision::record::outcome::AbstainReason;
-use medulla_decision_types::decision::{
-    DecisionInputs, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_types::contract::Digest256;
 use serde_json::Value;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::DecisionInputs,
+};
 
 /// The only rendering version this engine produces.
 pub const RENDERING_VERSION: u32 = 1;

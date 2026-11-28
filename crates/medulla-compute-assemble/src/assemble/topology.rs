@@ -27,10 +27,10 @@ use medulla_agent_types::agent_topology::TopologyFacts;
 use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::agent_topology::TopologyPolicy;
 use medulla_agent_types::agent_topology::TopologyRequirements;
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::decision::DecisionInputs;
-use medulla_decision_types::decision::DecisionPolicy;
-use medulla_decision_types::decision::TemplateFacts;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
+use medulla_decision_types::decision::record::AbstainReason;
+use medulla_decision_types::decision::record::DecisionInputs;
+use medulla_decision_types::decision::record::TemplateFacts;
 use medulla_types::contract::BoundedVec;
 
 pub(super) use tables::Choice;
@@ -102,9 +102,10 @@ pub(super) fn pose_for<'a>(
         .unwrap_or_else(TopologyPolicy::engine_default);
     // The pinned policy's cap knobs only tighten what the topology policy and
     // the request already allow (MEDULLA-DECISION-ENGINE-R046.750).
-    let knob_caps = medulla_decision_types::decision::knob_families::topology::caps_from_policy(
-        decision_policy,
-    );
+    let knob_caps =
+        medulla_decision_statistical_types::decision::knob_families::topology::caps_from_policy(
+            decision_policy,
+        );
     let caps = policy
         .caps
         .tightened_by(&knob_caps)

@@ -7,10 +7,10 @@
 //! the plan, its cap admission and its premises are sealed in the record.
 //! Evaluate-only: no capacity lease is taken (acquisition is `DecisionCommit`).
 
+use medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use {
@@ -62,7 +62,8 @@ fn conclude_topology(
         .ok_or_else(|| {
             format!("{TOPOLOGY_SCHEMA_UNAVAILABLE}: the topology schema digest is missing")
         })?;
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     let conclusion = decide_topology(&TopologyQuestionInputs {
         requirements: &question.requirements,
         read,

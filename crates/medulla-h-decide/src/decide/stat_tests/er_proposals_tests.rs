@@ -11,13 +11,26 @@ use super::resolve_entity_tests::{
 };
 use super::*;
 use medulla_decision_stats_records::decision::entity_resolution::proposal_option_id;
-use medulla_decision_types::decision::entity_resolution::{ResolutionTier, TierEvaluation};
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
 use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, QuestionKind, StatisticalOutcome, TypedParam,
+use {
+    medulla_decision_statistical_types::decision::entity_resolution::ResolutionTier,
+    medulla_decision_statistical_types::decision::entity_resolution::TierEvaluation,
 };
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedParam,
+};
 
 const OTHER_TENANT: &str = "tenant-other";
 const GRAPH: &str = "entities";
@@ -470,7 +483,7 @@ async fn proposal_records_model_hash_and_tier() {
         .iter()
         .find_map(|p| p.fact.strip_prefix(&format!("er:content_hash:{near}=")))
         .unwrap();
-    assert!(medulla_decision_types::decision::entity_resolution::is_content_hash(hash));
+    assert!(medulla_decision_statistical_types::decision::entity_resolution::is_content_hash(hash));
     // One proposal per generated option; the declared exact pairs add none.
     let proposals = record
         .premises

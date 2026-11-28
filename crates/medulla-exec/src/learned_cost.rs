@@ -450,7 +450,9 @@ fn revision_digest(corrections: &[CostCorrectionArtifact], knobs: &[(String, Str
         .iter()
         .map(|(k, v)| (k.as_str(), v.as_str()))
         .collect();
-    medulla_decision_types::decision::planner_cost_head::cost_head_digest(&curves, &knobs)
+    medulla_decision_statistical_types::decision::planner_cost_head::cost_head_digest(
+        &curves, &knobs,
+    )
 }
 
 impl CostHeadRevision {

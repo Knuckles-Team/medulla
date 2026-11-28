@@ -2,8 +2,11 @@
 
 use std::fmt;
 
-use medulla_decision_types::solve::spec::{RowId, VarId};
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::spec::RowId,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 /// What a certificate was verified to establish.
 #[derive(Debug, Clone, PartialEq, Eq)]

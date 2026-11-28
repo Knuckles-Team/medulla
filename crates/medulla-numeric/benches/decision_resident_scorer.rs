@@ -25,9 +25,12 @@ use medulla_decision_types::{
     decision::statistical::scorer::MAX_SCORER_WIDTH,
     decision::statistical::scorer::RESIDENT_SCORER_CEILING,
 };
-use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
 use serde_json::{json, Value};
 use std::hint::black_box;
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 const SAMPLES: usize = 1_000;
 const WARMUP: usize = 100;

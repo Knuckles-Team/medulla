@@ -11,18 +11,35 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::process_plan::{
-    BindingTarget, ProcessPlanRefusal, StepBinding, PROCESS_PLAN_CALL_DEPTH, PROCESS_PLAN_LOOP,
-    PROCESS_PLAN_TOO_LARGE, PROCESS_STEP_UNBOUND, WORKFLOW_UNKNOWN,
-};
-use medulla_decision_types::decision::task_plan::{
-    ApprovalSpec, BranchArm, BranchCondition, BranchDecisionCondition, BranchKind, BranchSpec,
-    DecisionSpec, JoinSpec, TaskPlanCall, TaskPlanProposal, TaskPlanTask, MAX_CONCURRENCY,
-    MAX_DECISION_IRI_BYTES, MAX_TASKS,
-};
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_import::{
     workflow_digest_hex, CanonicalStep, CanonicalWorkflow, GateKind, StepKind,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::ApprovalSpec,
+    medulla_decision_program_types::decision::task_plan::BranchArm,
+    medulla_decision_program_types::decision::task_plan::BranchCondition,
+    medulla_decision_program_types::decision::task_plan::BranchDecisionCondition,
+    medulla_decision_program_types::decision::task_plan::BranchKind,
+    medulla_decision_program_types::decision::task_plan::BranchSpec,
+    medulla_decision_program_types::decision::task_plan::DecisionSpec,
+    medulla_decision_program_types::decision::task_plan::JoinSpec,
+    medulla_decision_program_types::decision::task_plan::TaskPlanCall,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+    medulla_decision_program_types::decision::task_plan::MAX_CONCURRENCY,
+    medulla_decision_program_types::decision::task_plan::MAX_DECISION_IRI_BYTES,
+    medulla_decision_program_types::decision::task_plan::MAX_TASKS,
+};
+use {
+    medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+    medulla_decision_statistical_types::decision::process_plan::ProcessPlanRefusal,
+    medulla_decision_statistical_types::decision::process_plan::StepBinding,
+    medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_CALL_DEPTH,
+    medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_LOOP,
+    medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_TOO_LARGE,
+    medulla_decision_statistical_types::decision::process_plan::PROCESS_STEP_UNBOUND,
+    medulla_decision_statistical_types::decision::process_plan::WORKFLOW_UNKNOWN,
 };
 
 /// The prefix of the decision IRI a flow condition becomes; the digest of the workflow that

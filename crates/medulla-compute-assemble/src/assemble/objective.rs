@@ -7,16 +7,24 @@
 //! `Coefficient::Unknown` -- ranked in its own tier below every known value,
 //! never read as zero (§7.3).
 
-use medulla_decision_types::{
-    decision::DecisionErrorCode, decision::DecisionInputs, decision::ObjectiveLevelKind,
-    decision::ObjectiveOrder,
+use {
+    medulla_decision_policy_types::solve::Coefficient,
+    medulla_decision_policy_types::solve::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::ObjectiveTerm,
+    medulla_decision_policy_types::solve::VarId,
 };
-use medulla_decision_types::{
-    solve::Coefficient, solve::ObjectiveLevelSpec, solve::ObjectiveTerm, solve::VarId,
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+    medulla_decision_statistical_types::decision::ObjectiveOrder,
+    medulla_decision_types::decision::record::DecisionInputs,
 };
 
-use medulla_decision_types::decision::{
-    CandidateFacts, PremiseClass, PremiseProvenance, PremiseRef,
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::CandidateFacts,
 };
 
 use super::facts::{self, Declared};
@@ -26,7 +34,7 @@ use medulla_decision_policy::solve::model::MAX_ABS_COEFFICIENT;
 /// One level's value for one candidate.
 fn level_value(
     kind: ObjectiveLevelKind,
-    candidate: &medulla_decision_types::decision::CandidateFacts,
+    candidate: &medulla_decision_types::decision::record::CandidateFacts,
     currency: Option<&str>,
 ) -> Declared {
     match kind {
@@ -189,8 +197,8 @@ fn terms(
 /// `Σ weight · value` for one candidate: unknown when any weighted value is,
 /// an error when the exact sum leaves the solver's coefficient range.
 fn weighted_value(
-    weights: &[medulla_decision_types::decision::WeightedLevel],
-    candidate: &medulla_decision_types::decision::CandidateFacts,
+    weights: &[medulla_decision_statistical_types::decision::WeightedLevel],
+    candidate: &medulla_decision_types::decision::record::CandidateFacts,
     currency: Option<&str>,
 ) -> Result<Option<Coefficient>, ()> {
     let mut total: i64 = 0;

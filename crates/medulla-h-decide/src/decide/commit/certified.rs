@@ -11,7 +11,6 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::{DecisionErrorCode, DecisionRecord};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_persistence::AsRedb;
 use medulla_raft_xshard::cross_shard_txn::certificate::{
@@ -19,6 +18,10 @@ use medulla_raft_xshard::cross_shard_txn::certificate::{
 };
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 use super::super::SharedState;
 

@@ -366,13 +366,13 @@ pub fn read_pointer(
 ) -> Result<
     (
         Option<Vec<u8>>,
-        medulla_decision_types::decision::statistical::retrieval_pointer::PointerState,
+        medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState,
     ),
     String,
 > {
     let Some(bytes) = store.decision_artifact(tenant, &pointer_artifact_key(key))? else {
         let state =
-            medulla_decision_types::decision::statistical::retrieval_pointer::PointerState {
+            medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState {
                 key: key.to_string(),
                 ..Default::default()
             };
@@ -431,7 +431,7 @@ pub fn require_head_receipt(
     store: &AgentLibraryStore,
     request: &medulla_agent_types::agent_component::AgentComponentPublishRequest,
 ) -> Result<(), String> {
-    use medulla_decision_types::decision::statistical::StatisticalErrorCode::EvaluationReceiptMismatch;
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode::EvaluationReceiptMismatch;
     if request.component.kind
         != medulla_agent_types::agent_component::AgentComponentKind::DecisionHead
     {
@@ -447,7 +447,7 @@ pub fn require_head_receipt(
         .ok_or_else(|| {
             EvaluationReceiptMismatch.refusal("no evaluation receipt with that digest")
         })?;
-    let receipt: medulla_decision_types::decision::DecisionEvalReceipt =
+    let receipt: medulla_decision_types::decision::jobs::DecisionEvalReceipt =
         decode_artifact(&bytes, "evaluation receipt")?;
     if !receipt.passed {
         return Err(EvaluationReceiptMismatch.refusal(format!(

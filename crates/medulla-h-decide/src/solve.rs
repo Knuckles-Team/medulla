@@ -6,13 +6,13 @@
 //! `SOLVE_CERTIFICATE_REJECTED`. Pure compute: it reads no store, no clock and
 //! no float, so it takes neither the server state nor the verified context.
 
-use medulla_decision_types::solve::SolveRequest;
+use medulla_decision_policy_types::solve::SolveRequest;
 use medulla_protocol_types::protocol::Response;
 
 #[cfg(feature = "solve")]
 fn refuse(
     req_id: u64,
-    code: medulla_decision_types::solve::SolveErrorCode,
+    code: medulla_decision_policy_types::solve::SolveErrorCode,
     detail: impl std::fmt::Display,
 ) -> Response {
     Response::err(req_id, format!("{}: {detail}", code.as_str()))
@@ -22,11 +22,13 @@ fn refuse(
 #[cfg(feature = "solve")]
 pub async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
     use medulla_decision_policy::solve::{solve, verify, Model};
-    use medulla_decision_types::solve::certificate::SolverConfig;
-    use medulla_decision_types::{
-        solve::SolveErrorCode, solve::SolveResult, solve::SOLVE_RESULT_SCHEMA_VERSION,
-    };
+    use medulla_decision_policy_types::solve::certificate::SolverConfig;
     use medulla_protocol_types::protocol::ResultPayload;
+    use {
+        medulla_decision_policy_types::solve::SolveErrorCode,
+        medulla_decision_policy_types::solve::SolveResult,
+        medulla_decision_policy_types::solve::SOLVE_RESULT_SCHEMA_VERSION,
+    };
 
     let model = match Model::try_from(request.model) {
         Ok(model) => model,
@@ -70,9 +72,15 @@ pub async fn handle_solve(req_id: u64, _request: SolveRequest) -> Response {
 #[cfg(all(test, feature = "solve"))]
 mod tests {
     use super::*;
-    use medulla_decision_types::{
-        solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec,
-        solve::ObjectiveLevelSpec, solve::ObjectiveTerm, solve::SolveResult, solve::VarId,
+    use {
+        medulla_decision_policy_types::solve::Coefficient,
+        medulla_decision_policy_types::solve::ConstraintBody,
+        medulla_decision_policy_types::solve::ConstraintSpec,
+        medulla_decision_policy_types::solve::ModelSpec,
+        medulla_decision_policy_types::solve::ObjectiveLevelSpec,
+        medulla_decision_policy_types::solve::ObjectiveTerm,
+        medulla_decision_policy_types::solve::SolveResult,
+        medulla_decision_policy_types::solve::VarId,
     };
 
     fn cover_model() -> ModelSpec {

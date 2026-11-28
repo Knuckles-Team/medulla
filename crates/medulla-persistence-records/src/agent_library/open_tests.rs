@@ -82,8 +82,11 @@ fn production_open_refuses_each_genuine_predecessor_without_writing() {
 // spec: MEDULLA-DECISION-ENGINE-R172.5.1
 #[test]
 fn capability_reward_survives_reopen() {
-    use medulla_decision_types::decision::capability_designation::{CapabilityReward, Q32_ONE};
     use medulla_types::contract::{OpaqueId, TenantId};
+    use {
+        medulla_decision_policy_types::decision::capability_designation::CapabilityReward,
+        medulla_decision_policy_types::decision::capability_designation::Q32_ONE,
+    };
     let dir = tempfile::tempdir().unwrap();
     let tenant = TenantId::new("tenant-a").unwrap();
     let entity = OpaqueId::new("agent-1").unwrap();
@@ -125,7 +128,7 @@ fn capability_reward_survives_reopen() {
 // spec: MEDULLA-DECISION-ENGINE-R650.2.2
 #[test]
 fn power_digests_follow_the_tenant_ledger_and_never_another_tenants() {
-    use medulla_decision_types::decision::capability_designation::CapabilityReward;
+    use medulla_decision_policy_types::decision::capability_designation::CapabilityReward;
     use medulla_types::contract::{OpaqueId, TenantId};
     let dir = tempfile::tempdir().unwrap();
     let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();

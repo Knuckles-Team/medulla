@@ -26,9 +26,9 @@ use std::collections::BTreeSet;
 
 use super::assistant_profile::node_blob;
 use super::*;
-use medulla_decision_types::claims::ObserverRef;
+use medulla_decision_statistical_types::claims::ObserverRef;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::knob_families::participant::KNOBS as PARTICIPANT_KNOBS;
-use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_isolation::profile_access::read_stored;
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::coordination::{
@@ -92,7 +92,7 @@ pub enum Out {
     Member(Membership),
     Scope(MemoryScope),
     Observation(ObservationConfig),
-    Derivation(medulla_decision_types::memory_events::DerivationCompleted),
+    Derivation(medulla_decision_statistical_types::memory_events::DerivationCompleted),
 }
 
 fn invalid(detail: impl std::fmt::Display) -> String {

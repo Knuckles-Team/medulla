@@ -5,8 +5,8 @@
 //! for another run are coded refusals; a foreign tenant is refused.
 
 use super::*;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::process_remediation::KNOBS;
+use medulla_decision_policy_types::decision::process_remediation::KNOBS;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 
 fn text(name: &str, value: &str) -> TypedParam {
     TypedParam {
@@ -82,7 +82,7 @@ async fn verdicts_follow_thresholds() {
     }
 
     // The zombie threshold is the policy's knob.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .knobs
         .insert(KNOBS[0].knob_name(), KnobValue::Integer(1_200));

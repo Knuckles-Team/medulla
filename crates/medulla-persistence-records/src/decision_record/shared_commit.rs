@@ -20,8 +20,11 @@ use medulla_agent_types::agent_component::{
 };
 use medulla_agent_types::agent_graph::{AgentGraphEntry, AgentGraphPublishRequest};
 use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_decision_types::decision::approval::RecommendationApproval;
-use medulla_decision_types::decision::{DecisionErrorCode, DecisionRecord};
+use medulla_decision_policy_types::decision::approval::RecommendationApproval;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 use super::super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};
 use super::super::agent_graph::{graph_tables, GraphLayer};

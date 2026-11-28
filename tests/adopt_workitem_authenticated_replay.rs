@@ -826,7 +826,7 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
     let mut changed = updated.clone();
     changed.task_plan_proposal.as_mut().unwrap().max_concurrency = 1;
     changed.snapshot.task_plan = Some(
-        medulla_decision_types::decision::task_plan::plan_explicit_tasks(
+        medulla_decision_program_types::decision::task_plan::plan_explicit_tasks(
             changed.task_plan_proposal.as_ref().unwrap(),
         )
         .unwrap(),

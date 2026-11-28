@@ -7,11 +7,19 @@ use std::collections::BTreeSet;
 use medulla_decision_policy::solve::{solve, verify, Model, Verdict};
 use medulla_decision_types::decision::record::UniquenessScope;
 use medulla_decision_types::decision::request::effective_solver_budget;
-use medulla_decision_types::decision::{
-    CandidateFacts, DecisionOutcome, PremiseClass, PremiseProvenance, ResolutionKind,
+use {
+    medulla_decision_policy_types::solve::Relation,
+    medulla_decision_policy_types::solve::SolverConfig,
+    medulla_decision_policy_types::solve::SolverConfigSpec,
+    medulla_decision_policy_types::solve::VarId,
+    medulla_decision_policy_types::solve::DEFAULT_CERTIFICATE_LEAVES,
 };
-use medulla_decision_types::solve::{
-    Relation, SolverConfig, SolverConfigSpec, VarId, DEFAULT_CERTIFICATE_LEAVES,
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::ResolutionKind,
 };
 
 use super::fixture::*;
@@ -71,7 +79,7 @@ fn re_solve(
     assembly: &Assembly,
 ) -> (
     Model,
-    medulla_decision_types::solve::Certificate,
+    medulla_decision_policy_types::solve::Certificate,
     std::result::Result<Verdict, medulla_decision_policy::solve::VerifyError>,
 ) {
     let inputs = &assembly.record.inputs;

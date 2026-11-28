@@ -3,11 +3,20 @@
 //! and illegal verdicts as premises, and abstains when none is legal.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::statistical::reasoning_paradigm::{
-    COST_KEY, EXPECTED_VALUE_KEY, NONE_ADMISSIBLE, PARADIGMS,
+use {
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::COST_KEY,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::EXPECTED_VALUE_KEY,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::NONE_ADMISSIBLE,
+    medulla_decision_policy_types::decision::statistical::reasoning_paradigm::PARADIGMS,
 };
-use medulla_decision_types::decision::{AbstainReason, PremiseClass};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 fn paradigm_option(id: &str, tag: &str, expected: i64, cost: i64) -> DeclaredOption {
     DeclaredOption {

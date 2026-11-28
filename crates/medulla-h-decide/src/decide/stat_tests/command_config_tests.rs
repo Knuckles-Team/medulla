@@ -4,13 +4,24 @@
 //! another tenant's nodes are never read.
 
 use super::*;
-use medulla_decision_types::decision::command_config::{
-    CommandConfig, CommandConfigSchema, CommandMode, ConfigScalar, FieldType, ModeDecision,
-    COMMAND_CONFIG_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use std::collections::BTreeMap;
+use {
+    medulla_decision_statistical_types::decision::command_config::CommandConfig,
+    medulla_decision_statistical_types::decision::command_config::CommandConfigSchema,
+    medulla_decision_statistical_types::decision::command_config::CommandMode,
+    medulla_decision_statistical_types::decision::command_config::ConfigScalar,
+    medulla_decision_statistical_types::decision::command_config::FieldType,
+    medulla_decision_statistical_types::decision::command_config::ModeDecision,
+    medulla_decision_statistical_types::decision::command_config::COMMAND_CONFIG_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const GRAPH: &str = "kg-command-modes";
 const OTHER: &str = "tenant-other";
@@ -475,7 +486,10 @@ async fn invalid_config_refuses() {
 // spec: MEDULLA-DECISION-ENGINE-R148.5
 #[tokio::test]
 async fn config_evidence_binds_schema() {
-    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    };
     let h = harness().await;
     let (schema_pin, _) = publish_route_schema(&h);
     let record = ask(

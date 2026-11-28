@@ -5,12 +5,15 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_outcome_types::decision::load_set::AgentCandidate;
-use medulla_decision_types::decision::capability_designation::SchemaProjection;
-use medulla_decision_types::decision::load_set::{LoadSetQuestion, LOAD_SET_PARAM};
+use medulla_decision_policy_types::decision::capability_designation::SchemaProjection;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, TypedValue,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_policy_types::decision::load_set::LoadSetQuestion,
+    medulla_decision_policy_types::decision::load_set::LOAD_SET_PARAM,
+};
 
 use super::stat_designation::{schema_closure, shared_capability_index, DesignationRuntime};
 use super::stat_support::invalid_parameter;

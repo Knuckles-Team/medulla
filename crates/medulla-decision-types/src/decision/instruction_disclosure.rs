@@ -8,11 +8,15 @@
 use serde::{Deserialize, Serialize};
 
 use super::context_package::is_sha256_hex;
-use super::knobs::{KnobSafety, KnobSpec, KnobValue};
-use super::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// The domain of an instruction text hash.
 pub const INSTRUCTION_DISCLOSURE_DOMAIN: &str = "instruction_disclosure";
@@ -446,7 +450,7 @@ mod tests {
 #[cfg(test)]
 mod version_tests {
     use super::*;
-    use crate::decision::statistical::StatisticalErrorCode;
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
     fn version(timing: DisclosureTiming, trigger: Option<&str>) -> InstructionVersion {
         InstructionVersion {

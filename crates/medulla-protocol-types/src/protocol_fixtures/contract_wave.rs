@@ -46,7 +46,7 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             "Solve",
             Method::Solve {
                 request: Box::new(
-                    medulla_decision_types::decision_fixtures::contract_solver::request(),
+                    medulla_decision_policy_types::decision_fixtures::contract_solver::request(),
                 ),
             },
         ),

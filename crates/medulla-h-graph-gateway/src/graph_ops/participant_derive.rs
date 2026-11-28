@@ -8,12 +8,15 @@
 
 use super::assistant_profile::node_blob;
 use super::*;
-use medulla_decision_types::memory_events::{DerivationCompleted, MemoryEvent};
 use medulla_decision_types::participant_memory::{DeriveInput, DeriveTurn};
 use medulla_isolation::profile_access::read_stored;
 use medulla_work_types::memory_scope::ObservationConfig;
 use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
 use medulla_work_types::participant::ParticipantId;
+use {
+    medulla_decision_statistical_types::memory_events::DerivationCompleted,
+    medulla_decision_statistical_types::memory_events::MemoryEvent,
+};
 use {
     medulla_decision_stats_records::decision::participant_derive::conclusion_claim_prefix,
     medulla_decision_stats_records::decision::participant_derive::derivation_targets,

@@ -151,7 +151,7 @@ async fn list_pages_filters_and_isolates_tenants() {
     let none = DecisionLogOp::List {
         tenant_id: TENANT.to_string(),
         question_kind: None,
-        resolution_kind: Some(medulla_decision_types::decision::ResolutionKind::Abstention),
+        resolution_kind: Some(medulla_decision_types::decision::record::ResolutionKind::Abstention),
         from_ms: None,
         to_ms: None,
         limit: 50,
@@ -160,7 +160,7 @@ async fn list_pages_filters_and_isolates_tenants() {
     let none: DecisionLogList = decode(list(&h, TENANT, none).await).unwrap();
     assert!(none.records.iter().all(|item| matches!(
         item.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Abstention
+        medulla_decision_types::decision::record::ResolutionKind::Abstention
     )));
     for bad in [
         list_op(TENANT, 0, None),
@@ -232,7 +232,7 @@ async fn provenance_keeps_used_revision_and_hides_other_tenants() {
 
 /// Commit the assembled fixture record of `tenant-a` through the store, the way a
 /// served `DecisionCommit` stores it, and return it.
-fn commit_assembly(h: &Harness) -> medulla_decision_types::decision::DecisionRecord {
+fn commit_assembly(h: &Harness) -> medulla_decision_types::decision::record::DecisionRecord {
     use medulla_persistence_records::decision_record::tests as v1;
     v1::seed_library(&h.store, v1::TENANT);
     let record = v1::decided(&h.store, v1::TENANT).record;
@@ -282,7 +282,8 @@ async fn why_not_is_bounded_read_only_and_refuses_retired_inputs() {
         .store
         .decision_record_body(tenant, &record.record_id)
         .unwrap();
-    let medulla_decision_types::decision::DecisionOutcome::Solved { slots, .. } = &record.outcome
+    let medulla_decision_types::decision::record::DecisionOutcome::Solved { slots, .. } =
+        &record.outcome
     else {
         panic!("the fixture is solved")
     };
@@ -364,7 +365,8 @@ async fn decision_reads_end_to_end() {
     // second tenant gets DECISION_NOT_FOUND from each read.
     let assembly = commit_assembly(&h);
     let tenant: &'static str = medulla_persistence_records::decision_record::tests::TENANT;
-    let medulla_decision_types::decision::DecisionOutcome::Solved { slots, .. } = &assembly.outcome
+    let medulla_decision_types::decision::record::DecisionOutcome::Solved { slots, .. } =
+        &assembly.outcome
     else {
         panic!("the fixture is solved")
     };

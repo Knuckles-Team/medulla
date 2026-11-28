@@ -5,7 +5,7 @@ use medulla_agent_types::agent_component::red_team::RedTeamAttack;
 use medulla_agent_types::agent_component::red_team::RedTeamScorer;
 #[cfg(test)]
 use medulla_agent_types::agent_component::red_team::RedTeamTransform;
-use medulla_decision_types::decision::trajectory_verdict::ProbeVerdict;
+use medulla_decision_statistical_types::decision::trajectory_verdict::ProbeVerdict;
 use serde::{Deserialize, Serialize};
 
 /// One selected scorer's result. `score` is absent when the scorer gave none.
@@ -39,7 +39,9 @@ impl Default for RedTeamPolicy {
 
 impl RedTeamPolicy {
     /// The defaults the decision policy pins (`red_team.*` knobs).
-    pub fn from_policy(policy: &medulla_decision_types::decision::DecisionPolicy) -> Self {
+    pub fn from_policy(
+        policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
+    ) -> Self {
         use medulla_decision_types::decision::knob_families::red_team;
         Self {
             category_match: red_team::category_match(policy),
@@ -51,7 +53,7 @@ impl RedTeamPolicy {
 /// The registered refusal codes of the `probe_verdict` family
 /// (MEDULLA-DECISION-ENGINE-R138.4), in declaration order.
 pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] =
-    medulla_decision_types::decision::codes::PROBE_VERDICT;
+    medulla_decision_statistical_types::decision::codes::PROBE_VERDICT;
 
 /// Why a probe verdict is refused or abstained (MEDULLA-DECISION-ENGINE-R138.4).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,9 +68,11 @@ pub enum ProbeRefusal {
     ScoreOutOfRange { scorer_id: String, permille: i64 },
 }
 
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ProbeRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for ProbeRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
-        use medulla_decision_types::decision::codes;
+        use medulla_decision_statistical_types::decision::codes;
         match self {
             Self::NoScorerForCategory { .. } => codes::NO_SCORER_FOR_CATEGORY,
             Self::AttackUnknown { .. } => codes::PROBE_ATTACK_UNKNOWN,

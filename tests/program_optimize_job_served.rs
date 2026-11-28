@@ -15,7 +15,7 @@ mod program_job_support;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_decision_types::decision::held_out::GraderKind;
+use medulla_decision_policy_types::decision::held_out::GraderKind;
 use medulla_program::ExampleSplit;
 use program_job_support::{
     evaluated_journey, foreign_status, program_request, refused_submit, refused_submit_bytes,

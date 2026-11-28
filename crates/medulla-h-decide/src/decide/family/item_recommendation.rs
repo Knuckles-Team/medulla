@@ -16,20 +16,31 @@
 use sha2::{Digest, Sha256};
 
 use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
-use medulla_decision_types::decision::item_recommendation::{
-    encoder_key, encoder_prefix, DIMENSION_MISMATCH, EMPTY_CATALOG, ENCODER_MISSING, ENCODER_STALE,
-};
-use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_decision_program_types::decision::knob_families::recommend::RecommendKnobs;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::item_recommendation::encoder_key,
+    medulla_decision_statistical_types::decision::item_recommendation::encoder_prefix,
+    medulla_decision_statistical_types::decision::item_recommendation::DIMENSION_MISMATCH,
+    medulla_decision_statistical_types::decision::item_recommendation::EMPTY_CATALOG,
+    medulla_decision_statistical_types::decision::item_recommendation::ENCODER_MISSING,
+    medulla_decision_statistical_types::decision::item_recommendation::ENCODER_STALE,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 use {
     medulla_decision_stats_records::decision::recommend::encode_catalog,
     medulla_decision_stats_records::decision::recommend::refine_and_rank,

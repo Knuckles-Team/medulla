@@ -16,9 +16,12 @@ use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::statistical::body::decode_body;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::{DecisionPolicy, StatisticalPolicy};
+use medulla_decision_program_types::decision::statistical::body::decode_body;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+};
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
@@ -71,7 +74,7 @@ pub(super) async fn filtered_view_versioned(
 pub(super) async fn historical_views(
     state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
-    rows: &[medulla_decision_types::decision::statistical::graph_rows::GraphRowProvenance],
+    rows: &[medulla_decision_program_types::decision::statistical::graph_rows::GraphRowProvenance],
 ) -> Result<super::stat_replay::GraphSnapshots, String> {
     use medulla_graph_core::graph::NodeHistoryError;
     let mut wanted: std::collections::BTreeMap<(String, u64), Vec<&str>> =
@@ -103,7 +106,7 @@ pub(super) async fn historical_views(
                     }
                     NodeHistoryError::Future { .. } => format!(
                         "{}: {error}",
-                        medulla_decision_types::decision::DecisionErrorCode::DecisionReplayMismatch
+                        medulla_decision_statistical_types::decision::DecisionErrorCode::DecisionReplayMismatch
                             .as_str()
                     ),
                 })?;

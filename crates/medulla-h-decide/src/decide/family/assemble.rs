@@ -14,7 +14,7 @@
 //!   eliminated-constraint premise for the option it removed.
 
 use medulla_compute_assemble::assemble::primitive::check_graph_size;
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::request::AssemblyRequest;
 
 /// Refuse a request whose primitive graph is over the knob; the wire text is
 /// `CODE: detail`, like every assembly refusal.

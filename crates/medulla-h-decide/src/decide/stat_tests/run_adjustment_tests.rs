@@ -5,9 +5,16 @@
 //! counted.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_work_types::run_observation::{Measured, RunObservationWindow, WindowUsage};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 const GRAPH: &str = "run-windows";
 const OTHER_RUN: &str = "run-other";
@@ -354,10 +361,16 @@ fn refused_with(result: Result<DecisionBatch, String>, code: &str) {
 // spec: MEDULLA-DECISION-ENGINE-R158.4
 #[tokio::test]
 async fn invalid_policy_refuses() {
-    use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-    use medulla_decision_types::decision::run_adjustment::{
-        ADJUSTMENT_POLICY_UNDEFINED, CURRENT_MODEL_NOT_CANDIDATE, ERRORS_UNPARTITIONED,
-        HOST_CEILING_EXCEEDED, INSUFFICIENT_SAMPLES,
+    use {
+        medulla_decision_policy_types::decision::run_adjustment::ADJUSTMENT_POLICY_UNDEFINED,
+        medulla_decision_policy_types::decision::run_adjustment::CURRENT_MODEL_NOT_CANDIDATE,
+        medulla_decision_policy_types::decision::run_adjustment::ERRORS_UNPARTITIONED,
+        medulla_decision_policy_types::decision::run_adjustment::HOST_CEILING_EXCEEDED,
+        medulla_decision_policy_types::decision::run_adjustment::INSUFFICIENT_SAMPLES,
+    };
+    use {
+        medulla_decision_statistical_types::decision::knobs::KnobName,
+        medulla_decision_statistical_types::decision::knobs::KnobValue,
     };
     let h = harness().await;
     let (pin, _) = publish_route_schema(&h);
@@ -392,7 +405,7 @@ async fn invalid_policy_refuses() {
         CURRENT_MODEL_NOT_CANDIDATE,
     );
     // A pinned policy whose low threshold exceeds its high one.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("width.error_hi"),
         KnobValue::DecimalMicros(10_000),

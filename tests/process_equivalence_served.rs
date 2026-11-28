@@ -14,19 +14,29 @@ mod test_support;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::statistical::body::encode_body;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
-    StatisticalQuestion, TypedParam, TypedValue,
-};
+use medulla_decision_program_types::decision::statistical::body::encode_body;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_exchange::{ProcessDocument, ProcessDocumentFormat};
 use medulla_types::process_import::{CanonicalWorkflow, ProcessCompiled, ProcessModelImported};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 const SECRET: &str = "process-equivalence-served-secret";
 const ENCRYPTION_KEY: &str = "process-equivalence-served-key-0123456789";
@@ -136,7 +146,7 @@ fn plan_request(
 /// The task kinds and edges of a plan: `(task id, kind, sorted dependencies)` per task.
 type Shape = Vec<(String, &'static str, Vec<String>)>;
 
-fn shape(plan: &medulla_decision_types::decision::task_plan::TaskPlan) -> Shape {
+fn shape(plan: &medulla_decision_program_types::decision::task_plan::TaskPlan) -> Shape {
     plan.tasks
         .as_slice()
         .iter()

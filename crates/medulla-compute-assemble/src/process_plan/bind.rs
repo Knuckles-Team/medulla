@@ -7,9 +7,13 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use medulla_decision_types::decision::process_plan::{BindingSource, BindingTarget, StepBinding};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::process_import::{CanonicalStep, CanonicalWorkflow, StepKind};
+use {
+    medulla_decision_statistical_types::decision::process_plan::BindingSource,
+    medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+    medulla_decision_statistical_types::decision::process_plan::StepBinding,
+};
 
 /// The explicit bindings of a workflow, and what the binding left out.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

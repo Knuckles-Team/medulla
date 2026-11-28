@@ -10,8 +10,8 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_statistical_types::decision::TraceFidelityLevel;
 use medulla_decision_types::decision::statistical::log::StoredEvaluation;
-use medulla_decision_types::decision::TraceFidelityLevel;
 use medulla_decision_types::{
     decision::statistical::retrieval::ClassUsage, decision::statistical::retrieval::HardNegative,
     decision::statistical::retrieval::ProvenPath,

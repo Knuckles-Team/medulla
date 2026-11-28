@@ -7,14 +7,15 @@
 //! THROUGH that record: a reader that cannot see the record sees neither the
 //! outcome nor anything learned from it.
 
+use medulla_decision_types::decision::jobs::RecordWindow;
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
-use medulla_decision_types::decision::RecordWindow;
 use medulla_decision_types::{
     decision::statistical::retrieval::RetrievalOutcome,
     decision::statistical::retrieval::StoredRetrievalOutcome,
 };
-use medulla_decision_types::{
-    decision::statistical::QuestionKind, decision::statistical::StatisticalErrorCode,
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
 };
 use {
     medulla_decision_stats_records::decision::retrieval::verdict,

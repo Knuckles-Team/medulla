@@ -6,17 +6,32 @@
 use super::super::planned_write::PlannedWrite;
 use super::super::skill_telemetry::{handle_skill_telemetry, invocation_node_id};
 use super::*;
-use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
-use medulla_decision_types::skill_telemetry::{
-    principal_pseudonym, EvalOutcome, IngestReceipt, PeersAnswer, RankAnswer, SkillMeasures,
-    SkillTelemetryOp, TracesAnswer, Window, PEER_COHORT_TOO_SMALL, TELEMETRY_BATCH_TOO_LARGE,
-    TELEMETRY_CLOCK_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
-    TELEMETRY_SESSION_UNKNOWN, TELEMETRY_SKILL_UNKNOWN,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::{json, Value};
+use {
+    medulla_decision_policy_types::skill_eval::SuiteBand,
+    medulla_decision_policy_types::skill_eval::SuiteReport,
+};
+use {
+    medulla_decision_statistical_types::skill_telemetry::principal_pseudonym,
+    medulla_decision_statistical_types::skill_telemetry::EvalOutcome,
+    medulla_decision_statistical_types::skill_telemetry::IngestReceipt,
+    medulla_decision_statistical_types::skill_telemetry::PeersAnswer,
+    medulla_decision_statistical_types::skill_telemetry::RankAnswer,
+    medulla_decision_statistical_types::skill_telemetry::SkillMeasures,
+    medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp,
+    medulla_decision_statistical_types::skill_telemetry::TracesAnswer,
+    medulla_decision_statistical_types::skill_telemetry::Window,
+    medulla_decision_statistical_types::skill_telemetry::PEER_COHORT_TOO_SMALL,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_BATCH_TOO_LARGE,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_CLOCK_INVALID,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_FIELD_UNKNOWN,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SCOPE_REQUIRED,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SESSION_UNKNOWN,
+    medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SKILL_UNKNOWN,
+};
 
 const GRAPH: &str = "__commons__";
 const DAY: u64 = 24 * 60 * 60 * 1000;

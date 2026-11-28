@@ -23,6 +23,8 @@ medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["decide"] }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
@@ -58,7 +60,7 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 unicode-normalization = "0.1"
 
 [features]
-test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]
+test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]
 blob = ["redb", "medulla-protocol-types/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob", "server"]
 compute-dist = ["raft", "medulla-persistence/compute-dist", "medulla-protocol-types/compute-dist", "medulla-raft/compute-dist", "medulla-server-api/compute-dist", "medulla-server-ops/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist", "server"]
 jobs = ["medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "epistemic", "query", "redb", "server"]
@@ -77,7 +79,7 @@ tsdb = ["redb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server
 server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
 epistemic = ["medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "query", "redb"]
 numeric = ["medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-raft/numeric", "medulla-server-api/numeric"]
-query = ["medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "redb"]
+query = ["medulla-decision-policy-types/query", "medulla-decision-statistical-types/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "redb"]
 knowledge-batch = ["medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
 cost-opt = ["medulla-raft/cost-opt", "medulla-server-api/cost-opt", "query", "redb"]
 par-runtime = ["medulla-raft/par-runtime", "medulla-server-api/par-runtime", "query", "redb"]
@@ -105,6 +107,8 @@ traces = ["medulla-persistence/traces", "medulla-server-api/traces", "medulla-st
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

@@ -11,14 +11,20 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
-use medulla_decision_types::decision::answer_ranking_request::{
-    AnswerRankingRequest, AnswerTieRule, PairwiseComparison, PairwisePreference,
-    MAX_ANSWER_CANDIDATES, MAX_PAIRWISE_COMPARISONS,
-};
-use medulla_decision_types::{
-    decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
-};
 use medulla_query_types::solve_scalar::digest_text;
+use {
+    medulla_decision_program_types::decision::answer_ranking_request::AnswerRankingRequest,
+    medulla_decision_program_types::decision::answer_ranking_request::AnswerTieRule,
+    medulla_decision_program_types::decision::answer_ranking_request::PairwiseComparison,
+    medulla_decision_program_types::decision::answer_ranking_request::PairwisePreference,
+    medulla_decision_program_types::decision::answer_ranking_request::MAX_ANSWER_CANDIDATES,
+    medulla_decision_program_types::decision::answer_ranking_request::MAX_PAIRWISE_COMPARISONS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
 
 pub const ANSWER_RANKING_SCHEMA: &str = "answer-candidate-ranking/v1";
 /// The engine never proposes more revisions than this in one ranking.
@@ -72,9 +78,11 @@ pub enum AnswerRankingRefusal {
     IncompleteComparisons { missing: usize },
 }
 
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AnswerRankingRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for AnswerRankingRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
-        use medulla_decision_types::decision::codes;
+        use medulla_decision_statistical_types::decision::codes;
         match self {
             Self::VerifierNamed { .. } => codes::ANSWER_RANKING_VERIFIER_NAMED,
             Self::TooFewCandidates { .. } => codes::ANSWER_RANKING_TOO_FEW_CANDIDATES,

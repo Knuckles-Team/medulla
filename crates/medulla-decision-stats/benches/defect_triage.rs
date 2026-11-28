@@ -14,7 +14,7 @@ use medulla_decision_outcome_types::decision::defect_triage::{
     cap_frames, decide_triage, find_duplicate, pick_owner, rank_suspects, OpenDefect, SuspectInput,
     TriageEvidence, TriageKnobs,
 };
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_source_types::lifecycle::Severity;
 use medulla_source_types::stack_frame::{SymbolIndex, SymbolRef};
 

@@ -20,7 +20,7 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
-use medulla_decision_types::belief_revision::BeliefReviseRequest;
+use medulla_decision_statistical_types::belief_revision::BeliefReviseRequest;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -76,11 +76,6 @@ pub(super) mod served {
     use std::collections::{BTreeMap, BTreeSet};
     use std::sync::Arc;
 
-    use medulla_decision_types::belief_revision::{
-        BeliefPassResult, BeliefReviseRequest, BeliefRevision, ContradictionRecord,
-        ContradictionStatus, RetractionProposal,
-    };
-    use medulla_decision_types::claims::{ClaimRecord, EvidenceChannel};
     use medulla_epistemic::belief_revision::{
         run_pass, BeliefKnobs, ClaimInput, EvidenceInput, TokenIndex,
     };
@@ -95,6 +90,18 @@ pub(super) mod served {
     use medulla_types::contract::ServerErrorCode;
     use medulla_types::evidence_class::EvidenceClass;
     use sha2::{Digest, Sha256};
+    use {
+        medulla_decision_statistical_types::belief_revision::BeliefPassResult,
+        medulla_decision_statistical_types::belief_revision::BeliefReviseRequest,
+        medulla_decision_statistical_types::belief_revision::BeliefRevision,
+        medulla_decision_statistical_types::belief_revision::ContradictionRecord,
+        medulla_decision_statistical_types::belief_revision::ContradictionStatus,
+        medulla_decision_statistical_types::belief_revision::RetractionProposal,
+    };
+    use {
+        medulla_decision_statistical_types::claims::ClaimRecord,
+        medulla_decision_statistical_types::claims::EvidenceChannel,
+    };
 
     use super::super::claims::served::{
         claim_knobs, field, invalid, refuse, request_key, ClaimStore,

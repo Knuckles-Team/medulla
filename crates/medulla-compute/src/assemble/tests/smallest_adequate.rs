@@ -1,8 +1,15 @@
 //! Adequacy elimination of the size-and-adequacy facts
 //! (MEDULLA-DECISION-ENGINE-R014.100.1).
 
-use medulla_decision_types::decision::size::{Adequacy, SourceSize};
-use medulla_decision_types::decision::{CandidateFacts, DecisionPolicy, Violation};
+use {
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::CandidateFacts,
+};
+use {
+    medulla_decision_statistical_types::decision::size::Adequacy,
+    medulla_decision_statistical_types::decision::size::SourceSize,
+};
 
 use super::fixture::{cheap_model, inputs_with, request};
 use medulla_compute_assemble::assemble::eliminate::screen;
@@ -75,10 +82,15 @@ fn inadequate_and_unknown_adequacy_are_eliminated() {
 mod objective_levels {
     //! Size and ledger-cost objective levels (MEDULLA-DECISION-ENGINE-R014.100.2).
 
-    use medulla_decision_types::decision::size::ObservedRunCost;
-    use medulla_decision_types::decision::{
-        AbstainReason, CandidateFacts, DecisionOutcome, DecisionPolicy, ObjectiveLevelKind,
-        ObjectiveOrder, UnknownCostRule,
+    use medulla_decision_statistical_types::decision::size::ObservedRunCost;
+    use {
+        medulla_decision_statistical_types::decision::DecisionPolicy,
+        medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+        medulla_decision_statistical_types::decision::ObjectiveOrder,
+        medulla_decision_statistical_types::decision::UnknownCostRule,
+        medulla_decision_types::decision::record::AbstainReason,
+        medulla_decision_types::decision::record::CandidateFacts,
+        medulla_decision_types::decision::record::DecisionOutcome,
     };
 
     use super::super::fixture::{

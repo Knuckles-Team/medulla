@@ -6,12 +6,19 @@ use std::time::Instant;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::context_budget::ContextBudgetSignals;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;

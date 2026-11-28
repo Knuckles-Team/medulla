@@ -11,12 +11,15 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_agent_types::agent_component::capability_descriptor::SideEffectClass;
-use medulla_decision_types::decision::knob_families::skill::{
-    integer, MAX_BLOCK, MERGE_COSINE_MIN, MERGE_JACCARD_MIN,
-};
-use medulla_decision_types::decision::policy::DecisionPolicy;
-use medulla_decision_types::decision::skill_evolution::SkillMergeCandidate;
+use medulla_decision_policy_types::decision::skill_evolution::SkillMergeCandidate;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::knob_families::skill::integer,
+    medulla_decision_statistical_types::decision::knob_families::skill::MAX_BLOCK,
+    medulla_decision_statistical_types::decision::knob_families::skill::MERGE_COSINE_MIN,
+    medulla_decision_statistical_types::decision::knob_families::skill::MERGE_JACCARD_MIN,
+};
 
 const PPM: u128 = 1_000_000;
 
@@ -235,7 +238,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R703.2
     #[test]
     fn params_read_pinned_policy_knobs() {
-        use medulla_decision_types::decision::knobs::KnobValue;
+        use medulla_decision_statistical_types::decision::knobs::KnobValue;
         let mut policy = DecisionPolicy::engine_default();
         assert_eq!(
             MergeParams::from_policy(&policy),

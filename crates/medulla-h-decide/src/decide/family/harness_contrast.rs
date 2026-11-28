@@ -3,8 +3,8 @@
 //! The contrastive harness composition decision (MEDULLA-DECISION-ENGINE-R803):
 //! the family concludes through `stat_harness_contrast`.
 
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::statistical::DecideRequest;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};

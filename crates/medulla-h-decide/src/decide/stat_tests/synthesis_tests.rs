@@ -3,12 +3,17 @@
 //! caller's graph view shows, and abstains with no recommendation on any failure.
 
 use super::*;
-use medulla_decision_types::decision::analyst_synthesis::{
-    AnalystAccount, AnalystFinding, AnalystGap, Citation, SynthesisRequest, SynthesisResult,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::analyst_synthesis::AnalystAccount,
+    medulla_decision_policy_types::decision::analyst_synthesis::AnalystFinding,
+    medulla_decision_policy_types::decision::analyst_synthesis::AnalystGap,
+    medulla_decision_policy_types::decision::analyst_synthesis::Citation,
+    medulla_decision_policy_types::decision::analyst_synthesis::SynthesisRequest,
+    medulla_decision_policy_types::decision::analyst_synthesis::SynthesisResult,
+};
 
 const EVIDENCE: &str = "synth-evidence";
 const FOREIGN_GRAPH: &str = "synth-foreign";

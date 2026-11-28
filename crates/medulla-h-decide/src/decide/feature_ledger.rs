@@ -17,7 +17,7 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
-use medulla_decision_types::decision::feature_match::FeatureLedgerOp;
+use medulla_decision_statistical_types::decision::feature_match::FeatureLedgerOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -98,13 +98,6 @@ pub(super) mod served {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use medulla_decision_types::decision::feature_match::{
-        FeatureLedgerOp, FeatureLedgerView, LedgerEntry, LedgerEvent, LedgerStatus, PlanProposal,
-        FEATURE_LEDGER_MACHINE,
-    };
-    use medulla_decision_types::decision::feature_match::{
-        LEDGER_CLOSE_NO_CHANGE, LEDGER_REVISION_CONFLICT,
-    };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         FeatureLedgerClose, FeatureLedgerGet, FeatureLedgerOpen, FeatureLedgerPlan,
@@ -114,6 +107,19 @@ pub(super) mod served {
         StatechartStore,
     };
     use medulla_store::feature_ledger_statechart::{feature_ledger_statechart_def, RECORD_EVENT};
+    use {
+        medulla_decision_statistical_types::decision::feature_match::FeatureLedgerOp,
+        medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView,
+        medulla_decision_statistical_types::decision::feature_match::LedgerEntry,
+        medulla_decision_statistical_types::decision::feature_match::LedgerEvent,
+        medulla_decision_statistical_types::decision::feature_match::LedgerStatus,
+        medulla_decision_statistical_types::decision::feature_match::PlanProposal,
+        medulla_decision_statistical_types::decision::feature_match::FEATURE_LEDGER_MACHINE,
+    };
+    use {
+        medulla_decision_statistical_types::decision::feature_match::LEDGER_CLOSE_NO_CHANGE,
+        medulla_decision_statistical_types::decision::feature_match::LEDGER_REVISION_CONFLICT,
+    };
     use {
         medulla_decision_stats_records::decision::feature_match::advance_ledger,
         medulla_decision_stats_records::decision::feature_match::LedgerChangeError,

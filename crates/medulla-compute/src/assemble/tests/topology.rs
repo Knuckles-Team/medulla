@@ -15,12 +15,12 @@ use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::agent_topology::TopologyPlan;
 use medulla_agent_types::agent_topology::TopologyPolicy;
 use medulla_agent_types::agent_topology::TopologyRequirements;
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::decision::DecisionErrorCode;
-use medulla_decision_types::decision::DecisionOutcome;
-use medulla_decision_types::decision::DecisionPolicy;
-use medulla_decision_types::decision::TemplateFacts;
-use medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+use medulla_decision_types::decision::record::AbstainReason;
+use medulla_decision_types::decision::record::DecisionOutcome;
+use medulla_decision_types::decision::record::TemplateFacts;
 use medulla_mutation_types::capacity_lease::CapacityResourceClass;
 use medulla_types::evidence_class::EvidenceClass;
 
@@ -29,13 +29,16 @@ use super::template::{reference, template};
 use medulla_agent_types::agent_topology::enforcement::plan_digest;
 use medulla_agent_types::agent_topology::TopologyCaps;
 use medulla_compute_assemble::assemble::admit_topology;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use {
     medulla_compute_assemble::assemble::assemble,
     medulla_compute_assemble::assemble::inputs as build_inputs,
     medulla_compute_assemble::assemble::replay_check,
     medulla_compute_assemble::assemble::AssembleError,
     medulla_compute_assemble::assemble::Assembly,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
 
 fn fan(topology: TopologyFacts) -> TemplateFacts {

@@ -8,14 +8,21 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::decision::held_out::{
-    HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::OpaqueId;
 use medulla_types::refusal_code::RefusalCode;
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, StateMachineApply, TransitionRefused,
+};
+use {
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
 
 /// Where a revision stands between its draft and its retirement.
@@ -219,7 +226,7 @@ pub struct ChampionPointer {
     /// The canary split of a skill champion, when a challenger takes a share of its runs
     /// (MEDULLA-DECISION-ENGINE-R712.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub canary: Option<medulla_decision_types::skill_eval::SkillCanary>,
+    pub canary: Option<medulla_decision_policy_types::skill_eval::SkillCanary>,
 }
 
 /// A decision to move a champion from one revision to another.
@@ -324,16 +331,19 @@ pub const KNOBS: &[KnobSpec] = &[
     },
 ];
 
-use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
+use medulla_decision_statistical_types::decision::codes::PROMOTION_UNEVALUATED;
 
 /// The promotion and calibration refusal codes.
-pub const REFUSALS: &[RefusalCode] = medulla_decision_types::decision::codes::PROMOTION;
+pub const REFUSALS: &[RefusalCode] = medulla_decision_statistical_types::decision::codes::PROMOTION;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::held_out::{
-        DefinitionKind, GraderKind, MeasurementWindow, ReviewApproval,
+    use {
+        medulla_decision_policy_types::decision::held_out::DefinitionKind,
+        medulla_decision_policy_types::decision::held_out::GraderKind,
+        medulla_decision_policy_types::decision::held_out::MeasurementWindow,
+        medulla_decision_policy_types::decision::held_out::ReviewApproval,
     };
 
     fn reference(namespace: &str, value: &str) -> OpaqueId {

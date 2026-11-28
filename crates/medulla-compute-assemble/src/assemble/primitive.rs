@@ -9,14 +9,22 @@
 //! never reaches `decide_one`.
 
 use medulla_decision_types::decision::primitive::PrimitiveContract;
-use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalOrigin,
-};
-use medulla_decision_types::decision::{
-    CandidateFacts, DecisionErrorCode, DecisionInputs, Elimination, PremiseClass,
-    PremiseProvenance, PremiseRef, Violation,
-};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal,
+    medulla_decision_types::decision::record::outcome::AbstainReason,
+    medulla_decision_types::decision::record::outcome::RefusalOrigin,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::Elimination,
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+};
 
 use super::AssembleError;
 

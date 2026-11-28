@@ -9,18 +9,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::merge_arming::{
-    option_id, MergeArmingRefusal, KNOB_ARM_MAX_CHANGED_LINES, OWNER_APPROVAL_TYPE, PARAM_BRANCH,
-    PARAM_CHANGED_LINES, PARAM_DELIVERY, PARAM_GRAPH, PARAM_HEAD_CHANGESET, PARAM_HEAD_COMMIT,
-    PARAM_PROPOSAL, PARAM_REQUIRED_CHECK, REVIEW_TYPE, ROW_AT_MS, ROW_HEAD_COMMIT, ROW_PROPOSAL,
-    ROW_REVIEWER, ROW_REVIEW_STATE, STATE_CHANGES_REQUESTED,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_sdlc::lifecycle::delivery::arming::arming_verdict;
 use medulla_source_types::delivery::{
@@ -33,6 +23,37 @@ use medulla_source_types::gate_verdict::{
 };
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::step_verdict::VerificationVerdict;
+use {
+    medulla_decision_policy_types::decision::merge_arming::option_id,
+    medulla_decision_policy_types::decision::merge_arming::MergeArmingRefusal,
+    medulla_decision_policy_types::decision::merge_arming::KNOB_ARM_MAX_CHANGED_LINES,
+    medulla_decision_policy_types::decision::merge_arming::OWNER_APPROVAL_TYPE,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_BRANCH,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_CHANGED_LINES,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_DELIVERY,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_GRAPH,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_HEAD_CHANGESET,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_HEAD_COMMIT,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_PROPOSAL,
+    medulla_decision_policy_types::decision::merge_arming::PARAM_REQUIRED_CHECK,
+    medulla_decision_policy_types::decision::merge_arming::REVIEW_TYPE,
+    medulla_decision_policy_types::decision::merge_arming::ROW_AT_MS,
+    medulla_decision_policy_types::decision::merge_arming::ROW_HEAD_COMMIT,
+    medulla_decision_policy_types::decision::merge_arming::ROW_PROPOSAL,
+    medulla_decision_policy_types::decision::merge_arming::ROW_REVIEWER,
+    medulla_decision_policy_types::decision::merge_arming::ROW_REVIEW_STATE,
+    medulla_decision_policy_types::decision::merge_arming::STATE_CHANGES_REQUESTED,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -211,9 +232,9 @@ pub(in crate::decide) fn facts_of(
     }
     let changes_requested = latest.values().any(|(_, _, asks)| *asks);
 
-    let max_changed_lines = match policy
-        .knob(&medulla_decision_types::decision::lifecycle::KNOBS[KNOB_ARM_MAX_CHANGED_LINES])
-    {
+    let max_changed_lines = match policy.knob(
+        &medulla_decision_program_types::decision::lifecycle::KNOBS[KNOB_ARM_MAX_CHANGED_LINES],
+    ) {
         KnobValue::Integer(value) => u64::try_from(value).unwrap_or(0),
         _ => 0,
     };

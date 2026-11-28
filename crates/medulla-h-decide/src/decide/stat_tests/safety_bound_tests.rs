@@ -8,17 +8,25 @@ use super::kernel_family_support::{decide_as_other_tenant, facts};
 use super::trajectory_join_tests::{entry, join};
 use super::*;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::safety::{
-    BoundComparison, SafetyBound, SafetyMeasurement, DEFAULT_MAX_MEASUREMENT_AGE_MS,
-    SAFETY_BOUND_EXCEEDED, SAFETY_MEASUREMENT_MISSING, SAFETY_MEASUREMENT_STALE,
-    SAFETY_UNIT_MISMATCH,
-};
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance,
-};
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::safety::BoundComparison,
+    medulla_decision_statistical_types::decision::safety::SafetyBound,
+    medulla_decision_statistical_types::decision::safety::SafetyMeasurement,
+    medulla_decision_statistical_types::decision::safety::DEFAULT_MAX_MEASUREMENT_AGE_MS,
+    medulla_decision_statistical_types::decision::safety::SAFETY_BOUND_EXCEEDED,
+    medulla_decision_statistical_types::decision::safety::SAFETY_MEASUREMENT_MISSING,
+    medulla_decision_statistical_types::decision::safety::SAFETY_MEASUREMENT_STALE,
+    medulla_decision_statistical_types::decision::safety::SAFETY_UNIT_MISMATCH,
+};
 
 const BOUND: &str = "latency-p95";
 

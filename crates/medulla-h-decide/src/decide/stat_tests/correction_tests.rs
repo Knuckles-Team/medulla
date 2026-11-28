@@ -9,15 +9,23 @@ use super::super::planned_write::PlannedWrite;
 use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
 use medulla_decision_stats_records::decision::correction::commit_correction;
-use medulla_decision_types::correction::{
-    task_class_of, Correction, CorrectionInput, CorrectionOp, CorrectionOutcomes, CorrectionRead,
-    CorrectionRecorded, CorrectionSource, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED,
-    OUTCOME_SELF_REPORTED,
-};
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::Value;
+use {
+    medulla_decision_policy_types::correction::task_class_of,
+    medulla_decision_policy_types::correction::Correction,
+    medulla_decision_policy_types::correction::CorrectionInput,
+    medulla_decision_policy_types::correction::CorrectionOp,
+    medulla_decision_policy_types::correction::CorrectionOutcomes,
+    medulla_decision_policy_types::correction::CorrectionRead,
+    medulla_decision_policy_types::correction::CorrectionRecorded,
+    medulla_decision_policy_types::correction::CorrectionSource,
+    medulla_decision_policy_types::correction::CORRECTION_NOT_FOUND,
+    medulla_decision_policy_types::correction::CORRECTION_ROLE_REQUIRED,
+    medulla_decision_policy_types::correction::OUTCOME_SELF_REPORTED,
+};
 
 const GRAPH: &str = "__commons__";
 
@@ -558,10 +566,10 @@ async fn independent_outcomes_read_per_rule_candidate() {
 // spec: MEDULLA-DECISION-ENGINE-R059
 #[tokio::test]
 async fn aggregate_joins_the_independent_correction_outcomes() {
+    use medulla_decision_types::decision::jobs::RecordWindow;
     use medulla_decision_types::decision::statistical::log::{
         CorrectionLabelRequest, DecisionLogOp, OutcomeAggregate, OutcomeAggregateRequest,
     };
-    use medulla_decision_types::decision::RecordWindow;
 
     let h = harness().await;
     let core = core(&h).await;
@@ -642,12 +650,14 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
 // spec: MEDULLA-DECISION-ENGINE-R060
 #[tokio::test]
 async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
+    use medulla_decision_statistical_types::decision::codes::PROMOTION_UNEVALUATED;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     use medulla_decision_stats::decision::promotion::challenger_wins;
-    use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
-    use medulla_decision_types::decision::held_out::{
-        DefinitionKind, ReceiptKind, RevisionSubject,
+    use {
+        medulla_decision_policy_types::decision::held_out::DefinitionKind,
+        medulla_decision_policy_types::decision::held_out::ReceiptKind,
+        medulla_decision_policy_types::decision::held_out::RevisionSubject,
     };
-    use medulla_decision_types::decision::DecisionPolicy;
 
     use super::super::stat_promotion::{
         correction_set_digest, held_out_evidence, EvidenceError, EvidenceSources,

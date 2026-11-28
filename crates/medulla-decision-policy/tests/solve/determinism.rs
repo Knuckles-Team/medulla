@@ -2,7 +2,10 @@
 
 use medulla_decision_policy::solve::model::Model;
 use medulla_decision_policy::solve::solve;
-use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+};
 
 use super::generators::{planted_assembly, AssemblyShape};
 use super::support::model;

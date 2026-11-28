@@ -6,43 +6,75 @@
 //! this handler is the single write authority.
 
 use medulla_decision_stats::decision::trajectory_ladder::check_paired_verdict;
-use medulla_decision_types::decision::branch_fusion::{
-    branch_record_key, branch_retrieval_key, BranchRecord, BranchRef, BranchRetrievalReceipt,
-    BRANCH_DUPLICATE, BRANCH_READBACK_STALE,
-};
 use std::sync::Arc;
+use {
+    medulla_decision_statistical_types::decision::branch_fusion::branch_record_key,
+    medulla_decision_statistical_types::decision::branch_fusion::branch_retrieval_key,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRecord,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRef,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRetrievalReceipt,
+    medulla_decision_statistical_types::decision::branch_fusion::BRANCH_DUPLICATE,
+    medulla_decision_statistical_types::decision::branch_fusion::BRANCH_READBACK_STALE,
+};
 
-use medulla_decision_types::decision::program_store::preplan::PrePlanError;
-use medulla_decision_types::decision::program_store::{
-    compile_program,
-    insight::{insight_key, Insight, InsightError},
-    preplan::{
-        max_receipt_age_ms, pattern_key, verify_preplan, ManifestReading, PrePlanTestReceipt,
-        ReusablePattern,
-    },
-    program_key, program_node_id,
-    replay::{replay_key, StoredReplay},
-    run_trace_key,
-    semantic::{
-        build_match_index, match_key, phrasing_node_id, ProgramMatchIndex, ProgramPhrasing,
-        PHRASING_NODE_CLASS, PHRASING_OF,
-    },
-    CompiledProgram, ProgramError, ProgramKnobs, RunRecord, RunRecordStored, StoredRun,
-    StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS, RUN_TRACE_FIELD,
-};
+use medulla_decision_program_types::decision::program_store::preplan::PrePlanError;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::statistical::{QuestionKind, TypedValue};
-use medulla_decision_types::decision::task_plan::horizon::{
-    HORIZON_CHECKPOINT_MISSING, HORIZON_PLAN_STALE,
-};
-use medulla_decision_types::decision::task_plan::{
-    attach_horizons, check_horizon_checkpoint, checkpoint_key, compute_plan_digest, HorizonKnobs,
-};
-use medulla_decision_types::decision::trajectory_ladder::{
-    PairedVerdict, TrajectoryLadderRequest, TRAJECTORY_DECISION_UNKNOWN,
-};
 use medulla_persistence_records::decision_jobs::record_key as decision_record_key;
+use {
+    medulla_decision_program_types::decision::program_store::compile_program,
+    medulla_decision_program_types::decision::program_store::preplan::max_receipt_age_ms,
+    medulla_decision_program_types::decision::program_store::preplan::pattern_key,
+    medulla_decision_program_types::decision::program_store::preplan::verify_preplan,
+    medulla_decision_program_types::decision::program_store::preplan::ManifestReading,
+    medulla_decision_program_types::decision::program_store::preplan::PrePlanTestReceipt,
+    medulla_decision_program_types::decision::program_store::preplan::ReusablePattern,
+    medulla_decision_program_types::decision::program_store::program_key,
+    medulla_decision_program_types::decision::program_store::program_node_id,
+    medulla_decision_program_types::decision::program_store::run_trace_key,
+    medulla_decision_program_types::decision::program_store::semantic::build_match_index,
+    medulla_decision_program_types::decision::program_store::semantic::match_key,
+    medulla_decision_program_types::decision::program_store::semantic::phrasing_node_id,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatchIndex,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramPhrasing,
+    medulla_decision_program_types::decision::program_store::semantic::PHRASING_NODE_CLASS,
+    medulla_decision_program_types::decision::program_store::semantic::PHRASING_OF,
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+    medulla_decision_program_types::decision::program_store::ProgramError,
+    medulla_decision_program_types::decision::program_store::ProgramKnobs,
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+    medulla_decision_program_types::decision::program_store::StoredRunTrace,
+    medulla_decision_program_types::decision::program_store::COMPILED_FROM,
+    medulla_decision_program_types::decision::program_store::PROGRAM_NODE_CLASS,
+    medulla_decision_program_types::decision::program_store::RUN_TRACE_FIELD,
+    medulla_decision_statistical_types::decision::program_store::insight::insight_key,
+    medulla_decision_statistical_types::decision::program_store::insight::Insight,
+    medulla_decision_statistical_types::decision::program_store::insight::InsightError,
+    medulla_decision_statistical_types::decision::program_store::replay::replay_key,
+    medulla_decision_statistical_types::decision::program_store::replay::StoredReplay,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::attach_horizons,
+    medulla_decision_program_types::decision::task_plan::check_horizon_checkpoint,
+    medulla_decision_program_types::decision::task_plan::checkpoint_key,
+    medulla_decision_program_types::decision::task_plan::compute_plan_digest,
+    medulla_decision_program_types::decision::task_plan::HorizonKnobs,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::horizon::HORIZON_CHECKPOINT_MISSING,
+    medulla_decision_program_types::decision::task_plan::horizon::HORIZON_PLAN_STALE,
+};
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryLadderRequest,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_DECISION_UNKNOWN,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 
@@ -87,8 +119,8 @@ pub(super) async fn open_graph(
     verified: &VerifiedRequestContext,
     op: &medulla_decision_types::decision::statistical::log::DecisionLogOp,
 ) -> Result<Option<Arc<GraphVectors>>, String> {
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
     use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
     use medulla_isolation::isolation::AccessLevel;
     let DecisionLogOp::RunRecord {
         record: RunRecord::CompiledProgram { source, .. },
@@ -314,7 +346,10 @@ pub(super) fn stage(
 pub(super) fn read_run_trace(
     ctx: &ExecutionContext,
     run_id: &str,
-) -> Result<Option<medulla_decision_types::decision::run_governance::RunTraceRecord>, String> {
+) -> Result<
+    Option<medulla_decision_statistical_types::decision::run_governance::RunTraceRecord>,
+    String,
+> {
     let Some(reader) = ctx.reader else {
         return Ok(None);
     };

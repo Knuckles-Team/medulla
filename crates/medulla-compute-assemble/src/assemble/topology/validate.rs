@@ -5,9 +5,9 @@
 use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::agent_topology::TopologyPolicy;
 use medulla_agent_types::agent_topology::TopologyRequirements;
-use medulla_decision_types::decision::DecisionErrorCode;
-use medulla_decision_types::decision::DecisionInputs;
-use medulla_decision_types::decision::TemplateFacts;
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
+use medulla_decision_types::decision::record::DecisionInputs;
+use medulla_decision_types::decision::record::TemplateFacts;
 
 use super::super::AssembleError;
 

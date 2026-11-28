@@ -119,12 +119,15 @@ fn context_policy_preserves_supplied_thresholds_and_refuses_invalid_ones() {
     }
 }
 
-fn policy_with(knobs: &[(&str, i64)]) -> crate::decision::policy::DecisionPolicy {
-    let mut policy = crate::decision::policy::DecisionPolicy::engine_default();
+fn policy_with(
+    knobs: &[(&str, i64)],
+) -> medulla_decision_statistical_types::decision::policy::DecisionPolicy {
+    let mut policy =
+        medulla_decision_statistical_types::decision::policy::DecisionPolicy::engine_default();
     for (name, micros) in knobs {
         policy.knobs.insert(
-            crate::decision::knobs::KnobName::new(name),
-            crate::decision::knobs::KnobValue::DecimalMicros(*micros),
+            medulla_decision_statistical_types::decision::knobs::KnobName::new(name),
+            medulla_decision_statistical_types::decision::knobs::KnobValue::DecimalMicros(*micros),
         );
     }
     policy

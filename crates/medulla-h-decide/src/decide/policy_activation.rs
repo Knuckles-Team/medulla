@@ -19,13 +19,6 @@ use medulla_agent_types::agent_guardrail::{
     check_rule_against_invariants, GuardrailRule, RuleInvariant, RulePromotionVerdict,
 };
 use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
-use medulla_decision_types::decision::held_out::{
-    GraderKind, HeldOutEvidence, ReceiptKind, ReviewApproval, RevisionSubject,
-    HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact, read_pointer};
 use medulla_types::contract::Digest256;
@@ -36,13 +29,27 @@ use medulla_types::policy_document::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use {
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::ReviewApproval,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_support::refusal;
 use super::stat_vectors::GraphVectors;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 /// The decision artifact a recorded review lives under.
 const REVIEW_PREFIX: &str = "policy-review:";
@@ -486,7 +493,7 @@ pub(super) fn check_activation(
         && active != binding.expected_policy_revision.as_deref()
     {
         return Err(Fault::new(
-            medulla_decision_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str(),
+            medulla_decision_statistical_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str(),
             format!(
                 "the review was made against {:?}, the active revision is {:?}",
                 binding.expected_policy_revision, active

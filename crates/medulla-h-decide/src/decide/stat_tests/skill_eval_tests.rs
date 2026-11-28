@@ -3,12 +3,22 @@
 
 use super::super::stat_skill_eval::run;
 use super::*;
-use medulla_decision_types::skill_eval::{
-    EnvironmentAttestation, EvalCaseKind, EvalCaseSource, JudgeCalibration, SkillEvalCase,
-    SkillEvalOutcome, SkillEvalRequest, SkillEvalRun, SuiteBand, TrajectoryKind, TrajectoryStep,
-    EVAL_RUN_NOT_CLEAN_ROOM, JUDGE_NOT_CALIBRATED,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+use {
+    medulla_decision_policy_types::skill_eval::EnvironmentAttestation,
+    medulla_decision_policy_types::skill_eval::EvalCaseKind,
+    medulla_decision_policy_types::skill_eval::EvalCaseSource,
+    medulla_decision_policy_types::skill_eval::JudgeCalibration,
+    medulla_decision_policy_types::skill_eval::SkillEvalCase,
+    medulla_decision_policy_types::skill_eval::SkillEvalOutcome,
+    medulla_decision_policy_types::skill_eval::SkillEvalRequest,
+    medulla_decision_policy_types::skill_eval::SkillEvalRun,
+    medulla_decision_policy_types::skill_eval::SuiteBand,
+    medulla_decision_policy_types::skill_eval::TrajectoryKind,
+    medulla_decision_policy_types::skill_eval::TrajectoryStep,
+    medulla_decision_policy_types::skill_eval::EVAL_RUN_NOT_CLEAN_ROOM,
+    medulla_decision_policy_types::skill_eval::JUDGE_NOT_CALIBRATED,
+};
 
 const SKILL: &str = "skill:triage@3";
 
@@ -272,7 +282,10 @@ fn eval_caller(tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
 #[tokio::test]
 async fn a_case_is_added_checked_and_scoped_to_its_tenant() {
     use super::super::stat_skill_eval::{case_add_operations, case_node_id, require_scope};
-    use medulla_decision_types::skill_eval::{SkillEvalCaseAddRequest, SCOPE_AUTHOR};
+    use {
+        medulla_decision_policy_types::skill_eval::SkillEvalCaseAddRequest,
+        medulla_decision_policy_types::skill_eval::SCOPE_AUTHOR,
+    };
     let add = |case: SkillEvalCase, tenant: &str| SkillEvalCaseAddRequest {
         tenant_id: tenant.into(),
         case,
@@ -307,7 +320,7 @@ async fn a_case_is_added_checked_and_scoped_to_its_tenant() {
     let mut bare = case(3, EvalCaseKind::RealPrompt);
     bare.expected_trajectory.clear();
     let mut mocked = case(4, EvalCaseKind::Golden);
-    mocked.tool_mocks = vec![medulla_decision_types::skill_eval::ToolMock {
+    mocked.tool_mocks = vec![medulla_decision_policy_types::skill_eval::ToolMock {
         tool: "unknown".into(),
         args_digest: "a".into(),
         result_digest: "b".into(),
@@ -322,7 +335,10 @@ async fn a_case_is_added_checked_and_scoped_to_its_tenant() {
 #[tokio::test]
 async fn report_and_calibration_are_read_and_recorded_per_tenant() {
     use super::super::stat_skill_eval::{calibrate, report_answer};
-    use medulla_decision_types::skill_eval::{SkillEvalCalibrateRequest, SkillEvalReportRequest};
+    use {
+        medulla_decision_policy_types::skill_eval::SkillEvalCalibrateRequest,
+        medulla_decision_policy_types::skill_eval::SkillEvalReportRequest,
+    };
     let h = Harness::new().await;
     let store = store(&h).await;
     let ask = |tenant: &str| SkillEvalReportRequest {

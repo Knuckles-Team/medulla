@@ -11,9 +11,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::statistical::grounded_eval::{
-    CitationSupport, ClaimVotes, ExpectedTopicSet, GroundedClaimPrediction, GroundedKnobs,
-    GroundedScope, QueryTopicCoverage, ScopeTopicCoverage, TopicSupport, WeightedBrier,
+use {
+    medulla_decision_program_types::decision::statistical::grounded_eval::CitationSupport,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ClaimVotes,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ExpectedTopicSet,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedClaimPrediction,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedKnobs,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScope,
+    medulla_decision_program_types::decision::statistical::grounded_eval::QueryTopicCoverage,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ScopeTopicCoverage,
+    medulla_decision_program_types::decision::statistical::grounded_eval::TopicSupport,
+    medulla_decision_program_types::decision::statistical::grounded_eval::WeightedBrier,
 };
 
 /// The `grounded_eval` family refusal table.
@@ -247,7 +255,7 @@ pub fn weighted_brier(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::grounded_eval::ClaimSupport;
+    use medulla_decision_program_types::decision::statistical::grounded_eval::ClaimSupport;
 
     fn set(query: &str, topics: &[&str]) -> ExpectedTopicSet {
         ExpectedTopicSet {

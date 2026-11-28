@@ -5,12 +5,18 @@
 use super::super::failure_ingest::handle_failure_ingest;
 use super::super::planned_write::PlannedWrite;
 use super::*;
-use medulla_decision_types::failure_patterns::{
-    FailureIngestResult, FailureOp, GapTopic, Signature, FAILURE_NO_RUN_TRACE,
-    PATTERN_BELOW_MIN_COUNT, TOPIC_NOT_FOUND, TOPIC_SOURCE_UNLINKED,
-};
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::failure_patterns::FailureIngestResult,
+    medulla_decision_statistical_types::failure_patterns::FailureOp,
+    medulla_decision_statistical_types::failure_patterns::GapTopic,
+    medulla_decision_statistical_types::failure_patterns::Signature,
+    medulla_decision_statistical_types::failure_patterns::FAILURE_NO_RUN_TRACE,
+    medulla_decision_statistical_types::failure_patterns::PATTERN_BELOW_MIN_COUNT,
+    medulla_decision_statistical_types::failure_patterns::TOPIC_NOT_FOUND,
+    medulla_decision_statistical_types::failure_patterns::TOPIC_SOURCE_UNLINKED,
+};
 
 const GRAPH: &str = "__commons__";
 

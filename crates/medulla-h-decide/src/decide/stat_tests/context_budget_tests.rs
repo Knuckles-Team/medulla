@@ -4,10 +4,12 @@
 //! MEDULLA-DECISION-ENGINE-R029.2: the partition is complete.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
-};
 use std::collections::BTreeMap;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const A: &str = "tool-a-search";
 const B: &str = "tool-b-files";

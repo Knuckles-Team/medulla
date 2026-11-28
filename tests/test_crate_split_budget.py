@@ -134,3 +134,16 @@ def test_served_tests_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.10")
 def test_h_graph_split_is_within_budget() -> None:
     _assert_split(["medulla-h-graph-gateway", "medulla-h-graph"])
+
+
+# spec: MEDULLA-CONTRACT-R067.2
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.2")
+def test_decision_types_split_is_within_budget() -> None:
+    _assert_split(
+        [
+            "medulla-decision-statistical-types",
+            "medulla-decision-policy-types",
+            "medulla-decision-program-types",
+            "medulla-decision-types",
+        ]
+    )

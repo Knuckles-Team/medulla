@@ -26,13 +26,20 @@ use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_ontology;
 use medulla_decision_types::decision::record::AssemblyStep;
-use medulla_decision_types::decision::record::{
-    AbstainReason, CandidateFacts, CoverageDerivation, DecisionRecord, DerivationEdge, EdgeSource,
-    PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_decision_types::decision::request::AssemblyRequirements;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::CoverageDerivation,
+    medulla_decision_statistical_types::decision::record::premise::DerivationEdge,
+    medulla_decision_statistical_types::decision::record::premise::EdgeSource,
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 /// Most edges one stored coverage chain may carry.
 pub const MAX_DERIVATION_EDGES: usize = 16;

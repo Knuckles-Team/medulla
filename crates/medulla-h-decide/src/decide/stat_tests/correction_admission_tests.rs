@@ -3,13 +3,16 @@
 //! only when the receipts show the test failed before the fix and passed after.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::trace_fix_binding::{
     CorrectionBinding, FailedRunTrace, GeneratedFix, RegressionTest, RevisionOutcome,
     RevisionReceipt, REFUSALS,
 };
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_types::contract::{Digest256, OpaqueId};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn id(value: &str) -> OpaqueId {
     OpaqueId::new(value).unwrap()

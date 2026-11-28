@@ -1,10 +1,11 @@
 //! Bounded explicit plans through the actual Decide handler.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::{
-    decision::task_plan::TaskPlanProposal, decision::task_plan::TaskPlanTask,
-    decision::task_plan::TASK_PLAN_POLICY_REVISION,
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use {
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+    medulla_decision_program_types::decision::task_plan::TASK_PLAN_POLICY_REVISION,
 };
 
 pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
@@ -92,7 +93,7 @@ async fn decide_routes_task_plan() {
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Constraint
+        medulla_decision_types::decision::record::ResolutionKind::Constraint
     );
     assert_eq!(record.tenant_id, TENANT);
     assert_eq!(
@@ -101,8 +102,9 @@ async fn decide_routes_task_plan() {
     );
     assert!(record.premises.iter().any(|p| p.subject == "c"
         && p.fact.contains("dependencies=b")
-        && p.class == medulla_decision_types::decision::PremiseClass::Claim));
-    assert!(record.premises.iter().any(|p|p.subject==TASK_PLAN_POLICY_REVISION && matches!(&p.provenance, medulla_decision_types::decision::PremiseProvenance::Policy {policy_digest} if *policy_digest==plan.policy_digest)));
+        && p.class
+            == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim));
+    assert!(record.premises.iter().any(|p|p.subject==TASK_PLAN_POLICY_REVISION && matches!(&p.provenance, medulla_decision_statistical_types::decision::record::premise::PremiseProvenance::Policy {policy_digest} if *policy_digest==plan.policy_digest)));
     assert_eq!(
         medulla_decision_types::decision::digest::statistical_record_digest(record),
         record.record_digest
@@ -123,14 +125,14 @@ async fn decide_routes_task_plan() {
 /// The decision seals an abstention from the `task_plan` family: the code, the
 /// uncovered subtask in the detail and in a premise, and no plan.
 async fn assert_abstained(h: &Harness, request: DecideRequest, code: &str, detail: &str) {
+    use medulla_decision_types::decision::record::AbstainReason;
     use medulla_decision_types::decision::statistical::StatisticalOutcome;
-    use medulla_decision_types::decision::AbstainReason;
     let batch = decide(h, request).await.unwrap();
     let record = &batch.records.as_slice()[0];
     assert!(record.task_plan().is_none());
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Abstention
+        medulla_decision_types::decision::record::ResolutionKind::Abstention
     );
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         panic!("an abstention, got {:?}", record.outcome);
@@ -243,9 +245,9 @@ async fn task_plan_cannot_use_score_replay() {
 // spec: MEDULLA-DECISION-ENGINE-R134.111.7
 #[tokio::test]
 async fn canonical_task_plan_schema_publishes_once_and_routes() {
-    use medulla_decision_types::{
-        decision::task_plan::task_plan_feature_schema,
-        decision::task_plan::TASK_PLAN_FEATURE_SCHEMA_COMPONENT_ID,
+    use {
+        medulla_decision_program_types::decision::task_plan::task_plan_feature_schema,
+        medulla_decision_program_types::decision::task_plan::TASK_PLAN_FEATURE_SCHEMA_COMPONENT_ID,
     };
     let h = Harness::new().await;
     let body = task_plan_feature_schema().checked().unwrap();
@@ -300,14 +302,16 @@ fn with_call(request: &mut DecideRequest, reference: &str) {
         unreachable!()
     };
     let mut tasks = proposal.tasks.as_slice().to_vec();
-    tasks[3].call = Some(medulla_decision_types::decision::task_plan::TaskPlanCall {
-        server: "github".into(),
-        tool: "create_issue".into(),
-        arguments: serde_json::json!({
-            "title": "Joined",
-            "body": { "$ref": reference },
-        }),
-    });
+    tasks[3].call = Some(
+        medulla_decision_program_types::decision::task_plan::TaskPlanCall {
+            server: "github".into(),
+            tool: "create_issue".into(),
+            arguments: serde_json::json!({
+                "title": "Joined",
+                "body": { "$ref": reference },
+            }),
+        },
+    );
     proposal.tasks = BoundedVec::new(tasks).unwrap();
     request.params = BoundedVec::new(params).unwrap();
 }
@@ -360,7 +364,7 @@ async fn premises_name_calls_and_bindings() {
         .premises
         .iter()
         .filter(|p| {
-            p.subject == "join" && p.class == medulla_decision_types::decision::PremiseClass::Claim
+            p.subject == "join" && p.class == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
         })
         .map(|p| p.fact.as_str())
         .collect();
@@ -589,8 +593,11 @@ fn decompose_subtask(
     deps: &[&str],
     schema: Option<&str>,
     specialists: &[(&str, i64)],
-) -> medulla_decision_types::decision::task_plan::DecomposeSubtask {
-    use medulla_decision_types::decision::task_plan::{DecomposeSubtask, SpecialistScore};
+) -> medulla_decision_program_types::decision::task_plan::DecomposeSubtask {
+    use {
+        medulla_decision_program_types::decision::task_plan::DecomposeSubtask,
+        medulla_decision_program_types::decision::task_plan::SpecialistScore,
+    };
     DecomposeSubtask {
         id: id.into(),
         text: format!("Handle {id} with cited evidence"),
@@ -612,7 +619,10 @@ fn decompose_subtask(
 // spec: MEDULLA-DECISION-ENGINE-R134.3
 #[tokio::test]
 async fn decomposition_parameter_routes_through_decide() {
-    use medulla_decision_types::decision::task_plan::{AggregationOp, DecomposeFacts};
+    use {
+        medulla_decision_program_types::decision::task_plan::AggregationOp,
+        medulla_decision_program_types::decision::task_plan::DecomposeFacts,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     let facts = DecomposeFacts {
@@ -708,7 +718,10 @@ fn publish_skill_with_parent(
 // spec: MEDULLA-DECISION-ENGINE-R134.4
 #[tokio::test]
 async fn skill_query_parameter_plans_over_the_visible_skills() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_skill(
@@ -800,9 +813,12 @@ async fn skill_query_parameter_plans_over_the_visible_skills() {
 // spec: MEDULLA-DECISION-ENGINE-R134.7
 #[tokio::test]
 async fn premises_name_skill_and_flag() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
-    use medulla_decision_types::decision::task_plan::DecomposeFacts;
-    use medulla_decision_types::decision::PremiseClass;
+    use medulla_decision_program_types::decision::task_plan::DecomposeFacts;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_skill(
@@ -919,7 +935,7 @@ async fn premises_name_skill_and_flag() {
 }
 
 fn two_proposers(pin: &ComponentDependency) -> DecideRequest {
-    use medulla_decision_types::decision::task_plan::DecomposeFacts;
+    use medulla_decision_program_types::decision::task_plan::DecomposeFacts;
     let mut request = task_request(pin);
     let mut params = request.params.as_slice().to_vec();
     params.push(TypedParam {
@@ -942,9 +958,15 @@ fn two_proposers(pin: &ComponentDependency) -> DecideRequest {
 // spec: MEDULLA-DECISION-ENGINE-R134.5
 #[tokio::test]
 async fn decide_routes_automatic_task_plan() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
-    use medulla_decision_types::decision::task_plan::DecomposeFacts;
-    use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
+    use medulla_decision_program_types::decision::task_plan::DecomposeFacts;
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_types::decision::record::ResolutionKind,
+    };
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_skill(
@@ -1050,7 +1072,10 @@ async fn decide_routes_automatic_task_plan() {
 // spec: MEDULLA-DECISION-ENGINE-R134.6
 #[tokio::test]
 async fn uncovered_subtask_abstains() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_skill(
@@ -1164,8 +1189,11 @@ fn log_skill_outcome(
 // spec: MEDULLA-DECISION-ENGINE-R134.9
 #[tokio::test]
 async fn served_decide_returns_ranked_skill_tree() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
-    use medulla_decision_types::decision::task_plan::skill_tree::OutcomeRef;
+    use medulla_decision_statistical_types::decision::task_plan::skill_tree::OutcomeRef;
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_skill(
@@ -1312,7 +1340,10 @@ async fn served_decide_returns_ranked_skill_tree() {
 // spec: MEDULLA-DECISION-ENGINE-R134.9
 #[tokio::test]
 async fn served_decide_refuses_a_skill_parent_cycle_and_an_unknown_parent() {
-    use medulla_decision_types::decision::task_plan::skill_plan::{SkillPlanQuery, SkillSubtask};
+    use {
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+        medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask,
+    };
     let ask_over = |pin: &ComponentDependency| {
         plan_request(
             pin,
@@ -1519,14 +1550,14 @@ fn chain_proposal(n: usize) -> serde_json::Value {
 }
 
 fn checkpoint_of(
-    plan: &medulla_decision_types::decision::task_plan::TaskPlan,
+    plan: &medulla_decision_program_types::decision::task_plan::TaskPlan,
     index: u32,
     consumed: u64,
     reserved: u64,
     remaining: u64,
-) -> medulla_decision_types::decision::task_plan::HorizonCheckpoint {
+) -> medulla_decision_program_types::decision::task_plan::HorizonCheckpoint {
     let partition = plan.horizons.as_ref().unwrap();
-    medulla_decision_types::decision::task_plan::HorizonCheckpoint {
+    medulla_decision_program_types::decision::task_plan::HorizonCheckpoint {
         plan_digest: partition.plan_digest.clone(),
         horizon_index: index,
         consumed,
@@ -1541,16 +1572,17 @@ async fn log_checkpoint(
     h: &Harness,
     who: &str,
     tenant: &str,
-    plan: &medulla_decision_types::decision::task_plan::TaskPlan,
-    checkpoint: medulla_decision_types::decision::task_plan::HorizonCheckpoint,
-) -> Result<medulla_decision_types::decision::program_store::RunRecordStored, String> {
+    plan: &medulla_decision_program_types::decision::task_plan::TaskPlan,
+    checkpoint: medulla_decision_program_types::decision::task_plan::HorizonCheckpoint,
+) -> Result<medulla_decision_program_types::decision::program_store::RunRecordStored, String> {
     let op = DecisionLogOp::RunRecord {
         tenant_id: tenant.to_string(),
-        record: medulla_decision_types::decision::program_store::RunRecord::HorizonCheckpoint {
-            plan: Box::new(plan.clone()),
-            policy: DecisionPolicyRef::Default,
-            checkpoint,
-        },
+        record:
+            medulla_decision_program_types::decision::program_store::RunRecord::HorizonCheckpoint {
+                plan: Box::new(plan.clone()),
+                policy: DecisionPolicyRef::Default,
+                checkpoint,
+            },
     };
     decode(super::log_tests::log_op(h, who, op).await)
 }
@@ -1602,7 +1634,7 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
         .await
         .unwrap();
     assert!(!stored.replayed);
-    let medulla_decision_types::decision::program_store::StoredRun::HorizonCheckpoint {
+    let medulla_decision_program_types::decision::program_store::StoredRun::HorizonCheckpoint {
         checkpoint,
     } = &stored.stored
     else {
@@ -1668,11 +1700,11 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
     // plan_explicit_tasks cannot derive one (every step must feed the output), so
     // the partition's own refusal is exercised on a hand-built flat body.
     let none = serde_json::json!({});
-    let tight = medulla_decision_types::decision::task_plan::HorizonKnobs {
+    let tight = medulla_decision_program_types::decision::task_plan::HorizonKnobs {
         max_steps: 1,
         credit_ceiling: 1_000,
     };
-    let one_layer = medulla_decision_types::decision::task_plan::plan_explicit_tasks(
+    let one_layer = medulla_decision_program_types::decision::task_plan::plan_explicit_tasks(
         &serde_json::from_value(serde_json::json!({
             "tasks": [step("only", &[], none.clone())],
             "output_task_id": "only", "max_concurrency": 1, "max_steps": 1
@@ -1681,7 +1713,8 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
     )
     .unwrap();
     assert!(
-        medulla_decision_types::decision::task_plan::partition_horizons(&one_layer, &tight).is_ok()
+        medulla_decision_program_types::decision::task_plan::partition_horizons(&one_layer, &tight)
+            .is_ok()
     );
     let mut flat = plan.clone();
     flat.tasks = BoundedVec::new(
@@ -1695,20 +1728,22 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
             .collect(),
     )
     .unwrap();
-    let default_knobs = medulla_decision_types::decision::task_plan::HorizonKnobs {
+    let default_knobs = medulla_decision_program_types::decision::task_plan::HorizonKnobs {
         max_steps: 8,
         credit_ceiling: 200_000,
     };
-    let err =
-        medulla_decision_types::decision::task_plan::partition_horizons(&flat, &default_knobs)
-            .unwrap_err();
+    let err = medulla_decision_program_types::decision::task_plan::partition_horizons(
+        &flat,
+        &default_knobs,
+    )
+    .unwrap_err();
     assert!(err.starts_with("HORIZON_UNSPLITTABLE"), "{err}");
-    let two = medulla_decision_types::decision::task_plan::plan_explicit_tasks(
+    let two = medulla_decision_program_types::decision::task_plan::plan_explicit_tasks(
         &serde_json::from_value(chain_proposal(2)).unwrap(),
     )
     .unwrap();
     assert_eq!(
-        medulla_decision_types::decision::task_plan::partition_horizons(&two, &tight)
+        medulla_decision_program_types::decision::task_plan::partition_horizons(&two, &tight)
             .unwrap()
             .horizons
             .len(),
@@ -1724,8 +1759,10 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
 
 /// Make the `join` task a foreach tool step over `source`.
 fn with_foreach(request: &mut DecideRequest, source: &str, max_items: u32) {
-    use medulla_decision_types::decision::task_plan::{
-        ForeachSource, TaskPlanCall, TaskPlanForeach,
+    use {
+        medulla_decision_program_types::decision::task_plan::ForeachSource,
+        medulla_decision_program_types::decision::task_plan::TaskPlanCall,
+        medulla_decision_program_types::decision::task_plan::TaskPlanForeach,
     };
     let mut params = request.params.as_slice().to_vec();
     let TypedValue::TaskPlan(proposal) = &mut params[0].value else {
@@ -1774,7 +1811,7 @@ async fn decide_routes_task_plan_with_foreach() {
     // One claim premise names the source reference and the bound.
     assert!(record.premises.iter().any(|p| {
         p.subject == "join"
-            && p.class == medulla_decision_types::decision::PremiseClass::Claim
+            && p.class == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
             && p.fact == "task_plan_foreach:source=steps.c.output.items;max_items=5"
     }));
     assert_eq!(

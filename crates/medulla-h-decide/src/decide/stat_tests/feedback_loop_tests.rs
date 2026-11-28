@@ -4,13 +4,20 @@
 //! a fresh harness reads back, and a refusal leaves the continuation alone.
 
 use super::*;
-use medulla_decision_types::decision::checker_feedback::{
-    Continuation, FeedbackRecord, StopReason, FEEDBACK_BOUND_INVALID, FEEDBACK_REPLAYED_KEY,
-    FEEDBACK_UNGRADED_OUTPUT,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_program_types::decision::checker_feedback::Continuation,
+    medulla_decision_program_types::decision::checker_feedback::FeedbackRecord,
+    medulla_decision_program_types::decision::checker_feedback::StopReason,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_BOUND_INVALID,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_REPLAYED_KEY,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_UNGRADED_OUTPUT,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use super::super::family::feedback_loop::latest_continuation;
 use super::super::stat_log::LogReader;
@@ -335,7 +342,7 @@ async fn feedback_loop_stops() {
 // spec: MEDULLA-DECISION-ENGINE-R169.7
 #[tokio::test]
 async fn the_served_continuation_read_is_the_committers_own() {
-    use medulla_decision_types::decision::checker_feedback::ContinuationRead;
+    use medulla_decision_program_types::decision::checker_feedback::ContinuationRead;
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     let read = |who: &'static str, loop_id: &'static str| {

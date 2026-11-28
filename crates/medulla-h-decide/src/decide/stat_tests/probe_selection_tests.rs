@@ -6,7 +6,7 @@
 //! catalog is never read.
 
 use super::*;
-use medulla_decision_types::decision::ResolutionKind;
+use medulla_decision_types::decision::record::ResolutionKind;
 
 const OTHER: &str = "tenant-other";
 

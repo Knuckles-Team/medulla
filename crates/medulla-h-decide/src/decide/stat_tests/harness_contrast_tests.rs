@@ -5,26 +5,47 @@
 use std::time::Instant;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::harness_contrast::HarnessContrastAbstainReason;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
-use medulla_decision_types::decision::statistical::features::{
-    FeatureSchemaBody, FEATURE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalDecisionRecord,
-    StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;
-use medulla_decision_types::decision::program_store::{RunRecord, RunRecordStored};
-use medulla_decision_types::decision::run_governance::{
-    RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceStep,
-};
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+};
+use {
+    medulla_decision_statistical_types::decision::run_governance::RunOutcome,
+    medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
+    medulla_decision_statistical_types::decision::run_governance::StepKind,
+    medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+    medulla_decision_statistical_types::decision::run_governance::TraceStep,
+};
 
 pub(super) const CONDITIONS: &str = "sha256:conditions";
 pub(super) const BASELINE: &str = "trace:baseline";
@@ -172,8 +193,8 @@ async fn commit_trace_in(h: &Harness, tenant: &str, who: &str, trace: RunTraceRe
 pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
     let service =
         VerifiedRequestContext::verified_for_test_with_scopes("svc", tenant, &["usage:write"]);
-    let price = medulla_decision_types::usage::PriceEntry {
-        schema_version: medulla_decision_types::usage::USAGE_SCHEMA_VERSION,
+    let price = medulla_decision_policy_types::usage::PriceEntry {
+        schema_version: medulla_decision_policy_types::usage::USAGE_SCHEMA_VERSION,
         model_key: "m1".into(),
         valid_from_ms: 0,
         in_per_mtok_micro: 1,
@@ -185,8 +206,8 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
         &h.state,
         1,
         &service,
-        medulla_decision_types::usage::UsageOp::PutPrice {
-            catalog: medulla_decision_types::usage::PriceCatalog {
+        medulla_decision_policy_types::usage::UsageOp::PutPrice {
+            catalog: medulla_decision_policy_types::usage::PriceCatalog {
                 aliases: Default::default(),
                 entries: vec![price],
             },
@@ -196,30 +217,32 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
     assert!(put.error.is_none(), "{:?}", put.refusal_text());
     let records = costs
         .iter()
-        .map(|(run, cost)| medulla_decision_types::usage::UsageRecord {
-            schema_version: medulla_decision_types::usage::USAGE_SCHEMA_VERSION,
-            recorded_at_ms: 1_000,
-            child_id: "child".into(),
-            operation: "probe".into(),
-            tenant: tenant.into(),
-            principal: "principal:svc".into(),
-            run_id: run.to_string(),
-            model_key: "m1".into(),
-            tokens_in: cost * 1_000_000,
-            tokens_out: 0,
-            tokens_cached: 0,
-            latency_ms: 1,
-            outcome: medulla_decision_types::usage::UsageOutcome::Ok,
-            content_digest: "a".repeat(64),
-            project_id: String::new(),
-            agent_id: String::new(),
-        })
+        .map(
+            |(run, cost)| medulla_decision_policy_types::usage::UsageRecord {
+                schema_version: medulla_decision_policy_types::usage::USAGE_SCHEMA_VERSION,
+                recorded_at_ms: 1_000,
+                child_id: "child".into(),
+                operation: "probe".into(),
+                tenant: tenant.into(),
+                principal: "principal:svc".into(),
+                run_id: run.to_string(),
+                model_key: "m1".into(),
+                tokens_in: cost * 1_000_000,
+                tokens_out: 0,
+                tokens_cached: 0,
+                latency_ms: 1,
+                outcome: medulla_decision_policy_types::usage::UsageOutcome::Ok,
+                content_digest: "a".repeat(64),
+                project_id: String::new(),
+                agent_id: String::new(),
+            },
+        )
         .collect();
     let appended = crate::usage::handle_usage(
         &h.state,
         2,
         &service,
-        medulla_decision_types::usage::UsageOp::Append { records },
+        medulla_decision_policy_types::usage::UsageOp::Append { records },
     )
     .await;
     assert!(appended.error.is_none(), "{:?}", appended.refusal_text());

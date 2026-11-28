@@ -18,17 +18,7 @@ use std::sync::Arc;
 
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::resolve_conflict::{
-    CONFLICT_OPTION, PARAM_CONFLICT, WINNER_A, WINNER_B,
-};
-use medulla_decision_types::decision::statistical::declared::{
-    ConflictCandidate, ConflictCandidates, DeclaredOption,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome,
-    StatisticalQuestion, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_mutation_types::branch::{
     ConflictOutcome, ConflictRecord, ConflictSide, CONFLICT_PROVENANCE_KEYS,
 };
@@ -37,6 +27,27 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::{BoundedVec, ServerErrorCode};
 use tokio::sync::RwLock;
+use {
+    medulla_decision_statistical_types::decision::resolve_conflict::CONFLICT_OPTION,
+    medulla_decision_statistical_types::decision::resolve_conflict::PARAM_CONFLICT,
+    medulla_decision_statistical_types::decision::resolve_conflict::WINNER_A,
+    medulla_decision_statistical_types::decision::resolve_conflict::WINNER_B,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::ConflictCandidate,
+    medulla_decision_statistical_types::decision::statistical::declared::ConflictCandidates,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::merge::{EntityIdentity, EntitySnapshot, EntityVersion};
 
@@ -243,9 +254,12 @@ pub async fn merge_conflicts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
     use medulla_decision_types::decision::statistical::ScoredOption;
     use medulla_types::refusal_code::RefusalCode;
+    use {
+        medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+        medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    };
 
     fn version(pairs: &[(&str, &str)]) -> EntityVersion {
         EntityVersion {

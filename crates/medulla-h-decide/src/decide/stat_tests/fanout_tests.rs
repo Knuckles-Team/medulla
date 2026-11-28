@@ -5,13 +5,23 @@
 
 use super::log_tests::log_op;
 use super::*;
-use medulla_decision_types::decision::task_plan::fanout::{
-    aggregate_digest, ChildSummary, FanoutAggregateRequest, FanoutBudget, FanoutEntry,
-    FanoutOutcome, FanoutSubtaskResult, FinalArtifactReceipt,
+use {
+    medulla_decision_program_types::decision::task_plan::fanout::aggregate_digest,
+    medulla_decision_program_types::decision::task_plan::fanout::ChildSummary,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregateRequest,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutBudget,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutEntry,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutOutcome,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutSubtaskResult,
+    medulla_decision_program_types::decision::task_plan::fanout::FinalArtifactReceipt,
 };
-use medulla_decision_types::decision::task_plan::{
-    plan_explicit_tasks, AggregationOp, FinalArtifactDecl, TaskPlanAggregation, TaskPlanProposal,
-    TaskPlanTask,
+use {
+    medulla_decision_program_types::decision::task_plan::plan_explicit_tasks,
+    medulla_decision_program_types::decision::task_plan::AggregationOp,
+    medulla_decision_program_types::decision::task_plan::FinalArtifactDecl,
+    medulla_decision_program_types::decision::task_plan::TaskPlanAggregation,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
 };
 
 const GRAPH: &str = "kg-fanout";

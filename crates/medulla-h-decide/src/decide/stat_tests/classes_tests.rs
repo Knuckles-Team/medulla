@@ -74,7 +74,7 @@ async fn derived_classes_select_candidates_as_claims_under_a_pinned_rule_set() {
         .expect("the derived class is a named premise");
     assert_eq!(
         derived.class,
-        medulla_decision_types::decision::PremiseClass::Claim
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
     );
     assert_eq!(
         record.evidence_class,
@@ -139,7 +139,10 @@ async fn graph_class_request(h: &Harness, graph: &str, label: &str) -> DecideReq
 #[cfg(feature = "query")]
 fn graph_row_premises(
     record: &StatisticalDecisionRecord,
-) -> Vec<(String, medulla_decision_types::decision::PremiseClass)> {
+) -> Vec<(
+    String,
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+)> {
     let mut rows: Vec<_> = record
         .premises
         .iter()
@@ -154,8 +157,8 @@ fn graph_row_premises(
 #[cfg(feature = "query")]
 #[tokio::test]
 async fn graph_claim_and_evidence_control_answer_class() {
-    use medulla_decision_types::decision::statistical::graph_rows::GraphNodeClass;
-    use medulla_decision_types::decision::PremiseClass;
+    use medulla_decision_program_types::decision::statistical::graph_rows::GraphNodeClass;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     add_graph_rows(
         &h,

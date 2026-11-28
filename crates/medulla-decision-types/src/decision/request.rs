@@ -6,7 +6,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::policy::DecisionPolicy;
 use super::record::DecisionRecord;
 use medulla_agent_types::agent_component::{ModelInputCapabilities, ModelInputMediaType};
 use medulla_agent_types::agent_graph::AgentGraphDraft;
@@ -18,6 +17,7 @@ use medulla_agent_types::{
 use medulla_agent_types::{
     agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
 };
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
 
 /// Which policy decides this request: re-exported from the agent-component
@@ -195,11 +195,13 @@ pub struct AssemblyRequest {
     /// Verified coding-agent facts and the skills to compose on them
     /// (MEDULLA-DECISION-ENGINE-R036.101). Absent when none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub coding_agent: Option<super::coding_agent::CodingAgentRequest>,
+    pub coding_agent:
+        Option<medulla_decision_program_types::decision::coding_agent::CodingAgentRequest>,
     /// Evidence streams the decision rests on, referenced and never read
     /// (MEDULLA-DECISION-ENGINE-R019.100.1). Omitted when empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
+    pub evidence_streams:
+        BoundedVec<medulla_decision_policy_types::decision::evidence_stream::EvidenceStreamRef, 16>,
     /// The workflow pattern nodes (`workflow:<process_iri>:v<n>`) the assembly reads and
     /// validates (MEDULLA-ORCH-VOCAB-R800.3). Absent when empty, so a request without them
     /// keeps its bytes.
@@ -316,7 +318,7 @@ pub struct AssemblyResult {
     /// The exact integer programme the record's certificate was issued over,
     /// so a client can verify the certificate without trusting the engine.
     #[serde(default)]
-    pub model: Option<crate::solve::ModelSpec>,
+    pub model: Option<medulla_decision_policy_types::solve::ModelSpec>,
     /// The selected model component's `definition_digest` (64 lowercase hex,
     /// SHA-256); `Some` exactly when the outcome is `Solved`.
     #[serde(default)]
@@ -328,7 +330,8 @@ pub struct AssemblyResult {
     /// The composed coding-agent plan; `Some` exactly when the request asked
     /// for one and the outcome is `Solved` (MEDULLA-DECISION-ENGINE-R036.101).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub coding_agent_plan: Option<super::coding_agent::CodingAgentPlan>,
+    pub coding_agent_plan:
+        Option<medulla_decision_program_types::decision::coding_agent::CodingAgentPlan>,
     /// The prompts the request assigned, rendered (MEDULLA-ORCH-VOCAB-R800.3). Absent when
     /// empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
@@ -363,7 +366,7 @@ pub struct DecisionCommitRequest {
     /// The reviewer's approval receipt, checked when the record's pinned policy
     /// sets `approval_required` (MEDULLA-DECISION-ENGINE-R019.100.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub approval: Option<super::approval::RecommendationApproval>,
+    pub approval: Option<medulla_decision_policy_types::decision::approval::RecommendationApproval>,
 }
 
 /// The ledger graph a topology plan leases from, and the evidence graph that

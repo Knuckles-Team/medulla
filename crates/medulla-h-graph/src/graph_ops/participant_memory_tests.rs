@@ -1125,7 +1125,7 @@ fn profile_refusals_change_no_state() {
 mod derive_worker_proofs {
     use super::super::memory_surface_tests::{record, store};
     use super::{SCOPE_A, SCOPE_B};
-    use medulla_decision_types::claims::ObserverRef;
+    use medulla_decision_statistical_types::claims::ObserverRef;
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
     use medulla_server_mutation::mutation::apply_coalescable_write;

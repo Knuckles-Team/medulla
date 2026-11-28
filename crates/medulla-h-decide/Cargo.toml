@@ -26,6 +26,9 @@ medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-plan = { path = "../medulla-decision-plan" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
@@ -92,7 +95,7 @@ decide = ["raft", "dep:medulla-numeric", "medulla-numeric/decision", "medulla-de
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "query", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
 finance = ["medulla-compute-assemble/finance", "medulla-protocol-types/finance", "medulla-sql/finance", "medulla-types/finance"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-server-ops/owl", "medulla-types/owl", "medulla-query-types/owl", "rdf", "server", "sparql"]
-query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
+query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-policy-types/query", "medulla-decision-program-types/query", "medulla-decision-statistical-types/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "dep:medulla-raft-xshard", "medulla-raft-xshard/raft", "medulla-exec/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "server"]
 redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-server-mutation/redb", "medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-epistemic", "dep:medulla-h-jobs", "dep:medulla-statechart", "dep:medulla-store", "medulla-h-jobs/statechart", "medulla-protocol-types/statechart", "medulla-store/statechart", "medulla-work-types/statechart", "server"]
@@ -127,7 +130,7 @@ sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-reasoner/s
 geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql", "medulla-persistence/geosparql", "medulla-server-api/geosparql", "geo", "query", "rdf", "redb", "server", "sparql"]
 owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "rdf", "server", "sparql"]
 shacl = ["dep:medulla-shacl", "medulla-kernel/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "owl", "owl-dl", "rdf", "server", "sparql"]
-test-support = ["medulla-server-mutation/test-support", "dep:tempfile", "redb", "medulla-isolation/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
+test-support = ["medulla-server-mutation/test-support", "dep:tempfile", "redb", "medulla-isolation/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
 [dev-dependencies]
 medulla-h-decide = { path = ".", features = ["decide", "security", "nl-query", "test-support"] }
 medulla-shacl = { path = "../medulla-shacl" }
@@ -136,6 +139,9 @@ medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway", features = ["qu
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

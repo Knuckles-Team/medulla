@@ -5,13 +5,16 @@
 use super::*;
 use crate::decide::loops::handle_loops;
 use crate::decide::loops::served::LoopStore;
-use medulla_decision_types::loops::{
-    ImprovementSample, LoopOp, LoopState, LoopView, RatchetVerdict,
-};
 use medulla_statechart::loops::LoopKnobs;
 use medulla_statechart::{Context, EventInput};
 use medulla_store::loop_statechart::loop_record_statechart_def;
 use medulla_types::gap_machine::GapState;
+use {
+    medulla_decision_policy_types::loops::ImprovementSample,
+    medulla_decision_policy_types::loops::LoopOp, medulla_decision_policy_types::loops::LoopState,
+    medulla_decision_policy_types::loops::LoopView,
+    medulla_decision_policy_types::loops::RatchetVerdict,
+};
 
 const OTHER_TENANT: &str = "tenant-loops-other";
 

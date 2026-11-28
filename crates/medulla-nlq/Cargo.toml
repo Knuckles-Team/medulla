@@ -14,6 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
@@ -46,6 +47,7 @@ timeseries = ["medulla-exec/timeseries", "medulla-uql/timeseries", "medulla-type
 wasm-udf = ["medulla-exec/wasm-udf", "medulla-uql/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf"]
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

@@ -6,11 +6,20 @@ use std::collections::BTreeMap;
 
 use super::*;
 use crate::decide::claims::handle_claims;
-use medulla_decision_types::claims::{
-    ClaimGetResult, ClaimOp, ClaimPerspective, ClaimRecord, ClaimState, EvidenceChannel,
-    ObserverRef, ProofReceipt, ProofVerdict, ResearchArtifact, Stance,
-};
 use medulla_work_types::participant::ParticipantId;
+use {
+    medulla_decision_statistical_types::claims::ClaimGetResult,
+    medulla_decision_statistical_types::claims::ClaimOp,
+    medulla_decision_statistical_types::claims::ClaimPerspective,
+    medulla_decision_statistical_types::claims::ClaimRecord,
+    medulla_decision_statistical_types::claims::ClaimState,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+    medulla_decision_statistical_types::claims::ObserverRef,
+    medulla_decision_statistical_types::claims::ProofReceipt,
+    medulla_decision_statistical_types::claims::ProofVerdict,
+    medulla_decision_statistical_types::claims::ResearchArtifact,
+    medulla_decision_statistical_types::claims::Stance,
+};
 
 const OTHER_TENANT: &str = "tenant-claims-other";
 
@@ -170,7 +179,7 @@ async fn claim_journey() {
         1_000_000,
     );
     if let ClaimOp::RecordEvidence { feed: slot, .. } = &mut feed {
-        *slot = Some(medulla_decision_types::claims::FeedItem {
+        *slot = Some(medulla_decision_statistical_types::claims::FeedItem {
             text: "weather forecast".to_string(),
             fleet_topics: vec!["graph storage".to_string()],
         });
@@ -540,7 +549,7 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
 // spec: MEDULLA-DECISION-ENGINE-R652.11
 #[tokio::test]
 async fn get_reports_proven_standing_from_receipt() {
-    use medulla_decision_types::claims::ProofStanding;
+    use medulla_decision_statistical_types::claims::ProofStanding;
     let h = Harness::new().await;
 
     let plain = "standing-plain";
@@ -847,7 +856,10 @@ fn proven_op(axiom: Option<&str>, limit: Option<u32>) -> ClaimOp {
 // spec: MEDULLA-DECISION-ENGINE-R652.13
 #[tokio::test]
 async fn proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants() {
-    use medulla_decision_types::claims::{ProofStanding, ProvenClaimsResult};
+    use {
+        medulla_decision_statistical_types::claims::ProofStanding,
+        medulla_decision_statistical_types::claims::ProvenClaimsResult,
+    };
     let h = Harness::new().await;
     for claim in ["pc-b", "pc-a", "pc-sorry", "pc-fail"] {
         let _: ClaimRecord = writer(&h, propose(claim)).await.unwrap();
@@ -969,7 +981,10 @@ async fn proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants() {
 // spec: MEDULLA-DECISION-ENGINE-R652.14
 #[tokio::test]
 async fn proof_journey() {
-    use medulla_decision_types::claims::{ProofStanding, ProvenClaimsResult};
+    use {
+        medulla_decision_statistical_types::claims::ProofStanding,
+        medulla_decision_statistical_types::claims::ProvenClaimsResult,
+    };
     let h = Harness::new().await;
     let id = "journey-claim";
     let _: ClaimRecord = writer(&h, propose(id)).await.unwrap();
@@ -1052,7 +1067,10 @@ async fn planned(h: &Harness, who: &str, op: ClaimOp) -> crate::decide::claims::
 // spec: MEDULLA-DECISION-ENGINE-R073.6
 #[tokio::test]
 async fn a_perspective_claim_transition_announces_one_event_after_commit() {
-    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
+    use {
+        medulla_decision_statistical_types::memory_events::ClaimChanged,
+        medulla_decision_statistical_types::memory_events::MemoryEvent,
+    };
     let h = Harness::new().await;
     seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1")]).await;
     let observer = ObserverRef::System;
@@ -1392,7 +1410,7 @@ async fn card_as(
 // spec: MEDULLA-DECISION-ENGINE-R655.3
 #[tokio::test]
 async fn claim_change_refreshes_card_once() {
-    use medulla_decision_types::memory_events::MEMORY_EVENT_LABEL;
+    use medulla_decision_statistical_types::memory_events::MEMORY_EVENT_LABEL;
     let h = Harness::new().await;
     seed_participants(
         &h,

@@ -83,7 +83,7 @@ pub struct SourceCatalogs {
 
 /// The columns of the caller's decision log (the `decisions` relation).
 pub fn decision_log_columns() -> BTreeSet<String> {
-    medulla_decision_types::decision::DECISION_LOG_COLUMNS
+    medulla_decision_statistical_types::decision::DECISION_LOG_COLUMNS
         .iter()
         .map(|c| c.to_string())
         .collect()

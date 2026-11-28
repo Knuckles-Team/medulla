@@ -12,7 +12,7 @@
 //! keyed by the proposal id, so a replay writes nothing twice. A refusal writes nothing and
 //! leaves every flag `Open`.
 
-use medulla_decision_types::knowledge_curation::CurationOp;
+use medulla_decision_policy_types::knowledge_curation::CurationOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -44,15 +44,7 @@ mod served {
 
     use medulla_decision_outcome_types::decision::promotion::RevisionStage;
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-    use medulla_decision_types::decision::held_out::RevisionSubject;
-    use medulla_decision_types::knowledge_curation::{
-        ContradictionFinding, CorrectionRef, CurationAdmitted, CurationEditOp, CurationInputs,
-        CurationProposal, CurationStatus, FlagStateRow, PatternRef, SourceChangeRef, TraceRef,
-        CURATION_BODY_MAX_BYTES, CURATION_EDIT_TOO_LARGE, CURATION_FLAG_UNKNOWN,
-        CURATION_LEASE_REQUIRED, CURATION_NOT_DUE, CURATION_PAGE_MAX, CURATION_PROPOSAL_CLASS,
-        CURATION_PROPOSAL_NOT_FOUND, CURATION_ROLE_REQUIRED,
-    };
-    use medulla_decision_types::knowledge_flag::{FlagState, KnowledgeFlag, KnowledgeKind};
+    use medulla_decision_policy_types::decision::held_out::RevisionSubject;
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
@@ -65,6 +57,33 @@ mod served {
     use medulla_types::contract::Digest256;
     use serde::{Deserialize, Serialize};
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_policy_types::knowledge_curation::ContradictionFinding,
+        medulla_decision_policy_types::knowledge_curation::CorrectionRef,
+        medulla_decision_policy_types::knowledge_curation::CurationAdmitted,
+        medulla_decision_policy_types::knowledge_curation::CurationEditOp,
+        medulla_decision_policy_types::knowledge_curation::CurationInputs,
+        medulla_decision_policy_types::knowledge_curation::CurationProposal,
+        medulla_decision_policy_types::knowledge_curation::CurationStatus,
+        medulla_decision_policy_types::knowledge_curation::FlagStateRow,
+        medulla_decision_policy_types::knowledge_curation::PatternRef,
+        medulla_decision_policy_types::knowledge_curation::SourceChangeRef,
+        medulla_decision_policy_types::knowledge_curation::TraceRef,
+        medulla_decision_policy_types::knowledge_curation::CURATION_BODY_MAX_BYTES,
+        medulla_decision_policy_types::knowledge_curation::CURATION_EDIT_TOO_LARGE,
+        medulla_decision_policy_types::knowledge_curation::CURATION_FLAG_UNKNOWN,
+        medulla_decision_policy_types::knowledge_curation::CURATION_LEASE_REQUIRED,
+        medulla_decision_policy_types::knowledge_curation::CURATION_NOT_DUE,
+        medulla_decision_policy_types::knowledge_curation::CURATION_PAGE_MAX,
+        medulla_decision_policy_types::knowledge_curation::CURATION_PROPOSAL_CLASS,
+        medulla_decision_policy_types::knowledge_curation::CURATION_PROPOSAL_NOT_FOUND,
+        medulla_decision_policy_types::knowledge_curation::CURATION_ROLE_REQUIRED,
+    };
+    use {
+        medulla_decision_statistical_types::knowledge_flag::FlagState,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlag,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeKind,
+    };
     use {
         medulla_decision_stats_records::decision::knowledge_curation::check_contradictions,
         medulla_decision_stats_records::decision::knowledge_curation::is_due,

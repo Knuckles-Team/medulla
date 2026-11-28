@@ -6,12 +6,24 @@
 //! machine [`KNOWLEDGE_FLAG_MACHINE`](medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE).
 //! The handler (R708.3) turns the answer into one write.
 
-use medulla_decision_types::knowledge_flag::{
-    evidence_digest, flag_id_of, flag_key, target_form, FlagEvent, FlagResolution, FlagState,
-    KnowledgeFlag, RaiseOutcome, FLAG_RUN_QUOTA_EXCEEDED, FLAG_STATE_ILLEGAL, FLAG_TARGET_INVALID,
-    FLAG_TEXT_TOO_LARGE, SUGGESTED_CORRECTION_MAX_BYTES, WHAT_OBSERVED_MAX_BYTES,
-};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::knowledge_flag::evidence_digest,
+    medulla_decision_statistical_types::knowledge_flag::flag_id_of,
+    medulla_decision_statistical_types::knowledge_flag::flag_key,
+    medulla_decision_statistical_types::knowledge_flag::target_form,
+    medulla_decision_statistical_types::knowledge_flag::FlagEvent,
+    medulla_decision_statistical_types::knowledge_flag::FlagResolution,
+    medulla_decision_statistical_types::knowledge_flag::FlagState,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlag,
+    medulla_decision_statistical_types::knowledge_flag::RaiseOutcome,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_RUN_QUOTA_EXCEEDED,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_STATE_ILLEGAL,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_TARGET_INVALID,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_TEXT_TOO_LARGE,
+    medulla_decision_statistical_types::knowledge_flag::SUGGESTED_CORRECTION_MAX_BYTES,
+    medulla_decision_statistical_types::knowledge_flag::WHAT_OBSERVED_MAX_BYTES,
+};
 
 /// The knob `flag.max_open_per_run`, read once by the handler.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -182,7 +194,10 @@ pub fn resolve(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::knowledge_flag::{FlagKind, KnowledgeKind};
+    use {
+        medulla_decision_statistical_types::knowledge_flag::FlagKind,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeKind,
+    };
 
     const KNOBS: FlagKnobs = FlagKnobs {
         max_open_per_run: 20,

@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use medulla_decision_types::solve::spec::VarId;
+use medulla_decision_policy_types::solve::spec::VarId;
 
 /// Where in a model spec a defect was found.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -10,18 +10,30 @@ use std::collections::BTreeMap;
 
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_types::decision::codes::CANARY_NO_CHAMPION;
-use medulla_decision_types::decision::codes::COMPILE_MODEL_UNKNOWN;
-use medulla_decision_types::decision::skill_evolution::{Rollout, RolloutSet};
-use medulla_decision_types::skill_eval::{
-    AblationArm, AblationRecord, AblationRecorded, CanaryRecorded, CanaryVerdict, CompileState,
-    ModelCompile, ModelCompileRecorded, NoiseBand, SkillCanary, CANARY_TRAFFIC_MAX_PPM,
-    CANARY_TRAFFIC_MIN_PPM,
-};
+use medulla_decision_statistical_types::decision::codes::CANARY_NO_CHAMPION;
+use medulla_decision_statistical_types::decision::codes::COMPILE_MODEL_UNKNOWN;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::read_pointer;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::skill_evolution::Rollout,
+    medulla_decision_policy_types::decision::skill_evolution::RolloutSet,
+};
+use {
+    medulla_decision_policy_types::skill_eval::AblationArm,
+    medulla_decision_policy_types::skill_eval::AblationRecord,
+    medulla_decision_policy_types::skill_eval::AblationRecorded,
+    medulla_decision_policy_types::skill_eval::CanaryRecorded,
+    medulla_decision_policy_types::skill_eval::CanaryVerdict,
+    medulla_decision_policy_types::skill_eval::CompileState,
+    medulla_decision_policy_types::skill_eval::ModelCompile,
+    medulla_decision_policy_types::skill_eval::ModelCompileRecorded,
+    medulla_decision_policy_types::skill_eval::NoiseBand,
+    medulla_decision_policy_types::skill_eval::SkillCanary,
+    medulla_decision_policy_types::skill_eval::CANARY_TRAFFIC_MAX_PPM,
+    medulla_decision_policy_types::skill_eval::CANARY_TRAFFIC_MIN_PPM,
+};
 use {
     medulla_decision_stats_records::decision::skill_eval::ablation_verdict,
     medulla_decision_stats_records::decision::skill_eval::check_traffic,
@@ -257,7 +269,7 @@ pub(super) fn record_canary(
     verdict: CanaryVerdict,
 ) -> Result<CanaryRecorded, String> {
     let key = canary_key(&canary.skill_ref);
-    let subject = medulla_decision_types::decision::held_out::RevisionSubject::Skill {
+    let subject = medulla_decision_policy_types::decision::held_out::RevisionSubject::Skill {
         skill_ref: canary.skill_ref.clone(),
         tier: None,
     };

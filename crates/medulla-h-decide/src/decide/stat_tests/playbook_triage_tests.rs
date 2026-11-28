@@ -9,12 +9,18 @@
 
 use super::*;
 use medulla_agent_types::agent_ontology::CAPABILITY_ROOT;
-use medulla_decision_types::decision::playbook::PARAM_EXECUTE;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::{
-    AbstainReason, PremiseClass, PremiseProvenance, ResolutionKind,
-};
+use medulla_decision_policy_types::decision::playbook::PARAM_EXECUTE;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 const OTHER_TENANT: &str = "tenant-other";
 const STEP_SCORE: i64 = 1 << 32;

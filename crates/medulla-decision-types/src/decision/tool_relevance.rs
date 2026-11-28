@@ -8,11 +8,15 @@
 //! subset inside a token budget. Every score is a Q32 integer, so the answer
 //! digest is the same on every host. Nothing here reads a clock or a store.
 
-use super::knobs::{KnobSafety, KnobSpec, KnobValue};
-use super::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Deserializer, Serialize};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Current wire schema version of the three records below.
 pub const TOOL_RELEVANCE_SCHEMA_VERSION: u32 = 1;
@@ -165,13 +169,15 @@ impl From<super::statistical::tool_subset::ToolSubsetRefusal> for ToolRelevanceR
     }
 }
 
-impl super::record::outcome::DecisionRefusal for ToolRelevanceRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for ToolRelevanceRefusal
+{
     fn code(&self) -> RefusalCode {
         match self {
             Self::NoRelevantTool => NO_RELEVANT_TOOL,
             Self::EmptyCatalog => EMPTY_CATALOG,
             Self::BudgetBelowMinimum => BUDGET_BELOW_MINIMUM,
-            Self::Subset(inner) => super::record::outcome::DecisionRefusal::code(inner),
+            Self::Subset(inner) => medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal::code(inner),
         }
     }
 
@@ -182,7 +188,7 @@ impl super::record::outcome::DecisionRefusal for ToolRelevanceRefusal {
             Self::BudgetBelowMinimum => {
                 "the context budget is below the cheapest allowed tool".to_string()
             }
-            Self::Subset(inner) => super::record::outcome::DecisionRefusal::detail(inner),
+            Self::Subset(inner) => medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal::detail(inner),
         }
     }
 }
@@ -448,7 +454,7 @@ mod tests {
 
         // The kind and the typed value carry their wire names.
         assert_eq!(
-            serde_json::to_string(&crate::decision::statistical::QuestionKind::ToolRelevance)
+            serde_json::to_string(&medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::ToolRelevance)
                 .unwrap(),
             "\"tool_relevance\""
         );

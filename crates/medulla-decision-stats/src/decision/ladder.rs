@@ -15,16 +15,22 @@ use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::FittedRegime,
     decision::statistical::head::HeadCalibration,
 };
-use medulla_decision_types::{
-    decision::statistical::AuditDraw, decision::statistical::CalibrationStatement,
-    decision::statistical::RiskStatement, decision::statistical::ScoredOption,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
-};
-use medulla_decision_types::{
-    decision::AbstainReason, decision::ColdStart, decision::DecisionPolicy,
-    decision::StatisticalPolicy, decision::UnitRationalWire,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::AuditDraw,
+    medulla_decision_types::decision::statistical::CalibrationStatement,
+    medulla_decision_types::decision::statistical::RiskStatement,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 use super::exploration::{audit, logging_vector, plan, ExplorationPermit, ExplorationPlan};
 use super::head_eval::{act_rule, calibration_statement, top_index, Evaluated};
@@ -326,8 +332,11 @@ pub fn cost_tie_break(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue};
     use std::collections::BTreeMap;
+    use {
+        medulla_decision_statistical_types::decision::QuantScaleTag,
+        medulla_decision_statistical_types::decision::QuantisedValue,
+    };
 
     const ONE: i64 = 1 << 32;
 

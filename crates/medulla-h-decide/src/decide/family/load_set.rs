@@ -10,31 +10,58 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_outcome_types::decision::load_set::{merge_load_set, LoadComponent};
-use medulla_decision_types::decision::capability_designation::{
-    CapabilityDesignationQuestion, DesignatedCapability, DesignationAsk, DesignationKnobs,
-    DesignationWeights, EntityKind, PackOrigin, QueryVector,
-    DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, MAX_DESIGNATIONS, Q32_ONE,
-};
-use medulla_decision_types::decision::load_set::{
-    LoadSetAnswer, LoadSetQuestion, LOAD_SET_NO_DESIGNATED_COMPONENT, LOAD_SET_STALE_PACK_REVISION,
-};
 use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
 use medulla_decision_types::decision::load_set_knobs::KNOBS as LOAD_SET_KNOBS;
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::promotion_tier::{
-    TieredSkill, ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED, PERSONA_UNKNOWN,
-    PREMISE_ALWAYS_ON, PREMISE_PERSONA, TIER_REVIEW_MISSING,
-};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, TenantId};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::capability_designation::CapabilityDesignationQuestion,
+    medulla_decision_policy_types::decision::capability_designation::DesignatedCapability,
+    medulla_decision_policy_types::decision::capability_designation::DesignationAsk,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::DesignationWeights,
+    medulla_decision_policy_types::decision::capability_designation::EntityKind,
+    medulla_decision_policy_types::decision::capability_designation::PackOrigin,
+    medulla_decision_policy_types::decision::capability_designation::QueryVector,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+    medulla_decision_policy_types::decision::capability_designation::MAX_DESIGNATIONS,
+    medulla_decision_policy_types::decision::capability_designation::Q32_ONE,
+};
+use {
+    medulla_decision_policy_types::decision::load_set::LoadSetAnswer,
+    medulla_decision_policy_types::decision::load_set::LoadSetQuestion,
+    medulla_decision_policy_types::decision::load_set::LOAD_SET_NO_DESIGNATED_COMPONENT,
+    medulla_decision_policy_types::decision::load_set::LOAD_SET_STALE_PACK_REVISION,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::TieredSkill,
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_CAPABILITIES,
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_TOOL_REMOVED,
+    medulla_decision_statistical_types::decision::promotion_tier::PERSONA_UNKNOWN,
+    medulla_decision_statistical_types::decision::promotion_tier::PREMISE_ALWAYS_ON,
+    medulla_decision_statistical_types::decision::promotion_tier::PREMISE_PERSONA,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_REVIEW_MISSING,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
@@ -235,7 +262,8 @@ fn premises_of(
         provenance: observation(),
         trust_tier: None,
     });
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     for spec in LOAD_SET_KNOBS {
         out.push(PremiseRef {
             subject: "policy".to_string(),

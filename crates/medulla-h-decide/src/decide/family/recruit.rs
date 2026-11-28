@@ -17,15 +17,25 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::recruit::{
-    RankedEmployee, RecruitRequest, RecruitResult, ANSWER_PREFIX, PARAM_RECRUIT, RECRUIT_OPTION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::work_market::selection::allocate_offer;
+use {
+    medulla_decision_program_types::decision::recruit::RankedEmployee,
+    medulla_decision_program_types::decision::recruit::RecruitRequest,
+    medulla_decision_program_types::decision::recruit::RecruitResult,
+    medulla_decision_program_types::decision::recruit::ANSWER_PREFIX,
+    medulla_decision_program_types::decision::recruit::PARAM_RECRUIT,
+    medulla_decision_program_types::decision::recruit::RECRUIT_OPTION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

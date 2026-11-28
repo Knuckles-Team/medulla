@@ -7,16 +7,19 @@ use super::kernel_family_support::{
     decide_as_other_tenant, facts, kernel_request, persisted_files,
 };
 use super::*;
-use medulla_decision_types::decision::population::{
-    DriftRequest, DriftWindow, FanoutRequest, PopulationSpread,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_policy_types::decision::population::DriftRequest,
+    medulla_decision_policy_types::decision::population::DriftWindow,
+    medulla_decision_policy_types::decision::population::FanoutRequest,
+    medulla_decision_policy_types::decision::population::PopulationSpread,
 };
-use medulla_decision_types::decision::ResolutionKind;
 
 const ONE: i64 = 1 << 32;
 
 fn q(value: i64) -> QuantisedValue {
     QuantisedValue {
-        scale: medulla_decision_types::decision::QuantScaleTag::Q32,
+        scale: medulla_decision_statistical_types::decision::QuantScaleTag::Q32,
         value,
     }
 }
@@ -185,10 +188,10 @@ async fn other_tenant_inputs_are_not_read() {
 
     // The knob lowers the window bound: 16 is the minimum, so 17 samples fit
     // the default and fail a pinned 16.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
-        medulla_decision_types::decision::knobs::KnobName::new("drift.max_samples"),
-        medulla_decision_types::decision::knobs::KnobValue::Integer(16),
+        medulla_decision_statistical_types::decision::knobs::KnobName::new("drift.max_samples"),
+        medulla_decision_statistical_types::decision::knobs::KnobValue::Integer(16),
     );
     let pin = h.publish_policy("policy-drift", &policy);
     let samples: Vec<i64> = (0..17).collect();
@@ -220,10 +223,10 @@ async fn population_refusals() {
     let before = persisted_files(&dir);
 
     // DRIFT_WINDOW_TOO_LARGE under a pinned bound of 16 samples.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
-        medulla_decision_types::decision::knobs::KnobName::new("drift.max_samples"),
-        medulla_decision_types::decision::knobs::KnobValue::Integer(16),
+        medulla_decision_statistical_types::decision::knobs::KnobName::new("drift.max_samples"),
+        medulla_decision_statistical_types::decision::knobs::KnobValue::Integer(16),
     );
     let pin = h.publish_policy("policy-population", &policy);
     let samples: Vec<i64> = (0..17).collect();
@@ -283,9 +286,9 @@ async fn population_refusals() {
     assert_eq!(abstention_code(&record), "FANOUT_BUDGET_TOO_LOW");
 
     // Every code is registered.
-    for code in medulla_decision_types::decision::population::DRIFT_REFUSALS
+    for code in medulla_decision_policy_types::decision::population::DRIFT_REFUSALS
         .iter()
-        .chain(medulla_decision_types::decision::population::FANOUT_REFUSALS)
+        .chain(medulla_decision_policy_types::decision::population::FANOUT_REFUSALS)
     {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),

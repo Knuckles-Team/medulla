@@ -3,7 +3,7 @@
 //! body parameter and the declared candidates that name its subject.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 
 /// A `Decide` request of `kind` whose one parameter is `value` and whose
 /// declared candidates are `candidate_ids`.

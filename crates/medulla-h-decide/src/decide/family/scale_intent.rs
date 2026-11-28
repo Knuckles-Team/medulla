@@ -10,15 +10,25 @@
 
 use serde_json::{Map, Value};
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::scale::{
-    judge, ScaleIntentRecord, ScaleObservation, ScalePoolFacts, ScaleUnitFacts, PARAM_GRAPH,
-    PARAM_INTENT, VERDICT_OPTION,
-};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::statistical::scale::judge,
+    medulla_decision_program_types::decision::statistical::scale::ScaleIntentRecord,
+    medulla_decision_program_types::decision::statistical::scale::ScaleObservation,
+    medulla_decision_program_types::decision::statistical::scale::ScalePoolFacts,
+    medulla_decision_program_types::decision::statistical::scale::ScaleUnitFacts,
+    medulla_decision_program_types::decision::statistical::scale::PARAM_GRAPH,
+    medulla_decision_program_types::decision::statistical::scale::PARAM_INTENT,
+    medulla_decision_program_types::decision::statistical::scale::VERDICT_OPTION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

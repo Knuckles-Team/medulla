@@ -9,11 +9,13 @@ use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::policy::policy_from_attributes;
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
-use medulla_decision_types::{
-    decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
-    decision::TemplateFacts,
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_statistical_types::decision::policy::policy_from_attributes;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::DecisionRecord,
+    medulla_decision_types::decision::record::TemplateFacts,
 };
 
 use super::super::agent_component::ComponentLayer;

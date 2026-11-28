@@ -6,28 +6,41 @@
 //! recorded and never read by the math, so replaying a record on another host
 //! at another time produces the same digest.
 
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod outcome;
-pub mod premise;
 
 use serde::{Deserialize, Serialize};
 
-use super::errors::DecisionErrorCode;
-use super::policy::DecisionPolicy;
 use super::primitive::PrimitiveContract;
 use super::request::AssemblyRequest;
-use super::size::{Adequacy, ObservedRunCost, SourceSize};
-use crate::solve::{Algorithm, Certificate};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
+use medulla_decision_statistical_types::decision::errors::DecisionErrorCode;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::solve::Algorithm,
+    medulla_decision_policy_types::solve::Certificate,
+};
+use {
+    medulla_decision_statistical_types::decision::size::Adequacy,
+    medulla_decision_statistical_types::decision::size::ObservedRunCost,
+    medulla_decision_statistical_types::decision::size::SourceSize,
+};
 
 pub use outcome::{AbstainReason, DecisionOutcome, SlotAssignment, WhyNot};
-pub use premise::{
-    CoverageDerivation, DerivationEdge, EdgeSource, Elimination, PremiseClass, PremiseProvenance,
-    PremiseRef, Violation,
+pub use {
+    medulla_decision_statistical_types::decision::record::premise::CoverageDerivation,
+    medulla_decision_statistical_types::decision::record::premise::DerivationEdge,
+    medulla_decision_statistical_types::decision::record::premise::EdgeSource,
+    medulla_decision_statistical_types::decision::record::premise::Elimination,
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
 };
 
 /// The question a record answers. One variant in this wave; the tag exists so
@@ -151,12 +164,14 @@ impl CandidateFacts {
     /// premise here is a CLAIM pinned to the exact revision that asserted it.
     pub fn from_entry(entry: &AgentComponentEntry) -> Result<Self, DecisionErrorCode> {
         let bounded = |_| DecisionErrorCode::RecordTooLarge;
-        let size = super::size::size_from_entry(entry)
+        let size = medulla_decision_statistical_types::decision::size::size_from_entry(entry)
             .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
-        let adequacy = super::size::adequacy_from_entry(entry)
-            .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
-        let observed_run_cost = super::size::run_cost_from_entry(entry)
-            .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
+        let adequacy =
+            medulla_decision_statistical_types::decision::size::adequacy_from_entry(entry)
+                .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
+        let observed_run_cost =
+            medulla_decision_statistical_types::decision::size::run_cost_from_entry(entry)
+                .map_err(|_| DecisionErrorCode::AssemblyInputsInvalid)?;
         Ok(Self {
             component_id: entry.component_id.clone(),
             kind: entry.kind,
@@ -325,7 +340,7 @@ pub struct DecisionInputs {
     /// The assistant-profile constraint the candidates were narrowed under
     /// (MEDULLA-DECISION-ENGINE-R036.107).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub profile: Option<super::coding_agent::ProfileConstraint>,
+    pub profile: Option<medulla_decision_program_types::decision::coding_agent::ProfileConstraint>,
     /// The resolved `coding_agent.max_receipt_age` the plan was checked with
     /// (MEDULLA-DECISION-ENGINE-R036.101); present exactly when the request
     /// carries a coding-agent question, so a replay reads the same limit.
@@ -462,8 +477,10 @@ impl DecisionRecord {
 /// assembly, the topology version when the request asked a topology question.
 pub fn schema_version_for(request: &AssemblyRequest) -> u16 {
     match request.requirements.topology {
-        Some(_) => super::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION,
-        None => super::DECISION_RECORD_SCHEMA_VERSION,
+        Some(_) => {
+            medulla_decision_statistical_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION
+        }
+        None => medulla_decision_statistical_types::decision::DECISION_RECORD_SCHEMA_VERSION,
     }
 }
 

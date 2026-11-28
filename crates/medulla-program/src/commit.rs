@@ -314,7 +314,7 @@ pub struct ProgramRevisionIdentity {
     /// The held-out evidence the revision was evaluated on, stored as the
     /// `held_out` property of its node (MEDULLA-DECISION-ENGINE-R810.7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub held_out: Option<medulla_decision_types::decision::held_out::HeldOutEvidence>,
+    pub held_out: Option<medulla_decision_policy_types::decision::held_out::HeldOutEvidence>,
     /// The mean validation-split score of the corpus in ppm, stored as the
     /// `dev_score` property of the node; absent when the corpus has no
     /// validation example (MEDULLA-DECISION-ENGINE-R810.5).
@@ -386,7 +386,7 @@ impl ProgramRevisionIdentity {
     /// derived over.
     pub fn with_held_out(
         mut self,
-        evidence: Option<medulla_decision_types::decision::held_out::HeldOutEvidence>,
+        evidence: Option<medulla_decision_policy_types::decision::held_out::HeldOutEvidence>,
     ) -> Self {
         self.held_out = evidence.map(|mut evidence| {
             evidence.challenger_ref = self.revision_ref.as_str().to_owned();

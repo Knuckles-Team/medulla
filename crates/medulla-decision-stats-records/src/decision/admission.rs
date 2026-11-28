@@ -10,14 +10,20 @@
 //! admitted unless an LLM resolved it. The two regimes never mix.
 
 use medulla_decision_types::decision::jobs::LabelExclusions;
-use medulla_decision_types::decision::{RecordWindow, TraceFidelityLevel};
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-    decision::statistical::dataset::LoggedOutcome, decision::statistical::dataset::OutcomeFidelity,
-    decision::statistical::dataset::PropensitySource,
-};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+    medulla_decision_policy_types::decision::statistical::dataset::LoggedOutcome,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity,
+    medulla_decision_policy_types::decision::statistical::dataset::PropensitySource,
+};
+use {
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
+    medulla_decision_types::decision::jobs::RecordWindow,
+};
 
 /// Which regime a job reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

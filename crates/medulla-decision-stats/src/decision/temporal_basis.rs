@@ -5,7 +5,11 @@
 //! retry on and builds the widened fallback windows. All functions are pure;
 //! the caller runs the fallback query.
 
-use medulla_decision_types::decision::temporal_query::{TemporalContext, TemporalKnobs, TimeBasis};
+use {
+    medulla_decision_program_types::decision::temporal_query::TemporalContext,
+    medulla_decision_program_types::decision::temporal_query::TemporalKnobs,
+    medulla_decision_program_types::decision::temporal_query::TimeBasis,
+};
 
 /// Milliseconds in one day.
 pub const DAY_MS: i64 = 86_400_000;
@@ -146,7 +150,7 @@ mod tests {
             fallback_window(i64::MIN, i64::MAX, 365, 3),
             (i64::MIN, i64::MAX)
         );
-        for spec in medulla_decision_types::decision::temporal_query::KNOBS {
+        for spec in medulla_decision_program_types::decision::temporal_query::KNOBS {
             assert!(spec.admits(&spec.default), "{}", spec.name);
         }
     }

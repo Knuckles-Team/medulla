@@ -1,14 +1,16 @@
 //! The standalone `Topology` question (MEDULLA-DECISION-ENGINE-R111.1): the
 //! request's one typed parameter, and the server-side read that fills it.
 
-use medulla_decision_types::decision::statistical::topology::{
-    TopologyQuestion, TOPOLOGY_PARAM, TOPOLOGY_SCHEMA_UNAVAILABLE,
-};
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, TypedValue,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_statistical_types::decision::statistical::topology::TopologyQuestion,
+    medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_PARAM,
+    medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE,
+};
 
 use super::stat_support::invalid_parameter;
 use super::SharedState;

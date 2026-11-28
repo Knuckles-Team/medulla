@@ -7,7 +7,7 @@
 //! budget are the pure functions of `medulla_decision_types::context_facts`.
 
 use super::*;
-use medulla_decision_types::context_facts::{
+use medulla_decision_statistical_types::context_facts::{
     select, validate_request, ContextFactsRefusal, ContextFactsRequest, ContextFactsResult, RawFact,
 };
 use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;

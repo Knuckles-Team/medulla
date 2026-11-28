@@ -9,14 +9,17 @@ use super::promotion_tests::{commit, promotion_request};
 use super::rule_promotion_tests::publish_invariant;
 use super::*;
 use medulla_agent_types::agent_guardrail::RuleInvariant;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
-use medulla_decision_types::decision::held_out::{ReceiptKind, RevisionSubject};
 use medulla_decision_types::decision::statistical::retrieval::PointerRef;
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_persistence_records::decision_jobs::read_pointer;
 use medulla_types::contract::Digest256;
 use medulla_types::policy_document::{PolicyBinding, PolicyReview};
+use {
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
 
 use super::super::policy_activation::{
     active_policy, check_activation, invariant_generation, load_review, policy_premises,
@@ -335,9 +338,11 @@ async fn reviewed_set_promotes_through_decide_and_moves_the_pointer() {
         value: TypedValue::Text(REPO.to_string()),
     });
     request.params = BoundedVec::new(params).unwrap();
-    let facts_of = |premises: Vec<medulla_decision_types::decision::PremiseRef>| -> Vec<String> {
-        premises.into_iter().map(|premise| premise.fact).collect()
-    };
+    let facts_of =
+        |premises: Vec<
+            medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+        >|
+         -> Vec<String> { premises.into_iter().map(|premise| premise.fact).collect() };
     let first_facts = facts_of(policy_premises(&ctx, &request).unwrap());
     assert_eq!(
         first_facts,

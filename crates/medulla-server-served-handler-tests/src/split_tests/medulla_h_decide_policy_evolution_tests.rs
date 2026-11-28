@@ -3,13 +3,10 @@
 //! back under another tenant (MEDULLA-DECISION-ENGINE-R811).
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningRecorded, LearningWrite, PointerMovement, PointerRef,
-};
-use medulla_decision_types::decision::statistical::{
-    DecisionBatch, QuestionKind, TypedParam, TypedValue,
 };
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, decode, publish_route_schema, Harness,
@@ -18,6 +15,12 @@ use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload}
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 const GRAPH: &str = "__commons__";
 const TENANT: &str = "tenant-shared";

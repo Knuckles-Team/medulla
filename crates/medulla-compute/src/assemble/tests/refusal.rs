@@ -2,11 +2,11 @@
 //! (MEDULLA-DECISION-ENGINE-R010.100.2).
 
 use medulla_compute_assemble::assemble::AssembleError;
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
 use medulla_decision_types::decision::code_registry;
 use medulla_decision_types::decision::record::outcome::{
     AbstainReason, RefusalOrigin, RefusalSurface,
 };
-use medulla_decision_types::decision::DecisionErrorCode;
 
 /// Verifies MEDULLA-DECISION-ENGINE-R010.100.2: Fold existing per-feature refusal enums
 // spec: MEDULLA-DECISION-ENGINE-R010.100.2

@@ -2,10 +2,12 @@
 //! mutation context, never by a principal field in the request.
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::{
-    decision::task_plan::compute_plan_digest, decision::task_plan::plan_explicit_tasks,
-    decision::task_plan::without_derived, decision::task_plan::TaskPlan,
-    decision::task_plan::TaskPlanProposal,
+use {
+    medulla_decision_program_types::decision::task_plan::compute_plan_digest,
+    medulla_decision_program_types::decision::task_plan::plan_explicit_tasks,
+    medulla_decision_program_types::decision::task_plan::without_derived,
+    medulla_decision_program_types::decision::task_plan::TaskPlan,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

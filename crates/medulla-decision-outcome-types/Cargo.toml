@@ -12,6 +12,9 @@ name = "medulla_decision_outcome_types"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
@@ -24,10 +27,13 @@ medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-decision-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-source-types/contract-schema", "medulla-work-types/contract-schema"]
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-decision-policy-types/contract-schema", "medulla-decision-program-types/contract-schema", "medulla-decision-statistical-types/contract-schema", "medulla-decision-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-source-types/contract-schema", "medulla-work-types/contract-schema"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support"]
 
 [dev-dependencies]
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }

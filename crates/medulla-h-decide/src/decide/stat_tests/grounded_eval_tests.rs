@@ -5,14 +5,22 @@
 //! receipt.
 
 use super::*;
-use medulla_decision_types::decision::statistical::grounded_eval::{
-    CitationSupport, ClaimSupport, ClaimVotes, ExpectedTopicSet, GroundedAnswerRequest,
-    GroundedClaimPrediction, GroundedEvalReceipt, GroundedScope, GroundedScorerRecord,
-    TopicSupport, GROUNDED_EVAL_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::ranking_eval::PinnedSet;
-use medulla_decision_types::decision::DecisionJobStatusRequest;
+use medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet;
+use medulla_decision_types::decision::jobs::DecisionJobStatusRequest;
 use medulla_persistence_records::decision_jobs::grounded_pin_key;
+use {
+    medulla_decision_program_types::decision::statistical::grounded_eval::CitationSupport,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ClaimSupport,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ClaimVotes,
+    medulla_decision_program_types::decision::statistical::grounded_eval::ExpectedTopicSet,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedAnswerRequest,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedClaimPrediction,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedEvalReceipt,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScope,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScorerRecord,
+    medulla_decision_program_types::decision::statistical::grounded_eval::TopicSupport,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GROUNDED_EVAL_SCHEMA_VERSION,
+};
 
 fn pin(id: &str, digest: String) -> PinnedSet {
     PinnedSet {

@@ -6,11 +6,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::knowledge_curation::{
-    ContradictionFinding, CurationEditOp, CurationProposal, LoopMetrics,
-    CONTRADICTS_ACTIVE_DEFINITION, CONTRADICTS_INVARIANT, REFERENCE_UNRESOLVED, UPDATE_BASE_STALE,
+use medulla_decision_statistical_types::knowledge_flag::FlagState;
+use {
+    medulla_decision_policy_types::knowledge_curation::ContradictionFinding,
+    medulla_decision_policy_types::knowledge_curation::CurationEditOp,
+    medulla_decision_policy_types::knowledge_curation::CurationProposal,
+    medulla_decision_policy_types::knowledge_curation::LoopMetrics,
+    medulla_decision_policy_types::knowledge_curation::CONTRADICTS_ACTIVE_DEFINITION,
+    medulla_decision_policy_types::knowledge_curation::CONTRADICTS_INVARIANT,
+    medulla_decision_policy_types::knowledge_curation::REFERENCE_UNRESOLVED,
+    medulla_decision_policy_types::knowledge_curation::UPDATE_BASE_STALE,
 };
-use medulla_decision_types::knowledge_flag::FlagState;
 
 /// What the graph and the store hold about existing knowledge.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -175,8 +181,8 @@ pub fn loop_metrics(flags: &[FlagMeasure], from_ms: u64, to_ms: u64) -> LoopMetr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::knowledge_curation::CurationEdit;
-    use medulla_decision_types::knowledge_flag::KnowledgeKind;
+    use medulla_decision_policy_types::knowledge_curation::CurationEdit;
+    use medulla_decision_statistical_types::knowledge_flag::KnowledgeKind;
 
     fn proposal(op: CurationEditOp, before: Option<&str>, after: &str) -> CurationProposal {
         CurationProposal {

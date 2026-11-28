@@ -7,8 +7,8 @@ use super::path_preference_tests::pins;
 use super::promotion_tests::commit;
 use super::task_plan_tests::{request_with, step};
 use super::*;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::PremiseClass;
 
 const GRAPH: &str = "dmn-graph";
 const DECISION: &str = "https://example.org/dmn#discount";

@@ -9,7 +9,7 @@
 //! node. The handler commits nothing itself: it answers a [`PlannedWrite`] the router commits
 //! through the graph gateway. A refusal writes nothing.
 
-use medulla_decision_types::friction::FrictionOp;
+use medulla_decision_program_types::friction::FrictionOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -42,15 +42,6 @@ mod served {
     use std::collections::BTreeSet;
 
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-    use medulla_decision_types::friction::{
-        required_evidence, EvidenceKind, FrictionFiled, FrictionGroup, FrictionGroupView,
-        FrictionGroups, FrictionMoved, FrictionOp, FrictionReport, FrictionState, FrictionStepRow,
-        FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED, FRICTION_EVIDENCE_REQUIRED,
-        FRICTION_EVIDENCE_UNKNOWN, FRICTION_GROUP_CLASS, FRICTION_GROUP_LIST_MAX,
-        FRICTION_GROUP_NOT_FOUND, FRICTION_REPORT_CLASS, FRICTION_SELF_APPROVED,
-        FRICTION_SKILL_UNKNOWN, FRICTION_STEP_CLASS, FRICTION_TEXT_TOO_LARGE,
-        FRICTION_TRANSITION_ILLEGAL, SCOPE_APPROVE,
-    };
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::decision_jobs::{decode_artifact, receipt_key, record_key};
@@ -62,6 +53,33 @@ mod served {
     use medulla_types::contract::Digest256;
     use medulla_types::transition_refused::MachineState;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_program_types::friction::required_evidence,
+        medulla_decision_program_types::friction::EvidenceKind,
+        medulla_decision_program_types::friction::FrictionFiled,
+        medulla_decision_program_types::friction::FrictionGroup,
+        medulla_decision_program_types::friction::FrictionGroupView,
+        medulla_decision_program_types::friction::FrictionGroups,
+        medulla_decision_program_types::friction::FrictionMoved,
+        medulla_decision_program_types::friction::FrictionOp,
+        medulla_decision_program_types::friction::FrictionReport,
+        medulla_decision_program_types::friction::FrictionState,
+        medulla_decision_program_types::friction::FrictionStepRow,
+        medulla_decision_program_types::friction::FrictionTransition,
+        medulla_decision_program_types::friction::FRICTION_APPROVAL_ROLE_REQUIRED,
+        medulla_decision_program_types::friction::FRICTION_EVIDENCE_REQUIRED,
+        medulla_decision_program_types::friction::FRICTION_EVIDENCE_UNKNOWN,
+        medulla_decision_program_types::friction::FRICTION_GROUP_CLASS,
+        medulla_decision_program_types::friction::FRICTION_GROUP_LIST_MAX,
+        medulla_decision_program_types::friction::FRICTION_GROUP_NOT_FOUND,
+        medulla_decision_program_types::friction::FRICTION_REPORT_CLASS,
+        medulla_decision_program_types::friction::FRICTION_SELF_APPROVED,
+        medulla_decision_program_types::friction::FRICTION_SKILL_UNKNOWN,
+        medulla_decision_program_types::friction::FRICTION_STEP_CLASS,
+        medulla_decision_program_types::friction::FRICTION_TEXT_TOO_LARGE,
+        medulla_decision_program_types::friction::FRICTION_TRANSITION_ILLEGAL,
+        medulla_decision_program_types::friction::SCOPE_APPROVE,
+    };
 
     use super::{SCOPE_REPORT, SCOPE_TRANSITION};
     use crate::decide::knowledge_flag::served::{edge_operation, run_trace_of};

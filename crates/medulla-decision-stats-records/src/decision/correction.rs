@@ -5,12 +5,21 @@
 //! between them, and [`nearest_corrections`] picks the nearest prior corrections
 //! of one tenant. The handler (R702.3) turns the plan into the write.
 
-use medulla_decision_types::correction::{
-    CandidateOutcomes, Correction, CorrectionCommit, CorrectionEdge, CorrectionEffect,
-    CorrectionNode, CorrectionOutcome, CorrectionShapeError, EvalCase, OutcomeTag, RuleCandidate,
-};
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
+use {
+    medulla_decision_policy_types::correction::CandidateOutcomes,
+    medulla_decision_policy_types::correction::Correction,
+    medulla_decision_policy_types::correction::CorrectionCommit,
+    medulla_decision_policy_types::correction::CorrectionEdge,
+    medulla_decision_policy_types::correction::CorrectionEffect,
+    medulla_decision_policy_types::correction::CorrectionNode,
+    medulla_decision_policy_types::correction::CorrectionOutcome,
+    medulla_decision_policy_types::correction::CorrectionShapeError,
+    medulla_decision_policy_types::correction::EvalCase,
+    medulla_decision_policy_types::correction::OutcomeTag,
+    medulla_decision_policy_types::correction::RuleCandidate,
+};
 
 /// The class of the correction node.
 const CORRECTION_CLASS: &str = "Correction";
@@ -201,7 +210,7 @@ pub fn candidate_outcomes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::correction::CorrectionSource;
+    use medulla_decision_policy_types::correction::CorrectionSource;
 
     fn correction(after: &str) -> Correction {
         Correction {
@@ -314,7 +323,7 @@ mod tests {
             nearest_corrections(&neighbours, lookup, "tenant-a", 2),
             ["c", "a"]
         );
-        let knob = &medulla_decision_types::correction::KNOBS[0];
+        let knob = &medulla_decision_policy_types::correction::KNOBS[0];
         assert!(knob.admits(&knob.default));
     }
 

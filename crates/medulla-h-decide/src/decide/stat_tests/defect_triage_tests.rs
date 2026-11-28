@@ -3,11 +3,14 @@
 //! closed or foreign defect refuses and stores nothing.
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDefectRequest};
 use medulla_decision_types::decision::statistical::log::{DecisionLogEntry, DecisionLogOp};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_source_types::lifecycle::{
     defect_node_id, Defect, DefectIntake, DefectStatus, Severity, Symptom, DEFECT_RECORD_PROPERTY,
+};
+use {
+    medulla_decision_statistical_types::decision::defect_triage::TriageAbstainReason,
+    medulla_decision_statistical_types::decision::defect_triage::TriageDefectRequest,
 };
 
 use super::log_tests::log_op;

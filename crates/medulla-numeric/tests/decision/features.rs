@@ -8,13 +8,14 @@ use medulla_decision_stats::{
 };
 use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_types::{
-    decision::statistical::features::FeatureKind,
-    decision::statistical::features::FeatureSchemaBody,
-    decision::statistical::features::FeatureSpec, decision::statistical::features::MissingValue,
-    decision::statistical::features::FEATURE_SCHEMA_VERSION,
-};
-use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
 };
 
 use super::common::bounded;
@@ -95,8 +96,8 @@ fn coverage_is_exact_and_unknown_cost_abstains_rather_than_reading_zero() {
         }
     );
     let imputed = MissingValue::Impute {
-        value: medulla_decision_types::decision::QuantisedValue {
-            scale: medulla_decision_types::decision::QuantScaleTag::Q32,
+        value: medulla_decision_statistical_types::decision::QuantisedValue {
+            scale: medulla_decision_statistical_types::decision::QuantScaleTag::Q32,
             value: 7 << 32,
         },
     };

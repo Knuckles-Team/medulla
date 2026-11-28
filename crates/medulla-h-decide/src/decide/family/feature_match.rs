@@ -17,20 +17,28 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::feature_match::{
-    match_option_id, plan_option_id, FeatureMatchAnswer, FeatureMatrixRow, Match, PlanProposal,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, ScoredOption, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, QuantScaleTag, QuantisedValue, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::feature_match::match_option_id,
+    medulla_decision_statistical_types::decision::feature_match::plan_option_id,
+    medulla_decision_statistical_types::decision::feature_match::FeatureMatchAnswer,
+    medulla_decision_statistical_types::decision::feature_match::FeatureMatrixRow,
+    medulla_decision_statistical_types::decision::feature_match::Match,
+    medulla_decision_statistical_types::decision::feature_match::PlanProposal,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 use {
     medulla_decision_stats_records::decision::feature_match::dedup,
     medulla_decision_stats_records::decision::feature_match::name_only_pair,
@@ -240,7 +248,7 @@ impl DecisionFamily for FeatureMatchFamily {
             if let Some((left, right)) = name_only_pair(&parsed.rows, &embedding, &params) {
                 return Err(format!(
                     "{}: features {left} and {right} share a high-entropy name and no other evidence",
-                    medulla_decision_types::decision::feature_match::MATCH_HIGH_ENTROPY_NAME_ONLY
+                    medulla_decision_statistical_types::decision::feature_match::MATCH_HIGH_ENTROPY_NAME_ONLY
                         .as_str()
                 ));
             }

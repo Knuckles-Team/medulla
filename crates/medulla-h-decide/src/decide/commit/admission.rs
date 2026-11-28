@@ -7,7 +7,7 @@
 //! Both reservations are held until the commit decision is terminal and are then resolved
 //! together with the same decision: COMMIT when the record is durable, ABORT when it is not.
 
-use medulla_decision_types::decision::DecisionRecord;
+use medulla_decision_types::decision::record::DecisionRecord;
 use medulla_persistence_records::agent_library::admission::{AdmissionIntent, ComponentHead};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;

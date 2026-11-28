@@ -9,8 +9,14 @@ use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
 
-use crate::decision::{Violation, WhyNot};
-use crate::solve::{LevelValue, ObjectiveValue};
+use {
+    crate::decision::record::WhyNot,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+};
+use {
+    medulla_decision_statistical_types::solve::objective::LevelValue,
+    medulla_decision_statistical_types::solve::objective::ObjectiveValue,
+};
 
 /// Supported deployment targets. Systemd is not a placement target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -724,7 +730,7 @@ mod tests {
     // spec: MEDULLA-PLACEMENT-R001.2
     #[test]
     fn the_placement_question_kind_round_trips() {
-        use crate::decision::statistical::QuestionKind;
+        use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
         let json = serde_json::to_string(&QuestionKind::Placement).unwrap();
         assert_eq!(json, "\"placement\"");
         assert_eq!(

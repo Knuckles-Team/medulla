@@ -13,7 +13,7 @@
 
 use medulla_types::refusal_code::RefusalCode;
 
-pub use super::codes::EVAL_SET_NOT_INDEPENDENT;
+pub use medulla_decision_statistical_types::decision::codes::EVAL_SET_NOT_INDEPENDENT;
 
 /// The corpus has no test-split example, so there is nothing held out to
 /// evaluate a program revision against.

@@ -6,15 +6,16 @@
 //! exactly the policy-independence replay needs. A bandit label carries an
 //! outcome for the executed option only, so it is refused here.
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::body::canonical_body_bytes,
-    decision::statistical::body::content_digest_of,
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
 };
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
-    decision::statistical::dataset::LabelledItem,
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
 };
 
 use super::{ReplayPolicy, ReplayStep};

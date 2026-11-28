@@ -5,9 +5,12 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_decision_outcome_types::decision::derivation::required_capabilities;
-use medulla_decision_types::decision::{AssemblyRequirements, AssemblyStep};
 use medulla_types::contract::BoundedVec;
 use std::hint::black_box;
+use {
+    medulla_decision_types::decision::record::AssemblyStep,
+    medulla_decision_types::decision::request::AssemblyRequirements,
+};
 
 const ONTOLOGY: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 

@@ -7,13 +7,16 @@
 //! canonicalizer, so the plan digest matches `TaskPlan`. Time is
 //! O(steps + edges) apart from the planner's own ordering.
 
-use medulla_decision_types::decision::task_plan::{
-    plan_explicit_tasks, TaskPlanProposal, TaskPlanTask, MAX_CONCURRENCY,
-};
 use medulla_ingestion_types::skill_plan::{
     SkillCompilation, SkillStepBinding, SKILL_GRAMMAR_REVISION,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ServerErrorCode};
+use {
+    medulla_decision_program_types::decision::task_plan::plan_explicit_tasks,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+    medulla_decision_program_types::decision::task_plan::MAX_CONCURRENCY,
+};
 
 const STEPS_HEADING: &str = "## Steps";
 

@@ -7,14 +7,23 @@
 //! the task class is looked up; otherwise a request only tightens. `Decide` is
 //! evaluate-only and writes nothing.
 
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::run_governance::{
-    decide_runtime_quota, knob_quotas, QuotaField, QuotaRefusal, QuotaRequest, RuntimeQuota,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::run_governance::decide_runtime_quota,
+    medulla_decision_statistical_types::decision::run_governance::knob_quotas,
+    medulla_decision_statistical_types::decision::run_governance::QuotaField,
+    medulla_decision_statistical_types::decision::run_governance::QuotaRefusal,
+    medulla_decision_statistical_types::decision::run_governance::QuotaRequest,
+    medulla_decision_statistical_types::decision::run_governance::RuntimeQuota,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

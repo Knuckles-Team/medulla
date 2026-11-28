@@ -47,7 +47,7 @@ use medulla_types::contract::BoundedVec;
 use super::assemble_tests::{assemble_with_policy, harness, publish, request, ASKER, TENANT};
 
 /// The request of the journey: tools only, nothing required.
-fn tools_only() -> medulla_decision_types::decision::AssemblyRequest {
+fn tools_only() -> medulla_decision_types::decision::request::AssemblyRequest {
     let mut request = request(Vec::new());
     request.candidates.kinds = BoundedVec::new(vec![AgentComponentKind::Tool]).unwrap();
     request

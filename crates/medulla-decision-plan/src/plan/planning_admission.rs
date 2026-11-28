@@ -8,8 +8,10 @@
 //! derives nothing and writes nothing.
 
 use medulla_catalog_source_types::architecture_view::ArchitectureView;
-use medulla_decision_types::decision::planning_admission::{
-    DesignDifference, MissingKind, PlanningAdmissionRequest,
+use {
+    medulla_decision_program_types::decision::planning_admission::DesignDifference,
+    medulla_decision_program_types::decision::planning_admission::MissingKind,
+    medulla_decision_program_types::decision::planning_admission::PlanningAdmissionRequest,
 };
 
 /// Compare the plan's features with the wired call sites of the view.
@@ -57,8 +59,11 @@ pub fn admits(differences: &[DesignDifference]) -> bool {
 mod tests {
     use super::*;
     use medulla_catalog_source_types::architecture_view::ViewContainer;
-    use medulla_decision_types::decision::planning_admission::{AttachPoint, PlanFeature};
     use medulla_types::contract::{BoundedVec, Digest256};
+    use {
+        medulla_decision_program_types::decision::planning_admission::AttachPoint,
+        medulla_decision_program_types::decision::planning_admission::PlanFeature,
+    };
 
     fn view() -> ArchitectureView {
         ArchitectureView {

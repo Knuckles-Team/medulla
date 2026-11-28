@@ -302,7 +302,7 @@ pub enum ExplainBeliefResponse {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct AuthorityPolicyWire {
-    pub source_reliability: medulla_decision_types::decision::reputation::SourceReliability,
+    pub source_reliability: medulla_decision_policy_types::decision::reputation::SourceReliability,
     pub attack_multiplier: f64,
     pub prior_strength: f64,
 }

@@ -15,10 +15,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::jobs::{EvalCandidate, OptimiserSpec};
-use super::numeric::QuantisedValue;
 use super::statistical::head::HeadKind;
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_statistical_types::decision::numeric::QuantisedValue;
 use medulla_types::contract::BoundedVec;
 
 /// Most folds one replay may cut.

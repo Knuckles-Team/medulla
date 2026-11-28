@@ -8,10 +8,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::program_store::insight::{
-    Insight, InsightKnobs, MAX_INSIGHT_SOURCE_RUNS,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::program_store::insight::Insight,
+    medulla_decision_statistical_types::decision::program_store::insight::InsightKnobs,
+    medulla_decision_statistical_types::decision::program_store::insight::MAX_INSIGHT_SOURCE_RUNS,
+};
 
 /// An insight chosen for a context, with its match quantised to Q32.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -137,7 +139,7 @@ pub fn select_insights(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::program_store::insight::INSIGHT_SCHEMA_VERSION;
+    use medulla_decision_statistical_types::decision::program_store::insight::INSIGHT_SCHEMA_VERSION;
 
     fn insight(id: &str, text: &str, runs: &[&str], context: &str, successes: u32) -> Insight {
         Insight {

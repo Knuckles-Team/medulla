@@ -12,10 +12,18 @@ use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::decision::statistical::log::{
     OptionExplanation, WhyNotReason, WhyNotVerdict,
 };
-use medulla_decision_types::decision::{CandidateFacts, DecisionInputs};
-use medulla_decision_types::{decision::Violation, decision::WhyNot};
-use medulla_decision_types::{
-    solve::ConstraintBody, solve::ConstraintSpec, solve::SolveStatus, solve::VarId,
+use {
+    medulla_decision_policy_types::solve::ConstraintBody,
+    medulla_decision_policy_types::solve::ConstraintSpec,
+    medulla_decision_policy_types::solve::SolveStatus, medulla_decision_policy_types::solve::VarId,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_types::decision::record::WhyNot,
+};
+use {
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
 };
 
 use super::agent::slot_name;

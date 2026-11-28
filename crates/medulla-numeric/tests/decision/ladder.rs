@@ -13,17 +13,22 @@ use medulla_decision_types::{
     decision::statistical::head::HeadKind,
     decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
-use medulla_decision_types::{
-    decision::statistical::keyed::decision_seed, decision::statistical::keyed::exploration_key,
-    decision::statistical::keyed::seed_commitment,
+use {
+    medulla_decision_policy_types::decision::statistical::keyed::decision_seed,
+    medulla_decision_policy_types::decision::statistical::keyed::exploration_key,
+    medulla_decision_policy_types::decision::statistical::keyed::seed_commitment,
 };
-use medulla_decision_types::{
-    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
-    decision::statistical::StatisticalOutcome, decision::statistical::StatisticalQuestion,
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
 };
-use medulla_decision_types::{
-    decision::ColdStart, decision::ExplorationBudget, decision::QuantScaleTag,
-    decision::QuantisedValue,
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::ExplorationBudget,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
 };
 
 use super::common::{bounded, option_ids, policy, rational, statistical};

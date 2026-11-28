@@ -13,7 +13,7 @@ Abstentions: `NO_PROGRAM`, `PROGRAM_BELOW_THRESHOLD`, `PROGRAM_SLOTS_UNBOUND`, `
 
 ## Authoritative types
 
-`ProgramMatch` in `crates/medulla-decision-types/src/decision/program_store/semantic.rs` and `ProgramReplay` in `crates/medulla-decision-types/src/decision/program_store/replay.rs`.
+`ProgramMatch` in `crates/medulla-decision-program-types/src/decision/program_store/semantic.rs` and `ProgramReplay` in `crates/medulla-decision-statistical-types/src/decision/program_store/replay.rs`.
 
 ## Test vectors
 

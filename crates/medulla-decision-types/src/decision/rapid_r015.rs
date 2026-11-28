@@ -34,10 +34,14 @@ pub enum HeadKindRefusal {
     NotAStatisticalHead { name: String },
 }
 
-impl crate::decision::record::outcome::DecisionRefusal for HeadKindRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for HeadKindRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
-            Self::NotAStatisticalHead { .. } => crate::decision::codes::HEAD_KIND_NOT_STATISTICAL,
+            Self::NotAStatisticalHead { .. } => {
+                medulla_decision_statistical_types::decision::codes::HEAD_KIND_NOT_STATISTICAL
+            }
         }
     }
 

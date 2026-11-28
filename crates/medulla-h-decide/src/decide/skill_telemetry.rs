@@ -6,7 +6,7 @@
 //! tenant and the caller's row-filtered view of the graph. The handler commits nothing itself: it
 //! answers a [`PlannedWrite`] the router commits through the graph gateway.
 
-use medulla_decision_types::skill_telemetry::SkillTelemetryOp;
+use medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -42,18 +42,9 @@ pub async fn handle_skill_telemetry(
 mod served {
     use std::collections::{BTreeMap, BTreeSet};
 
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
     use medulla_decision_stats::decision::skill_telemetry::{
         cohort_of, measures, peer_skills, rank_skills, RankInput,
-    };
-    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-    use medulla_decision_types::skill_telemetry::{
-        principal_pseudonym, started_day, window_days, ChosenBy, EvalOutcome, IngestReceipt,
-        InvocationOutcome, PeersAnswer, RankAnswer, SkillInvocation, SkillMeasures,
-        SkillTelemetryOp, TracesAnswer, Window, INDEX_KEY_DAY, INDEX_KEY_PRINCIPAL,
-        INDEX_KEY_SKILL, INGEST_BATCH_MAX, PEER_COHORT_TOO_SMALL, SCOPE_READ, SCOPE_WRITE,
-        SKILL_INVOCATION_CLASS, TELEMETRY_BATCH_TOO_LARGE, TELEMETRY_CLOCK_INVALID,
-        TELEMETRY_CODE_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
-        TELEMETRY_SESSION_UNKNOWN, TELEMETRY_SKILL_UNKNOWN, TRACES_PAGE_MAX,
     };
     use medulla_graph_core::graph::{GraphCore, GraphView};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -66,6 +57,38 @@ mod served {
     use medulla_types::contract::Digest256;
     use medulla_types::refusal_code::RefusalCode;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_statistical_types::skill_telemetry::principal_pseudonym,
+        medulla_decision_statistical_types::skill_telemetry::started_day,
+        medulla_decision_statistical_types::skill_telemetry::window_days,
+        medulla_decision_statistical_types::skill_telemetry::ChosenBy,
+        medulla_decision_statistical_types::skill_telemetry::EvalOutcome,
+        medulla_decision_statistical_types::skill_telemetry::IngestReceipt,
+        medulla_decision_statistical_types::skill_telemetry::InvocationOutcome,
+        medulla_decision_statistical_types::skill_telemetry::PeersAnswer,
+        medulla_decision_statistical_types::skill_telemetry::RankAnswer,
+        medulla_decision_statistical_types::skill_telemetry::SkillInvocation,
+        medulla_decision_statistical_types::skill_telemetry::SkillMeasures,
+        medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp,
+        medulla_decision_statistical_types::skill_telemetry::TracesAnswer,
+        medulla_decision_statistical_types::skill_telemetry::Window,
+        medulla_decision_statistical_types::skill_telemetry::INDEX_KEY_DAY,
+        medulla_decision_statistical_types::skill_telemetry::INDEX_KEY_PRINCIPAL,
+        medulla_decision_statistical_types::skill_telemetry::INDEX_KEY_SKILL,
+        medulla_decision_statistical_types::skill_telemetry::INGEST_BATCH_MAX,
+        medulla_decision_statistical_types::skill_telemetry::PEER_COHORT_TOO_SMALL,
+        medulla_decision_statistical_types::skill_telemetry::SCOPE_READ,
+        medulla_decision_statistical_types::skill_telemetry::SCOPE_WRITE,
+        medulla_decision_statistical_types::skill_telemetry::SKILL_INVOCATION_CLASS,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_BATCH_TOO_LARGE,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_CLOCK_INVALID,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_CODE_INVALID,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_FIELD_UNKNOWN,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SCOPE_REQUIRED,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SESSION_UNKNOWN,
+        medulla_decision_statistical_types::skill_telemetry::TELEMETRY_SKILL_UNKNOWN,
+        medulla_decision_statistical_types::skill_telemetry::TRACES_PAGE_MAX,
+    };
 
     use crate::decide::knowledge_flag::served::edge_operation;
     use crate::decide::planned_write::PlannedWrite;

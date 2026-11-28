@@ -75,16 +75,16 @@ fn a_topology_request_is_sealed_as_the_topology_version() {
     record.inputs.request.requirements.topology = Some(requirements(4));
     assert_eq!(
         schema_version_for(&record.inputs.request),
-        medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION
+        medulla_decision_statistical_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION
     );
     assert_eq!(
         record.clone().checked(),
-        Err(medulla_decision_types::decision::DecisionErrorCode::DecisionRecordVersionUnsupported),
+        Err(medulla_decision_statistical_types::decision::DecisionErrorCode::DecisionRecordVersionUnsupported),
         "a v1 header over a topology request is refused, typed"
     );
     record.schema_version =
-        medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
-    let round_tripped: medulla_decision_types::decision::DecisionRecord =
+        medulla_decision_statistical_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+    let round_tripped: medulla_decision_types::decision::record::DecisionRecord =
         serde_json::from_str(&serde_json::to_string(&record).unwrap()).unwrap();
     assert_eq!(round_tripped.checked().unwrap(), record);
 }
@@ -106,7 +106,7 @@ fn every_supported_decision_record_version_decodes_and_an_unknown_version_is_ref
         "the golden file carries at least one v1 vector"
     );
     for case in cases {
-        let record: medulla_decision_types::decision::DecisionRecord =
+        let record: medulla_decision_types::decision::record::DecisionRecord =
             serde_json::from_value(case["record"].clone()).expect("a golden v1 record decodes");
         assert_eq!(
             record.schema_version, 1,
@@ -120,8 +120,8 @@ fn every_supported_decision_record_version_decodes_and_an_unknown_version_is_ref
     let mut topology_record = wave::record(wave::every_decision_outcome().remove(0));
     topology_record.inputs.request.requirements.topology = Some(requirements(4));
     topology_record.schema_version =
-        medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
-    let round_tripped: medulla_decision_types::decision::DecisionRecord =
+        medulla_decision_statistical_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
+    let round_tripped: medulla_decision_types::decision::record::DecisionRecord =
         serde_json::from_str(&serde_json::to_string(&topology_record).unwrap()).unwrap();
     round_tripped
         .checked()
@@ -131,7 +131,7 @@ fn every_supported_decision_record_version_decodes_and_an_unknown_version_is_ref
     unrecognised.schema_version = u16::MAX;
     assert_eq!(
         unrecognised.checked(),
-        Err(medulla_decision_types::decision::DecisionErrorCode::DecisionRecordVersionUnsupported),
+        Err(medulla_decision_statistical_types::decision::DecisionErrorCode::DecisionRecordVersionUnsupported),
         "a version this build does not recognise must be a typed refusal"
     );
 }

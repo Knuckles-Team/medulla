@@ -7,8 +7,11 @@ use super::*;
 use medulla_decision_types::decision::statistical::log::{EntryInputs, RecordVisibility};
 use medulla_decision_types::decision::statistical::outcome::StatisticalOutcome;
 use medulla_decision_types::decision::statistical::CandidatePool;
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_persistence_records::decision_jobs::{encode_artifact, record_key};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+};
 
 const NOW: u64 = 1_000_000_000_000;
 const WINDOW: u64 = 86_400_000;

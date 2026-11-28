@@ -3,18 +3,21 @@
 //! record rested on, `WhyNot` re-solves why one option was not chosen. All three
 //! filter by each record's own visibility and write nothing.
 
-use medulla_decision_types::decision::knob_families::decision_reads::list_page_max;
-use medulla_decision_types::decision::record::{PremiseProvenance, ResolutionKind};
+use medulla_decision_program_types::decision::knob_families::decision_reads::list_page_max;
+use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
+use medulla_decision_types::decision::record::DecisionRecord;
 use medulla_decision_types::decision::statistical::log::{
     AssemblyOutcomeState, DecisionListItem, DecisionLogList, DecisionProvenance, DecisionWhyNot,
     InputsState, ProvenanceFact, ProvenancePremise, ProvenanceRule, RecordKind,
 };
-use medulla_decision_types::decision::statistical::QuestionKind;
-use medulla_decision_types::decision::DecisionRecord;
 use medulla_graph_core::graph::GraphCore;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use serde_json::Value;
 use std::sync::Arc;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use super::stat_log::{visible_entries, visible_entry, LogReader, MAX_LOG_ROWS};
 
@@ -282,9 +285,9 @@ fn assembly_provenance(
         })
         .and_then(|receipt| {
             serde_json::from_str::<
-                    medulla_decision_types::decision::approval::RecommendationApproval,
-                >(&receipt)
-                .ok()
+                medulla_decision_policy_types::decision::approval::RecommendationApproval,
+            >(&receipt)
+            .ok()
         })
         .map(|approval| approval.reviewer_principal);
     Ok(DecisionProvenance {
@@ -327,7 +330,7 @@ pub(super) async fn provenance_graphs(
             state,
             verified.agent_id(),
             name,
-            medulla_decision_types::decision::statistical::StatisticalErrorCode::ParameterInvalid,
+            medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode::ParameterInvalid,
         )
         .await?;
         opened.push((name.to_string(), core));
@@ -357,7 +360,7 @@ fn has_edge(core: &GraphCore, source: &str, target: &str, relationship: &str) ->
 /// `decisionRequest` edge (MEDULLA-DECISION-ENGINE-R869.2); an action is one
 /// whose `approvedBy` edge reaches the gate. `None` when no such action exists.
 fn action_links(
-    rows: &[medulla_decision_types::decision::statistical::graph_rows::GraphRowProvenance],
+    rows: &[medulla_decision_program_types::decision::statistical::graph_rows::GraphRowProvenance],
     graphs: &[(String, Arc<GraphCore>)],
 ) -> Option<(Vec<ProvenanceFact>, Vec<ProvenanceRule>)> {
     let (mut facts, mut rules, mut found) = (Vec::new(), Vec::new(), false);
@@ -443,7 +446,7 @@ pub(super) fn why_not(
         medulla_compute_assemble::assemble::RecordIdentity::of(&record),
     )
     .map_err(|error| match error.code {
-        medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid => {
+        medulla_decision_statistical_types::decision::DecisionErrorCode::AssemblyInputsInvalid => {
             format!("DECISION_INPUTS_RETIRED: {error}")
         }
         _ => error.to_string(),
@@ -451,12 +454,14 @@ pub(super) fn why_not(
     if replayed.record.record_digest != record.record_digest {
         return Err(format!(
             "{}: re-deriving the record from its stored inputs reached a different record",
-            medulla_decision_types::decision::DecisionErrorCode::DecisionReplayMismatch.as_str()
+            medulla_decision_statistical_types::decision::DecisionErrorCode::DecisionReplayMismatch
+                .as_str()
         ));
     }
-    let budget = medulla_decision_types::decision::knob_families::decision_reads::why_not_budget_ms(
-        budget_ms,
-    );
+    let budget =
+        medulla_decision_program_types::decision::knob_families::decision_reads::why_not_budget_ms(
+            budget_ms,
+        );
     let clock = || {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

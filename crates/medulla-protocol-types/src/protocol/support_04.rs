@@ -12,7 +12,7 @@ pub struct RankedResultWire {
     pub evidence_quality: f64,
     /// The governed read of this candidate's source (MEDULLA-DECISION-ENGINE-R118.1.2.3);
     /// `InsufficientHistory` means the reliability component abstained (counted as 0.0).
-    pub source_reliability: medulla_decision_types::decision::reputation::SourceReliability,
+    pub source_reliability: medulla_decision_policy_types::decision::reputation::SourceReliability,
 }
 
 /// Materialized result of a `Method::RankByProvenance` run, highest score first.

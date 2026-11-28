@@ -128,9 +128,12 @@ pub(crate) fn prompt_selection(
     hidden: Vec<String>,
     required: &BTreeSet<String>,
     entries: &[AgentComponentEntry],
-) -> Option<medulla_decision_types::decision::PromptSelection> {
-    use medulla_decision_types::decision::{PromptSelection, SelectedPromptFacts};
+) -> Option<medulla_decision_types::decision::record::PromptSelection> {
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_types::decision::record::PromptSelection,
+        medulla_decision_types::decision::record::SelectedPromptFacts,
+    };
 
     if selected.is_none() && hidden.is_empty() {
         return None;

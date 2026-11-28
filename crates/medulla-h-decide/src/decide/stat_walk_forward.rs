@@ -13,6 +13,8 @@
 //! look-ahead.
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_policy_types::decision::statistical::dataset::LabelledItem;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats::decision::fit::FitSpec;
 use medulla_decision_stats::{decision::quant::q32, decision::quant::value_of};
 use medulla_decision_stats::{
@@ -24,22 +26,22 @@ use medulla_decision_stats::{
 };
 use medulla_decision_stats_records::decision::admission::Regime;
 use medulla_decision_stats_records::decision::refusal::RefusalResult;
-use medulla_decision_types::decision::statistical::dataset::LabelledItem;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::replay::EvaluationRun, decision::replay::OptionContribution,
     decision::replay::ReplayEnvironment, decision::replay::ReplayEvent,
     decision::replay::ReplayFoldView, decision::replay::ReplayReceipt,
     decision::replay::ReplaySpec, decision::replay::ReplayValidation, decision::replay::TrialLog,
 };
-use medulla_decision_types::{
-    decision::DecisionEvalRequest, decision::DecisionJobOutput, decision::QuantisedValue,
-};
 use medulla_numeric::evaluation::backtest::{
     deflated_sharpe_ratio, diebold_mariano, probability_of_backtest_overfit,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::jobs::DecisionEvalRequest,
+    medulla_decision_types::decision::jobs::DecisionJobOutput,
+};
 
 use super::stat_jobs::{candidate_head, dataset_digest, EvalInputs, JobRun};
 use super::stat_support::refusal;
@@ -147,7 +149,7 @@ fn incumbent_head(
     store: &AgentLibraryStore,
     inputs: &EvalInputs,
     tenant_id: &str,
-    pin: &medulla_decision_types::decision::EvalCandidate,
+    pin: &medulla_decision_types::decision::jobs::EvalCandidate,
 ) -> Result<medulla_decision_types::decision::statistical::head::DecisionHeadBody, String> {
     let head = candidate_head(store, tenant_id, pin)?;
     if head.feature_schema_digest != inputs.dataset.feature_schema_digest {

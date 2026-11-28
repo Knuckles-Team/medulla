@@ -277,7 +277,7 @@ pub(super) async fn current_program_active_revision_ref(
         .await
         .ok_or_else(|| "program promotion target graph is unavailable".to_string())?;
     let store = medulla_persistence_records::agent_library::shared_agent_library(state).await?;
-    let subject = medulla_decision_types::decision::held_out::RevisionSubject::Program {
+    let subject = medulla_decision_policy_types::decision::held_out::RevisionSubject::Program {
         program_ref: program_ref.as_str().to_string(),
     };
     let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(

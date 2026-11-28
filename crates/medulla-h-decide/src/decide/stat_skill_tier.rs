@@ -7,16 +7,22 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, MEMBER_OF, PARAM_TIER_REVIEWER, PERSONA_CLASS, PERSONA_INCLUDES, SCOPE_REVIEW,
-    TIER_KEY_PREFIX, TIER_REVIEW_SCOPE_REQUIRED,
-};
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedParam, TypedValue};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::SkillTier,
+    medulla_decision_statistical_types::decision::promotion_tier::MEMBER_OF,
+    medulla_decision_statistical_types::decision::promotion_tier::PARAM_TIER_REVIEWER,
+    medulla_decision_statistical_types::decision::promotion_tier::PERSONA_CLASS,
+    medulla_decision_statistical_types::decision::promotion_tier::PERSONA_INCLUDES,
+    medulla_decision_statistical_types::decision::promotion_tier::SCOPE_REVIEW,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_KEY_PREFIX,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_REVIEW_SCOPE_REQUIRED,
+};
 
 use super::stat_support::edges_named;
 
@@ -142,7 +148,7 @@ pub(super) fn is_author(view: &GraphView, skill_ref: &str, principal: &str) -> b
 
 /// The tier a decision record promoted to: the value of its `tier:target=` premise.
 pub(super) fn tier_of_premises<'a>(facts: impl IntoIterator<Item = &'a str>) -> Option<SkillTier> {
-    use medulla_decision_types::decision::promotion_tier::PREMISE_TARGET;
+    use medulla_decision_statistical_types::decision::promotion_tier::PREMISE_TARGET;
     facts
         .into_iter()
         .find_map(|fact| fact.strip_prefix(PREMISE_TARGET))

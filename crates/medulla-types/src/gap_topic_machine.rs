@@ -156,7 +156,8 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R738.7
     #[test]
     fn no_writer_sets_status_outside_apply() {
-        let source = include_str!("../../medulla-decision-types/src/failure_patterns.rs");
+        let source =
+            include_str!("../../medulla-decision-statistical-types/src/failure_patterns.rs");
         assert!(
             source.contains("GapStatus::initial"),
             "the writer routes through the machine"

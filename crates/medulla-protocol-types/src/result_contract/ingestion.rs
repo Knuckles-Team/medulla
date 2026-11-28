@@ -165,7 +165,7 @@ method_results! {
     DeliveryRetry(DeliveryRetry) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
     DeliveryRespond(DeliveryRespond) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
     // MEDULLA-SDLC-R004.3: the defect triage.
-    TriageDefect(TriageDefect) => Raw<medulla_decision_types::decision::defect_triage::TriageDefectReceipt>;
+    TriageDefect(TriageDefect) => Raw<medulla_decision_statistical_types::decision::defect_triage::TriageDefectReceipt>;
     DeliveryStatus(DeliveryStatus) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
     DeliveryList(DeliveryList) => Raw<medulla_source_types::delivery::DeliveryListAnswer>;
     SchemaDriftList(SchemaDriftList) => Raw<medulla_source_types::schema_drift_methods::SchemaDriftListAnswer>;

@@ -1,7 +1,11 @@
-use medulla_decision_types::decision::process_plan::{BindingSource, BindingTarget, StepBinding};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::process_import::{
     CanonicalStep, CanonicalWorkflow, ProcessSourceSystem, SourceTrace, StepKind,
+};
+use {
+    medulla_decision_statistical_types::decision::process_plan::BindingSource,
+    medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+    medulla_decision_statistical_types::decision::process_plan::StepBinding,
 };
 
 use super::bind::{explicit_bindings, registered_contract, resolve_bindings, step_node_id};
@@ -388,12 +392,12 @@ fn sealed(
     callee: super::plan::CalleeOf<'_>,
     max_call_depth: u32,
 ) -> Result<
-    medulla_decision_types::decision::task_plan::TaskPlan,
-    medulla_decision_types::decision::process_plan::ProcessPlanRefusal,
+    medulla_decision_program_types::decision::task_plan::TaskPlan,
+    medulla_decision_statistical_types::decision::process_plan::ProcessPlanRefusal,
 > {
     let drafted =
         super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth, 86_400)?;
-    medulla_decision_types::decision::task_plan::plan_explicit_tasks(&drafted.proposal)
+    medulla_decision_program_types::decision::task_plan::plan_explicit_tasks(&drafted.proposal)
         .map_err(|message| super::plan::engine_refusal(&message))
 }
 
@@ -471,7 +475,10 @@ fn invoice() -> (CanonicalWorkflow, Vec<StepBinding>) {
 // spec: MEDULLA-CQ-ORCH-R704.4
 #[test]
 fn workflow_maps_to_canonical_plan() {
-    use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind};
+    use {
+        medulla_decision_program_types::decision::task_plan::BranchCondition,
+        medulla_decision_program_types::decision::task_plan::BranchKind,
+    };
     let (wf, bindings) = invoice();
     let plan = sealed(&wf, &bindings, &no_callee, 4).unwrap();
     let again = sealed(&wf, &bindings, &no_callee, 4).unwrap();
@@ -529,8 +536,11 @@ fn workflow_maps_to_canonical_plan() {
 // spec: MEDULLA-CQ-ORCH-R704.4
 #[test]
 fn plan_refuses_loops_unbound_steps_and_deep_calls() {
-    use medulla_decision_types::decision::process_plan::{
-        PROCESS_PLAN_CALL_DEPTH, PROCESS_PLAN_LOOP, PROCESS_STEP_UNBOUND, WORKFLOW_UNKNOWN,
+    use {
+        medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_CALL_DEPTH,
+        medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_LOOP,
+        medulla_decision_statistical_types::decision::process_plan::PROCESS_STEP_UNBOUND,
+        medulla_decision_statistical_types::decision::process_plan::WORKFLOW_UNKNOWN,
     };
     let (wf, bindings) = invoice();
     // An agent step with no binding is named.
@@ -617,7 +627,10 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
 // spec: MEDULLA-CQ-ORCH-R704.4
 #[test]
 fn several_boundaries_on_one_activity_split_normal_and_trigger_arms() {
-    use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind};
+    use {
+        medulla_decision_program_types::decision::task_plan::BranchCondition,
+        medulla_decision_program_types::decision::task_plan::BranchKind,
+    };
     let mut wf = workflow(vec![
         step("s1", StepKind::Start, None, None),
         step("s2", StepKind::Agent, None, None),

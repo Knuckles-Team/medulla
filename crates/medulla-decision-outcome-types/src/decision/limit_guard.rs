@@ -3,8 +3,11 @@
 //! Each rule names one closed metric, a bound and the scope it covers. A
 //! request may supply its own bounds, but only a tighter bound takes effect.
 
-use medulla_decision_types::decision::limit_types::{GuardedAction, LimitRule};
 use serde::{Deserialize, Serialize};
+use {
+    medulla_decision_statistical_types::decision::limit_types::GuardedAction,
+    medulla_decision_statistical_types::decision::limit_types::LimitRule,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

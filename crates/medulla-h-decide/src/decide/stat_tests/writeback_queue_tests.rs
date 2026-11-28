@@ -5,12 +5,21 @@
 
 use super::log_tests::log_op;
 use super::*;
-use medulla_decision_types::decision::statistical::writeback::{
-    InventoryItemInput, PreflightVerdict, ProposalInput, ProposalKind, QueuedProposalInput,
-    RiskFindingInput, RiskTier, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows,
-    WritebackOp, WritebackOutcome,
-};
 use std::collections::BTreeMap;
+use {
+    medulla_decision_program_types::decision::statistical::writeback::InventoryItemInput,
+    medulla_decision_program_types::decision::statistical::writeback::PreflightVerdict,
+    medulla_decision_program_types::decision::statistical::writeback::ProposalInput,
+    medulla_decision_program_types::decision::statistical::writeback::ProposalKind,
+    medulla_decision_program_types::decision::statistical::writeback::QueuedProposalInput,
+    medulla_decision_program_types::decision::statistical::writeback::RiskFindingInput,
+    medulla_decision_program_types::decision::statistical::writeback::RiskTier,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAudit,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAuditOutcome,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAuditRows,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOutcome,
+};
 
 async fn writeback(h: &Harness, op: WritebackOp) -> Result<WritebackOutcome, String> {
     writeback_as(h, "writer", op).await
@@ -325,8 +334,10 @@ async fn high_tier_proposal_queues_and_releases_after_approval() {
 #[tokio::test]
 async fn unapproved_release_refuses_without_partial_write() {
     use medulla_decision_types::decision::code_registry;
-    use medulla_decision_types::decision::codes::{
-        CONNECTOR_WRITE_BACK, PROPOSAL_UNAPPROVED, WRITEBACK_SOURCE_CONFLICT,
+    use {
+        medulla_decision_statistical_types::decision::codes::CONNECTOR_WRITE_BACK,
+        medulla_decision_statistical_types::decision::codes::PROPOSAL_UNAPPROVED,
+        medulla_decision_statistical_types::decision::codes::WRITEBACK_SOURCE_CONFLICT,
     };
     // Both codes are registered in the connector_write_back family table.
     assert!(CONNECTOR_WRITE_BACK.contains(&PROPOSAL_UNAPPROVED));
@@ -476,7 +487,7 @@ async fn release_and_refusal_leave_audit_rows() {
     writeback(&h, release()).await.unwrap_err();
     let refused = audit_rows(&h, "writer", change_set_id).await;
     assert_eq!(refused.len(), 2);
-    let code = medulla_decision_types::decision::codes::PROPOSAL_UNAPPROVED
+    let code = medulla_decision_statistical_types::decision::codes::PROPOSAL_UNAPPROVED
         .as_str()
         .to_string();
     for row in &refused {
@@ -576,7 +587,10 @@ async fn queuer_cannot_approve_its_own_change_set() {
 // spec: MEDULLA-DECISION-ENGINE-R615.7
 #[tokio::test]
 async fn list_reads_a_stored_queue_whole_and_an_unknown_queue_refuses() {
-    use medulla_decision_types::decision::statistical::writeback::{QueueStatus, QueueView};
+    use {
+        medulla_decision_program_types::decision::statistical::writeback::QueueStatus,
+        medulla_decision_program_types::decision::statistical::writeback::QueueView,
+    };
     let h = Harness::new().await;
     let list = || WritebackOp::List {
         queue_id: "q:list".to_string(),

@@ -16,13 +16,15 @@ use medulla_decision_stats::{
 };
 use medulla_decision_stats::{decision::trajectory::belief, decision::trajectory::Prefix};
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::{
-    decision::statistical::belief::BeliefPoint, decision::statistical::belief::BeliefSliceInputs,
-};
-use medulla_decision_types::{
-    decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::belief::BeliefPoint,
+    medulla_decision_program_types::decision::statistical::belief::BeliefSliceInputs,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+};
 
 use super::stat_executor::{ExecutionContext, Pinned};
 use super::stat_support::refusal;

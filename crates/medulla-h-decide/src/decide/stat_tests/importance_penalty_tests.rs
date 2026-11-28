@@ -4,11 +4,16 @@
 //! reaches the handler.
 
 use super::*;
-use medulla_decision_types::decision::importance_penalty::{
-    FeatureImportance, PenaltyObjective, IMPORTANCE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_protocol_types::protocol::Response;
+use {
+    medulla_decision_policy_types::decision::importance_penalty::FeatureImportance,
+    medulla_decision_policy_types::decision::importance_penalty::PenaltyObjective,
+    medulla_decision_policy_types::decision::importance_penalty::IMPORTANCE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
 
 fn quantised(micros: i64) -> QuantisedValue {
     QuantisedValue {
@@ -237,7 +242,7 @@ async fn penalty_evidence() {
             3,
             &verified(),
             DecisionFitOp::Status {
-                request: medulla_decision_types::decision::DecisionJobStatusRequest {
+                request: medulla_decision_types::decision::jobs::DecisionJobStatusRequest {
                     tenant_id: TENANT.to_string(),
                     job_id: job.job_id.clone(),
                 },
@@ -265,7 +270,7 @@ async fn penalty_evidence() {
         receipt.evidence_class,
         medulla_types::evidence_class::EvidenceClass::Observation
     );
-    let sealed = medulla_decision_types::decision::importance_penalty::PenaltyReceipt::seal(
+    let sealed = medulla_decision_policy_types::decision::importance_penalty::PenaltyReceipt::seal(
         &PenaltyObjective {
             schema_version: IMPORTANCE_SCHEMA_VERSION,
             loss_coefficient: quantised(1_000_000),

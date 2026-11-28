@@ -4,12 +4,19 @@
 //! so it depends only on `medulla_compute` and the seeded RNG. Every instance is
 //! SYNTHETIC; nothing here claims real-world calibration.
 
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveTerm,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 /// Cost of one capability inside a planted component.
 pub const UNIT: i64 = 10;

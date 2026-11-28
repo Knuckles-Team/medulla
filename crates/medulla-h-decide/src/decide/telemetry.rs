@@ -141,13 +141,15 @@ pub(super) fn stage_done(stage: Stage, family: &str, tenant: &str, ok: bool, sta
 }
 
 /// The metric and span family label of a question kind.
-pub(super) fn family(kind: medulla_decision_types::decision::statistical::QuestionKind) -> String {
+pub(super) fn family(
+    kind: medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+) -> String {
     format!("{kind:?}").to_ascii_lowercase()
 }
 
 /// One solved or abstained assembly: abstention codes and the solver's node use.
-pub(super) fn assembled(record: &medulla_decision_types::decision::DecisionRecord) {
-    use medulla_decision_types::decision::DecisionOutcome;
+pub(super) fn assembled(record: &medulla_decision_types::decision::record::DecisionRecord) {
+    use medulla_decision_types::decision::record::DecisionOutcome;
     match &record.outcome {
         DecisionOutcome::Solved { certificate, .. } => medulla_kernel::metrics::process()
             .solver_nodes_ratio(certificate.nodes_expanded, record.inputs.solver.node_budget),

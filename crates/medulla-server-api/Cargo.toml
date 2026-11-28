@@ -59,6 +59,8 @@ ureq = { version = "3.4.2", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
@@ -86,7 +88,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-resource = { path = "../medulla-resource" }
 
 [features]
-test-support = ["medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-federation?/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-types/test-support", "medulla-identity-core-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-direct-state/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-work-store/test-support", "medulla-exec/test-support"]
+test-support = ["medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-federation?/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-identity-core-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-direct-state/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-work-store/test-support", "medulla-exec/test-support"]
 request-policy-fixture = ["test-support"]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", "blob"]
 amqp-wire = ["broker", "server"]
@@ -125,7 +127,7 @@ otel-export = ["dep:ureq", "obs", "metrics", "medulla-federation?/otel-export", 
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "sparql", "medulla-exec/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-types/owl", "medulla-query-types/owl"]
 program-optimization = ["dep:medulla-program", "jobs", "medulla-agent-types/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization"]
 quantum-agent-api = ["medulla-capabilities/quantum", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-exec/query", "medulla-decision-program-types/query", "medulla-decision-statistical-types/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["server", "redb", "medulla-exec/raft", "medulla-kernel/raft", "medulla-store/raft"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-rdf/sparql", "medulla-reasoner/rdf", "server", "medulla-kernel/rdf", "medulla-protocol-types/rdf", "medulla-types/rdf"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml", "rdf"]
@@ -179,6 +181,8 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

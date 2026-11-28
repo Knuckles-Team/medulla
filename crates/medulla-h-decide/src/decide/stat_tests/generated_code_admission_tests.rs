@@ -4,16 +4,27 @@
 
 use super::*;
 use medulla_decision_types::decision::digest::verifier_receipt_digest;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
-use medulla_decision_types::decision::verifier_receipt::{
-    VerifierCase, VerifierCaseState, VerifierReceipt,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
-};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
+use {
+    medulla_decision_statistical_types::decision::verifier_receipt::VerifierCase,
+    medulla_decision_statistical_types::decision::verifier_receipt::VerifierCaseState,
+    medulla_decision_statistical_types::decision::verifier_receipt::VerifierReceipt,
+};
 
 const ARTIFACT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER_ARTIFACT: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";

@@ -16,10 +16,16 @@
 
 use std::cmp::Ordering;
 
-use medulla_decision_types::{
-    decision::AbstainReason, decision::DecisionOutcome, decision::Violation, decision::WhyNot,
+use {
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::WhyNot,
 };
-use medulla_decision_types::{solve::LevelValue, solve::ObjectiveValue};
+use {
+    medulla_decision_statistical_types::solve::objective::LevelValue,
+    medulla_decision_statistical_types::solve::objective::ObjectiveValue,
+};
 
 use super::conclude::{decide_one, Decided, Ladder};
 use super::AssembleError;

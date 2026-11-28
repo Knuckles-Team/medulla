@@ -50,7 +50,7 @@ $($variants)*
     /// nothing. Boxed like `SemanticIndex`/`KgDelegate` so one request cannot
     /// set the size of every `Method`.
     AgentAssemble {
-        request: Box<medulla_decision_types::decision::AssemblyRequest>,
+        request: Box<medulla_decision_types::decision::request::AssemblyRequest>,
     },
     /// Read-only capability coverage (MEDULLA-DECISION-ENGINE-R126.2.1): for each
     /// capability in the closure of native task/capability IRIs, the visible
@@ -85,21 +85,21 @@ $($variants)*
     /// catalog digest before writing, so a stale decision is refused rather
     /// than stored.
     DecisionCommit {
-        request: Box<medulla_decision_types::decision::DecisionCommitRequest>,
+        request: Box<medulla_decision_types::decision::request::DecisionCommitRequest>,
     },
     /// Statistical decision over library or RLS-filtered graph candidates.
     /// EVALUATE-ONLY: it answers records and commits none of them.
     Decide {
-        request: Box<medulla_decision_types::decision::DecideRequest>,
+        request: Box<medulla_decision_types::decision::statistical::DecideRequest>,
     },
     /// Admin job: fit a decision head into a Blob CAS draft artifact.
     DecisionFit {
-        op: Box<medulla_decision_types::decision::DecisionFitOp>,
+        op: Box<medulla_decision_types::decision::jobs::DecisionFitOp>,
     },
     /// Admin job: off-policy and calibration evaluation producing the
     /// promotion receipt a head must carry before it may be published.
     DecisionEval {
-        op: Box<medulla_decision_types::decision::DecisionEvalOp>,
+        op: Box<medulla_decision_types::decision::jobs::DecisionEvalOp>,
     },
     /// The statistical decision log: commit an acted-on record after
     /// verify-replay, join independent outcome evaluations, and read the
@@ -113,71 +113,71 @@ $($variants)*
     /// by receipt id. The `CorrectionRecord` handler is the single writer of
     /// correction state.
     CorrectionRecord {
-        op: Box<medulla_decision_types::correction::CorrectionOp>,
+        op: Box<medulla_decision_policy_types::correction::CorrectionOp>,
     },
     /// Knowledge flags (MEDULLA-DECISION-ENGINE-R708.3): any agent raises a flag that a skill, a
     /// domain term or a data access source is missing or wrong; a curator resolves it. The
     /// `KnowledgeFlag` handler is the single writer of flag state.
     KnowledgeFlag {
-        op: Box<medulla_decision_types::knowledge_flag::KnowledgeFlagOp>,
+        op: Box<medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagOp>,
     },
     /// The knowledge curation cycle (MEDULLA-DECISION-ENGINE-R709.3): serve the curation inputs,
     /// check one proposal for contradiction and record it as an evaluated revision, close the
     /// flags of an adopted proposal and measure the closed loop.
     KnowledgeCuration {
-        op: Box<medulla_decision_types::knowledge_curation::CurationOp>,
+        op: Box<medulla_decision_policy_types::knowledge_curation::CurationOp>,
     },
     /// Friction reports (MEDULLA-DECISION-ENGINE-R710.3): agents file what they tried, expected
     /// and saw while using a skill; the engine groups the reports by skill and moves each group
     /// along the friction machine, every move naming its evidence.
     FrictionReport {
-        op: Box<medulla_decision_types::friction::FrictionOp>,
+        op: Box<medulla_decision_program_types::friction::FrictionOp>,
     },
     /// Skill telemetry (MEDULLA-DECISION-ENGINE-R713.3): a service ingests skill invocations, and
     /// callers read the twelve measures of a skill, a quality rank, peer skills and the run traces
     /// of a skill by eval outcome. No invocation holds free text.
     SkillTelemetry {
-        op: Box<medulla_decision_types::skill_telemetry::SkillTelemetryOp>,
+        op: Box<medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp>,
     },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The
     /// `FailureIngest` handler is the single writer of gap nodes.
     FailureIngest {
-        op: Box<medulla_decision_types::failure_patterns::FailureOp>,
+        op: Box<medulla_decision_statistical_types::failure_patterns::FailureOp>,
     },
     /// The per-tenant usage ledger (MEDULLA-DECISION-ENGINE-R801.8): append
     /// observed model calls or store a price catalog under the verified tenant.
     /// Both ops need the service-only scope `usage:write`.
     Usage {
-        op: Box<medulla_decision_types::usage::UsageOp>,
+        op: Box<medulla_decision_policy_types::usage::UsageOp>,
     },
     /// The feature ledger: record a gap with the matches it came from, attach a
     /// plan, close it by a known change, and read entries
     /// (MEDULLA-DECISION-ENGINE-R707.3). The `FeatureLedger` handler is the
     /// single writer of ledger state.
     FeatureLedger {
-        op: Box<medulla_decision_types::decision::feature_match::FeatureLedgerOp>,
+        op: Box<medulla_decision_statistical_types::decision::feature_match::FeatureLedgerOp>,
     },
     /// Research claims: propose, advance along the lifecycle, record evidence
     /// on five channels, compile a sealed research artifact and read them back.
     /// The `Claims` handler is the single writer of claim state.
     Claims {
-        op: Box<medulla_decision_types::claims::ClaimOp>,
+        op: Box<medulla_decision_statistical_types::claims::ClaimOp>,
     },
     /// Improvement loops: the fenced lease, gaps, the gap-to-work-offer market,
     /// stage beacons, the improvement ledger, the failure-sequence miner and
     /// the capability ratchet. The `Loops` handler is the single writer of
     /// loop state.
     Loops {
-        op: Box<medulla_decision_types::loops::LoopOp>,
+        op: Box<medulla_decision_policy_types::loops::LoopOp>,
     },
     /// Belief revision: revise the confidence of claims whose evidence changed,
     /// track contradictions and propose retractions. The `BeliefRevise`
     /// handler is the single writer of belief revisions, friction findings and
     /// contradiction records.
     BeliefRevise {
-        request: Box<medulla_decision_types::belief_revision::BeliefReviseRequest>,
+        request: Box<medulla_decision_statistical_types::belief_revision::BeliefReviseRequest>,
     },
     /// Publish a rendered skill package when the run history `DecisionLog`
     /// `learn` recorded for its digest validates it (MEDULLA-DECISION-ENGINE-R160.3).
@@ -188,7 +188,7 @@ $($variants)*
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {
-        request: Box<medulla_decision_types::solve::SolveRequest>,
+        request: Box<medulla_decision_policy_types::solve::SolveRequest>,
     },
 
     // ── Connector MCP pack import (RF-ADR-009) ─────────────────────────────
@@ -665,7 +665,7 @@ $($variants)*
     /// family, commits the sealed record through `DecisionLog` and writes the `affects` edges.
     /// An unknown defect refuses `DEFECT_UNKNOWN` and a closed one `DEFECT_CLOSED`.
     TriageDefect {
-        request: Box<medulla_decision_types::decision::defect_triage::TriageDefectRequest>,
+        request: Box<medulla_decision_statistical_types::decision::defect_triage::TriageDefectRequest>,
     },
     /// List the quarantined schema drifts of the caller's tenant, optionally of one stream
     /// (MEDULLA-TYPED-PACKS-R806). Reads only.

@@ -68,8 +68,10 @@ pub async fn handle_policy_evolution(
 /// The wire text of a policy refusal, folded under the `PolicyEvolution`
 /// origin (MEDULLA-DECISION-ENGINE-R010.100.2): `CODE: detail`.
 fn refuse(refusal: PolicyRefusal) -> String {
-    use medulla_decision_types::decision::record::outcome::{
-        AbstainReason, DecisionRefusal, RefusalOrigin,
+    use {
+        medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal,
+        medulla_decision_types::decision::record::outcome::AbstainReason,
+        medulla_decision_types::decision::record::outcome::RefusalOrigin,
     };
     let folded = AbstainReason::from_refusal(RefusalOrigin::POLICY_EVOLUTION, &refusal);
     format!(

@@ -37,12 +37,15 @@ use medulla_catalog_types::{
 };
 use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageResult;
 use medulla_decision_outcome_types::decision::execution_answer::ExecutionAnswer;
-use medulla_decision_types::{decision::AssemblyResult, decision::DecisionCommitResult};
 use medulla_mutation_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,
     write_back::WriteBackReceiptPage,
 };
 use medulla_query_types::series_expr::DerivedSeriesReceipt;
+use {
+    medulla_decision_types::decision::request::AssemblyResult,
+    medulla_decision_types::decision::request::DecisionCommitResult,
+};
 
 method_results! {
     visit_storage;

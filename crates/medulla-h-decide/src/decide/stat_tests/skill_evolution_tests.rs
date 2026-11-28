@@ -6,12 +6,21 @@
 //! tenant never sees another tenant's skills.
 
 use super::*;
-use medulla_decision_types::decision::skill_evolution::{
-    RolloutSet, PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A, PARAM_PAIR_B,
-    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
-};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_policy_types::decision::skill_evolution::RolloutSet,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_CANDIDATE_TRACES,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_EMBEDDING_GRAPH,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_PAIR_A,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_PAIR_B,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_REQUESTED_SKILLS,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_SKILL_EMBEDDINGS,
+    medulla_decision_policy_types::decision::skill_evolution::PARAM_USED_TERMS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+};
 
 const OTHER_TENANT: &str = "tenant-other";
 const VECTORS: &str = "skill-vectors";
@@ -337,7 +346,7 @@ async fn candidate_cites_traces_and_library_rows() {
 // spec: MEDULLA-DECISION-ENGINE-R703.6
 #[tokio::test]
 async fn candidates_are_proposals_only() {
-    use medulla_decision_types::decision::ResolutionKind;
+    use medulla_decision_types::decision::record::ResolutionKind;
     use medulla_types::evidence_class::EvidenceClass;
     // The embedding graph is read through the graph ACL, which needs a provisioned caller.
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
@@ -454,8 +463,8 @@ async fn rollout_and_spec_refusals() {
     use super::super::stat_promotion::rollouts_key;
     use super::promotion_tests::rollout_set;
     use super::retrieval_tests::learn;
+    use medulla_decision_policy_types::decision::skill_evolution::Rollout;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
-    use medulla_decision_types::decision::skill_evolution::Rollout;
     use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
 
     let h = Harness::new().await;
@@ -646,7 +655,7 @@ async fn rollout_evidence_reads_back_field_for_field() {
         &h,
         promotion_request(
             &pinned.0,
-            &medulla_decision_types::decision::held_out::RevisionSubject::Program {
+            &medulla_decision_policy_types::decision::held_out::RevisionSubject::Program {
                 program_ref: set.program_ref.clone(),
             },
             &digest,
@@ -682,11 +691,14 @@ async fn served_skill_evolution_journey() {
     use super::path_preference_tests::pins;
     use super::promotion_tests::{commit, promotion_request};
     use super::retrieval_tests::learn;
+    use medulla_decision_policy_types::decision::held_out::RevisionSubject;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
-    use medulla_decision_types::decision::held_out::RevisionSubject;
-    use medulla_decision_types::decision::skill_evolution::{Rollout, ROLLOUT_SET_SCHEMA_VERSION};
     use medulla_decision_types::decision::statistical::retrieval::{
         LearningRecorded, LearningWrite, PointerMovement, PointerRef,
+    };
+    use {
+        medulla_decision_policy_types::decision::skill_evolution::Rollout,
+        medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_SET_SCHEMA_VERSION,
     };
 
     const PAIRS: u64 = 200;

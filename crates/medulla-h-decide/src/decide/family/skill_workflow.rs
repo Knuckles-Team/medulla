@@ -12,13 +12,18 @@
 use medulla_decision_plan::plan::skill_workflow::{
     compile_skill_workflow, COMPILER_ID, COMPILER_REVISION,
 };
-use medulla_decision_types::decision::skill_workflow::SkillWorkflowDraft;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_program_types::decision::skill_workflow::SkillWorkflowDraft;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,

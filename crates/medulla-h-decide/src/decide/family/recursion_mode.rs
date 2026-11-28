@@ -10,14 +10,18 @@
 use medulla_decision_outcome_types::decision::context_budget::{
     decide_recursion_mode, ContextBudgetSignals, RecursionThresholds, SignalRefusal,
 };
-use medulla_decision_types::decision::knob_families::context;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_policy_types::decision::knob_families::context;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 

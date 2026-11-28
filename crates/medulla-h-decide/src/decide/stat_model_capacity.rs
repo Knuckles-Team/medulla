@@ -6,14 +6,8 @@
 //! handler copies none of their logic and reads no ledger or log. A ceiling
 //! above the declared cell ceiling abstains `PolicyLoosening`. Evaluate-only.
 
-use medulla_decision_types::decision::model_capacity::{
-    breaker_cooldown_ms, breaker_failures, latency_target_ms, BreakerKind, CapacityAnswer,
-    CapacityBounds, CapacityObservation, CapacityOutcome, CAPACITY_OPTION, MAX_OBSERVATIONS,
-    PARAM_BOUNDS, PARAM_OBSERVATIONS,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_resource::admission::{
     AgentProcess, CircuitBreaker, CircuitState, CognitiveDecision, CognitiveScheduler,
@@ -22,6 +16,26 @@ use medulla_resource::admission::{
 };
 use medulla_types::contract::BoundedVec;
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_statistical_types::decision::model_capacity::breaker_cooldown_ms,
+    medulla_decision_statistical_types::decision::model_capacity::breaker_failures,
+    medulla_decision_statistical_types::decision::model_capacity::latency_target_ms,
+    medulla_decision_statistical_types::decision::model_capacity::BreakerKind,
+    medulla_decision_statistical_types::decision::model_capacity::CapacityAnswer,
+    medulla_decision_statistical_types::decision::model_capacity::CapacityBounds,
+    medulla_decision_statistical_types::decision::model_capacity::CapacityObservation,
+    medulla_decision_statistical_types::decision::model_capacity::CapacityOutcome,
+    medulla_decision_statistical_types::decision::model_capacity::CAPACITY_OPTION,
+    medulla_decision_statistical_types::decision::model_capacity::MAX_OBSERVATIONS,
+    medulla_decision_statistical_types::decision::model_capacity::PARAM_BOUNDS,
+    medulla_decision_statistical_types::decision::model_capacity::PARAM_OBSERVATIONS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 use super::family::DecisionFamily;
 use super::family::{advisory, invalid, json_param, single_option, text_param};

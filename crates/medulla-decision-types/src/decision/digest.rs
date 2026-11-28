@@ -13,16 +13,14 @@ use super::statistical::StatisticalDecisionRecord;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 
-pub use policy_part::{digest_text_hex, policy_digest, DECISION_POLICY_DIGEST_DOMAIN};
-
-mod policy_part;
-
 /// Domain of a verifier receipt (MEDULLA-DECISION-ENGINE-R138.100.2).
 pub const VERIFIER_RECEIPT_DIGEST_DOMAIN: &str = "medulla/verifier-receipt/v1";
 
 /// The digest a caller states for a verifier receipt: over the whole receipt,
 /// its header and every case.
-pub fn verifier_receipt_digest(receipt: &super::verifier_receipt::VerifierReceipt) -> String {
+pub fn verifier_receipt_digest(
+    receipt: &medulla_decision_statistical_types::decision::verifier_receipt::VerifierReceipt,
+) -> String {
     digest_text(VERIFIER_RECEIPT_DIGEST_DOMAIN, receipt)
 }
 
@@ -70,7 +68,10 @@ pub fn record_id(record_digest: &str) -> String {
     let hex = record_digest
         .strip_prefix(DIGEST_TEXT_PREFIX)
         .unwrap_or(record_digest);
-    format!("{}{hex}", super::DECISION_COMPONENT_ID_PREFIX)
+    format!(
+        "{}{hex}",
+        crate::decision::request::DECISION_COMPONENT_ID_PREFIX
+    )
 }
 
 /// The digest of one statistical record, cleared the same way.
@@ -127,7 +128,12 @@ pub const THOUGHT_PATH_DIGEST_DOMAIN: &str = "eg/thought-path/v1";
 
 /// The digest of a root-to-best thought path: its node ids and scores, in
 /// path order.
-pub fn thought_path_digest(path: &[(u32, super::numeric::QuantisedValue)]) -> String {
+pub fn thought_path_digest(
+    path: &[(
+        u32,
+        medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    )],
+) -> String {
     digest_text(THOUGHT_PATH_DIGEST_DOMAIN, &path)
 }
 

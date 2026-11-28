@@ -2,13 +2,16 @@
 //! would-dispatch decision are records of the one decision log, a repeat replays, an
 //! incomplete scenario run refuses and writes nothing, and a read lists the newest run first.
 
-use medulla_decision_types::decision::statistical::lifecycle_record::{
-    LifecycleRecordKind, LifecycleRecordQuery, LifecycleRecordStored, LifecycleRecordWrite,
-    LifecycleRecordsFound,
-};
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_source_types::delivery::WouldDispatch;
 use medulla_source_types::lifecycle::{ProjectMode, ScenarioResult, ScenarioRun};
+use {
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordKind,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordQuery,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordStored,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordWrite,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordsFound,
+};
 
 use super::log_tests::log_op;
 use super::*;

@@ -2,7 +2,10 @@
 
 use super::error::VerifyError;
 use crate::solve::model::{Model, Row};
-use medulla_decision_types::solve::spec::{Relation, RowId};
+use {
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::RowId,
+};
 
 /// Check a full selection against every row and the claimed objective.
 pub(super) fn check_selection(model: &Model, selected: &[bool]) -> Result<(), VerifyError> {

@@ -2,9 +2,9 @@
 //! smallest covering tool subset within the caller's context budget.
 
 use super::*;
-use medulla_decision_types::{
-    decision::statistical::declared::DeclaredNumber,
-    decision::statistical::declared::DeclaredOption,
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
 };
 
 fn tool(id: &str, capabilities: &[&str], schema_tokens: i64) -> DeclaredOption {
@@ -113,7 +113,7 @@ async fn tool_subset_question_selects_the_minimal_covering_tools_within_budget()
     // every other question kind (stat_decide::resolution/evidence_class).
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Statistical
+        medulla_decision_types::decision::record::ResolutionKind::Statistical
     );
 }
 

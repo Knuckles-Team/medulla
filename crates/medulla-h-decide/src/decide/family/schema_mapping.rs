@@ -10,18 +10,26 @@
 //! never writes. The weights and the floor are decision-policy knobs read from
 //! the policy the request resolves.
 
+use medulla_decision_statistical_types::decision::knob_families::schema_mapping as mapping_knobs;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::knob_families::schema_mapping as mapping_knobs;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, ScoredOption, StatisticalErrorCode, StatisticalOutcome,
-    TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseRef, QuantScaleTag, QuantisedValue,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 use {
     medulla_decision_stats_records::decision::schema_mapping::rank,
     medulla_decision_stats_records::decision::schema_mapping::OntologyProperty,

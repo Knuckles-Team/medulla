@@ -35,21 +35,13 @@
 
 use std::sync::Arc;
 
+use medulla_decision_program_types::decision::knob_families::resolve_entity as resolve_entity_knobs;
+use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 use medulla_decision_stats_records::decision::adapter::to_q16;
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::decision::codes::{ER_BELOW_THRESHOLD, ER_CROSS_TENANT, ER_DRIFT_HOLD};
-use medulla_decision_types::decision::entity_resolution::{ResolutionTier, ReviewOutcome};
-use medulla_decision_types::decision::knob_families::resolve_entity as resolve_entity_knobs;
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText, MAX_DECLARED_OPTIONS,
-};
-use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_decision_types::decision::statistical::StatisticalOutcome;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_index_types::entity_resolution::{
     decide_merge, identity_evidence, ApprovalRefusal, IdentityEvidence, MergeDecision,
@@ -59,6 +51,28 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
+use {
+    medulla_decision_statistical_types::decision::codes::ER_BELOW_THRESHOLD,
+    medulla_decision_statistical_types::decision::codes::ER_CROSS_TENANT,
+    medulla_decision_statistical_types::decision::codes::ER_DRIFT_HOLD,
+};
+use {
+    medulla_decision_statistical_types::decision::entity_resolution::ResolutionTier,
+    medulla_decision_statistical_types::decision::entity_resolution::ReviewOutcome,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+    medulla_decision_statistical_types::decision::statistical::declared::MAX_DECLARED_OPTIONS,
+};
 use {
     medulla_decision_stats_records::decision::entity_resolution::accept_rate_drift,
     medulla_decision_stats_records::decision::entity_resolution::proposal_option_id,
@@ -284,9 +298,10 @@ fn review_premises(request: &DecideRequest) -> Vec<PremiseRef> {
         ) else {
             continue;
         };
-        let evaluation = medulla_decision_types::decision::entity_resolution::TierEvaluation::new(
-            tier, accepted, rejected,
-        );
+        let evaluation =
+            medulla_decision_statistical_types::decision::entity_resolution::TierEvaluation::new(
+                tier, accepted, rejected,
+            );
         out.push(observed(format!(
             "er:tier_evaluation:{}={accepted}/{rejected}/{}",
             tier_token(tier),
@@ -354,7 +369,7 @@ fn neighbour_options(
         if nodes.len() > max_nodes {
             return Err(format!(
                 "{}: the candidate graph holds more than {max_nodes} embedded nodes",
-                medulla_decision_types::decision::codes::ER_INDEX_TOO_LARGE.as_str()
+                medulla_decision_statistical_types::decision::codes::ER_INDEX_TOO_LARGE.as_str()
             ));
         }
     }
@@ -711,7 +726,8 @@ impl DecisionFamily for ResolveEntityFamily {
                     return Err(format!(
                         "{}: option '{}' must declare the texts {LEFT_KEY} and {RIGHT_KEY}, \
                          each an IRI",
-                        medulla_decision_types::decision::codes::ENTITY_PAIR_INVALID.as_str(),
+                        medulla_decision_statistical_types::decision::codes::ENTITY_PAIR_INVALID
+                            .as_str(),
                         option.option_id
                     ));
                 }
@@ -719,7 +735,7 @@ impl DecisionFamily for ResolveEntityFamily {
             if left == right {
                 return Err(format!(
                     "{}: option '{}' pairs an entity with itself",
-                    medulla_decision_types::decision::codes::ENTITY_PAIR_SELF.as_str(),
+                    medulla_decision_statistical_types::decision::codes::ENTITY_PAIR_SELF.as_str(),
                     option.option_id
                 ));
             }

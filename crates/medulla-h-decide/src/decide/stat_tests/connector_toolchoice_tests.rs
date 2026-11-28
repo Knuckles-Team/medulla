@@ -70,10 +70,12 @@ async fn connector_tool_choice_is_a_proposal_that_cannot_itself_trigger_a_write_
 
 use super::rank_tests::{advisory_policy, published_head_over};
 use crate::decide::connector_points::DECISION_POINTS;
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredOption, DeclaredText, MAX_RANK_CATALOG_CANDIDATES,
+use medulla_decision_types::decision::record::AbstainReason;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+    medulla_decision_statistical_types::decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
 };
-use medulla_decision_types::decision::AbstainReason;
 
 fn catalog_schema_body() -> FeatureSchemaBody {
     FeatureSchemaBody {

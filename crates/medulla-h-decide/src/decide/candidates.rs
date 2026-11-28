@@ -22,25 +22,29 @@ use medulla_agent_types::{
     agent_component::AgentComponentSearchRequest,
 };
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::decision::statistical::graph_rows::{
-    GraphNodeClass, GraphRowProvenance,
-};
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
-use medulla_decision_types::{
-    decision::statistical::declared::check_declared,
-    decision::statistical::declared::DeclaredOption,
-    decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
-};
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::StatisticalErrorCode,
-    decision::statistical::TypedParam, decision::statistical::TypedValue,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::graph_rows::GraphNodeClass,
+    medulla_decision_program_types::decision::statistical::graph_rows::GraphRowProvenance,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::check_declared,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::MAX_RANK_CATALOG_CANDIDATES,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::features::capability_text::{capability_features, Embed, RankWeights};
-use medulla_decision_types::{
-    decision::CandidateSourceRecord, decision::LibraryCandidateScope,
-    decision::MAX_ASSEMBLY_CANDIDATES,
+use {
+    medulla_decision_statistical_types::decision::MAX_ASSEMBLY_CANDIDATES,
+    medulla_decision_types::decision::record::CandidateSourceRecord,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
 };
 
 use super::family::DecisionFamily;
@@ -569,7 +573,7 @@ pub(super) struct CandidateRead<'a> {
     pub principal: &'a str,
     pub family: &'a dyn DecisionFamily,
     pub params: &'a [TypedParam],
-    pub policy: &'a medulla_decision_types::decision::policy::DecisionPolicy,
+    pub policy: &'a medulla_decision_statistical_types::decision::policy::DecisionPolicy,
 }
 
 /// Read the options `source` names. Graph candidates need the caller's

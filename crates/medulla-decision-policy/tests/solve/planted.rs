@@ -1,7 +1,10 @@
 //! Planted assemblies: the unique optimum is known by construction.
 
 use medulla_decision_policy::solve::Verdict;
-use medulla_decision_types::solve::certificate::{SolveStatus, SolverConfig};
+use {
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+};
 
 use super::generators::{planted_assembly, AssemblyShape};
 use super::support::{config, model, solve_and_verify};

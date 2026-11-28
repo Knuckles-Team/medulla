@@ -8,18 +8,24 @@
 //! randomised policy is recorded as an exact rational: `(1-f) + f/n` for the
 //! greedy option, `f/n` for any other, with `f = a/b` the budget fraction.
 
-use medulla_decision_types::decision::statistical::keyed::uniform_draw;
+use medulla_decision_policy_types::decision::statistical::keyed::uniform_draw;
 use medulla_decision_types::{
     decision::statistical::AuditDraw, decision::statistical::QuestionSafety,
     decision::statistical::StatisticalQuestion,
 };
-use medulla_decision_types::{
-    decision::ColdStart, decision::DecisionErrorCode, decision::DecisionPolicy,
-    decision::UnitRationalWire,
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
 };
 
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_decision_types::decision::statistical::CandidatePool;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 use super::quant::exact_wire;
 

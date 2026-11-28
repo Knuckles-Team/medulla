@@ -12,27 +12,37 @@ use medulla_decision_outcome_types::policy_evolution::{
     EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionRecord, SafetyOutcome,
     StoredPolicyRecord,
 };
+use medulla_decision_statistical_types::decision::codes::PROMOTION_UNEVALUATED;
 use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
-use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
-use medulla_decision_types::decision::held_out::{
-    DefinitionKind, GraderKind, ReceiptKind, RevisionSubject,
-};
 use medulla_decision_types::decision::jobs::{FullLabelMetrics, LabelExclusions};
-use medulla_decision_types::decision::skill_evolution::{
-    Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
-};
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningRecorded, LearningWrite, PointerRef,
 };
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::{
-    CalibrationMethod, CalibrationStatement, DecisionEvalReceipt, DecisionPolicy, QuantScaleTag,
-    QuantisedValue, UnitRationalWire,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key};
 use medulla_types::contract::{Digest256, OpaqueId};
+use {
+    medulla_decision_policy_types::decision::held_out::DefinitionKind,
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
+use {
+    medulla_decision_policy_types::decision::skill_evolution::Rollout,
+    medulla_decision_policy_types::decision::skill_evolution::RolloutSet,
+    medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_SET_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_types::decision::jobs::DecisionEvalReceipt,
+    medulla_decision_types::decision::statistical::CalibrationMethod,
+    medulla_decision_types::decision::statistical::CalibrationStatement,
+};
 
 use super::super::stat_promotion::{
     held_out_evidence, rollouts_key, EvidenceError, EvidenceSources,
@@ -653,10 +663,12 @@ async fn promote_then_roll_back_every_subject_kind() {
 async fn pointer_history_replays() {
     use super::super::stat_pointer::pointer_events;
     use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
-    use medulla_decision_types::decision::statistical::retrieval_pointer::{
-        PointerEvent, PointerState, PointerTransition,
-    };
     use medulla_persistence_records::decision_jobs::read_pointer;
+    use {
+        medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerEvent,
+        medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState,
+        medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerTransition,
+    };
 
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);
@@ -781,8 +793,8 @@ async fn pointer_history_replays() {
 async fn harness_component_current_is_the_champion() {
     use medulla_decision_outcome_types::decision::promotion::RevisionStage;
     use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+    use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerTransition;
     use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
-    use medulla_decision_types::decision::statistical::retrieval_pointer::PointerTransition;
     use medulla_work_types::orchestration::{
         register_version, HarnessComponentKind, HarnessComponentVersion,
     };
@@ -1429,10 +1441,11 @@ async fn served_promotion_journey() {
 // spec: MEDULLA-DECISION-ENGINE-R805.14
 #[tokio::test]
 async fn a_promotion_record_seals_the_typed_verdict_champion_and_challenger() {
-    use medulla_decision_types::decision::promotion_answer::{
-        PromotionAnswer, PromotionAnswerVerdict,
-    };
     use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    use {
+        medulla_decision_statistical_types::decision::promotion_answer::PromotionAnswer,
+        medulla_decision_statistical_types::decision::promotion_answer::PromotionAnswerVerdict,
+    };
 
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);

@@ -6,14 +6,20 @@
 //! case was retested against the proposed artifact. The check returns every
 //! breach, never only the first.
 
+use medulla_decision_statistical_types::decision::knob_families::verifier::min_cases;
+#[cfg(test)]
+use medulla_decision_statistical_types::decision::knob_families::verifier::KNOBS;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::context_package::is_sha256_hex;
-use medulla_decision_types::decision::knob_families::verifier::min_cases;
 #[cfg(test)]
-use medulla_decision_types::decision::knob_families::verifier::KNOBS;
-#[cfg(test)]
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobValue};
-use medulla_decision_types::decision::verifier_receipt::{VerifierCaseState, VerifierReceipt};
-use medulla_decision_types::decision::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::verifier_receipt::VerifierCaseState,
+    medulla_decision_statistical_types::decision::verifier_receipt::VerifierReceipt,
+};
 
 /// One reason a receipt does not admit the artifact.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,7 +113,7 @@ pub fn check_verifier_receipt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::verifier_receipt::VerifierCase;
+    use medulla_decision_statistical_types::decision::verifier_receipt::VerifierCase;
     use medulla_types::contract::BoundedVec;
 
     const ARTIFACT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -237,7 +243,9 @@ mod tests {
         assert!(!KNOBS[0].admits(&KnobValue::Integer(65)));
         let mut pinned = DecisionPolicy::engine_default();
         pinned.knobs.insert(
-            medulla_decision_types::decision::knobs::KnobName::new("verifier.min_cases"),
+            medulla_decision_statistical_types::decision::knobs::KnobName::new(
+                "verifier.min_cases",
+            ),
             KnobValue::Integer(3),
         );
         assert_eq!(min_cases(&pinned), 3);

@@ -7,13 +7,13 @@
 //! names another tenant's head does not resolve.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_policy_types::decision::importance_penalty::PenaltyReceipt;
+use medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats::decision::quant::value_of;
 use medulla_decision_stats_records::decision::importance_penalty::ImportancePenalty;
-use medulla_decision_types::decision::importance_penalty::PenaltyReceipt;
 use medulla_decision_types::decision::jobs::DecisionFitRequest;
-use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, penalty_key};
 
@@ -92,7 +92,7 @@ pub(super) fn precheck_importance(
     store: &AgentLibraryStore,
     request: &DecisionFitRequest,
 ) -> Result<(), String> {
-    use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
+    use medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody;
     if request.penalty.is_none() {
         return Ok(());
     }
@@ -113,8 +113,9 @@ pub(super) fn precheck_importance(
 /// well-formed evidence (MEDULLA-DECISION-ENGINE-R151.4). Runs before the fit
 /// starts, so a refusal writes no artifact.
 fn check_importance(request: &DecisionFitRequest, names: &[String]) -> Result<(), String> {
-    use medulla_decision_types::decision::importance_penalty::{
-        is_sha256_hex, weight_in_unit_interval,
+    use {
+        medulla_decision_policy_types::decision::importance_penalty::is_sha256_hex,
+        medulla_decision_policy_types::decision::importance_penalty::weight_in_unit_interval,
     };
     if request.features.is_empty() {
         return Err(refusal(

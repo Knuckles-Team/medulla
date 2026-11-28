@@ -28,8 +28,11 @@ use medulla_decision_types::{
     decision::statistical::scorer::MAX_SCORER_SHORTLIST,
     decision::statistical::scorer::MAX_SCORER_WIDTH,
 };
-use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
 use medulla_query_types::solve_scalar::digest_text;
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 use super::common::{bounded, SCHEMA_DIGEST};
 

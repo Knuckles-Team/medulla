@@ -13,7 +13,7 @@ Arbora asks `Decide` with `QuestionKind::ProcessPlan` and receives the sealed ta
 
 ## Authoritative types
 
-`StepBinding` in `crates/medulla-decision-types/src/decision/process_plan.rs`; control steps in `crates/medulla-decision-types/src/decision/task_plan/control.rs`.
+`StepBinding` in `crates/medulla-decision-statistical-types/src/decision/process_plan.rs`; control steps in `crates/medulla-decision-program-types/src/decision/task_plan/control.rs`.
 
 ## Test vectors
 

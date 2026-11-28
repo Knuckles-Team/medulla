@@ -39,7 +39,7 @@ pub const REFUSALS: &[RefusalCode] = &[
 mod tests {
     use super::*;
     use crate::decision::code_registry;
-    use crate::decision::codes;
+    use medulla_decision_statistical_types::decision::codes;
 
     #[test]
     fn usage_codes_are_registered_and_distinct() {

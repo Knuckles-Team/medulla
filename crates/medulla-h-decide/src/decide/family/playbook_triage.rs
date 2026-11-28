@@ -30,17 +30,25 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_types::decision::playbook::{
-    NoTrigger, Playbook, TriggerKind, PARAM_EXECUTE, PLAYBOOK_EVALUATE_ONLY, REASON_EVALUATE_ONLY,
-};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 use medulla_decision_types::decision::request::LibraryCandidateScope;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_decision_types::decision::statistical::TypedValue;
 use medulla_decision_types::decision::statistical::{CandidateSource, DecideRequest};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::playbook::NoTrigger,
+    medulla_decision_policy_types::decision::playbook::Playbook,
+    medulla_decision_policy_types::decision::playbook::TriggerKind,
+    medulla_decision_policy_types::decision::playbook::PARAM_EXECUTE,
+    medulla_decision_policy_types::decision::playbook::PLAYBOOK_EVALUATE_ONLY,
+    medulla_decision_policy_types::decision::playbook::REASON_EVALUATE_ONLY,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 use {
     medulla_decision_stats_records::decision::playbook::match_playbook,
     medulla_decision_stats_records::decision::playbook::Correlator,
@@ -104,7 +112,7 @@ impl DecisionFamily for PlaybookTriageFamily {
         _request: &DecideRequest,
         executed: &Executed,
         policy_digest: &str,
-    ) -> Vec<medulla_decision_types::decision::PremiseRef> {
+    ) -> Vec<medulla_decision_statistical_types::decision::record::premise::PremiseRef> {
         executed
             .family_premises
             .iter()

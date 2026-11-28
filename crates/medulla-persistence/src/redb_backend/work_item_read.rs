@@ -359,10 +359,11 @@ impl RedbBackend {
     pub async fn read_trace_critique(
         &self,
         graph_fname: &str,
-        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+        query: medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery,
         content_authorized: bool,
         page_limit: u32,
-    ) -> Result<medulla_decision_types::decision::recursive_trace::TraceCritiquePage, String> {
+    ) -> Result<medulla_decision_program_types::decision::recursive_trace::TraceCritiquePage, String>
+    {
         let graph = graph_fname.to_owned();
         self.read_snapshot(graph_fname, move |shard, crypto| {
             medulla_work_store::redb_store::work_item::read_trace_critique(

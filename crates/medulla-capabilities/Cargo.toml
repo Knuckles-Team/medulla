@@ -60,6 +60,9 @@ medulla-work-types = { path = "../medulla-work-types", features = ["test-support
 medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
@@ -161,13 +164,16 @@ asr-native = ["medulla-query-types/asr-native", "medulla-protocol-types/asr-nati
 viz = ["medulla-query-types/viz", "medulla-protocol-types/viz"]
 # MEDULLA-DECISION-ENGINE-R054.1: the decision-contract ontology generator
 # (`decision_ontology`) reads the decision types' JSON schemas.
-contract-schema = ["dep:schemars", "dep:regex", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema", "medulla-protocol-types/test-support"]
+contract-schema = ["dep:schemars", "dep:regex", "medulla-decision-policy-types/contract-schema", "medulla-decision-program-types/contract-schema", "medulla-decision-statistical-types/contract-schema", "medulla-decision-types/contract-schema", "medulla-protocol-types/contract-schema", "medulla-protocol-types/test-support"]
 
 [dependencies]
 # The served method catalog (MEDULLA-CONTRACT-R057) renders as JSON.
 serde_json = "1.0.154"
 schemars = { version = "1.2.3", optional = true }
 regex = { version = "1", optional = true }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["wire-contract"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["wire-contract"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["wire-contract"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }

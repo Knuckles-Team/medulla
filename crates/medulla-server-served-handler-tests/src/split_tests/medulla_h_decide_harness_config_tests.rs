@@ -6,20 +6,11 @@ use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     MeasuredFact, ObservationRef, ShellProficiency, StoppingBehaviour,
 };
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 use medulla_decision_types::decision::statistical::harness_config::{
     ActionSpace, HarnessConfigAnswer, HarnessPart, PlanScaffold,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
-    StatisticalDecisionRecord, StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_h_decide::decide::stat_test_support::{
     decode, publish_route_schema, request, Harness, TENANT,
 };
@@ -28,6 +19,34 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 async fn dispatch(h: &Harness, method: Method) -> Response {
     let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();

@@ -12,14 +12,18 @@ use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentEntry, AgentComponentKind, ComponentDependency,
 };
-use medulla_decision_types::decision::digest::policy_digest;
-use medulla_decision_types::decision::policy::policy_from_attributes;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::{
-    DecisionPolicy, QuantScaleTag, QuantisedValue, StatisticalPolicy, TraceFidelityLevel,
-    UnitRationalWire,
-};
+use medulla_decision_statistical_types::decision::digest::policy_part::policy_digest;
+use medulla_decision_statistical_types::decision::policy::policy_from_attributes;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+};
 
 /// A resolved policy: the body, its digest and its statistical half.
 pub struct ResolvedPolicy {

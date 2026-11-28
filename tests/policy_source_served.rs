@@ -15,9 +15,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_agent_types::agent_component::{AgentComponentKind, AgentComponentPublishRequest};
-use medulla_decision_types::decision::digest::policy_digest;
-use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::digest::policy_part::policy_digest;
+use medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;

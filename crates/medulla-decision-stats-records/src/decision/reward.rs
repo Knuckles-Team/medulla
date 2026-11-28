@@ -9,13 +9,21 @@
 //! arithmetic on `Q32`: no float, no clock, no store, so repeated calls for one
 //! trajectory return identical bytes.
 
-use medulla_decision_types::decision::numeric::{micros_to_q32, QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::reward::{
-    RewardDecompositionRequest, RewardKnobs, StepReward, TrajectoryReward, MAX_HTN_NODES,
-    MAX_REWARD_STEPS,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::numeric::micros_to_q32,
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::reward::RewardDecompositionRequest,
+    medulla_decision_statistical_types::decision::reward::RewardKnobs,
+    medulla_decision_statistical_types::decision::reward::StepReward,
+    medulla_decision_statistical_types::decision::reward::TrajectoryReward,
+    medulla_decision_statistical_types::decision::reward::MAX_HTN_NODES,
+    medulla_decision_statistical_types::decision::reward::MAX_REWARD_STEPS,
+};
 
 const ONE_MICROS: i128 = 1_000_000;
 
@@ -230,7 +238,10 @@ pub fn decompose(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::reward::{HtnNode, StepSignal};
+    use {
+        medulla_decision_statistical_types::decision::reward::HtnNode,
+        medulla_decision_statistical_types::decision::reward::StepSignal,
+    };
 
     const ONE: i64 = 1 << 32;
 

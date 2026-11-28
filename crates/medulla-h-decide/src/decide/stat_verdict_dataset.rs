@@ -9,19 +9,23 @@
 //! not name rungs of that ladder is skipped: it cannot be turned into an item.
 //! The set is marked synthetic by the fit, as every caller-authored dataset is.
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::QuantScaleTag;
 use medulla_decision_stats::decision::trajectory_ladder::{
     verdict_item, VerdictRow, LADDER_FEATURE_NAMES,
 };
-use medulla_decision_types::decision::statistical::dataset::{
-    LabelledDataset, LABELLED_DATASET_SCHEMA_VERSION,
-};
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::trajectory_ladder::{PairedVerdict, VERDICT_PREFIX};
-use medulla_decision_types::decision::QuantScaleTag;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, record_key};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::VERDICT_PREFIX,
+};
 
 use super::run_record::ladder_of_entry;
 use super::stat_support::refusal;

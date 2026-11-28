@@ -2,8 +2,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::capability_designation::{CapabilityRecord, EntityKind};
 use medulla_types::contract::{OpaqueId, TenantId};
+use {
+    medulla_decision_policy_types::decision::capability_designation::CapabilityRecord,
+    medulla_decision_policy_types::decision::capability_designation::EntityKind,
+};
 
 use super::arena::{dot, normalized, Arena};
 use super::postings::Postings;

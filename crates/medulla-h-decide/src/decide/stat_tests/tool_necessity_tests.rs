@@ -205,7 +205,7 @@ async fn mismatch_links_to_the_model_call() {
     assert_eq!(mismatch.fact, "call:1");
     assert!(matches!(
         &mismatch.provenance,
-        medulla_decision_types::decision::PremiseProvenance::Request { field }
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance::Request { field }
             if field == "model_call_id"
     ));
 

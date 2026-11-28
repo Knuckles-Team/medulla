@@ -6,12 +6,14 @@
 
 use super::retrieval_tests::learn;
 use super::*;
-use medulla_decision_types::decision::statistical::distilled::{
-    DistilledScorerManifest, DistilledUpload, TeacherJudgment,
-};
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_statistical_types::decision::statistical::distilled::DistilledScorerManifest,
+    medulla_decision_statistical_types::decision::statistical::distilled::DistilledUpload,
+    medulla_decision_statistical_types::decision::statistical::distilled::TeacherJudgment,
+};
 
 const GRAPH: &str = "kg-distilled-rank";
 
@@ -310,7 +312,7 @@ async fn distilled_evidence_binds_scorer() {
     {
         assert_eq!(
             premise.class,
-            medulla_decision_types::decision::PremiseClass::Claim
+            medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
         );
     }
     // Another tenant's rows carry no scorer.

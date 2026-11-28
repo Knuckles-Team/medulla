@@ -9,17 +9,24 @@ use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, ComponentDependency,
 };
-use medulla_decision_types::decision::size::{
-    ADEQUACY_EVALUATION_ATTRIBUTE, ADEQUATE_ATTRIBUTE, SIZE_BYTES_ATTRIBUTE, SIZE_LINES_ATTRIBUTE,
-    SIZE_REVISION_ATTRIBUTE,
-};
-use medulla_decision_types::decision::{
-    DecisionOutcome, DecisionPolicy, ObjectiveLevelKind, ObjectiveOrder, UnknownCostRule,
-};
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::size::ADEQUACY_EVALUATION_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::size::ADEQUATE_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::size::SIZE_BYTES_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::size::SIZE_LINES_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::size::SIZE_REVISION_ATTRIBUTE,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+    medulla_decision_statistical_types::decision::ObjectiveOrder,
+    medulla_decision_statistical_types::decision::UnknownCostRule,
+    medulla_decision_types::decision::record::DecisionOutcome,
+};
 
 use super::assemble_tests::{assemble, harness, publish_with, request, seed_with, TENANT};
 
@@ -70,9 +77,10 @@ fn publish_policy(
 ) -> ComponentDependency {
     let mut draft = test_component_draft(TENANT, id);
     draft.kind = AgentComponentKind::DecisionPolicy;
-    draft.content_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    draft.content_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     draft.attributes.insert(
-        medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
+        medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
         serde_json::to_string(policy).unwrap(),
     );
     let committed = store

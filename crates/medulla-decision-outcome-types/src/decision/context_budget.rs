@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::decision::numeric::UnitRationalWire;
+use medulla_decision_statistical_types::decision::numeric::UnitRationalWire;
 
 /// Named, replaceable defaults (MEDULLA-DECISION-ENGINE-R137.2).
 pub const DEFAULT_OVER_WINDOW_NUMERATOR: u64 = 4;
@@ -110,14 +110,16 @@ pub enum ContextBudgetRefusal {
     },
 }
 
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ContextBudgetRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for ContextBudgetRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::BudgetExhausted { .. } => {
-                medulla_decision_types::decision::codes::CONTEXT_BUDGET_EXHAUSTED
+                medulla_decision_statistical_types::decision::codes::CONTEXT_BUDGET_EXHAUSTED
             }
             Self::TooManyItems { .. } => {
-                medulla_decision_types::decision::codes::CONTEXT_BUDGET_TOO_MANY_ITEMS
+                medulla_decision_statistical_types::decision::codes::CONTEXT_BUDGET_TOO_MANY_ITEMS
             }
         }
     }
@@ -408,7 +410,7 @@ pub enum SignalRefusal {
 impl SignalRefusal {
     /// The registered code (`decision::codes`).
     pub fn code(&self) -> medulla_types::refusal_code::RefusalCode {
-        use medulla_decision_types::decision::codes;
+        use medulla_decision_statistical_types::decision::codes;
         match self {
             Self::Invalid { .. } => codes::SIGNAL_INVALID,
             Self::DigestMismatch { .. } => codes::SIGNAL_DIGEST_MISMATCH,

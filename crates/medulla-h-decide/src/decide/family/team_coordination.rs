@@ -6,10 +6,13 @@
 //! its team read are in `stat_team`. Exactly one legal option concludes with
 //! `ResolutionKind::Constraint`. Evaluate-only: `Decide` writes nothing.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 use crate::decide::stat_team;

@@ -14,17 +14,30 @@ use medulla_decision_outcome_types::decision::concentration::{
     ConcentrationPolicy, EditFact,
 };
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::codes::{MIXED_POLICY_REVISION, NO_CONCENTRATION_POLICY};
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::edit_machine::EditStatus;
+use {
+    medulla_decision_statistical_types::decision::codes::MIXED_POLICY_REVISION,
+    medulla_decision_statistical_types::decision::codes::NO_CONCENTRATION_POLICY,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::stat_executor::{Executed, FamilyExecuted};
 use super::stat_support::{filtered_view, invalid_parameter};

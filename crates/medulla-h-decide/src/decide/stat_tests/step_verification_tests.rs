@@ -7,11 +7,22 @@ use super::kernel_family_support::{
     decide_as_other_tenant, facts, kernel_request, persisted_files,
 };
 use super::*;
-use medulla_decision_types::decision::trajectory_verdict::{
-    AdmissionRequest, AdmissionVerdict, CheckInterval, ProbeResult, ProbeVerdict, RecoveryAction,
-    StepCheck, StepOutcome, TraceStep, VerifyRequest,
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionRequest,
+    medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::CheckInterval,
+    medulla_decision_statistical_types::decision::trajectory_verdict::ProbeResult,
+    medulla_decision_statistical_types::decision::trajectory_verdict::ProbeVerdict,
+    medulla_decision_statistical_types::decision::trajectory_verdict::RecoveryAction,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepCheck,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepOutcome,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TraceStep,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyRequest,
 };
-use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
+use {
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn hex(n: u8) -> String {
     format!("{n:02x}").repeat(32)
@@ -101,7 +112,7 @@ fn admission(schema: &ComponentDependency, verdicts: &[ProbeVerdict]) -> DecideR
 
 fn verification(
     record: &StatisticalDecisionRecord,
-) -> &medulla_decision_types::decision::trajectory_verdict::StepVerification {
+) -> &medulla_decision_statistical_types::decision::trajectory_verdict::StepVerification {
     record
         .answer
         .as_ref()
@@ -358,9 +369,9 @@ async fn verification_and_admission_refusals() {
     };
     assert_eq!(reasons.as_slice()[0].code().as_str(), "PROBE_COMPROMISED");
 
-    for code in medulla_decision_types::decision::trajectory_verdict::VERIFY_REFUSALS
+    for code in medulla_decision_statistical_types::decision::trajectory_verdict::VERIFY_REFUSALS
         .iter()
-        .chain(medulla_decision_types::decision::trajectory_verdict::REFUSALS)
+        .chain(medulla_decision_statistical_types::decision::trajectory_verdict::REFUSALS)
     {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),

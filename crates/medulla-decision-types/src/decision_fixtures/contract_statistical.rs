@@ -1,27 +1,46 @@
 //! Valid sample values for the statistical decision surface.
 
-use crate::decision::{
-    CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,
-    DecisionEvalOp, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobStatusRequest, EvalCandidate, ExplorationRecord, FeatureMatrixRef, HeadKind,
-    LabelRegime, LibraryCandidateScope, OpeEstimatorKind, OptimiserSpec, QuantScaleTag,
-    QuantisedValue, QuestionKind, QuestionSafety, RecordWindow, RiskMethod, RiskStatement,
-    ScoredOption, ShortlistProvenance, StatisticalOutcome, StatisticalQuestion, TypedParam,
-    TypedValue,
-};
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use {
+    crate::decision::jobs::DecisionEvalOp, crate::decision::jobs::DecisionEvalRequest,
+    crate::decision::jobs::DecisionFitOp, crate::decision::jobs::DecisionFitRequest,
+    crate::decision::jobs::DecisionJobStatusRequest, crate::decision::jobs::EvalCandidate,
+    crate::decision::jobs::HeadKind, crate::decision::jobs::LabelRegime,
+    crate::decision::jobs::OpeEstimatorKind, crate::decision::jobs::OptimiserSpec,
+    crate::decision::jobs::RecordWindow, crate::decision::request::LibraryCandidateScope,
+    crate::decision::statistical::CalibrationMethod,
+    crate::decision::statistical::CalibrationStatement,
+    crate::decision::statistical::CandidatePool, crate::decision::statistical::CandidateSource,
+    crate::decision::statistical::DecideRequest, crate::decision::statistical::ExplorationRecord,
+    crate::decision::statistical::FeatureMatrixRef, crate::decision::statistical::QuestionSafety,
+    crate::decision::statistical::RiskMethod, crate::decision::statistical::RiskStatement,
+    crate::decision::statistical::ScoredOption, crate::decision::statistical::ShortlistProvenance,
+    crate::decision::statistical::StatisticalOutcome,
+    crate::decision::statistical::StatisticalQuestion, crate::decision::statistical::TypedParam,
+    crate::decision::statistical::TypedValue,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 use crate::decision::jobs::DatasetSource;
 use crate::decision::replay::{
     AllocationRule, EvalMode, RefitSpec, ReplayEnvironment, ReplaySpec, SharedCap, TrialLog,
     WalkForward,
 };
-use crate::decision::statistical::dataset::{
-    ItemLabel, LabelSource, LabelledDataset, LabelledItem, LoggedOutcome, OutcomeEvaluation,
-    OutcomeFidelity, PropensitySource, LABELLED_DATASET_SCHEMA_VERSION,
-};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+    medulla_decision_policy_types::decision::statistical::dataset::LoggedOutcome,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeEvaluation,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity,
+    medulla_decision_policy_types::decision::statistical::dataset::PropensitySource,
+    medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
 
 use super::contract_decision::{dependency, every_abstain_reason, unit_rational};
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};
@@ -300,8 +319,11 @@ pub fn eval_ops() -> Vec<(&'static str, DecisionEvalOp)> {
     ]
 }
 
-fn pinned_set(id: &str, byte: u8) -> crate::decision::statistical::ranking_eval::PinnedSet {
-    crate::decision::statistical::ranking_eval::PinnedSet {
+fn pinned_set(
+    id: &str,
+    byte: u8,
+) -> medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet {
+    medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet {
         id: id.to_string(),
         revision: 1,
         digest: digest_text(byte),
@@ -350,10 +372,16 @@ fn certification_request() -> crate::decision::local_certification::LocalCertifi
 }
 
 /// A two-algorithm ranking evaluation submission.
-fn ranking_request() -> crate::decision::statistical::ranking_eval::RetrievalRankingRequest {
-    use crate::decision::statistical::ranking_eval::{
-        AlgorithmRun, LabelPair, LabelSet, QueryRanking, QuerySet, RetrievalRankingRequest,
-        RANKING_EVAL_SCHEMA_VERSION,
+fn ranking_request(
+) -> medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest {
+    use {
+        medulla_decision_policy_types::decision::statistical::ranking_eval::AlgorithmRun,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::LabelPair,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::LabelSet,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::QueryRanking,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::QuerySet,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::RANKING_EVAL_SCHEMA_VERSION,
     };
     let run = |id: &str| AlgorithmRun {
         algorithm_id: id.to_string(),
@@ -389,11 +417,19 @@ fn ranking_request() -> crate::decision::statistical::ranking_eval::RetrievalRan
 }
 
 /// A grounded evaluation submission over one query, topic and claim.
-fn grounded_request() -> crate::decision::statistical::grounded_eval::GroundedAnswerRequest {
-    use crate::decision::statistical::grounded_eval::{
-        CitationSupport, ClaimSupport, ClaimVotes, ExpectedTopicSet, GroundedAnswerRequest,
-        GroundedClaimPrediction, GroundedScope, GroundedScorerRecord, TopicSupport,
-        GROUNDED_EVAL_SCHEMA_VERSION,
+fn grounded_request(
+) -> medulla_decision_program_types::decision::statistical::grounded_eval::GroundedAnswerRequest {
+    use {
+        medulla_decision_program_types::decision::statistical::grounded_eval::CitationSupport,
+        medulla_decision_program_types::decision::statistical::grounded_eval::ClaimSupport,
+        medulla_decision_program_types::decision::statistical::grounded_eval::ClaimVotes,
+        medulla_decision_program_types::decision::statistical::grounded_eval::ExpectedTopicSet,
+        medulla_decision_program_types::decision::statistical::grounded_eval::GroundedAnswerRequest,
+        medulla_decision_program_types::decision::statistical::grounded_eval::GroundedClaimPrediction,
+        medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScope,
+        medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScorerRecord,
+        medulla_decision_program_types::decision::statistical::grounded_eval::TopicSupport,
+        medulla_decision_program_types::decision::statistical::grounded_eval::GROUNDED_EVAL_SCHEMA_VERSION,
     };
     GroundedAnswerRequest {
         schema_version: GROUNDED_EVAL_SCHEMA_VERSION,

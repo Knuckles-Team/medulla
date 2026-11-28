@@ -5,10 +5,13 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::{
-    AbstainReason, CostBudget, DecisionOutcome, ResolutionKind,
-};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::ResolutionKind,
+    medulla_decision_types::decision::request::CostBudget,
+};
 
 use super::fixture::*;
 use {
@@ -26,8 +29,8 @@ enum Accept {
 
 struct Item {
     name: &'static str,
-    request: medulla_decision_types::decision::AssemblyRequest,
-    library: Vec<medulla_decision_types::decision::CandidateFacts>,
+    request: medulla_decision_types::decision::request::AssemblyRequest,
+    library: Vec<medulla_decision_types::decision::record::CandidateFacts>,
     accept: Accept,
 }
 

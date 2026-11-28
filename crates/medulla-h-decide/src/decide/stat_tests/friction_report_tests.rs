@@ -8,17 +8,31 @@ use super::super::planned_write::PlannedWrite;
 use super::*;
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
-use medulla_decision_types::friction::{
-    FrictionFiled, FrictionGroupView, FrictionGroups, FrictionMoved, FrictionOp, FrictionReport,
-    FrictionState, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED, FRICTION_EVIDENCE_REQUIRED,
-    FRICTION_EVIDENCE_UNKNOWN, FRICTION_SELF_APPROVED, FRICTION_SKILL_UNKNOWN,
-    FRICTION_TEXT_TOO_LARGE, FRICTION_TRANSITION_ILLEGAL,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key, record_key};
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::{json, Value};
+use {
+    medulla_decision_program_types::friction::FrictionFiled,
+    medulla_decision_program_types::friction::FrictionGroupView,
+    medulla_decision_program_types::friction::FrictionGroups,
+    medulla_decision_program_types::friction::FrictionMoved,
+    medulla_decision_program_types::friction::FrictionOp,
+    medulla_decision_program_types::friction::FrictionReport,
+    medulla_decision_program_types::friction::FrictionState,
+    medulla_decision_program_types::friction::FrictionTransition,
+    medulla_decision_program_types::friction::FRICTION_APPROVAL_ROLE_REQUIRED,
+    medulla_decision_program_types::friction::FRICTION_EVIDENCE_REQUIRED,
+    medulla_decision_program_types::friction::FRICTION_EVIDENCE_UNKNOWN,
+    medulla_decision_program_types::friction::FRICTION_SELF_APPROVED,
+    medulla_decision_program_types::friction::FRICTION_SKILL_UNKNOWN,
+    medulla_decision_program_types::friction::FRICTION_TEXT_TOO_LARGE,
+    medulla_decision_program_types::friction::FRICTION_TRANSITION_ILLEGAL,
+};
+use {
+    medulla_decision_statistical_types::failure_patterns::FailureIngestResult,
+    medulla_decision_statistical_types::failure_patterns::FailureOp,
+};
 
 const GRAPH: &str = "__commons__";
 const SKILL: &str = "skill:triage@3";

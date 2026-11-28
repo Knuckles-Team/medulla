@@ -6,7 +6,10 @@
 //! `QuestionKind::Rank`; an id that starts with `catalog.` and is not in the
 //! table abstains `QUESTION_UNPUBLISHED`.
 
-use medulla_decision_types::decision::statistical::{QuestionKind, QuestionSafety};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+};
 
 /// How often a point's decision records are logged.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,11 +2,15 @@
 
 use super::record::core_rows;
 use super::Search;
-use medulla_decision_types::solve::certificate::{
-    Algorithm, BoundProof, Certificate, Incumbent, SolveStatus,
-};
-use medulla_decision_types::solve::spec::RowId;
+use medulla_decision_policy_types::solve::spec::RowId;
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::Algorithm,
+    medulla_decision_policy_types::solve::certificate::BoundProof,
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::Incumbent,
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+};
 
 /// What the search established, reduced to the facts the status depends on.
 struct Established {

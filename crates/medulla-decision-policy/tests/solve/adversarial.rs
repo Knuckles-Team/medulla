@@ -1,9 +1,14 @@
 //! Worst cases for the search: loose bounds, parity, and certificate limits.
 
 use medulla_decision_policy::solve::Verdict;
-use medulla_decision_types::solve::certificate::{BoundProof, LeafProof, ProofNode, SolveStatus};
-use medulla_decision_types::solve::spec::RowId;
+use medulla_decision_policy_types::solve::spec::RowId;
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::BoundProof,
+    medulla_decision_policy_types::solve::certificate::LeafProof,
+    medulla_decision_policy_types::solve::certificate::ProofNode,
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+};
 
 use super::support::{config, model, odd_cycle_cover, parity_equality, solve_and_verify};
 

@@ -15,7 +15,9 @@ path = "src/lib.rs"
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
 hex = "0.4"
@@ -44,7 +46,7 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
-test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
+test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
 ast = ["medulla-compute-assemble/ast"]
 compute-dist = ["raft", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-types/compute-dist"]
 embedded = ["redb"]
@@ -56,12 +58,14 @@ security = ["redb", "medulla-core/security", "medulla-graph-core/security", "med
 server = ["medulla-kernel/server"]
 statechart = ["dep:medulla-statechart", "server", "medulla-protocol-types/statechart", "medulla-work-types/statechart"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-decision-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-decision-policy-types/query", "medulla-decision-program-types/query", "medulla-decision-statistical-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query", "redb"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "query", "redb", "server", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "query", "redb", "server", "tsdb"]
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }

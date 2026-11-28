@@ -13,7 +13,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_decision_policy::solve::model::Model;
 use medulla_decision_policy::solve::{solve, verify};
-use medulla_decision_types::solve::certificate::SolverConfig;
+use medulla_decision_policy_types::solve::certificate::SolverConfig;
 use std::hint::black_box;
 
 #[path = "../tests/solve/generators.rs"]

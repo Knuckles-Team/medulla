@@ -4,11 +4,22 @@
 //! or undeclared, a required input is missing or a path is too deep.
 
 use super::*;
-use medulla_decision_types::decision::field_shielding::{
-    DeclaredInput, FieldPath, FieldShieldingRequest, ShieldedField, StepProjection, REFUSALS,
+use {
+    medulla_decision_statistical_types::decision::field_shielding::DeclaredInput,
+    medulla_decision_statistical_types::decision::field_shielding::FieldPath,
+    medulla_decision_statistical_types::decision::field_shielding::FieldShieldingRequest,
+    medulla_decision_statistical_types::decision::field_shielding::ShieldedField,
+    medulla_decision_statistical_types::decision::field_shielding::StepProjection,
+    medulla_decision_statistical_types::decision::field_shielding::REFUSALS,
 };
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn path(value: &str) -> FieldPath {
     FieldPath::new(value).unwrap()

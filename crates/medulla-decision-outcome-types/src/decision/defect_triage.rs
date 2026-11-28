@@ -5,12 +5,19 @@
 //! link, or abstains with a typed reason. Nothing here reads a clock or a float;
 //! equal inputs produce equal records.
 
-use medulla_decision_types::decision::codes;
-use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::codes;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_source_types::lifecycle::Severity;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::defect_triage::TriageAbstainReason,
+    medulla_decision_statistical_types::decision::defect_triage::TriageDecision,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// A triage that names a defect the engine does not hold.
 pub const DEFECT_UNKNOWN: RefusalCode = RefusalCode::new("DEFECT_UNKNOWN");
@@ -492,7 +499,7 @@ mod tests {
     // spec: MEDULLA-SDLC-R004.7
     #[test]
     fn knob_specs_lie_within_bounds_and_codes_map_abstain_reasons() {
-        use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+        use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 
         assert_eq!(KNOBS.len(), 5);
         for spec in KNOBS {

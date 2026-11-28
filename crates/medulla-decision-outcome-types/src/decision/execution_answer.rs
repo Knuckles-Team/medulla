@@ -6,10 +6,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::decision::record::{AbstainReason, PremiseRef};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 /// Format identity of the composed orchestration answer envelope.
 pub const EXECUTION_ANSWER_SCHEMA_VERSION: u16 = 1;
@@ -67,7 +70,7 @@ pub struct ExecutionAnswer {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct AgentExecutionAnswerRequest {
     pub task_iri: String,
-    pub assembly: medulla_decision_types::decision::AssemblyRequest,
+    pub assembly: medulla_decision_types::decision::request::AssemblyRequest,
 }
 
 impl ExecutionAnswer {

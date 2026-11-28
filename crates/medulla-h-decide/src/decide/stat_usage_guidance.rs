@@ -19,12 +19,14 @@ use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, TypedValue,
 };
-use medulla_decision_types::decision::usage_guidance::{
-    DEFAULT_USAGE_GUIDANCE_GRAPH, USAGE_GUIDANCE_CONNECTOR_PARAM, USAGE_GUIDANCE_GRAPH_PARAM,
-    USAGE_GUIDANCE_JOB_CLASS_PARAM,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_decision_program_types::decision::usage_guidance::DEFAULT_USAGE_GUIDANCE_GRAPH,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_CONNECTOR_PARAM,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_GRAPH_PARAM,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_JOB_CLASS_PARAM,
+};
 
 use super::stat_designation::{shared_capability_index, DesignationRuntime};
 use super::stat_log::{aggregate_log, LogReader};

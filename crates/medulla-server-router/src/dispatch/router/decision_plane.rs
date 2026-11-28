@@ -189,12 +189,15 @@ async fn queue_outbound(
     response: Response,
 ) -> Response {
     use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-    use medulla_decision_types::decision::statistical::writeback::{
-        ProposalInput, QueuedProposalInput, RiskTier, WritebackOp,
-    };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::graph::SourceSync;
     use medulla_source_types::source_sync::SyncReport;
+    use {
+        medulla_decision_program_types::decision::statistical::writeback::ProposalInput,
+        medulla_decision_program_types::decision::statistical::writeback::QueuedProposalInput,
+        medulla_decision_program_types::decision::statistical::writeback::RiskTier,
+        medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+    };
 
     if response.error.is_some() {
         return response;
@@ -389,7 +392,9 @@ async fn dispatch_decision_methods(
                 match *op {
                     // The suite report is a graph node: the job plans it and the router commits it
                     // (MEDULLA-DECISION-ENGINE-R711.3).
-                    medulla_decision_types::decision::DecisionEvalOp::SkillEval { request } => {
+                    medulla_decision_types::decision::jobs::DecisionEvalOp::SkillEval {
+                        request,
+                    } => {
                         match medulla_h_decide::decide::handle_skill_eval(
                             state,
                             verified_context,
@@ -405,7 +410,7 @@ async fn dispatch_decision_methods(
                         }
                     }
                     // A case is a graph node too (MEDULLA-DECISION-ENGINE-R711.7).
-                    medulla_decision_types::decision::DecisionEvalOp::SkillEvalCaseAdd {
+                    medulla_decision_types::decision::jobs::DecisionEvalOp::SkillEvalCaseAdd {
                         request,
                     } => {
                         match medulla_h_decide::decide::handle_skill_eval_case_add(
@@ -422,7 +427,7 @@ async fn dispatch_decision_methods(
                         }
                     }
                     // A critique is recorded on the proposal's node (MEDULLA-DECISION-ENGINE-R038.6).
-                    medulla_decision_types::decision::DecisionEvalOp::HeldItemCritique {
+                    medulla_decision_types::decision::jobs::DecisionEvalOp::HeldItemCritique {
                         request,
                     } => {
                         match medulla_h_decide::decide::handle_held_item_critique(
@@ -1110,9 +1115,9 @@ async fn triage_defect(
     req_id: u64,
     caller: Option<&str>,
     verified: &VerifiedRequestContext,
-    request: medulla_decision_types::decision::defect_triage::TriageDefectRequest,
+    request: medulla_decision_statistical_types::decision::defect_triage::TriageDefectRequest,
 ) -> Response {
-    use medulla_decision_types::decision::defect_triage::TriageDefectReceipt;
+    use medulla_decision_statistical_types::decision::defect_triage::TriageDefectReceipt;
     use medulla_protocol_types::result_contract::ingestion::TriageDefect as TriageDefectResult;
     let graph = request.graph.clone();
     let result = async {

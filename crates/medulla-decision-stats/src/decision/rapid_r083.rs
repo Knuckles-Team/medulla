@@ -32,11 +32,13 @@ pub enum EncodeRefusal {
     TooManyCapabilities { declared: usize, max: usize },
 }
 
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for EncodeRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for EncodeRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::TooManyCapabilities { .. } => {
-                medulla_decision_types::decision::codes::ENCODE_TOO_MANY_CAPABILITIES
+                medulla_decision_statistical_types::decision::codes::ENCODE_TOO_MANY_CAPABILITIES
             }
         }
     }
@@ -143,8 +145,8 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R010.100.2
     #[test]
     fn encode_refusal_maps_to_a_folded_code() {
-        use medulla_decision_types::decision::codes;
-        use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+        use medulla_decision_statistical_types::decision::codes;
+        use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
         let refusal = EncodeRefusal::TooManyCapabilities {
             declared: 65,
             max: 64,

@@ -11,13 +11,19 @@
 //! `i128`; a model whose multipliers do not fit is refused.
 
 use super::error::ModelError;
-use medulla_decision_types::solve::spec::{Coefficient, ObjectiveLevelSpec};
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+};
 
 // `LevelValue`/`ObjectiveValue` are wire types; the definitions live in
 // `medulla_decision_types::solve::objective` (re-exported by `crate::solve`) so there is
 // exactly one copy. Only the scalarisation algorithm below is this crate's.
-use medulla_decision_types::solve::objective::{LevelValue, ObjectiveValue};
+use {
+    medulla_decision_statistical_types::solve::objective::LevelValue,
+    medulla_decision_statistical_types::solve::objective::ObjectiveValue,
+};
 
 /// Largest total `Σ|w|` of the scalar objective. Leaves headroom in `i128`
 /// for the bound denominator and dual multipliers.

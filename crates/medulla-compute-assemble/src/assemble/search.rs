@@ -10,24 +10,28 @@
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_graph::AgentGraphDraft;
 use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_decision_policy_types::solve::Certificate;
+use medulla_decision_policy_types::solve::ConstraintBody;
+use medulla_decision_policy_types::solve::ConstraintSpec;
+use medulla_decision_policy_types::solve::ModelSpec;
+use medulla_decision_policy_types::solve::Relation;
+use medulla_decision_policy_types::solve::SolveStatus;
+use medulla_decision_policy_types::solve::SolverConfig;
+use medulla_decision_policy_types::solve::SolverConfigSpec;
+use medulla_decision_policy_types::solve::Term;
+use medulla_decision_policy_types::solve::VarId;
+use medulla_decision_policy_types::solve::DEFAULT_CERTIFICATE_LEAVES;
 use medulla_decision_types::decision::request::effective_solver_budget;
-use medulla_decision_types::solve::Certificate;
-use medulla_decision_types::solve::ConstraintBody;
-use medulla_decision_types::solve::ConstraintSpec;
-use medulla_decision_types::solve::ModelSpec;
-use medulla_decision_types::solve::Relation;
-use medulla_decision_types::solve::SolveStatus;
-use medulla_decision_types::solve::SolverConfig;
-use medulla_decision_types::solve::SolverConfigSpec;
-use medulla_decision_types::solve::Term;
-use medulla_decision_types::solve::VarId;
-use medulla_decision_types::solve::DEFAULT_CERTIFICATE_LEAVES;
-use medulla_decision_types::{
-    decision::digest, decision::AbstainReason, decision::CandidateFacts,
-    decision::DecisionErrorCode, decision::DecisionInputs, decision::TemplateFacts,
-};
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::digest,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::TemplateFacts,
+};
 
 use super::model::Built;
 use super::AssembleError;

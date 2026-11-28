@@ -20,7 +20,11 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::process_decision::{DmnValue, FixedDecimal, TableVerdict};
+use {
+    medulla_decision_program_types::decision::process_decision::DmnValue,
+    medulla_decision_program_types::decision::process_decision::FixedDecimal,
+    medulla_decision_program_types::decision::process_decision::TableVerdict,
+};
 
 /// One output clause: its name and the value priority list (highest first).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

@@ -2,8 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::OpaqueId;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// The `breadth.*` knobs: `min`, `max`, `raise_at`, `narrow_at`, `min_attempts`.
 /// Rates are fixed-point decimals (the value times 1,000,000).

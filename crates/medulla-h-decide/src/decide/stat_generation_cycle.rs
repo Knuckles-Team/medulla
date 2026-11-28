@@ -10,16 +10,16 @@
 //! a terminal cycle, or a shadow graph that is already the active generation,
 //! changes nothing. `GenerationCycleMachine` is the only writer of the state.
 
+use medulla_decision_program_types::decision::statistical::body::canonical_body_bytes;
+use medulla_decision_program_types::decision::statistical::body::content_digest_of;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats_records::decision::adapter::AdapterKernel;
-use medulla_decision_types::decision::statistical::body::canonical_body_bytes;
-use medulla_decision_types::decision::statistical::body::content_digest_of;
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
 use medulla_decision_types::decision::statistical::retrieval_generation::{
     GenerationBootstrapReceipt, GenerationCycle, GenerationCycleEvent, GenerationCycleJob,
     GenerationCycleReceipt, GenerationCycleRequest, GenerationCycleState,
     GENERATION_BOOTSTRAP_VERDICT, GENERATION_CYCLE_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_query_types::solve_scalar::digest_text;

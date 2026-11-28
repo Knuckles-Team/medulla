@@ -1,5 +1,5 @@
 use super::*;
-use crate::decision::knobs::KnobName;
+use medulla_decision_statistical_types::decision::knobs::KnobName;
 
 fn limits(premises: i64, candidates: i64, bytes: i64) -> HarnessReplayLimits {
     let mut policy = DecisionPolicy::engine_default();

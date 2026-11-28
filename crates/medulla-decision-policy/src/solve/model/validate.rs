@@ -1,8 +1,14 @@
 //! Field-level validation of a [`ModelSpec`].
 
 use super::error::{Location, ModelError};
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, Term, VarId,
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
 };
 
 /// Most binary variables a model may declare.

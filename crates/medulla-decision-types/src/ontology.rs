@@ -13,8 +13,8 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use crate::decision::statistical::{DecideRequest, StatisticalDecisionRecord};
-use crate::decision::{DecisionEvalOp, DecisionFitOp};
 use serde_json::Value;
+use {crate::decision::jobs::DecisionEvalOp, crate::decision::jobs::DecisionFitOp};
 
 /// Namespace every generated IRI lives in (the core ontology namespace).
 pub const DECISION_NAMESPACE: &str = medulla_types::ontology_iri!("core#");

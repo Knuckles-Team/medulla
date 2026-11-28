@@ -21,13 +21,18 @@
 use medulla_agent_types::agent_topology::SlotRole;
 use medulla_agent_types::agent_topology::SlotTopology;
 use medulla_agent_types::agent_topology::TopologyFacts;
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::decision::DecisionErrorCode;
-use medulla_decision_types::{
-    solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ObjectiveLevelSpec,
-    solve::ObjectiveTerm, solve::Relation, solve::Term, solve::VarId,
-};
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_mutation_types::capacity_lease::CapacityResourceClass;
+use {
+    medulla_decision_policy_types::solve::Coefficient,
+    medulla_decision_policy_types::solve::ConstraintBody,
+    medulla_decision_policy_types::solve::ConstraintSpec,
+    medulla_decision_policy_types::solve::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::ObjectiveTerm,
+    medulla_decision_policy_types::solve::Relation, medulla_decision_policy_types::solve::Term,
+    medulla_decision_policy_types::solve::VarId,
+};
 
 use super::super::model::Built;
 use super::super::AssembleError;

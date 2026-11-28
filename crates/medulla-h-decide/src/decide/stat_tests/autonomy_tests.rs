@@ -7,10 +7,13 @@
 use super::kernel_family_support::{facts, kernel_request};
 use super::path_preference_tests::{pins, run, seed, seed_as, OTHER};
 use super::*;
-use medulla_decision_types::decision::autonomy::{
-    AutonomyReading, AutonomyRequest, CorrigibilityVerdict, IrreversibilityClass,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::autonomy::AutonomyReading,
+    medulla_decision_statistical_types::decision::autonomy::AutonomyRequest,
+    medulla_decision_statistical_types::decision::autonomy::CorrigibilityVerdict,
+    medulla_decision_statistical_types::decision::autonomy::IrreversibilityClass,
 };
-use medulla_decision_types::decision::ResolutionKind;
 
 async fn ask(
     h: &Harness,
@@ -208,7 +211,7 @@ async fn autonomy_refusals() {
     assert_eq!(reading.verdict, CorrigibilityVerdict::RequireConfirmation);
     assert_eq!(reading.code.as_deref(), Some("ACTION_NEEDS_APPROVAL"));
 
-    for code in medulla_decision_types::decision::autonomy::REFUSALS {
+    for code in medulla_decision_statistical_types::decision::autonomy::REFUSALS {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)

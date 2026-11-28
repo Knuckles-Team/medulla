@@ -293,7 +293,10 @@ impl ContextPackageSelection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::statistical::{QuestionKind, TypedValue};
+    use {
+        crate::decision::statistical::TypedValue,
+        medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    };
 
     const DIGEST: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 

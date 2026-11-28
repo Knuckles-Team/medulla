@@ -15,11 +15,14 @@
 use std::collections::{BTreeMap, HashMap, VecDeque};
 
 use medulla_decision_outcome_types::decision::derivation::classification_chain;
-use medulla_decision_types::decision::playbook::{
-    EventCorrelation, Playbook, TriggerKind, MAX_CORRELATED_EVENTS,
-};
-use medulla_decision_types::decision::DerivationEdge;
+use medulla_decision_statistical_types::decision::record::premise::DerivationEdge;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::playbook::EventCorrelation,
+    medulla_decision_policy_types::decision::playbook::Playbook,
+    medulla_decision_policy_types::decision::playbook::TriggerKind,
+    medulla_decision_policy_types::decision::playbook::MAX_CORRELATED_EVENTS,
+};
 
 /// The event kind that counts toward flapping.
 pub const STATE_CHANGE: &str = "state_change";
@@ -199,7 +202,7 @@ pub fn match_playbook(
 mod tests {
     use super::*;
     use medulla_agent_types::agent_ontology::CAPABILITY_ROOT;
-    use medulla_decision_types::decision::playbook::ProposedStep;
+    use medulla_decision_policy_types::decision::playbook::ProposedStep;
     use medulla_types::evidence_class::EvidenceClass;
 
     const LIMITS: CorrelatorLimits = CorrelatorLimits {

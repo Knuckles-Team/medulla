@@ -22,7 +22,7 @@ hex = "0.4"
 medulla-alignment = { path = "../medulla-alignment", optional = true }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-graphql = { path = "../medulla-graphql", optional = true }

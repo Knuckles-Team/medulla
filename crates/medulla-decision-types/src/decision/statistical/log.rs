@@ -18,11 +18,11 @@
 use serde::{Deserialize, Serialize};
 
 use super::super::jobs::RecordWindow;
-use super::super::numeric::QuantisedValue;
-use super::dataset::OutcomeFidelity;
 use super::StatisticalDecisionRecord;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_guardrail::{GuardrailRule, RulePromotionVerdict};
+use medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity;
+use medulla_decision_statistical_types::decision::numeric::QuantisedValue;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 
@@ -61,7 +61,7 @@ pub struct DecisionOutcomeEvaluation {
     /// evaluations never enter a transfer estimate; the field is omitted from
     /// the stored row when absent, so existing rows keep their bytes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub backbone: Option<super::super::transfer::BackboneBinding>,
+    pub backbone: Option<medulla_decision_policy_types::decision::transfer::BackboneBinding>,
 }
 
 /// Who a committer names to evaluate its record (EH-395): ONE principal, or
@@ -143,7 +143,7 @@ pub struct DecisionLogEntry {
     /// The approval receipt the commit carried, when its policy required one
     /// (MEDULLA-DECISION-ENGINE-R019.100.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub approval: Option<crate::decision::approval::RecommendationApproval>,
+    pub approval: Option<medulla_decision_policy_types::decision::approval::RecommendationApproval>,
 }
 
 /// Most entries one compaction call touches.
@@ -278,7 +278,7 @@ pub struct OutcomeAggregateRequest {
     pub corrections: Option<CorrectionLabelRequest>,
     /// Also report the robust transfer estimate of one skill (R059.1.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub transfer: Option<super::super::transfer::TransferRequest>,
+    pub transfer: Option<medulla_decision_policy_types::decision::transfer::TransferRequest>,
 }
 
 /// Which correction outcomes an aggregate joins (MEDULLA-DECISION-ENGINE-R059). The labels are
@@ -385,10 +385,11 @@ pub struct OutcomeAggregate {
     pub attribution: Option<SlateAttribution>,
     /// The requested robust transfer estimate (R059.1.1); absent when none was asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub transfer: Option<super::super::transfer::TransferEstimate>,
+    pub transfer: Option<medulla_decision_policy_types::decision::transfer::TransferEstimate>,
     /// Options with enough independent successes to become a skill (R059.2).
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub skill_candidates: BoundedVec<super::super::transfer::SkillCandidateRow, 1024>,
+    pub skill_candidates:
+        BoundedVec<medulla_decision_policy_types::decision::transfer::SkillCandidateRow, 1024>,
     /// The independent correction outcomes per rule candidate, when the request asked for them
     /// (R059, R702.8); absent otherwise.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
@@ -422,7 +423,7 @@ pub enum DecisionLogOp {
         /// The reviewer's approval receipt, checked when the record's pinned
         /// policy sets `approval_required` (MEDULLA-DECISION-ENGINE-R019.100.2).
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        approval: Option<crate::decision::approval::RecommendationApproval>,
+        approval: Option<medulla_decision_policy_types::decision::approval::RecommendationApproval>,
     },
     /// Join one independent evaluation to a committed record.
     Evaluate {
@@ -508,13 +509,13 @@ pub enum DecisionLogOp {
     /// the approval queue, so the class follows the computation.
     Writeback {
         tenant_id: String,
-        computation: super::writeback::WritebackOp,
+        computation: medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
     },
     /// Commit one run record (MEDULLA-DECISION-ENGINE-R135.3): the engine
     /// compiles a successful run into a stored program keyed by task signature.
     RunRecord {
         tenant_id: String,
-        record: super::super::program_store::RunRecord,
+        record: medulla_decision_program_types::decision::program_store::RunRecord,
     },
     /// Record what one run observed of a designated entity and update its
     /// learned reward (MEDULLA-DECISION-ENGINE-R172.7.1). Exactly one of
@@ -582,13 +583,13 @@ pub enum DecisionLogOp {
     /// both; a repeat of an identical record is a replay.
     LifecycleRecord {
         tenant_id: String,
-        record: super::lifecycle_record::LifecycleRecordWrite,
+        record: medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordWrite,
     },
     /// List the stored lifecycle records of one kind, newest first (MEDULLA-SDLC-R013).
     /// Reads the index `LifecycleRecord` writes; commits nothing.
     LifecycleRecords {
         tenant_id: String,
-        query: super::lifecycle_record::LifecycleRecordQuery,
+        query: medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordQuery,
     },
     /// List the tenant's committed records, newest first, one page at a time
     /// (MEDULLA-DECISION-ENGINE-R870.1). Reads the record index `Get` reads;
@@ -596,7 +597,7 @@ pub enum DecisionLogOp {
     List {
         tenant_id: String,
         #[serde(default)]
-        question_kind: Option<super::QuestionKind>,
+        question_kind: Option<medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind>,
         #[serde(default)]
         resolution_kind: Option<super::super::record::ResolutionKind>,
         #[serde(default)]
@@ -685,7 +686,9 @@ pub struct DecisionListItem {
     /// Which of the two committed record families this item is.
     pub record_kind: RecordKind,
     /// The statistical question; absent for an assembly record.
-    pub question_kind: Option<super::QuestionKind>,
+    pub question_kind: Option<
+        medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    >,
     pub resolution_kind: super::super::record::ResolutionKind,
     /// The statistical outcome; absent for an assembly record.
     pub outcome: Option<super::StatisticalOutcome>,
@@ -714,7 +717,7 @@ pub struct ProvenancePremise {
     /// The provenance tag of the premise (`graph_row`, `policy`, ...).
     pub kind: String,
     pub reference: String,
-    pub class: super::super::record::PremiseClass,
+    pub class: medulla_decision_statistical_types::decision::record::premise::PremiseClass,
 }
 
 /// One fact a decision used, at the revision it read.
@@ -929,7 +932,7 @@ impl DecisionLogOp {
             | Self::Provenance { .. }
             | Self::WhyNot { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
-                use super::writeback::WritebackOp as W;
+                use medulla_decision_program_types::decision::statistical::writeback::WritebackOp as W;
                 match computation {
                     W::Preflight { .. } | W::Propose { .. } | W::List { .. } => LogOpClass::Read,
                     W::Queue { .. } | W::Release { .. } => LogOpClass::Write,

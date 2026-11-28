@@ -4,11 +4,18 @@
 //! kernel refuses without producing a receipt.
 
 use super::*;
-use medulla_decision_types::decision::statistical::ranking_eval::{
-    AlgorithmRun, LabelPair, LabelSet, PinnedSet, QueryRanking, QuerySet, RetrievalRankingReceipt,
-    RetrievalRankingRequest, RANKING_EVAL_SCHEMA_VERSION,
+use medulla_decision_types::decision::jobs::DecisionJobStatusRequest;
+use {
+    medulla_decision_policy_types::decision::statistical::ranking_eval::AlgorithmRun,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::LabelPair,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::LabelSet,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::QueryRanking,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::QuerySet,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingReceipt,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RANKING_EVAL_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::DecisionJobStatusRequest;
 
 fn pinned(id: &str, digest: String) -> PinnedSet {
     PinnedSet {

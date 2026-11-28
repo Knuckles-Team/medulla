@@ -1,0 +1,386 @@
+//! Per-unit embedding-admission classification for ingestion
+//! (`MEDULLA-DECISION-ENGINE-R079.1`): before any derived unit of text is sent to
+//! an embedding call, a deterministic classifier decides whether its
+//! content class is even eligible.
+//!
+//! This module fixes the taxonomy and the pure admission rule only. It
+//! wires no real ingestion call site, no embedding client, no
+//! cheaper-index lookup (exact/BM25/graph), no near-duplicate entropy or
+//! content-hash dedup, no size bound, no SQL-column cardinality rule, and
+//! no retrieval-telemetry feedback -- those are later slices of
+//! `MEDULLA-DECISION-ENGINE-R079` (`.2`/`.3`+), built on top of the typed gate
+//! this one establishes.
+//!
+//! Three classes are admitted because they carry information a human wrote
+//! for humans to read: prose, document, and comment content. Four are
+//! excluded because they are mechanically produced or not meaningfully
+//! natural-language text: generated, lockfile, vendored, and minified
+//! content. Embedding an excluded class would spend budget on text that
+//! cannot answer a retrieval question any better than its exact, BM25, or
+//! graph index already does.
+
+use serde::{Deserialize, Serialize};
+
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+
+/// The `embedding.*` knobs of unit admission (MEDULLA-DECISION-ENGINE-R079.2,
+/// R079.3), each `Tunable`.
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "embedding.minified_line_chars",
+        unit: "chars",
+        default: KnobValue::Integer(1000),
+        min: KnobValue::Integer(200),
+        max: KnobValue::Integer(100_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.min_entropy_bits",
+        unit: "bits per char",
+        default: KnobValue::DecimalMicros(2_000_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(8_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.min_unit_chars",
+        unit: "chars",
+        default: KnobValue::Integer(32),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(1024),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.max_unit_chars",
+        unit: "chars",
+        default: KnobValue::Integer(8192),
+        min: KnobValue::Integer(256),
+        max: KnobValue::Integer(65_536),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.column_min_distinct_ratio",
+        unit: "ratio",
+        default: KnobValue::DecimalMicros(500_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.column_min_samples",
+        unit: "values",
+        default: KnobValue::Integer(100),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.demote_window",
+        unit: "ms",
+        default: KnobValue::DurationMs(30 * 86_400_000),
+        min: KnobValue::DurationMs(86_400_000),
+        max: KnobValue::DurationMs(365 * 86_400_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "embedding.demote_min_units",
+        unit: "units",
+        default: KnobValue::Integer(100),
+        min: KnobValue::Integer(10),
+        max: KnobValue::Integer(100_000),
+        safety: KnobSafety::Tunable,
+    },
+];
+
+/// The resolved `embedding.*` admission thresholds.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AdmissionKnobs {
+    /// A line this long marks a unit minified.
+    pub minified_line_chars: usize,
+    /// Character entropy below this many bits per character is low entropy.
+    pub min_entropy_bits: f64,
+    pub min_unit_chars: usize,
+    pub max_unit_chars: usize,
+    /// A text column whose distinct ratio is below this is an enumeration,
+    /// in millionths (R079.4).
+    pub column_min_distinct_micros: u64,
+    /// A free-text column is admitted only when measured over this many
+    /// values (R079.4).
+    pub column_min_samples: u32,
+    /// A content class with no citation inside this window is a demotion
+    /// candidate, in milliseconds (R079.5).
+    pub demote_window_ms: u64,
+    /// A class is demoted only when at least this many of its units are
+    /// embedded (R079.5).
+    pub demote_min_units: usize,
+}
+
+impl AdmissionKnobs {
+    /// Read the thresholds through [`DecisionPolicy::knob`].
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let int = |spec: &KnobSpec| match policy.knob(spec) {
+            KnobValue::Integer(v) => v.max(0) as usize,
+            _ => 0,
+        };
+        let micros = match policy.knob(&KNOBS[1]) {
+            KnobValue::DecimalMicros(v) => v as f64 / 1_000_000.0,
+            _ => 0.0,
+        };
+        Self {
+            minified_line_chars: int(&KNOBS[0]),
+            min_entropy_bits: micros,
+            min_unit_chars: int(&KNOBS[2]),
+            max_unit_chars: int(&KNOBS[3]),
+            column_min_distinct_micros: match policy.knob(&KNOBS[4]) {
+                KnobValue::DecimalMicros(v) => v.max(0) as u64,
+                _ => 0,
+            },
+            column_min_samples: int(&KNOBS[5]).min(u32::MAX as usize) as u32,
+            demote_window_ms: match policy.knob(&KNOBS[6]) {
+                KnobValue::DurationMs(v) => v,
+                _ => 0,
+            },
+            demote_min_units: int(&KNOBS[7]),
+        }
+    }
+}
+
+const LOCKFILES: [&str; 5] = [
+    "Cargo.lock",
+    "package-lock.json",
+    "yarn.lock",
+    "poetry.lock",
+    "uv.lock",
+];
+const VENDORED_SEGMENTS: [&str; 3] = ["vendor", "node_modules", "third_party"];
+/// Lines at the head of a unit that may carry a generated-file marker.
+const GENERATED_HEADER_LINES: usize = 10;
+
+/// Classify one unit of text (MEDULLA-DECISION-ENGINE-R079.2). The path
+/// hint is the source path or URL path the unit came from. Lockfile and
+/// vendored are decided by the path, generated by a header marker, minified
+/// by a line of at least `knobs.minified_line_chars`; everything else is
+/// prose, or a document when the path names a markup file.
+pub fn classify_unit(path_hint: &str, text: &str, knobs: &AdmissionKnobs) -> ContentClass {
+    let path = path_hint.split(['?', '#']).next().unwrap_or_default();
+    let mut segments = path.split('/').filter(|s| !s.is_empty()).peekable();
+    let mut file = "";
+    let mut vendored = false;
+    while let Some(segment) = segments.next() {
+        if segments.peek().is_some() {
+            vendored |= VENDORED_SEGMENTS.contains(&segment);
+        } else {
+            file = segment;
+        }
+    }
+    if LOCKFILES.iter().any(|name| file.ends_with(name)) {
+        return ContentClass::Lockfile;
+    }
+    if vendored {
+        return ContentClass::Vendored;
+    }
+    if text
+        .lines()
+        .take(GENERATED_HEADER_LINES)
+        .any(|line| line.contains("@generated") || line.contains("DO NOT EDIT"))
+    {
+        return ContentClass::Generated;
+    }
+    if text
+        .lines()
+        .any(|line| line.chars().count() >= knobs.minified_line_chars)
+    {
+        return ContentClass::Minified;
+    }
+    let lower = file.to_ascii_lowercase();
+    if [".md", ".rst", ".txt", ".adoc"]
+        .iter()
+        .any(|ext| lower.ends_with(ext))
+    {
+        ContentClass::Document
+    } else {
+        ContentClass::Prose
+    }
+}
+
+/// The fixed per-unit content-class taxonomy an ingestion admission
+/// decision classifies text into. Adding a class is a registry change
+/// here, not a new ad hoc check at each ingestion call site.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ContentClass {
+    /// Free natural-language prose: README bodies, docstrings, commit
+    /// messages, design notes.
+    Prose,
+    /// Structured documentation: spec, task, and status prose-bearing
+    /// documents.
+    Document,
+    /// Inline source comments.
+    Comment,
+    /// Mechanically produced output: codegen, compiled artifacts, snapshot
+    /// fixtures.
+    Generated,
+    /// Dependency lockfiles (`Cargo.lock`, `package-lock.json`, and the
+    /// like).
+    Lockfile,
+    /// Vendored third-party source copied verbatim into the tree.
+    Vendored,
+    /// Minified or otherwise machine-compacted text.
+    Minified,
+}
+
+impl ContentClass {
+    /// Every registered content class, in a stable order.
+    pub const ALL: [ContentClass; 7] = [
+        Self::Prose,
+        Self::Document,
+        Self::Comment,
+        Self::Generated,
+        Self::Lockfile,
+        Self::Vendored,
+        Self::Minified,
+    ];
+
+    /// Whether a unit of this content class may ever be embedded.
+    ///
+    /// This is the single, deterministic admission gate an ingestion call
+    /// site must consult before it embeds any derived text for a unit of
+    /// this class: `false` means no embedding call is made for that unit,
+    /// full stop -- independent of any cheaper-index lookup, dedup, size
+    /// bound, or telemetry demotion a later slice layers on top for the
+    /// classes that do admit.
+    pub const fn admits(self) -> bool {
+        matches!(self, Self::Prose | Self::Document | Self::Comment)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn knobs() -> AdmissionKnobs {
+        AdmissionKnobs::from_policy(&DecisionPolicy::engine_default())
+    }
+
+    #[test]
+    fn default_knobs_lie_within_bounds() {
+        for spec in KNOBS {
+            assert!(spec.admits(&spec.default), "{}", spec.name);
+        }
+        let k = knobs();
+        assert_eq!(k.minified_line_chars, 1000);
+        assert_eq!(k.max_unit_chars, 8192);
+        assert!((k.min_entropy_bits - 2.0).abs() < 1e-9);
+        assert_eq!(k.column_min_distinct_micros, 500_000);
+        assert_eq!(k.column_min_samples, 100);
+        assert_eq!(k.demote_window_ms, 30 * 86_400_000);
+        assert_eq!(k.demote_min_units, 100);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R079.2
+    #[test]
+    fn classify_unit_names_each_class_by_its_rule() {
+        let k = knobs();
+        assert_eq!(
+            classify_unit("a/Cargo.lock", "plain words", &k),
+            ContentClass::Lockfile
+        );
+        assert_eq!(
+            classify_unit("https://x.org/node_modules/pkg/readme.md", "words", &k),
+            ContentClass::Vendored
+        );
+        assert_eq!(
+            classify_unit("a.rs", "// @generated by tool\nfn x() {}", &k),
+            ContentClass::Generated
+        );
+        assert_eq!(
+            classify_unit("a.rs", "// DO NOT EDIT\n", &k),
+            ContentClass::Generated
+        );
+        assert_eq!(
+            classify_unit("a.js", &"x".repeat(1000), &k),
+            ContentClass::Minified
+        );
+        assert_eq!(
+            classify_unit("a.js", &"x".repeat(999), &k),
+            ContentClass::Prose
+        );
+        assert_eq!(
+            classify_unit("docs/guide.md", "words", &k),
+            ContentClass::Document
+        );
+        assert_eq!(classify_unit("", "words", &k), ContentClass::Prose);
+        // A vendor file name is not a vendored directory.
+        assert_eq!(classify_unit("a/vendor", "words", &k), ContentClass::Prose);
+    }
+
+    #[test]
+    fn ingestion_admission_classifier_excludes_every_excluded_class() {
+        for class in [
+            ContentClass::Generated,
+            ContentClass::Lockfile,
+            ContentClass::Vendored,
+            ContentClass::Minified,
+        ] {
+            assert!(
+                !class.admits(),
+                "{class:?} must not be admitted: no embedding call may be made for it"
+            );
+        }
+    }
+
+    #[test]
+    fn ingestion_admission_classifier_admits_every_eligible_class() {
+        for class in [
+            ContentClass::Prose,
+            ContentClass::Document,
+            ContentClass::Comment,
+        ] {
+            assert!(class.admits(), "{class:?} must be admitted");
+        }
+    }
+
+    /// Feeds every excluded class and asserts `admits() == false`, and every
+    /// eligible class and asserts `admits() == true` -- the acceptance text
+    /// verbatim, as one test over the taxonomy rather than two.
+    // spec: MEDULLA-DECISION-ENGINE-R079.1
+    #[test]
+    fn admission_gate_excludes_mechanical_classes_and_admits_human_written_ones() {
+        for class in [
+            ContentClass::Generated,
+            ContentClass::Lockfile,
+            ContentClass::Vendored,
+            ContentClass::Minified,
+        ] {
+            assert!(!class.admits(), "{class:?} must not be admitted");
+        }
+        for class in [
+            ContentClass::Prose,
+            ContentClass::Document,
+            ContentClass::Comment,
+        ] {
+            assert!(class.admits(), "{class:?} must be admitted");
+        }
+    }
+
+    #[test]
+    fn ingestion_admission_classifier_registry_partitions_with_no_overlap() {
+        let admitted = ContentClass::ALL
+            .iter()
+            .filter(|class| class.admits())
+            .count();
+        let excluded = ContentClass::ALL
+            .iter()
+            .filter(|class| !class.admits())
+            .count();
+        assert_eq!(admitted, 3);
+        assert_eq!(excluded, 4);
+        assert_eq!(admitted + excluded, ContentClass::ALL.len());
+    }
+}

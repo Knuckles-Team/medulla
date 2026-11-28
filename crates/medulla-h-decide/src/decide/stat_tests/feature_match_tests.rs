@@ -8,13 +8,19 @@ use super::kernel_family_support::decide_as_other_tenant;
 use super::path_preference_tests::pins;
 use super::*;
 use crate::decide::feature_ledger::handle_feature_ledger;
-use medulla_decision_types::decision::feature_match::{
-    match_option_id, plan_option_id, FeatureLedgerOp, FeatureLedgerView, LedgerStatus,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::feature_match::match_option_id,
+    medulla_decision_statistical_types::decision::feature_match::plan_option_id,
+    medulla_decision_statistical_types::decision::feature_match::FeatureLedgerOp,
+    medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView,
+    medulla_decision_statistical_types::decision::feature_match::LedgerStatus,
 };
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
 };
-use medulla_decision_types::decision::ResolutionKind;
 
 const ONE: i64 = 1 << 32;
 /// A commit the repository index holds, readable by the ledger writer.
@@ -148,7 +154,9 @@ async fn ledger(
     decode(handle_feature_ledger(&h.state, 3, &verified, op).await)
 }
 
-fn only(view: FeatureLedgerView) -> medulla_decision_types::decision::feature_match::LedgerEntry {
+fn only(
+    view: FeatureLedgerView,
+) -> medulla_decision_statistical_types::decision::feature_match::LedgerEntry {
     assert_eq!(view.entries.len(), 1, "{view:?}");
     view.entries.into_iter().next().unwrap()
 }
@@ -389,7 +397,7 @@ async fn ledger_refusals_change_no_state() {
 
     // An entry planned and waiting for its change.
     let planned_op = FeatureLedgerOp::Plan {
-        plan: medulla_decision_types::decision::feature_match::PlanProposal {
+        plan: medulla_decision_statistical_types::decision::feature_match::PlanProposal {
             plan_id: "plan-1".into(),
             feature_ids: vec!["f-e2".into()],
             rationale_digest: "d".into(),
@@ -460,7 +468,7 @@ async fn ledger_rows_cite_matches_and_plan() {
         .expect("a claim per match");
     assert_eq!(
         cited.class,
-        medulla_decision_types::decision::PremiseClass::Claim
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
     );
     for part in ["token_ppm=", "label_ppm=", "embedding_ppm="] {
         assert!(cited.fact.contains(part), "{}", cited.fact);

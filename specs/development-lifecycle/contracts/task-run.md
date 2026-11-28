@@ -22,7 +22,7 @@ The engine sends one task context per run. Meristem returns one result.
 
 ## Authoritative types
 
-- `crates/medulla-decision-types/src/decision/task_plan.rs`: the dispatch decision.
+- `crates/medulla-decision-program-types/src/decision/task_plan.rs`: the dispatch decision.
 - meristem `meristem/harness/task_run.py`: `TaskRunContext` and `TaskRunResult`.
 
 ## Test vectors

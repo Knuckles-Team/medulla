@@ -5,11 +5,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::belief_revision::{
-    BeliefRevision, EvidenceRef, FrictionFinding, RetractionProposal,
-};
-use medulla_decision_types::claims::{Evidence, EvidenceChannel};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::belief_revision::BeliefRevision,
+    medulla_decision_statistical_types::belief_revision::EvidenceRef,
+    medulla_decision_statistical_types::belief_revision::FrictionFinding,
+    medulla_decision_statistical_types::belief_revision::RetractionProposal,
+};
+use {
+    medulla_decision_statistical_types::claims::Evidence,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+};
 
 use crate::antonyms::confirms_opposition;
 use crate::claims::{combine_evidence, ClaimKnobs};

@@ -13,11 +13,15 @@
 use super::context_search::resolve_policy;
 use super::*;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::indexless_retrieval::{
-    ceiling_premises, clamp_budget, tenant_ceiling, unit_costs, BudgetMeter,
-};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
+use {
+    medulla_decision_program_types::decision::indexless_retrieval::ceiling_premises,
+    medulla_decision_program_types::decision::indexless_retrieval::clamp_budget,
+    medulla_decision_program_types::decision::indexless_retrieval::tenant_ceiling,
+    medulla_decision_program_types::decision::indexless_retrieval::unit_costs,
+    medulla_decision_program_types::decision::indexless_retrieval::BudgetMeter,
+};
 
 /// Parse and run one UQL statement.
 #[cfg(feature = "query")]
@@ -432,9 +436,12 @@ fn uql_cache_key(
 mod served_tests {
     use super::UqlMetering;
     use crate::query::current_auth_test_support::prelude::*;
-    use medulla_decision_types::decision::indexless_retrieval::{tenant_ceiling, unit_costs};
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     use medulla_query_types::wire::{UqlParam, UqlResult};
+    use {
+        medulla_decision_program_types::decision::indexless_retrieval::tenant_ceiling,
+        medulla_decision_program_types::decision::indexless_retrieval::unit_costs,
+    };
 
     const SECRET: &str = "uql-served-test-secret";
 

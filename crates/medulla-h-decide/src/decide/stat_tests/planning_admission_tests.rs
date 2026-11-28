@@ -5,16 +5,24 @@
 //! refusal carries its registered code and admits nothing.
 
 use medulla_core::architecture_view::{derive_architecture_view_of_snapshot, ViewRules};
-use medulla_decision_types::decision::planning_admission::{
-    AttachPoint, PlanFeature, PlanningAdmissionRequest, ADMISSION_FEATURE_UNWIRED,
-    ADMISSION_GAP_UNCOVERED, ADMISSION_NO_COMPARISON, ADMISSION_STALE_VIEW,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{
-    AbstainReason, PremiseClass, PremiseProvenance, ResolutionKind,
-};
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_program_types::decision::planning_admission::AttachPoint,
+    medulla_decision_program_types::decision::planning_admission::PlanFeature,
+    medulla_decision_program_types::decision::planning_admission::PlanningAdmissionRequest,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_FEATURE_UNWIRED,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_GAP_UNCOVERED,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_NO_COMPARISON,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_STALE_VIEW,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use super::super::family::planning_admission::view_digest;
 use super::*;

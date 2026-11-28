@@ -6,14 +6,22 @@
 //! `refuse:<CODE>`: a refused proposal is a decided verdict, sealed in the
 //! record. Advisory; `Decide` writes nothing.
 
-use medulla_decision_types::decision::statistical::capacity::{
-    judge, CapacityAdjustmentProposal, Observation, PARAM_OBSERVATION, PARAM_PROPOSAL,
-    VERDICT_OPTION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::DecideRequest;
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_policy_types::decision::statistical::capacity::judge,
+    medulla_decision_policy_types::decision::statistical::capacity::CapacityAdjustmentProposal,
+    medulla_decision_policy_types::decision::statistical::capacity::Observation,
+    medulla_decision_policy_types::decision::statistical::capacity::PARAM_OBSERVATION,
+    medulla_decision_policy_types::decision::statistical::capacity::PARAM_PROPOSAL,
+    medulla_decision_policy_types::decision::statistical::capacity::VERDICT_OPTION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

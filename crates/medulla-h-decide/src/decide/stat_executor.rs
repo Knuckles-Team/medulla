@@ -10,6 +10,7 @@
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
+use medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_stats::decision::exploration::{permit, ExplorationPermit};
 use medulla_decision_stats::{
     decision::features::feature_matrix, decision::features::FeatureInputs,
@@ -24,19 +25,21 @@ use medulla_decision_stats::{
     decision::ladder::decide, decision::ladder::LadderInputs, decision::ladder::LadderResult,
 };
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::statistical::CandidatePool;
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::{
-    decision::statistical::keyed::decision_seed, decision::statistical::keyed::exploration_key,
-};
-use medulla_decision_types::{
-    decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
-    decision::statistical::StatisticalOutcome, decision::statistical::StatisticalQuestion,
-    decision::statistical::TypedParam,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::keyed::decision_seed,
+    medulla_decision_policy_types::decision::statistical::keyed::exploration_key,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+};
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -126,10 +129,11 @@ pub(super) struct FamilyExecuted {
     /// The typed answer sealed in the record; `None` where the family's answer
     /// is its outcome alone and only its premises are sealed in full.
     pub(super) answer: Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer>,
-    pub(super) premises: Vec<medulla_decision_types::decision::PremiseRef>,
+    pub(super) premises:
+        Vec<medulla_decision_statistical_types::decision::record::premise::PremiseRef>,
     /// The resolution kind the family seals its answer with, when the answer
     /// itself decides it; `None` keeps the family hook's.
-    pub(super) resolution: Option<medulla_decision_types::decision::ResolutionKind>,
+    pub(super) resolution: Option<medulla_decision_types::decision::record::ResolutionKind>,
     /// The evidence class the family seals its answer with, when the answer
     /// itself decides it; `None` keeps the claim rule of the record stage.
     pub(super) evidence: Option<medulla_types::evidence_class::EvidenceClass>,
@@ -176,21 +180,27 @@ pub(super) enum FamilyPremiseSource {
     Observation(String),
     /// A provenance the family already bound itself, where its field or
     /// policy digest is only known at conclude time.
-    Bound(medulla_decision_types::decision::PremiseProvenance),
+    Bound(medulla_decision_statistical_types::decision::record::premise::PremiseProvenance),
 }
 
 /// One premise a family computed while it concluded.
 pub(super) struct FamilyPremise {
     pub(super) subject: std::borrow::Cow<'static, str>,
     pub(super) fact: String,
-    pub(super) class: medulla_decision_types::decision::PremiseClass,
+    pub(super) class: medulla_decision_statistical_types::decision::record::premise::PremiseClass,
     pub(super) source: FamilyPremiseSource,
 }
 
 impl FamilyPremise {
     /// The sealed premise, bound to `policy_digest` when it came from the policy.
-    pub(super) fn seal(&self, policy_digest: &str) -> medulla_decision_types::decision::PremiseRef {
-        use medulla_decision_types::decision::{PremiseProvenance, PremiseRef};
+    pub(super) fn seal(
+        &self,
+        policy_digest: &str,
+    ) -> medulla_decision_statistical_types::decision::record::premise::PremiseRef {
+        use {
+            medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+            medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+        };
         PremiseRef {
             subject: self.subject.to_string(),
             fact: self.fact.clone(),
@@ -227,7 +237,7 @@ pub(super) struct RouteExecuted {
     pub(super) option_id: String,
     /// How the answer was reached: a rule is a constraint, evaluated history
     /// is statistical.
-    pub(super) resolution: medulla_decision_types::decision::ResolutionKind,
+    pub(super) resolution: medulla_decision_types::decision::record::ResolutionKind,
     /// The matched earlier decisions that ran the chosen option, when the
     /// stage reads history (team reuse); empty otherwise.
     pub(super) matched_records: Vec<String>,

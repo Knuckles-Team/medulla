@@ -5,10 +5,10 @@ use std::sync::OnceLock;
 
 use medulla_catalog_types::connector_pack::result::PackWriteErrorCode;
 use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
+use medulla_decision_policy_types::solve::SolveErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
 use medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionErrorCode;
-use medulla_decision_types::solve::SolveErrorCode;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode, UqlCode};
 use medulla_work_types::orchestration::HarnessVocabularyErrorCode;
 
@@ -2856,7 +2856,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "FrictionReport" {
         // MEDULLA-DECISION-ENGINE-R710.4: the friction refusal table.
         codes.extend(
-            medulla_decision_types::friction::REFUSALS
+            medulla_decision_program_types::friction::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );
@@ -2864,7 +2864,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "SkillTelemetry" {
         // MEDULLA-DECISION-ENGINE-R713.4: the telemetry refusal table.
         codes.extend(
-            medulla_decision_types::skill_telemetry::REFUSALS
+            medulla_decision_statistical_types::skill_telemetry::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );
@@ -2872,7 +2872,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "KnowledgeCuration" {
         // MEDULLA-DECISION-ENGINE-R709.4: the curation refusal table.
         codes.extend(
-            medulla_decision_types::knowledge_curation::REFUSALS
+            medulla_decision_policy_types::knowledge_curation::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );
@@ -2880,7 +2880,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "KnowledgeFlag" {
         // MEDULLA-DECISION-ENGINE-R708.4: the flag refusal table.
         codes.extend(
-            medulla_decision_types::knowledge_flag::REFUSALS
+            medulla_decision_statistical_types::knowledge_flag::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );
@@ -2889,7 +2889,7 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
         // MEDULLA-DECISION-ENGINE-R707.4: the ledger's own refusal table (a
         // stale compare-and-set, a close by an unknown change).
         codes.extend(
-            medulla_decision_types::decision::feature_match::REFUSALS
+            medulla_decision_statistical_types::decision::feature_match::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );

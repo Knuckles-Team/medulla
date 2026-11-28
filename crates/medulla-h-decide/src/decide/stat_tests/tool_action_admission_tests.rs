@@ -5,8 +5,12 @@
 //! caller's access check: a stranger and a foreign tenant are refused.
 
 use super::*;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const GRAPH: &str = "content-graph";
 
@@ -45,7 +49,9 @@ fn verdict(batch: &DecisionBatch) -> String {
     }
 }
 
-fn typed(batch: &DecisionBatch) -> medulla_decision_types::decision::tool_action::ToolActionAnswer {
+fn typed(
+    batch: &DecisionBatch,
+) -> medulla_decision_policy_types::decision::tool_action::ToolActionAnswer {
     use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
     match &batch.records.as_slice()[0].answer {
         Some(FamilyAnswer::ToolActionAdmission(answer)) => (**answer).clone(),
@@ -93,7 +99,7 @@ async fn untrusted_follow_up_is_denied() {
         let answer = typed(&batch);
         assert_eq!(
             answer.verdict,
-            medulla_decision_types::decision::tool_action::ToolActionAnswerVerdict::Deny
+            medulla_decision_policy_types::decision::tool_action::ToolActionAnswerVerdict::Deny
         );
         assert_eq!(answer.approval_ref, "call-1");
         assert_eq!(answer.decision_ref, record.record_id);
@@ -126,7 +132,7 @@ async fn untrusted_follow_up_is_denied() {
         let answer = typed(&batch);
         assert_eq!(
             answer.verdict,
-            medulla_decision_types::decision::tool_action::ToolActionAnswerVerdict::Abstain
+            medulla_decision_policy_types::decision::tool_action::ToolActionAnswerVerdict::Abstain
         );
         assert_eq!(answer.reason.as_deref(), Some("TRUST_MARK_MISSING"));
     }

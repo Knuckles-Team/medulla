@@ -1,8 +1,12 @@
 //! The `red_team.*` knobs (MEDULLA-DECISION-ENGINE-R138.3). They fill the
 //! probe-verdict defaults, pinned through the decision policy.
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// The `red_team.*` knobs, each a `Fixed` flag.
 pub const KNOBS: &[KnobSpec] = &[
@@ -44,7 +48,7 @@ pub fn any_scorer_compromises(policy: &DecisionPolicy) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::knobs::KnobName;
+    use medulla_decision_statistical_types::decision::knobs::KnobName;
 
     // spec: MEDULLA-DECISION-ENGINE-R138.3
     #[test]

@@ -20,15 +20,25 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::statistical::{
-    FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,
-};
-use crate::decision::{DecisionPolicy, QuantScaleTag};
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::{
     orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast,
+};
+use {
+    crate::decision::statistical::FeatureMatrixRef,
+    crate::decision::statistical::StatisticalDecisionRecord,
+    crate::decision::statistical::StatisticalOutcome,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
 };
 
 /// The fewest candidate component versions one contrast decides over.
@@ -248,7 +258,9 @@ pub enum HarnessContrastRefusal {
     TraceMismatch,
 }
 
-impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for HarnessContrastRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         medulla_types::refusal_code::RefusalCode::new(HarnessContrastRefusal::code(*self))
     }
@@ -258,7 +270,9 @@ impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastRefusa
     }
 }
 
-impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastAbstainReason {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for HarnessContrastAbstainReason
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         medulla_types::refusal_code::RefusalCode::new(
             match self {
@@ -271,7 +285,7 @@ impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastAbstai
     }
 
     fn detail(&self) -> String {
-        crate::decision::record::outcome::DecisionRefusal::code(self)
+        medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal::code(self)
             .as_str()
             .to_string()
     }
@@ -597,7 +611,7 @@ pub fn replay_record(
 #[derive(Debug, Clone, Copy)]
 pub struct MeasuredRun<'a> {
     /// The stored trace of the run.
-    pub trace: &'a crate::decision::run_governance::RunTraceRecord,
+    pub trace: &'a medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
     /// The `:Score` values of the run, in millionths of the score range.
     pub scores_ppm: &'a [i64],
     /// The ledger cost of the run in micro-units; `None` when unpriced.
@@ -606,8 +620,10 @@ pub struct MeasuredRun<'a> {
 
 /// The retry events of a run: a step that repeats the kind and action of an
 /// earlier step that ended in an error.
-pub fn retry_count(trace: &crate::decision::run_governance::RunTraceRecord) -> i64 {
-    use crate::decision::run_governance::StepOutcome;
+pub fn retry_count(
+    trace: &medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
+) -> i64 {
+    use medulla_decision_statistical_types::decision::run_governance::StepOutcome;
     let mut failed: BTreeSet<(u8, &str)> = BTreeSet::new();
     let mut retries = 0i64;
     for step in trace.steps.as_slice() {
@@ -623,8 +639,13 @@ pub fn retry_count(trace: &crate::decision::run_governance::RunTraceRecord) -> i
 }
 
 /// The tool-call steps of a run that ended `ok`.
-pub fn ok_tool_calls(trace: &crate::decision::run_governance::RunTraceRecord) -> i64 {
-    use crate::decision::run_governance::{StepKind, StepOutcome};
+pub fn ok_tool_calls(
+    trace: &medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
+) -> i64 {
+    use {
+        medulla_decision_statistical_types::decision::run_governance::StepKind,
+        medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+    };
     i64::try_from(
         trace
             .steps
@@ -680,19 +701,27 @@ pub fn measure_contrast(
 mod tests {
     use super::*;
     use crate::decision::digest::statistical_record_digest;
-    use crate::decision::run_governance::{RunOutcome, StepKind, StepOutcome, TraceStep};
+    use crate::decision::record::CandidateSourceRecord;
     use crate::decision::statistical::{
         ShortlistProvenance, StatisticalInputs, StatisticalQuestion,
-    };
-    use crate::decision::CandidateSourceRecord;
-    use crate::decision::{
-        PremiseRef, ResolutionKind, StatisticalOutcome, TraceFidelity, UnitRationalWire,
-        STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
     use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_query_types::solve_scalar::digest_text;
     use medulla_types::evidence_class::EvidenceClass;
     use medulla_work_types::orchestration::improvement::HarnessProbeRun;
+    use {
+        crate::decision::record::ResolutionKind, crate::decision::record::TraceFidelity,
+        crate::decision::statistical::StatisticalOutcome,
+        medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+        medulla_decision_statistical_types::decision::UnitRationalWire,
+        medulla_decision_statistical_types::decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_statistical_types::decision::run_governance::RunOutcome,
+        medulla_decision_statistical_types::decision::run_governance::StepKind,
+        medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+        medulla_decision_statistical_types::decision::run_governance::TraceStep,
+    };
 
     /// The input-digest domain the server's `seal` uses for statistical
     /// records.
@@ -1133,7 +1162,7 @@ mod tests {
             },
             None => StatisticalOutcome::Abstained {
                 reasons: BoundedVec::new(vec![
-                    crate::decision::AbstainReason::InsufficientConfidence,
+                    crate::decision::record::AbstainReason::InsufficientConfidence,
                 ])
                 .unwrap(),
             },
@@ -1294,28 +1323,35 @@ mod tests {
         // The knob values come from the pinned policy.
         let mut policy = DecisionPolicy::engine_default();
         policy.knobs.insert(
-            crate::decision::knobs::KnobName::new("harness_evolution.min_eval_delta"),
+            medulla_decision_statistical_types::decision::knobs::KnobName::new(
+                "harness_evolution.min_eval_delta",
+            ),
             KnobValue::DecimalMicros(150_000),
         );
         assert_eq!(ContrastKnobs::from_policy(&policy), high);
         // The candidate bounds are Fixed: a revision cannot move them.
         let revision = BTreeMap::from([(
-            crate::decision::knobs::KnobName::new("harness_evolution.max_candidates"),
+            medulla_decision_statistical_types::decision::knobs::KnobName::new(
+                "harness_evolution.max_candidates",
+            ),
             KnobValue::Integer(4),
         )]);
         assert_eq!(
-            crate::decision::knobs::check_revision(&[KNOBS], &revision)
-                .unwrap_err()
-                .1,
-            crate::decision::knobs::KnobRefusalCode::KnobNotTunable
+            medulla_decision_statistical_types::decision::knobs::check_revision(
+                &[KNOBS],
+                &revision
+            )
+            .unwrap_err()
+            .1,
+            medulla_decision_statistical_types::decision::knobs::KnobRefusalCode::KnobNotTunable
         );
     }
 
     fn trace_of(
         run_id: &str,
         steps: Vec<(StepKind, &str, StepOutcome)>,
-    ) -> crate::decision::run_governance::RunTraceRecord {
-        crate::decision::run_governance::RunTraceRecord {
+    ) -> medulla_decision_statistical_types::decision::run_governance::RunTraceRecord {
+        medulla_decision_statistical_types::decision::run_governance::RunTraceRecord {
             schema_version: 1,
             run_id: run_id.to_string(),
             task_signature: "sig".to_string(),

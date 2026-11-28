@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::run_adjustment::WidthKnobs;
+use medulla_decision_policy_types::decision::run_adjustment::WidthKnobs;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_work_types::run_observation::RunObservationWindow;
 

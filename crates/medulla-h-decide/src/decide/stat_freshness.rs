@@ -12,13 +12,22 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
 
-use medulla_decision_types::decision::statistical::retrieval_refresh::{
-    canonical_url, classify_result, BudgetRefusal, DedupeOutcome, FreshResult, FreshnessReceipt,
-    FreshnessRefresh, RefreshSpend, RegionMark, StoredFreshRow, FRESHNESS_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::canonical_url,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::classify_result,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::BudgetRefusal,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::DedupeOutcome,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshResult,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessReceipt,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessRefresh,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::RefreshSpend,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::RegionMark,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::StoredFreshRow,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FRESHNESS_SCHEMA_VERSION,
+};
 
 use medulla_protocol_types::protocol::Method;
 

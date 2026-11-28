@@ -7,9 +7,14 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::delegation::{
-    digest_parts, DelegationAdmissionRequest, DelegationKnobs, DelegationOutcome,
-    DelegationRefusal, DelegationVerdict, Q32_ONE,
+use {
+    medulla_decision_statistical_types::decision::delegation::digest_parts,
+    medulla_decision_statistical_types::decision::delegation::DelegationAdmissionRequest,
+    medulla_decision_statistical_types::decision::delegation::DelegationKnobs,
+    medulla_decision_statistical_types::decision::delegation::DelegationOutcome,
+    medulla_decision_statistical_types::decision::delegation::DelegationRefusal,
+    medulla_decision_statistical_types::decision::delegation::DelegationVerdict,
+    medulla_decision_statistical_types::decision::delegation::Q32_ONE,
 };
 
 /// A Q32 rate rounded up to millionths.

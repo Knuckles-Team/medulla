@@ -16,7 +16,7 @@
 //!   also holds (self-evaluation is never independent);
 //! * every evaluation admitted through a grant is audited.
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogEntry, decision::statistical::log::NamedEvaluator,
 };

@@ -6,16 +6,19 @@ use super::kernel_family_support::{
     decide_as_other_tenant, facts, kernel_request, persisted_files,
 };
 use super::*;
-use medulla_decision_types::decision::reward::{
-    HtnNode, RewardDecompositionRequest, StepSignal, TrajectoryReward,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::reward::HtnNode,
+    medulla_decision_statistical_types::decision::reward::RewardDecompositionRequest,
+    medulla_decision_statistical_types::decision::reward::StepSignal,
+    medulla_decision_statistical_types::decision::reward::TrajectoryReward,
 };
-use medulla_decision_types::decision::ResolutionKind;
 
 const ONE: i64 = 1 << 32;
 
 fn q(value: i64) -> QuantisedValue {
     QuantisedValue {
-        scale: medulla_decision_types::decision::QuantScaleTag::Q32,
+        scale: medulla_decision_statistical_types::decision::QuantScaleTag::Q32,
         value,
     }
 }
@@ -201,7 +204,7 @@ async fn premises_name_trajectory_and_depth() {
             .iter()
             .filter(|f| f.starts_with("knob:reward.") || f.starts_with("knob:htn."))
             .count(),
-        medulla_decision_types::decision::reward::KNOBS.len()
+        medulla_decision_statistical_types::decision::reward::KNOBS.len()
     );
 }
 
@@ -269,14 +272,14 @@ async fn reward_refusals() {
     )
     .await;
     // The depth bound is the pinned knob: a hierarchy of two levels fails a pin of 1.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
-        medulla_decision_types::decision::knobs::KnobName::new("htn.max_depth"),
-        medulla_decision_types::decision::knobs::KnobValue::Integer(1),
+        medulla_decision_statistical_types::decision::knobs::KnobName::new("htn.max_depth"),
+        medulla_decision_statistical_types::decision::knobs::KnobValue::Integer(1),
     );
     policy.knobs.insert(
-        medulla_decision_types::decision::knobs::KnobName::new("reward.max_steps"),
-        medulla_decision_types::decision::knobs::KnobValue::Integer(3),
+        medulla_decision_statistical_types::decision::knobs::KnobName::new("reward.max_steps"),
+        medulla_decision_statistical_types::decision::knobs::KnobValue::Integer(3),
     );
     let pin = h.publish_policy("policy-reward", &policy);
     let mut pinned = ask(
@@ -358,7 +361,7 @@ async fn reward_refusals() {
 
     // A refusal wrote nothing, and every code is registered.
     assert_eq!(persisted_files(&dir), before);
-    for code in medulla_decision_types::decision::reward::REFUSALS {
+    for code in medulla_decision_statistical_types::decision::reward::REFUSALS {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)

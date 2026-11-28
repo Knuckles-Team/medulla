@@ -9,12 +9,17 @@
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_stats_records::decision::ranking_eval::evaluate_ranking;
-use medulla_decision_types::decision::knob_families::ranking_eval::{RankingEvalKnobs, KNOBS};
-use medulla_decision_types::decision::statistical::ranking_eval::{
-    AlgorithmScore, RetrievalRankingReceipt, RetrievalRankingRequest,
-};
-use medulla_decision_types::decision::DecisionJobOutput;
+use medulla_decision_types::decision::jobs::DecisionJobOutput;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
+use {
+    medulla_decision_policy_types::decision::knob_families::ranking_eval::RankingEvalKnobs,
+    medulla_decision_policy_types::decision::knob_families::ranking_eval::KNOBS,
+};
+use {
+    medulla_decision_policy_types::decision::statistical::ranking_eval::AlgorithmScore,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingReceipt,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest,
+};
 
 use super::stat_jobs::JobRun;
 use super::stat_support::resolve_policy;

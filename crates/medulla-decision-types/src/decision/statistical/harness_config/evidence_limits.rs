@@ -6,8 +6,12 @@
 //! the decoded item and string sizes.
 
 use super::{HarnessConfigAnswer, HarnessConfigEvaluationEvidence, HarnessPart};
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Refusal code of an over-limit evidence record.
 pub const HARNESS_EVIDENCE_OVER_LIMIT: &str = "HARNESS_EVIDENCE_OVER_LIMIT";

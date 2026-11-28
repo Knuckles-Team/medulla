@@ -5,8 +5,12 @@
 //! nothing is re-derived, read or written.
 
 use super::HarnessConfigEvaluationEvidence;
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Refusal code of a replay workload above a limit.
 pub const HARNESS_REPLAY_LIMIT: &str = "HARNESS_REPLAY_LIMIT";

@@ -8,7 +8,7 @@ use medulla_catalog_types::fleet_catalog::rendered::RenderedSkillPackage;
 use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_types::refusal_code::RefusalCode;
 
-use super::knob_families::package::knob_values;
+use medulla_decision_statistical_types::decision::knob_families::package::knob_values;
 use serde::{Deserialize, Serialize};
 
 /// `PACKAGE_DIGEST_MISMATCH`: the rendered digest does not parse, or a run names another package.

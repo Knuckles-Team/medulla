@@ -34,9 +34,9 @@ method_results! {
     DomainPackRunResult(DomainPack / "run") => Raw<medulla_catalog_types::domain_pack::DomainPackRun>;
     // MEDULLA-CQ-ORCH-R010.3: the served architecture view.
     ArchitectureView(ArchitectureView) => Json<medulla_catalog_source_types::architecture_view::ArchitectureViewResponse>;
-    ContextFacts(ContextFacts) => Json<medulla_decision_types::context_facts::ContextFactsResult>;
+    ContextFacts(ContextFacts) => Json<medulla_decision_statistical_types::context_facts::ContextFactsResult>;
     // MEDULLA-DECISION-ENGINE-R153.3: one bounded span of a stored text source.
-    ReadSpan(ReadSpan) => Json<medulla_decision_types::source_toc::ReadSpanResult>;
+    ReadSpan(ReadSpan) => Json<medulla_decision_statistical_types::source_toc::ReadSpanResult>;
     // MEDULLA-INGEST-WORKER-R003.3: the atoms one context read selected.
     AtomContext(AtomContext) => Json<medulla_ingestion_types::knowledge_atom::AtomContextResult>;
     // MEDULLA-DURABLE-KERNEL-R043.100.2 and .3: the change feed's snapshot and page.

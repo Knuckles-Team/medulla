@@ -75,7 +75,7 @@ fn round_types_round_trip() {
         "unverified"
     );
     assert!(serde_json::from_value::<RoundVerdict>(serde_json::json!("refuted")).is_err());
-    use medulla_decision_types::decision::statistical::QuestionKind;
+    use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
     assert_eq!(
         serde_json::to_value([QuestionKind::RoundVerdict, QuestionKind::StageAllocation]).unwrap(),
         serde_json::json!(["round_verdict", "stage_allocation"])

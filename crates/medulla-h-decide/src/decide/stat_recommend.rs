@@ -13,12 +13,18 @@ use sha2::{Digest, Sha256};
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
-use medulla_decision_types::decision::item_recommendation::{
-    encoder_key, CatalogEncoderFitted, DIMENSION_MISMATCH, EMPTY_CATALOG,
-};
-use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
-use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
+use medulla_decision_program_types::decision::knob_families::recommend::RecommendKnobs;
 use medulla_persistence_records::decision_jobs::encode_artifact;
+use {
+    medulla_decision_statistical_types::decision::item_recommendation::encoder_key,
+    medulla_decision_statistical_types::decision::item_recommendation::CatalogEncoderFitted,
+    medulla_decision_statistical_types::decision::item_recommendation::DIMENSION_MISMATCH,
+    medulla_decision_statistical_types::decision::item_recommendation::EMPTY_CATALOG,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+};
 use {
     medulla_decision_stats_records::decision::recommend::fit_codebooks,
     medulla_decision_stats_records::decision::recommend::CatalogItem,
@@ -30,7 +36,7 @@ use super::stat_executor::ExecutionContext;
 use super::stat_support::{refusal, resolve_policy};
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 /// The param an `item_recommendation` question carries its [`RecommendRequest`] in, as JSON text.
 pub(super) const PARAM_RECOMMEND: &str = "recommend";

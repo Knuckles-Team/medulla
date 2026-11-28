@@ -6,10 +6,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::analyst_synthesis::{
-    AnalystAccount, SupportedConclusion, SynthesisRefusal, SynthesisRequest, SynthesisResult,
-    ANALYST_DUPLICATE, ANALYST_MISSING, DECISION_ROLE_ABSENT, INVALID_CITATION, MISSING_CITATION,
-    SYNTHESIS_PLAN_MISMATCH, UNRESOLVED_CONFLICT,
+use {
+    medulla_decision_policy_types::decision::analyst_synthesis::AnalystAccount,
+    medulla_decision_policy_types::decision::analyst_synthesis::SupportedConclusion,
+    medulla_decision_policy_types::decision::analyst_synthesis::SynthesisRefusal,
+    medulla_decision_policy_types::decision::analyst_synthesis::SynthesisRequest,
+    medulla_decision_policy_types::decision::analyst_synthesis::SynthesisResult,
+    medulla_decision_policy_types::decision::analyst_synthesis::ANALYST_DUPLICATE,
+    medulla_decision_policy_types::decision::analyst_synthesis::ANALYST_MISSING,
+    medulla_decision_policy_types::decision::analyst_synthesis::DECISION_ROLE_ABSENT,
+    medulla_decision_policy_types::decision::analyst_synthesis::INVALID_CITATION,
+    medulla_decision_policy_types::decision::analyst_synthesis::MISSING_CITATION,
+    medulla_decision_policy_types::decision::analyst_synthesis::SYNTHESIS_PLAN_MISMATCH,
+    medulla_decision_policy_types::decision::analyst_synthesis::UNRESOLVED_CONFLICT,
 };
 
 fn refuse(code: &'static str, detail: impl std::fmt::Display) -> SynthesisRefusal {

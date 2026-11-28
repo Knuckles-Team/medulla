@@ -14,7 +14,10 @@
 
 use std::fmt::Write as _;
 
-use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
+use {
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 const NS: &str = "urn:eg:decide:";
 

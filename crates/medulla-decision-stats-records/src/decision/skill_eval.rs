@@ -7,18 +7,34 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::correction::{CorrectionSource, EvalCase};
-use medulla_decision_types::decision::codes::{
-    ABLATION_NOISE_BAND_MISSING, CANARY_TRAFFIC_OUT_OF_BOUNDS,
-};
-use medulla_decision_types::knowledge_flag::target_form;
-use medulla_decision_types::skill_eval::{
-    AblationVerdict, CanaryVerdict, CompileState, EnvironmentAttestation, EvalCaseKind,
-    EvalCaseSource, JudgeCalibration, ModelCompile, NoiseBand, SkillEvalCase, SuiteBand,
-    TrajectoryStep, EVAL_CASE_INVALID, EVAL_RUN_NOT_CLEAN_ROOM, JUDGE_MIN_ANNOTATED,
-    JUDGE_NOT_CALIBRATED,
-};
+use medulla_decision_statistical_types::knowledge_flag::target_form;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_policy_types::correction::CorrectionSource,
+    medulla_decision_policy_types::correction::EvalCase,
+};
+use {
+    medulla_decision_policy_types::skill_eval::AblationVerdict,
+    medulla_decision_policy_types::skill_eval::CanaryVerdict,
+    medulla_decision_policy_types::skill_eval::CompileState,
+    medulla_decision_policy_types::skill_eval::EnvironmentAttestation,
+    medulla_decision_policy_types::skill_eval::EvalCaseKind,
+    medulla_decision_policy_types::skill_eval::EvalCaseSource,
+    medulla_decision_policy_types::skill_eval::JudgeCalibration,
+    medulla_decision_policy_types::skill_eval::ModelCompile,
+    medulla_decision_policy_types::skill_eval::NoiseBand,
+    medulla_decision_policy_types::skill_eval::SkillEvalCase,
+    medulla_decision_policy_types::skill_eval::SuiteBand,
+    medulla_decision_policy_types::skill_eval::TrajectoryStep,
+    medulla_decision_policy_types::skill_eval::EVAL_CASE_INVALID,
+    medulla_decision_policy_types::skill_eval::EVAL_RUN_NOT_CLEAN_ROOM,
+    medulla_decision_policy_types::skill_eval::JUDGE_MIN_ANNOTATED,
+    medulla_decision_policy_types::skill_eval::JUDGE_NOT_CALIBRATED,
+};
+use {
+    medulla_decision_statistical_types::decision::codes::ABLATION_NOISE_BAND_MISSING,
+    medulla_decision_statistical_types::decision::codes::CANARY_TRAFFIC_OUT_OF_BOUNDS,
+};
 
 const PPM: u64 = 1_000_000;
 
@@ -340,7 +356,11 @@ pub fn stale_after_change(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::skill_eval::{EvalCaseSource, ToolMock, TrajectoryKind};
+    use {
+        medulla_decision_policy_types::skill_eval::EvalCaseSource,
+        medulla_decision_policy_types::skill_eval::ToolMock,
+        medulla_decision_policy_types::skill_eval::TrajectoryKind,
+    };
 
     const KNOBS: EvalKnobs = EvalKnobs {
         low_ppm: 700_000,

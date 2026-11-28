@@ -20,19 +20,8 @@
 
 use medulla_core::architecture_view::{derive_architecture_view_of_snapshot, ViewRules};
 use medulla_decision_plan::plan::planning_admission::{admits, compare_features};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::planning_admission::{
-    DesignDifference, MissingKind, PlanningAdmissionRequest, ADMISSION_FEATURE_UNWIRED,
-    ADMISSION_GAP_UNCOVERED, ADMISSION_NO_COMPARISON, ADMISSION_STALE_VIEW,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::evidence_class::EvidenceClass;
@@ -40,6 +29,34 @@ use medulla_types::refusal_code::RefusalCode;
 use {
     medulla_catalog_source_types::architecture_view::ArchitectureView,
     medulla_catalog_source_types::architecture_view::ViewScope,
+};
+use {
+    medulla_decision_program_types::decision::planning_admission::DesignDifference,
+    medulla_decision_program_types::decision::planning_admission::MissingKind,
+    medulla_decision_program_types::decision::planning_admission::PlanningAdmissionRequest,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_FEATURE_UNWIRED,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_GAP_UNCOVERED,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_NO_COMPARISON,
+    medulla_decision_program_types::decision::planning_admission::ADMISSION_STALE_VIEW,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
 };
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};

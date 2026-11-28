@@ -2,13 +2,20 @@
 //! one-declared-option gate and the advisory answer every plan-shaped family
 //! returns.
 
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, ScoredOption, StatisticalErrorCode, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
 use crate::decide::stat_executor::Executed;
 use crate::decide::stat_support::refusal;
@@ -118,11 +125,11 @@ pub(in crate::decide) fn advisory_scored(options: Vec<(String, i64)>) -> Result<
 
 /// An abstention that reports `refusal` under `kind`'s registered table.
 pub(super) fn abstained(
-    kind: medulla_decision_types::decision::statistical::QuestionKind,
-    refusal: &(impl medulla_decision_types::decision::record::outcome::DecisionRefusal + ?Sized),
+    kind: medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    refusal: &(impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal + ?Sized),
 ) -> Executed {
     use medulla_decision_types::decision::record::outcome::RefusalOrigin;
-    use medulla_decision_types::decision::AbstainReason;
+    use medulla_decision_types::decision::record::AbstainReason;
     let reason = AbstainReason::from_refusal(RefusalOrigin::Decide(kind), refusal);
     Executed {
         matrix: None,
@@ -147,14 +154,14 @@ pub(super) fn abstained(
 /// An abstention that reports every one of `refusals` under `kind`'s registered
 /// table, in the order given; `refusals` is never empty.
 pub(super) fn abstained_all<R>(
-    kind: medulla_decision_types::decision::statistical::QuestionKind,
+    kind: medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
     refusals: &[R],
 ) -> Result<Executed, String>
 where
-    R: medulla_decision_types::decision::record::outcome::DecisionRefusal,
+    R: medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal,
 {
     use medulla_decision_types::decision::record::outcome::RefusalOrigin;
-    use medulla_decision_types::decision::AbstainReason;
+    use medulla_decision_types::decision::record::AbstainReason;
     let reasons: Vec<AbstainReason> = refusals
         .iter()
         .map(|refusal| AbstainReason::from_refusal(RefusalOrigin::Decide(kind), refusal))

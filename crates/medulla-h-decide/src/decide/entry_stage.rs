@@ -15,16 +15,24 @@
 
 use medulla_decision_outcome_types::decision::entry_trust::admit_entries;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::entry_types::{
-    EntryCheck, RefusedEntry, RetrievedEntry, TrustTier, POISONED_ENTRY,
-};
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::entry_types::EntryCheck,
+    medulla_decision_statistical_types::decision::entry_types::RefusedEntry,
+    medulla_decision_statistical_types::decision::entry_types::RetrievedEntry,
+    medulla_decision_statistical_types::decision::entry_types::TrustTier,
+    medulla_decision_statistical_types::decision::entry_types::POISONED_ENTRY,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 use super::stat_executor::Executed;
 use super::stat_support::invalid_parameter;

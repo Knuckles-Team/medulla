@@ -7,13 +7,13 @@
 //! and the skill is the revision currently published. The job is the write authority; a refusal
 //! stores nothing.
 
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_types::decision::jobs::DecisionJobOutput;
 use medulla_decision_types::decision::local_certification::{
     certify, current_attestation, CertificationReadAnswer, CertificationReadRequest,
     LocalCertificationAttestation, LocalCertificationRequest, SkillClassification,
     CERT_DEPENDENCY_MISSING, CERT_DEPENDENCY_STALE,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::DecisionJobOutput;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 

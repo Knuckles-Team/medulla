@@ -13,11 +13,13 @@ use medulla_decision_types::{
     decision::statistical::log::AbstentionResolution,
     decision::statistical::log::AbstentionResolver, decision::statistical::log::StoredResolution,
 };
-use medulla_decision_types::{
-    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
-};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{store_once, visible_entry, LogReader};

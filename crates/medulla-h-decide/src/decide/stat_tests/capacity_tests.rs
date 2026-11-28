@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::statistical::capacity::CapacityRefusalCode;
+use medulla_decision_policy_types::decision::statistical::capacity::CapacityRefusalCode;
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;

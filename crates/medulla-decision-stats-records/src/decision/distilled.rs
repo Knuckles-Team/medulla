@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::statistical::distilled::TeacherJudgment;
+use medulla_decision_statistical_types::decision::statistical::distilled::TeacherJudgment;
 
 /// A candidate with no stored score: the first such document id, in the
 /// caller's candidate order (`DISTILLED_SCORE_MISSING`).

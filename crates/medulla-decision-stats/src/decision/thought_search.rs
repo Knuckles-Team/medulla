@@ -9,11 +9,18 @@ use std::cmp::Reverse;
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::digest::thought_path_digest;
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::thought_search::{
-    ReasoningState, ReasoningStrategy, ThoughtNode, ThoughtSearchAnswer, ThoughtSearchKnobs,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::thought_search::ReasoningState,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningStrategy,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtNode,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchAnswer,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchKnobs,
+};
 
 /// Score descending, then id ascending.
 fn rank_key(node: &ThoughtNode) -> (Reverse<i64>, u32) {
@@ -145,7 +152,7 @@ pub fn choose_expansion(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::thought_search::BudgetLedger;
+    use medulla_decision_statistical_types::decision::thought_search::BudgetLedger;
 
     fn node(id: u32, parent: Option<u32>, depth: u32, score: i64, state: &str) -> ThoughtNode {
         ThoughtNode {

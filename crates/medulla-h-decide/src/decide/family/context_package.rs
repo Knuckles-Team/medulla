@@ -14,24 +14,36 @@ use std::collections::BTreeSet;
 
 use medulla_decision_policy::solve::context_package::{select_with, PackageRefusal};
 use medulla_decision_policy::solve::Model;
+use medulla_decision_policy_types::decision::knob_families::context as context_knobs;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::context_package::{
     ContextPackageErrorCode, ContextPackageRequest, RemainingBudget, NONE_ADMISSIBLE,
     WORK_EXHAUSTED,
 };
-use medulla_decision_types::decision::knob_families::context as context_knobs;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalErrorCode,
-    StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::decision::{
-    PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue, ResolutionKind,
-};
-use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -104,7 +116,7 @@ impl DecisionFamily for ContextPackageFamily {
         &self,
         ctx: &ExecutionContext,
         request: &DecideRequest,
-        policy: &medulla_decision_types::decision::DecisionPolicy,
+        policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(solve(ctx.tenant_id, request, policy, graph_view))
@@ -155,7 +167,7 @@ pub(in crate::decide) fn source_graph(request: &DecideRequest) -> Result<&str, S
 /// force resolves; the family never overrides one silently.
 fn check_knobs(
     package: &ContextPackageRequest,
-    policy: &medulla_decision_types::decision::DecisionPolicy,
+    policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
 ) -> Result<(), String> {
     let node_budget = context_knobs::solver_node_budget(policy);
     if u64::from(package.node_budget) != node_budget {
@@ -313,7 +325,7 @@ fn bound_by_remaining(
     tenant: &str,
     package: &ContextPackageRequest,
     request: &DecideRequest,
-    policy: &medulla_decision_types::decision::DecisionPolicy,
+    policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
     view: &GraphView,
 ) -> Result<Bounded, String> {
     let class = task_class(request)?;
@@ -396,7 +408,7 @@ fn bound_by_remaining(
 fn solve(
     tenant: &str,
     request: &DecideRequest,
-    policy: &medulla_decision_types::decision::DecisionPolicy,
+    policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
     graph_view: Option<&GraphView>,
 ) -> Result<Executed, String> {
     let package = package(request)?;
@@ -619,7 +631,10 @@ pub(in crate::decide) mod overrides {
     use std::sync::{Mutex, OnceLock};
 
     use medulla_decision_policy::solve::Model;
-    use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
+    use {
+        medulla_decision_policy_types::solve::certificate::Certificate,
+        medulla_decision_policy_types::solve::certificate::SolverConfig,
+    };
 
     /// A replacement solver.
     pub(in crate::decide) type SolverFn = fn(&Model, &SolverConfig) -> Certificate;

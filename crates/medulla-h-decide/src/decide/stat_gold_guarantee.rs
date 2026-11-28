@@ -10,14 +10,17 @@
 //! published; the receipt records the alpha, the counts and the gold-set digest
 //! it was held to.
 
+use medulla_decision_program_types::decision::knob_families::resolve_entity as knobs;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats::decision::evaluate::seal_receipt;
 use medulla_decision_types::decision::jobs::{
     DecisionEvalReceipt, GoldGuarantee, GoldGuaranteeEvidence,
 };
-use medulla_decision_types::decision::knob_families::resolve_entity as knobs;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::{DecisionPolicy, UnitRationalWire};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+};
 
 use super::stat_support::refusal;
 

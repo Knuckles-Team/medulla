@@ -1,7 +1,7 @@
 //! One error shape for the decision computation: a closed code and a detail.
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
 use medulla_types::contract::BoundedVec;
 
 use medulla_numeric::detkernel::StatError;

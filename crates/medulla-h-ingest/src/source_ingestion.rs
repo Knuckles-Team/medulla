@@ -1612,9 +1612,10 @@ fn admitted_embedding_set(
         .iter()
         .map(|raw| (raw.stream.as_str(), raw.record_id.as_str()))
         .collect();
-    let knobs = medulla_decision_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
-        &medulla_decision_types::decision::policy::DecisionPolicy::engine_default(),
-    );
+    let knobs =
+        medulla_decision_policy_types::decision::ingestion_admission::AdmissionKnobs::from_policy(
+            &medulla_decision_statistical_types::decision::policy::DecisionPolicy::engine_default(),
+        );
     medulla_h_ingest_repository::ingestion_admission::build_embedding_set(
         batch.records.iter().filter(|record| {
             admitted.contains(&(record.stream.as_str(), record.record_id.as_str()))
@@ -3324,7 +3325,9 @@ fn stage_source_toc(
     let payload = record.payload.value()?;
     let Some(text) = payload
         .as_object()
-        .and_then(|fields| fields.get(medulla_decision_types::source_toc::SOURCE_TEXT_FIELD))
+        .and_then(|fields| {
+            fields.get(medulla_decision_statistical_types::source_toc::SOURCE_TEXT_FIELD)
+        })
         .and_then(|value| value.as_str())
     else {
         return Ok(Vec::new());
@@ -4584,7 +4587,7 @@ fn validate_strict_source_fields(
         row_version::ROW_VERSION_MEMBER,
         // The text of a text source is read by `stage_source_toc`
         // (MEDULLA-DECISION-ENGINE-R153.3), never by a field mapping.
-        medulla_decision_types::source_toc::SOURCE_TEXT_FIELD,
+        medulla_decision_statistical_types::source_toc::SOURCE_TEXT_FIELD,
     ]);
     match source.keys().find(|key| !allowed.contains(key.as_str())) {
         Some(unknown) => Err(format!(

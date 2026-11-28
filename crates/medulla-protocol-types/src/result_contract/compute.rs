@@ -1,7 +1,7 @@
 //! Declared results of the `compute` contract domain.
 
 use super::Dynamic;
-use medulla_decision_types::solve::SolveResult;
+use medulla_decision_policy_types::solve::SolveResult;
 #[cfg(feature = "datascience")]
 use medulla_query_types::wire::FittedModel;
 use medulla_result_types::compute_result::algorithms;

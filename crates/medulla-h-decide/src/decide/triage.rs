@@ -4,18 +4,25 @@
 //! The method lives here, not in the ingest handler crate, because a handler crate never calls
 //! a sibling.
 
-use medulla_decision_types::decision::defect_triage::{
-    TriageDecision, TriageDefectRequest, MAX_PATH_OWNERS,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion, TypedParam,
-    TypedValue,
-};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::defect_triage::TriageDecision,
+    medulla_decision_statistical_types::decision::defect_triage::TriageDefectRequest,
+    medulla_decision_statistical_types::decision::defect_triage::MAX_PATH_OWNERS,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::SharedState;
 

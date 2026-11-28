@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_decision_stats::decision::usage_guidance::{
     order_steps, OrderError, PlanStep, UsageKnobs,
 };
-use medulla_decision_types::decision::AssemblyStep;
+use medulla_decision_types::decision::record::AssemblyStep;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
 

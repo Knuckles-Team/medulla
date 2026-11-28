@@ -7,26 +7,61 @@
 //! and writes nothing. A signature with no stored program abstains with
 //! `NO_PROGRAM`.
 
-use medulla_decision_types::decision::program_store::preplan::{pattern_key, ReusablePattern};
-use medulla_decision_types::decision::program_store::replay::{
-    replay_prefix, replay_verdict, ProgramDemoted, ReplayKnobs, StoredReplay, MAX_REPLAY_ROWS,
-};
-use medulla_decision_types::decision::program_store::semantic::{
-    bind_request, bind_steps, match_key, select_match, Binding, BindingSource, MatchKind,
-    MatchRefusal, ProgramCandidates, ProgramHit, ProgramMatch, ProgramMatchIndex, Selection,
-    MATCH_ANSWER_PREFIX, MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES,
-    PARAM_PROGRAM_GRAPH, PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
-};
-use medulla_decision_types::decision::program_store::{CompiledProgram, NoProgram, ProgramKnobs};
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::program_store::preplan::pattern_key,
+    medulla_decision_program_types::decision::program_store::preplan::ReusablePattern,
+};
+use {
+    medulla_decision_program_types::decision::program_store::semantic::bind_request,
+    medulla_decision_program_types::decision::program_store::semantic::bind_steps,
+    medulla_decision_program_types::decision::program_store::semantic::match_key,
+    medulla_decision_program_types::decision::program_store::semantic::select_match,
+    medulla_decision_program_types::decision::program_store::semantic::Binding,
+    medulla_decision_program_types::decision::program_store::semantic::BindingSource,
+    medulla_decision_program_types::decision::program_store::semantic::MatchKind,
+    medulla_decision_program_types::decision::program_store::semantic::MatchRefusal,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramCandidates,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramHit,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatch,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatchIndex,
+    medulla_decision_program_types::decision::program_store::semantic::Selection,
+    medulla_decision_program_types::decision::program_store::semantic::MATCH_ANSWER_PREFIX,
+    medulla_decision_program_types::decision::program_store::semantic::MATCH_SCHEMA_VERSION,
+    medulla_decision_program_types::decision::program_store::semantic::MAX_REQUEST_TEXT_BYTES,
+    medulla_decision_program_types::decision::program_store::semantic::PARAM_PROGRAM_CANDIDATES,
+    medulla_decision_program_types::decision::program_store::semantic::PARAM_PROGRAM_GRAPH,
+    medulla_decision_program_types::decision::program_store::semantic::PARAM_REQUEST_TEXT,
+    medulla_decision_program_types::decision::program_store::semantic::PHRASING_NODE_CLASS,
+};
+use {
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+    medulla_decision_program_types::decision::program_store::NoProgram,
+    medulla_decision_program_types::decision::program_store::ProgramKnobs,
+};
+use {
+    medulla_decision_statistical_types::decision::program_store::replay::replay_prefix,
+    medulla_decision_statistical_types::decision::program_store::replay::replay_verdict,
+    medulla_decision_statistical_types::decision::program_store::replay::ProgramDemoted,
+    medulla_decision_statistical_types::decision::program_store::replay::ReplayKnobs,
+    medulla_decision_statistical_types::decision::program_store::replay::StoredReplay,
+    medulla_decision_statistical_types::decision::program_store::replay::MAX_REPLAY_ROWS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -77,9 +112,11 @@ fn signature(request: &DecideRequest) -> Result<String, String> {
         text_param(request, PARAM_MODEL_REF)?,
     ) {
         (None, None) => Ok(task.to_string()),
-        (Some(skill), Some(model)) if !skill.trim().is_empty() && !model.trim().is_empty() => {
-            Ok(medulla_decision_types::decision::program_store::pair_signature(task, skill, model))
-        }
+        (Some(skill), Some(model)) if !skill.trim().is_empty() && !model.trim().is_empty() => Ok(
+            medulla_decision_program_types::decision::program_store::pair_signature(
+                task, skill, model,
+            ),
+        ),
         _ => Err(invalid(
             "skill_ref and model_ref are given together, and neither is empty",
         )),
@@ -88,7 +125,7 @@ fn signature(request: &DecideRequest) -> Result<String, String> {
 
 /// The stored program for `task_signature` in the caller's tenant, if any.
 fn stored(ctx: &ExecutionContext, task_signature: &str) -> Result<Option<CompiledProgram>, String> {
-    let key = medulla_decision_types::decision::program_store::program_key(task_signature);
+    let key = medulla_decision_program_types::decision::program_store::program_key(task_signature);
     let Some(bytes) = ctx.store.decision_artifact(ctx.tenant_id, &key)? else {
         return Ok(None);
     };
@@ -463,7 +500,7 @@ pub(in crate::decide) async fn with_program_candidates(
     let exact = store
         .decision_artifact(
             &request.tenant_id,
-            &medulla_decision_types::decision::program_store::program_key(&task_signature),
+            &medulla_decision_program_types::decision::program_store::program_key(&task_signature),
         )?
         .is_some();
     let mut candidates = ProgramCandidates {
@@ -526,7 +563,8 @@ pub(in crate::decide) async fn with_program_candidates(
 }
 
 /// The class of a stored program node.
-const PROGRAM_CLASS: &str = medulla_decision_types::decision::program_store::PROGRAM_NODE_CLASS;
+const PROGRAM_CLASS: &str =
+    medulla_decision_program_types::decision::program_store::PROGRAM_NODE_CLASS;
 
 impl DecisionFamily for ProgramLookupFamily {
     fn validate_candidates(

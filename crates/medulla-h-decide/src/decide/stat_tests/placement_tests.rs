@@ -4,19 +4,24 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::placement::{
     cpu_cell, memory_cell, PlacementConstraints, PlacementQuestion, PlacementRead,
     PlacementRequestBody, PlacementSubject, PlacementTarget, PLACEMENT_PARAM,
 };
-use medulla_decision_types::decision::{AbstainReason, DecisionOutcome, ResolutionKind, Violation};
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass, LeasePriority};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::native_control::{CapacityCellUpdateRequest, NativeControlSchemaVersion};
+use {
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use super::assemble_tests as library;
 use super::*;
@@ -347,7 +352,7 @@ async fn placement_reads_headroom_without_lease() {
         .premises
         .iter()
         .filter(|p| p.fact.starts_with("lease:"))
-        .all(|p| p.class == medulla_decision_types::decision::PremiseClass::Observation));
+        .all(|p| p.class == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Observation));
 
     // A lower-priority request sees less: the reserved floor is not its to spend.
     let mut background = body(false, 2);
@@ -410,10 +415,11 @@ async fn placement_abstains_with_typed_reasons() {
     );
 
     // PolicyLoosening: a request cap above the pinned policy cap abstains.
-    let mut capped_policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut capped_policy =
+        medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     capped_policy.knobs.insert(
         medulla_decision_types::decision::knob_families::placement::KNOBS[0].knob_name(),
-        medulla_decision_types::decision::knobs::KnobValue::Integer(2),
+        medulla_decision_statistical_types::decision::knobs::KnobValue::Integer(2),
     );
     let mut loosening = body(false, 2);
     loosening.constraints.max_relative_cost = Some(5);
@@ -598,17 +604,18 @@ async fn deployment_template_key_assembles_the_pinned_revision() {
     let by_pin = library::assemble(&library, by_pin_request)
         .await
         .expect("the pin assembles");
-    let steps = |result: &medulla_decision_types::decision::AssemblyResult| -> Vec<String> {
-        result
-            .graph
-            .as_ref()
-            .expect("a solved record answers its graph")
-            .shape
-            .nodes
-            .iter()
-            .map(|node| node.node_id.clone())
-            .collect()
-    };
+    let steps =
+        |result: &medulla_decision_types::decision::request::AssemblyResult| -> Vec<String> {
+            result
+                .graph
+                .as_ref()
+                .expect("a solved record answers its graph")
+                .shape
+                .nodes
+                .iter()
+                .map(|node| node.node_id.clone())
+                .collect()
+        };
     assert_eq!(
         steps(&by_key),
         ["render-artifact", "apply", "verify", "done"]

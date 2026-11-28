@@ -8,14 +8,14 @@
 
 use medulla_agent_types::agent_component::FactQuality;
 use medulla_agent_types::agent_ontology::satisfies;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::features::FeatureKind,
-    decision::statistical::features::FeatureSchemaBody,
-    decision::statistical::features::MissingValue,
-};
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
 };
 
 use super::quant::{q32, q32_integer};
@@ -145,7 +145,9 @@ fn nearest_neighbour_column(
     graph_param: &str,
 ) -> RefusalResult<Vec<Option<i64>>> {
     let name =
-        medulla_decision_types::decision::paper_admission::nearest_neighbour_param(graph_param);
+        medulla_decision_statistical_types::decision::paper_admission::nearest_neighbour_param(
+            graph_param,
+        );
     let TypedValue::Text(json) = param(inputs, &name)? else {
         return Err(wrong_type(&name, "text"));
     };

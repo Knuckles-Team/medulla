@@ -7,18 +7,31 @@
 //! declares only `revert` for a culprit with dependents abstains `REVERT_HAS_DEPENDENTS`.
 //! `Decide` is evaluate-only: it writes nothing.
 
-use medulla_decision_types::decision::revert_or_fix_forward::{
-    legal_ranked, RecordedVerdict, RevertRefusal, OPTION_FIX_FORWARD, OPTION_REVERT, PARAM_CULPRIT,
-    PARAM_DEPENDENTS, PARAM_VERDICTS,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::step_verdict::VerificationVerdict;
+use {
+    medulla_decision_program_types::decision::revert_or_fix_forward::legal_ranked,
+    medulla_decision_program_types::decision::revert_or_fix_forward::RecordedVerdict,
+    medulla_decision_program_types::decision::revert_or_fix_forward::RevertRefusal,
+    medulla_decision_program_types::decision::revert_or_fix_forward::OPTION_FIX_FORWARD,
+    medulla_decision_program_types::decision::revert_or_fix_forward::OPTION_REVERT,
+    medulla_decision_program_types::decision::revert_or_fix_forward::PARAM_CULPRIT,
+    medulla_decision_program_types::decision::revert_or_fix_forward::PARAM_DEPENDENTS,
+    medulla_decision_program_types::decision::revert_or_fix_forward::PARAM_VERDICTS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

@@ -73,8 +73,7 @@ async fn ds_kmeans_served_separates_blobs_and_refuses_k_above_rows() {
 #[cfg(feature = "ann")]
 mod activation {
     use super::*;
-    use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
     use medulla_numeric::cluster::{Progress, ProgressSink};
     use medulla_server_graph::semantic_activation::{
         activate_one, cancel_all_builds, cluster_config, sweep_resident_graphs_with,
@@ -82,6 +81,10 @@ mod activation {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use std::time::{Duration, Instant};
+    use {
+        medulla_decision_statistical_types::decision::knobs::KnobName,
+        medulla_decision_statistical_types::decision::knobs::KnobValue,
+    };
 
     const DIM: usize = 16;
     const ROWS: usize = 5000;

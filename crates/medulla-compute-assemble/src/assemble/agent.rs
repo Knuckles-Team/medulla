@@ -22,8 +22,10 @@ use medulla_agent_types::{
 use medulla_agent_types::{
     agent_library::AgentLibraryEntryDraft, agent_library::AgentRuntimeContract,
 };
-use medulla_decision_types::{
-    decision::CandidateFacts, decision::DecisionInputs, decision::TemplateFacts,
+use {
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::TemplateFacts,
 };
 
 use super::facts;

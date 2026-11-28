@@ -595,8 +595,8 @@ async fn trace_limits(
     tenant: &str,
     reference: &medulla_agent_types::agent_component::DecisionPolicyRef,
 ) -> Result<(medulla_source_types::lifecycle::TraceLimits, String), String> {
-    use medulla_decision_types::decision::knobs::KnobValue;
-    use medulla_decision_types::decision::lifecycle::KNOBS;
+    use medulla_decision_program_types::decision::lifecycle::KNOBS;
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
     let resolved = match reference {
         medulla_agent_types::agent_component::DecisionPolicyRef::Default => {
             medulla_decision_policy::policy::resolve_policy(&NoPolicyLibrary, tenant, reference)?

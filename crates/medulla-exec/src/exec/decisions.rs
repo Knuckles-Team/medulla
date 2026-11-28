@@ -12,7 +12,7 @@ use serde_json::{Map, Value};
 use super::PlanCtx;
 use crate::pred_eval;
 use crate::rowset::RowSet;
-use medulla_decision_types::decision::reputation::SourceReliability;
+use medulla_decision_policy_types::decision::reputation::SourceReliability;
 use medulla_query_types::wire::Pred;
 
 /// The caller's visible decision records, one JSON object per record carrying the

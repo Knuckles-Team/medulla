@@ -15,7 +15,10 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::statistical::log::StoredEvaluation;
-use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
+use {
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::decode_artifact;

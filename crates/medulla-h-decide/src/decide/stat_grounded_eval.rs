@@ -10,17 +10,22 @@
 //! stored one, is refused. The scorer's recorded inputs must not include the
 //! label set.
 
-use medulla_decision_types::decision::knob_families::grounded::{
-    coverage_knobs, score_digits, KNOBS,
-};
-use medulla_decision_types::decision::statistical::grounded_eval::{
-    GroundedAnswerRequest, GroundedBinding, GroundedEvalReceipt, GroundedScope,
-    GROUNDED_EVAL_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::ranking_eval::is_sha256_hex;
-use medulla_decision_types::decision::DecisionJobOutput;
+use medulla_decision_policy_types::decision::statistical::ranking_eval::is_sha256_hex;
+use medulla_decision_types::decision::jobs::DecisionJobOutput;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{grounded_pin_key, grounded_pin_prefix};
+use {
+    medulla_decision_program_types::decision::knob_families::grounded::coverage_knobs,
+    medulla_decision_program_types::decision::knob_families::grounded::score_digits,
+    medulla_decision_program_types::decision::knob_families::grounded::KNOBS,
+};
+use {
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedAnswerRequest,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedBinding,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedEvalReceipt,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedScope,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GROUNDED_EVAL_SCHEMA_VERSION,
+};
 use {
     medulla_decision_stats_records::decision::grounded_eval::topic_coverage,
     medulla_decision_stats_records::decision::grounded_eval::weighted_brier,

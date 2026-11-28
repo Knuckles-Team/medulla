@@ -44,10 +44,12 @@ pub fn typed_samples() -> Vec<(&'static str, Method)> {
 
 /// A typed harness question exercises the shared client codec's new enum value.
 fn harness_config_sample() -> Method {
-    use medulla_decision_types::{
-        decision::QuestionKind, decision::TypedParam, decision::TypedValue,
-    };
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+        medulla_decision_types::decision::statistical::TypedParam,
+        medulla_decision_types::decision::statistical::TypedValue,
+    };
 
     let mut request =
         medulla_decision_types::decision_fixtures::contract_statistical::decide_request();

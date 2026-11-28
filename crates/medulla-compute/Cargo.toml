@@ -12,7 +12,7 @@ license = "MIT"
 name = "medulla_compute"
 
 [features]
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-compute-assemble/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-compute-assemble/test-support"]
 # `algorithms`, `ast`, and `parser` are always compiled (algorithms is used by
 # the always-on graph-op handlers); the heavy domains are gated so a slim build
 # links neither their code nor their deps. Mirrors the facade feature names 1:1.
@@ -203,6 +203,8 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 
 # Criterion harness for the AST parse-throughput baseline bench (CONCEPT:MEDULLA-012).
 # DEV-only — never linked into the engine binary.
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
@@ -221,6 +223,8 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", f
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used

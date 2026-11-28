@@ -13,7 +13,7 @@
 //! caller's tenant. `Get` reads the correction and its effects back by receipt
 //! id; a correction of another tenant reads as absent.
 
-use medulla_decision_types::correction::CorrectionOp;
+use medulla_decision_policy_types::correction::CorrectionOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -47,14 +47,7 @@ mod served {
     use medulla_agent_types::agent_guardrail::{
         check_rule_against_invariants, GuardrailRule, RulePromotionVerdict,
     };
-    use medulla_decision_types::correction::{
-        task_class_of, CandidateOutcomes, Correction, CorrectionEffect, CorrectionInput,
-        CorrectionNearest, CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead,
-        CorrectionRecorded, CorrectionSource, EvalCase, OutcomeTag, RuleCandidate,
-        ACTION_RECORD_CLASS, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
-        OUTCOME_SELF_REPORTED,
-    };
-    use medulla_decision_types::decision::knobs::KnobValue;
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;
@@ -63,6 +56,29 @@ mod served {
     };
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_policy_types::correction::task_class_of,
+        medulla_decision_policy_types::correction::CandidateOutcomes,
+        medulla_decision_policy_types::correction::Correction,
+        medulla_decision_policy_types::correction::CorrectionEffect,
+        medulla_decision_policy_types::correction::CorrectionInput,
+        medulla_decision_policy_types::correction::CorrectionNearest,
+        medulla_decision_policy_types::correction::CorrectionOp,
+        medulla_decision_policy_types::correction::CorrectionOutcome,
+        medulla_decision_policy_types::correction::CorrectionOutcomes,
+        medulla_decision_policy_types::correction::CorrectionRead,
+        medulla_decision_policy_types::correction::CorrectionRecorded,
+        medulla_decision_policy_types::correction::CorrectionSource,
+        medulla_decision_policy_types::correction::EvalCase,
+        medulla_decision_policy_types::correction::OutcomeTag,
+        medulla_decision_policy_types::correction::RuleCandidate,
+        medulla_decision_policy_types::correction::ACTION_RECORD_CLASS,
+        medulla_decision_policy_types::correction::CORRECTION_NOT_FOUND,
+        medulla_decision_policy_types::correction::CORRECTION_ROLE_REQUIRED,
+        medulla_decision_policy_types::correction::CORRECTOR_ROLE,
+        medulla_decision_policy_types::correction::KNOBS,
+        medulla_decision_policy_types::correction::OUTCOME_SELF_REPORTED,
+    };
     use {
         medulla_decision_stats_records::decision::correction::candidate_outcomes,
         medulla_decision_stats_records::decision::correction::commit_correction,

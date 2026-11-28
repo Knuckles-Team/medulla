@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_graph_core::graph::GraphCore;
 
 use super::stat_support::readable_graph;

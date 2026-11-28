@@ -45,13 +45,15 @@ pub enum ToolSubsetRefusal {
     BudgetExceeded,
 }
 
-impl crate::decision::record::outcome::DecisionRefusal for ToolSubsetRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for ToolSubsetRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::CapabilityUncoverable => {
-                crate::decision::codes::TOOL_SUBSET_CAPABILITY_UNCOVERABLE
+                medulla_decision_statistical_types::decision::codes::TOOL_SUBSET_CAPABILITY_UNCOVERABLE
             }
-            Self::BudgetExceeded => crate::decision::codes::TOOL_SUBSET_BUDGET_EXCEEDED,
+            Self::BudgetExceeded => medulla_decision_statistical_types::decision::codes::TOOL_SUBSET_BUDGET_EXCEEDED,
         }
     }
 

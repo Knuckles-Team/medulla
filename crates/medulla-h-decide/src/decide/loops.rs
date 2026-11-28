@@ -14,7 +14,7 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
-use medulla_decision_types::loops::LoopOp;
+use medulla_decision_policy_types::loops::LoopOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -82,10 +82,6 @@ pub(super) async fn holds_live_lease(
 pub(super) mod served {
     use std::sync::Arc;
 
-    use medulla_decision_types::loops::{
-        Gap, ImprovementLedger, LoopInstance, LoopOp, LoopState, LoopTransition, LoopView,
-        OfferEvidence, StageBeacon, PPM_MAX,
-    };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         LoopsBeacon, LoopsClaim, LoopsFileGap, LoopsGet, LoopsMine, LoopsOffer, LoopsRatchet,
@@ -106,6 +102,18 @@ pub(super) mod served {
     use medulla_types::gap_machine::GapEvent;
     use medulla_types::gap_machine::GapState;
     use medulla_types::transition_refused::{TransitionRefusalReason, TransitionRefused};
+    use {
+        medulla_decision_policy_types::loops::Gap,
+        medulla_decision_policy_types::loops::ImprovementLedger,
+        medulla_decision_policy_types::loops::LoopInstance,
+        medulla_decision_policy_types::loops::LoopOp,
+        medulla_decision_policy_types::loops::LoopState,
+        medulla_decision_policy_types::loops::LoopTransition,
+        medulla_decision_policy_types::loops::LoopView,
+        medulla_decision_policy_types::loops::OfferEvidence,
+        medulla_decision_policy_types::loops::StageBeacon,
+        medulla_decision_policy_types::loops::PPM_MAX,
+    };
 
     use crate::decide::claims::served::{invalid, refuse, request_key};
 

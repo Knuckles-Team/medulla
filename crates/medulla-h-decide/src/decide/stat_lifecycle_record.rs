@@ -7,14 +7,19 @@
 //! `SCENARIO_RUN_INCOMPLETE` before anything is stored. A read lists the stored records of one
 //! kind, newest first, by the engine instant each was committed at.
 
-use medulla_decision_types::decision::statistical::lifecycle_record::{
-    LifecycleRecordKind, LifecycleRecordQuery, LifecycleRecordStored, LifecycleRecordWrite,
-    LifecycleRecordsFound, StoredWouldDispatch, LIFECYCLE_RECORD_SCHEMA_VERSION,
-    MAX_LIFECYCLE_RECORDS_READ,
-};
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_source_types::delivery::WouldDispatch;
 use medulla_source_types::lifecycle::{sha256_hex, ScenarioRun, StoredScenarioRun};
+use {
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordKind,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordQuery,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordStored,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordWrite,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordsFound,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::StoredWouldDispatch,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::LIFECYCLE_RECORD_SCHEMA_VERSION,
+    medulla_decision_policy_types::decision::statistical::lifecycle_record::MAX_LIFECYCLE_RECORDS_READ,
+};
 
 use super::stat_executor::ExecutionContext;
 

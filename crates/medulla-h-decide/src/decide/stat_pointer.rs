@@ -6,14 +6,14 @@
 
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::retrieval_pointer::PointerEvent,
-    decision::statistical::retrieval_pointer::PointerState,
-    decision::statistical::retrieval_pointer::PointerTransition,
-    decision::statistical::retrieval_pointer::MAX_POINTER_HISTORY,
-};
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerEvent,
+    medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState,
+    medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerTransition,
+    medulla_decision_policy_types::decision::statistical::retrieval_pointer::MAX_POINTER_HISTORY,
+};
 
 use super::stat_support::refusal;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -181,12 +181,12 @@ pub(super) fn champion_pointer(
     pointer_key: &str,
 ) -> Result<medulla_decision_outcome_types::decision::promotion::ChampionPointer, String> {
     use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
-    use medulla_decision_types::decision::held_out::RevisionSubject;
+    use medulla_decision_policy_types::decision::held_out::RevisionSubject;
     use medulla_types::contract::OpaqueId;
     let not_found = || {
         format!(
             "{}: no champion is active under `{pointer_key}`",
-            medulla_decision_types::decision::codes::POINTER_NOT_FOUND.as_str()
+            medulla_decision_statistical_types::decision::codes::POINTER_NOT_FOUND.as_str()
         )
     };
     let opaque = |value: &str| OpaqueId::new(value.to_owned()).map_err(|_| not_found());

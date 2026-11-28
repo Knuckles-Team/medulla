@@ -14,24 +14,25 @@
 //! entries are kept for ever (R066.1).
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::knob_families::retention;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::StatisticalPolicy;
-use medulla_decision_types::{
-    decision::statistical::body::canonical_body_bytes,
-    decision::statistical::body::content_digest_of,
-};
+use medulla_decision_policy_types::decision::knob_families::retention;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::StatisticalPolicy;
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogCompacted, decision::statistical::log::DecisionLogEntry,
     decision::statistical::log::DecisionLogVerification, decision::statistical::log::EntryInputs,
     decision::statistical::log::InputsBlob, decision::statistical::log::MAX_COMPACT_PER_CALL,
 };
-use medulla_decision_types::{
-    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
-    decision::statistical::StatisticalErrorCode,
-};
 use medulla_persistence_records::decision_jobs::{evaluation_key, record_key};
 use medulla_server_blob::blob::BlobStateExt;
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader, MAX_LOG_ROWS};
@@ -186,7 +187,7 @@ enum Step {
 
 /// The retirement age at which a graph summary expires: the pinned knob, or
 /// its default (R066.4).
-fn expire_after_ms(policy: &medulla_decision_types::decision::DecisionPolicy) -> u64 {
+fn expire_after_ms(policy: &medulla_decision_statistical_types::decision::DecisionPolicy) -> u64 {
     let spec = &retention::KNOBS[retention::GRAPH_SUMMARY_EXPIRE_AFTER];
     match policy.knob(spec) {
         KnobValue::DurationMs(ms) => ms,
@@ -206,7 +207,7 @@ fn due(
     // Library evidence remains reproducible indefinitely, regardless of policy.
     if matches!(
         entry.record.candidate_source,
-        medulla_decision_types::decision::CandidateSourceRecord::AgentLibrary { .. }
+        medulla_decision_types::decision::record::CandidateSourceRecord::AgentLibrary { .. }
     ) {
         return None;
     }

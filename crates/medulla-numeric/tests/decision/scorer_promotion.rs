@@ -13,19 +13,22 @@ use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderI
 use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
 use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset,
-};
-use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadKind,
 };
 use medulla_decision_types::{
     decision::statistical::CalibrationMethod, decision::statistical::StatisticalOutcome,
 };
-use medulla_decision_types::{
-    decision::ColdStart, decision::QuantScaleTag, decision::QuantisedValue,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+};
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 use {
     medulla_decision_stats_records::decision::admission::admit,
     medulla_decision_stats_records::decision::admission::Regime,

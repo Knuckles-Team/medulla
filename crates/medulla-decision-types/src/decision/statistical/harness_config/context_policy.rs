@@ -1,10 +1,14 @@
 //! Pure context-pressure selection (MEDULLA-DECISION-ENGINE-R128.5).
 
 use super::{ContextPolicy, HarnessPart};
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::numeric::UnitRationalWire;
-use crate::decision::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::numeric::UnitRationalWire;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 const Q32: u64 = 1 << 32;
 

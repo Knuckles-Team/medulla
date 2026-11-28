@@ -10,17 +10,28 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::codes;
-use medulla_decision_types::decision::coding_agent::{
-    CodingAgentPlan, CodingAgentRequest, SkillTransformation,
-};
+use medulla_decision_statistical_types::decision::codes;
 use medulla_decision_types::decision::primitive::{PrimitiveContract, PrimitiveKind};
-use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalOrigin,
-};
-use medulla_decision_types::decision::{DecisionErrorCode, DecisionInputs};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_program_types::decision::coding_agent::CodingAgentPlan,
+    medulla_decision_program_types::decision::coding_agent::CodingAgentRequest,
+    medulla_decision_program_types::decision::coding_agent::SkillTransformation,
+};
+use {
+    medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal,
+    medulla_decision_types::decision::record::outcome::AbstainReason,
+    medulla_decision_types::decision::record::outcome::RefusalOrigin,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::DecisionInputs,
+};
 
 use super::primitive::edge_type_checks;
 use super::AssembleError;

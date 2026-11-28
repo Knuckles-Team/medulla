@@ -1019,7 +1019,7 @@ fn delivery_proposal_machine_classes_extend_core() {
 #[test]
 fn shard_monitor_machine_matches_edge_table() {
     sm::assert_matches(
-        &medulla_decision_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE,
+        &medulla_decision_policy_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE,
     );
 }
 // spec: MEDULLA-FEDERATED-QUERY-R739.1
@@ -1098,7 +1098,9 @@ fn revision_machine_classes_extend_core() {
 // spec: MEDULLA-DECISION-ENGINE-R831.2
 #[test]
 fn feature_ledger_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_decision_types::decision::feature_match::FEATURE_LEDGER_MACHINE);
+    sm::assert_matches(
+        &medulla_decision_statistical_types::decision::feature_match::FEATURE_LEDGER_MACHINE,
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R831.4
@@ -1348,7 +1350,7 @@ fn gap_machine_classes_extend_core() {
 #[test]
 fn verifiercase_machine_matches_edge_table() {
     sm::assert_matches(
-        &medulla_decision_types::decision::verifier_case_machine::VERIFIER_CASE_MACHINE,
+        &medulla_decision_statistical_types::decision::verifier_case_machine::VERIFIER_CASE_MACHINE,
     );
 }
 // spec: MEDULLA-DECISION-ENGINE-R831.1
@@ -1672,14 +1674,14 @@ fn materialization_machine_matches_edge_table() {
 // spec: MEDULLA-DECISION-ENGINE-R708.2
 #[test]
 fn knowledge_flag_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE);
+    sm::assert_matches(&medulla_decision_statistical_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE);
     sm::assert_extends_core("KnowledgeFlag");
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R710.2
 #[test]
 fn friction_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_decision_types::friction::FRICTION_MACHINE);
+    sm::assert_matches(&medulla_decision_program_types::friction::FRICTION_MACHINE);
     sm::assert_extends_core("Friction");
 }
 

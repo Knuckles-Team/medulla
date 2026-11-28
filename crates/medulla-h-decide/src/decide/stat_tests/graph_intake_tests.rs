@@ -5,10 +5,17 @@
 //! a node of another owner resolves as failed.
 
 use super::*;
-use medulla_decision_types::decision::graph_intake::{GraphReference, IntakeSource};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
 use medulla_types::contract::Digest256;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::graph_intake::GraphReference,
+    medulla_decision_policy_types::decision::graph_intake::IntakeSource,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const GRAPH: &str = "kg-graph-intake";
 const AUTHORITY: &str = "graph:main";

@@ -47,7 +47,7 @@ pub(super) async fn evaluated(
         source: DatasetSource::Inline {
             dataset: Box::new(data),
         },
-        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
         gold_guarantee: None,
     };
     let op = DecisionEvalOp::Submit {

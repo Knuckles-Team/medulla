@@ -1,7 +1,12 @@
 use std::collections::BTreeMap;
 
-use medulla_decision_types::usage::{
-    PriceCatalog, PriceEntry, UsageGroupBy, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
+use {
+    medulla_decision_policy_types::usage::PriceCatalog,
+    medulla_decision_policy_types::usage::PriceEntry,
+    medulla_decision_policy_types::usage::UsageGroupBy,
+    medulla_decision_policy_types::usage::UsageOutcome,
+    medulla_decision_policy_types::usage::UsageRecord,
+    medulla_decision_policy_types::usage::USAGE_SCHEMA_VERSION,
 };
 
 use super::super::agent_fixtures::open_agent_store;

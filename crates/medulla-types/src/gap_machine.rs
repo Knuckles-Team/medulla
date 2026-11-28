@@ -147,7 +147,7 @@ mod tests {
         for source in [
             include_str!("../../medulla-statechart/src/loops.rs"),
             include_str!("../../medulla-h-decide/src/decide/loops.rs"),
-            include_str!("../../medulla-decision-types/src/loops.rs"),
+            include_str!("../../medulla-decision-policy-types/src/loops.rs"),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();
             let writes: Vec<&str> = production

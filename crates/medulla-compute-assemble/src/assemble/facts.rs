@@ -11,7 +11,7 @@ use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::CostFacts,
     agent_component::DeclaredLatency,
 };
-use medulla_decision_types::decision::CandidateFacts;
+use medulla_decision_types::decision::record::CandidateFacts;
 
 use medulla_decision_policy::solve::model::MAX_ABS_COEFFICIENT;
 
@@ -168,7 +168,7 @@ pub(super) fn prompt_tokens(candidate: &CandidateFacts) -> Option<u32> {
 mod cross_path_consistency_tests {
     use super::{p95_latency, per_call_cost, Declared};
     use medulla_decision_stats_records::decision::candidate::CandidateView;
-    use medulla_decision_types::decision::CandidateFacts;
+    use medulla_decision_types::decision::record::CandidateFacts;
     use medulla_decision_types::decision_fixtures::decision::tool_entry_with_cost_latency;
 
     #[test]

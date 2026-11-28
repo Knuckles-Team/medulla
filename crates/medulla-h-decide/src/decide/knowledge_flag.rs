@@ -9,7 +9,7 @@
 //! context. `Raise` needs scope `knowledge:flag`; `Resolve` needs `knowledge:curate`. A refusal
 //! plans nothing.
 
-use medulla_decision_types::knowledge_flag::KnowledgeFlagOp;
+use medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 use super::planned_write::PlannedWrite;
@@ -41,12 +41,6 @@ pub async fn handle_knowledge_flag(
 pub(crate) mod served {
     use std::collections::BTreeMap;
 
-    use medulla_decision_types::knowledge_flag::{
-        evidence_digest, flag_id_of, flag_key, FlagKind, FlagResolution, FlagState, KnowledgeFlag,
-        KnowledgeFlagList, KnowledgeFlagOp, KnowledgeFlagReceipt, KnowledgeFlagView, RaiseOutcome,
-        EVIDENCE_AGENT_ASSERTED, FLAG_LIST_MAX, FLAG_NOT_FOUND, FLAG_RESOLVE_ROLE_REQUIRED,
-        FLAG_RUN_UNKNOWN, FLAG_TARGET_UNKNOWN, KNOWLEDGE_FLAG_CLASS,
-    };
     use medulla_graph_core::graph::GraphView;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
@@ -56,6 +50,27 @@ pub(crate) mod served {
     use medulla_types::contract::Digest256;
     use medulla_types::transition_refused::MachineState;
     use serde_json::{json, Map, Value};
+    use {
+        medulla_decision_statistical_types::knowledge_flag::evidence_digest,
+        medulla_decision_statistical_types::knowledge_flag::flag_id_of,
+        medulla_decision_statistical_types::knowledge_flag::flag_key,
+        medulla_decision_statistical_types::knowledge_flag::FlagKind,
+        medulla_decision_statistical_types::knowledge_flag::FlagResolution,
+        medulla_decision_statistical_types::knowledge_flag::FlagState,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlag,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagList,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagOp,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagReceipt,
+        medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagView,
+        medulla_decision_statistical_types::knowledge_flag::RaiseOutcome,
+        medulla_decision_statistical_types::knowledge_flag::EVIDENCE_AGENT_ASSERTED,
+        medulla_decision_statistical_types::knowledge_flag::FLAG_LIST_MAX,
+        medulla_decision_statistical_types::knowledge_flag::FLAG_NOT_FOUND,
+        medulla_decision_statistical_types::knowledge_flag::FLAG_RESOLVE_ROLE_REQUIRED,
+        medulla_decision_statistical_types::knowledge_flag::FLAG_RUN_UNKNOWN,
+        medulla_decision_statistical_types::knowledge_flag::FLAG_TARGET_UNKNOWN,
+        medulla_decision_statistical_types::knowledge_flag::KNOWLEDGE_FLAG_CLASS,
+    };
     use {
         medulla_decision_stats_records::decision::knowledge_flag::raise,
         medulla_decision_stats_records::decision::knowledge_flag::resolve,
@@ -256,7 +271,7 @@ pub(crate) mod served {
     /// The node a `target_ref` names: the whole reference or the part after its prefix is a
     /// node id of the view (a topic names its gap node `gap:<slug>`).
     fn target_node(view: &GraphView, target_ref: &str) -> Option<String> {
-        let rest = medulla_decision_types::knowledge_flag::target_form(target_ref)
+        let rest = medulla_decision_statistical_types::knowledge_flag::target_form(target_ref)
             .map(|(_, rest)| rest.to_string())?;
         let candidates = [target_ref.to_string(), rest.clone(), format!("gap:{rest}")];
         candidates

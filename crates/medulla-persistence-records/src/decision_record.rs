@@ -38,10 +38,14 @@ use medulla_agent_types::{
 use medulla_agent_types::{
     agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
 };
-use medulla_decision_types::{
-    decision::approval::RecommendationApproval, decision::digest, decision::CandidateFacts,
-    decision::DecisionErrorCode, decision::DecisionRecord, decision::LibraryCandidateScope,
-    decision::MAX_ASSEMBLY_CANDIDATES,
+use {
+    medulla_decision_policy_types::decision::approval::RecommendationApproval,
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::MAX_ASSEMBLY_CANDIDATES,
+    medulla_decision_types::decision::digest,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionRecord,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
 };
 
 use super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};
@@ -178,7 +182,7 @@ pub(crate) fn verify_policy_component(draft: &AgentComponentDraft) -> Result<(),
     if draft.kind == AgentComponentKind::PlannerCostHead {
         // MEDULLA-FEDERATED-QUERY-R732.5: a cost-head revision verifies against its digest the
         // same way, so the policy-evolution gate can admit it as a `KnobSet` revision.
-        return medulla_decision_types::decision::planner_cost_head::verify_cost_head(
+        return medulla_decision_statistical_types::decision::planner_cost_head::verify_cost_head(
             &draft.attributes,
             &draft.content_digest,
         )
@@ -192,7 +196,7 @@ pub(crate) fn verify_policy_component(draft: &AgentComponentDraft) -> Result<(),
     if draft.kind != AgentComponentKind::DecisionPolicy {
         return Ok(());
     }
-    medulla_decision_types::decision::policy::policy_from_attributes(
+    medulla_decision_statistical_types::decision::policy::policy_from_attributes(
         &draft.attributes,
         &draft.content_digest,
     )

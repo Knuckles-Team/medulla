@@ -13,23 +13,42 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::branch_select::select_branch;
-use medulla_decision_types::decision::process_decision::{
-    BranchSelectRequest, BranchVerdict, DecisionTableRequest, DmnValue, TableVerdict,
-    BRANCH_NO_ARM, DMN_ANY_CONFLICT, DMN_EXPRESSION_UNSUPPORTED, DMN_INPUT_MISSING,
-    DMN_NO_RULE_MATCHED, DMN_UNIQUE_VIOLATED, PLAN_UNKNOWN,
-};
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind, BranchSpec};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_program_types::decision::process_decision::BranchSelectRequest,
+    medulla_decision_program_types::decision::process_decision::BranchVerdict,
+    medulla_decision_program_types::decision::process_decision::DecisionTableRequest,
+    medulla_decision_program_types::decision::process_decision::DmnValue,
+    medulla_decision_program_types::decision::process_decision::TableVerdict,
+    medulla_decision_program_types::decision::process_decision::BRANCH_NO_ARM,
+    medulla_decision_program_types::decision::process_decision::DMN_ANY_CONFLICT,
+    medulla_decision_program_types::decision::process_decision::DMN_EXPRESSION_UNSUPPORTED,
+    medulla_decision_program_types::decision::process_decision::DMN_INPUT_MISSING,
+    medulla_decision_program_types::decision::process_decision::DMN_NO_RULE_MATCHED,
+    medulla_decision_program_types::decision::process_decision::DMN_UNIQUE_VIOLATED,
+    medulla_decision_program_types::decision::process_decision::PLAN_UNKNOWN,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::BranchCondition,
+    medulla_decision_program_types::decision::task_plan::BranchKind,
+    medulla_decision_program_types::decision::task_plan::BranchSpec,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 use {
     medulla_decision_stats_records::decision::dmn_eval::evaluate_table,
     medulla_decision_stats_records::decision::dmn_eval::DmnError,
@@ -67,10 +86,17 @@ pub const PROCESS_CONTROL_QUESTION_IDS: [&str; 2] =
 /// inert `declared_cost_micros` feature imputing 0, which no process decision reads.
 /// `medulla/generated/_process_control_feature_schemas.py` mirrors it.
 pub fn process_control_feature_schema(
-) -> medulla_decision_types::decision::statistical::features::FeatureSchemaBody {
-    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-    use medulla_decision_types::decision::statistical::features::{
-        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+) -> medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody {
+    use {
+        medulla_decision_program_types::decision::statistical::features::FeatureKind,
+        medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+        medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+        medulla_decision_program_types::decision::statistical::features::MissingValue,
+        medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+        medulla_decision_statistical_types::decision::numeric::QuantisedValue,
     };
     FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
@@ -466,7 +492,8 @@ mod control_schema_tests {
         let body = process_control_feature_schema().checked().unwrap();
         assert_eq!(body.names(), ["declared_cost_micros"]);
         let encoded =
-            medulla_decision_types::decision::statistical::body::encode_body(&body).unwrap();
+            medulla_decision_program_types::decision::statistical::body::encode_body(&body)
+                .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
         assert_eq!(
             json["features"][0]["kind"]["feature"],

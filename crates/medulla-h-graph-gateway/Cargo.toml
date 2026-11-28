@@ -24,6 +24,9 @@ medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }

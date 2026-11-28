@@ -8,12 +8,20 @@ use std::collections::BTreeMap;
 use super::*;
 use crate::decide::belief_revise::{enqueue_touched, handle_belief_revise};
 use crate::decide::claims::handle_claims;
-use medulla_decision_types::belief_revision::{
-    BeliefPassResult, BeliefReviseRequest, ContradictionMove, ContradictionStatus, PremiseRef,
-};
-use medulla_decision_types::claims::{ClaimOp, ClaimRecord, EvidenceChannel};
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::belief_revision::BeliefPassResult,
+    medulla_decision_statistical_types::belief_revision::BeliefReviseRequest,
+    medulla_decision_statistical_types::belief_revision::ContradictionMove,
+    medulla_decision_statistical_types::belief_revision::ContradictionStatus,
+    medulla_decision_statistical_types::belief_revision::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::claims::ClaimOp,
+    medulla_decision_statistical_types::claims::ClaimRecord,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+};
 
 const WHO: &str = "belief-writer";
 const GRAPH: &str = "kg-belief";
@@ -119,7 +127,7 @@ async fn claim_of(h: &Harness, claim_id: &str) -> ClaimRecord {
         },
     )
     .await
-    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_statistical_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap()
 }
 
@@ -205,7 +213,7 @@ async fn belief_refusals_leave_state_unchanged() {
         },
     )
     .await
-    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_statistical_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap();
 
     let unknown = pass(&h, request(&["no-such-claim"])).await;
@@ -244,7 +252,7 @@ async fn belief_refusals_leave_state_unchanged() {
         },
     )
     .await
-    .map(|got: medulla_decision_types::claims::ClaimGetResult| got.claim.unwrap())
+    .map(|got: medulla_decision_statistical_types::claims::ClaimGetResult| got.claim.unwrap())
     .unwrap();
     assert_eq!(
         after, before,

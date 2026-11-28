@@ -4,14 +4,25 @@
 
 use medulla_decision_policy::solve::model::Model;
 use medulla_decision_policy::solve::{solve, verify, Verdict, VerifyError};
-use medulla_decision_types::solve::certificate::{Certificate, SolverConfig, SolverConfigSpec};
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 use medulla_query_types::solve_scalar::Scalar;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+    medulla_decision_policy_types::solve::certificate::SolverConfigSpec,
+};
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveTerm,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 use super::generators::shuffled;
 
@@ -37,7 +48,7 @@ pub fn config(
 /// Enough budget and certificate room to finish and certify small models.
 pub fn wide_config() -> SolverConfig {
     config(
-        medulla_decision_types::solve::certificate::MAX_NODE_BUDGET,
+        medulla_decision_policy_types::solve::certificate::MAX_NODE_BUDGET,
         1 << 20,
         0,
         1,

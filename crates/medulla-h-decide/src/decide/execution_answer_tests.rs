@@ -5,7 +5,7 @@
 use medulla_decision_outcome_types::decision::execution_answer::{
     AgentExecutionAnswerRequest, ExecutionAnswer, ExecutionAnswerPart,
 };
-use medulla_decision_types::decision::DecisionOutcome;
+use medulla_decision_types::decision::record::DecisionOutcome;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::ontology_iri;
@@ -200,8 +200,8 @@ fn family_abstention(part: &ExecutionAnswerPart, name: &str) -> String {
 #[test]
 fn no_source_fault_abstains_one_part_by_code() {
     use super::execution_answer::{part_or_abstain, PartFault};
+    use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
     use medulla_decision_types::decision::record::AbstainReason;
-    use medulla_decision_types::decision::statistical::QuestionKind;
 
     let part = part_or_abstain(
         "coverage",

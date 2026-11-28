@@ -10,13 +10,13 @@
 //! read through the caller's access check and row-level filter, so an absent proposal, another
 //! kind and a foreign tenant's proposal refuse alike.
 
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_decision_types::decision::held_item::{
     derive_critique, HeldItemCritiqueRecorded, HeldItemCritiqueRequest, HeldItemKind,
     HeldItemRefusal, ROW_CONTENT_DIGEST, ROW_CRITIQUE_ANSWER_PREFIX, ROW_CRITIQUE_DIGEST,
     ROW_CRITIQUE_RECORDED_AT, ROW_CRITIQUE_RECORDED_BY, ROW_CRITIQUE_REF, ROW_CRITIQUE_VERDICT,
     ROW_ITEM_KIND,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_graph_core::graph::GraphView;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::result_contract::coordination::DecisionEvalHeldItemCritique;

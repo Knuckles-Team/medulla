@@ -15,11 +15,17 @@ use crate::decide::stat_freshness::{
 };
 use medulla_decision_stats::decision::drift::ChangedRevisions;
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
-use medulla_decision_types::decision::statistical::retrieval_drift::{
-    DriftKind, RefreshPlan, RefreshPriority, RegionRef,
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftKind,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPlan,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RegionRef,
 };
-use medulla_decision_types::decision::statistical::retrieval_refresh::{
-    FreshnessReceipt, FreshnessRefresh, RefreshBudget, RefreshTrigger,
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessReceipt,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessRefresh,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::RefreshBudget,
+    medulla_decision_policy_types::decision::statistical::retrieval_refresh::RefreshTrigger,
 };
 
 const SOURCE: &str = "https://knuckles-team.github.io/ontology/virtual-graph#searxng-connection";

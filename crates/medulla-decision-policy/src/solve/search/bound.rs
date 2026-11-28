@@ -20,9 +20,13 @@
 //! `i128`; a capped or skipped raise only weakens the bound.
 
 use super::state::{row_id, SearchState};
-use medulla_decision_types::solve::certificate::{DualEntry, LagrangeDual, MAX_MULTIPLIER};
-use medulla_decision_types::solve::spec::Relation;
+use medulla_decision_policy_types::solve::spec::Relation;
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::DualEntry,
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::MAX_MULTIPLIER,
+};
 
 /// A dual and the bound value it certifies at the node that produced it.
 pub(super) struct NodeBound {

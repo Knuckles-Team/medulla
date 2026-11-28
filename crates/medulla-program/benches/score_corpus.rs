@@ -7,7 +7,7 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_decision_types::decision::held_out::GraderKind;
+use medulla_decision_policy_types::decision::held_out::GraderKind;
 use medulla_modality::{
     ArtifactId, Classification, DerivationId, EvidenceAddress, EvidenceLocus, EvidenceLocusId,
     OpaqueRef, PolicyEnvelope, PrivacyAttestation, ResourceId,

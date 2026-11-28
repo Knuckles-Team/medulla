@@ -1,5 +1,5 @@
 use super::*;
-use medulla_decision_types::decision::entry_types::EntryTrust;
+use medulla_decision_statistical_types::decision::entry_types::EntryTrust;
 
 fn entry(id: &str, tier: TrustTier, value: &str, source: &str) -> RetrievedEntry {
     RetrievedEntry {

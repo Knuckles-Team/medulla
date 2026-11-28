@@ -7,9 +7,13 @@
 //! tenant are refused.
 
 use super::*;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const GRAPH: &str = "held-items";
 
@@ -188,7 +192,8 @@ async fn program_needs_independent_verifier_and_passes() {
     // refused, lowered to 1 a one-pass program is admitted.
     let knob = &medulla_decision_types::decision::held_item::KNOBS[0];
     let pinned = |floor: i64| {
-        let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+        let mut policy =
+            medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
         policy
             .knobs
             .insert(knob.knob_name(), KnobValue::Integer(floor));

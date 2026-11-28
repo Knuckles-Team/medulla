@@ -240,6 +240,9 @@ schemars = { version = "1.2.3", optional = true }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }

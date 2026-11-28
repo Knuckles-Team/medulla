@@ -12,16 +12,30 @@
 use medulla_decision_stats::decision::temporal_basis::{
     confusion, fallback_windows, needs_fallback,
 };
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalErrorCode,
-    StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::temporal_query::{
-    TemporalKnobs, TemporalQueryInput, TemporalRefusal, TimeBasis, BASIS_OPTIONS,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::temporal_query::TemporalKnobs,
+    medulla_decision_program_types::decision::temporal_query::TemporalQueryInput,
+    medulla_decision_program_types::decision::temporal_query::TemporalRefusal,
+    medulla_decision_program_types::decision::temporal_query::TimeBasis,
+    medulla_decision_program_types::decision::temporal_query::BASIS_OPTIONS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

@@ -10,15 +10,24 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::memory_benchmark::{
-    BenchmarkKnobs, BenchmarkQuery, MemoryChangeBenchmarkRequest, RunResults, ACCURACY_BELOW_MIN,
-    MEMORY_COVERAGE_INCOMPLETE, MEMORY_DATASET_EMPTY, MEMORY_EXPECTED_MISSING,
-    MEMORY_METRIC_UNRESOLVED, MEMORY_REVISION_STALE, MEMORY_SNAPSHOT_MISMATCH, RECALL_BELOW_MIN,
-    REGRESSION_ABOVE_MAX,
-};
 use medulla_types::contract::Digest256;
 use medulla_types::refusal_code::RefusalCode;
 use unicode_normalization::UnicodeNormalization;
+use {
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkKnobs,
+    medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkQuery,
+    medulla_decision_statistical_types::decision::memory_benchmark::MemoryChangeBenchmarkRequest,
+    medulla_decision_statistical_types::decision::memory_benchmark::RunResults,
+    medulla_decision_statistical_types::decision::memory_benchmark::ACCURACY_BELOW_MIN,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_COVERAGE_INCOMPLETE,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_DATASET_EMPTY,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_EXPECTED_MISSING,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_METRIC_UNRESOLVED,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_REVISION_STALE,
+    medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_SNAPSHOT_MISMATCH,
+    medulla_decision_statistical_types::decision::memory_benchmark::RECALL_BELOW_MIN,
+    medulla_decision_statistical_types::decision::memory_benchmark::REGRESSION_ABOVE_MAX,
+};
 
 const PPM: u128 = 1_000_000;
 
@@ -239,8 +248,12 @@ pub fn benchmark(
 mod tests {
     use super::*;
     use medulla_agent_types::agent_component::DecisionPolicyRef;
-    use medulla_decision_types::decision::memory_benchmark::{
-        BenchmarkDataset, ChangeKind, QueryResult, RevisionRef, MEMORY_BENCHMARK_SCHEMA_VERSION,
+    use {
+        medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkDataset,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
+        medulla_decision_statistical_types::decision::memory_benchmark::QueryResult,
+        medulla_decision_statistical_types::decision::memory_benchmark::RevisionRef,
+        medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_BENCHMARK_SCHEMA_VERSION,
     };
 
     fn rev(revision: u64) -> RevisionRef {

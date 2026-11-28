@@ -22,22 +22,37 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::research_voi::{
-    ResearchAnswer, ResearchRead, ResearchStop, RESEARCH_DEPTH_EXCEEDED, RESEARCH_NO_BUDGET,
-    SPENT_CLASSIFICATION, STOP_OPTION_ID, SUBTASK_CLASSIFICATION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, ScoredOption, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, QuantScaleTag, QuantisedValue, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::research_voi::ResearchAnswer,
+    medulla_decision_statistical_types::decision::research_voi::ResearchRead,
+    medulla_decision_statistical_types::decision::research_voi::ResearchStop,
+    medulla_decision_statistical_types::decision::research_voi::RESEARCH_DEPTH_EXCEEDED,
+    medulla_decision_statistical_types::decision::research_voi::RESEARCH_NO_BUDGET,
+    medulla_decision_statistical_types::decision::research_voi::SPENT_CLASSIFICATION,
+    medulla_decision_statistical_types::decision::research_voi::STOP_OPTION_ID,
+    medulla_decision_statistical_types::decision::research_voi::SUBTASK_CLASSIFICATION,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 use {
     medulla_decision_stats_records::decision::research_voi::expand_frontier,
     medulla_decision_stats_records::decision::research_voi::q32_to_micro,

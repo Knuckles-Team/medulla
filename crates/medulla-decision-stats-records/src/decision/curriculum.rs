@@ -7,11 +7,17 @@
 //! `knob curriculum.promote_floor`. The rate comparison is exact
 //! integer arithmetic on `Q32`; no float, no clock, no store.
 
-use medulla_decision_types::decision::curriculum::{
-    CurriculumStage, PromotionPolicy, PromotionReading, PromotionVerdict,
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_policy_types::decision::curriculum::CurriculumStage,
+    medulla_decision_policy_types::decision::curriculum::PromotionPolicy,
+    medulla_decision_policy_types::decision::curriculum::PromotionReading,
+    medulla_decision_policy_types::decision::curriculum::PromotionVerdict,
 };
-use medulla_decision_types::decision::numeric::{micros_to_q32, QuantScaleTag};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use {
+    medulla_decision_statistical_types::decision::numeric::micros_to_q32,
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+};
 
 /// The verdict for `stage` from its `outcomes` (newest first, `true` is a
 /// success) over a window of `window_runs` runs.
@@ -71,7 +77,7 @@ pub fn promotion_verdict(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::numeric::QuantisedValue;
+    use medulla_decision_statistical_types::decision::numeric::QuantisedValue;
 
     const FLOOR: i64 = 500_000;
 

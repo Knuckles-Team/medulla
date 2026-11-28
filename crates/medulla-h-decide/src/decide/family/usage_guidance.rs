@@ -9,25 +9,39 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_decision_policy_types::decision::capability_designation::Q32_ONE;
 use medulla_decision_stats::decision::usage_guidance::{
     order_steps, OrderError, PlanStep, UsageKnobs,
 };
-use medulla_decision_types::decision::capability_designation::Q32_ONE;
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
-};
-use medulla_decision_types::decision::usage_guidance::{
-    UsageGuidance, UsageStep, USAGE_GUIDANCE_CYCLIC_STEPS, USAGE_GUIDANCE_NO_STEPS,
-    USAGE_GUIDANCE_UNKNOWN_CONNECTOR,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, OpaqueId, TenantId};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::usage_guidance::UsageGuidance,
+    medulla_decision_program_types::decision::usage_guidance::UsageStep,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_CYCLIC_STEPS,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_NO_STEPS,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_UNKNOWN_CONNECTOR,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
@@ -75,7 +89,7 @@ fn origin_of(
     runtime: &DesignationRuntime,
     tenant: &TenantId,
     component_id: &str,
-) -> Option<medulla_decision_types::decision::capability_designation::PackOrigin> {
+) -> Option<medulla_decision_policy_types::decision::capability_designation::PackOrigin> {
     let id = OpaqueId::new(component_id).ok()?;
     runtime
         .index
@@ -134,13 +148,13 @@ pub(crate) fn usage_guidance_outcome(
         .map_err(|detail| invalid_parameter(format!("tenant: {detail}")))?;
     let runtime = ctx.designation.as_ref().ok_or_else(|| {
         coded(
-            medulla_decision_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+            medulla_decision_policy_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
             "the pack facts and tool outcomes were not read",
         )
     })?;
     let read: &UsageGuidanceRead = runtime.usage_guidance.as_ref().ok_or_else(|| {
         coded(
-            medulla_decision_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+            medulla_decision_policy_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
             "the pack facts of the connector were not read",
         )
     })?;
@@ -290,7 +304,8 @@ pub(crate) fn usage_guidance_outcome(
     }
     let mut seen = BTreeSet::new();
     premises.retain(|premise| seen.insert((premise.subject.clone(), premise.fact.clone())));
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     premises.push(PremiseRef {
         subject: "policy".to_string(),
         fact: format!("knob:usage.min_trials={}", knobs.min_trials),

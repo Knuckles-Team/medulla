@@ -7,7 +7,7 @@ use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, learn, outcome, sql,
 };
 use super::*;
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
 use medulla_decision_types::{
     decision::statistical::retrieval::LearningRecorded,
     decision::statistical::retrieval::LearningWrite,

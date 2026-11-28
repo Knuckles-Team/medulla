@@ -6,10 +6,14 @@
 //! `WriteBack` or `Irreversible`, always requires confirmation with the code
 //! `ACTION_NEEDS_APPROVAL`. No float, no clock, no store.
 
-use medulla_decision_types::decision::autonomy::{
-    AutonomyReading, CorrigibilityVerdict, IrreversibilityClass, TrustLedger, ACTION_NEEDS_APPROVAL,
-};
 use medulla_decision_types::decision::statistical::QuestionSafety;
+use {
+    medulla_decision_statistical_types::decision::autonomy::AutonomyReading,
+    medulla_decision_statistical_types::decision::autonomy::CorrigibilityVerdict,
+    medulla_decision_statistical_types::decision::autonomy::IrreversibilityClass,
+    medulla_decision_statistical_types::decision::autonomy::TrustLedger,
+    medulla_decision_statistical_types::decision::autonomy::ACTION_NEEDS_APPROVAL,
+};
 
 /// The ledger of `action_class` from its independent `outcomes`, newest first
 /// (`true` is a success): the successes since the last failure.

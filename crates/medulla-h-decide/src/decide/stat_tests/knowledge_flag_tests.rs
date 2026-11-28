@@ -5,14 +5,27 @@
 use super::super::knowledge_flag::handle_knowledge_flag;
 use super::super::planned_write::PlannedWrite;
 use super::*;
-use medulla_decision_types::knowledge_flag::{
-    FlagKind, FlagResolution, FlagState, KnowledgeFlagList, KnowledgeFlagOp, KnowledgeFlagReceipt,
-    KnowledgeFlagView, KnowledgeKind, RaiseOutcome, FLAG_NOT_FOUND, FLAG_RESOLVE_ROLE_REQUIRED,
-    FLAG_RUN_QUOTA_EXCEEDED, FLAG_RUN_UNKNOWN, FLAG_STATE_ILLEGAL, FLAG_TARGET_UNKNOWN,
-    FLAG_TEXT_TOO_LARGE, WHAT_OBSERVED_MAX_BYTES,
-};
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::knowledge_flag::FlagKind,
+    medulla_decision_statistical_types::knowledge_flag::FlagResolution,
+    medulla_decision_statistical_types::knowledge_flag::FlagState,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagList,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagOp,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagReceipt,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagView,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeKind,
+    medulla_decision_statistical_types::knowledge_flag::RaiseOutcome,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_NOT_FOUND,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_RESOLVE_ROLE_REQUIRED,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_RUN_QUOTA_EXCEEDED,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_RUN_UNKNOWN,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_STATE_ILLEGAL,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_TARGET_UNKNOWN,
+    medulla_decision_statistical_types::knowledge_flag::FLAG_TEXT_TOO_LARGE,
+    medulla_decision_statistical_types::knowledge_flag::WHAT_OBSERVED_MAX_BYTES,
+};
 
 const GRAPH: &str = "__commons__";
 const RUN: &str = "run-1";

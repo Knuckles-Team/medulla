@@ -4,17 +4,32 @@
 //! refusal stores nothing; another tenant's program is never read.
 
 use super::*;
-use medulla_decision_types::decision::program_store::{
-    program_key, program_node_id, CompiledProgram, RunRecord, RunRecordStored, StoredRun,
-    TraceSource, COMPILED_FROM,
-};
-use medulla_decision_types::decision::run_governance::{
-    RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
-};
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::program_store::program_key,
+    medulla_decision_program_types::decision::program_store::program_node_id,
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+    medulla_decision_program_types::decision::program_store::TraceSource,
+    medulla_decision_program_types::decision::program_store::COMPILED_FROM,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::run_governance::RunOutcome,
+    medulla_decision_statistical_types::decision::run_governance::RunTraceRecord,
+    medulla_decision_statistical_types::decision::run_governance::StepKind,
+    medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+    medulla_decision_statistical_types::decision::run_governance::TraceArgument,
+    medulla_decision_statistical_types::decision::run_governance::TraceScalar,
+    medulla_decision_statistical_types::decision::run_governance::TraceStep,
+};
 
 const FOREIGN: &str = "tenant-foreign";
 const SIGNATURE: &str = "summarize-report";
@@ -247,9 +262,9 @@ fn answered(record: &StatisticalDecisionRecord) -> Result<CompiledProgram, Vec<S
         StatisticalOutcome::Abstained { reasons } => Err(reasons
             .iter()
             .map(|reason| match reason {
-                medulla_decision_types::decision::AbstainReason::Family { code, .. } => {
-                    code.as_str().to_string()
-                }
+                medulla_decision_types::decision::record::AbstainReason::Family {
+                    code, ..
+                } => code.as_str().to_string(),
                 other => panic!("unexpected abstain reason {other:?}"),
             })
             .collect()),
@@ -590,12 +605,15 @@ async fn overlong_trace_is_refused() {
 #[cfg(feature = "blob")]
 mod preplan {
     use super::*;
-    use medulla_decision_types::decision::program_store::preplan::{
-        pattern_key, PlanBinding, PrePlanTestReceipt, ReusablePattern,
-    };
     use medulla_server_blob::blob::engine_bodies::EngineBody;
     use medulla_server_blob::blob::BlobStateExt;
     use sha2::{Digest, Sha256};
+    use {
+        medulla_decision_program_types::decision::program_store::preplan::pattern_key,
+        medulla_decision_program_types::decision::program_store::preplan::PlanBinding,
+        medulla_decision_program_types::decision::program_store::preplan::PrePlanTestReceipt,
+        medulla_decision_program_types::decision::program_store::preplan::ReusablePattern,
+    };
 
     fn hex64(c: char) -> String {
         std::iter::repeat_n(c, 64).collect()

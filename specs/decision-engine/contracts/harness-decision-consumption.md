@@ -13,7 +13,7 @@ Medulla refuses a stale or malformed plan input with a typed code before it expo
 
 ## Authoritative types
 
-`task_plan` types in `crates/medulla-decision-types/src/decision/task_plan.rs`.
+`task_plan` types in `crates/medulla-decision-program-types/src/decision/task_plan.rs`.
 
 ## Test vectors
 

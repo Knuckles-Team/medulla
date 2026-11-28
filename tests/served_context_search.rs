@@ -16,20 +16,22 @@ use tokio::sync::RwLock;
 use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, ComponentDependency, DecisionPolicyRef,
 };
-use medulla_decision_types::decision::digest::policy_digest;
-use medulla_decision_types::decision::knob_families::context_search::KNOBS;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
-use medulla_decision_types::decision::statistical::context_search::{
-    sha256_hex, RetrievalContextSearchRequest, RetrievalContextSearchResult,
-    CONTEXT_SEARCH_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_policy_types::decision::knob_families::context_search::KNOBS;
+use medulla_decision_statistical_types::decision::digest::policy_part::policy_digest;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::state::ServerState;
+use {
+    medulla_decision_policy_types::decision::statistical::context_search::sha256_hex,
+    medulla_decision_policy_types::decision::statistical::context_search::RetrievalContextSearchRequest,
+    medulla_decision_policy_types::decision::statistical::context_search::RetrievalContextSearchResult,
+    medulla_decision_policy_types::decision::statistical::context_search::CONTEXT_SEARCH_SCHEMA_VERSION,
+};
 
 const SECRET: &str = "context-search-served-secret";
 const GRAPH: &str = "__commons__";

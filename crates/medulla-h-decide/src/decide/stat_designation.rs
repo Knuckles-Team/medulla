@@ -6,16 +6,19 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_decision_memory::memory::capability_index::{CapabilityIndex, ShardLimits};
-use medulla_decision_types::decision::capability_designation::{
-    DesignationAsk, DesignationKnobs, SchemaProjection, DESIGNATION_PARAM,
-};
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterScope;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, TypedValue,
 };
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::{ErasedHandle, ServerState};
+use {
+    medulla_decision_policy_types::decision::capability_designation::DesignationAsk,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::SchemaProjection,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_PARAM,
+};
 
 use super::stat_support::invalid_parameter;
 use super::SharedState;

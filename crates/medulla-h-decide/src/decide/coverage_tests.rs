@@ -14,8 +14,7 @@ use medulla_decision_outcome_types::{
     decision::coverage::CapabilityCoverageOutcome, decision::coverage::CapabilityCoverageRequest,
     decision::coverage::CapabilityCoverageResult,
 };
-use medulla_decision_types::decision::record::PremiseClass;
-use medulla_decision_types::decision::{AssemblyRequirements, LibraryCandidateScope};
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -24,6 +23,10 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_types::decision::request::AssemblyRequirements,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
 
 const TENANT: &str = "tenant-coverage";
 const FOREIGN: &str = "tenant-foreign";

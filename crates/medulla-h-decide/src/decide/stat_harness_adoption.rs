@@ -13,11 +13,10 @@
 
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_types::decision::held_out::{DefinitionKind, RevisionSubject};
+use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 use medulla_decision_types::decision::statistical::log::{
     HarnessAdoptionStored, HarnessAdoptionWrite, HarnessLessonQuery, HarnessLessonsFound,
 };
-use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::improvement::{
@@ -25,6 +24,10 @@ use medulla_work_types::orchestration::improvement::{
     HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence, LessonSupersession,
 };
 use serde::de::DeserializeOwned;
+use {
+    medulla_decision_policy_types::decision::held_out::DefinitionKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entries, LogReader};

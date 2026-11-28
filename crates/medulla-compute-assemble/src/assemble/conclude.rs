@@ -7,15 +7,28 @@ use medulla_decision_outcome_types::{
     decision::derivation::coverage_derivation, decision::derivation::required_capabilities,
     decision::derivation::weakest, decision::derivation::RequiredCapability,
 };
+use medulla_decision_policy_types::solve::ModelSpec;
 use medulla_decision_types::decision::request::effective_solver_budget;
-use medulla_decision_types::decision::{
-    AbstainReason, CandidateFacts, CoverageDerivation, DecisionErrorCode, DecisionInputs,
-    DecisionOutcome, Elimination, PremiseRef, ResolutionKind, SlotAssignment, TemplateFacts,
-    UniquenessProof, UnknownCostRule, Violation, WhyNot, MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
-};
-use medulla_decision_types::solve::ModelSpec;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::CoverageDerivation,
+    medulla_decision_statistical_types::decision::record::premise::Elimination,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::UnknownCostRule,
+    medulla_decision_statistical_types::decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::ResolutionKind,
+    medulla_decision_types::decision::record::SlotAssignment,
+    medulla_decision_types::decision::record::TemplateFacts,
+    medulla_decision_types::decision::record::UniquenessProof,
+    medulla_decision_types::decision::record::WhyNot,
+};
 
 use super::admit_topology;
 use super::eliminate::Screened;
@@ -330,9 +343,11 @@ fn solved(
             .flat_map(|candidate| candidate.fact_premises.iter().cloned()),
     );
     premises.extend(question.map(Question::premises).unwrap_or_default());
-    premises.extend(medulla_decision_types::decision::evidence_stream::premises(
-        context.inputs.request.evidence_streams.as_slice(),
-    ));
+    premises.extend(
+        medulla_decision_policy_types::decision::evidence_stream::premises(
+            context.inputs.request.evidence_streams.as_slice(),
+        ),
+    );
     premises.extend(uniqueness.premises.iter().cloned());
     premises.extend(super::objective::premises(context.inputs, &components));
     let topology = question.map(|question| {

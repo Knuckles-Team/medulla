@@ -10,21 +10,38 @@ use super::super::planned_write::PlannedWrite;
 use super::*;
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
-use medulla_decision_types::knowledge_curation::{
-    CurationAdmitted, CurationEdit, CurationEditOp, CurationInputs, CurationOp, CurationProposal,
-    CurationStatus, LoopMetrics, CURATION_EDIT_TOO_LARGE, CURATION_FLAG_UNKNOWN,
-    CURATION_LEASE_REQUIRED, CURATION_NOT_DUE, CURATION_ROLE_REQUIRED, REFERENCE_UNRESOLVED,
-    UPDATE_BASE_STALE,
-};
-use medulla_decision_types::knowledge_flag::{
-    FlagKind, FlagState, KnowledgeFlagList, KnowledgeFlagOp, KnowledgeKind,
-};
-use medulla_decision_types::loops::{LoopOp, LoopView};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::contract::Digest256;
 use serde_json::{json, Value};
+use {
+    medulla_decision_policy_types::knowledge_curation::CurationAdmitted,
+    medulla_decision_policy_types::knowledge_curation::CurationEdit,
+    medulla_decision_policy_types::knowledge_curation::CurationEditOp,
+    medulla_decision_policy_types::knowledge_curation::CurationInputs,
+    medulla_decision_policy_types::knowledge_curation::CurationOp,
+    medulla_decision_policy_types::knowledge_curation::CurationProposal,
+    medulla_decision_policy_types::knowledge_curation::CurationStatus,
+    medulla_decision_policy_types::knowledge_curation::LoopMetrics,
+    medulla_decision_policy_types::knowledge_curation::CURATION_EDIT_TOO_LARGE,
+    medulla_decision_policy_types::knowledge_curation::CURATION_FLAG_UNKNOWN,
+    medulla_decision_policy_types::knowledge_curation::CURATION_LEASE_REQUIRED,
+    medulla_decision_policy_types::knowledge_curation::CURATION_NOT_DUE,
+    medulla_decision_policy_types::knowledge_curation::CURATION_ROLE_REQUIRED,
+    medulla_decision_policy_types::knowledge_curation::REFERENCE_UNRESOLVED,
+    medulla_decision_policy_types::knowledge_curation::UPDATE_BASE_STALE,
+};
+use {
+    medulla_decision_policy_types::loops::LoopOp, medulla_decision_policy_types::loops::LoopView,
+};
+use {
+    medulla_decision_statistical_types::knowledge_flag::FlagKind,
+    medulla_decision_statistical_types::knowledge_flag::FlagState,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagList,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagOp,
+    medulla_decision_statistical_types::knowledge_flag::KnowledgeKind,
+};
 
 const GRAPH: &str = "__commons__";
 const LOOP: &str = "curation";
@@ -151,7 +168,8 @@ async fn raise(
     .await
     .expect("raises");
     commit(core, &write);
-    let receipt: medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt = reply(&write);
+    let receipt: medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagReceipt =
+        reply(&write);
     receipt.flag.flag_id
 }
 

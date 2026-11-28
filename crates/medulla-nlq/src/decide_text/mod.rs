@@ -40,7 +40,7 @@ mod tests;
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::request::AssemblyRequest;
 use medulla_decision_types::{
     decision::statistical::DecideRequest, decision::statistical::TypedValue,
 };

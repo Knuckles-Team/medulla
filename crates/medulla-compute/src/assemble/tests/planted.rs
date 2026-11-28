@@ -9,11 +9,16 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
 use medulla_decision_outcome_types::decision::derivation::verify_record;
-use medulla_decision_types::decision::{
-    AbstainReason, CostBudget, DecisionErrorCode, DecisionOutcome, PremiseClass, SolverBudget,
-    Violation,
-};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::request::CostBudget,
+    medulla_decision_types::decision::request::SolverBudget,
+};
 
 use super::fixture::*;
 use {
@@ -30,8 +35,8 @@ use {
 };
 
 fn decide(
-    request: medulla_decision_types::decision::AssemblyRequest,
-    library: Vec<medulla_decision_types::decision::CandidateFacts>,
+    request: medulla_decision_types::decision::request::AssemblyRequest,
+    library: Vec<medulla_decision_types::decision::record::CandidateFacts>,
 ) -> Assembly {
     assemble(inputs(request, library), identity()).expect("the inputs are consistent")
 }
@@ -246,7 +251,7 @@ fn a_result_the_deterministic_search_would_not_reach_is_not_committable() {
             lower_bound: medulla_query_types::solve_scalar::Scalar::new(0),
         }]),
     };
-    aborted.resolution_kind = medulla_decision_types::decision::ResolutionKind::Abstention;
+    aborted.resolution_kind = medulla_decision_types::decision::record::ResolutionKind::Abstention;
     aborted.why_not = Default::default();
     assert!(replay_check(&aborted).is_err());
 }
@@ -278,9 +283,10 @@ fn the_nogood_loop_terminates_after_its_bounded_rounds() {
         panic!("the research library is buildable")
     };
     let context = SolveContext::new(&inputs, built, None).expect("context");
-    let refuse_all = |_: &[(usize, &medulla_decision_types::decision::CandidateFacts)]| {
-        Err("TEMPLATE_REFUSED: every answer".to_string())
-    };
+    let refuse_all = |_: &[(
+        usize,
+        &medulla_decision_types::decision::record::CandidateFacts,
+    )]| { Err("TEMPLATE_REFUSED: every answer".to_string()) };
     let Err(reasons) = search(&context, &refuse_all).expect("decides") else {
         panic!("every answer was refused, so the search must abstain")
     };
@@ -298,7 +304,7 @@ fn the_nogood_loop_terminates_after_its_bounded_rounds() {
 }
 
 fn required(
-    inputs: &medulla_decision_types::decision::DecisionInputs,
+    inputs: &medulla_decision_types::decision::record::DecisionInputs,
 ) -> Vec<medulla_decision_outcome_types::decision::derivation::RequiredCapability> {
     medulla_decision_outcome_types::decision::derivation::required_capabilities(
         &inputs.request.requirements,
@@ -315,11 +321,13 @@ fn required(
 // spec: MEDULLA-DECISION-ENGINE-R065
 #[test]
 fn candidate_scope_at_the_boundary_builds_one_more_is_refused() {
-    use medulla_decision_types::{
-        decision::DecisionErrorCode, decision::DecisionPolicy, decision::MAX_ASSEMBLY_CANDIDATES,
+    use {
+        medulla_decision_statistical_types::decision::DecisionErrorCode,
+        medulla_decision_statistical_types::decision::DecisionPolicy,
+        medulla_decision_statistical_types::decision::MAX_ASSEMBLY_CANDIDATES,
     };
 
-    let sorted_tools = |n: usize| -> Vec<medulla_decision_types::decision::CandidateFacts> {
+    let sorted_tools = |n: usize| -> Vec<medulla_decision_types::decision::record::CandidateFacts> {
         (0..n)
             .map(|i| {
                 tool(

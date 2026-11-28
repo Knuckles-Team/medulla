@@ -7,9 +7,12 @@
 //! the sorted source ids joined by newlines. A pure function of the entries:
 //! the order they arrive in never matters.
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::digest::trajectory_derivation_digest;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::trajectory_verdict::{DistilledTrajectory, TrajectoryEntry};
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::DistilledTrajectory,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TrajectoryEntry,
+};
 
 /// The most trajectories one join takes; more refuse with
 /// `CANDIDATE_SET_TOO_LARGE`.
@@ -60,8 +63,11 @@ pub fn join(entries: &[TrajectoryEntry]) -> Result<DistilledTrajectory, String> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
     use medulla_types::evidence_class::EvidenceClass;
+    use {
+        medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+        medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    };
 
     fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
         TrajectoryEntry::new(

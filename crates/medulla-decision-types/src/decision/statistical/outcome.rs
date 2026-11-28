@@ -6,9 +6,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::super::numeric::{QuantisedValue, UnitRationalWire};
 use super::super::record::AbstainReason;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    medulla_decision_statistical_types::decision::numeric::UnitRationalWire,
+};
 
 /// Which controlled procedure produced the risk statement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -157,28 +160,28 @@ pub struct AuditDraw {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum FamilyAnswer {
     /// The evaluate-only explicit task DAG of the `task_plan` family.
-    TaskPlan(Box<crate::decision::task_plan::TaskPlan>),
+    TaskPlan(Box<medulla_decision_program_types::decision::task_plan::TaskPlan>),
     /// The proven swarm topology of the `topology` family (MEDULLA-DECISION-ENGINE-R111.1).
     Topology(Box<medulla_agent_types::agent_topology::TopologyPlan>),
     /// The expansion choice or stop of the `thought_search` family
     /// (MEDULLA-DECISION-ENGINE-R750.754).
-    ThoughtSearch(Box<crate::decision::thought_search::ThoughtSearchAnswer>),
+    ThoughtSearch(Box<medulla_decision_statistical_types::decision::thought_search::ThoughtSearchAnswer>),
     /// The budgeted plan of the `comparative_analysis_plan` family
     /// (MEDULLA-DECISION-ENGINE-R139.3).
-    ComparativeAnalysis(Box<crate::decision::comparative_analysis::ComparativeAnalysisPlan>),
+    ComparativeAnalysis(Box<medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan>),
     /// The designated agents, tools and skills of the `capability_designation`
     /// family (MEDULLA-DECISION-ENGINE-R172.7).
-    CapabilityDesignation(Box<crate::decision::capability_designation::CapabilityDesignation>),
+    CapabilityDesignation(Box<medulla_decision_policy_types::decision::capability_designation::CapabilityDesignation>),
     /// The bounded tool, skill and agent set of the `load_set` family
     /// (MEDULLA-DECISION-ENGINE-R176.3).
-    LoadSet(Box<crate::decision::load_set::LoadSetAnswer>),
+    LoadSet(Box<medulla_decision_policy_types::decision::load_set::LoadSetAnswer>),
     /// The ordered steps, prompts and cautions of the `usage_guidance` family
     /// (MEDULLA-DECISION-ENGINE-R177.3).
-    UsageGuidance(Box<crate::decision::usage_guidance::UsageGuidance>),
+    UsageGuidance(Box<medulla_decision_program_types::decision::usage_guidance::UsageGuidance>),
     /// The receipt of an admitted `skill_upgrade` (MEDULLA-DECISION-ENGINE-R167.3).
-    SkillUpgrade(Box<crate::decision::skill_upgrade_request::SkillUpgradeReceipt>),
+    SkillUpgrade(Box<medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt>),
     /// An admitted plan of the `planning_admission` family (MEDULLA-DECISION-ENGINE-R171.3).
-    PlanningAdmission(Box<crate::decision::planning_admission::PlanningAdmissionAnswer>),
+    PlanningAdmission(Box<medulla_decision_program_types::decision::planning_admission::PlanningAdmissionAnswer>),
     /// The why-not of every non-chosen target of a `placement` question
     /// (MEDULLA-PLACEMENT-R001.9).
     Placement(Box<crate::decision::statistical::placement::PlacementAnswer>),
@@ -186,25 +189,25 @@ pub enum FamilyAnswer {
     /// (MEDULLA-PLACEMENT-R700.3).
     PlacementPlan(Box<crate::decision::statistical::placement_plan::PlacementPlan>),
     /// The per-step split of a trajectory reward (MEDULLA-DECISION-ENGINE-R751.755).
-    RewardDecomposition(Box<crate::decision::reward::TrajectoryReward>),
+    RewardDecomposition(Box<medulla_decision_statistical_types::decision::reward::TrajectoryReward>),
     /// The ordered reads and stop reason of a research walk (MEDULLA-DECISION-ENGINE-R705.3).
-    Research(Box<crate::decision::research_voi::ResearchAnswer>),
+    Research(Box<medulla_decision_statistical_types::decision::research_voi::ResearchAnswer>),
     /// The matches, merge clusters and gap plans of a feature comparison (MEDULLA-DECISION-ENGINE-R707.3).
-    FeatureMatch(Box<crate::decision::feature_match::FeatureMatchAnswer>),
+    FeatureMatch(Box<medulla_decision_statistical_types::decision::feature_match::FeatureMatchAnswer>),
     /// Whether a curriculum stage is promoted (MEDULLA-DECISION-ENGINE-R751.754).
-    CurriculumPromotion(Box<crate::decision::curriculum::PromotionReading>),
+    CurriculumPromotion(Box<medulla_decision_policy_types::decision::curriculum::PromotionReading>),
     /// The corrigibility verdict of an action class (MEDULLA-DECISION-ENGINE-R752.755).
-    Autonomy(Box<crate::decision::autonomy::AutonomyReading>),
+    Autonomy(Box<medulla_decision_statistical_types::decision::autonomy::AutonomyReading>),
     /// The drift reading between two windows (MEDULLA-DECISION-ENGINE-R752.754).
-    PopulationDrift(Box<crate::decision::population::DriftReading>),
+    PopulationDrift(Box<medulla_decision_policy_types::decision::population::DriftReading>),
     /// The replica width a fan-out should use (MEDULLA-DECISION-ENGINE-R752.754).
     FanoutWidth { width: u32 },
     /// The winning trajectory of a join (MEDULLA-DECISION-ENGINE-R753.754).
-    TrajectoryJoin(Box<crate::decision::trajectory_verdict::DistilledTrajectory>),
+    TrajectoryJoin(Box<medulla_decision_statistical_types::decision::trajectory_verdict::DistilledTrajectory>),
     /// A step verdict and its recovery (MEDULLA-DECISION-ENGINE-R753.755).
-    StepVerdict(Box<crate::decision::trajectory_verdict::StepVerification>),
+    StepVerdict(Box<medulla_decision_statistical_types::decision::trajectory_verdict::StepVerification>),
     /// Whether a candidate is admitted (MEDULLA-DECISION-ENGINE-R753.755).
-    Admission(crate::decision::trajectory_verdict::AdmissionVerdict),
+    Admission(medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionVerdict),
     /// The typed instruction-disclosure event of the `instruction_disclosure`
     /// family's event mode (MEDULLA-DECISION-ENGINE-R143.3). The prior-event
     /// read of the next request finds it here.
@@ -214,24 +217,26 @@ pub enum FamilyAnswer {
     /// seals it as `inputs.harness_evaluation`, not as `answer`.
     HarnessConfig(Box<super::harness_config::HarnessConfigEvaluationEvidence>),
     /// The triage of one defect, or its abstention (MEDULLA-SDLC-R004.3).
-    DefectTriage(Box<crate::decision::defect_triage::TriageDecision>),
+    DefectTriage(Box<medulla_decision_statistical_types::decision::defect_triage::TriageDecision>),
     /// The program a skill document's typed draft compiles to (MEDULLA-DECISION-ENGINE-R156.3).
     /// Committing the record stores it under `skill:<document digest>`.
-    SkillWorkflow(Box<crate::decision::program_store::CompiledProgram>),
+    SkillWorkflow(Box<medulla_decision_program_types::decision::program_store::CompiledProgram>),
     /// The admitted papers, each with its claim ids, of an advisory
     /// `paper_admission` question (MEDULLA-DECISION-ENGINE-R031.101).
-    PaperAdmission(Box<crate::decision::paper_admission::PaperAdmissionAnswer>),
+    PaperAdmission(Box<medulla_decision_statistical_types::decision::paper_admission::PaperAdmissionAnswer>),
     /// The verdict of a `tool_action_admission` question (MEDULLA-DECISION-ENGINE-R038.4).
-    ToolActionAdmission(Box<crate::decision::tool_action::ToolActionAnswer>),
+    ToolActionAdmission(Box<medulla_decision_policy_types::decision::tool_action::ToolActionAnswer>),
     /// The outcome of a `held_item_admission` question (MEDULLA-DECISION-ENGINE-R038.5).
     HeldItemAdmission(Box<crate::decision::held_item::HeldItemAnswer>),
     /// The verdict, champion and challenger of a `promotion` question (MEDULLA-DECISION-ENGINE-R805.14).
-    Promotion(Box<crate::decision::promotion_answer::PromotionAnswer>),
+    Promotion(Box<medulla_decision_statistical_types::decision::promotion_answer::PromotionAnswer>),
 }
 
 impl FamilyAnswer {
     /// The task plan this answer carries.
-    pub fn task_plan(&self) -> Option<&crate::decision::task_plan::TaskPlan> {
+    pub fn task_plan(
+        &self,
+    ) -> Option<&medulla_decision_program_types::decision::task_plan::TaskPlan> {
         match self {
             Self::TaskPlan(plan) => Some(plan),
             _ => None,
@@ -241,7 +246,9 @@ impl FamilyAnswer {
     /// The designation this answer carries.
     pub fn capability_designation(
         &self,
-    ) -> Option<&crate::decision::capability_designation::CapabilityDesignation> {
+    ) -> Option<
+        &medulla_decision_policy_types::decision::capability_designation::CapabilityDesignation,
+    > {
         match self {
             Self::CapabilityDesignation(designation) => Some(designation),
             _ => None,
@@ -268,7 +275,9 @@ impl FamilyAnswer {
         }
     }
     /// The load set this answer carries.
-    pub fn load_set(&self) -> Option<&crate::decision::load_set::LoadSetAnswer> {
+    pub fn load_set(
+        &self,
+    ) -> Option<&medulla_decision_policy_types::decision::load_set::LoadSetAnswer> {
         match self {
             Self::LoadSet(answer) => Some(answer),
             _ => None,
@@ -284,7 +293,10 @@ impl FamilyAnswer {
     }
 
     /// The thought-search answer this answer carries.
-    pub fn thought_search(&self) -> Option<&crate::decision::thought_search::ThoughtSearchAnswer> {
+    pub fn thought_search(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::thought_search::ThoughtSearchAnswer>
+    {
         match self {
             Self::ThoughtSearch(answer) => Some(answer),
             _ => None,
@@ -294,7 +306,7 @@ impl FamilyAnswer {
     /// The comparative-analysis plan this answer carries.
     pub fn comparative_analysis_plan(
         &self,
-    ) -> Option<&crate::decision::comparative_analysis::ComparativeAnalysisPlan> {
+    ) -> Option<&medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan>{
         match self {
             Self::ComparativeAnalysis(plan) => Some(plan),
             _ => None,
@@ -302,7 +314,9 @@ impl FamilyAnswer {
     }
 
     /// The usage guidance this answer carries.
-    pub fn usage_guidance(&self) -> Option<&crate::decision::usage_guidance::UsageGuidance> {
+    pub fn usage_guidance(
+        &self,
+    ) -> Option<&medulla_decision_program_types::decision::usage_guidance::UsageGuidance> {
         match self {
             Self::UsageGuidance(guidance) => Some(guidance),
             _ => None,
@@ -312,7 +326,8 @@ impl FamilyAnswer {
     /// The skill upgrade receipt this answer carries.
     pub fn skill_upgrade_receipt(
         &self,
-    ) -> Option<&crate::decision::skill_upgrade_request::SkillUpgradeReceipt> {
+    ) -> Option<&medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt>
+    {
         match self {
             Self::SkillUpgrade(receipt) => Some(receipt),
             _ => None,
@@ -322,7 +337,9 @@ impl FamilyAnswer {
     /// The planning admission answer this answer carries.
     pub fn planning_admission(
         &self,
-    ) -> Option<&crate::decision::planning_admission::PlanningAdmissionAnswer> {
+    ) -> Option<
+        &medulla_decision_program_types::decision::planning_admission::PlanningAdmissionAnswer,
+    > {
         match self {
             Self::PlanningAdmission(value) => Some(value),
             _ => None,
@@ -348,7 +365,9 @@ impl FamilyAnswer {
     }
 
     /// The research walk this answer carries.
-    pub fn research(&self) -> Option<&crate::decision::research_voi::ResearchAnswer> {
+    pub fn research(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::research_voi::ResearchAnswer> {
         match self {
             Self::Research(answer) => Some(answer),
             _ => None,
@@ -356,7 +375,10 @@ impl FamilyAnswer {
     }
 
     /// The feature comparison this answer carries.
-    pub fn feature_match(&self) -> Option<&crate::decision::feature_match::FeatureMatchAnswer> {
+    pub fn feature_match(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::feature_match::FeatureMatchAnswer>
+    {
         match self {
             Self::FeatureMatch(answer) => Some(answer),
             _ => None,
@@ -364,7 +386,9 @@ impl FamilyAnswer {
     }
 
     /// The promotion reading this answer carries.
-    pub fn curriculum_promotion(&self) -> Option<&crate::decision::curriculum::PromotionReading> {
+    pub fn curriculum_promotion(
+        &self,
+    ) -> Option<&medulla_decision_policy_types::decision::curriculum::PromotionReading> {
         match self {
             Self::CurriculumPromotion(reading) => Some(reading),
             _ => None,
@@ -372,7 +396,9 @@ impl FamilyAnswer {
     }
 
     /// The autonomy reading this answer carries.
-    pub fn autonomy(&self) -> Option<&crate::decision::autonomy::AutonomyReading> {
+    pub fn autonomy(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::autonomy::AutonomyReading> {
         match self {
             Self::Autonomy(reading) => Some(reading),
             _ => None,
@@ -380,7 +406,9 @@ impl FamilyAnswer {
     }
 
     /// The trajectory reward this answer carries.
-    pub fn reward_decomposition(&self) -> Option<&crate::decision::reward::TrajectoryReward> {
+    pub fn reward_decomposition(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::reward::TrajectoryReward> {
         match self {
             Self::RewardDecomposition(reward) => Some(reward),
             _ => None,
@@ -388,7 +416,9 @@ impl FamilyAnswer {
     }
 
     /// The drift reading this answer carries.
-    pub fn population_drift(&self) -> Option<&crate::decision::population::DriftReading> {
+    pub fn population_drift(
+        &self,
+    ) -> Option<&medulla_decision_policy_types::decision::population::DriftReading> {
         match self {
             Self::PopulationDrift(reading) => Some(reading),
             _ => None,
@@ -406,7 +436,9 @@ impl FamilyAnswer {
     /// The distilled trajectory this answer carries.
     pub fn trajectory_join(
         &self,
-    ) -> Option<&crate::decision::trajectory_verdict::DistilledTrajectory> {
+    ) -> Option<
+        &medulla_decision_statistical_types::decision::trajectory_verdict::DistilledTrajectory,
+    > {
         match self {
             Self::TrajectoryJoin(distilled) => Some(distilled),
             _ => None,
@@ -414,7 +446,10 @@ impl FamilyAnswer {
     }
 
     /// The step verification this answer carries.
-    pub fn step_verdict(&self) -> Option<&crate::decision::trajectory_verdict::StepVerification> {
+    pub fn step_verdict(
+        &self,
+    ) -> Option<&medulla_decision_statistical_types::decision::trajectory_verdict::StepVerification>
+    {
         match self {
             Self::StepVerdict(verification) => Some(verification),
             _ => None,
@@ -422,7 +457,10 @@ impl FamilyAnswer {
     }
 
     /// The admission verdict this answer carries.
-    pub fn admission(&self) -> Option<crate::decision::trajectory_verdict::AdmissionVerdict> {
+    pub fn admission(
+        &self,
+    ) -> Option<medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionVerdict>
+    {
         match self {
             Self::Admission(verdict) => Some(*verdict),
             _ => None,

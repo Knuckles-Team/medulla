@@ -11,17 +11,26 @@
 use super::*;
 use medulla_decision_stats::decision::evaluate::seal_receipt;
 use medulla_decision_types::decision::jobs::{DecisionEvalReceipt, GoldGuarantee, LabelExclusions};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
-};
 use medulla_decision_types::decision::statistical::head::{
     DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadCalibration,
     DECISION_HEAD_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::statistical::{RiskMethod, RiskStatement};
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 pub(super) const ONE: i64 = 1 << 32;
 
@@ -111,9 +120,10 @@ pub(super) fn publish_acting_head(
     let mut receipt = DecisionEvalReceipt {
         receipt_digest: String::new(),
         head_digest,
-        policy_digest: medulla_decision_types::decision::digest::policy_digest(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
-        ),
+        policy_digest:
+            medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(
+                &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
+            ),
         n_records: 200,
         estimates: BoundedVec::default(),
         calibration: None,
@@ -207,7 +217,7 @@ pub(super) fn pair_request(
 }
 
 fn policy_with(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     for (name, value) in knobs {
         policy.knobs.insert(KnobName::new(name), *value);
     }
@@ -471,7 +481,7 @@ async fn evaluate_gold(
         source: DatasetSource::Inline {
             dataset: Box::new(data),
         },
-        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
         gold_guarantee: guarantee,
     };
     let job: DecisionJobRecord = decode(
@@ -639,7 +649,7 @@ async fn gold_set_guarantee_holds_or_the_decision_abstains() {
         source: DatasetSource::Inline {
             dataset: Box::new(gold_set(&digest, 60, 60)),
         },
-        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
         gold_guarantee: ask,
     };
     foreign.gold_set_digest =

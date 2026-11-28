@@ -7,9 +7,15 @@ use super::*;
 use medulla_decision_types::decision::context_replacement::{
     PairedContextEvaluation, QueryVerdict,
 };
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicy};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const RAW: &str = "2222222222222222222222222222222222222222222222222222222222222222";
 const CANDIDATE: &str = "3333333333333333333333333333333333333333333333333333333333333333";

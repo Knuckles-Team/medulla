@@ -6,20 +6,32 @@
 //! `thought_search.*` knobs; a request may lower a budget through an integer
 //! parameter named after the knob, never raise it. Evaluate-only.
 
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_decision_stats::decision::thought_search::choose_expansion;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionSafety, StatisticalErrorCode, StatisticalOutcome,
-    TypedValue,
-};
-use medulla_decision_types::decision::thought_search::{
-    ReasoningState, ReasoningStrategy, ThoughtSearchAnswer, ThoughtSearchKnobs, KNOBS,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::thought_search::ReasoningState,
+    medulla_decision_statistical_types::decision::thought_search::ReasoningStrategy,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchAnswer,
+    medulla_decision_statistical_types::decision::thought_search::ThoughtSearchKnobs,
+    medulla_decision_statistical_types::decision::thought_search::KNOBS,
+};
 
 use super::stat_executor::FamilyExecuted;
 use super::stat_support::{invalid_parameter, refusal};
@@ -244,7 +256,8 @@ pub(super) fn conclude(
         // Scores are caller claims: neither calibrated nor an authorization.
         _ => StatisticalOutcome::advisory(BoundedVec::default(), false),
     };
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     let premises = premises(&parsed, strategy, &policy_digest, &answer);
     Ok((
         outcome,

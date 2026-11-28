@@ -4,12 +4,15 @@
 //! code, and keeps every input position in the result.
 
 use super::*;
-use medulla_decision_types::decision::council::{
-    CouncilPolicy, CouncilPosition, CouncilResult, EvidenceRef,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::council::CouncilPolicy,
+    medulla_decision_program_types::decision::council::CouncilPosition,
+    medulla_decision_program_types::decision::council::CouncilResult,
+    medulla_decision_program_types::decision::council::EvidenceRef,
+};
 
 fn head(id: &str) -> EvidenceRef {
     EvidenceRef {

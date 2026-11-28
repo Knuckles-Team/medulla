@@ -8,10 +8,7 @@
 use std::collections::BTreeSet;
 
 use super::*;
-use medulla_decision_types::decision::recruit::{
-    RecruitCandidate, RecruitMarket, RecruitRequest, RecruitResult,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::org::{
     AgentTwin, EmployeeSpec, RoleSpec, AGENT_INSTANCE_CHART,
@@ -19,6 +16,12 @@ use medulla_work_types::orchestration::org::{
 use medulla_work_types::work_market::selection::{MarketFacts, OfferExclusion};
 use medulla_work_types::work_market::{
     BlastRadius, GapEvidenceInput, GapUpsertRequest, GapView, GapWorkSpec, WorkOffer, WorkOfferView,
+};
+use {
+    medulla_decision_program_types::decision::recruit::RecruitCandidate,
+    medulla_decision_program_types::decision::recruit::RecruitMarket,
+    medulla_decision_program_types::decision::recruit::RecruitRequest,
+    medulla_decision_program_types::decision::recruit::RecruitResult,
 };
 
 const CODE: &str = "eg:capability/code";

@@ -20,7 +20,7 @@ impl DecisionFamily for EditConcentrationFamily {
         &self,
         ctx: &ExecutionContext,
         request: &DecideRequest,
-        _policy: &medulla_decision_types::decision::DecisionPolicy,
+        _policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(stat_concentration::conclude(

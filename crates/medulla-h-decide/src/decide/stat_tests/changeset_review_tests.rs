@@ -4,11 +4,16 @@
 //! the blocking severity blocks the change.
 
 use super::*;
-use medulla_decision_types::decision::changeset_review::{changed_files_digest, REFUSALS};
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
+use medulla_decision_statistical_types::decision::DecisionPolicy;
+use {
+    medulla_decision_policy_types::decision::changeset_review::changed_files_digest,
+    medulla_decision_policy_types::decision::changeset_review::REFUSALS,
 };
-use medulla_decision_types::decision::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const PATHS: [&str; 3] = ["src/b.rs", "src/a.rs", "src/c.rs"];
 
@@ -167,7 +172,8 @@ async fn review_covers_five_classes_and_filters_by_impact() {
         .premises
         .iter()
         .filter(|p| p.fact.starts_with("review.finding:"))
-        .all(|p| p.class == medulla_decision_types::decision::PremiseClass::Claim));
+        .all(|p| p.class
+            == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim));
 
     // Without the high finding nothing reaches the blocking severity.
     let mut passing = five();
@@ -191,7 +197,7 @@ async fn review_covers_five_classes_and_filters_by_impact() {
         medulla_decision_stats_records::decision::changeset_review::block_severity(
             &DecisionPolicy::engine_default()
         ),
-        medulla_decision_types::decision::changeset_review::Severity::High
+        medulla_decision_policy_types::decision::changeset_review::Severity::High
     );
 }
 

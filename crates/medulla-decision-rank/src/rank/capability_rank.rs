@@ -10,11 +10,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::capability_designation::{
-    CapabilityDesignationQuestion, CapabilityReward, ClassIri, DesignationKnobs,
-    NEUTRAL_REWARD_Q32, Q32_ONE,
-};
 use medulla_types::contract::OpaqueId;
+use {
+    medulla_decision_policy_types::decision::capability_designation::CapabilityDesignationQuestion,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityReward,
+    medulla_decision_policy_types::decision::capability_designation::ClassIri,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::NEUTRAL_REWARD_Q32,
+    medulla_decision_policy_types::decision::capability_designation::Q32_ONE,
+};
 
 /// One oversampled candidate, passed by value.
 #[derive(Debug, Clone)]
@@ -184,10 +188,11 @@ pub fn rank_capability_candidates(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::capability_designation::{
-        DesignationWeights, QueryVector,
-    };
     use medulla_types::contract::TenantId;
+    use {
+        medulla_decision_policy_types::decision::capability_designation::DesignationWeights,
+        medulla_decision_policy_types::decision::capability_designation::QueryVector,
+    };
 
     const A: &str = "https://knuckles-team.github.io/ontology/core#Agent";
     const B: &str = "https://knuckles-team.github.io/ontology/core#Tool";

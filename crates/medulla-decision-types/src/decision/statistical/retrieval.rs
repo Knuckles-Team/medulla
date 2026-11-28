@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use super::log::LogOpClass;
 use super::retrieval_adapter::{AdapterFitRequest, AdapterFitted};
 use super::retrieval_generation::{GenerationEvalRequest, GenerationEvaluated};
-use super::retrieval_pointer::PointerState;
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
 use medulla_types::contract::BoundedVec;
 
 /// Format identity of every retrieval-learning body.
@@ -288,7 +288,7 @@ pub enum PointerRef {
     /// The champion of one revision subject, keyed `champion:<kind>:<ref>`
     /// (MEDULLA-DECISION-ENGINE-R805.3).
     Champion {
-        subject: crate::decision::held_out::RevisionSubject,
+        subject: medulla_decision_policy_types::decision::held_out::RevisionSubject,
     },
 }
 
@@ -335,7 +335,7 @@ pub enum LearningWrite {
     },
     /// Refresh a logical graph from a search source.
     RefreshFreshness {
-        request: Box<super::retrieval_refresh::FreshnessRefresh>,
+        request: Box<medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessRefresh>,
     },
     /// Record a delegated run's answer, cited rows and per-step rewards
     /// (MEDULLA-DECISION-ENGINE-R100.102.1).
@@ -345,7 +345,7 @@ pub enum LearningWrite {
     /// Store one batch of distilled teacher scores for a scorer revision
     /// (MEDULLA-DECISION-ENGINE-R147.3).
     UploadDistilledScores {
-        upload: Box<super::distilled::DistilledUpload>,
+        upload: Box<medulla_decision_statistical_types::decision::statistical::distilled::DistilledUpload>,
     },
     /// Evaluate the drift monitors of a logical graph and schedule one refresh plan for the
     /// shards that fire (MEDULLA-DECISION-ENGINE-R174.8.3).
@@ -356,7 +356,7 @@ pub enum LearningWrite {
         /// How soon the scheduled plan runs; `on_demand` is governance at
         /// schedule time too (MEDULLA-DECISION-ENGINE-R174.8.4).
         #[serde(default = "default_refresh_priority")]
-        priority: super::retrieval_drift::RefreshPriority,
+        priority: medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority,
     },
     /// Register or replace the drift policy of a logical graph
     /// (MEDULLA-DECISION-ENGINE-R174.8.4).
@@ -391,20 +391,20 @@ pub enum LearningWrite {
     /// champion; answers the held-out evidence they carry
     /// (MEDULLA-DECISION-ENGINE-R654.3).
     RecordRollouts {
-        set: Box<crate::decision::skill_evolution::RolloutSet>,
+        set: Box<medulla_decision_policy_types::decision::skill_evolution::RolloutSet>,
     },
     /// Record the runs of one skill's ablation: the identical runs set the noise band and the
     /// paired with-and-without runs are stored as rollout rows; answers the band, the verdict and
     /// the rollout evidence (MEDULLA-DECISION-ENGINE-R712.3).
     RecordAblation {
-        record: Box<crate::skill_eval::AblationRecord>,
+        record: Box<medulla_decision_policy_types::skill_eval::AblationRecord>,
     },
     /// Put a canary split in force after a `ramp` or `hold` verdict, or take it off after a
     /// `rollback`: the champion pointer read of the skill returns it
     /// (MEDULLA-DECISION-ENGINE-R712.3).
     RecordCanary {
-        canary: Box<crate::skill_eval::SkillCanary>,
-        verdict: crate::skill_eval::CanaryVerdict,
+        canary: Box<medulla_decision_policy_types::skill_eval::SkillCanary>,
+        verdict: medulla_decision_policy_types::skill_eval::CanaryVerdict,
     },
     /// Record the program a skill was compiled into for one model. When the model revision
     /// differs from the one recorded, the other compiled rows of that model become stale and one
@@ -412,7 +412,7 @@ pub enum LearningWrite {
     RecordModelCompile {
         /// The graph whose model catalog names `compile.model_ref`.
         graph: String,
-        compile: Box<crate::skill_eval::ModelCompile>,
+        compile: Box<medulla_decision_policy_types::skill_eval::ModelCompile>,
         /// The revision of the model now in force.
         model_revision: String,
     },
@@ -472,8 +472,9 @@ impl LearningWrite {
     }
 }
 
-fn default_refresh_priority() -> super::retrieval_drift::RefreshPriority {
-    super::retrieval_drift::RefreshPriority::Downtime
+fn default_refresh_priority(
+) -> medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority::Downtime
 }
 
 /// What one learning write recorded.
@@ -489,30 +490,30 @@ pub enum LearningRecorded {
     Cycle(Box<super::retrieval_generation::GenerationCycleJob>),
     Pointer(Box<PointerState>),
     Run(Box<super::run_credit::RunCreditReceipt>),
-    Refreshed(Box<super::retrieval_refresh::FreshnessReceipt>),
+    Refreshed(Box<medulla_decision_policy_types::decision::statistical::retrieval_refresh::FreshnessReceipt>),
     /// The scorer manifest after a distilled score upload.
-    DistilledScores(Box<super::distilled::DistilledScorerManifest>),
-    Drift(Box<super::retrieval_drift::DriftEvaluated>),
+    DistilledScores(Box<medulla_decision_statistical_types::decision::statistical::distilled::DistilledScorerManifest>),
+    Drift(Box<medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftEvaluated>),
     /// The drift policy after a `RegisterDriftPolicy` write.
-    DriftPolicy(Box<super::retrieval_drift::DriftPolicyNode>),
+    DriftPolicy(Box<medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftPolicyNode>),
     /// The receipt of an executed refresh plan.
-    DriftRefreshed(Box<super::retrieval_drift::DriftRefreshed>),
+    DriftRefreshed(Box<medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftRefreshed>),
     /// The stored feedback event after a `RecordFeedback` write.
     Feedback(Box<super::feedback::StoredFeedback>),
     /// The package run row after a `PackageRun` write.
     PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
     /// The held-out evidence of the rollout set a `RecordRollouts` write stored.
-    Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
+    Rollouts(Box<medulla_decision_policy_types::decision::held_out::HeldOutEvidence>),
     /// The noise band, verdict and rollout evidence of a `RecordAblation` write.
-    Ablation(Box<crate::skill_eval::AblationRecorded>),
+    Ablation(Box<medulla_decision_policy_types::skill_eval::AblationRecorded>),
     /// The canary split after a `RecordCanary` write.
-    Canary(Box<crate::skill_eval::CanaryRecorded>),
+    Canary(Box<medulla_decision_policy_types::skill_eval::CanaryRecorded>),
     /// The compile row and the stale rows of a `RecordModelCompile` write.
-    ModelCompile(Box<crate::skill_eval::ModelCompileRecorded>),
+    ModelCompile(Box<medulla_decision_policy_types::skill_eval::ModelCompileRecorded>),
     /// The `ReviewApproval` evidence of the policy review a `RecordPolicyReview` write stored.
-    PolicyReview(Box<crate::decision::held_out::HeldOutEvidence>),
+    PolicyReview(Box<medulla_decision_policy_types::decision::held_out::HeldOutEvidence>),
     /// The encoder a `FitCatalogEncoder` write stored.
-    CatalogEncoder(Box<crate::decision::item_recommendation::CatalogEncoderFitted>),
+    CatalogEncoder(Box<medulla_decision_statistical_types::decision::item_recommendation::CatalogEncoderFitted>),
     /// The session note a `RecordSessionNote` write stored.
     SessionNote(Box<medulla_work_types::memory::SessionNoteStored>),
 }

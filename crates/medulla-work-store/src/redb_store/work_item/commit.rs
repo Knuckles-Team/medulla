@@ -629,7 +629,7 @@ fn validate_run_trace_receipt(
                 receipt.node_id
             ))
         })?;
-        let record: medulla_decision_types::decision::run_governance::RunTraceRecord =
+        let record: medulla_decision_statistical_types::decision::run_governance::RunTraceRecord =
             serde_json::from_value(raw.clone()).map_err(|error| {
                 run_trace_invalid(format!(
                     "receipt node '{}' record does not decode: {error}",
@@ -659,14 +659,17 @@ fn validate_recursive_trace_receipts(
 ) -> Result<(), String> {
     let nodes =
         decode_recursive_trace_nodes(&extension.receipt_nodes, &extension.outcome_bundle.run_id)?;
-    medulla_decision_types::decision::recursive_trace::validate_snapshot(&nodes)
+    medulla_decision_program_types::decision::recursive_trace::validate_snapshot(&nodes)
         .map_err(|refusal| format!("{}: {}", refusal.code(), refusal))
 }
 
 fn decode_recursive_trace_nodes(
     receipts: &[medulla_result_types::outcome_bundle::ReceiptNode],
     run_id: &str,
-) -> Result<Vec<medulla_decision_types::decision::recursive_trace::RecursiveTraceNode>, String> {
+) -> Result<
+    Vec<medulla_decision_program_types::decision::recursive_trace::RecursiveTraceNode>,
+    String,
+> {
     use medulla_result_types::outcome_bundle::ReceiptNodeKind;
     let mut nodes = Vec::new();
     for receipt in receipts
@@ -686,7 +689,7 @@ fn decode_recursive_trace_nodes(
                 receipt.node_id
             ))
         })?;
-        let node: medulla_decision_types::decision::recursive_trace::RecursiveTraceNode =
+        let node: medulla_decision_program_types::decision::recursive_trace::RecursiveTraceNode =
             serde_json::from_value(raw.clone()).map_err(|error| {
                 run_trace_invalid(format!(
                     "receipt node '{}' record does not decode: {error}",

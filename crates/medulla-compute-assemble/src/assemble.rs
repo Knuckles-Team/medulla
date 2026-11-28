@@ -61,10 +61,12 @@ pub mod why_not;
 
 use medulla_agent_types::agent_graph::AgentGraphDraft;
 use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
-use medulla_decision_types::solve::ModelSpec;
-use medulla_decision_types::{
-    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
-    decision::DecisionRecord,
+use medulla_decision_policy_types::solve::ModelSpec;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::DecisionRecord,
 };
 
 pub use seal::{encoded_len, RecordIdentity};
@@ -111,7 +113,9 @@ impl std::error::Error for AssembleError {}
 /// An assembly refusal is a typed decision refusal under its closed code, so
 /// the `AgentAssemble` caller folds it under `RefusalOrigin::ASSEMBLE`
 /// (MEDULLA-DECISION-ENGINE-R010.100.2).
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AssembleError {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for AssembleError
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         medulla_types::refusal_code::RefusalCode::new(self.code.as_str())
     }
@@ -124,13 +128,15 @@ impl medulla_decision_types::decision::record::outcome::DecisionRefusal for Asse
 /// The complete inputs of one assembly over `candidates` (any order) under
 /// `policy`: candidates sorted, and every digest computed from what it names.
 pub fn inputs(
-    request: medulla_decision_types::decision::AssemblyRequest,
-    mut candidates: Vec<medulla_decision_types::decision::CandidateFacts>,
-    templates: Vec<medulla_decision_types::decision::TemplateFacts>,
-    policy: medulla_decision_types::decision::DecisionPolicy,
+    request: medulla_decision_types::decision::request::AssemblyRequest,
+    mut candidates: Vec<medulla_decision_types::decision::record::CandidateFacts>,
+    templates: Vec<medulla_decision_types::decision::record::TemplateFacts>,
+    policy: medulla_decision_statistical_types::decision::DecisionPolicy,
 ) -> Result<DecisionInputs, AssembleError> {
-    use medulla_decision_types::{
-        decision::digest, decision::request::effective_solver_budget, decision::SolverIdentity,
+    use {
+        medulla_decision_types::decision::digest,
+        medulla_decision_types::decision::record::SolverIdentity,
+        medulla_decision_types::decision::request::effective_solver_budget,
     };
     candidates.sort_by(|a, b| a.component_id.cmp(&b.component_id));
     let node_budget = effective_solver_budget(&policy, &request).node_budget;
@@ -141,10 +147,13 @@ pub fn inputs(
             AssembleError::new(DecisionErrorCode::CandidateScopeTooLarge, error)
         })?,
         ontology_digest: medulla_agent_types::agent_ontology::ontology_digest(),
-        policy_digest: digest::policy_digest(&policy),
+        policy_digest:
+            medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(
+                &policy,
+            ),
         policy,
         solver: SolverIdentity {
-            algorithm: medulla_decision_types::solve::Algorithm::DepthFirstDualAscent,
+            algorithm: medulla_decision_policy_types::solve::Algorithm::DepthFirstDualAscent,
             node_budget,
         },
         templates: medulla_types::contract::BoundedVec::new(templates)

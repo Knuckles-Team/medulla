@@ -7,8 +7,11 @@
 //! [`medulla_decision_types::decision::recursive_trace::read_critique`]; this
 //! module only supplies the tenant-bound node lookup.
 use super::*;
-use medulla_decision_types::decision::recursive_trace::{
-    read_critique, RecursiveTraceNode, TraceCritiquePage, TraceCritiqueQuery,
+use {
+    medulla_decision_program_types::decision::recursive_trace::read_critique,
+    medulla_decision_program_types::decision::recursive_trace::RecursiveTraceNode,
+    medulla_decision_program_types::decision::recursive_trace::TraceCritiquePage,
+    medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery,
 };
 
 /// The class label a stored recursive trace node carries.

@@ -5,10 +5,15 @@
 
 use super::scorer_tests::evaluated;
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{
-    DeclaredNumber, DeclaredOption, DeclaredText,
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
 };
-use medulla_decision_types::decision::{AbstainReason, PremiseClass};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const IDS: [&str; 3] = ["opt-a", "opt-b", "opt-c"];
 
@@ -110,7 +115,7 @@ pub(super) async fn published_head_over(
 }
 
 pub(super) fn advisory_policy(h: &Harness) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::AdvisoryUncalibrated;
     DecisionPolicyRef::Pinned {
         component: h.publish_policy("policy-rank-advisory", &policy),
@@ -202,7 +207,7 @@ async fn decide_orders_by_calibrated_score_and_item_tie_break() {
     );
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Statistical
+        medulla_decision_types::decision::record::ResolutionKind::Statistical
     );
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
 
@@ -249,7 +254,7 @@ async fn uncalibrated_option_abstains_with_its_code() {
     assert_eq!(named, IDS, "every uncalibrated option is named once");
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Abstention
+        medulla_decision_types::decision::record::ResolutionKind::Abstention
     );
 }
 
@@ -281,7 +286,7 @@ async fn tied_pair_records_tie_break_premises() {
         assert_eq!(score.class, PremiseClass::Claim);
         assert!(matches!(
             score.provenance,
-            medulla_decision_types::decision::PremiseProvenance::Observation { .. }
+            medulla_decision_statistical_types::decision::record::premise::PremiseProvenance::Observation { .. }
         ));
     }
     assert_eq!(

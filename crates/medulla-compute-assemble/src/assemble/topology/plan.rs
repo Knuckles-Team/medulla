@@ -7,9 +7,9 @@ use medulla_agent_types::agent_topology::SlotPlan;
 use medulla_agent_types::agent_topology::SubagentAllowance;
 use medulla_agent_types::agent_topology::SubagentFallback;
 use medulla_agent_types::agent_topology::TopologyPlan;
-use medulla_decision_types::decision::PremiseClass;
-use medulla_decision_types::decision::PremiseProvenance;
-use medulla_decision_types::decision::PremiseRef;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+use medulla_decision_statistical_types::decision::record::premise::PremiseProvenance;
+use medulla_decision_statistical_types::decision::record::premise::PremiseRef;
 use medulla_types::contract::BoundedVec;
 
 use super::model::concurrent_amount;

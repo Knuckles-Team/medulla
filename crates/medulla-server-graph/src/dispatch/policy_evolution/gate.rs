@@ -9,7 +9,7 @@ use medulla_decision_outcome_types::policy_evolution::{
     PolicyEvaluation, PolicyEvolutionRecord, PolicyEvolutionRecordBody, PolicyRefusal, TrainingRun,
     TrainingRunOutcome, VersionOrigin,
 };
-use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
 
 /// What admission may read from the request graph.
 pub trait RecordLookup {

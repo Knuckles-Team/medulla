@@ -17,29 +17,54 @@ use medulla_decision_rank::rank::capability_rank::{
     rank_capability_candidates, PoolEntry, RankPolicy,
 };
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::capability_designation::{
-    compute_capability_eligibility, CapabilityDesignation, CapabilityIri, CapabilityReward,
-    DesignatedCapability, DesignationAsk, DesignationKnobs, PackOrigin, SchemaProjection,
-    DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, DESIGNATION_CLOSURE_TOO_LARGE,
-    DESIGNATION_DIM_MISMATCH, DESIGNATION_EMBEDDING_VERSION_MISMATCH,
-    DESIGNATION_EMPTY_QUERY_VECTOR, DESIGNATION_INDEX_CAPACITY_EXCEEDED,
-    DESIGNATION_MALFORMED_QUERY_VECTOR, DESIGNATION_NO_CAPABLE_CANDIDATE,
-    DESIGNATION_NO_DESIGNATED_COMPONENT, DESIGNATION_STALE_PACK_REVISION,
-    DESIGNATION_TOO_MANY_CANDIDATES, DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES,
-    DESIGNATION_UNKNOWN_TARGET_CLASS, KNOBS as DESIGNATION_KNOBS,
-};
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, OpaqueId, ResourceId};
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_policy_types::decision::capability_designation::compute_capability_eligibility,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityDesignation,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityIri,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityReward,
+    medulla_decision_policy_types::decision::capability_designation::DesignatedCapability,
+    medulla_decision_policy_types::decision::capability_designation::DesignationAsk,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::PackOrigin,
+    medulla_decision_policy_types::decision::capability_designation::SchemaProjection,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_CLOSURE_TOO_LARGE,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_DIM_MISMATCH,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_EMBEDDING_VERSION_MISMATCH,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_EMPTY_QUERY_VECTOR,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_INDEX_CAPACITY_EXCEEDED,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_MALFORMED_QUERY_VECTOR,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_NO_CAPABLE_CANDIDATE,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_NO_DESIGNATED_COMPONENT,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_STALE_PACK_REVISION,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_TOO_MANY_CANDIDATES,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_TOO_MANY_REQUIRED_CAPABILITIES,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_UNKNOWN_TARGET_CLASS,
+    medulla_decision_policy_types::decision::capability_designation::KNOBS as DESIGNATION_KNOBS,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_designation::{coded, question_of, DesignationRuntime};
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
@@ -672,7 +697,7 @@ pub(crate) fn designate(
     let rank_question = if runtime.adapter.is_some() {
         let mut adapted = question.clone();
         adapted.query_vector =
-            medulla_decision_types::decision::capability_designation::QueryVector::from_f32(
+            medulla_decision_policy_types::decision::capability_designation::QueryVector::from_f32(
                 &question.query_vector.embedding_version,
                 &query,
             )
@@ -747,7 +772,8 @@ pub(crate) fn capability_designation_outcome(
         Designated::Answer(answer) => answer,
         Designated::Abstain(code, detail) => return Ok(abstained_with(code, detail)),
     };
-    let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+    let policy_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy);
     let mut premises = premises_of(&answer, policy, &policy_digest);
     // A designated skill that has an evaluation suite states its quality (MEDULLA-DECISION-ENGINE-R713.5).
     let prior = medulla_server_api::knob_config::knobs().skill_quality_prior_runs;

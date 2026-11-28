@@ -17,7 +17,7 @@
 
 use super::{belief_policy, PlanCtx};
 use crate::rowset::RowSet;
-use medulla_decision_types::decision::reputation::SourceReliability;
+use medulla_decision_policy_types::decision::reputation::SourceReliability;
 
 /// Where a source's reliability number came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

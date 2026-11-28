@@ -6,14 +6,18 @@ use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_decision_types::decision::statistical::CalibrationMethod;
 use medulla_decision_types::{decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec};
 use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-};
-use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadKind,
 };
-use medulla_decision_types::{
-    decision::QuantScaleTag, decision::QuantisedValue, decision::TraceFidelityLevel,
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
 };
 use {
     medulla_decision_stats_records::decision::admission::admit,
@@ -180,7 +184,7 @@ fn an_off_policy_estimate_on_unsupported_actions_blocks_promotion() {
     let items: Vec<_> = (0..60)
         .map(|i| {
             let mut item = logged_item(i);
-            if let medulla_decision_types::decision::statistical::dataset::ItemLabel::Logged(l) =
+            if let medulla_decision_policy_types::decision::statistical::dataset::ItemLabel::Logged(l) =
                 &mut item.label
             {
                 let executed = (i / 3) % 3;

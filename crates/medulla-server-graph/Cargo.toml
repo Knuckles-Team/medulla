@@ -64,6 +64,8 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }

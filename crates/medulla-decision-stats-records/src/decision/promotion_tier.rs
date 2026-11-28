@@ -4,13 +4,23 @@
 //! the always-on count and the approver's team membership, then asks [`tier_gate`] whether the
 //! tier may be granted.
 
-use medulla_decision_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
-use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierContext, TierKnobs, TierReview, ALWAYS_ON_CAPACITY_REACHED, PLATFORM_TEAM,
-    TIER_DOWNGRADE_NEEDS_REVIEW, TIER_REVIEW_MISSING, TIER_SELF_REVIEW,
-};
-use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
+use medulla_decision_statistical_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_policy_types::skill_eval::SuiteBand,
+    medulla_decision_policy_types::skill_eval::SuiteReport,
+};
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::SkillTier,
+    medulla_decision_statistical_types::decision::promotion_tier::TierContext,
+    medulla_decision_statistical_types::decision::promotion_tier::TierKnobs,
+    medulla_decision_statistical_types::decision::promotion_tier::TierReview,
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_CAPACITY_REACHED,
+    medulla_decision_statistical_types::decision::promotion_tier::PLATFORM_TEAM,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_DOWNGRADE_NEEDS_REVIEW,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_REVIEW_MISSING,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_SELF_REVIEW,
+};
 
 /// Whether a revision may take `tier`.
 ///

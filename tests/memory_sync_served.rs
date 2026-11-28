@@ -65,7 +65,7 @@ async fn admitted(
     mut method: Method,
     content: &str,
     head: u64,
-    kind: medulla_decision_types::decision::memory_benchmark::ChangeKind,
+    kind: medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
 ) -> Method {
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     let store = state
@@ -124,7 +124,7 @@ async fn competing_saves_retain_both_and_resolve_once() {
         submit("r2", Some(1), "two"),
         "two",
         1,
-        medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Rewrite,
     )
     .await;
     let second: SyncOutcome = json_of(send(&state, 3, rewrite).await);
@@ -152,7 +152,7 @@ async fn competing_saves_retain_both_and_resolve_once() {
         ),
         "stale",
         2,
-        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Consolidate,
     )
     .await;
     let resolved: SyncOutcome = json_of(send(&state, 5, resolve.clone()).await);
@@ -593,7 +593,7 @@ async fn conflicts_survive_gc_and_retention_refusal() {
         ),
         "rival",
         1,
-        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Consolidate,
     )
     .await;
     let resolved: SyncOutcome = json_of(send(&state, 5, resolve).await);
@@ -689,7 +689,7 @@ async fn a_storage_failure_refuses_before_commit_and_a_holder_failure_warns() {
         submit("f3", Some(1), "two"),
         "two",
         1,
-        medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Rewrite,
     )
     .await;
     let clean: SyncReceipt = json_of(send(&state, 6, rewrite).await);
@@ -785,7 +785,7 @@ async fn complete_memory_sync_journey() {
         ),
         "beta text",
         1,
-        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Consolidate,
     )
     .await;
     let resolved: SyncOutcome = json_of(send_as(&state, alpha, 8, GRAPH, resolve.clone()).await);
@@ -946,7 +946,7 @@ async fn save_state(
             method,
             &body,
             head,
-            medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+            medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Rewrite,
         )
         .await;
     }
@@ -1069,7 +1069,7 @@ async fn incomplete_state_refuses() {
             submit_state(&format!("bad-{index}"), Some(1), content),
             content,
             1,
-            medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+            medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind::Rewrite,
         )
         .await;
         let refused = send(&state, 10 + index as u64, method).await;

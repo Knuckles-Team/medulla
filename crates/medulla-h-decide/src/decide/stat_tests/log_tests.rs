@@ -12,7 +12,7 @@ pub(super) async fn fit_from_the_engine_log(
     schema_pin: &ComponentDependency,
     record: &StatisticalDecisionRecord,
 ) {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     let mut statistical = super::super::stat_support::default_statistical_policy();
     statistical.approved_commit_principals =
         BoundedVec::new(vec![record.caller_principal.clone()]).unwrap();
@@ -146,8 +146,8 @@ pub(super) async fn decision_log_round_trip(h: &Harness, record: StatisticalDeci
 pub(super) fn retention_policy(
     compact_after_ms: u64,
     drop_blob_after_ms: Option<u64>,
-) -> medulla_decision_types::decision::DecisionPolicy {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+) -> medulla_decision_statistical_types::decision::DecisionPolicy {
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     let mut statistical = super::super::stat_support::default_statistical_policy();
     statistical.compact_after_ms = Some(compact_after_ms);
     statistical.drop_blob_after_ms = drop_blob_after_ms;
@@ -525,7 +525,7 @@ async fn assert_reputation_origin(
     };
     let learned = views.learned_reliability(option_id).unwrap();
     if real.is_some() {
-        let medulla_decision_types::decision::reputation::SourceReliability::Estimated {
+        let medulla_decision_policy_types::decision::reputation::SourceReliability::Estimated {
             mean,
             lower,
             upper,
@@ -540,7 +540,7 @@ async fn assert_reputation_origin(
         assert!(
             !matches!(
                 learned,
-                medulla_decision_types::decision::reputation::SourceReliability::Estimated { .. }
+                medulla_decision_policy_types::decision::reputation::SourceReliability::Estimated { .. }
             ),
             "synthetic outcomes cannot teach reliability"
         );

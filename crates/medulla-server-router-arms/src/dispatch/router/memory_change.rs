@@ -43,7 +43,7 @@ async fn handle_consolidate(
     props_msgpack: Vec<u8>,
     admit_receipt_digests: Vec<String>,
 ) -> Response {
-    use medulla_decision_types::decision::memory_benchmark::ChangeKind;
+    use medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{
         consolidate_candidate, require_admit_receipts,
     };
@@ -124,7 +124,7 @@ async fn handle_sync_memory(
     ctx: DispatchCtx<'_>,
     request: medulla_mutation_types::memory_sync::SyncRequest,
 ) -> Response {
-    use medulla_decision_types::decision::memory_benchmark::ChangeKind;
+    use medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
     use {
         medulla_h_graph_gateway::graph_ops::memory_snapshot::check_doc_kind,
@@ -274,12 +274,16 @@ async fn handle_sync_memory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::memory_benchmark::{
-        BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt, RevisionRef, RunMetricsReceipt,
-        MEMORY_BENCHMARK_SCHEMA_VERSION,
-    };
     use medulla_h_decide::decide::stat_memory_change::benchmark_receipt_row;
     use medulla_h_decide::decide::stat_test_support::{Harness, TENANT};
+    use {
+        medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkVerdictKind,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
+        medulla_decision_statistical_types::decision::memory_benchmark::MemoryBenchmarkReceipt,
+        medulla_decision_statistical_types::decision::memory_benchmark::RevisionRef,
+        medulla_decision_statistical_types::decision::memory_benchmark::RunMetricsReceipt,
+        medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_BENCHMARK_SCHEMA_VERSION,
+    };
 
     const OTHER: &str = "tenant-other";
 

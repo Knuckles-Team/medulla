@@ -12,8 +12,8 @@
 //! rungs, or ranked out by the shortlist -- reports [`EXCLUDED_LOGIT`] and
 //! probability zero. It was never a token.
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::scorer::OptionAttentionParams;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody,
     decision::statistical::head::FeatureStandardisation,

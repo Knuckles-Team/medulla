@@ -23,15 +23,16 @@ use medulla_agent_types::agent_guardrail::{
     RuleLifecycle, RulePromotionVerdict, RuleVersion,
 };
 use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_decision_types::decision::statistical::body::{
-    canonical_body_bytes, content_digest_of,
-};
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::log::{
     AbstentionResolver, RulePromotionResult, StoredResolution,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::agent_library::current_agent_library_policy_digest;
 use medulla_types::contract::{BoundedVec, Nonce};
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{store_once, visible_entry, LogReader, MAX_LOG_ROWS};

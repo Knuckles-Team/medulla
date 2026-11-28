@@ -6,10 +6,12 @@
 use super::log_tests::log_op;
 use super::*;
 use medulla_decision_outcome_types::decision::answer_ranking::ANSWER_RANKING_SCHEMA;
-use medulla_decision_types::decision::answer_ranking_request::{
-    AnswerRankingRequest, PairwiseComparison, PairwisePreference,
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+use {
+    medulla_decision_program_types::decision::answer_ranking_request::AnswerRankingRequest,
+    medulla_decision_program_types::decision::answer_ranking_request::PairwiseComparison,
+    medulla_decision_program_types::decision::answer_ranking_request::PairwisePreference,
 };
-use medulla_decision_types::decision::PremiseClass;
 
 fn pair(first: &str, second: &str, preference: PairwisePreference) -> PairwiseComparison {
     PairwiseComparison {

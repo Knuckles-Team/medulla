@@ -16,6 +16,8 @@ medulla-persistence = { path = "../medulla-persistence" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
@@ -42,11 +44,13 @@ tokio = { version = "1.53", features = ["rt", "sync"] }
 decide = ["redb", "medulla-capabilities/decide", "medulla-compute-assemble/decide", "medulla-persistence/decide", "medulla-server-api/decide", "rdf"]
 rdf = ["dep:medulla-rdf", "medulla-kernel/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-rdf?/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
-test-support = ["dep:tempfile", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-identity-core-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support"]
+test-support = ["dep:tempfile", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-identity-core-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support"]
 [dev-dependencies]
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

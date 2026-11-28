@@ -5,14 +5,21 @@
 //! second aggregation authority. `Decide` is evaluate-only and writes nothing;
 //! a caller commits the record through the decision log for readback.
 
-use medulla_decision_types::decision::knob_families::fanout::knob_values;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_program_types::decision::knob_families::fanout::knob_values;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::task_plan::fanout::{
-    aggregate_fanout, FanoutRefusal, ARTIFACT_DIGEST_MISMATCH, FANOUT_CHILD_UNKNOWN,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_program_types::decision::task_plan::fanout::aggregate_fanout,
+    medulla_decision_program_types::decision::task_plan::fanout::FanoutRefusal,
+    medulla_decision_program_types::decision::task_plan::fanout::ARTIFACT_DIGEST_MISMATCH,
+    medulla_decision_program_types::decision::task_plan::fanout::FANOUT_CHILD_UNKNOWN,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -32,7 +39,10 @@ pub struct FanoutAggregateFamily;
 
 fn fanout(
     request: &DecideRequest,
-) -> Result<&medulla_decision_types::decision::task_plan::fanout::FanoutAggregateRequest, String> {
+) -> Result<
+    &medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregateRequest,
+    String,
+> {
     match param(request, PARAM_FANOUT)? {
         Some(TypedValue::FanoutResults(body)) => Ok(body),
         Some(_) => Err(invalid("parameter fanout is not a fan-out result set")),
@@ -94,9 +104,9 @@ pub(in crate::decide) async fn fanout_view(
 }
 
 fn premises(
-    body: &medulla_decision_types::decision::task_plan::fanout::FanoutAggregateRequest,
-    aggregate: &medulla_decision_types::decision::task_plan::fanout::FanoutAggregate,
-    knobs: &medulla_decision_types::decision::knob_families::fanout::FanoutKnobs,
+    body: &medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregateRequest,
+    aggregate: &medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregate,
+    knobs: &medulla_decision_program_types::decision::knob_families::fanout::FanoutKnobs,
 ) -> Vec<FamilyPremise> {
     let mut out = Vec::new();
     for result in body.results.iter() {
@@ -206,7 +216,7 @@ fn premises(
 /// The delivered artifact's digest must be the `digest` of the stored readback
 /// node. A delivery with no readback node in the view does not match.
 fn readback_matches(
-    aggregate: &medulla_decision_types::decision::task_plan::fanout::FanoutAggregate,
+    aggregate: &medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregate,
     graph_view: Option<&GraphView>,
 ) -> bool {
     let Some(delivery) = &aggregate.delivery else {
@@ -250,11 +260,11 @@ impl DecisionFamily for FanoutAggregateFamily {
         let knobs = knob_values(policy);
         Some(match aggregate_fanout(body, &knobs) {
             Err(refusal) => Ok(abstained(
-                medulla_decision_types::decision::statistical::QuestionKind::FanoutAggregate,
+                medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::FanoutAggregate,
                 &refusal,
             )),
             Ok(aggregate) if !readback_matches(&aggregate, graph_view) => Ok(abstained(
-                medulla_decision_types::decision::statistical::QuestionKind::FanoutAggregate,
+                medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::FanoutAggregate,
                 &FanoutRefusal::ArtifactDigestMismatch,
             )),
             Ok(aggregate) => {

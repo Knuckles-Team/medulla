@@ -7,19 +7,39 @@
 //! Medulla reads no store and no topology. Evaluate-only: `DecisionCommit`
 //! persists the record.
 
-use medulla_decision_types::decision::council::{
-    check, conclude, quorum_floor_micros, CouncilAbstention, CouncilInput, CouncilOutcome,
-    CouncilPolicy, CouncilPosition, CouncilRefusal, EvidenceRef, ANSWER_PREFIX, COUNCIL_OPTION,
-    PARAM_COUNCIL_ID, PARAM_COUNCIL_POLICY, PARAM_EVIDENCE_CURRENT, PARAM_POSITIONS,
-    PARAM_TOPOLOGY_REVISION,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::council::check,
+    medulla_decision_program_types::decision::council::conclude,
+    medulla_decision_program_types::decision::council::quorum_floor_micros,
+    medulla_decision_program_types::decision::council::CouncilAbstention,
+    medulla_decision_program_types::decision::council::CouncilInput,
+    medulla_decision_program_types::decision::council::CouncilOutcome,
+    medulla_decision_program_types::decision::council::CouncilPolicy,
+    medulla_decision_program_types::decision::council::CouncilPosition,
+    medulla_decision_program_types::decision::council::CouncilRefusal,
+    medulla_decision_program_types::decision::council::EvidenceRef,
+    medulla_decision_program_types::decision::council::ANSWER_PREFIX,
+    medulla_decision_program_types::decision::council::COUNCIL_OPTION,
+    medulla_decision_program_types::decision::council::PARAM_COUNCIL_ID,
+    medulla_decision_program_types::decision::council::PARAM_COUNCIL_POLICY,
+    medulla_decision_program_types::decision::council::PARAM_EVIDENCE_CURRENT,
+    medulla_decision_program_types::decision::council::PARAM_POSITIONS,
+    medulla_decision_program_types::decision::council::PARAM_TOPOLOGY_REVISION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

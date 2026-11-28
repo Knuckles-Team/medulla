@@ -17,14 +17,11 @@ use tokio::sync::RwLock;
 use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, ComponentDependency, DecisionPolicyRef,
 };
-use medulla_decision_types::decision::digest::policy_digest;
-use medulla_decision_types::decision::indexless_retrieval::{
-    IndexlessOp, IndexlessRequest, IndexlessResult,
-};
-use medulla_decision_types::decision::knob_families::indexless::MAX_ROWS;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_program_types::decision::knob_families::indexless::MAX_ROWS;
+use medulla_decision_statistical_types::decision::digest::policy_part::policy_digest;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -32,6 +29,11 @@ use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::indexless_retrieval::IndexlessOp,
+    medulla_decision_program_types::decision::indexless_retrieval::IndexlessRequest,
+    medulla_decision_program_types::decision::indexless_retrieval::IndexlessResult,
+};
 
 const SECRET: &str = "indexless-retrieval-served-secret";
 const GRAPH: &str = "__commons__";

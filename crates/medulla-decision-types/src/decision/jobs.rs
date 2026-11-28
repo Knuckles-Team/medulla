@@ -8,18 +8,31 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::delegation_quality::DelegationQualityRequest;
-use super::importance_penalty::{ImportanceFeatures, PenaltyObjective, PenaltyReceipt};
-use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
 use super::replay::{EvalMode, EvaluationRun};
-use super::statistical::dataset::LabelledDataset;
-use super::statistical::grounded_eval::{GroundedAnswerRequest, GroundedEvalReceipt};
 use super::statistical::head::DecisionHeadBody;
-use super::statistical::ranking_eval::{RetrievalRankingReceipt, RetrievalRankingRequest};
 use super::statistical::CalibrationMethod;
 use super::statistical::CalibrationStatement;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_policy_types::decision::delegation_quality::DelegationQualityRequest;
+use medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset;
+use {
+    medulla_decision_policy_types::decision::importance_penalty::ImportanceFeatures,
+    medulla_decision_policy_types::decision::importance_penalty::PenaltyObjective,
+    medulla_decision_policy_types::decision::importance_penalty::PenaltyReceipt,
+};
+use {
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingReceipt,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest,
+};
+use {
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedAnswerRequest,
+    medulla_decision_program_types::decision::statistical::grounded_eval::GroundedEvalReceipt,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    medulla_decision_statistical_types::decision::numeric::UnitRationalWire,
+};
 
 pub use super::statistical::head::HeadKind;
 use medulla_agent_types::agent_component::ComponentDependency;
@@ -526,11 +539,15 @@ pub enum DecisionJobOutput {
     Replay { run: Box<EvaluationRun> },
     /// A memory rewrite's fidelity-gated evaluation (R141.100).
     MemoryRewrite {
-        evaluation: Box<super::memory_rewrite::MemoryRewriteEvaluation>,
+        evaluation: Box<
+            medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteEvaluation,
+        >,
     },
     /// A memory change's benchmark receipt (R141.101).
     MemoryBenchmark {
-        receipt: Box<super::memory_benchmark::MemoryBenchmarkReceipt>,
+        receipt: Box<
+            medulla_decision_statistical_types::decision::memory_benchmark::MemoryBenchmarkReceipt,
+        >,
     },
     /// A pinned retrieval ranking evaluation's receipt (R100.100.2).
     RankingEval {
@@ -669,12 +686,12 @@ pub enum DecisionEvalOp {
     },
     /// Evaluate one memory rewrite (R141.100); writes the decision job only.
     MemoryRewriteSubmit {
-        request: Box<super::memory_rewrite::MemoryRewriteProposal>,
+        request: Box<medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteProposal>,
     },
     /// Score one memory change against a benchmark dataset (R141.101); writes
     /// the decision job only.
     MemoryChangeBenchmarkSubmit {
-        request: Box<super::memory_benchmark::MemoryChangeBenchmarkRequest>,
+        request: Box<medulla_decision_statistical_types::decision::memory_benchmark::MemoryChangeBenchmarkRequest>,
     },
     /// Score pinned retrieval algorithm runs with hits-at-k and seal the
     /// receipt (R100.100.2).
@@ -704,20 +721,20 @@ pub enum DecisionEvalOp {
     /// Evaluate one skill's suite of cases and store the results and the report
     /// (MEDULLA-DECISION-ENGINE-R711.3).
     SkillEval {
-        request: Box<crate::skill_eval::SkillEvalRequest>,
+        request: Box<medulla_decision_policy_types::skill_eval::SkillEvalRequest>,
     },
     /// Add one case to a skill's suite (MEDULLA-DECISION-ENGINE-R711.7).
     SkillEvalCaseAdd {
-        request: Box<crate::skill_eval::SkillEvalCaseAddRequest>,
+        request: Box<medulla_decision_policy_types::skill_eval::SkillEvalCaseAddRequest>,
     },
     /// Read the latest suite report and judge calibration of one skill
     /// (MEDULLA-DECISION-ENGINE-R711.7).
     SkillEvalReport {
-        request: crate::skill_eval::SkillEvalReportRequest,
+        request: medulla_decision_policy_types::skill_eval::SkillEvalReportRequest,
     },
     /// Record the calibration of the judge of one skill's suite (MEDULLA-DECISION-ENGINE-R711.7).
     SkillEvalCalibrate {
-        request: Box<crate::skill_eval::SkillEvalCalibrateRequest>,
+        request: Box<medulla_decision_policy_types::skill_eval::SkillEvalCalibrateRequest>,
     },
 }
 
@@ -769,8 +786,8 @@ impl DecisionEvalOp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::decision::numeric::QuantScaleTag;
     use medulla_agent_types::agent_component::AgentComponentKind;
+    use medulla_decision_statistical_types::decision::numeric::QuantScaleTag;
 
     fn feature_schema() -> ComponentDependency {
         ComponentDependency {

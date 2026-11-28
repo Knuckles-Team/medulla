@@ -15,7 +15,7 @@
 //! * `decision_pointers` -- every governed pointer move (adapter, generation)
 //!   of the caller's tenant.
 
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerEvent;
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerEvent;
 use medulla_decision_types::{
     decision::statistical::retrieval::ClassUsage, decision::statistical::retrieval::HardNegative,
     decision::statistical::retrieval::ProvenPath,

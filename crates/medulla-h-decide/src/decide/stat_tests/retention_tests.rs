@@ -82,7 +82,7 @@ async fn library_records_survive_every_retention_window() {
     let record = library_record(&h).await;
     assert!(matches!(
         record.candidate_source,
-        medulla_decision_types::decision::CandidateSourceRecord::AgentLibrary { .. }
+        medulla_decision_types::decision::record::CandidateSourceRecord::AgentLibrary { .. }
     ));
     let entry = commit_record(&h, record).await;
     let before = serde_json::to_vec(&entry).unwrap();

@@ -13,8 +13,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_memory::memory::episodes::split_by_gap;
-use medulla_decision_types::decision::knob_families::episodes::GAP;
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_program_types::decision::knob_families::episodes::GAP;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_work_types::memory::{

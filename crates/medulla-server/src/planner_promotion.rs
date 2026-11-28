@@ -24,23 +24,12 @@ use medulla_decision_outcome_types::policy_evolution::{
     EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionOp, PolicyRecordReceipt,
     SafetyOutcome, MAX_HELD_OUT_TRAJECTORIES,
 };
-use medulla_decision_types::decision::held_out::{GraderKind, RevisionSubject};
-use medulla_decision_types::decision::planner_cost_head::{
-    COMPONENT_DIGEST_PREFIX, PLANNER_COST_HEAD_ATTRIBUTE, PLANNER_POLICY_ID,
-};
-use medulla_decision_types::decision::statistical::body::encode_body;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-};
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_program_types::decision::statistical::body::encode_body;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval::{
     LearningWrite, PointerMovement, PointerRef,
-};
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
-    StatisticalQuestion, TypedParam, TypedValue,
 };
 use medulla_exec::learned_cost::{CostHeadRevision, PlanRecordStore, ShadowComparison};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -51,6 +40,32 @@ use medulla_server_api::state::ServerState;
 use medulla_types::contract::{BoundedVec, Digest256, Nonce, OpaqueId};
 use serde::Serialize;
 use tokio::sync::RwLock;
+use {
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::planner_cost_head::COMPONENT_DIGEST_PREFIX,
+    medulla_decision_statistical_types::decision::planner_cost_head::PLANNER_COST_HEAD_ATTRIBUTE,
+    medulla_decision_statistical_types::decision::planner_cost_head::PLANNER_POLICY_ID,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 /// The service principal a planner-evolution job runs as.
 pub const PLANNER_ACTOR: &str = "engine:planner-evolution";

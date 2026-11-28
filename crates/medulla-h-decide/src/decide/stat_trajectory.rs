@@ -8,22 +8,34 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_statistical_types::decision::record::premise::PremiseRef;
+use medulla_decision_statistical_types::decision::task_plan::trajectory_refusal::TrajectoryRefusal;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::task_plan::branch_breadth::{
-    decide_breadth, BranchHistory, BreadthKnobs, ResultClass, StoredBranchOutcome,
+use {
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::decide_budget,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::TrajectoryKnobs,
 };
-use medulla_decision_types::decision::task_plan::pairwise::{rank_pairwise, PairwiseKnobs};
-use medulla_decision_types::decision::task_plan::trajectory::{
-    TrajectoryAnswer, TrajectoryDecision, TrajectoryQuery, TRAJECTORY_PARAM,
+use {
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::validate_projection,
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::StoredSource,
 };
-use medulla_decision_types::decision::task_plan::trajectory_budget::{
-    decide_budget, TrajectoryKnobs,
+use {
+    medulla_decision_program_types::decision::task_plan::branch_breadth::decide_breadth,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::BranchHistory,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::BreadthKnobs,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::ResultClass,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::StoredBranchOutcome,
 };
-use medulla_decision_types::decision::task_plan::trajectory_projection::{
-    validate_projection, StoredSource,
+use {
+    medulla_decision_program_types::decision::task_plan::pairwise::rank_pairwise,
+    medulla_decision_program_types::decision::task_plan::pairwise::PairwiseKnobs,
 };
-use medulla_decision_types::decision::task_plan::trajectory_refusal::TrajectoryRefusal;
-use medulla_decision_types::decision::PremiseRef;
+use {
+    medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryAnswer,
+    medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryDecision,
+    medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryQuery,
+    medulla_decision_program_types::decision::task_plan::trajectory::TRAJECTORY_PARAM,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{evaluations_of, visible_entry, LogReader};

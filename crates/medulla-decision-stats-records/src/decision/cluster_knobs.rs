@@ -3,9 +3,13 @@
 //! The kernel holds the same defaults as constants in
 //! `medulla_numeric::cluster`; a test below asserts the table and the constants agree.
 
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_numeric::cluster::ClusterConfig;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 const fn spec(
     name: &'static str,
@@ -202,9 +206,13 @@ pub fn config_from_policy(policy: &DecisionPolicy) -> ClusterConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::knobs::{check_revision, KnobName, KnobRefusalCode};
     use medulla_numeric::cluster as k;
     use std::collections::BTreeMap;
+    use {
+        medulla_decision_statistical_types::decision::knobs::check_revision,
+        medulla_decision_statistical_types::decision::knobs::KnobName,
+        medulla_decision_statistical_types::decision::knobs::KnobRefusalCode,
+    };
 
     // spec: MEDULLA-CLUSTER-R002.5
     #[test]

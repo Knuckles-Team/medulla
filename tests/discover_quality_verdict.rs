@@ -11,8 +11,8 @@ mod test_support;
 
 use serde_json::json;
 
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::drift::DriftThresholds;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_router::dispatch::request_boundary::dispatch;
 

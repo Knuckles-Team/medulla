@@ -11,18 +11,32 @@
 //! `ModeDecision` is kept in a premise. `Decide` is evaluate-only and writes
 //! nothing.
 
-use medulla_decision_types::decision::command_config::{
-    build_config, select_mode, CommandConfigSchema, CommandMode, FieldType, ModeDecision,
-    ModeRefusal, COMMAND_CONFIG_SCHEMA_VERSION, KNOBS,
-};
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::Digest256;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::command_config::build_config,
+    medulla_decision_statistical_types::decision::command_config::select_mode,
+    medulla_decision_statistical_types::decision::command_config::CommandConfigSchema,
+    medulla_decision_statistical_types::decision::command_config::CommandMode,
+    medulla_decision_statistical_types::decision::command_config::FieldType,
+    medulla_decision_statistical_types::decision::command_config::ModeDecision,
+    medulla_decision_statistical_types::decision::command_config::ModeRefusal,
+    medulla_decision_statistical_types::decision::command_config::COMMAND_CONFIG_SCHEMA_VERSION,
+    medulla_decision_statistical_types::decision::command_config::KNOBS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
@@ -245,7 +259,7 @@ fn conclude_mode(
 impl DecisionFamily for CommandConfigFamily {
     fn validate_candidates(
         &self,
-        options: &[medulla_decision_types::decision::statistical::declared::DeclaredOption],
+        options: &[medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption],
         _principal: &str,
     ) -> Result<(), String> {
         single_option(options, MODE_OPTION)

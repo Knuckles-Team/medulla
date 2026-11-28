@@ -4,13 +4,22 @@
 //! stores nothing; another tenant's record is never read.
 
 use super::*;
-use medulla_decision_types::decision::branch_fusion::{
-    branch_record_key, BranchRecord, BranchRef, BranchResult, BranchRetrievalReceipt,
-    FusionReceipt, PlannedBranch,
-};
-use medulla_decision_types::decision::program_store::{RunRecord, RunRecordStored, StoredRun};
-use medulla_decision_types::decision::PremiseClass;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
+use {
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+};
+use {
+    medulla_decision_statistical_types::decision::branch_fusion::branch_record_key,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRecord,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRef,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchResult,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRetrievalReceipt,
+    medulla_decision_statistical_types::decision::branch_fusion::FusionReceipt,
+    medulla_decision_statistical_types::decision::branch_fusion::PlannedBranch,
+};
 
 const FOREIGN: &str = "tenant-foreign";
 const PLAN: &str = "plan-digest-1";

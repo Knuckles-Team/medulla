@@ -14,12 +14,16 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent, TOPIC_CLAIM_CHANGED};
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::state::ServerState;
 use medulla_statechart::StatechartStore;
 use medulla_transaction::OutboxClaimBudget;
+use {
+    medulla_decision_statistical_types::memory_events::ClaimChanged,
+    medulla_decision_statistical_types::memory_events::MemoryEvent,
+    medulla_decision_statistical_types::memory_events::TOPIC_CLAIM_CHANGED,
+};
 
 /// The consumer name under which the publisher reads the claim store's outbox.
 pub const CONSUMER: &str = "memory-event-publisher";

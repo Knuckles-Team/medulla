@@ -6,9 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::decision::codes;
-use medulla_decision_types::decision::numeric::UnitRationalWire;
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_decision_statistical_types::decision::codes;
+use medulla_decision_statistical_types::decision::numeric::UnitRationalWire;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_types::refusal_code::RefusalCode;
 
 /// The named default round count.

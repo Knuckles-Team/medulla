@@ -5,16 +5,23 @@
 
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_types::decision::path_success::RoutingPath;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
+use medulla_decision_statistical_types::decision::path_success::RoutingPath;
 use medulla_decision_types::decision::statistical::log::{
     DecisionLogCommitted, DecisionLogOp, DecisionOutcomeEvaluation, NamedEvaluator,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 pub(super) const OTHER: &str = "tenant-other";
 const QUESTION: &str = "route.tools";
@@ -62,9 +69,10 @@ pub(super) fn pins(h: &Harness, tenant: &str) -> (ComponentDependency, DecisionP
     let policy = exploring_policy();
     let mut draft = test_component_draft(tenant, &format!("policy-paths-{tenant}"));
     draft.kind = AgentComponentKind::DecisionPolicy;
-    draft.content_digest = medulla_decision_types::decision::digest::policy_digest(&policy);
+    draft.content_digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(&policy);
     draft.attributes.insert(
-        medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
+        medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
         serde_json::to_string(&policy).unwrap(),
     );
     let component = h.commit_in(tenant, draft, None).unwrap();
@@ -411,8 +419,10 @@ fn premise_facts(record: &StatisticalDecisionRecord) -> Vec<String> {
 // spec: MEDULLA-DECISION-ENGINE-R159.4
 #[tokio::test]
 async fn unmeasured_and_stale_paths_refuse() {
-    use medulla_decision_types::decision::path_success::{
-        PATH_OUTCOME_MISSING, PATH_UNMEASURED, PATH_WINDOW_STALE,
+    use {
+        medulla_decision_statistical_types::decision::path_success::PATH_OUTCOME_MISSING,
+        medulla_decision_statistical_types::decision::path_success::PATH_UNMEASURED,
+        medulla_decision_statistical_types::decision::path_success::PATH_WINDOW_STALE,
     };
     let h = Harness::new().await;
     let pins = pins(&h, TENANT);

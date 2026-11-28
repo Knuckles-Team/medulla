@@ -17,21 +17,33 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::statistical::distilled::{
-    DistilledScorerManifest, DistilledUpload, TeacherJudgment, KNOBS, Q16_ONE,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalErrorCode,
-    StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, QuantScaleTag, QuantisedValue,
-};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{BoundedVec, Digest256};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::distilled::DistilledScorerManifest,
+    medulla_decision_statistical_types::decision::statistical::distilled::DistilledUpload,
+    medulla_decision_statistical_types::decision::statistical::distilled::TeacherJudgment,
+    medulla_decision_statistical_types::decision::statistical::distilled::KNOBS,
+    medulla_decision_statistical_types::decision::statistical::distilled::Q16_ONE,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 use {
     medulla_decision_stats_records::decision::distilled::rank_stored,
     medulla_decision_stats_records::decision::distilled::MissingScore,

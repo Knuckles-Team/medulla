@@ -9,9 +9,9 @@
 
 use medulla_agent_types::agent_topology::SchemaAuthority;
 use medulla_agent_types::agent_topology::TopologyAdmission;
-use medulla_decision_types::decision::PremiseClass;
-use medulla_decision_types::decision::PremiseProvenance;
-use medulla_decision_types::decision::PremiseRef;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+use medulla_decision_statistical_types::decision::record::premise::PremiseProvenance;
+use medulla_decision_statistical_types::decision::record::premise::PremiseRef;
 
 use super::Question;
 

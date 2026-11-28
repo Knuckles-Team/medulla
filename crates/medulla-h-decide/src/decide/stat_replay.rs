@@ -9,21 +9,24 @@
 //! identical, and the recomputed keyed seed must match the record's
 //! commitment; only then is the seed revealed in the logged copy.
 
+use medulla_decision_statistical_types::decision::DecisionErrorCode;
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_types::decision::digest::statistical_record_digest;
 use medulla_decision_types::decision::statistical::harness_config::HARNESS_REPLAY_MISMATCH;
-use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::{
     decision::harness_contrast::replay_record, decision::harness_contrast::ContrastKnobs,
     decision::harness_contrast::CONTRAST_FEATURE_NAMES,
 };
-use medulla_decision_types::{
-    decision::statistical::keyed::seed_commitment, decision::statistical::keyed::seed_text,
+use {
+    medulla_decision_policy_types::decision::statistical::keyed::seed_commitment,
+    medulla_decision_policy_types::decision::statistical::keyed::seed_text,
 };
-use medulla_decision_types::{
-    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
-    decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
-    decision::statistical::StatisticalOutcome,
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
 };
 
 use medulla_graph_core::graph::GraphView;
@@ -231,7 +234,7 @@ fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), St
     // A harness_config record carries its evidence as its answer; it replays
     // through its own re-derivation, never through the score replay.
     if (record.answer.is_some() && record.question.kind != QuestionKind::HarnessConfig)
-        || record.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan
+        || record.question.kind == medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::TaskPlan
     {
         return Err(refusal(
             StatisticalErrorCode::ParameterInvalid,

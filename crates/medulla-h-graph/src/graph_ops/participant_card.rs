@@ -7,11 +7,14 @@
 //! crate computes the card and the router commits these operations.
 
 use super::*;
-use medulla_decision_types::claims::ObserverRef;
-use medulla_decision_types::memory_events::{CardUpdated, MemoryEvent};
+use medulla_decision_statistical_types::claims::ObserverRef;
 use medulla_decision_types::participant_memory::ParticipantCard;
 use medulla_isolation::profile_access::read_stored;
 use medulla_work_types::participant::ParticipantId;
+use {
+    medulla_decision_statistical_types::memory_events::CardUpdated,
+    medulla_decision_statistical_types::memory_events::MemoryEvent,
+};
 
 /// The `type` property of a stored card.
 pub const CARD_LABEL: &str = "ParticipantCard";

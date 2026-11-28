@@ -4,8 +4,11 @@
 //! and a foreign tenant's graph is never visible.
 
 use super::*;
-use medulla_decision_types::decision::{AbstainReason, PremiseProvenance};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const OTHER_TENANT: &str = "tenant-other";
 
@@ -72,7 +75,7 @@ async fn inbound_task_routes_through_a_recorded_decision() {
     }
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Constraint
+        medulla_decision_types::decision::record::ResolutionKind::Constraint
     );
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
     let premise = record

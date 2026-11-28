@@ -24,7 +24,7 @@ pub async fn handle_component_content(
     // the Agent Library transaction that committed it, not in the Blob CAS.
     if request
         .component_id
-        .starts_with(medulla_decision_types::decision::DECISION_COMPONENT_ID_PREFIX)
+        .starts_with(medulla_decision_types::decision::request::DECISION_COMPONENT_ID_PREFIX)
     {
         return serve_decision_record(store, req_id, verified, &request);
     }
@@ -517,8 +517,8 @@ pub async fn serve_prompt_render(
         use medulla_agent_types::agent_component::{
             receipt_digest, PromptRenderReceipt, PromptRenderResult, PROMPT_RENDER_SCHEMA_VERSION,
         };
-        use medulla_decision_types::decision::knob_families::prompt_render;
-        use medulla_decision_types::decision::knobs::KnobValue;
+        use medulla_decision_policy_types::decision::knob_families::prompt_render;
+        use medulla_decision_statistical_types::decision::knobs::KnobValue;
         use medulla_types::contract::Digest256;
         use {
             medulla_compute_assemble::assemble::prompt::canonical_bytes,

@@ -4,12 +4,15 @@
 //! through [`q32`] or [`unit_wire`], which quantise with ties-to-even. Every
 //! record digest is therefore over integers.
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
 };
-use medulla_decision_types::{
-    decision::QuantScaleTag, decision::QuantisedValue, decision::UnitRationalWire,
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
 };
 
 use medulla_numeric::{

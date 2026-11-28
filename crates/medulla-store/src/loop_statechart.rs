@@ -78,7 +78,7 @@
 //!   already exhaustively cover every terminal `callee_terminal` value ahead of row 14,
 //!   control only reaches row 14 when `callee_terminal` was already absent/non-terminal.
 
-use medulla_decision_types::loops::LoopState;
+use medulla_decision_policy_types::loops::LoopState;
 use medulla_statechart::{Action, Guard, State, StatechartDef, Transition};
 
 /// The states a lease holder acts in: every active [`LoopState`], in `LoopState::ALL` order.
@@ -320,8 +320,11 @@ pub fn loop_record_statechart_def() -> StatechartDef {
 /// the reviewer-is-not-the-author rule of `approve` is checked by the recording
 /// handler before the event is sent. Pure and deterministic.
 pub fn spec_proposal_statechart_def() -> StatechartDef {
-    use medulla_decision_types::decision::skill_evolution::{
-        SPEC_PROPOSAL_CHART, SPEC_PROPOSAL_EVENTS, SPEC_PROPOSAL_FINALS, SPEC_PROPOSAL_STATES,
+    use {
+        medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_CHART,
+        medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_EVENTS,
+        medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_FINALS,
+        medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_STATES,
     };
     let edge = |from: &str, event: &str, to: &str| {
         Transition::new(from, event, to).with_guard(Guard::Always)
@@ -438,7 +441,7 @@ pub const FRICTION_CHART: &str = "friction";
 pub fn friction_statechart_def() -> StatechartDef {
     machine_statechart_def(
         FRICTION_CHART,
-        &medulla_decision_types::friction::FRICTION_MACHINE,
+        &medulla_decision_program_types::friction::FRICTION_MACHINE,
     )
 }
 
@@ -451,7 +454,7 @@ pub const KNOWLEDGE_FLAG_CHART: &str = "knowledge_flag";
 pub fn flag_statechart_def() -> StatechartDef {
     machine_statechart_def(
         KNOWLEDGE_FLAG_CHART,
-        &medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE,
+        &medulla_decision_statistical_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE,
     )
 }
 
@@ -988,8 +991,10 @@ mod tests {
             assert_eq!(out.next_state, to);
         }
         // Every other (state, event) pair leaves the state unchanged.
-        for from in medulla_decision_types::decision::skill_evolution::SPEC_PROPOSAL_STATES {
-            for event in medulla_decision_types::decision::skill_evolution::SPEC_PROPOSAL_EVENTS {
+        for from in medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_STATES {
+            for event in
+                medulla_decision_policy_types::decision::skill_evolution::SPEC_PROPOSAL_EVENTS
+            {
                 if legal.iter().any(|(f, e, _)| *f == from && *e == event) {
                     continue;
                 }
@@ -1005,7 +1010,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R708.2
     #[test]
     fn flag_chart_matches_the_edge_table() {
-        use medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE;
+        use medulla_decision_statistical_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE;
         use medulla_types::transition_refused::{MachineEvent, MachineState};
         let chart = flag_statechart_def();
         assert!(validate(&chart).is_ok(), "the chart is well formed");
@@ -1034,8 +1039,11 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R710.2
     #[test]
     fn friction_machine_allows_only_the_listed_moves() {
-        use medulla_decision_types::friction::{FrictionState, FRICTION_MACHINE};
         use medulla_types::transition_refused::{MachineEvent, MachineState};
+        use {
+            medulla_decision_program_types::friction::FrictionState,
+            medulla_decision_program_types::friction::FRICTION_MACHINE,
+        };
         let chart = friction_statechart_def();
         assert!(validate(&chart).is_ok(), "the chart is well formed");
         assert_eq!(chart, friction_statechart_def(), "deterministic");

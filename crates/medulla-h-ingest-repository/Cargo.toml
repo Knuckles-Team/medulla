@@ -24,7 +24,8 @@ medulla-compute = { path = "../medulla-compute" }
 medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-document = { path = "../medulla-document", features = ["reader-pdf", "reader-ooxml", "reader-spreadsheet", "reader-email"] }
 medulla-enrich = { path = "../medulla-enrich" }
 medulla-image = { path = "../medulla-image", optional = true }

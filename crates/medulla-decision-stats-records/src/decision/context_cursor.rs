@@ -5,8 +5,8 @@
 //! check value over that payload. A caller cannot forge or edit one, replay
 //! it for another tenant or query, or resume it after the snapshot moved.
 
-use medulla_decision_types::decision::statistical::context_search::sha256_hex;
-use medulla_decision_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_policy_types::decision::statistical::context_search::sha256_hex;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 /// The `context_cursor` family refusal table.
 pub const REFUSALS: &[StatisticalErrorCode] = &[

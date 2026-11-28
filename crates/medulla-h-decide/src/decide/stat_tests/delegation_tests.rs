@@ -8,14 +8,17 @@
 //! class, a policy digest and an evaluation set of the case.
 
 use super::*;
-use medulla_decision_types::decision::delegation::{DelegationAdmissionRequest, Q32_ONE};
-use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
+use medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity;
 use medulla_decision_types::decision::statistical::log::{
     DecisionLogEntry, DecisionOutcomeEvaluation, EntryInputs, RecordVisibility, StoredEvaluation,
     DECISION_LOG_SCHEMA_VERSION,
 };
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::delegation::DelegationAdmissionRequest,
+    medulla_decision_statistical_types::decision::delegation::Q32_ONE,
+};
 
 const DAY_MS: u64 = 86_400_000;
 
@@ -198,7 +201,7 @@ pub(super) async fn window_matrix_admits_or_refuses(
         .premises
         .iter()
         .any(|p| p.fact == "delegation.pooled:successes=30;samples=30"
-            && p.class == medulla_decision_types::decision::PremiseClass::Observation));
+            && p.class == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Observation));
 
     // An open window abstains.
     let open = verdict(h, "c-admit", 0.0, now_ms() + 3_600_000).await;

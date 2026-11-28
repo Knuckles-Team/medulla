@@ -12,13 +12,17 @@ use medulla_decision_outcome_types::decision::context_budget::{
     decide_over_window, ContextBudgetLimit, ContextBudgetRefusal, OverWindowPlan,
     ParallelMapLimits, WindowBudget,
 };
-use medulla_decision_types::decision::knob_families::context;
-use medulla_decision_types::decision::numeric::UnitRationalWire;
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_policy_types::decision::knob_families::context;
+use medulla_decision_statistical_types::decision::numeric::UnitRationalWire;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

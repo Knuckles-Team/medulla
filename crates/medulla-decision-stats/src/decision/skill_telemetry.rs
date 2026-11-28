@@ -7,11 +7,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::skill_telemetry::{
-    InvocationOutcome, PeerSkill, RankedSkill, SkillInvocation, SkillMeasures, Window,
-    PEER_COHORT_TOO_SMALL, RETENTION_WINDOW_MS,
-};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::skill_telemetry::InvocationOutcome,
+    medulla_decision_statistical_types::skill_telemetry::PeerSkill,
+    medulla_decision_statistical_types::skill_telemetry::RankedSkill,
+    medulla_decision_statistical_types::skill_telemetry::SkillInvocation,
+    medulla_decision_statistical_types::skill_telemetry::SkillMeasures,
+    medulla_decision_statistical_types::skill_telemetry::Window,
+    medulla_decision_statistical_types::skill_telemetry::PEER_COHORT_TOO_SMALL,
+    medulla_decision_statistical_types::skill_telemetry::RETENTION_WINDOW_MS,
+};
 
 const PPM: u64 = 1_000_000;
 
@@ -72,7 +78,9 @@ pub fn measures(
     let retained = first.iter().filter(|user| last.contains(*user)).count() as u64;
     let agent = inside
         .iter()
-        .filter(|row| row.chosen_by == medulla_decision_types::skill_telemetry::ChosenBy::Agent)
+        .filter(|row| {
+            row.chosen_by == medulla_decision_statistical_types::skill_telemetry::ChosenBy::Agent
+        })
         .count() as u64;
     let errors = inside
         .iter()
@@ -221,7 +229,7 @@ pub fn peer_skills(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::skill_telemetry::ChosenBy;
+    use medulla_decision_statistical_types::skill_telemetry::ChosenBy;
 
     const DAY: u64 = 24 * 60 * 60 * 1000;
 

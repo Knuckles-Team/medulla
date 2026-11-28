@@ -12,10 +12,14 @@ name = "medulla_graph_core"
 path = "src/lib.rs"
 
 [build-dependencies]
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["contract-schema"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["contract-schema"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["contract-schema"] }
 
 [dependencies]
 # The memory knob family: the importance cap reinforcement honours (MEDULLA-DECISION-ENGINE-R651.8).
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }

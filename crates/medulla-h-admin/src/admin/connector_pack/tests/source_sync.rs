@@ -11,11 +11,14 @@ use std::collections::BTreeSet;
 
 use serde_json::{json, Value};
 
-use medulla_decision_types::decision::statistical::writeback::{WritebackOp, WritebackOutcome};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
 use medulla_virtual_graph::architecture_sync::ArchitectureSyncAdapter;
 use medulla_virtual_graph::source_sync::{SyncAdapter, SYNC_CONFLICT_CLASS, SYNC_STATE_CLASS};
+use {
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOutcome,
+};
 
 use super::sync_harness::{unique, SyncHarness, SyncSpec};
 use super::{ok, refused};

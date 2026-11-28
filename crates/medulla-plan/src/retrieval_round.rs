@@ -269,7 +269,7 @@ impl crate::retrieval_arbitration::SpanVerifier for SnapshotSpanVerifier<'_> {
         let Some(text) = chunk_text(self.ctx, &citation.document_id) else {
             return SpanCheck::OutsideSnapshot;
         };
-        match medulla_decision_types::decision::indexless_retrieval::verify_span(
+        match medulla_decision_program_types::decision::indexless_retrieval::verify_span(
             &text,
             citation.start_byte,
             citation.end_byte,

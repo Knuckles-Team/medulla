@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::DecisionRefusal;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_types::refusal_code::RefusalCode;
 

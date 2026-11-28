@@ -7,15 +7,25 @@
 //! cannot see is absent and never counted. The digest of the context rides in the answer's
 //! premises as `task_context.digest`; the answer wire does not change.
 
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::task_plan::context::{ContextSection, TaskContext};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_types::contract::BoundedVec;
 use std::collections::BTreeSet;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::task_plan::context::ContextSection,
+    medulla_decision_statistical_types::decision::task_plan::context::TaskContext,
+};
 
 use crate::decide::stat_support::invalid_parameter;
 use crate::decide::SharedState;

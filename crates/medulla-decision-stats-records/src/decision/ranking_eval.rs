@@ -9,10 +9,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::knob_families::ranking_eval::RankingEvalKnobs;
-use medulla_decision_types::decision::statistical::errors::StatisticalErrorCode;
-use medulla_decision_types::decision::statistical::ranking_eval::{
-    is_sha256_hex, AlgorithmRun, HitsAtK, LabelSet, QuerySet, RetrievalRankingRequest,
+use medulla_decision_policy_types::decision::knob_families::ranking_eval::RankingEvalKnobs;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_policy_types::decision::statistical::ranking_eval::is_sha256_hex,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::AlgorithmRun,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::HitsAtK,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::LabelSet,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::QuerySet,
+    medulla_decision_policy_types::decision::statistical::ranking_eval::RetrievalRankingRequest,
 };
 
 /// The `retrieval_eval` family refusal table.
@@ -179,8 +184,11 @@ pub fn evaluate_ranking(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::ranking_eval::{
-        LabelPair, PinnedSet, QueryRanking, RANKING_EVAL_SCHEMA_VERSION,
+    use {
+        medulla_decision_policy_types::decision::statistical::ranking_eval::LabelPair,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::PinnedSet,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::QueryRanking,
+        medulla_decision_policy_types::decision::statistical::ranking_eval::RANKING_EVAL_SCHEMA_VERSION,
     };
 
     const KNOBS: RankingEvalKnobs = RankingEvalKnobs {

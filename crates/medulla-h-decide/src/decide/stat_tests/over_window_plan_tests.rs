@@ -5,10 +5,13 @@
 
 use super::*;
 use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 fn int(name: &str, value: i64) -> TypedParam {
     TypedParam {
@@ -355,7 +358,10 @@ async fn budget_exhausted_names_the_limit() {
 // spec: MEDULLA-DECISION-ENGINE-R137.5
 #[tokio::test]
 async fn premises_name_window_and_limits() {
-    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    };
     let h = Harness::new().await;
     let (schema, _) = publish_route_schema(&h);
     publish_profile(&h, "profile-wide", 8_192);

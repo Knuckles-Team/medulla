@@ -5,16 +5,16 @@
 
 use super::*;
 use medulla_decision_types::{
-    decision::statistical::declared::DeclaredNumber,
-    decision::statistical::declared::DeclaredOption,
-};
-use medulla_decision_types::{
-    decision::statistical::enrichment_schedule::COST_KEY,
-    decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
-};
-use medulla_decision_types::{
     decision::statistical::log::AbstentionResolution,
     decision::statistical::log::AbstentionResolver, decision::statistical::log::StoredResolution,
+};
+use {
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::COST_KEY,
+    medulla_decision_policy_types::decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
 };
 
 pub(super) fn declared(id: &str, score: i64) -> DeclaredOption {
@@ -192,7 +192,7 @@ async fn declared_options_decide_as_claims_under_the_declaring_principal() {
     ));
     assert!(matches!(
         record.candidate_source,
-        medulla_decision_types::decision::CandidateSourceRecord::Declared { .. }
+        medulla_decision_types::decision::record::CandidateSourceRecord::Declared { .. }
     ));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     let claims = record
@@ -333,7 +333,7 @@ async fn cost_routing_without_l5_accounting_abstains_naming_the_fact() {
     assert_eq!(
         reasons.as_slice(),
         [
-            medulla_decision_types::decision::AbstainReason::UnknownFact {
+            medulla_decision_types::decision::record::AbstainReason::UnknownFact {
                 component_id: "model-a".to_string(),
                 field: "l5.observed_cost".to_string(),
             }
@@ -439,7 +439,7 @@ async fn a_negative_enrichment_cost_is_refused_through_decide() {
 // spec: MEDULLA-DECISION-ENGINE-R035
 #[tokio::test]
 async fn graph_decide_answers_every_execution_routing_category() {
-    use medulla_decision_types::decision::statistical::execution_routing::ExecutionRoutingCategory;
+    use medulla_decision_policy_types::decision::statistical::execution_routing::ExecutionRoutingCategory;
 
     let h = Harness::new().await;
     let schema_pin = h
@@ -548,7 +548,7 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             None,
         )
         .unwrap();
-    let medulla_decision_types::decision::DecisionOutcome::Solved { graph_digest, .. } =
+    let medulla_decision_types::decision::record::DecisionOutcome::Solved { graph_digest, .. } =
         &record.outcome
     else {
         panic!("solved")
@@ -670,15 +670,20 @@ mod topology_question {
         CapacityHeadroom, SchemaAuthority, TopologyAdmission, TopologyInputs, TopologyPlan,
     };
     use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-    use medulla_decision_types::decision::statistical::topology::{
-        TopologyQuestion, TOPOLOGY_PARAM, TOPOLOGY_SCHEMA_UNAVAILABLE,
-    };
     use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-    use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
     use medulla_mutation_types::capacity_lease::CapacityResourceClass;
     use medulla_persistence_records::agent_graph::tests::publish_topology_template;
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_types::evidence_class::EvidenceClass;
+    use {
+        medulla_decision_statistical_types::decision::statistical::topology::TopologyQuestion,
+        medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_PARAM,
+        medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE,
+    };
+    use {
+        medulla_decision_types::decision::record::AbstainReason,
+        medulla_decision_types::decision::record::ResolutionKind,
+    };
 
     fn read(available: u64) -> TopologyInputs {
         TopologyInputs {
@@ -918,7 +923,7 @@ async fn exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result() {
     use super::placement_tests::{
         abstain_reasons, body, placement_harness_with_floor, placement_request, CPU_HEADROOM,
     };
-    use medulla_decision_types::decision::AbstainReason;
+    use medulla_decision_types::decision::record::AbstainReason;
     use medulla_mutation_types::capacity_lease::LeasePriority;
 
     // Every CPU cell keeps all but 100 millicores in reserve.

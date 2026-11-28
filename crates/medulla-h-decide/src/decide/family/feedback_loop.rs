@@ -8,23 +8,42 @@
 //! and the latest committed record of a loop id is the durable continuation
 //! (read back by the `latest_continuation` test helper).
 
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::checker_feedback::{
-    effective_bound, next_round, Continuation, FeedbackRecord, StopReason, FEEDBACK_BOUND_INVALID,
-    FEEDBACK_REPLAYED_KEY, FEEDBACK_UNGRADED_OUTPUT, KNOBS,
-};
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, ScoredOption, StatisticalDecisionRecord, StatisticalOutcome,
-    TypedParam, TypedValue,
-};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
+use {
+    medulla_decision_program_types::decision::checker_feedback::effective_bound,
+    medulla_decision_program_types::decision::checker_feedback::next_round,
+    medulla_decision_program_types::decision::checker_feedback::Continuation,
+    medulla_decision_program_types::decision::checker_feedback::FeedbackRecord,
+    medulla_decision_program_types::decision::checker_feedback::StopReason,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_BOUND_INVALID,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_REPLAYED_KEY,
+    medulla_decision_program_types::decision::checker_feedback::FEEDBACK_UNGRADED_OUTPUT,
+    medulla_decision_program_types::decision::checker_feedback::KNOBS,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 use crate::decide::stat_log::{visible_entries, LogReader};

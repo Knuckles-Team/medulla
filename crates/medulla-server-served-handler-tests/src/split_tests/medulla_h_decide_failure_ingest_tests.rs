@@ -2,12 +2,16 @@
 //! patterns and a recurring pattern files exactly one gap node
 //! (MEDULLA-DECISION-ENGINE-R701.3).
 
-use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp, Signature};
 use medulla_h_decide::decide::stat_test_support::{decode, Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::failure_patterns::FailureIngestResult,
+    medulla_decision_statistical_types::failure_patterns::FailureOp,
+    medulla_decision_statistical_types::failure_patterns::Signature,
+};
 
 const GRAPH: &str = "__commons__";
 

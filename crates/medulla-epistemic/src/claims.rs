@@ -7,12 +7,22 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::claims::{
-    ArtifactSeal, ClaimRecord, ClaimState, Evidence, EvidenceChannel, ObserverRef, ProofReceipt,
-    ProofStanding, ProofVerdict, ProvenClaim, ResearchArtifact, Stance,
-};
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use medulla_types::contract::ServerErrorCode;
+use {
+    medulla_decision_statistical_types::claims::ArtifactSeal,
+    medulla_decision_statistical_types::claims::ClaimRecord,
+    medulla_decision_statistical_types::claims::ClaimState,
+    medulla_decision_statistical_types::claims::Evidence,
+    medulla_decision_statistical_types::claims::EvidenceChannel,
+    medulla_decision_statistical_types::claims::ObserverRef,
+    medulla_decision_statistical_types::claims::ProofReceipt,
+    medulla_decision_statistical_types::claims::ProofStanding,
+    medulla_decision_statistical_types::claims::ProofVerdict,
+    medulla_decision_statistical_types::claims::ProvenClaim,
+    medulla_decision_statistical_types::claims::ResearchArtifact,
+    medulla_decision_statistical_types::claims::Stance,
+};
 
 /// Digest domain of a sealed research artifact.
 pub const ARTIFACT_DIGEST_DOMAIN: &str = "research_artifact";
@@ -584,7 +594,7 @@ mod tests {
             weight_ppm: 0,
             source_digest: "sha256:aa".to_string(),
             session_id: None,
-            proof: Some(medulla_decision_types::claims::ProofReceipt {
+            proof: Some(medulla_decision_statistical_types::claims::ProofReceipt {
                 checker_id: "checker".to_string(),
                 toolchain_version: "1".to_string(),
                 declaration: "Decl.a".to_string(),
@@ -645,7 +655,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R652.9
     #[test]
     fn observer_sees_own_and_visible_system_claims_only() {
-        use medulla_decision_types::claims::ClaimPerspective;
+        use medulla_decision_statistical_types::claims::ClaimPerspective;
         use medulla_work_types::participant::ParticipantId;
 
         let ada = ObserverRef::Participant(ParticipantId::new("ada").unwrap());

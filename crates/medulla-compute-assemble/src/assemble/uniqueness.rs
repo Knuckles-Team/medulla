@@ -19,9 +19,19 @@
 
 use medulla_decision_policy::solve::{solve, verify, Model, Verdict};
 use medulla_decision_types::decision::record::{UniquenessProof, UniquenessScope};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
-use medulla_decision_types::solve::{
-    Certificate, ConstraintBody, ConstraintSpec, ModelSpec, Relation, SolverConfig, Term, VarId,
+use {
+    medulla_decision_policy_types::solve::Certificate,
+    medulla_decision_policy_types::solve::ConstraintBody,
+    medulla_decision_policy_types::solve::ConstraintSpec,
+    medulla_decision_policy_types::solve::ModelSpec,
+    medulla_decision_policy_types::solve::Relation,
+    medulla_decision_policy_types::solve::SolverConfig, medulla_decision_policy_types::solve::Term,
+    medulla_decision_policy_types::solve::VarId,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
 };
 
 use super::conclude::Ladder;

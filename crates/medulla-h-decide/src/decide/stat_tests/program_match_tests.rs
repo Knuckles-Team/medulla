@@ -2,24 +2,35 @@
 //! `DecisionLog`, stored once under its key, stamped with the engine time and the committer.
 
 use super::*;
-use medulla_decision_types::decision::program_store::replay::{
-    replay_key, ProgramReplay, ReplayOutcome, REPLAY_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::program_store::semantic::{
-    match_key, phrasing_node_id, MatchKind, ProgramCandidates, ProgramMatch, ProgramMatchIndex,
-    ProgramPhrasing,
-};
-use medulla_decision_types::decision::program_store::{
-    program_node_id, RunRecord, RunRecordStored, StoredRun,
-};
-use medulla_decision_types::decision::run_governance::RunOutcome;
-use medulla_decision_types::decision::ResolutionKind;
-use medulla_decision_types::decision::StatisticalOutcome;
+use medulla_decision_statistical_types::decision::run_governance::RunOutcome;
+use medulla_decision_types::decision::record::ResolutionKind;
+use medulla_decision_types::decision::statistical::StatisticalOutcome;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_program_types::decision::program_store::program_node_id,
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+};
+use {
+    medulla_decision_program_types::decision::program_store::semantic::match_key,
+    medulla_decision_program_types::decision::program_store::semantic::phrasing_node_id,
+    medulla_decision_program_types::decision::program_store::semantic::MatchKind,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramCandidates,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatch,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatchIndex,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramPhrasing,
+};
+use {
+    medulla_decision_statistical_types::decision::program_store::replay::replay_key,
+    medulla_decision_statistical_types::decision::program_store::replay::ProgramReplay,
+    medulla_decision_statistical_types::decision::program_store::replay::ReplayOutcome,
+    medulla_decision_statistical_types::decision::program_store::replay::REPLAY_SCHEMA_VERSION,
+};
 
 use super::program_store_tests::{commit_op, lookup_request, trace, Fixture, GRAPH};
-use medulla_decision_types::decision::program_store::TraceSource;
+use medulla_decision_program_types::decision::program_store::TraceSource;
 
 fn replay(outcome: ReplayOutcome) -> ProgramReplay {
     ProgramReplay {
@@ -276,9 +287,9 @@ fn abstain_codes(batch: &DecisionBatch) -> Vec<String> {
         StatisticalOutcome::Abstained { reasons } => reasons
             .iter()
             .map(|reason| match reason {
-                medulla_decision_types::decision::AbstainReason::Family { code, .. } => {
-                    code.as_str().to_string()
-                }
+                medulla_decision_types::decision::record::AbstainReason::Family {
+                    code, ..
+                } => code.as_str().to_string(),
                 other => panic!("unexpected abstain reason {other:?}"),
             })
             .collect(),
@@ -686,14 +697,13 @@ async fn request_text_finds_the_nearest_program_and_binds_it() {
     .unwrap();
     let matched = answer(&exact);
     assert_eq!(matched.match_kind, MatchKind::Exact);
-    assert!(matched
-        .bindings
-        .iter()
-        .any(|binding| binding.parameter == "p0"
+    assert!(matched.bindings.iter().any(|binding| {
+        binding.parameter == "p0"
             && binding.value
-                == medulla_decision_types::decision::run_governance::TraceScalar::Text(
-                    "monthly".into()
-                )));
+                == medulla_decision_statistical_types::decision::run_governance::TraceScalar::Text(
+                    "monthly".into(),
+                )
+    }));
 
     // Text no phrasing fits leaves the slots unbound.
     let unbound = decide(

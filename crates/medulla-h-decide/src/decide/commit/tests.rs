@@ -13,9 +13,9 @@ use medulla_agent_types::agent_topology::SchemaAuthority;
 use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::delegation::AgentGraphEntryRef;
-use medulla_decision_types::decision::DecisionCommitRequest;
-use medulla_decision_types::decision::DecisionCommitResult;
-use medulla_decision_types::decision::TemplateFacts;
+use medulla_decision_types::decision::record::TemplateFacts;
+use medulla_decision_types::decision::request::DecisionCommitRequest;
+use medulla_decision_types::decision::request::DecisionCommitResult;
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::{
@@ -330,7 +330,7 @@ async fn topology_denial_accepts_one_followup_request() {
     let world = topology_world().await;
     let denied_id = world.assembly.record.record_id.clone();
     block_cell(&world).await;
-    let followup = |record: medulla_decision_types::decision::DecisionRecord,
+    let followup = |record: medulla_decision_types::decision::record::DecisionRecord,
                     key: &str,
                     nonce: u8| DecisionCommitRequest {
         context: commit_context(&world.store, TENANT, key, nonce),

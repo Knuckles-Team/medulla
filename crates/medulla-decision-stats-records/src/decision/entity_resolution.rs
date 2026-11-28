@@ -12,8 +12,11 @@
 use std::collections::HashMap;
 
 use medulla_ann::{HnswIndex, Metric};
-use medulla_decision_types::decision::entity_resolution::{
-    ResolutionTier, ReviewOutcome, TenantScopedEmbedding, TierEvaluation,
+use {
+    medulla_decision_statistical_types::decision::entity_resolution::ResolutionTier,
+    medulla_decision_statistical_types::decision::entity_resolution::ReviewOutcome,
+    medulla_decision_statistical_types::decision::entity_resolution::TenantScopedEmbedding,
+    medulla_decision_statistical_types::decision::entity_resolution::TierEvaluation,
 };
 
 /// Links per node of the candidate index graph.

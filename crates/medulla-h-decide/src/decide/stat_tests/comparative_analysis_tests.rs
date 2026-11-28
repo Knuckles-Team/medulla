@@ -9,11 +9,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::super::candidates::library_candidates;
 use super::*;
-use medulla_decision_types::decision::comparative_analysis::{
-    ComparativeAnalysisRequest, ComparativeAnalysisStage, ComparativeCandidate,
-};
-use medulla_decision_types::decision::ResolutionKind;
+use medulla_decision_types::decision::record::ResolutionKind;
 use medulla_program::{ModelCallRequest, ModelCallResponse, ModelTransport, ModelTransportError};
+use {
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisRequest,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisStage,
+    medulla_decision_statistical_types::decision::comparative_analysis::ComparativeCandidate,
+};
 
 /// A model transport that counts every call it receives.
 struct RecordingTransport(AtomicUsize);
@@ -258,8 +260,11 @@ fn with_ceiling(mut request: DecideRequest, ceiling: u32) -> DecideRequest {
 }
 
 fn thresholds(h: &Harness, synthesis: i64, extraction: i64) -> DecisionPolicyRef {
-    use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    use {
+        medulla_decision_statistical_types::decision::knobs::KnobName,
+        medulla_decision_statistical_types::decision::knobs::KnobValue,
+    };
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("comparative.synthesis_importance_min"),
         KnobValue::DecimalMicros(synthesis),
@@ -373,7 +378,10 @@ async fn comparative_refusals() {
 // spec: MEDULLA-DECISION-ENGINE-R139.5
 #[tokio::test]
 async fn mutating_a_bound_input_changes_the_plan_digest() {
-    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     let revisions = publish_tools(&h, TENANT, &["cand-a", "cand-b"]);

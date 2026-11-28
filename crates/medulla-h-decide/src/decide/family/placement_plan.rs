@@ -7,8 +7,11 @@
 
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::DecideRequest;
-use medulla_decision_types::decision::{DecisionPolicy, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_placement_plan::{placement_plan_outcome, premises, question_of};

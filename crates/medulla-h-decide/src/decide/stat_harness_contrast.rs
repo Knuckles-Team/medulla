@@ -14,27 +14,32 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::features::FeatureMatrix;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::record::outcome::RefusalOrigin;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
     decision::harness_contrast::ContrastCandidate, decision::harness_contrast::ContrastEvidence,
     decision::harness_contrast::ContrastKnobs, decision::harness_contrast::HarnessContrastRefusal,
     decision::harness_contrast::CONTRAST_FEATURE_NAMES,
 };
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::QuestionKind, decision::statistical::StatisticalOutcome,
-    decision::statistical::TypedValue,
-};
-use medulla_decision_types::{decision::AbstainReason, decision::UnitRationalWire};
 use medulla_work_types::orchestration::is_harness_component_write;
 use medulla_work_types::{
     orchestration::improvement::decode_harness_contrast_write,
     orchestration::improvement::decode_harness_probe_run_write,
     orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_types::decision::record::AbstainReason,
 };
 
 use super::run_record::read_run_trace;
@@ -103,7 +108,7 @@ pub(super) async fn contrast_evidence_view(
 pub(super) fn contrast_executed(
     ctx: &ExecutionContext,
     request: &DecideRequest,
-    policy: &medulla_decision_types::decision::DecisionPolicy,
+    policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Option<Result<Executed, String>> {
     (request.question.kind == QuestionKind::HarnessContrast).then(|| {
@@ -191,9 +196,9 @@ pub(super) fn run_scores_graded(
         let independent = props
             .get("grader_kind")
             .and_then(|v| {
-                serde_json::from_value::<medulla_decision_types::decision::held_out::GraderKind>(
-                    v.clone(),
-                )
+                serde_json::from_value::<
+                    medulla_decision_policy_types::decision::held_out::GraderKind,
+                >(v.clone())
                 .ok()
             })
             .is_some_and(|kind| kind.decides_promotion());
@@ -283,7 +288,7 @@ fn compute(
         )));
     }
     let baseline_trace = read_run_trace(ctx, baseline_trace_id)?;
-    let catalog = medulla_decision_types::usage::PriceCatalog {
+    let catalog = medulla_decision_policy_types::usage::PriceCatalog {
         aliases: BTreeMap::new(),
         entries: ctx
             .store

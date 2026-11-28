@@ -3,8 +3,14 @@
 //! premise `mapping:<column>=<property>` at the rule's evidence class.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
-use medulla_decision_types::decision::{PremiseClass, PremiseRef};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const BASE: &str = "https://knuckles-team.github.io/ontology/customer#";
 
@@ -112,7 +118,7 @@ async fn columns_map_to_expected_properties_with_evidence_class() {
     assert_eq!(premises[0].class, PremiseClass::Proof);
     assert_eq!(
         batch.records.as_slice()[0].resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Statistical
+        medulla_decision_types::decision::record::ResolutionKind::Statistical
     );
 
     // A partial name with every sample valid is an observation.
@@ -139,7 +145,7 @@ async fn columns_map_to_expected_properties_with_evidence_class() {
     };
     assert_eq!(
         reasons.as_slice(),
-        &[medulla_decision_types::decision::AbstainReason::InsufficientConfidence]
+        &[medulla_decision_types::decision::record::AbstainReason::InsufficientConfidence]
     );
     assert!(record
         .premises

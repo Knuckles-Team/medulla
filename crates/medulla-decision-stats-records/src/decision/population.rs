@@ -8,11 +8,18 @@
 //! the budget and `knob fanout.replica_ceiling` allow. All arithmetic is
 //! fixed-point integer on `Q32`; no float, no clock, no store.
 
-use medulla_decision_types::decision::numeric::{micros_to_q32, QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::population::{
-    DriftReading, PopulationKnobs, PopulationSpread, Wasserstein1,
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use {
+    medulla_decision_policy_types::decision::population::DriftReading,
+    medulla_decision_policy_types::decision::population::PopulationKnobs,
+    medulla_decision_policy_types::decision::population::PopulationSpread,
+    medulla_decision_policy_types::decision::population::Wasserstein1,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use {
+    medulla_decision_statistical_types::decision::numeric::micros_to_q32,
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
 
 fn sorted_q32(window: &[QuantisedValue], what: &str) -> Result<Vec<i128>, String> {
     if window.is_empty() {
@@ -180,7 +187,7 @@ mod tests {
         .is_err());
         // The alert fires strictly above the 0.10 knob.
         let knobs = PopulationKnobs::from_policy(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
+            &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
         );
         let near =
             drift_reading(&window(&[0]), &window(&[micros_to_q32(100_000)]), &knobs).unwrap();
@@ -202,7 +209,7 @@ mod tests {
     #[test]
     fn width_never_exceeds_the_cap() {
         let knobs = PopulationKnobs::from_policy(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
+            &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
         );
         assert_eq!(knobs.replica_ceiling, 8);
         let width = |diversity, current, budget| {
@@ -246,7 +253,7 @@ mod tests {
     #[test]
     fn drift_and_width_replay_golden_vectors() {
         let knobs = PopulationKnobs::from_policy(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
+            &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
         );
         let reference = window(&[429496729, 858993459, 1288490188, 1717986918]);
         let current = window(&[

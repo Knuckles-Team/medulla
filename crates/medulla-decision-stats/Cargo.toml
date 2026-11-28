@@ -19,6 +19,9 @@ rand_chacha = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 medulla-types = { path = "../medulla-types", optional = true }
 medulla-query-types = { path = "../medulla-query-types", optional = true }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 serde_json = "1.0"
@@ -31,6 +34,9 @@ decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/dec
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }

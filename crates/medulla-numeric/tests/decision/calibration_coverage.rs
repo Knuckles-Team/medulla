@@ -13,11 +13,12 @@ use medulla_decision_stats::{
 use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 use medulla_decision_types::decision::statistical::head::HeadKind;
 use medulla_decision_types::decision::statistical::CalibrationMethod;
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset,
-};
 use medulla_numeric::calibration::metrics::{reliability, BinCount};
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+};
 use {
     medulla_decision_stats_records::decision::admission::admit,
     medulla_decision_stats_records::decision::admission::Regime,

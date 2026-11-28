@@ -260,7 +260,7 @@ pub fn rank_tools_by_relevance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+    use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
     use medulla_decision_types::decision::tool_relevance::TOOL_RELEVANCE_SCHEMA_VERSION;
 
     const ONE: i64 = 1 << 32;

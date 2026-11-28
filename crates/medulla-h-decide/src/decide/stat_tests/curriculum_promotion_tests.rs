@@ -8,11 +8,17 @@ use super::kernel_family_support::{
 };
 use super::path_preference_tests::{pins, run, seed, OTHER};
 use super::*;
-use medulla_decision_types::decision::curriculum::{
-    CurriculumRequest, CurriculumStage, PromotionPolicy, PromotionVerdict,
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_policy_types::decision::curriculum::CurriculumRequest,
+    medulla_decision_policy_types::decision::curriculum::CurriculumStage,
+    medulla_decision_policy_types::decision::curriculum::PromotionPolicy,
+    medulla_decision_policy_types::decision::curriculum::PromotionVerdict,
 };
-use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-use medulla_decision_types::decision::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+};
 
 fn request(schema: &ComponentDependency, stage_id: &str) -> DecideRequest {
     request_at(schema, stage_id, 3 << 30)
@@ -165,7 +171,7 @@ async fn curriculum_refusals() {
     );
 
     assert_eq!(persisted_files(&dir), before, "a refusal writes nothing");
-    for code in medulla_decision_types::decision::curriculum::REFUSALS {
+    for code in medulla_decision_policy_types::decision::curriculum::REFUSALS {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)

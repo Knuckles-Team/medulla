@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 
 use super::propagate::guarantees;
 use super::state::SearchState;
-use medulla_decision_types::solve::spec::Relation;
+use medulla_decision_policy_types::solve::spec::Relation;
 
 /// What to do at a propagated, feasible node.
 pub(super) enum Choice {

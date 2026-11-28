@@ -18,12 +18,17 @@ use medulla_decision_types::decision::statistical::placement::{
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionSafety, ScoredOption, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, QuantScaleTag,
-    QuantisedValue,
-};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 use super::stat_support::invalid_parameter;
 use super::{capacity_premise, topology_read, SharedState};

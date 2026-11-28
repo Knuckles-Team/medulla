@@ -6,18 +6,27 @@
 //! mismatch is an abstention that names the expected and the actual value.
 //! `Decide` is evaluate-only and writes nothing.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::sub_call::{
-    check_sub_call, tool_set_digest, SubCallRequest, SubCallSignature,
-};
-use medulla_decision_types::decision::{
-    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::sub_call::check_sub_call,
+    medulla_decision_policy_types::decision::sub_call::tool_set_digest,
+    medulla_decision_policy_types::decision::sub_call::SubCallRequest,
+    medulla_decision_policy_types::decision::sub_call::SubCallSignature,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 

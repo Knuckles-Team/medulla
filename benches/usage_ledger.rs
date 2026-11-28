@@ -10,13 +10,17 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_decision_types::usage::{
-    PriceCatalog, UsageOp, UsageOutcome, UsageReadView, UsageRecord,
-};
 use medulla_h_decide::decide::stat_test_support::{Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use {
+    medulla_decision_policy_types::usage::PriceCatalog,
+    medulla_decision_policy_types::usage::UsageOp,
+    medulla_decision_policy_types::usage::UsageOutcome,
+    medulla_decision_policy_types::usage::UsageReadView,
+    medulla_decision_policy_types::usage::UsageRecord,
+};
 
 const BATCHES: usize = 1_000;
 const BATCH: usize = 1_000;

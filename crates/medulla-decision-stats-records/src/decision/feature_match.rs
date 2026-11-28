@@ -14,10 +14,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::feature_match::{
-    FeatureMatrixRow, LedgerEntry, LedgerEvent, Match,
-};
 use medulla_types::transition_refused::TransitionRefused;
+use {
+    medulla_decision_statistical_types::decision::feature_match::FeatureMatrixRow,
+    medulla_decision_statistical_types::decision::feature_match::LedgerEntry,
+    medulla_decision_statistical_types::decision::feature_match::LedgerEvent,
+    medulla_decision_statistical_types::decision::feature_match::Match,
+};
 
 /// One part per million: similarity `1.0`.
 pub const PPM: u32 = 1_000_000;
@@ -339,7 +342,7 @@ pub fn advance_ledger(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::feature_match::LedgerStatus;
+    use medulla_decision_statistical_types::decision::feature_match::LedgerStatus;
 
     const PARAMS: MatchParams = MatchParams {
         w_token: 400_000,

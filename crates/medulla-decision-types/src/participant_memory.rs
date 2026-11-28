@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use medulla_work_types::memory_scope::ScopeRef;
 use medulla_work_types::participant::{Participant, ParticipantId};
 
-use crate::claims::ObserverRef;
 use crate::decision::record::outcome::AbstainReason;
+use medulla_decision_statistical_types::claims::ObserverRef;
 
 /// A question about one participant, asked as one observer.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

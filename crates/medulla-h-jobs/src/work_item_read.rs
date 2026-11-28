@@ -85,7 +85,7 @@ pub enum WorkItemRead {
     /// MEDULLA-DECISION-ENGINE-R133.7.3: one page of a stored recursive trace.
     /// `content_authorized` is whether the verified caller holds `trace:read-content`.
     TraceCritique {
-        query: medulla_decision_types::decision::recursive_trace::TraceCritiqueQuery,
+        query: medulla_decision_program_types::decision::recursive_trace::TraceCritiqueQuery,
         content_authorized: bool,
     },
 }

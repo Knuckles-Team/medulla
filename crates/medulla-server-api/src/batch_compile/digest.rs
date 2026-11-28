@@ -427,7 +427,7 @@ mod current_plan_identity_tests {
             medulla_decision_outcome_types::current_plan::sample_task_plan_publish_request();
         changed.task_plan_proposal.as_mut().unwrap().max_concurrency = 1;
         changed.snapshot.task_plan = Some(
-            medulla_decision_types::decision::task_plan::plan_explicit_tasks(
+            medulla_decision_program_types::decision::task_plan::plan_explicit_tasks(
                 changed.task_plan_proposal.as_ref().unwrap(),
             )
             .unwrap(),

@@ -8,9 +8,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::context_package::is_sha256_hex;
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// The schema version of a feedback event.
 pub const FEEDBACK_SCHEMA_VERSION: u16 = 1;

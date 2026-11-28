@@ -6,15 +6,25 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::memory_rewrite::{
-    MemoryFidelityMetric, MemoryRewriteEvaluation, MemoryRewriteKnobs, MemoryRewriteProposal,
-    RewriteHistory, RewriteReason, RewriteVerdict, MEMORY_ACTIVE_SIGNALS_EMPTY,
-    MEMORY_HISTORY_MISSING, MEMORY_METRIC_UNRESOLVED, MEMORY_POLICY_MISSING, MEMORY_REVISION_STALE,
-    MEMORY_TOKEN_DENOMINATOR_ZERO, Q4_ONE,
-};
 use medulla_types::refusal_code::RefusalCode;
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
+use {
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryFidelityMetric,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteEvaluation,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteKnobs,
+    medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteProposal,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteHistory,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteReason,
+    medulla_decision_statistical_types::decision::memory_rewrite::RewriteVerdict,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_ACTIVE_SIGNALS_EMPTY,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_HISTORY_MISSING,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_METRIC_UNRESOLVED,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_POLICY_MISSING,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REVISION_STALE,
+    medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_TOKEN_DENOMINATOR_ZERO,
+    medulla_decision_statistical_types::decision::memory_rewrite::Q4_ONE,
+};
 
 /// One signal in normal form: NFC, lower case, whitespace runs collapsed to one
 /// space, trimmed.
@@ -128,8 +138,10 @@ pub fn evaluate_rewrite(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::memory_rewrite::{
-        HistoryEntry, RevisionRef, MEMORY_REWRITE_SCHEMA_VERSION,
+    use {
+        medulla_decision_statistical_types::decision::memory_rewrite::HistoryEntry,
+        medulla_decision_statistical_types::decision::memory_rewrite::RevisionRef,
+        medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REWRITE_SCHEMA_VERSION,
     };
 
     fn knobs() -> MemoryRewriteKnobs {

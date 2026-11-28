@@ -10,12 +10,16 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_decision_types::skill_telemetry::{principal_pseudonym, SkillTelemetryOp, Window};
 use medulla_h_decide::decide::stat_test_support::{Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use serde_json::{json, Value};
+use {
+    medulla_decision_statistical_types::skill_telemetry::principal_pseudonym,
+    medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp,
+    medulla_decision_statistical_types::skill_telemetry::Window,
+};
 
 const GRAPH: &str = "__commons__";
 const INVOCATIONS: usize = 1_000_000;

@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use super::context_package::is_sha256_hex;
-use super::record::outcome::DecisionRefusal;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
 

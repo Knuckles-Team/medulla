@@ -13,10 +13,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::super::numeric::{QuantisedValue, UnitRationalWire};
 use super::outcome::RiskStatement;
 use super::scorer::OptionAttentionParams;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantisedValue,
+    medulla_decision_statistical_types::decision::numeric::UnitRationalWire,
+};
 
 /// Which head shape a fit produces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

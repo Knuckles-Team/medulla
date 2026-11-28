@@ -10,9 +10,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
-use medulla_decision_types::decision::capability_designation::{CapabilityRecord, Q32_ONE};
 use medulla_types::contract::OpaqueId;
 use parking_lot::Mutex;
+use {
+    medulla_decision_policy_types::decision::capability_designation::CapabilityRecord,
+    medulla_decision_policy_types::decision::capability_designation::Q32_ONE,
+};
 
 use super::arena::{normalized, Arena};
 use super::postings::Postings;

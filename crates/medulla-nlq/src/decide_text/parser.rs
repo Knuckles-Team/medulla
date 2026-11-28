@@ -6,16 +6,22 @@ use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::{
-    AssemblyConstraints, AssemblyRequest, AssemblyRequirements, LibraryCandidateScope,
-};
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
-    decision::statistical::StatisticalQuestion, decision::statistical::TypedParam,
-    decision::statistical::TypedValue,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_types::decision::request::AssemblyConstraints,
+    medulla_decision_types::decision::request::AssemblyRequest,
+    medulla_decision_types::decision::request::AssemblyRequirements,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
 
 use super::lexer::{Spanned, Tok};
 use super::{DecideTextError, DecideTextErrorKind, DecideTextRequest};

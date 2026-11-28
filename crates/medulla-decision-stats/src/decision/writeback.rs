@@ -22,7 +22,7 @@ pub const WRITEBACK_DUPLICATE_EXTERNAL_ID: &str = "WRITEBACK_DUPLICATE_EXTERNAL_
 pub const WRITEBACK_TENANT_MISMATCH: &str = "WRITEBACK_TENANT_MISMATCH";
 /// The stable code of a proposal whose sources disagree on its value.
 pub const WRITEBACK_SOURCE_CONFLICT: &str =
-    medulla_decision_types::decision::codes::WRITEBACK_SOURCE_CONFLICT.as_str();
+    medulla_decision_statistical_types::decision::codes::WRITEBACK_SOURCE_CONFLICT.as_str();
 
 /// A refused write-back model value, with its stable code.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,7 +70,7 @@ fn as_of(as_of_ms: i64) -> Result<(), WritebackError> {
     Ok(())
 }
 
-use medulla_decision_types::decision::statistical::writeback::RiskTier;
+use medulla_decision_program_types::decision::statistical::writeback::RiskTier;
 
 /// One high-stakes write-back proposal, stamped with the as-of instant it
 /// derives from.
@@ -182,7 +182,7 @@ impl ProposalQueue {
 pub const WRITEBACK_QUEUE_TRANSITION_REFUSED: &str = "WRITEBACK_QUEUE_TRANSITION_REFUSED";
 /// The stable code of a release before every proposal holds an approval.
 pub const PROPOSAL_UNAPPROVED: &str =
-    medulla_decision_types::decision::codes::PROPOSAL_UNAPPROVED.as_str();
+    medulla_decision_statistical_types::decision::codes::PROPOSAL_UNAPPROVED.as_str();
 /// The stable code of a queue the tenant does not hold.
 pub const WRITEBACK_QUEUE_UNKNOWN: &str = "WRITEBACK_QUEUE_UNKNOWN";
 /// The stable code of a queue id that is already stored.

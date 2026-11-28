@@ -14,12 +14,18 @@ use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::trajectory_verdict::{
-    RecoveryAction, StepVerification, VerifyKnobs, VerifyRequest,
-};
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::RecoveryAction,
+    medulla_decision_statistical_types::decision::trajectory_verdict::StepVerification,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyKnobs,
+    medulla_decision_statistical_types::decision::trajectory_verdict::VerifyRequest,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

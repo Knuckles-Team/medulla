@@ -7,17 +7,19 @@
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::ComponentDependency,
 };
+use medulla_decision_program_types::decision::statistical::body::decode_body;
 use medulla_decision_stats_records::decision::nl::fill_slots;
-use medulla_decision_types::decision::statistical::body::decode_body;
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
     decision::statistical::nl::NlTemplateBody,
 };
-use medulla_decision_types::{
-    decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
-    decision::statistical::StatisticalOutcome, decision::statistical::TypedValue,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::stat_support::refusal;
 

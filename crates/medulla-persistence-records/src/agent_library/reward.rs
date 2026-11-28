@@ -7,7 +7,7 @@
 //! its result. A write that carries an older `updated_revision` than the
 //! stored row is refused, so a durable reward is never replaced by a staler one.
 
-use medulla_decision_types::decision::capability_designation::CapabilityReward;
+use medulla_decision_policy_types::decision::capability_designation::CapabilityReward;
 use medulla_storage::{CAPABILITY_REWARD, DECISION_ARTIFACTS};
 use redb::ReadableTable;
 

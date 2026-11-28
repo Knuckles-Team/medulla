@@ -7,10 +7,12 @@
 
 use super::error::VerifyError;
 use crate::solve::model::Model;
-use medulla_decision_types::solve::certificate::{
-    LagrangeDual, MAX_BOUND_DENOMINATOR, MAX_MULTIPLIER,
+use medulla_decision_policy_types::solve::spec::Relation;
+use {
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::MAX_BOUND_DENOMINATOR,
+    medulla_decision_policy_types::solve::certificate::MAX_MULTIPLIER,
 };
-use medulla_decision_types::solve::spec::Relation;
 
 /// Which objective the dual is evaluated against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

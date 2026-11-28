@@ -11,9 +11,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::capability_rank;
-use medulla_decision_types::decision::policy::DecisionPolicy;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
+use medulla_decision_statistical_types::decision::capability_rank;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 /// `Q32` one.
 const Q32_ONE: f64 = 4_294_967_296.0;
@@ -84,10 +87,17 @@ pub const FEATURE_NAMES: [&str; 5] = [
 /// body under each point's `feature_schema` component id; the same bytes mean one tenant's
 /// pin is reproducible. `medulla/generated/_catalog_rank_feature_schemas.py` mirrors it.
 pub fn catalog_rank_feature_schema(
-) -> medulla_decision_types::decision::statistical::features::FeatureSchemaBody {
-    use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-    use medulla_decision_types::decision::statistical::features::{
-        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
+) -> medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody {
+    use {
+        medulla_decision_program_types::decision::statistical::features::FeatureKind,
+        medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+        medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+        medulla_decision_program_types::decision::statistical::features::MissingValue,
+        medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+        medulla_decision_statistical_types::decision::numeric::QuantisedValue,
     };
     FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
@@ -267,7 +277,7 @@ pub fn capability_features(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    use medulla_decision_statistical_types::decision::statistical::declared::DeclaredText;
 
     // spec: MEDULLA-DECISION-ENGINE-R829.4
     #[test]
@@ -278,7 +288,7 @@ mod tests {
             .features
             .iter()
             .map(|feature| match &feature.kind {
-                medulla_decision_types::decision::statistical::features::FeatureKind::Number {
+                medulla_decision_program_types::decision::statistical::features::FeatureKind::Number {
                     key,
                 } => key.clone(),
                 other => panic!("not a number feature: {other:?}"),
@@ -295,7 +305,8 @@ mod tests {
             ]
         );
         let encoded =
-            medulla_decision_types::decision::statistical::body::encode_body(&body).unwrap();
+            medulla_decision_program_types::decision::statistical::body::encode_body(&body)
+                .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&encoded.bytes).unwrap();
         assert_eq!(json["features"][4]["missing"]["missing"], "impute");
         assert_eq!(json["features"][4]["missing"]["value"]["value"], 0);

@@ -23,7 +23,7 @@ This file describes the entities of the refusal taxonomy that `MEDULLA-DECISION-
 
 ### Shared codes
 
-- New file: `crates/medulla-decision-types/src/decision/codes.rs`.
+- New file: `crates/medulla-decision-statistical-types/src/decision/codes.rs`.
 - It holds the request codes that more than one family uses, declared once.
 
 ### DecisionRecord

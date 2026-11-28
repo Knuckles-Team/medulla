@@ -17,14 +17,24 @@ use medulla_decision_types::decision::context_package::{
 use medulla_types::contract::BoundedVec;
 
 use super::{verify, Model, Verdict};
-use medulla_decision_types::solve::certificate::{
-    Certificate, SolveStatus, SolverConfig, SolverConfigSpec,
-};
-use medulla_decision_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 use medulla_query_types::solve_scalar::Scalar;
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+    medulla_decision_policy_types::solve::certificate::SolverConfigSpec,
+};
+use {
+    medulla_decision_policy_types::solve::spec::Coefficient,
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ConstraintSpec,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::spec::ObjectiveTerm,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 /// A typed refusal of the package kernel: the closed code and a detail.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -228,7 +238,7 @@ pub fn select_with(
     let config = SolverConfig::try_from(SolverConfigSpec {
         node_budget: u64::from(request.node_budget),
         max_certificate_leaves:
-            medulla_decision_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES,
+            medulla_decision_policy_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES,
         bound_denominator: 1,
         accepted_gap: Scalar::new(0),
     })
@@ -323,7 +333,9 @@ pub fn select_with(
     })
 }
 
-fn level_known_sum(level: &medulla_decision_types::solve::objective::LevelValue) -> i128 {
+fn level_known_sum(
+    level: &medulla_decision_statistical_types::solve::objective::LevelValue,
+) -> i128 {
     level.known.get()
 }
 

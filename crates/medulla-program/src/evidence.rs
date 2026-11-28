@@ -8,11 +8,15 @@
 //! (`Decide` kind `Promotion`) reads the evidence off the stored
 //! `ProgramRevision` node.
 
-use medulla_decision_types::decision::held_out::{
-    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
 use medulla_query_types::solve_scalar::digest_text;
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 
 use crate::{ExampleSplit, OptimizationRequest, OptimizationResult, TrainingExample};
 

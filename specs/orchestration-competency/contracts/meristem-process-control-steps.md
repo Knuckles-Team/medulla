@@ -13,7 +13,7 @@ The harness receives branch, join, decision and approval-wait steps inside the c
 
 ## Authoritative types
 
-`BranchSpec`, `JoinSpec`, `DecisionSpec` and `ApprovalSpec` in `crates/medulla-decision-types/src/decision/task_plan/control.rs`; `BranchVerdict` and `TableVerdict` in `crates/medulla-decision-types/src/decision/process_decision.rs`.
+`BranchSpec`, `JoinSpec`, `DecisionSpec` and `ApprovalSpec` in `crates/medulla-decision-program-types/src/decision/task_plan/control.rs`; `BranchVerdict` and `TableVerdict` in `crates/medulla-decision-program-types/src/decision/process_decision.rs`.
 
 ## Test vectors
 

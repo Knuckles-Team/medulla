@@ -1,5 +1,5 @@
 use super::*;
-use crate::decision::knobs::KnobName;
+use medulla_decision_statistical_types::decision::knobs::KnobName;
 
 fn limits(items: i64, bytes: i64, string_bytes: i64) -> HarnessEvidenceLimits {
     let mut policy = DecisionPolicy::engine_default();

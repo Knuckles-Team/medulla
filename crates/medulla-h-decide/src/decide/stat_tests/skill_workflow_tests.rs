@@ -7,15 +7,24 @@ use super::kernel_family_support::kernel_request;
 use super::log_tests::log_op;
 use super::path_preference_tests::{pins, OTHER};
 use super::*;
-use medulla_decision_types::decision::program_store::{program_key, CompiledProgram};
-use medulla_decision_types::decision::skill_workflow::{
-    DraftStep, SkillWorkflowDraft, StepEdge, TypeRef,
-};
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::TypedValue;
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_program_types::decision::program_store::program_key,
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+};
+use {
+    medulla_decision_program_types::decision::skill_workflow::DraftStep,
+    medulla_decision_program_types::decision::skill_workflow::SkillWorkflowDraft,
+    medulla_decision_program_types::decision::skill_workflow::StepEdge,
+    medulla_decision_program_types::decision::skill_workflow::TypeRef,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn step(id: &str, action: &str, next: &[&str], on_error: Option<&str>) -> DraftStep {
     DraftStep {

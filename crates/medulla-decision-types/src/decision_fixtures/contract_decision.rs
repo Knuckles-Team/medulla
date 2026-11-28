@@ -4,18 +4,6 @@
 //! to a record makes this file fail to compile instead of making a test pass
 //! against a value that no longer has the shape it claims.
 
-use crate::decision::{
-    AbstainReason, AssemblyConstraints, AssemblyRequest, AssemblyRequirements, CandidateFacts,
-    CandidateSourceRecord, ColdStart, CoverageDerivation, DecideRequest, DecisionCommitRequest,
-    DecisionInputs, DecisionOutcome, DecisionPolicy, DecisionQuestion, DecisionRecord,
-    DerivationClass, DerivationEdge, EdgeSource, Elimination, LibraryCandidateScope,
-    ObjectiveLevelKind, ObjectiveOrder, PremiseClass, PremiseProvenance, PremiseRef,
-    ResolutionKind, SlotAssignment, SolverIdentity, TraceFidelity, UnitRationalWire,
-    UnknownCostRule, Violation, WhyNot, DECISION_POLICY_SCHEMA_VERSION,
-    DECISION_RECORD_SCHEMA_VERSION,
-};
-use crate::solve::Algorithm;
-use crate::solve::ObjectiveValue;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_fixtures::agent_library::mutation_context;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
@@ -23,10 +11,40 @@ use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
+use medulla_decision_policy_types::solve::Algorithm;
+use medulla_decision_statistical_types::solve::objective::ObjectiveValue;
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    crate::decision::record::AbstainReason, crate::decision::record::CandidateFacts,
+    crate::decision::record::CandidateSourceRecord, crate::decision::record::DecisionInputs,
+    crate::decision::record::DecisionOutcome, crate::decision::record::DecisionQuestion,
+    crate::decision::record::DecisionRecord, crate::decision::record::DerivationClass,
+    crate::decision::record::ResolutionKind, crate::decision::record::SlotAssignment,
+    crate::decision::record::SolverIdentity, crate::decision::record::TraceFidelity,
+    crate::decision::record::WhyNot, crate::decision::request::AssemblyConstraints,
+    crate::decision::request::AssemblyRequest, crate::decision::request::AssemblyRequirements,
+    crate::decision::request::DecisionCommitRequest,
+    crate::decision::request::LibraryCandidateScope, crate::decision::statistical::DecideRequest,
+    medulla_decision_statistical_types::decision::record::premise::CoverageDerivation,
+    medulla_decision_statistical_types::decision::record::premise::DerivationEdge,
+    medulla_decision_statistical_types::decision::record::premise::EdgeSource,
+    medulla_decision_statistical_types::decision::record::premise::Elimination,
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::record::premise::Violation,
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+    medulla_decision_statistical_types::decision::ObjectiveOrder,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_statistical_types::decision::UnknownCostRule,
+    medulla_decision_statistical_types::decision::DECISION_POLICY_SCHEMA_VERSION,
+    medulla_decision_statistical_types::decision::DECISION_RECORD_SCHEMA_VERSION,
+};
 
-use super::contract_solver as solver;
+use medulla_decision_policy_types::decision_fixtures::contract_solver as solver;
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};
 
 /// A pinned component reference.

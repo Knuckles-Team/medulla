@@ -16,7 +16,8 @@ medulla-store = { path = "../medulla-store", features = ["redb"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 hex = "0.4"
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-storage = { path = "../medulla-storage" }
@@ -44,11 +45,12 @@ tempfile = { version = "3", optional = true }
 [features]
 security = ["medulla-store/security", "medulla-lane-store/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
 statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-work-types/statechart"]
-test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
+test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-protocol-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
 [dev-dependencies]
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }

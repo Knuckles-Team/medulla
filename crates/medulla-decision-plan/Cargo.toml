@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
 medulla-types = { path = "../medulla-types" }
 
 [dev-dependencies]

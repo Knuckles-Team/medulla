@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use medulla_decision_types::claims::ObserverRef;
+use medulla_decision_statistical_types::claims::ObserverRef;
 use medulla_decision_types::participant_memory::DeriveTurn;
 use medulla_work_types::memory_scope::ObservationConfig;
 use medulla_work_types::participant::ParticipantId;

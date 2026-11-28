@@ -11,15 +11,18 @@ use medulla_agent_types::{
     agent_component::ModalityFacts, agent_component::PromptMode, agent_component::ToolEffect,
 };
 #[cfg(test)]
-use medulla_decision_types::decision::DecisionOutcome;
-use medulla_decision_types::decision::{
-    AssemblyRequest, AssemblyRequirements, DecisionPolicy, LibraryCandidateScope,
-};
+use medulla_decision_types::decision::record::DecisionOutcome;
 use medulla_types::contract::BoundedVec;
 use {
     medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
     medulla_compute_assemble::assemble::replay_check, medulla_compute_assemble::assemble::Assembly,
     medulla_compute_assemble::assemble::RecordIdentity,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::request::AssemblyRequest,
+    medulla_decision_types::decision::request::AssemblyRequirements,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
 };
 
 use super::super::agent_component::{test_component_draft, test_tool_facts};
@@ -418,7 +421,7 @@ fn policy_draft(policy: &DecisionPolicy, content_digest: String) -> AgentCompone
     draft.classification = Vec::new();
     draft.content_digest = content_digest;
     draft.attributes = std::collections::BTreeMap::from([(
-        medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
+        medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
         serde_json::to_string(policy).expect("encodes"),
     )]);
     draft
@@ -432,7 +435,8 @@ fn a_pinned_policy_component_decides_and_commits() {
     seed_library(&store, TENANT);
     let mut policy = DecisionPolicy::engine_default();
     policy.node_budget = 5_000;
-    let digest = medulla_decision_types::decision::digest::policy_digest(&policy);
+    let digest =
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(&policy);
     let published = publish(&store, TENANT, 130, policy_draft(&policy, digest));
     let pin = ComponentDependency {
         component_id: published.component_id.clone(),

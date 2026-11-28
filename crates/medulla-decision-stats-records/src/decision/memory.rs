@@ -8,7 +8,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_decision_types::decision::statistical::tool_subset::{
     smallest_covering_subset, ToolCoverageCandidate, ToolSubsetRefusal, ToolSubsetRequestBody,
 };
@@ -19,6 +18,11 @@ use medulla_work_types::memory::{
     PromotionGroup, RetentionPolicy, TrajectoryEntry,
 };
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Cosine at or above which two records of one tier are near duplicates.
 pub const MERGE_COSINE: KnobSpec = KnobSpec {

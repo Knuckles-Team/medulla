@@ -18,7 +18,7 @@ mod head;
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 pub use budget::{max_drawdown, mean, proportional, sharpe};
 pub use events::{cursor_of, event_digest, order_events, OrderedEvents};

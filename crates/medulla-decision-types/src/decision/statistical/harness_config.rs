@@ -3,11 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::numeric::UnitRationalWire;
 use medulla_agent_types::{
     agent_component::MeasuredFact, agent_component::ObservationRef,
     agent_component::ShellProficiency, agent_component::StoppingBehaviour,
 };
+use medulla_decision_statistical_types::decision::numeric::UnitRationalWire;
 use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_types::contract::BoundedVec;
 
@@ -151,7 +151,10 @@ pub struct HarnessConfigEvaluationEvidence {
     /// from these options after checking that digest (R128.13.2.1). Omitted
     /// when empty, so evidence of a question without candidates is unchanged.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub declared_options: BoundedVec<super::declared::DeclaredOption, 64>,
+    pub declared_options: BoundedVec<
+        medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+        64,
+    >,
     /// The evaluation run behind the measured plan-scaffold no-gain fact the
     /// derivation read, digest included: a premise names only the run's id, so
     /// the replay takes the digest from here (R128.13.2.1). Omitted when the
@@ -719,7 +722,11 @@ mod tests {
     }
 
     fn harness_input_digest(inputs: &super::super::StatisticalInputs) -> String {
-        use super::super::{QuestionKind, QuestionSafety, StatisticalQuestion};
+        use {
+            crate::decision::statistical::QuestionSafety,
+            crate::decision::statistical::StatisticalQuestion,
+            medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+        };
         let question = StatisticalQuestion {
             question_id: "legacy-question".into(),
             kind: QuestionKind::Route,

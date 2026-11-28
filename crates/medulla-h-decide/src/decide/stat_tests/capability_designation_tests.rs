@@ -6,14 +6,9 @@
 use super::*;
 use crate::decide::stat_designation::{shared_capability_index, DesignationRuntime};
 use medulla_decision_memory::memory::capability_index::Change;
-use medulla_decision_types::decision::capability_designation::{
-    CapabilityDesignation, CapabilityDesignationQuestion, CapabilityOutcomeApplied,
-    CapabilityRecord, CapabilityReward, DesignationAsk, DesignationKnobs, DesignationWeights,
-    EntityKind, QueryVector, SchemaProjection, DESIGNATION_PARAM, KNOBS as DESIGNATION_KNOBS,
-    NEUTRAL_REWARD_Q32, Q32_ONE,
-};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::ResolutionKind;
+use {medulla_decision_policy_types::decision::capability_designation::CapabilityDesignation, medulla_decision_policy_types::decision::capability_designation::CapabilityDesignationQuestion, medulla_decision_policy_types::decision::capability_designation::CapabilityOutcomeApplied, medulla_decision_policy_types::decision::capability_designation::CapabilityRecord, medulla_decision_policy_types::decision::capability_designation::CapabilityReward, medulla_decision_policy_types::decision::capability_designation::DesignationAsk, medulla_decision_policy_types::decision::capability_designation::DesignationKnobs, medulla_decision_policy_types::decision::capability_designation::DesignationWeights, medulla_decision_policy_types::decision::capability_designation::EntityKind, medulla_decision_policy_types::decision::capability_designation::QueryVector, medulla_decision_policy_types::decision::capability_designation::SchemaProjection, medulla_decision_policy_types::decision::capability_designation::DESIGNATION_PARAM, medulla_decision_policy_types::decision::capability_designation::KNOBS as DESIGNATION_KNOBS, medulla_decision_policy_types::decision::capability_designation::NEUTRAL_REWARD_Q32, medulla_decision_policy_types::decision::capability_designation::Q32_ONE};
+use {medulla_decision_statistical_types::decision::knobs::KnobName, medulla_decision_statistical_types::decision::knobs::KnobValue};
+use medulla_decision_types::decision::record::ResolutionKind;
 use medulla_types::contract::{OpaqueId, TenantId};
 use std::collections::BTreeSet;
 
@@ -90,7 +85,7 @@ fn designation_request_on(
         },
         candidates: CandidateSource::Declared {
             options: BoundedVec::new(vec![
-                medulla_decision_types::decision::statistical::declared::DeclaredOption {
+                medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption {
                     option_id: question_id,
                     classification: BoundedVec::default(),
                     numbers: BoundedVec::default(),
@@ -403,7 +398,7 @@ async fn capability_designation_refusals() {
     );
 
     // A policy that bounds the shard below what the tenant shard holds.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("designation.max_records_per_shard"),
         KnobValue::Integer(1000),
@@ -448,7 +443,7 @@ async fn capability_designation_refusals() {
     assert_eq!(reason.code().as_str(), "DESIGNATION_NO_CAPABLE_CANDIDATE");
     assert!(matches!(
         reason,
-        medulla_decision_types::decision::AbstainReason::Family { detail, .. } if detail == "cap:missing"
+        medulla_decision_types::decision::record::AbstainReason::Family { detail, .. } if detail == "cap:missing"
     ));
     assert_eq!(sealed.resolution_kind, ResolutionKind::Abstention);
 
@@ -502,7 +497,7 @@ async fn capability_outcome_updates_reward_and_refuses() {
     seed(&h, fixture_rows()).await;
     let alpha = {
         let knobs = DesignationKnobs::from_policy(
-            &medulla_decision_types::decision::DecisionPolicy::engine_default(),
+            &medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
         );
         knobs.reward_alpha_q32
     };
@@ -729,7 +724,7 @@ async fn premises_name_scores_and_knobs() {
         assert!(has(d.entity_id.as_str(), "subsumption:cap:sub>cap:super"));
     }
     // One knob premise per designation knob read, at the resolved value.
-    let policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     for spec in DESIGNATION_KNOBS {
         assert!(
             has(
@@ -821,7 +816,7 @@ fn pack_record(id: &str, applies: &[&str], executes: &[&str], revision: u64) -> 
     record.executes = executes.iter().map(|c| class(c)).collect();
     record.record_revision = 7;
     record.pack = Some(
-        medulla_decision_types::decision::capability_designation::PackOrigin {
+        medulla_decision_policy_types::decision::capability_designation::PackOrigin {
             connector: "finance".to_string(),
             binding_revision: revision,
             pack_digest: format!("sha256:{}", "12".repeat(32)),
@@ -897,7 +892,7 @@ async fn pack_target_refusals() {
     );
     assert!(matches!(
         reason,
-        medulla_decision_types::decision::AbstainReason::Family { detail, .. }
+        medulla_decision_types::decision::record::AbstainReason::Family { detail, .. }
             if detail.contains(&class("Orphan"))
     ));
     assert_eq!(sealed.resolution_kind, ResolutionKind::Abstention);
@@ -1087,11 +1082,11 @@ async fn premises_name_subclass_path_and_pack() {
     assert_eq!(premise.subject, "tool-var");
     assert_eq!(
         premise.class,
-        medulla_decision_types::decision::PremiseClass::Claim
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim
     );
     assert!(matches!(
         &premise.provenance,
-        medulla_decision_types::decision::PremiseProvenance::ConnectorPack {
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance::ConnectorPack {
             connector, binding_revision: 5, pack_digest: digest, ..
         } if connector == "finance" && *digest == pack_digest
     ));
@@ -1415,7 +1410,7 @@ async fn closure_projection_is_served_and_bounded_by_its_knob() {
 
     // A policy whose `designation.closure_max_members` is below the closure
     // refuses with the registered code and writes nothing.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("designation.closure_max_members"),
         KnobValue::Integer(64),
@@ -1450,7 +1445,7 @@ async fn closure_projection_is_served_and_bounded_by_its_knob() {
 // spec: MEDULLA-DECISION-ENGINE-R650.4
 #[tokio::test]
 async fn descriptor_refusals_and_tenant_isolation() {
-    use medulla_decision_types::decision::capability_designation::REFUSALS;
+    use medulla_decision_policy_types::decision::capability_designation::REFUSALS;
     // Both publication codes are in the family refusal table.
     for code in [
         "DESCRIPTOR_SIDE_EFFECT_MISSING",
@@ -1535,7 +1530,7 @@ async fn designation_returns_descriptor_and_closure() {
     let mut packed = record(Some(TENANT), "tool-translate", &[CAP]);
     packed.entity_kind = EntityKind::Tool;
     packed.pack = Some(
-        medulla_decision_types::decision::capability_designation::PackOrigin {
+        medulla_decision_policy_types::decision::capability_designation::PackOrigin {
             connector: "finance".to_string(),
             binding_revision: 5,
             pack_digest: format!("sha256:{}", "12".repeat(32)),
@@ -1611,7 +1606,7 @@ async fn descriptor_designation(h: &Harness) -> StatisticalDecisionRecord {
     let mut packed = record(Some(TENANT), "tool-translate", &[CAP]);
     packed.entity_kind = EntityKind::Tool;
     packed.pack = Some(
-        medulla_decision_types::decision::capability_designation::PackOrigin {
+        medulla_decision_policy_types::decision::capability_designation::PackOrigin {
             connector: "finance".to_string(),
             binding_revision: 5,
             pack_digest: format!("sha256:{}", "12".repeat(32)),

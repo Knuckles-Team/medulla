@@ -5,8 +5,13 @@
 use std::collections::BTreeMap;
 
 use super::*;
-use medulla_decision_types::decision::knobs::{
-    check_revision, KnobName, KnobRefusalCode, KnobSafety, KnobSpec, KnobValue,
+use {
+    medulla_decision_statistical_types::decision::knobs::check_revision,
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobRefusalCode,
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
 
 const FAMILY: &[KnobSpec] = &[
@@ -41,7 +46,7 @@ const FAMILY: &[KnobSpec] = &[
 #[tokio::test]
 async fn decide_reads_the_pinned_knob_value_and_falls_back_to_the_default() {
     let h = Harness::new().await;
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .knobs
         .insert(KnobName::new("probe.batch"), KnobValue::Integer(16));
@@ -149,8 +154,8 @@ fn participant_knobs_are_registered_and_tunable() {
 // spec: MEDULLA-DECISION-ENGINE-R179.5
 #[tokio::test]
 async fn record_lists_every_knob_read() {
+    use medulla_decision_policy_types::decision::knob_families::route::KNOBS as ROUTE;
     use medulla_decision_stats::decision::drift::KNOBS as DRIFT;
-    use medulla_decision_types::decision::knob_families::route::KNOBS as ROUTE;
     let h = Harness::new().await;
     let schema_pin = h
         .publish_test_component(
@@ -161,7 +166,7 @@ async fn record_lists_every_knob_read() {
             None,
         )
         .unwrap();
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("drift.shift_threshold"),
         KnobValue::DecimalMicros(400_000),
@@ -233,7 +238,7 @@ async fn a_promoted_knob_revision_changes_the_served_decision_and_rolls_back() {
         )
         .unwrap();
     let policy_id = "policy-champion";
-    let base = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let base = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     let first = h.publish_policy(policy_id, &base);
     let mut revised = base.clone();
     revised.knobs.insert(
@@ -242,8 +247,8 @@ async fn a_promoted_knob_revision_changes_the_served_decision_and_rolls_back() {
     );
     let second = h.publish_policy(policy_id, &revised);
     assert_eq!(first.component_id, second.component_id);
-    let digest_of = |policy: &medulla_decision_types::decision::DecisionPolicy| {
-        medulla_decision_types::decision::digest::policy_digest(policy)
+    let digest_of = |policy: &medulla_decision_statistical_types::decision::DecisionPolicy| {
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(policy)
     };
     let serve = || async {
         decide(
@@ -266,10 +271,11 @@ async fn a_promoted_knob_revision_changes_the_served_decision_and_rolls_back() {
         principal: "operator",
         now_ms,
     };
-    let qualified = |policy: &medulla_decision_types::decision::DecisionPolicy| Qualified {
-        target: digest_of(policy),
-        receipt_digest: "sha256:receipt".to_string(),
-    };
+    let qualified =
+        |policy: &medulla_decision_statistical_types::decision::DecisionPolicy| Qualified {
+            target: digest_of(policy),
+            receipt_digest: "sha256:receipt".to_string(),
+        };
 
     // Nothing is promoted: the engine default serves.
     let before = shift_threshold_fact(&serve().await);

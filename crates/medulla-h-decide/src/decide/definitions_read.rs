@@ -4,7 +4,7 @@
 //! result field; each assigned prompt is rendered after the solve, with the pure functions of
 //! `medulla_work_types::orchestration::definitions`. A request that names neither reads nothing.
 
-use medulla_decision_types::decision::PromptAssignment;
+use medulla_decision_types::decision::request::PromptAssignment;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::Digest256;
 use medulla_work_types::orchestration::definitions::{

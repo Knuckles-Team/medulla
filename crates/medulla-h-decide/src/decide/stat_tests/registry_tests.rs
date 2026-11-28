@@ -5,9 +5,10 @@
 //! before the registry.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::{
-    decision::task_plan::TaskPlanProposal, decision::task_plan::TaskPlanTask,
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use {
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
 };
 
 fn declared_request(
@@ -215,7 +216,7 @@ async fn decide_dispatches_every_kind_through_its_family() {
     assert!(record.answer.as_ref().and_then(|a| a.task_plan()).is_some());
     assert_eq!(
         record.resolution_kind,
-        medulla_decision_types::decision::ResolutionKind::Constraint
+        medulla_decision_types::decision::record::ResolutionKind::Constraint
     );
 
     // The declared-option gate runs through the family's validate_candidates
@@ -271,7 +272,7 @@ async fn assemble_and_decide_text_use_the_registry() {
 }
 
 fn text_option(id: &str, name: &str) -> DeclaredOption {
-    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    use medulla_decision_statistical_types::decision::statistical::declared::DeclaredText;
     DeclaredOption {
         option_id: id.into(),
         classification: BoundedVec::default(),
@@ -287,8 +288,8 @@ fn text_option(id: &str, name: &str) -> DeclaredOption {
 /// The two IRI sides of a `resolve_entity` pair, in key order.
 fn pair_texts(
     id: &str,
-) -> Vec<medulla_decision_types::decision::statistical::declared::DeclaredText> {
-    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+) -> Vec<medulla_decision_statistical_types::decision::statistical::declared::DeclaredText> {
+    use medulla_decision_statistical_types::decision::statistical::declared::DeclaredText;
     vec![
         DeclaredText {
             key: "entity.left".to_string(),
@@ -305,7 +306,7 @@ fn pair_texts(
 /// same name on both sides, since identity evidence is computed between the
 /// two sides of one pair.
 fn pair_text_option(id: &str, name: &str) -> DeclaredOption {
-    use medulla_decision_types::decision::statistical::declared::DeclaredText;
+    use medulla_decision_statistical_types::decision::statistical::declared::DeclaredText;
     let mut option = text_option(id, name);
     let mut texts: Vec<DeclaredText> = option.texts.iter().cloned().collect();
     texts.extend(pair_texts(id));

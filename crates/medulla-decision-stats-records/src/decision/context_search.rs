@@ -10,13 +10,15 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::knob_families::context_search::ContextSearchKnobs;
-use medulla_decision_types::decision::statistical::context_search::{
-    sha256_hex, text_digest, ContextSpan,
-};
-use medulla_decision_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_policy_types::decision::knob_families::context_search::ContextSearchKnobs;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use unicode_normalization::char::canonical_combining_class;
 use unicode_normalization::UnicodeNormalization;
+use {
+    medulla_decision_policy_types::decision::statistical::context_search::sha256_hex,
+    medulla_decision_policy_types::decision::statistical::context_search::text_digest,
+    medulla_decision_policy_types::decision::statistical::context_search::ContextSpan,
+};
 
 /// The `context_search` family refusal table.
 pub const REFUSALS: &[StatisticalErrorCode] = &[

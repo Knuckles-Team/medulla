@@ -8,7 +8,11 @@ use std::time::Instant;
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const CLASS: &str = "task-class:build";
 const OTHER_TENANT: &str = "tenant-other";
@@ -102,7 +106,7 @@ fn decide_view(
 fn fact<'a>(
     record: &'a StatisticalDecisionRecord,
     fact: &str,
-) -> Option<&'a medulla_decision_types::decision::PremiseRef> {
+) -> Option<&'a medulla_decision_statistical_types::decision::record::premise::PremiseRef> {
     record.premises.iter().find(|p| p.fact == fact)
 }
 

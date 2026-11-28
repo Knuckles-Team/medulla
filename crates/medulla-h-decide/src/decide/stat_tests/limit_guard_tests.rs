@@ -8,15 +8,23 @@ use super::kernel_family_support::decide_as_other_tenant;
 use super::trajectory_join_tests::{entry, join};
 use super::*;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::limit_types::{
-    GuardedAction, LimitMetric, LimitObservation, LimitRule, RequestedBound, LIMIT_BREACH,
-};
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance,
-};
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::limit_types::GuardedAction,
+    medulla_decision_statistical_types::decision::limit_types::LimitMetric,
+    medulla_decision_statistical_types::decision::limit_types::LimitObservation,
+    medulla_decision_statistical_types::decision::limit_types::LimitRule,
+    medulla_decision_statistical_types::decision::limit_types::RequestedBound,
+    medulla_decision_statistical_types::decision::limit_types::LIMIT_BREACH,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const RULE: &str = "max-position";
 const SCOPE: &str = "account:a";

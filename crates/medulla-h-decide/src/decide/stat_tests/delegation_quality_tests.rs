@@ -5,14 +5,23 @@
 //! before a write.
 
 use super::*;
-use medulla_decision_types::decision::delegation_quality::{
-    artifact_key, DelegationQualityOutcome, DelegationQualityRequest, DelegationQualityWindow,
-    QualityObservation, QualityThreshold, StoredDelegation, REFUSALS,
-};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_policy_types::decision::delegation_quality::artifact_key,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationQualityOutcome,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationQualityRequest,
+    medulla_decision_policy_types::decision::delegation_quality::DelegationQualityWindow,
+    medulla_decision_policy_types::decision::delegation_quality::QualityObservation,
+    medulla_decision_policy_types::decision::delegation_quality::QualityThreshold,
+    medulla_decision_policy_types::decision::delegation_quality::StoredDelegation,
+    medulla_decision_policy_types::decision::delegation_quality::REFUSALS,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 const HOUR_MS: u64 = 3_600_000;
 
@@ -102,7 +111,7 @@ fn stored(h: &Harness, scope: &str) -> StoredDelegation {
 }
 
 fn knob_policy(h: &Harness, id: &str, knob: &str, value: i64) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .knobs
         .insert(KnobName::new(knob), KnobValue::Integer(value));

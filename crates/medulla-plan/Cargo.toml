@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["medulla-sql/sql", "dep:medulla-decision-stats", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query"]
+query = ["medulla-sql/sql", "dep:medulla-decision-stats", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-program-types/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -423,6 +423,7 @@ rayon = { version = "1.12", optional = true }
 # none of it.
 arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["query"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
@@ -441,6 +442,7 @@ medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support", "query"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the

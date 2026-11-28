@@ -9,6 +9,8 @@
 //! critique verdict bound to its digest. The verdict is advisory and `Decide`
 //! writes nothing.
 
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::held_item::{
     critique_checklist, is_digest, min_passes, HeldItemAnswer, HeldItemKind, HeldItemOutcome,
     HeldItemRefusal, HeldItemVerdict, PARAM_CONTENT_DIGEST, PARAM_GRAPH, PARAM_ITEM_KIND,
@@ -16,15 +18,19 @@ use medulla_decision_types::decision::held_item::{
     ROW_CRITIQUE_VERDICT, ROW_ITEM_KIND, ROW_LIFECYCLE, ROW_VERIFICATION_PASSES,
     ROW_VERIFICATION_REF, ROW_VERIFIED_BY,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,

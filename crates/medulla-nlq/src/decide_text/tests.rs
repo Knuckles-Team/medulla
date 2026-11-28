@@ -4,11 +4,13 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::QuestionKind,
-    decision::statistical::QuestionSafety, decision::statistical::TypedValue,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use super::{parse, DecideTextErrorKind, DecideTextRequest};
 

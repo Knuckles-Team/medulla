@@ -13,22 +13,26 @@ use medulla_decision_outcome_types::decision::revision_list::{RevisionRow, REVIS
 use medulla_decision_outcome_types::policy_evolution::{
     is_policy_evolution_row, PolicyEvolutionRecord, StoredPolicyRecord,
 };
+use medulla_decision_policy_types::decision::skill_evolution::RolloutSet;
+use medulla_decision_statistical_types::decision::codes::PROMOTION_UNEVALUATED;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
-use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
-use medulla_decision_types::decision::held_out::{
-    DefinitionKind, GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject,
-    HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
 use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
-use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, receipt_key, record_key};
 use medulla_types::refusal_code::RefusalCode;
 use medulla_work_types::orchestration::improvement::{AdoptedHarness, HarnessContrast};
+use {
+    medulla_decision_policy_types::decision::held_out::DefinitionKind,
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_harness_adoption::{ADOPTED_PREFIX, CONTRAST_PREFIX};
@@ -483,8 +487,11 @@ pub(super) fn record_rollouts(
 /// for its program has nothing to compare with, `PROMOTION_NO_BASELINE`.
 fn check_rollout_set(ctx: &ExecutionContext, set: &RolloutSet) -> Result<(), String> {
     use medulla_decision_outcome_types::decision::promotion::{KNOBS, MIN_CASES};
-    use medulla_decision_types::decision::knobs::KnobValue;
-    use medulla_decision_types::decision::skill_evolution::{ROLLOUT_TOO_FEW, ROLLOUT_UNPAIRED};
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
+    use {
+        medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_TOO_FEW,
+        medulla_decision_policy_types::decision::skill_evolution::ROLLOUT_UNPAIRED,
+    };
     if let Some(rollout) = set.rollouts.iter().find(|rollout| {
         rollout.challenger_score_ppm.is_none() || rollout.champion_score_ppm.is_none()
     }) {
@@ -520,7 +527,7 @@ fn check_rollout_set(ctx: &ExecutionContext, set: &RolloutSet) -> Result<(), Str
         if state.target().is_none() {
             return Err(format!(
                 "{}: the set names no champion and no champion is active for `{}`",
-                medulla_decision_types::decision::codes::PROMOTION_NO_BASELINE.as_str(),
+                medulla_decision_statistical_types::decision::codes::PROMOTION_NO_BASELINE.as_str(),
                 set.program_ref
             ));
         }
@@ -545,7 +552,8 @@ pub(super) fn qualified_champion(
     let mismatch = |detail: &str| {
         format!(
             "{}: {detail}",
-            medulla_decision_types::decision::codes::PROMOTION_RECEIPT_MISMATCH.as_str()
+            medulla_decision_statistical_types::decision::codes::PROMOTION_RECEIPT_MISMATCH
+                .as_str()
         )
     };
     let Some(bytes) = store.decision_artifact(tenant, &record_key(receipt_digest))? else {
@@ -555,7 +563,7 @@ pub(super) fn qualified_champion(
     let record = &entry.record;
     if record.tenant_id != tenant
         || record.question.kind
-            != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+            != medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::Promotion
     {
         return Err(mismatch(
             "the record is not a promotion decision of this tenant",
@@ -581,7 +589,7 @@ pub(super) fn qualified_champion(
     if state.target().unwrap_or("none") != pinned {
         return Err(format!(
             "{}: the champion pinned by the decision is no longer active",
-            medulla_decision_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str()
+            medulla_decision_statistical_types::decision::codes::PROMOTION_CAS_CONFLICT.as_str()
         ));
     }
     Ok(Qualified {
@@ -596,7 +604,8 @@ pub(super) fn promoted_tier(
     store: &AgentLibraryStore,
     tenant: &str,
     receipt_digest: &str,
-) -> Result<Option<medulla_decision_types::decision::promotion_tier::SkillTier>, String> {
+) -> Result<Option<medulla_decision_statistical_types::decision::promotion_tier::SkillTier>, String>
+{
     let Some(bytes) = store.decision_artifact(tenant, &record_key(receipt_digest))? else {
         return Ok(None);
     };
@@ -685,7 +694,7 @@ pub(super) fn promoted_receipt(
     let record = &entry.record;
     if record.tenant_id != tenant
         || record.question.kind
-            != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+            != medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::Promotion
     {
         return Ok(None);
     }

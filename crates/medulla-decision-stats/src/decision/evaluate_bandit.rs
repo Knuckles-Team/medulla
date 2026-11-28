@@ -17,9 +17,10 @@ use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::{
     decision::jobs::OpeEstimateView, decision::jobs::OpeEstimatorKind, decision::jobs::PooledRate,
 };
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
-    decision::statistical::dataset::LabelledItem,
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
 };
 
 use super::evaluate::{read_item, EvalSpec};
@@ -128,7 +129,9 @@ fn run(kind: OpeEstimatorKind, records: &[LoggedDecision]) -> RefusalResult<OpeE
     })
 }
 
-fn bounded_q(value: f64) -> RefusalResult<medulla_decision_types::decision::QuantisedValue> {
+fn bounded_q(
+    value: f64,
+) -> RefusalResult<medulla_decision_statistical_types::decision::QuantisedValue> {
     let finite = if value.is_finite() {
         value
     } else {

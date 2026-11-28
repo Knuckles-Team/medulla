@@ -5,11 +5,15 @@
 //! order. The same draft yields the same program bytes. The skill document
 //! remains the one source of truth; the program holds only its digest.
 
-use medulla_decision_types::decision::program_store::{
-    CompiledProgram, ProgramEdge, ProgramError, ProgramStep, PROGRAM_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::skill_workflow::SkillWorkflowDraft;
+use medulla_decision_program_types::decision::skill_workflow::SkillWorkflowDraft;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+    medulla_decision_program_types::decision::program_store::ProgramEdge,
+    medulla_decision_program_types::decision::program_store::ProgramError,
+    medulla_decision_program_types::decision::program_store::ProgramStep,
+    medulla_decision_program_types::decision::program_store::PROGRAM_SCHEMA_VERSION,
+};
 
 /// The compiler identity a sealed record names next to the program digest.
 pub const COMPILER_ID: &str = "skill_workflow_compile";
@@ -98,8 +102,12 @@ pub fn compile_skill_workflow(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::skill_workflow::{DraftStep, StepEdge, TypeRef};
     use medulla_types::contract::Digest256;
+    use {
+        medulla_decision_program_types::decision::skill_workflow::DraftStep,
+        medulla_decision_program_types::decision::skill_workflow::StepEdge,
+        medulla_decision_program_types::decision::skill_workflow::TypeRef,
+    };
 
     fn step(id: &str, next: &[(&str, Option<&str>)], on_error: Option<&str>) -> DraftStep {
         DraftStep {

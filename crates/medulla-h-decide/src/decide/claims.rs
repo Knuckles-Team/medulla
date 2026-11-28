@@ -14,7 +14,7 @@
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
 use super::SharedState;
-use medulla_decision_types::claims::ClaimOp;
+use medulla_decision_statistical_types::claims::ClaimOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -26,7 +26,7 @@ pub struct ClaimsServed {
     pub response: Response,
     /// One `memory.claim.changed` event per committed lifecycle transition of a claim that has a
     /// perspective; empty for every other operation and for any refusal.
-    pub events: Vec<medulla_decision_types::memory_events::MemoryEvent>,
+    pub events: Vec<medulla_decision_statistical_types::memory_events::MemoryEvent>,
 }
 
 /// Serve one claim operation, dropping the memory events (a caller with no graph outbox to
@@ -149,9 +149,9 @@ pub(super) async fn participants_of(
 fn check_perspective(
     core: Option<&std::sync::Arc<medulla_graph_core::graph::GraphCore>>,
     tenant: &str,
-    perspective: &medulla_decision_types::claims::ClaimPerspective,
+    perspective: &medulla_decision_statistical_types::claims::ClaimPerspective,
 ) -> Result<(), String> {
-    use medulla_decision_types::claims::ObserverRef;
+    use medulla_decision_statistical_types::claims::ObserverRef;
     use {
         medulla_h_graph_gateway::graph_ops::participant_surface::participant_exists,
         medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,
@@ -175,7 +175,7 @@ fn check_perspective(
 fn reader_view(
     core: Option<&std::sync::Arc<medulla_graph_core::graph::GraphCore>>,
     verified: &VerifiedRequestContext,
-    requested: Option<&medulla_decision_types::claims::ObserverRef>,
+    requested: Option<&medulla_decision_statistical_types::claims::ObserverRef>,
 ) -> Result<medulla_epistemic::claims::ReaderView, String> {
     use medulla_h_graph_gateway::graph_ops::participant_surface::principal_view;
     let empty;
@@ -201,13 +201,6 @@ pub(super) mod served {
     use serde::de::DeserializeOwned;
     use sha2::{Digest, Sha256};
 
-    use medulla_decision_types::claims::{
-        ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, Evidence, FeedGrade, LifecycleTransition,
-        ProvenClaimsResult, ResearchArtifact, Stance, PROVEN_CLAIMS_DEFAULT_LIMIT,
-        PROVEN_CLAIMS_MAX_LIMIT, WEIGHT_PPM_MAX,
-    };
-    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef};
-    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
     use medulla_epistemic::claims::{
         check_transition, claim_visible_to, combine_evidence, compile_artifact,
         contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, proven_rows,
@@ -226,6 +219,29 @@ pub(super) mod served {
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
     use medulla_types::contract::ServerErrorCode;
     use medulla_work_types::participant::ParticipantId;
+    use {
+        medulla_decision_statistical_types::claims::ClaimGetResult,
+        medulla_decision_statistical_types::claims::ClaimOp,
+        medulla_decision_statistical_types::claims::ClaimRecord,
+        medulla_decision_statistical_types::claims::ClaimState,
+        medulla_decision_statistical_types::claims::Evidence,
+        medulla_decision_statistical_types::claims::FeedGrade,
+        medulla_decision_statistical_types::claims::LifecycleTransition,
+        medulla_decision_statistical_types::claims::ProvenClaimsResult,
+        medulla_decision_statistical_types::claims::ResearchArtifact,
+        medulla_decision_statistical_types::claims::Stance,
+        medulla_decision_statistical_types::claims::PROVEN_CLAIMS_DEFAULT_LIMIT,
+        medulla_decision_statistical_types::claims::PROVEN_CLAIMS_MAX_LIMIT,
+        medulla_decision_statistical_types::claims::WEIGHT_PPM_MAX,
+    };
+    use {
+        medulla_decision_statistical_types::claims::ClaimPerspective,
+        medulla_decision_statistical_types::claims::ObserverRef,
+    };
+    use {
+        medulla_decision_statistical_types::memory_events::ClaimChanged,
+        medulla_decision_statistical_types::memory_events::MemoryEvent,
+    };
 
     /// Domain of the instance keys.
     const KEY_DOMAIN: &str = "medulla-claims/v1";
@@ -353,19 +369,20 @@ pub(super) mod served {
         /// The graph the store's events are published into; empty for a read-only caller.
         graph: String,
         /// Events of the transitions this store committed, in order.
-        events: std::sync::Mutex<Vec<medulla_decision_types::memory_events::MemoryEvent>>,
+        events:
+            std::sync::Mutex<Vec<medulla_decision_statistical_types::memory_events::MemoryEvent>>,
     }
 
     /// The fields of one evidence record as a caller sent them, before they are validated.
     struct EvidenceDraft {
         evidence_id: String,
         claim_id: String,
-        channel: Option<medulla_decision_types::claims::EvidenceChannel>,
+        channel: Option<medulla_decision_statistical_types::claims::EvidenceChannel>,
         supports: bool,
         weight_ppm: u32,
         source_digest: String,
         session_id: Option<String>,
-        proof: Option<medulla_decision_types::claims::ProofReceipt>,
+        proof: Option<medulla_decision_statistical_types::claims::ProofReceipt>,
     }
 
     impl ClaimStore {
@@ -403,7 +420,7 @@ pub(super) mod served {
         /// The memory events of the transitions committed so far, taken once.
         pub(in crate::decide) fn take_events(
             &self,
-        ) -> Vec<medulla_decision_types::memory_events::MemoryEvent> {
+        ) -> Vec<medulla_decision_statistical_types::memory_events::MemoryEvent> {
             std::mem::take(&mut *self.events.lock_recovering("claim memory events"))
         }
 
@@ -565,7 +582,7 @@ pub(super) mod served {
             if let Some(statement) = perspective.and_then(|p| p.statement.as_deref()) {
                 if statement.trim().is_empty()
                     || statement.chars().count()
-                        > medulla_decision_types::claims::CLAIM_STATEMENT_MAX_CHARS
+                        > medulla_decision_statistical_types::claims::CLAIM_STATEMENT_MAX_CHARS
                 {
                     return Err(invalid(
                         "a claim statement is empty or over its character limit",
@@ -685,7 +702,8 @@ pub(super) mod served {
                 weight_ppm,
                 source_digest,
                 session_id,
-                proof: proof.map(medulla_decision_types::claims::ProofReceipt::normalised),
+                proof: proof
+                    .map(medulla_decision_statistical_types::claims::ProofReceipt::normalised),
             };
             // A proof receipt is checked before any state changes: a refusal
             // returns here and records nothing.
@@ -701,7 +719,7 @@ pub(super) mod served {
             &self,
             evidence: Evidence,
             new_stances: BTreeMap<String, Stance>,
-            feed: Option<medulla_decision_types::claims::FeedItem>,
+            feed: Option<medulla_decision_statistical_types::claims::FeedItem>,
         ) -> Result<ClaimRecord, String> {
             let instance = self.require("claim", &evidence.claim_id)?;
             let mut record = record_of(&instance)?;

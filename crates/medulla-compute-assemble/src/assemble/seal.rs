@@ -7,13 +7,20 @@
 //! the record abstains with `RecordTooLarge { bytes }` -- a committed record is
 //! never silently cut.
 
-use medulla_decision_types::{
-    decision::digest, decision::AbstainReason, decision::CandidateSourceRecord,
-    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
-    decision::DecisionQuestion, decision::DecisionRecord, decision::DerivationClass,
-    decision::TraceFidelity, decision::MAX_DECISION_RECORD_BYTES,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::MAX_DECISION_RECORD_BYTES,
+    medulla_decision_types::decision::digest,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::CandidateSourceRecord,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::DecisionQuestion,
+    medulla_decision_types::decision::record::DecisionRecord,
+    medulla_decision_types::decision::record::DerivationClass,
+    medulla_decision_types::decision::record::TraceFidelity,
+};
 
 use super::conclude::Decided;
 use super::{AssembleError, Assembly};
@@ -76,7 +83,8 @@ pub(super) fn seal(
                 "reasons",
             )?,
         };
-        record.resolution_kind = medulla_decision_types::decision::ResolutionKind::Abstention;
+        record.resolution_kind =
+            medulla_decision_types::decision::record::ResolutionKind::Abstention;
         record.trace_fidelity = truncated(&["why_not", "outcome"])?;
         assembly_parts = (None, Vec::new(), None);
     }

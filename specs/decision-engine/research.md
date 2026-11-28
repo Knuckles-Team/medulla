@@ -765,7 +765,7 @@ A logical graph resolves to one generation graph: the target of its generation p
 
 ## R177.1: the usage-guidance answer type lives in the decision types crate
 
-The `usage_guidance` family answers with a `FamilyAnswer` variant, and `FamilyAnswer` lives in the decision types crate. The outcome types crate depends on the decision types crate, so a type the answer carries cannot live in the outcome types crate. `UsageGuidance`, its parameter names and its refusal table therefore stay in `crates/medulla-decision-types/src/decision/usage_guidance.rs`; the earlier copy in the outcome types crate is removed so there is one definition.
+The `usage_guidance` family answers with a `FamilyAnswer` variant, and `FamilyAnswer` lives in the decision types crate. The outcome types crate depends on the decision types crate, so a type the answer carries cannot live in the outcome types crate. `UsageGuidance`, its parameter names and its refusal table therefore stay in `crates/medulla-decision-program-types/src/decision/usage_guidance.rs`; the earlier copy in the outcome types crate is removed so there is one definition.
 - The index records carry no provenance marker, so the record's evidence class is `Observation`: its premises are observations of the index at an epoch and definitions of the schema and knobs.
 
 ## R170.2: team coordination fallback (design calls)

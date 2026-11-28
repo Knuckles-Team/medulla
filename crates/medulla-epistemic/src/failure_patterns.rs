@@ -6,10 +6,14 @@
 
 use std::collections::HashMap;
 
-use medulla_decision_types::failure_patterns::{
-    FailurePattern, FailureRecord, Signature, MAX_FAILURE_STEPS, MAX_PATTERN_MEMBERS,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::failure_patterns::FailurePattern,
+    medulla_decision_statistical_types::failure_patterns::FailureRecord,
+    medulla_decision_statistical_types::failure_patterns::Signature,
+    medulla_decision_statistical_types::failure_patterns::MAX_FAILURE_STEPS,
+    medulla_decision_statistical_types::failure_patterns::MAX_PATTERN_MEMBERS,
+};
 
 /// What clustering is bounded by; both figures are registry knobs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

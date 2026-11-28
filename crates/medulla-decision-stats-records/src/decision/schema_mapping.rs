@@ -11,7 +11,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::decision::PremiseClass;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 
 /// One in Q32.
 pub const ONE: i64 = 1 << 32;

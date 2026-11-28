@@ -1109,23 +1109,35 @@ async fn enrich_wide(
 async fn committed_executed_retrieval_record(state: &test_support::SharedState) -> String {
     use medulla_agent_types::agent_component::AgentComponentKind;
     use medulla_agent_types::agent_component::DecisionPolicyRef;
-    use medulla_decision_types::decision::statistical::body::encode_body;
-    use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-    use medulla_decision_types::decision::statistical::features::{
-        FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-    };
+    use medulla_decision_program_types::decision::statistical::body::encode_body;
+    use medulla_decision_statistical_types::decision::UnitRationalWire;
     use medulla_decision_types::decision::statistical::log::{
         DecisionLogCommitted, DecisionLogEntry, DecisionLogOp,
     };
-    use medulla_decision_types::decision::statistical::{
-        CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
-        StatisticalOutcome, StatisticalQuestion,
-    };
-    use medulla_decision_types::decision::UnitRationalWire;
     use medulla_h_decide::decide::stat_test_support::Harness;
     use medulla_persistence_records::agent_component::test_component_draft;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_program_types::decision::statistical::features::FeatureKind,
+        medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+        medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+        medulla_decision_program_types::decision::statistical::features::MissingValue,
+        medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+        medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    };
+    use {
+        medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+        medulla_decision_types::decision::statistical::CandidateSource,
+        medulla_decision_types::decision::statistical::DecideRequest,
+        medulla_decision_types::decision::statistical::DecisionBatch,
+        medulla_decision_types::decision::statistical::QuestionSafety,
+        medulla_decision_types::decision::statistical::StatisticalOutcome,
+        medulla_decision_types::decision::statistical::StatisticalQuestion,
+    };
 
     let store = state.write().await.ensure_agent_library().unwrap();
     let harness = Harness {

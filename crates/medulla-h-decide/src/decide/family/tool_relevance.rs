@@ -12,19 +12,27 @@
 //! compares; there is no second catalog hook. Nothing is written.
 
 use medulla_decision_stats::decision::tool_relevance::{fuse_tool_ranks, rank_tools_by_relevance};
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
-};
 use medulla_decision_types::decision::tool_relevance::{
     max_tools_from_policy, rrf_k_from_policy, AssignedTool, ToolAssignmentRequest,
     ToolRankingKnobs, ToolRelevanceRefusal, CATALOG_TOO_LARGE, UNKNOWN_ROLE,
 };
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

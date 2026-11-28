@@ -129,7 +129,7 @@ async fn an_utterance_routes_over_templates_and_an_llm_proposal_is_only_a_claim(
         .premises
         .iter()
         .any(|p| p.fact == "llm_template_proposal"
-            && p.class == medulla_decision_types::decision::PremiseClass::Claim));
+            && p.class == medulla_decision_statistical_types::decision::record::premise::PremiseClass::Claim));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert!(matches!(
         record.outcome,

@@ -15,20 +15,28 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::drift::{DriftMonitor, DriftThresholds, Moments, VocabBloom};
 use medulla_decision_stats_records::decision::refusal::Refusal;
-use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
-use medulla_decision_types::decision::statistical::retrieval_drift::{DriftKind, RegionRef};
-use medulla_decision_types::decision::statistical::shard_monitor::{
-    ShardMonitorEvent, ShardMonitorFacts, ShardMonitorState,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_retrieval::discover_signals::{
     set_discover_signals, DiscoverSignals, SignalsReading, WrittenVector,
 };
 use medulla_types::transition_refused::TransitionRefused;
 use parking_lot::Mutex;
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftKind,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RegionRef,
+};
+use {
+    medulla_decision_policy_types::decision::statistical::shard_monitor::ShardMonitorEvent,
+    medulla_decision_policy_types::decision::statistical::shard_monitor::ShardMonitorFacts,
+    medulla_decision_policy_types::decision::statistical::shard_monitor::ShardMonitorState,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Why a shard monitor did not take a written vector: the machine refused the event, or
 /// the vector does not fit the monitor (its width, or a non-finite component).
@@ -450,7 +458,7 @@ pub fn install() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE;
+    use medulla_decision_policy_types::decision::statistical::shard_monitor::SHARD_MONITOR_MACHINE;
     use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefusalReason};
 
     const DIM: usize = 2;

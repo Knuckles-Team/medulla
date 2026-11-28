@@ -755,8 +755,9 @@ pub fn epistemic_status_wire(
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
     let mut policy = medulla_epistemic::AuthorityPolicy::default();
     let governed = medulla_exec::exec::reliability::resolve(&bg, &policy, decisions, node_id)?;
-    if let medulla_decision_types::decision::reputation::SourceReliability::Estimated {
-        mean, ..
+    if let medulla_decision_policy_types::decision::reputation::SourceReliability::Estimated {
+        mean,
+        ..
     } = governed.learned
     {
         policy.source_reliability = mean;

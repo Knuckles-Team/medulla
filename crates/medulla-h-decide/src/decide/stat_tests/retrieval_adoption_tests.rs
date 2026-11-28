@@ -7,15 +7,19 @@ use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, learn, outcome, sql,
 };
 use super::*;
+use medulla_decision_statistical_types::decision::codes::ADOPTION_NOT_PROVEN;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
-use medulla_decision_types::decision::codes::ADOPTION_NOT_PROVEN;
-use medulla_decision_types::decision::held_out::{
-    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-};
 use medulla_decision_types::decision::statistical::retrieval::ReturnedEvidence;
-use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
 use serde_json::json;
+use {
+    medulla_decision_policy_types::decision::held_out::GraderKind,
+    medulla_decision_policy_types::decision::held_out::HeldOutEvidence,
+    medulla_decision_policy_types::decision::held_out::ReceiptKind,
+    medulla_decision_policy_types::decision::held_out::RevisionSubject,
+    medulla_decision_policy_types::decision::held_out::HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+};
 
 fn sourced(id: &str, source: &str) -> ReturnedEvidence {
     ReturnedEvidence {
@@ -103,8 +107,8 @@ async fn paired_run_adopts_and_refuses() {
     use super::learning_tests::{activate, pointer_state};
     use super::path_preference_tests::{pins, OTHER};
     use super::promotion_tests::{commit, promotion_request, rollout_set};
+    use medulla_decision_policy_types::decision::skill_evolution::RolloutSet;
     use medulla_decision_stats::decision::promotion::rollout_set_digest;
-    use medulla_decision_types::decision::skill_evolution::RolloutSet;
     use medulla_decision_types::decision::statistical::retrieval::{LearningWrite, PointerRef};
     let pinned = pins(&h, TENANT);
     let adopted = RolloutSet {

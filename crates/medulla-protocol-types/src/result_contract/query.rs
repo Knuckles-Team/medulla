@@ -11,7 +11,7 @@ use crate::protocol::{
 };
 #[cfg(feature = "query")]
 use crate::protocol::{ExplainPlanResult, ExplainPolicyResult};
-use medulla_decision_types::decision::DecisionBatch;
+use medulla_decision_types::decision::statistical::DecisionBatch;
 use medulla_index_types::{managed_index::EdgeIndexStatusView, managed_index::EdgeSearchView};
 #[cfg(feature = "knowledge-batch")]
 use medulla_ingestion_types::knowledge_stream::KnowledgeStreamBatch;
@@ -88,9 +88,9 @@ method_results! {
     // MEDULLA-SRC-AUTH-R004.6.1: the verdicts and audit of one source-coverage read.
     SourceCoverage(SourceCoverage) => Raw<medulla_identity_core_types::source_coverage::SourceCoverageReply>;
     // MEDULLA-DECISION-ENGINE-R100.100.4: the spans of one context search.
-    RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchResult>;
+    RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_policy_types::decision::statistical::context_search::RetrievalContextSearchResult>;
     // MEDULLA-DECISION-ENGINE-R144.3: the rows and the cost report of one indexless retrieval.
-    IndexlessRetrieve(IndexlessRetrieve) => Raw<medulla_decision_types::decision::indexless_retrieval::IndexlessResult>;
+    IndexlessRetrieve(IndexlessRetrieve) => Raw<medulla_decision_program_types::decision::indexless_retrieval::IndexlessResult>;
     // MEDULLA-FEDERATED-QUERY-R702.3: the accepted task or the typed rejection of one synthesis.
     SynthesizeSearchTask(SynthesizeSearchTask) => Raw<medulla_work_types::search_task::SynthesizeSearchTaskAnswer>;
     // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis.

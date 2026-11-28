@@ -7,10 +7,17 @@
 use super::*;
 use crate::decide::tool_index::ToolIndexCache;
 use medulla_agent_types::agent_component::{AgentComponentDraft, AgentComponentFacts, ToolEffect};
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::tool_relevance::ToolAssignmentRequest;
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_persistence_records::agent_component::test_component_draft;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const FOREIGN: &str = "tenant-foreign";
 const TASK: &str = "export the quarterly report";
@@ -190,7 +197,7 @@ fn abstain_codes(record: &StatisticalDecisionRecord) -> Vec<String> {
 }
 
 fn pinned_max_tools(h: &Harness, max: i64) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("tool_subset.max_tools"),
         KnobValue::Integer(max),

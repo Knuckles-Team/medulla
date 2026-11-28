@@ -8,12 +8,10 @@ use super::*;
 use crate::decide::stat_designation::{shared_capability_index, DesignationRuntime};
 use crate::decide::stat_load_set::LoadSetRead;
 use medulla_decision_outcome_types::decision::load_set::AgentCandidate;
-use medulla_decision_types::decision::capability_designation::{
-    CapabilityRecord, EntityKind, PackOrigin, SchemaProjection,
-};
-use medulla_decision_types::decision::load_set::{LoadSetAnswer, LoadSetQuestion, LOAD_SET_PARAM};
+use {medulla_decision_policy_types::decision::capability_designation::CapabilityRecord, medulla_decision_policy_types::decision::capability_designation::EntityKind, medulla_decision_policy_types::decision::capability_designation::PackOrigin, medulla_decision_policy_types::decision::capability_designation::SchemaProjection};
+use {medulla_decision_policy_types::decision::load_set::LoadSetAnswer, medulla_decision_policy_types::decision::load_set::LoadSetQuestion, medulla_decision_policy_types::decision::load_set::LOAD_SET_PARAM};
 use medulla_decision_types::decision::load_set_knobs::KNOBS as LOAD_SET_KNOBS;
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
+use {medulla_decision_statistical_types::decision::record::premise::PremiseClass, medulla_decision_statistical_types::decision::record::premise::PremiseProvenance, medulla_decision_types::decision::record::ResolutionKind};
 use medulla_types::contract::{OpaqueId, TenantId};
 use std::collections::BTreeSet;
 
@@ -164,7 +162,7 @@ fn load_set_request(schema: &ComponentDependency, question: LoadSetQuestion) -> 
         },
         candidates: CandidateSource::Declared {
             options: BoundedVec::new(vec![
-                medulla_decision_types::decision::statistical::declared::DeclaredOption {
+                medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption {
                     option_id: question_id,
                     classification: BoundedVec::default(),
                     numbers: BoundedVec::default(),
@@ -394,7 +392,7 @@ async fn load_set_refusals() {
     assert_eq!(reason.code().as_str(), "LOAD_SET_NO_DESIGNATED_COMPONENT");
     assert!(matches!(
         reason,
-        medulla_decision_types::decision::AbstainReason::Family { detail, .. }
+        medulla_decision_types::decision::record::AbstainReason::Family { detail, .. }
             if detail.contains("cap:missing")
     ));
     assert_eq!(sealed.resolution_kind, ResolutionKind::Abstention);
@@ -513,7 +511,7 @@ fn runtime_with_personas(
 // spec: MEDULLA-DECISION-ENGINE-R714.4, MEDULLA-DECISION-ENGINE-R714.6
 #[tokio::test]
 async fn a_persona_set_follows_the_always_on_skills_with_its_tiers() {
-    use medulla_decision_types::decision::promotion_tier::SkillTier;
+    use medulla_decision_statistical_types::decision::promotion_tier::SkillTier;
     let h = Harness::new().await;
     let pin = schema_pin(&h);
     seed(&h, fixture_rows()).await;

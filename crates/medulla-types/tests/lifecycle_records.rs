@@ -2,8 +2,7 @@
 //! R006.1, R006.7).
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobValue};
-use medulla_decision_types::decision::lifecycle::KNOBS;
+use medulla_decision_program_types::decision::lifecycle::KNOBS;
 use medulla_source_types::{
     lifecycle::record_deployment, lifecycle::release_range, lifecycle::Defect,
     lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Deployment,
@@ -11,6 +10,10 @@ use medulla_source_types::{
     lifecycle::LifecycleTraceRequest, lifecycle::Release, lifecycle::Severity,
     lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer, lifecycle::Symptom,
     lifecycle::TraceLimits,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
 
 fn release(version: &str, digests: &[&str]) -> Release {

@@ -5,11 +5,13 @@
 //! decision log to an authorized reader only.
 
 use super::*;
-use medulla_decision_types::decision::evidence_stream::{
-    EvidenceStreamKind, EvidenceStreamRef, EVIDENCE_STREAM_DIGEST_INVALID,
-    EVIDENCE_STREAM_DUPLICATE,
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+use {
+    medulla_decision_policy_types::decision::evidence_stream::EvidenceStreamKind,
+    medulla_decision_policy_types::decision::evidence_stream::EvidenceStreamRef,
+    medulla_decision_policy_types::decision::evidence_stream::EVIDENCE_STREAM_DIGEST_INVALID,
+    medulla_decision_policy_types::decision::evidence_stream::EVIDENCE_STREAM_DUPLICATE,
 };
-use medulla_decision_types::decision::PremiseClass;
 
 fn stream(kind: EvidenceStreamKind, id: &str, digest: String) -> EvidenceStreamRef {
     EvidenceStreamRef {
@@ -85,7 +87,7 @@ async fn evidence_streams_are_sealed_and_read_back() {
         assert_eq!(premise.class, PremiseClass::Claim);
         assert!(matches!(
             &premise.provenance,
-            medulla_decision_types::decision::PremiseProvenance::Request { field }
+            medulla_decision_statistical_types::decision::record::premise::PremiseProvenance::Request { field }
                 if field == "evidence_streams"
         ));
     }
@@ -116,7 +118,7 @@ async fn evidence_streams_are_sealed_and_read_back() {
     let assemble_refusal = |streams: Vec<EvidenceStreamRef>| {
         let h = &h;
         async move {
-            let mut req = medulla_decision_types::decision::AssemblyRequest {
+            let mut req = medulla_decision_types::decision::request::AssemblyRequest {
                 tenant_id: TENANT.to_string(),
                 requirements: Default::default(),
                 candidates: LibraryCandidateScope {
@@ -187,8 +189,8 @@ async fn evidence_streams_are_sealed_and_read_back() {
 // spec: MEDULLA-DECISION-ENGINE-R019.100.2
 #[tokio::test]
 async fn missing_stale_and_mismatched_approval_refuse_without_write() {
-    use medulla_decision_types::decision::approval::RecommendationApproval;
-    use medulla_decision_types::decision::DecisionPolicy;
+    use medulla_decision_policy_types::decision::approval::RecommendationApproval;
+    use medulla_decision_statistical_types::decision::DecisionPolicy;
 
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let approval = |record_id: &str, record_digest: &str, at_ms: u64| RecommendationApproval {
@@ -290,10 +292,13 @@ async fn missing_stale_and_mismatched_approval_refuse_without_write() {
     assert!(retried.replayed, "an approved retry answers replayed");
 
     // DecisionCommit: the receipt names the DecisionRecord's id and digest.
-    use medulla_decision_types::decision::{DecisionCommitRequest, DecisionCommitResult};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::decision_record::tests::{
         commit_context, decided_under, seed_library, TENANT,
+    };
+    use {
+        medulla_decision_types::decision::request::DecisionCommitRequest,
+        medulla_decision_types::decision::request::DecisionCommitResult,
     };
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().to_str().unwrap().to_string();

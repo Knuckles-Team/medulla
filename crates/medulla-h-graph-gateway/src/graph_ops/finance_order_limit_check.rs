@@ -13,9 +13,6 @@ use super::ops_context::GraphOpsContext;
 use super::*;
 
 use medulla_decision_outcome_types::decision::limit_guard::{check_limits, LimitBreach};
-use medulla_decision_types::decision::limit_types::{
-    GuardedAction, LimitMetric, LimitObservation, LimitRule,
-};
 use medulla_finance_market::market::digest;
 use medulla_finance_quant::leverage::LeveragePolicy;
 use medulla_finance_types::finance_order::{
@@ -24,6 +21,12 @@ use medulla_finance_types::finance_order::{
     TRADING_POLICY_MISSING,
 };
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_statistical_types::decision::limit_types::GuardedAction,
+    medulla_decision_statistical_types::decision::limit_types::LimitMetric,
+    medulla_decision_statistical_types::decision::limit_types::LimitObservation,
+    medulla_decision_statistical_types::decision::limit_types::LimitRule,
+};
 
 pub const TENANT_SCOPE_KEY: &str = "finance_tenant_scope";
 

@@ -4,11 +4,11 @@
 //! independently and seals it as a verified optimum.
 
 use super::*;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::context_package::{
     ContextPackageBudget, ContextPackageCandidate, ContextPackageRequest, RemainingBudget,
 };
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::ResolutionKind;
+use medulla_decision_types::decision::record::ResolutionKind;
 use medulla_types::evidence_class::EvidenceClass;
 
 const SOURCES: &str = "pkg-sources";
@@ -419,7 +419,9 @@ async fn request_knobs_must_equal_the_policy_values() {
 }
 
 /// The abstention reasons of the one record of `batch`.
-fn abstention(batch: &DecisionBatch) -> Vec<medulla_decision_types::decision::AbstainReason> {
+fn abstention(
+    batch: &DecisionBatch,
+) -> Vec<medulla_decision_types::decision::record::AbstainReason> {
     let record = &batch.records.as_slice()[0];
     let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
         panic!("expected an abstention: {:?}", record.outcome)
@@ -440,7 +442,7 @@ async fn package_refusals_are_typed() {
     use medulla_decision_types::decision::context_package::{
         NONE_ADMISSIBLE, REFUSALS, WORK_EXHAUSTED,
     };
-    use medulla_decision_types::decision::AbstainReason;
+    use medulla_decision_types::decision::record::AbstainReason;
     let h = sourced().await;
     let (schema, _digest) = publish_route_schema(&h);
     let request = |package| package_request(&schema, package, ALL_IDS.to_vec());
@@ -595,13 +597,17 @@ fn hard_pool() -> Vec<ContextPackageCandidate> {
 /// has (or lacks) an incumbent.
 fn exhausted_certificate(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_types::solve::certificate::SolverConfig,
+    config: &medulla_decision_policy_types::solve::certificate::SolverConfig,
     with_incumbent: bool,
-) -> medulla_decision_types::solve::certificate::Certificate {
+) -> medulla_decision_policy_types::solve::certificate::Certificate {
     use medulla_decision_policy::solve::solve;
-    use medulla_decision_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES;
-    use medulla_decision_types::solve::certificate::{SolveStatus, SolverConfig, SolverConfigSpec};
+    use medulla_decision_policy_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES;
     use medulla_query_types::solve_scalar::Scalar;
+    use {
+        medulla_decision_policy_types::solve::certificate::SolveStatus,
+        medulla_decision_policy_types::solve::certificate::SolverConfig,
+        medulla_decision_policy_types::solve::certificate::SolverConfigSpec,
+    };
     let full = solve(model, config);
     let mut budget = 1_u64;
     while budget < full.nodes_expanded {
@@ -628,15 +634,15 @@ fn exhausted_certificate(
 
 fn exhausting_with_incumbent(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_types::solve::certificate::SolverConfig,
-) -> medulla_decision_types::solve::certificate::Certificate {
+    config: &medulla_decision_policy_types::solve::certificate::SolverConfig,
+) -> medulla_decision_policy_types::solve::certificate::Certificate {
     exhausted_certificate(model, config, true)
 }
 
 fn exhausting_without_incumbent(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_types::solve::certificate::SolverConfig,
-) -> medulla_decision_types::solve::certificate::Certificate {
+    config: &medulla_decision_policy_types::solve::certificate::SolverConfig,
+) -> medulla_decision_policy_types::solve::certificate::Certificate {
     // The real solver seeds a greedy incumbent before its first node, so on this
     // pool no budget leaves it without one. A search that found no package is
     // the exhausted certificate with no incumbent claimed: its bound proof does
@@ -649,8 +655,8 @@ fn exhausting_without_incumbent(
 /// A solver whose certificate is bound to another model: the verifier must reject it.
 fn rebinding_solver(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_types::solve::certificate::SolverConfig,
-) -> medulla_decision_types::solve::certificate::Certificate {
+    config: &medulla_decision_policy_types::solve::certificate::SolverConfig,
+) -> medulla_decision_policy_types::solve::certificate::Certificate {
     let mut certificate = medulla_decision_policy::solve::solve(model, config);
     certificate.model_digest =
         medulla_query_types::solve_scalar::Sha256Digest::of_json("test/other-model", &"other");
@@ -662,7 +668,7 @@ async fn exhausted_reasons(
     question_id: &str,
     solver: super::super::family::context_package::overrides::SolverFn,
 ) -> (
-    Vec<medulla_decision_types::decision::AbstainReason>,
+    Vec<medulla_decision_types::decision::record::AbstainReason>,
     ResolutionKind,
 ) {
     let h = sourced().await;
@@ -686,7 +692,7 @@ async fn exhausted_reasons(
 #[tokio::test]
 async fn exhausted_budget_abstains_with_incumbent() {
     use medulla_decision_types::decision::context_package::WORK_EXHAUSTED;
-    use medulla_decision_types::decision::AbstainReason;
+    use medulla_decision_types::decision::record::AbstainReason;
 
     // The budget runs out with an incumbent: both it and the bound are reported.
     let (reasons, kind) =
@@ -751,7 +757,7 @@ async fn evidence_of(
 // spec: MEDULLA-DECISION-ENGINE-R137.11
 #[tokio::test]
 async fn package_evidence_binds_inputs() {
-    use medulla_decision_types::decision::PremiseClass;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
 
     let h = sourced().await;
     let (schema, _digest) = publish_route_schema(&h);
@@ -1066,7 +1072,7 @@ async fn negative_remainder_and_tokenizer_mismatch_refuse() {
     assert_eq!(
         abstention(&batch),
         vec![
-            medulla_decision_types::decision::AbstainReason::UnknownFact {
+            medulla_decision_types::decision::record::AbstainReason::UnknownFact {
                 component_id: "class:unmeasured".to_string(),
                 field: "complexityBand".to_string(),
             }

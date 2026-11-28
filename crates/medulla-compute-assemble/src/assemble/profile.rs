@@ -9,14 +9,20 @@
 //! generic uncovered-capability reason.
 
 use medulla_agent_types::agent_ontology::is_a;
-use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalOrigin,
-};
-use medulla_decision_types::decision::{
-    DecisionInputs, DecisionOutcome, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal,
+    medulla_decision_types::decision::record::outcome::AbstainReason,
+    medulla_decision_types::decision::record::outcome::RefusalOrigin,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::record::DecisionOutcome,
+};
 
 use super::conclude::Decided;
 

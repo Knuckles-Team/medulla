@@ -6,20 +6,28 @@ use super::path_preference_tests::pins;
 use super::promotion_tests::{commit, promotion_request};
 use super::retrieval_tests::learn;
 use super::*;
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
+use medulla_decision_policy_types::decision::skill_evolution::RolloutSet;
+use medulla_decision_statistical_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
 use medulla_decision_stats::decision::promotion::rollout_set_digest;
-use medulla_decision_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
-use medulla_decision_types::decision::held_out::RevisionSubject;
-use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierReview, ALWAYS_ON_CAPACITY_REACHED, MEMBER_OF, TIER_DOWNGRADE_NEEDS_REVIEW,
-    TIER_REVIEW_MISSING, TIER_SELF_REVIEW,
-};
-use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::retrieval::{LearningWrite, PointerRef};
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use serde_json::json;
+use {
+    medulla_decision_policy_types::skill_eval::SuiteBand,
+    medulla_decision_policy_types::skill_eval::SuiteReport,
+};
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::SkillTier,
+    medulla_decision_statistical_types::decision::promotion_tier::TierReview,
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_CAPACITY_REACHED,
+    medulla_decision_statistical_types::decision::promotion_tier::MEMBER_OF,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_DOWNGRADE_NEEDS_REVIEW,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_REVIEW_MISSING,
+    medulla_decision_statistical_types::decision::promotion_tier::TIER_SELF_REVIEW,
+};
 
 use super::super::stat_skill_tier::{read_tier, write_tier};
 

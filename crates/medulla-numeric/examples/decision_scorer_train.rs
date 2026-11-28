@@ -13,20 +13,23 @@
 //! promotion protocol a `DecisionEval` job runs. Prints one JSON object: the
 //! head's content digest, its parameter count and the receipt.
 
+use medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
 use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
-use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_types::decision::statistical::head::HeadKind;
 use medulla_decision_types::{decision::jobs::OptimiserSpec, decision::jobs::RecordWindow};
-use medulla_decision_types::{
-    decision::statistical::body::canonical_body_bytes,
-    decision::statistical::body::content_digest_of,
-};
-use medulla_decision_types::{
-    decision::QuantScaleTag, decision::QuantisedValue, decision::StatisticalPolicy,
-    decision::TraceFidelityLevel, decision::UnitRationalWire,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+};
 use {
     medulla_decision_stats_records::decision::admission::admit,
     medulla_decision_stats_records::decision::admission::AdmissionRules,

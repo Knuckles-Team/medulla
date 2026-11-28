@@ -21,6 +21,9 @@ medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-program-types = { path = "../medulla-decision-program-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-federation = { path = "../medulla-federation", optional = true }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
@@ -75,7 +78,7 @@ ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medu
 jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "query", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch"]
 program-optimization = ["jobs", "medulla-agent-types/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
-query = ["dep:medulla-exec", "medulla-table-store/sql", "dep:medulla-sql", "medulla-sql/sql", "dep:medulla-tables", "medulla-tables/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
+query = ["dep:medulla-exec", "medulla-table-store/sql", "dep:medulla-sql", "medulla-sql/sql", "dep:medulla-tables", "medulla-tables/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-policy-types/query", "medulla-decision-program-types/query", "medulla-decision-statistical-types/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-work-types/statechart", "server"]
@@ -112,6 +115,9 @@ result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", 
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-program-types = { path = "../medulla-decision-program-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

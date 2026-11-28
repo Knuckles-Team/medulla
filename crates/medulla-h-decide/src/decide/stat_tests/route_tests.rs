@@ -3,14 +3,21 @@
 //! reaches the shared ladder (the learned policy).
 
 use super::*;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats_records::decision::route::FAST_PATH_CLASS;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::{
     DecisionOutcomeEvaluation, RecordVisibility, StoredEvaluation, DECISION_LOG_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn route_option(id: &str, classification: &[&str]) -> DeclaredOption {
     DeclaredOption {
@@ -72,7 +79,7 @@ fn route_request(
 
 fn route_stage_premises(
     record: &StatisticalDecisionRecord,
-) -> Vec<&medulla_decision_types::decision::PremiseRef> {
+) -> Vec<&medulla_decision_statistical_types::decision::record::premise::PremiseRef> {
     record
         .premises
         .iter()
@@ -154,7 +161,7 @@ async fn first_matching_route_stage_wins() {
     }
 
     // The bound is the pinned policy's knob, not a default.
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.knobs.insert(
         KnobName::new("route.fast_path_max_tokens"),
         KnobValue::Integer(50),
@@ -392,7 +399,7 @@ async fn a_proven_team_is_reused_before_the_learned_policy() {
 }
 
 fn policy_pin(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     for (name, value) in knobs {
         policy.knobs.insert(KnobName::new(name), *value);
     }
@@ -403,8 +410,12 @@ fn policy_pin(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPol
 
 /// Append one priced call of `model` for `tenant` and put its price.
 fn seed_model_cost(h: &Harness, tenant: &str, model: &str, out_per_mtok_micro: u64) {
-    use medulla_decision_types::usage::{
-        PriceCatalog, PriceEntry, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
+    use {
+        medulla_decision_policy_types::usage::PriceCatalog,
+        medulla_decision_policy_types::usage::PriceEntry,
+        medulla_decision_policy_types::usage::UsageOutcome,
+        medulla_decision_policy_types::usage::UsageRecord,
+        medulla_decision_policy_types::usage::USAGE_SCHEMA_VERSION,
     };
     let entry = PriceEntry {
         schema_version: USAGE_SCHEMA_VERSION,
@@ -449,7 +460,7 @@ fn signal_option(id: &str, signal: i64) -> DeclaredOption {
         option_id: id.to_string(),
         classification: BoundedVec::default(),
         numbers: BoundedVec::new(vec![
-            medulla_decision_types::decision::statistical::declared::DeclaredNumber {
+            medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber {
                 key: "signal".to_string(),
                 q32: signal,
             },
@@ -474,11 +485,14 @@ fn observed_cost_facts(record: &StatisticalDecisionRecord) -> Vec<String> {
 // spec: MEDULLA-DECISION-ENGINE-R039.2
 #[tokio::test]
 async fn lower_cost_option_wins_within_the_tie_epsilon() {
-    use medulla_decision_types::decision::{AbstainReason, ColdStart};
+    use {
+        medulla_decision_statistical_types::decision::ColdStart,
+        medulla_decision_types::decision::record::AbstainReason,
+    };
     let h = Harness::new().await;
     let (schema, head) =
         super::rank_tests::published_head(&h, HeadKind::WeightedFeatures, "head-route-cost").await;
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::AdvisoryUncalibrated;
     let policy = DecisionPolicyRef::Pinned {
         component: h.publish_policy("policy-route-cost", &policy),
@@ -560,11 +574,11 @@ fn preferred_param(option: &str) -> TypedParam {
 // spec: MEDULLA-DECISION-ENGINE-R039.3
 #[tokio::test]
 async fn legal_preference_wins_and_illegal_is_recorded() {
-    use medulla_decision_types::decision::ColdStart;
+    use medulla_decision_statistical_types::decision::ColdStart;
     let h = Harness::new().await;
     let (schema, head) =
         super::rank_tests::published_head(&h, HeadKind::WeightedFeatures, "head-route-pref").await;
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::AdvisoryUncalibrated;
     let policy = DecisionPolicyRef::Pinned {
         component: h.publish_policy("policy-route-pref", &policy),

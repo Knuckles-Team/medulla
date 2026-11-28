@@ -1303,7 +1303,7 @@ fn decision_record_columns_are_grounded_and_an_unbound_catalog_is_not_checked() 
     assert!(context.ground(&plan("invented")).is_ok(), "unbound");
     context.declare_source_catalogs(SourceCatalogs {
         decision_columns: Some(
-            medulla_decision_types::decision::DECISION_LOG_COLUMNS
+            medulla_decision_statistical_types::decision::DECISION_LOG_COLUMNS
                 .iter()
                 .map(|c| c.to_string())
                 .collect(),

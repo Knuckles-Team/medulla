@@ -5,13 +5,18 @@
 //! `ConflictDecider` seam returns the same sealed record.
 
 use super::*;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::statistical::declared::{
-    ConflictCandidate, ConflictCandidates, DeclaredOption,
-};
-use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_server_api::api::conflict_decider::ConflictDecider;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::ConflictCandidate,
+    medulla_decision_statistical_types::decision::statistical::declared::ConflictCandidates,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 fn side(
     reliability: f64,
@@ -38,7 +43,7 @@ fn pair(a: ConflictCandidate, b: ConflictCandidate) -> ConflictCandidates {
 }
 
 fn pinned(h: &Harness, id: &str, knobs: &[(&str, KnobValue)]) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     for (name, value) in knobs {
         policy.knobs.insert(KnobName::new(name), *value);
     }

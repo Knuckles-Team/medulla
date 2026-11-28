@@ -4,8 +4,8 @@
 //! The code constants themselves live in [`super::codes`]; this module is the
 //! one place that names every module that declares a table.
 
-use super::codes::*;
-use super::statistical::QuestionKind;
+use medulla_decision_statistical_types::decision::codes::*;
+use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 use medulla_types::refusal_code::RefusalCode;
 
 /// The `REFUSALS` table of every registered family, keyed by its question
@@ -14,7 +14,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::Rank, RANK),
     (QuestionKind::ConnectorWriteBack, CONNECTOR_WRITE_BACK),
     (QuestionKind::ResolveEntity, RESOLVE_ENTITY),
-    (QuestionKind::FeatureMatch, super::feature_match::REFUSALS),
+    (
+        QuestionKind::FeatureMatch,
+        medulla_decision_statistical_types::decision::feature_match::REFUSALS,
+    ),
     (
         QuestionKind::ContextPackage,
         super::context_package::REFUSALS,
@@ -32,10 +35,13 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::CredentialReuse, CREDENTIAL_REUSE),
     (
         QuestionKind::ScaleIntent,
-        super::statistical::scale::REFUSALS,
+        medulla_decision_program_types::decision::statistical::scale::REFUSALS,
     ),
     (QuestionKind::RecursionMode, RECURSION_SIGNALS),
-    (QuestionKind::SubCallAdmission, super::sub_call::REFUSALS),
+    (
+        QuestionKind::SubCallAdmission,
+        medulla_decision_policy_types::decision::sub_call::REFUSALS,
+    ),
     (
         QuestionKind::RetrievalPlan,
         super::statistical::run_credit::REFUSALS,
@@ -48,24 +54,42 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
         QuestionKind::RetrievalPlan,
         super::statistical::feedback::REFUSALS,
     ),
-    (QuestionKind::ThoughtSearch, super::thought_search::REFUSALS),
-    (QuestionKind::CommandConfig, super::command_config::REFUSALS),
-    (QuestionKind::GraphIntake, super::graph_intake::REFUSALS),
-    (QuestionKind::ToolNecessity, super::tool_necessity::REFUSALS),
+    (
+        QuestionKind::ThoughtSearch,
+        medulla_decision_statistical_types::decision::thought_search::REFUSALS,
+    ),
+    (
+        QuestionKind::CommandConfig,
+        medulla_decision_statistical_types::decision::command_config::REFUSALS,
+    ),
+    (
+        QuestionKind::GraphIntake,
+        medulla_decision_policy_types::decision::graph_intake::REFUSALS,
+    ),
+    (
+        QuestionKind::ToolNecessity,
+        medulla_decision_program_types::decision::tool_necessity::REFUSALS,
+    ),
     (
         QuestionKind::DecisionTableEval,
-        super::process_decision::REFUSALS,
+        medulla_decision_program_types::decision::process_decision::REFUSALS,
     ),
     (
         QuestionKind::BranchSelect,
-        super::process_decision::REFUSALS,
+        medulla_decision_program_types::decision::process_decision::REFUSALS,
     ),
     (
         QuestionKind::ItemRecommendation,
-        super::item_recommendation::REFUSALS,
+        medulla_decision_statistical_types::decision::item_recommendation::REFUSALS,
     ),
-    (QuestionKind::RunAdjustment, super::run_adjustment::REFUSALS),
-    (QuestionKind::PathPreference, super::path_success::REFUSALS),
+    (
+        QuestionKind::RunAdjustment,
+        medulla_decision_policy_types::decision::run_adjustment::REFUSALS,
+    ),
+    (
+        QuestionKind::PathPreference,
+        medulla_decision_statistical_types::decision::path_success::REFUSALS,
+    ),
     (
         QuestionKind::Placement,
         super::statistical::placement::REFUSALS,
@@ -80,33 +104,39 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (
         QuestionKind::TaskPlan,
-        super::task_plan::trajectory_budget::REFUSALS,
+        medulla_decision_policy_types::decision::task_plan::trajectory_budget::REFUSALS,
     ),
     (
         QuestionKind::TaskPlan,
-        super::task_plan::trajectory_projection::REFUSALS,
+        medulla_decision_policy_types::decision::task_plan::trajectory_projection::REFUSALS,
     ),
     (
         QuestionKind::TaskPlan,
-        super::task_plan::branch_breadth::REFUSALS,
+        medulla_decision_program_types::decision::task_plan::branch_breadth::REFUSALS,
     ),
-    (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
-    (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
+    (
+        QuestionKind::TaskPlan,
+        medulla_decision_program_types::decision::task_plan::pairwise::REFUSALS,
+    ),
+    (
+        QuestionKind::ProgramLookup,
+        medulla_decision_program_types::decision::program_store::REFUSALS,
+    ),
     (
         QuestionKind::SkillWorkflowCompile,
-        super::skill_workflow::REFUSALS,
+        medulla_decision_program_types::decision::skill_workflow::REFUSALS,
     ),
     (
         QuestionKind::FeedbackLoop,
-        super::checker_feedback::REFUSALS,
+        medulla_decision_program_types::decision::checker_feedback::REFUSALS,
     ),
     (
         QuestionKind::SkillUpgrade,
-        super::skill_upgrade_request::REFUSALS,
+        medulla_decision_program_types::decision::skill_upgrade_request::REFUSALS,
     ),
     (
         QuestionKind::PlanningAdmission,
-        super::planning_admission::REFUSALS,
+        medulla_decision_program_types::decision::planning_admission::REFUSALS,
     ),
     (QuestionKind::EditConcentration, CONCENTRATION_REFUSALS),
     (QuestionKind::ContextBudget, super::context_source::REFUSALS),
@@ -114,32 +144,32 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::TeamCoordination, TEAM_REFUSALS),
     (
         QuestionKind::PaperAdmission,
-        super::paper_admission::REFUSALS,
+        medulla_decision_statistical_types::decision::paper_admission::REFUSALS,
     ),
     (QuestionKind::HeldItemAdmission, super::held_item::REFUSALS),
     (
         QuestionKind::ServingTechniqueActivation,
-        super::serving_technique::REFUSALS,
+        medulla_decision_program_types::decision::serving_technique::REFUSALS,
     ),
     (
         QuestionKind::ReasoningParadigm,
-        super::statistical::reasoning_paradigm::REFUSALS,
+        medulla_decision_policy_types::decision::statistical::reasoning_paradigm::REFUSALS,
     ),
     (
         QuestionKind::CapacityProposal,
-        super::statistical::capacity::REFUSALS,
+        medulla_decision_policy_types::decision::statistical::capacity::REFUSALS,
     ),
     (
         QuestionKind::ProcessRemediation,
-        super::process_remediation::REFUSALS,
+        medulla_decision_policy_types::decision::process_remediation::REFUSALS,
     ),
     (
         QuestionKind::ProcessPlan,
-        super::process_plan::PROCESS_PLAN_REFUSALS,
+        medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_REFUSALS,
     ),
     (
         QuestionKind::ToolActionAdmission,
-        super::tool_action::REFUSALS,
+        medulla_decision_policy_types::decision::tool_action::REFUSALS,
     ),
     (
         QuestionKind::InstructionDisclosure,
@@ -147,88 +177,124 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (
         QuestionKind::ComparativeAnalysisPlan,
-        super::comparative_analysis::REFUSALS,
+        medulla_decision_statistical_types::decision::comparative_analysis::REFUSALS,
     ),
     (
         QuestionKind::ChangesetReview,
-        super::changeset_review::REFUSALS,
+        medulla_decision_policy_types::decision::changeset_review::REFUSALS,
     ),
-    (QuestionKind::TemporalBasis, super::temporal_query::REFUSALS),
+    (
+        QuestionKind::TemporalBasis,
+        medulla_decision_program_types::decision::temporal_query::REFUSALS,
+    ),
     (
         QuestionKind::FieldShielding,
-        super::field_shielding::REFUSALS,
+        medulla_decision_statistical_types::decision::field_shielding::REFUSALS,
     ),
-    (QuestionKind::RuntimeQuota, super::run_governance::REFUSALS),
-    (QuestionKind::TaskPlan, super::task_plan::TASK_PLAN_REFUSALS),
+    (
+        QuestionKind::RuntimeQuota,
+        medulla_decision_statistical_types::decision::run_governance::REFUSALS,
+    ),
+    (
+        QuestionKind::TaskPlan,
+        medulla_decision_program_types::decision::task_plan::TASK_PLAN_REFUSALS,
+    ),
     (QuestionKind::ToolRelevance, super::tool_relevance::REFUSALS),
-    (QuestionKind::ResearchNext, super::research_voi::REFUSALS),
+    (
+        QuestionKind::ResearchNext,
+        medulla_decision_statistical_types::decision::research_voi::REFUSALS,
+    ),
     (
         QuestionKind::InsightSelection,
-        super::program_store::insight::REFUSALS,
+        medulla_decision_statistical_types::decision::program_store::insight::REFUSALS,
     ),
-    (QuestionKind::BranchOutcome, super::branch_fusion::REFUSALS),
-    (QuestionKind::AutonomyVerdict, super::autonomy::REFUSALS),
+    (
+        QuestionKind::BranchOutcome,
+        medulla_decision_statistical_types::decision::branch_fusion::REFUSALS,
+    ),
+    (
+        QuestionKind::AutonomyVerdict,
+        medulla_decision_statistical_types::decision::autonomy::REFUSALS,
+    ),
     (
         QuestionKind::SkillEvolution,
-        super::skill_evolution::REFUSALS,
+        medulla_decision_policy_types::decision::skill_evolution::REFUSALS,
     ),
     (
         QuestionKind::FanoutAggregate,
-        super::task_plan::fanout::REFUSALS,
+        medulla_decision_program_types::decision::task_plan::fanout::REFUSALS,
     ),
     (
         QuestionKind::DelegationAdmission,
-        super::delegation::REFUSALS,
+        medulla_decision_statistical_types::decision::delegation::REFUSALS,
     ),
     (
         QuestionKind::CapabilityDesignation,
-        super::capability_designation::REFUSALS,
+        medulla_decision_policy_types::decision::capability_designation::REFUSALS,
     ),
-    (QuestionKind::LoadSet, super::load_set::REFUSALS),
-    (QuestionKind::UsageGuidance, super::usage_guidance::REFUSALS),
+    (
+        QuestionKind::LoadSet,
+        medulla_decision_policy_types::decision::load_set::REFUSALS,
+    ),
+    (
+        QuestionKind::UsageGuidance,
+        medulla_decision_program_types::decision::usage_guidance::REFUSALS,
+    ),
     (
         QuestionKind::AdversarialAdmission,
-        super::trajectory_verdict::REFUSALS,
+        medulla_decision_statistical_types::decision::trajectory_verdict::REFUSALS,
     ),
-    (QuestionKind::PlaybookTriage, super::playbook::REFUSALS),
+    (
+        QuestionKind::PlaybookTriage,
+        medulla_decision_policy_types::decision::playbook::REFUSALS,
+    ),
     (
         QuestionKind::TrajectoryJoin,
-        super::trajectory_verdict::JOIN_REFUSALS,
+        medulla_decision_statistical_types::decision::trajectory_verdict::JOIN_REFUSALS,
     ),
     (
         QuestionKind::StepVerification,
-        super::trajectory_verdict::VERIFY_REFUSALS,
+        medulla_decision_statistical_types::decision::trajectory_verdict::VERIFY_REFUSALS,
     ),
-    (QuestionKind::RewardDecomposition, super::reward::REFUSALS),
+    (
+        QuestionKind::RewardDecomposition,
+        medulla_decision_statistical_types::decision::reward::REFUSALS,
+    ),
     (
         QuestionKind::CurriculumPromotion,
-        super::curriculum::REFUSALS,
+        medulla_decision_policy_types::decision::curriculum::REFUSALS,
     ),
     (
         QuestionKind::PopulationDrift,
-        super::population::DRIFT_REFUSALS,
+        medulla_decision_policy_types::decision::population::DRIFT_REFUSALS,
     ),
     (
         QuestionKind::FanoutWidth,
-        super::population::FANOUT_REFUSALS,
+        medulla_decision_policy_types::decision::population::FANOUT_REFUSALS,
     ),
     (
         QuestionKind::TrajectoryLadder,
-        super::trajectory_ladder::REFUSALS,
+        medulla_decision_program_types::decision::trajectory_ladder::REFUSALS,
     ),
     (
         QuestionKind::AnalystSynthesis,
-        super::analyst_synthesis::REFUSALS,
+        medulla_decision_policy_types::decision::analyst_synthesis::REFUSALS,
     ),
     (
         QuestionKind::ResolveConflict,
-        super::resolve_conflict::REFUSALS,
+        medulla_decision_statistical_types::decision::resolve_conflict::REFUSALS,
     ),
-    (QuestionKind::CouncilCoordination, super::council::REFUSALS),
-    (QuestionKind::MergeArming, super::merge_arming::REFUSALS),
+    (
+        QuestionKind::CouncilCoordination,
+        medulla_decision_program_types::decision::council::REFUSALS,
+    ),
+    (
+        QuestionKind::MergeArming,
+        medulla_decision_policy_types::decision::merge_arming::REFUSALS,
+    ),
     (
         QuestionKind::RevertOrFixForward,
-        super::revert_or_fix_forward::REFUSALS,
+        medulla_decision_program_types::decision::revert_or_fix_forward::REFUSALS,
     ),
 ];
 
@@ -237,38 +303,43 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
 /// that declares its table; the uniqueness test collects it with every family
 /// table (MEDULLA-DECISION-ENGINE-R010.100.1).
 pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
-    use crate::{belief_revision, claims, context_facts, source_toc};
     use medulla_catalog_source_types::asset_usage;
     use medulla_source_types::meeting_transcript;
     use medulla_types::{
         archimate_exchange, bookmark_query, media_tag, paper_ingest, participant,
         transition_refused,
     };
+    use {
+        medulla_decision_statistical_types::belief_revision,
+        medulla_decision_statistical_types::claims,
+        medulla_decision_statistical_types::context_facts,
+        medulla_decision_statistical_types::source_toc,
+    };
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
-        ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),
+        ("memory_change", medulla_decision_statistical_types::decision::memory_benchmark::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R144.1, R144.2: the indexless retrieval refusals.
-        ("indexless", super::indexless_retrieval::REFUSALS.to_vec()),
-        ("safety", super::safety::REFUSALS.to_vec()),
-        ("limits", super::limit_types::REFUSALS.to_vec()),
-        ("entry_trust", super::entry_types::REFUSALS.to_vec()),
-        ("failure", crate::failure_patterns::REFUSALS.to_vec()),
+        ("indexless", medulla_decision_program_types::decision::indexless_retrieval::REFUSALS.to_vec()),
+        ("safety", medulla_decision_statistical_types::decision::safety::REFUSALS.to_vec()),
+        ("limits", medulla_decision_statistical_types::decision::limit_types::REFUSALS.to_vec()),
+        ("entry_trust", medulla_decision_statistical_types::decision::entry_types::REFUSALS.to_vec()),
+        ("failure", medulla_decision_statistical_types::failure_patterns::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R702.4: the served correction refusals.
-        ("correction", crate::correction::REFUSALS.to_vec()),
+        ("correction", medulla_decision_policy_types::correction::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R708.4: the knowledge flag refusals.
-        ("knowledge_flag", crate::knowledge_flag::REFUSALS.to_vec()),
+        ("knowledge_flag", medulla_decision_statistical_types::knowledge_flag::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R710.4: the friction report refusals.
-        ("friction", crate::friction::REFUSALS.to_vec()),
+        ("friction", medulla_decision_program_types::friction::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R711.4: the skill evaluation refusals.
-        ("skill_eval", crate::skill_eval::REFUSALS.to_vec()),
+        ("skill_eval", medulla_decision_policy_types::skill_eval::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R714.5, R715.1: the skill tier and always-on refusals.
-        ("promotion_tier", super::promotion_tier::REFUSALS.to_vec()),
+        ("promotion_tier", medulla_decision_statistical_types::decision::promotion_tier::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R713.4: the skill telemetry refusals.
-        ("skill_telemetry", crate::skill_telemetry::REFUSALS.to_vec()),
+        ("skill_telemetry", medulla_decision_statistical_types::skill_telemetry::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R709.2, R709.4: the knowledge curation refusals.
         (
             "knowledge_curation",
-            crate::knowledge_curation::REFUSALS.to_vec(),
+            medulla_decision_policy_types::knowledge_curation::REFUSALS.to_vec(),
         ),
         // MEDULLA-DECISION-ENGINE-R810.4: the program optimization job refusals.
         ("program", super::program::REFUSALS.to_vec()),
@@ -279,15 +350,15 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ),
         (
             "delegation_quality",
-            super::delegation_quality::REFUSALS.to_vec(),
+            medulla_decision_policy_types::decision::delegation_quality::REFUSALS.to_vec(),
         ),
         (
             "distilled",
-            super::statistical::distilled::REFUSALS.to_vec(),
+            medulla_decision_statistical_types::decision::statistical::distilled::REFUSALS.to_vec(),
         ),
         (
             "retrieval_drift",
-            super::statistical::retrieval_drift::REFUSALS.to_vec(),
+            medulla_decision_policy_types::decision::statistical::retrieval_drift::REFUSALS.to_vec(),
         ),
         ("asset_usage", asset_usage::REFUSALS.to_vec()),
         ("archimate_exchange", archimate_exchange::REFUSALS.to_vec()),
@@ -392,7 +463,7 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         (
             "topology_question",
             vec![RefusalCode::new(
-                super::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE,
+                medulla_decision_statistical_types::decision::statistical::topology::TOPOLOGY_SCHEMA_UNAVAILABLE,
             )],
         ),
     ]
@@ -407,12 +478,12 @@ pub fn registered() -> impl Iterator<Item = RefusalCode> {
         .chain(PROMOTION.iter())
         .chain(FAMILY_TABLES.iter().flat_map(|(_, table)| table.iter()))
         .chain(super::usage::REFUSALS.iter())
-        .chain(super::transfer::REFUSALS.iter())
-        .chain(super::evidence_stream::REFUSALS.iter())
-        .chain(super::execution_part::REFUSALS.iter())
-        .chain(super::importance_penalty::REFUSALS.iter())
+        .chain(medulla_decision_policy_types::decision::transfer::REFUSALS.iter())
+        .chain(medulla_decision_policy_types::decision::evidence_stream::REFUSALS.iter())
+        .chain(medulla_decision_statistical_types::decision::execution_part::REFUSALS.iter())
+        .chain(medulla_decision_policy_types::decision::importance_penalty::REFUSALS.iter())
         .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
-        .chain(super::memory_rewrite::REFUSALS.iter())
+        .chain(medulla_decision_statistical_types::decision::memory_rewrite::REFUSALS.iter())
         .chain(super::statistical::retrieval_generation::REFUSALS.iter())
         .copied()
         .chain(module_tables().into_iter().flat_map(|(_, table)| table))
@@ -430,7 +501,7 @@ pub fn resolve(code: &str) -> Option<RefusalCode> {
 
 /// The registered code of one `DecisionErrorCode` token.
 fn decision_error_code(code: &str) -> Option<RefusalCode> {
-    super::DecisionErrorCode::ALL
+    medulla_decision_statistical_types::decision::DecisionErrorCode::ALL
         .iter()
         .find(|registered| registered.as_str() == code)
         .map(|registered| RefusalCode::new(registered.as_str()))
@@ -439,8 +510,8 @@ fn decision_error_code(code: &str) -> Option<RefusalCode> {
 #[cfg(test)]
 mod thought_search_registration_tests {
     use super::resolve;
-    use crate::decision::statistical::StatisticalErrorCode;
-    use crate::decision::thought_search::REFUSALS;
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+    use medulla_decision_statistical_types::decision::thought_search::REFUSALS;
 
     // spec: MEDULLA-DECISION-ENGINE-R750.752
     #[test]
@@ -460,7 +531,7 @@ mod task_plan_registration_tests {
     #[test]
     fn every_planner_code_is_registered_upper_snake() {
         use super::resolve;
-        for code in crate::decision::task_plan::TASK_PLAN_REFUSALS {
+        for code in medulla_decision_program_types::decision::task_plan::TASK_PLAN_REFUSALS {
             assert_eq!(resolve(code.as_str()), Some(*code));
             assert!(code
                 .as_str()

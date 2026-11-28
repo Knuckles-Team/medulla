@@ -16,14 +16,24 @@ use medulla_decision_stats::decision::writeback::{
     WRITEBACK_BELOW_QUEUE_TIER, WRITEBACK_PROPOSAL_UNKNOWN, WRITEBACK_QUEUE_EXISTS,
     WRITEBACK_QUEUE_TOO_LARGE, WRITEBACK_QUEUE_UNKNOWN, WRITEBACK_SELF_APPROVAL,
 };
-use medulla_decision_types::decision::statistical::writeback::{
-    GovernedChangeSet, PreflightVerdict, ProposalInput, ProposalKind, ProposalRow, QueueStatus,
-    QueueView, WritebackApproval, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows,
-    WritebackOp, WritebackOutcome,
-};
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{ResourceId, TenantId};
 use serde::{Deserialize, Serialize};
+use {
+    medulla_decision_program_types::decision::statistical::writeback::GovernedChangeSet,
+    medulla_decision_program_types::decision::statistical::writeback::PreflightVerdict,
+    medulla_decision_program_types::decision::statistical::writeback::ProposalInput,
+    medulla_decision_program_types::decision::statistical::writeback::ProposalKind,
+    medulla_decision_program_types::decision::statistical::writeback::ProposalRow,
+    medulla_decision_program_types::decision::statistical::writeback::QueueStatus,
+    medulla_decision_program_types::decision::statistical::writeback::QueueView,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackApproval,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAudit,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAuditOutcome,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackAuditRows,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOp,
+    medulla_decision_program_types::decision::statistical::writeback::WritebackOutcome,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
@@ -95,7 +105,9 @@ fn queue(
     reader: &LogReader,
     tenant: &str,
     queue_id: &str,
-    proposals: Vec<medulla_decision_types::decision::statistical::writeback::QueuedProposalInput>,
+    proposals: Vec<
+        medulla_decision_program_types::decision::statistical::writeback::QueuedProposalInput,
+    >,
     min_tier: u64,
     max_proposals: u64,
 ) -> Result<WritebackOutcome, String> {

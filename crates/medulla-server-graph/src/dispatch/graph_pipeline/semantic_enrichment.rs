@@ -25,9 +25,9 @@ pub async fn serve(
 mod imp {
     use std::collections::{BTreeMap, BTreeSet};
 
+    use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
     use medulla_decision_types::decision::statistical::log::{DecisionLogEntry, RecordVisibility};
     use medulla_decision_types::decision::statistical::outcome::StatisticalOutcome;
-    use medulla_decision_types::decision::statistical::QuestionKind;
     use medulla_enrich::semantic::{
         classify_with_floor, fit_topics, project_edges, rank_candidates_top, store_card,
         CapabilityCard, ConceptInput, EnrichmentKnobs, LabelledVector, ProjectionNode,

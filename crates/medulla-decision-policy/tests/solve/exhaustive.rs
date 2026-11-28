@@ -1,8 +1,8 @@
 //! Cross-check the solver against exhaustive enumeration of every selection.
 
 use medulla_decision_policy::solve::Verdict;
-use medulla_decision_types::solve::certificate::SolveStatus;
-use medulla_decision_types::solve::spec::ModelSpec;
+use medulla_decision_policy_types::solve::certificate::SolveStatus;
+use medulla_decision_policy_types::solve::spec::ModelSpec;
 
 use super::support::{
     exhaustive_optimum, level_key, model, random_model, solve_and_verify, wide_config,

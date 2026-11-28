@@ -11,11 +11,15 @@
 use serde::{Deserialize, Serialize};
 
 use super::digest::HELD_ITEM_CRITIQUE_DIGEST_DOMAIN;
-use super::knobs::{KnobSafety, KnobSpec, KnobValue};
-use super::policy::DecisionPolicy;
-use super::record::outcome::DecisionRefusal;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Text parameter: the kind of the held item.
 pub const PARAM_ITEM_KIND: &str = "item_kind";

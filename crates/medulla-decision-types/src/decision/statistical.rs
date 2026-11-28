@@ -6,67 +6,47 @@
 //! commits nothing. Whether a record is durable, and where, is a separate
 //! decision with its own method.
 
-pub mod belief;
-pub mod body;
-pub mod capacity;
-pub mod context_search;
-pub mod dataset;
-pub mod declared;
-pub mod distilled;
-pub mod enrichment_schedule;
-pub mod errors;
-pub mod execution_routing;
-pub mod features;
 pub mod feedback;
-pub mod graph_rows;
-pub mod grounded_eval;
 pub mod harness_config;
 pub mod head;
-pub mod ingestion_lane;
-pub mod keyed;
-pub mod lifecycle_record;
 pub mod log;
 pub mod nl;
 pub mod outcome;
 pub mod placement;
 pub mod placement_plan;
-pub mod question_kind;
-pub mod ranking_eval;
-pub mod reasoning_paradigm;
 pub mod retrieval;
 pub mod retrieval_adapter;
 pub mod retrieval_calibration;
-pub mod retrieval_drift;
 pub mod retrieval_generation;
 pub mod retrieval_plan;
-pub mod retrieval_pointer;
-pub mod retrieval_refresh;
 pub mod run_credit;
-pub mod scale;
 pub mod scorer;
-// MEDULLA-FEDERATED-QUERY-R739.1: the shard drift monitor machine.
-pub mod shard_monitor;
 pub mod tool_subset;
-pub mod topology;
-pub mod writeback;
 
 use serde::{Deserialize, Serialize};
 
-use super::errors::DecisionErrorCode;
-use super::numeric::{QuantScaleTag, UnitRationalWire};
-use super::record::{CandidateSourceRecord, PremiseRef, ResolutionKind, TraceFidelity};
 use super::request::LibraryCandidateScope;
 use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_statistical_types::decision::errors::DecisionErrorCode;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    crate::decision::record::CandidateSourceRecord, crate::decision::record::ResolutionKind,
+    crate::decision::record::TraceFidelity,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::numeric::QuantScaleTag,
+    medulla_decision_statistical_types::decision::numeric::UnitRationalWire,
+};
 
-pub use errors::StatisticalErrorCode;
+pub use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+pub use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 pub use outcome::{
     AuditDraw, CalibrationMethod, CalibrationStatement, LinearExplanation, RiskMethod,
     RiskStatement, ScoredOption, StatisticalOutcome,
 };
-pub use question_kind::QuestionKind;
 
 /// The largest record batch one `Decide` may return.
 pub const MAX_DECIDE_RECORDS: u16 = 256;
@@ -117,14 +97,19 @@ pub enum CandidateSource {
     /// The caller's own options, each fact a claim the caller makes
     /// ([`declared`]). Visible to the declaring principal only.
     Declared {
-        options: BoundedVec<declared::DeclaredOption, 64>,
+        options: BoundedVec<
+            medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+            64,
+        >,
     },
     /// A capability catalog sent whole for ranking (MEDULLA-DECISION-ENGINE-R829.1):
     /// one declared option per candidate, texts only. A `Vec`, not a
     /// `BoundedVec`, so a set above
     /// [`declared::MAX_RANK_CATALOG_CANDIDATES`] decodes and is refused by value.
     RankCatalog {
-        options: Vec<declared::DeclaredOption>,
+        options: Vec<
+            medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+        >,
     },
 }
 
@@ -141,53 +126,53 @@ pub enum TypedValue {
     IriList(BoundedVec<String, 64>),
     Rational(UnitRationalWire),
     /// Explicit task claims, never policy or authorization.
-    TaskPlan(Box<super::task_plan::TaskPlanProposal>),
+    TaskPlan(Box<medulla_decision_program_types::decision::task_plan::TaskPlanProposal>),
     /// Subtasks and specialist scores the harness produced; medulla derives
     /// the plan (MEDULLA-DECISION-ENGINE-R134.3).
-    TaskDecomposition(Box<super::task_plan::DecomposeFacts>),
+    TaskDecomposition(Box<medulla_decision_program_types::decision::task_plan::DecomposeFacts>),
     /// Atomic subtasks to cover with library skills (MEDULLA-DECISION-ENGINE-R134.4).
-    SkillPlanQuery(Box<super::task_plan::skill_plan::SkillPlanQuery>),
+    SkillPlanQuery(Box<medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery>),
     /// A context-package request (MEDULLA-DECISION-ENGINE-R137.7).
     ContextPackages(Box<super::context_package::ContextPackageRequest>),
     /// A standalone topology question (MEDULLA-DECISION-ENGINE-R111.1).
-    Topology(Box<topology::TopologyQuestion>),
+    Topology(Box<medulla_decision_statistical_types::decision::statistical::topology::TopologyQuestion>),
     /// A placement question (MEDULLA-PLACEMENT-R001.7).
     Placement(Box<placement::PlacementQuestion>),
     /// A placement-plan question (MEDULLA-PLACEMENT-R700.3).
     PlacementPlan(Box<placement_plan::PlacementPlanQuestion>),
     /// One trajectory's reward and step signals (MEDULLA-DECISION-ENGINE-R751.755).
-    RewardDecomposition(Box<super::reward::RewardDecompositionRequest>),
+    RewardDecomposition(Box<medulla_decision_statistical_types::decision::reward::RewardDecompositionRequest>),
     /// A stage and its promotion policy (MEDULLA-DECISION-ENGINE-R751.754).
-    CurriculumPromotion(Box<super::curriculum::CurriculumRequest>),
+    CurriculumPromotion(Box<medulla_decision_policy_types::decision::curriculum::CurriculumRequest>),
     /// An action class's reversibility (MEDULLA-DECISION-ENGINE-R752.755).
-    AutonomyVerdict(Box<super::autonomy::AutonomyRequest>),
+    AutonomyVerdict(Box<medulla_decision_statistical_types::decision::autonomy::AutonomyRequest>),
     /// A reference and a current score window (MEDULLA-DECISION-ENGINE-R752.754).
-    PopulationDrift(Box<super::population::DriftRequest>),
+    PopulationDrift(Box<medulla_decision_policy_types::decision::population::DriftRequest>),
     /// A replica spread, width and budget (MEDULLA-DECISION-ENGINE-R752.754).
-    FanoutWidth(Box<super::population::FanoutRequest>),
+    FanoutWidth(Box<medulla_decision_policy_types::decision::population::FanoutRequest>),
     /// Competing trajectories (MEDULLA-DECISION-ENGINE-R753.754).
-    TrajectoryJoin(Box<super::trajectory_verdict::JoinRequest>),
+    TrajectoryJoin(Box<medulla_decision_statistical_types::decision::trajectory_verdict::JoinRequest>),
     /// A trace and its checks (MEDULLA-DECISION-ENGINE-R753.755).
-    StepVerification(Box<super::trajectory_verdict::VerifyRequest>),
+    StepVerification(Box<medulla_decision_statistical_types::decision::trajectory_verdict::VerifyRequest>),
     /// A candidate's probe results (MEDULLA-DECISION-ENGINE-R753.755).
-    AdversarialAdmission(Box<super::trajectory_verdict::AdmissionRequest>),
+    AdversarialAdmission(Box<medulla_decision_statistical_types::decision::trajectory_verdict::AdmissionRequest>),
     /// The bounded frontier of a thought search (MEDULLA-DECISION-ENGINE-R750.754).
-    ThoughtSearch(Box<super::thought_search::ReasoningState>),
+    ThoughtSearch(Box<medulla_decision_statistical_types::decision::thought_search::ReasoningState>),
     /// Retrieved memory or knowledge entries offered as premises, each with its
     /// trust tier (MEDULLA-DECISION-ENGINE-R132.3). Read from the param named
     /// `retrieved_entries`.
-    RetrievedEntries(BoundedVec<super::entry_types::RetrievedEntry, 64>),
+    RetrievedEntries(BoundedVec<medulla_decision_statistical_types::decision::entry_types::RetrievedEntry, 64>),
     /// A skill workflow draft to compile (MEDULLA-DECISION-ENGINE-R156.1).
-    SkillWorkflowDraft(Box<super::skill_workflow::SkillWorkflowDraft>),
+    SkillWorkflowDraft(Box<medulla_decision_program_types::decision::skill_workflow::SkillWorkflowDraft>),
     /// A skill upgrade compatibility question (MEDULLA-DECISION-ENGINE-R167.1).
-    SkillUpgrade(Box<super::skill_upgrade_request::SkillUpgradeRequest>),
+    SkillUpgrade(Box<medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeRequest>),
     /// What a caller observed about one channel (MEDULLA-DECISION-ENGINE-R170.1).
-    ChannelSignal(super::team_coordination::ChannelSignal),
+    ChannelSignal(medulla_decision_program_types::decision::team_coordination::ChannelSignal),
     /// A paired held-out evaluation of a raw and a candidate context
     /// (MEDULLA-DECISION-ENGINE-R137.14).
     ContextReplacement(Box<super::context_replacement::PairedContextEvaluation>),
     /// A time-windowed query with its three-clock context (MEDULLA-DECISION-ENGINE-R146.1).
-    TemporalQuery(super::temporal_query::TemporalQueryInput),
+    TemporalQuery(medulla_decision_program_types::decision::temporal_query::TemporalQueryInput),
     /// A stored distilled scorer to rank with (MEDULLA-DECISION-ENGINE-R147.1).
     DistilledScorer {
         scorer_id: String,
@@ -197,42 +182,42 @@ pub enum TypedValue {
     /// A trace, fix, test and receipts to admit (MEDULLA-DECISION-ENGINE-R161.1).
     CorrectionBinding(Box<super::trace_fix_binding::CorrectionBinding>),
     /// A field-shielding request (MEDULLA-DECISION-ENGINE-R162.1).
-    FieldShielding(Box<super::field_shielding::FieldShieldingRequest>),
+    FieldShielding(Box<medulla_decision_statistical_types::decision::field_shielding::FieldShieldingRequest>),
     /// Mixed filesystem and graph intake sources (MEDULLA-DECISION-ENGINE-R163.1).
-    IntakeSources(BoundedVec<super::graph_intake::IntakeSource, 64>),
+    IntakeSources(BoundedVec<medulla_decision_policy_types::decision::graph_intake::IntakeSource, 64>),
     /// One round of a checker feedback loop (MEDULLA-DECISION-ENGINE-R169.1).
-    Feedback(Box<super::checker_feedback::FeedbackRecord>),
+    Feedback(Box<medulla_decision_program_types::decision::checker_feedback::FeedbackRecord>),
     /// A tool-assignment request (MEDULLA-DECISION-ENGINE-R134.110.1).
     ToolAssignment(Box<super::tool_relevance::ToolAssignmentRequest>),
     /// The complete receipt set of one fan-out (MEDULLA-DECISION-ENGINE-R134.100).
-    FanoutResults(Box<super::task_plan::fanout::FanoutAggregateRequest>),
+    FanoutResults(Box<medulla_decision_program_types::decision::task_plan::fanout::FanoutAggregateRequest>),
     /// A delegation admission request (MEDULLA-DECISION-ENGINE-R134.102).
-    DelegationAdmission(super::delegation::DelegationAdmissionRequest),
+    DelegationAdmission(medulla_decision_statistical_types::decision::delegation::DelegationAdmissionRequest),
     /// Pairwise caller claims over answer candidates (MEDULLA-DECISION-ENGINE-R134.106).
-    AnswerRanking(Box<super::answer_ranking_request::AnswerRankingRequest>),
+    AnswerRanking(Box<medulla_decision_program_types::decision::answer_ranking_request::AnswerRankingRequest>),
     /// The ranked candidates of one unified query to budget a comparative
     /// analysis over (MEDULLA-DECISION-ENGINE-R139.3).
-    ComparativeAnalysis(Box<super::comparative_analysis::ComparativeAnalysisRequest>),
+    ComparativeAnalysis(Box<medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisRequest>),
     /// A capability designation question (MEDULLA-DECISION-ENGINE-R172.7).
-    CapabilityDesignation(Box<super::capability_designation::DesignationAsk>),
+    CapabilityDesignation(Box<medulla_decision_policy_types::decision::capability_designation::DesignationAsk>),
     /// A job-scoped load set question (MEDULLA-DECISION-ENGINE-R176.3).
-    LoadSet(Box<super::load_set::LoadSetQuestion>),
+    LoadSet(Box<medulla_decision_policy_types::decision::load_set::LoadSetQuestion>),
     /// A plan to admit against the architecture view (MEDULLA-DECISION-ENGINE-R171.3).
-    PlanningAdmission(Box<super::planning_admission::PlanningAdmissionRequest>),
+    PlanningAdmission(Box<medulla_decision_program_types::decision::planning_admission::PlanningAdmissionRequest>),
     /// The caller's measurements of the policy's safety bounds, read from the
     /// param `safety.measurements` (MEDULLA-DECISION-ENGINE-R001.100.2).
-    SafetyMeasurements(BoundedVec<super::safety::SafetyMeasurement, 32>),
+    SafetyMeasurements(BoundedVec<medulla_decision_statistical_types::decision::safety::SafetyMeasurement, 32>),
     /// One trajectory decision of a task plan (MEDULLA-DECISION-ENGINE-R140.104).
-    Trajectory(Box<super::task_plan::trajectory::TrajectoryQuery>),
+    Trajectory(Box<medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryQuery>),
     /// The stored skill binding a task plan was built from, read from the param
     /// `skill_binding` (MEDULLA-REPO-INGEST-R002.1.3).
-    SkillBinding(Box<super::task_plan::skill_binding::SkillBindingPin>),
+    SkillBinding(Box<medulla_decision_policy_types::decision::task_plan::skill_binding::SkillBindingPin>),
     /// The proposed action to check against the policy's limits, read from the
     /// param `guarded_action` (MEDULLA-DECISION-ENGINE-R131.3).
-    GuardedAction(Box<super::limit_types::GuardedAction>),
+    GuardedAction(Box<medulla_decision_statistical_types::decision::limit_types::GuardedAction>),
     /// The two candidates of one branch-merge conflict record
     /// (MEDULLA-DECISION-ENGINE-R828).
-    ResolveConflict(Box<declared::ConflictCandidates>),
+    ResolveConflict(Box<medulla_decision_statistical_types::decision::statistical::declared::ConflictCandidates>),
 }
 
 /// One named parameter of a question.
@@ -272,7 +257,8 @@ pub struct DecideRequest {
     /// Evidence streams the decision rests on, referenced and never read
     /// (MEDULLA-DECISION-ENGINE-R019.100.1). Omitted when empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
+    pub evidence_streams:
+        BoundedVec<medulla_decision_policy_types::decision::evidence_stream::EvidenceStreamRef, 16>,
 }
 
 /// How the feature matrix the decision read is pinned.
@@ -381,15 +367,22 @@ pub struct StatisticalInputs {
     pub exploration: Option<ExplorationRecord>,
     /// The belief slices' stored inputs (EH-297); omitted when none.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub belief_slices: BoundedVec<belief::BeliefSliceInputs, 8>,
+    pub belief_slices: BoundedVec<
+        medulla_decision_program_types::decision::statistical::belief::BeliefSliceInputs,
+        8,
+    >,
     /// The evidence streams the request referenced; omitted when none, so
     /// older record bytes and digests are unchanged.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub evidence_streams: BoundedVec<super::evidence_stream::EvidenceStreamRef, 16>,
+    pub evidence_streams:
+        BoundedVec<medulla_decision_policy_types::decision::evidence_stream::EvidenceStreamRef, 16>,
     /// The graph rows a graph-sourced decision read, with the class each row's
     /// typed label gives it (MEDULLA-DECISION-ENGINE-R121.2); omitted when none.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub graph_rows: BoundedVec<graph_rows::GraphRowProvenance, 64>,
+    pub graph_rows: BoundedVec<
+        medulla_decision_program_types::decision::statistical::graph_rows::GraphRowProvenance,
+        64,
+    >,
 }
 
 /// One statistical decision, recorded. Record version 2.
@@ -435,7 +428,8 @@ pub struct StatisticalDecisionRecord {
     pub nl_binding: Option<nl::NlBinding>,
     /// The head's belief at each requested slice (EH-297); omitted when none.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub belief: BoundedVec<belief::BeliefPoint, 8>,
+    pub belief:
+        BoundedVec<medulla_decision_program_types::decision::statistical::belief::BeliefPoint, 8>,
     /// Synthetic evidence is labelled as such, always.
     pub synthetic_evidence: bool,
     /// The provider a retrieval-plan decision committed to
@@ -445,13 +439,16 @@ pub struct StatisticalDecisionRecord {
     /// The retrieved entries the policy refused, with the tier and the check
     /// (MEDULLA-DECISION-ENGINE-R132.5); omitted when none was refused.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
-    pub refused_entries: BoundedVec<super::entry_types::RefusedEntry, 64>,
+    pub refused_entries:
+        BoundedVec<medulla_decision_statistical_types::decision::entry_types::RefusedEntry, 64>,
     pub record_digest: String,
 }
 
 impl StatisticalDecisionRecord {
     /// The explicit task plan the `task_plan` family answered, if any.
-    pub fn task_plan(&self) -> Option<&super::task_plan::TaskPlan> {
+    pub fn task_plan(
+        &self,
+    ) -> Option<&medulla_decision_program_types::decision::task_plan::TaskPlan> {
         self.answer
             .as_ref()
             .and_then(outcome::FamilyAnswer::task_plan)
@@ -461,7 +458,7 @@ impl StatisticalDecisionRecord {
     /// answered, if any.
     pub fn comparative_analysis_plan(
         &self,
-    ) -> Option<&super::comparative_analysis::ComparativeAnalysisPlan> {
+    ) -> Option<&medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan>{
         self.answer
             .as_ref()
             .and_then(outcome::FamilyAnswer::comparative_analysis_plan)
@@ -469,7 +466,7 @@ impl StatisticalDecisionRecord {
 
     /// The validating constructor; see [`super::DecisionRecord::checked`].
     pub fn checked(self) -> Result<Self, DecisionErrorCode> {
-        if self.schema_version != super::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION {
+        if self.schema_version != medulla_decision_statistical_types::decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION {
             return Err(DecisionErrorCode::DecisionRecordVersionUnsupported);
         }
         Ok(self)
@@ -489,7 +486,7 @@ pub struct DecisionBatch {
 
 #[cfg(test)]
 mod question_kind_declared_tests {
-    use super::QuestionKind;
+    use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 
     // spec: MEDULLA-DECISION-ENGINE-R128.1
     #[test]
@@ -533,7 +530,11 @@ mod question_kind_declared_tests {
 mod tests {
     use super::outcome::FamilyAnswer;
     use super::*;
-    use crate::decision::task_plan::{plan_explicit_tasks, TaskPlanProposal, TaskPlanTask};
+    use {
+        medulla_decision_program_types::decision::task_plan::plan_explicit_tasks,
+        medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+        medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+    };
 
     fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
         TaskPlanTask {

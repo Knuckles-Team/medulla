@@ -8,18 +8,19 @@
 //! logging support only ([`super::evaluate_bandit`]). Every promotion gate that
 //! fails is named in the receipt; the receipt passes exactly when none did.
 
+use medulla_decision_statistical_types::decision::StatisticalPolicy;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
-use medulla_decision_types::decision::StatisticalPolicy;
 use medulla_decision_types::{
     decision::jobs::DecisionEvalReceipt, decision::jobs::FullLabelMetrics,
     decision::jobs::LabelExclusions, decision::jobs::OpeEstimatorKind,
     decision::jobs::PromotionMetrics,
 };
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
-    decision::statistical::dataset::LabelledItem,
-};
 use medulla_query_types::solve_scalar::digest_text;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
 
 use super::evaluate_bandit::{bandit_gates, BanditReport};
 use super::feature_power::{feature_power, FeaturePowerKnobs};

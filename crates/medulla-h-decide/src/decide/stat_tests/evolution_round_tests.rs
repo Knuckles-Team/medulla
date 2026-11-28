@@ -4,12 +4,18 @@
 //! tenant's pinned policy.
 
 use super::*;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
-};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 fn json_param(name: &str, value: serde_json::Value) -> TypedParam {
     TypedParam {
@@ -224,7 +230,7 @@ fn allocation_request(schema: &ComponentDependency, params: Vec<TypedParam>) -> 
 fn premise_of<'a>(
     batch: &'a DecisionBatch,
     fact: &str,
-) -> Option<&'a medulla_decision_types::decision::PremiseRef> {
+) -> Option<&'a medulla_decision_statistical_types::decision::record::premise::PremiseRef> {
     batch.records.as_slice()[0]
         .premises
         .iter()

@@ -7,15 +7,18 @@ use super::kernel_family_support::{
     decide_as_other_tenant, facts, kernel_request, persisted_files,
 };
 use super::*;
-use medulla_decision_types::decision::trajectory_verdict::{JoinRequest, TrajectoryEntry};
-use medulla_decision_types::decision::ResolutionKind;
+use medulla_decision_types::decision::record::ResolutionKind;
+use {
+    medulla_decision_statistical_types::decision::trajectory_verdict::JoinRequest,
+    medulla_decision_statistical_types::decision::trajectory_verdict::TrajectoryEntry,
+};
 
 pub(super) fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
     TrajectoryEntry::new(
         id.to_string(),
         evidence,
         QuantisedValue {
-            scale: medulla_decision_types::decision::QuantScaleTag::Q32,
+            scale: medulla_decision_statistical_types::decision::QuantScaleTag::Q32,
             value: score,
         },
         "cd".repeat(32),
@@ -30,7 +33,7 @@ pub(super) fn join(schema: &ComponentDependency, entries: Vec<TrajectoryEntry>) 
     // join declares the first of them and carries every entry.
     let refs: Vec<&str> = ids
         .iter()
-        .take(medulla_decision_types::decision::statistical::declared::MAX_DECLARED_OPTIONS)
+        .take(medulla_decision_statistical_types::decision::statistical::declared::MAX_DECLARED_OPTIONS)
         .map(String::as_str)
         .collect();
     kernel_request(
@@ -256,7 +259,7 @@ async fn join_refusals() {
     );
     assert!(before_large.len() >= before.len());
 
-    for code in medulla_decision_types::decision::trajectory_verdict::JOIN_REFUSALS {
+    for code in medulla_decision_statistical_types::decision::trajectory_verdict::JOIN_REFUSALS {
         assert_eq!(
             medulla_decision_types::decision::code_registry::resolve(code.as_str()),
             Some(*code)

@@ -10,9 +10,13 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_types::contract::BoundedVec;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Most decisions one run may reference.
 pub const MAX_RUN_DECISIONS: usize = 16;

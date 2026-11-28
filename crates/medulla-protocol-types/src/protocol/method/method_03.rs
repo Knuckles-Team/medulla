@@ -453,7 +453,7 @@ $($variants)*
     /// context and half-open byte offsets into the original text. A read;
     /// nothing is committed.
     RetrievalContextSearch {
-        request: Box<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchRequest>,
+        request: Box<medulla_decision_policy_types::decision::statistical::context_search::RetrievalContextSearchRequest>,
     },
 
     /// MEDULLA-DECISION-ENGINE-R144.3: run 1 to 64 indexless operations (raw
@@ -461,7 +461,7 @@ $($variants)*
     /// `Document` nodes under a budget clamped to the tenant ceiling, and report
     /// the cost. Builds and consults no index. A read; nothing is committed.
     IndexlessRetrieve {
-        request: Box<medulla_decision_types::decision::indexless_retrieval::IndexlessRequest>,
+        request: Box<medulla_decision_program_types::decision::indexless_retrieval::IndexlessRequest>,
     },
 
     /// MEDULLA-FEDERATED-QUERY-R702.3: synthesize one multi-hop search task around an

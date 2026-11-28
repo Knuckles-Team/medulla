@@ -9,13 +9,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::task_plan::skill_plan::{
-    SkillPlanKnobs, SkillPlanQuery, EMPTY_SKILL_INDEX, NO_SKILL_FOR_SUBTASK,
-};
-use medulla_decision_types::decision::task_plan::{
-    independent_ids, TaskPlanProposal, TaskPlanTask, MAX_CONCURRENCY,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::task_plan::independent_ids,
+    medulla_decision_program_types::decision::task_plan::TaskPlanProposal,
+    medulla_decision_program_types::decision::task_plan::TaskPlanTask,
+    medulla_decision_program_types::decision::task_plan::MAX_CONCURRENCY,
+};
+use {
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanKnobs,
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillPlanQuery,
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::EMPTY_SKILL_INDEX,
+    medulla_decision_statistical_types::decision::task_plan::skill_plan::NO_SKILL_FOR_SUBTASK,
+};
 
 use super::quant::q32;
 use medulla_decision_stats_records::decision::bm25;
@@ -281,8 +287,8 @@ pub fn plan_over_skills(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
-    use medulla_decision_types::decision::task_plan::skill_plan::SkillSubtask;
+    use medulla_decision_program_types::decision::task_plan::plan_explicit_tasks;
+    use medulla_decision_statistical_types::decision::task_plan::skill_plan::SkillSubtask;
 
     fn knobs() -> SkillPlanKnobs {
         SkillPlanKnobs {

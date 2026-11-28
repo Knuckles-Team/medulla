@@ -232,13 +232,18 @@ pub(super) fn part_or_abstain(
     task_iri: &str,
     outcome: Result<ExecutionAnswerPart, PartFault>,
 ) -> ExecutionAnswerPart {
-    use medulla_decision_types::decision::execution_part::{
-        ORCH_PART_ASSEMBLY_ABSTAINED, ORCH_PART_EMPTY, ORCH_PART_NO_SOURCE,
-    };
-    use medulla_decision_types::decision::record::{
-        AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
-    };
     use medulla_types::evidence_class::EvidenceClass;
+    use {
+        medulla_decision_statistical_types::decision::execution_part::ORCH_PART_ASSEMBLY_ABSTAINED,
+        medulla_decision_statistical_types::decision::execution_part::ORCH_PART_EMPTY,
+        medulla_decision_statistical_types::decision::execution_part::ORCH_PART_NO_SOURCE,
+    };
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+        medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+        medulla_decision_types::decision::record::AbstainReason,
+    };
 
     let (code, detail) = match outcome {
         Ok(part) | Err(PartFault::Own(part)) => return part,
@@ -257,7 +262,7 @@ pub(super) fn part_or_abstain(
     };
     ExecutionAnswerPart::Abstain {
         reason: AbstainReason::Family {
-            family: medulla_decision_types::decision::statistical::QuestionKind::TaskPlan,
+            family: medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::TaskPlan,
             code,
             detail,
         },
@@ -269,7 +274,7 @@ pub(super) fn part_or_abstain(
 /// The staffing, bindings and DAG parts of one assembly, and the digest of the sealed assembly record.
 #[cfg(feature = "decide")]
 fn solved_parts(
-    assembly: &medulla_decision_types::decision::AssemblyResult,
+    assembly: &medulla_decision_types::decision::request::AssemblyResult,
     task_iri: &str,
 ) -> Result<
     (
@@ -280,7 +285,7 @@ fn solved_parts(
     ),
     String,
 > {
-    use medulla_decision_types::decision::DecisionOutcome;
+    use medulla_decision_types::decision::record::DecisionOutcome;
 
     let record = &assembly.record;
     let evidence_class = record.evidence_class;
@@ -372,7 +377,7 @@ async fn coverage_answer(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &AgentExecutionAnswerRequest,
-    assembly: Option<&medulla_decision_types::decision::AssemblyResult>,
+    assembly: Option<&medulla_decision_types::decision::request::AssemblyResult>,
 ) -> Result<ExecutionAnswerPart, PartFault> {
     use medulla_decision_outcome_types::decision::coverage::{
         CapabilityCoverageOutcome, CapabilityCoverageRequest,
@@ -678,7 +683,11 @@ fn merge_contract_steps(
     prompts: Result<Vec<AgentPrompt>, String>,
     (graph, graph_version): (&str, u64),
 ) -> Result<ExecutionAnswerPart, PartFault> {
-    use medulla_decision_types::decision::record::{PremiseClass, PremiseProvenance, PremiseRef};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+        medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    };
 
     let contracts = match contracts {
         Ok(steps) => steps,
@@ -710,7 +719,7 @@ fn merge_contract_steps(
                 // (MEDULLA-CQ-ORCH-R012.2).
                 "skill_abstain": step.skills.is_empty().then(|| serde_json::json!({
                     "family": "task_plan",
-                    "code": medulla_decision_types::decision::execution_part::ORCH_PART_EMPTY.as_str(),
+                    "code": medulla_decision_statistical_types::decision::execution_part::ORCH_PART_EMPTY.as_str(),
                     "detail": format!("no skill of {} uses tool {}", step.contract, step.tool),
                 })),
             })
@@ -790,8 +799,12 @@ fn query_part(
     (graph, graph_version): (&str, u64),
     max_rows: usize,
 ) -> Result<ExecutionAnswerPart, PartFault> {
-    use medulla_decision_types::decision::record::{PremiseClass, PremiseProvenance, PremiseRef};
     use medulla_rdf::sparql::{Dataset, Projection, QueryOutcome};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+        medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    };
 
     let text = query.replace("<TASK>", &format!("<{task_iri}>"));
     let outcome = medulla_rdf::sparql::execute(

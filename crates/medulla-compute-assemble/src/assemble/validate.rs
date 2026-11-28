@@ -7,15 +7,18 @@
 //! rather than decided.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_policy_types::solve::Algorithm;
 use medulla_decision_types::decision::digest;
-use medulla_decision_types::solve::Algorithm;
 use medulla_decision_types::{
     decision::request::effective_solver_budget, decision::request::loosened_solver_field,
 };
-use medulla_decision_types::{
-    decision::CandidateFacts, decision::DecisionErrorCode, decision::DecisionInputs,
-    decision::MAX_ASSEMBLY_CANDIDATES, decision::MAX_ASSEMBLY_TEMPLATES,
-    decision::MAX_TEMPLATE_SLOTS,
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::MAX_ASSEMBLY_CANDIDATES,
+    medulla_decision_statistical_types::decision::MAX_ASSEMBLY_TEMPLATES,
+    medulla_decision_statistical_types::decision::MAX_TEMPLATE_SLOTS,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
 };
 
 use super::seal::RecordIdentity;
@@ -84,7 +87,11 @@ fn check_templates(inputs: &DecisionInputs) -> Result<(), AssembleError> {
 }
 
 fn check_digests(inputs: &DecisionInputs) -> Result<(), AssembleError> {
-    if inputs.policy_digest != digest::policy_digest(&inputs.policy) {
+    if inputs.policy_digest
+        != medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(
+            &inputs.policy,
+        )
+    {
         return Err(invalid(
             "policy_digest is not the digest of the stored policy",
         ));

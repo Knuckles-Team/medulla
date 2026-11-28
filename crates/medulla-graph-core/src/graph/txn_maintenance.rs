@@ -1,7 +1,7 @@
 use super::*;
 
-use medulla_decision_types::decision::knob_families::memory::IMPORTANCE_CAP;
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_policy_types::decision::knob_families::memory::IMPORTANCE_CAP;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 
 /// The stable code a prune reports for a node a legal hold keeps
 /// (MEDULLA-DECISION-ENGINE-R617.4); registered in the work-types `memory` refusal table.

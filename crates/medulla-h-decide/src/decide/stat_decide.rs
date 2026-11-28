@@ -13,28 +13,39 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::Instrument;
 
+use medulla_decision_policy_types::decision::statistical::keyed::seed_commitment;
 use medulla_decision_types::decision::digest::statistical_record_digest;
-use medulla_decision_types::decision::statistical::keyed::seed_commitment;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{
-    PremiseClass, PremiseProvenance, PremiseRef, QuantScaleTag, ResolutionKind, TraceFidelity,
-    STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
-};
-use medulla_decision_types::{
-    decision::statistical::declared::MAX_DECLARED_OPTIONS, decision::statistical::CandidatePool,
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::DecisionBatch, decision::statistical::ExplorationRecord,
-    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
-    decision::statistical::ShortlistProvenance, decision::statistical::StatisticalDecisionRecord,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalInputs,
-    decision::statistical::StatisticalOutcome,
-};
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+    medulla_decision_types::decision::record::ResolutionKind,
+    medulla_decision_types::decision::record::TraceFidelity,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::MAX_DECLARED_OPTIONS,
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidatePool,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::ExplorationRecord,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+    medulla_decision_types::decision::statistical::ShortlistProvenance,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalInputs,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use super::candidates::{read_candidates, ReadCandidates};
 use super::stat_belief::{live_slices, Slices};
@@ -128,8 +139,9 @@ fn conflict_schema_pin(
     tenant: &str,
 ) -> Result<medulla_agent_types::agent_component::ComponentDependency, String> {
     use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
-    use medulla_decision_types::decision::resolve_conflict::{
-        conflict_feature_schema_component_id, CONFLICT_SCHEMA_MISSING,
+    use {
+        medulla_decision_statistical_types::decision::resolve_conflict::conflict_feature_schema_component_id,
+        medulla_decision_statistical_types::decision::resolve_conflict::CONFLICT_SCHEMA_MISSING,
     };
     let component_id = conflict_feature_schema_component_id();
     store
@@ -159,7 +171,7 @@ pub(super) async fn serve(
                 "ACCESS_DENIED: Decide tenant must match the verified request tenant".to_string(),
             );
         }
-        medulla_decision_types::decision::evidence_stream::validate(
+        medulla_decision_policy_types::decision::evidence_stream::validate(
             request.evidence_streams.as_slice(),
         )
         .map_err(|refused| refused.message())?;
@@ -880,7 +892,7 @@ struct Sealing<'a> {
         medulla_decision_types::decision::statistical::retrieval_plan::RetrievalProviderBinding,
     >,
     /// The retrieved entries the policy refused (R132.5).
-    refused_entries: Vec<medulla_decision_types::decision::entry_types::RefusedEntry>,
+    refused_entries: Vec<medulla_decision_statistical_types::decision::entry_types::RefusedEntry>,
 }
 
 /// The pool a decision that may explore draws against. A refused permit
@@ -915,8 +927,8 @@ fn matched_history(
     policy: &ResolvedPolicy,
     context_digest: &str,
 ) -> Result<Vec<super::stat_log::MatchedTrajectory>, String> {
+    use medulla_decision_statistical_types::decision::knobs::KnobValue;
     use medulla_decision_stats::decision::exploration::KNOBS;
-    use medulla_decision_types::decision::knobs::KnobValue;
     let (KnobValue::DurationMs(window_ms), KnobValue::Integer(max_matched)) =
         (policy.policy.knob(&KNOBS[0]), policy.policy.knob(&KNOBS[1]))
     else {
@@ -974,7 +986,7 @@ fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationReco
     ) {
         return None; // Explicit planning, search and the kernel families never draw.
     }
-    let medulla_decision_types::decision::ColdStart::Explore { budget } =
+    let medulla_decision_statistical_types::decision::ColdStart::Explore { budget } =
         &sealing.policy.policy.cold_start
     else {
         return None;
@@ -1051,7 +1063,7 @@ fn declared_premises(request: &DecideRequest) -> Vec<PremiseRef> {
 /// evidence class is the weakest premise class, so a claim row can never
 /// lift an answer to an observation.
 fn graph_row_premises(candidates: &ReadCandidates) -> Vec<PremiseRef> {
-    use medulla_decision_types::decision::statistical::graph_rows::GraphNodeClass;
+    use medulla_decision_program_types::decision::statistical::graph_rows::GraphNodeClass;
     candidates
         .graph_rows
         .iter()
@@ -1077,87 +1089,117 @@ fn graph_row_premises(candidates: &ReadCandidates) -> Vec<PremiseRef> {
 /// (MEDULLA-DECISION-ENGINE-R179.5). The decision reads the drift thresholds
 /// of the belief slices it consulted through `DriftThresholds::from_policy`.
 fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
-    let contrast: &[medulla_decision_types::decision::knobs::KnobSpec] = match sealing
+    let contrast: &[medulla_decision_statistical_types::decision::knobs::KnobSpec] = match sealing
         .request
         .question
         .kind
     {
         QuestionKind::HarnessContrast => medulla_decision_types::decision::harness_contrast::KNOBS,
-        QuestionKind::ThoughtSearch => medulla_decision_types::decision::thought_search::KNOBS,
-        QuestionKind::RoundVerdict => {
-            medulla_decision_types::decision::knob_families::round_verdict::KNOBS
+        QuestionKind::ThoughtSearch => {
+            medulla_decision_statistical_types::decision::thought_search::KNOBS
         }
-        QuestionKind::Route => medulla_decision_types::decision::knob_families::route::KNOBS,
-        QuestionKind::ToolNecessity => medulla_decision_types::decision::tool_necessity::KNOBS,
+        QuestionKind::RoundVerdict => {
+            medulla_decision_program_types::decision::knob_families::round_verdict::KNOBS
+        }
+        QuestionKind::Route => medulla_decision_policy_types::decision::knob_families::route::KNOBS,
+        QuestionKind::ToolNecessity => {
+            medulla_decision_program_types::decision::tool_necessity::KNOBS
+        }
         QuestionKind::ItemRecommendation => {
-            medulla_decision_types::decision::knob_families::recommend::KNOBS
+            medulla_decision_program_types::decision::knob_families::recommend::KNOBS
         }
         QuestionKind::ResolveEntity => {
-            medulla_decision_types::decision::knob_families::resolve_entity::KNOBS
+            medulla_decision_program_types::decision::knob_families::resolve_entity::KNOBS
         }
         QuestionKind::StageAllocation => medulla_decision_types::decision::harness_contrast::KNOBS,
         QuestionKind::ContextPackage | QuestionKind::RecursionMode => {
-            medulla_decision_types::decision::knob_families::context::KNOBS
+            medulla_decision_policy_types::decision::knob_families::context::KNOBS
         }
         QuestionKind::OverWindowPlan => {
-            medulla_decision_types::decision::knob_families::context::KNOBS
+            medulla_decision_policy_types::decision::knob_families::context::KNOBS
         }
         // A task plan of any proposer (explicit, decomposition, skill query)
         // lists the whole family table (MEDULLA-DECISION-ENGINE-R134.7); the
         // skill-tree knobs are a subset of it.
-        QuestionKind::TemporalBasis => medulla_decision_types::decision::temporal_query::KNOBS,
-        QuestionKind::RuntimeQuota => medulla_decision_types::decision::run_governance::KNOBS,
-        QuestionKind::ProgramLookup => medulla_decision_types::decision::program_store::KNOBS,
-        QuestionKind::InsightSelection => {
-            medulla_decision_types::decision::program_store::insight::KNOBS
+        QuestionKind::TemporalBasis => {
+            medulla_decision_program_types::decision::temporal_query::KNOBS
         }
-        QuestionKind::TaskPlan => medulla_decision_types::decision::knob_families::task_plan::KNOBS,
+        QuestionKind::RuntimeQuota => {
+            medulla_decision_statistical_types::decision::run_governance::KNOBS
+        }
+        QuestionKind::ProgramLookup => {
+            medulla_decision_program_types::decision::program_store::KNOBS
+        }
+        QuestionKind::InsightSelection => {
+            medulla_decision_statistical_types::decision::program_store::insight::KNOBS
+        }
+        QuestionKind::TaskPlan => {
+            medulla_decision_statistical_types::decision::knob_families::task_plan::KNOBS
+        }
         QuestionKind::ToolRelevance => medulla_decision_types::decision::tool_relevance::KNOBS,
-        QuestionKind::ProcessPlan => medulla_decision_types::decision::process_plan::KNOBS,
+        QuestionKind::ProcessPlan => {
+            medulla_decision_statistical_types::decision::process_plan::KNOBS
+        }
         QuestionKind::ComparativeAnalysisPlan => {
-            medulla_decision_types::decision::comparative_analysis::KNOBS
+            medulla_decision_statistical_types::decision::comparative_analysis::KNOBS
         }
         QuestionKind::ProbeVerdict | QuestionKind::ProbeSelection => {
             medulla_decision_types::decision::knob_families::red_team::KNOBS
         }
         QuestionKind::TrajectoryLadder => {
-            medulla_decision_types::decision::knob_families::trajectory::KNOBS
+            medulla_decision_policy_types::decision::knob_families::trajectory::KNOBS
         }
         QuestionKind::AnalystSynthesis => {
-            medulla_decision_types::decision::analyst_synthesis::KNOBS
+            medulla_decision_policy_types::decision::analyst_synthesis::KNOBS
         }
-        QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
-        QuestionKind::CouncilCoordination => medulla_decision_types::decision::council::KNOBS,
-        QuestionKind::MergeArming => medulla_decision_types::decision::lifecycle::KNOBS,
+        QuestionKind::ResolveConflict => {
+            medulla_decision_statistical_types::decision::resolve_conflict::KNOBS
+        }
+        QuestionKind::CouncilCoordination => {
+            medulla_decision_program_types::decision::council::KNOBS
+        }
+        QuestionKind::MergeArming => medulla_decision_program_types::decision::lifecycle::KNOBS,
         QuestionKind::DefectTriage => {
             medulla_decision_outcome_types::decision::defect_triage::KNOBS
         }
         QuestionKind::Promotion => medulla_decision_outcome_types::decision::promotion::KNOBS,
         QuestionKind::CriterionReview => {
-            medulla_decision_types::decision::knob_families::criterion_review::KNOBS
+            medulla_decision_statistical_types::decision::knob_families::criterion_review::KNOBS
         }
-        QuestionKind::DelegationAdmission => medulla_decision_types::decision::delegation::KNOBS,
-        QuestionKind::RunAdjustment => medulla_decision_types::decision::run_adjustment::KNOBS,
-        QuestionKind::PathPreference => medulla_decision_types::decision::path_success::KNOBS,
+        QuestionKind::DelegationAdmission => {
+            medulla_decision_statistical_types::decision::delegation::KNOBS
+        }
+        QuestionKind::RunAdjustment => {
+            medulla_decision_policy_types::decision::run_adjustment::KNOBS
+        }
+        QuestionKind::PathPreference => {
+            medulla_decision_statistical_types::decision::path_success::KNOBS
+        }
         QuestionKind::TeamCoordination => {
-            medulla_decision_types::decision::team_coordination::KNOBS
+            medulla_decision_program_types::decision::team_coordination::KNOBS
         }
         QuestionKind::ChangesetReview => {
             medulla_decision_stats_records::decision::changeset_review::KNOBS
         }
-        QuestionKind::RewardDecomposition => medulla_decision_types::decision::reward::KNOBS,
-        QuestionKind::CurriculumPromotion => medulla_decision_types::decision::curriculum::KNOBS,
-        QuestionKind::AutonomyVerdict => medulla_decision_types::decision::autonomy::KNOBS,
+        QuestionKind::RewardDecomposition => {
+            medulla_decision_statistical_types::decision::reward::KNOBS
+        }
+        QuestionKind::CurriculumPromotion => {
+            medulla_decision_policy_types::decision::curriculum::KNOBS
+        }
+        QuestionKind::AutonomyVerdict => {
+            medulla_decision_statistical_types::decision::autonomy::KNOBS
+        }
         QuestionKind::PopulationDrift | QuestionKind::FanoutWidth => {
-            medulla_decision_types::decision::population::KNOBS
+            medulla_decision_policy_types::decision::population::KNOBS
         }
         QuestionKind::StepVerification | QuestionKind::AdversarialAdmission => {
-            medulla_decision_types::decision::trajectory_verdict::KNOBS
+            medulla_decision_statistical_types::decision::trajectory_verdict::KNOBS
         }
         QuestionKind::HarnessConfig => {
             medulla_decision_types::decision::statistical::harness_config::HARNESS_KNOBS
         }
-        QuestionKind::Rank => medulla_decision_types::decision::capability_rank::KNOBS,
+        QuestionKind::Rank => medulla_decision_statistical_types::decision::capability_rank::KNOBS,
         _ => &[],
     };
     medulla_decision_stats::decision::drift::KNOBS
@@ -1328,7 +1370,7 @@ fn skill_upgrade_receipt(
     }
     let upgrade = super::family::skill_upgrade::upgrade_of(request).ok()?;
     let receipt =
-        medulla_decision_types::decision::skill_upgrade_request::SkillUpgradeReceipt::of_request(
+        medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt::of_request(
             upgrade,
         )
         .ok()?;
@@ -1355,7 +1397,7 @@ fn planning_admission_answer(
     Some(
         medulla_decision_types::decision::statistical::outcome::FamilyAnswer::PlanningAdmission(
             Box::new(
-                medulla_decision_types::decision::planning_admission::PlanningAdmissionAnswer::admitted(plan),
+                medulla_decision_program_types::decision::planning_admission::PlanningAdmissionAnswer::admitted(plan),
             ),
         ),
     )
@@ -1367,7 +1409,7 @@ fn seal(
     nl: Option<NlBinding>,
     task_plan: Option<super::stat_task_plan::Planned>,
     comparative: Option<
-        medulla_decision_types::decision::comparative_analysis::ComparativeAnalysisPlan,
+        medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan,
     >,
     trajectory_premises: Vec<PremiseRef>,
 ) -> Result<StatisticalDecisionRecord, String> {
@@ -1432,9 +1474,11 @@ fn seal(
         executed,
         &sealing.policy.digest,
     ));
-    premise_list.extend(medulla_decision_types::decision::evidence_stream::premises(
-        sealing.request.evidence_streams.as_slice(),
-    ));
+    premise_list.extend(
+        medulla_decision_policy_types::decision::evidence_stream::premises(
+            sealing.request.evidence_streams.as_slice(),
+        ),
+    );
     let outcome = executed.ladder.outcome.clone();
     let synthetic = sealing
         .pinned

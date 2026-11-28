@@ -14,10 +14,6 @@ use medulla_agent_types::agent_topology::{
     TopologyPlan,
 };
 use medulla_agent_types::delegation::AgentGraphEntryRef;
-use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{
-    AssemblyRequest, DecisionOutcome, DecisionPolicy, DecisionRecord, TemplateFacts,
-};
 use medulla_mutation_types::capacity_lease::CapacityResourceClass;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_record::tests::{decided, seed_library, TENANT};
@@ -30,6 +26,17 @@ use {
     medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
     medulla_compute_assemble::assemble::replay_check,
     medulla_compute_assemble::assemble::RecordIdentity,
+};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobName,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::DecisionRecord,
+    medulla_decision_types::decision::record::TemplateFacts,
+    medulla_decision_types::decision::request::AssemblyRequest,
 };
 
 const ASKER: &str = "asker";

@@ -23,7 +23,11 @@ use record::Recorder;
 use state::SearchState;
 
 use super::model::Model;
-use medulla_decision_types::solve::certificate::{Certificate, LagrangeDual, SolverConfig};
+use {
+    medulla_decision_policy_types::solve::certificate::Certificate,
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+};
 
 /// Solve `model` to proven optimality, proven infeasibility or the node budget.
 pub fn solve(model: &Model, config: &SolverConfig) -> Certificate {

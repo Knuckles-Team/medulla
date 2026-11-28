@@ -13,16 +13,24 @@ use std::collections::BTreeSet;
 use medulla_decision_outcome_types::decision::context_budget::{
     AvailableContextSource, ContextSourceSelection, OmissionReason, OmittedContextSource,
 };
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::quant::q32;
 use medulla_decision_stats_records::decision::candidate::CandidateView;
 use medulla_decision_stats_records::decision::context_partition::partition;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, ScoredOption, StatisticalErrorCode, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::stat_executor::{Executed, FamilyExecuted, Pinned};
 use crate::decide::stat_support::refusal;
@@ -130,7 +138,7 @@ impl DecisionFamily for ContextBudgetFamily {
         request: Option<&DecideRequest>,
         _pinned: &Pinned,
         views: &[CandidateView],
-        _policy: &medulla_decision_types::decision::DecisionPolicy,
+        _policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
         policy_digest: &str,
         mut executed: Executed,
     ) -> Result<Executed, String> {
@@ -198,8 +206,8 @@ impl DecisionFamily for ContextBudgetFamily {
             .filter_map(|id| sources.iter().find(|source| &source.source_id == id))
             .map(|source| ScoredOption {
                 option_id: source.source_id.clone(),
-                score: medulla_decision_types::decision::QuantisedValue {
-                    scale: medulla_decision_types::decision::QuantScaleTag::Q32,
+                score: medulla_decision_statistical_types::decision::QuantisedValue {
+                    scale: medulla_decision_statistical_types::decision::QuantScaleTag::Q32,
                     value: source.relevance_q32,
                 },
                 probability: None,

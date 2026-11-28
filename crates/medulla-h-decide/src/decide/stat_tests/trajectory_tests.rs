@@ -6,25 +6,45 @@
 use super::task_plan_tests::task_request;
 use super::*;
 use medulla_decision_types::decision::statistical::log::{EntryInputs, RecordVisibility};
-use medulla_decision_types::decision::task_plan::branch_breadth::{
-    BranchHistory, BreadthRequest, OutcomeRef, ResultClass,
-};
-use medulla_decision_types::decision::task_plan::pairwise::{
-    PairwiseCandidate, PairwisePolicyPin, PairwiseRecord, PairwiseRequest, Verdict,
-    PAIRWISE_POLICY_ID, PAIRWISE_POLICY_REVISION,
-};
-use medulla_decision_types::decision::task_plan::trajectory::{
-    TrajectoryAnswer, TrajectoryQuery, TRAJECTORY_PARAM,
-};
-use medulla_decision_types::decision::task_plan::trajectory_budget::{
-    scorer_digest, BudgetBranch, ComplexityFeature, ComplexityScorer, FeatureWeight,
-    TrajectoryBudgetRequest,
-};
-use medulla_decision_types::decision::task_plan::trajectory_projection::{
-    ProjectionPin, ProjectionRequest, SourceTrajectory, TokenRange,
-};
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
+use {
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::scorer_digest,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::BudgetBranch,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::ComplexityFeature,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::ComplexityScorer,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::FeatureWeight,
+    medulla_decision_policy_types::decision::task_plan::trajectory_budget::TrajectoryBudgetRequest,
+};
+use {
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::ProjectionPin,
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::ProjectionRequest,
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::SourceTrajectory,
+    medulla_decision_policy_types::decision::task_plan::trajectory_projection::TokenRange,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::branch_breadth::BranchHistory,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::BreadthRequest,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::OutcomeRef,
+    medulla_decision_program_types::decision::task_plan::branch_breadth::ResultClass,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::pairwise::PairwiseCandidate,
+    medulla_decision_program_types::decision::task_plan::pairwise::PairwisePolicyPin,
+    medulla_decision_program_types::decision::task_plan::pairwise::PairwiseRecord,
+    medulla_decision_program_types::decision::task_plan::pairwise::PairwiseRequest,
+    medulla_decision_program_types::decision::task_plan::pairwise::Verdict,
+    medulla_decision_program_types::decision::task_plan::pairwise::PAIRWISE_POLICY_ID,
+    medulla_decision_program_types::decision::task_plan::pairwise::PAIRWISE_POLICY_REVISION,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryAnswer,
+    medulla_decision_program_types::decision::task_plan::trajectory::TrajectoryQuery,
+    medulla_decision_program_types::decision::task_plan::trajectory::TRAJECTORY_PARAM,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const OTHER_TENANT: &str = "tenant-trajectory-other";
 

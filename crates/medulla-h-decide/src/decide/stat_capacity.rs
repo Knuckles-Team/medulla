@@ -9,12 +9,16 @@
 //! `Orchestration` priority.
 
 use medulla_agent_types::agent_topology::CapacityScope;
-use medulla_decision_types::decision::statistical::capacity::{
-    CapacityAdjustmentProposal, Observation, PARAM_GRAPH, PARAM_OBSERVATION, PARAM_PROPOSAL,
-};
 use medulla_decision_types::decision::statistical::{DecideRequest, TypedParam, TypedValue};
 use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::capacity::CapacityAdjustmentProposal,
+    medulla_decision_policy_types::decision::statistical::capacity::Observation,
+    medulla_decision_policy_types::decision::statistical::capacity::PARAM_GRAPH,
+    medulla_decision_policy_types::decision::statistical::capacity::PARAM_OBSERVATION,
+    medulla_decision_policy_types::decision::statistical::capacity::PARAM_PROPOSAL,
+};
 
 use super::stat_support::invalid_parameter;
 use super::{capacity_premise, SharedState};

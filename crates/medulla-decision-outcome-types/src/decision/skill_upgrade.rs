@@ -2,10 +2,11 @@
 
 #[cfg(test)]
 mod tests {
-    use medulla_decision_types::decision::skill_upgrade_request::{
-        SkillUpgradeReceipt, SKILL_UPGRADE_RECEIPT_SCHEMA_VERSION,
-    };
     use medulla_types::contract::{Digest256, OpaqueId};
+    use {
+        medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt,
+        medulla_decision_program_types::decision::skill_upgrade_request::SKILL_UPGRADE_RECEIPT_SCHEMA_VERSION,
+    };
 
     fn receipt(migration: Option<&str>) -> SkillUpgradeReceipt {
         SkillUpgradeReceipt {

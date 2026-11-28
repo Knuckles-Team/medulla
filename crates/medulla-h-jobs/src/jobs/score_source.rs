@@ -13,7 +13,7 @@ use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 
-use medulla_decision_types::decision::held_out::GraderKind;
+use medulla_decision_policy_types::decision::held_out::GraderKind;
 use medulla_graph_core::graph::GraphCore;
 use medulla_program::corpus::{ScoreRefusal, StoredScore, StoredScoreSet};
 use medulla_program::{ExampleSplit, MAX_EXAMPLES};

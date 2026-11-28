@@ -3,14 +3,18 @@
 //! batch, `Nearest` finds it, a self-reported correction is refused and another
 //! tenant never sees it (MEDULLA-DECISION-ENGINE-R702.6).
 
-use medulla_decision_types::correction::{
-    CorrectionInput, CorrectionNearest, CorrectionOp, CorrectionRead, CorrectionRecorded,
-    CorrectionSource,
-};
 use medulla_h_decide::decide::stat_test_support::{decode, Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use {
+    medulla_decision_policy_types::correction::CorrectionInput,
+    medulla_decision_policy_types::correction::CorrectionNearest,
+    medulla_decision_policy_types::correction::CorrectionOp,
+    medulla_decision_policy_types::correction::CorrectionRead,
+    medulla_decision_policy_types::correction::CorrectionRecorded,
+    medulla_decision_policy_types::correction::CorrectionSource,
+};
 
 const GRAPH: &str = "__commons__";
 

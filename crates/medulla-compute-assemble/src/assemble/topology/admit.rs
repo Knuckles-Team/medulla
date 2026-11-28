@@ -10,9 +10,9 @@ use medulla_agent_types::agent_topology::EnforcementRecord;
 use medulla_agent_types::agent_topology::TopologyCaps;
 use medulla_agent_types::agent_topology::TopologyPlan;
 use medulla_agent_types::agent_topology::TopologyRefusal;
-use medulla_decision_types::decision::PremiseClass;
-use medulla_decision_types::decision::PremiseProvenance;
-use medulla_decision_types::decision::PremiseRef;
+use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
+use medulla_decision_statistical_types::decision::record::premise::PremiseProvenance;
+use medulla_decision_statistical_types::decision::record::premise::PremiseRef;
 
 /// Hold `plan`, nested `depth` deep, to `caps`: the first slot over the width
 /// cap, then the depth, then the first slot over the rounds cap, then the

@@ -7,15 +7,20 @@
 
 use super::scorer_tests::evaluated;
 use super::*;
-use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::paper_admission::{
-    PARAM_GOALS, PARAM_GRAPH_VERSION, TEXT_CLAIM_IDS, TEXT_CONTENT_DIGEST,
-};
-use medulla_decision_types::decision::statistical::features::{
-    FeatureKind, FeatureSpec, MissingValue,
-};
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_decision_types::decision::AbstainReason;
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+};
+use {
+    medulla_decision_statistical_types::decision::paper_admission::PARAM_GOALS,
+    medulla_decision_statistical_types::decision::paper_admission::PARAM_GRAPH_VERSION,
+    medulla_decision_statistical_types::decision::paper_admission::TEXT_CLAIM_IDS,
+    medulla_decision_statistical_types::decision::paper_admission::TEXT_CONTENT_DIGEST,
+};
 
 const STAGED: &str = "staged-papers";
 const CONTENT: &str = "platform-content";
@@ -158,10 +163,10 @@ async fn published_head(h: &Harness) -> (ComponentDependency, ComponentDependenc
 }
 
 fn advisory_policy(h: &Harness, relevance_min_micros: Option<i64>) -> DecisionPolicyRef {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::AdvisoryUncalibrated;
     if let Some(floor) = relevance_min_micros {
-        let spec = &medulla_decision_types::decision::paper_admission::KNOBS[0];
+        let spec = &medulla_decision_statistical_types::decision::paper_admission::KNOBS[0];
         policy
             .knobs
             .insert(spec.knob_name(), KnobValue::DecimalMicros(floor));

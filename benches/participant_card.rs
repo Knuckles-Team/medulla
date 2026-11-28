@@ -11,7 +11,7 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_decision_types::claims::ObserverRef;
+use medulla_decision_statistical_types::claims::ObserverRef;
 use medulla_decision_types::participant_memory::{CardClaim, ParticipantCard};
 use medulla_graph_core::graph::GraphCore;
 use medulla_h_graph::graph_ops::participant_card::{card_node_id, read_card, CARD_LABEL};

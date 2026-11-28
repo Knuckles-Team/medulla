@@ -9,7 +9,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::ingestion_admission::{AdmissionKnobs, ContentClass};
 use medulla_source_types::source_ingestion::column_profile::{
     ColumnAdmission, ColumnExclusion, ColumnExclusionReason, EmbeddingSetEntry, SqlColumnProfile,
     SqlColumnType, Q32_ONE,
@@ -17,6 +16,10 @@ use medulla_source_types::source_ingestion::column_profile::{
 use medulla_source_types::source_ingestion::web_document::{AdmissionOutcome, UnitAdmission};
 use medulla_source_types::source_ingestion::SourceRecord;
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_policy_types::decision::ingestion_admission::AdmissionKnobs,
+    medulla_decision_policy_types::decision::ingestion_admission::ContentClass,
+};
 
 /// Snake-case label of a content class, as the receipt records it.
 pub fn class_label(class: ContentClass) -> String {
@@ -281,7 +284,7 @@ pub fn demoted_classes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::policy::DecisionPolicy;
+    use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
 
     fn knobs() -> AdmissionKnobs {
         AdmissionKnobs::from_policy(&DecisionPolicy::engine_default())

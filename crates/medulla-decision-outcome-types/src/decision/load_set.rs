@@ -5,8 +5,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::decision::capability_designation::EntityKind;
-use medulla_decision_types::decision::load_set::{AgentStart, LoadSetQuestion};
+use medulla_decision_policy_types::decision::capability_designation::EntityKind;
+use {
+    medulla_decision_policy_types::decision::load_set::AgentStart,
+    medulla_decision_policy_types::decision::load_set::LoadSetQuestion,
+};
 
 use medulla_decision_types::decision::load_set_knobs::LoadSetKnobs;
 

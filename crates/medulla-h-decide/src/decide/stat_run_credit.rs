@@ -20,11 +20,11 @@
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::run_credit::{
     baseline_weight_q16, RunCreditReceipt, RunOutcome, StepCredit, KNOBS,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{BoundedVec, Digest256};

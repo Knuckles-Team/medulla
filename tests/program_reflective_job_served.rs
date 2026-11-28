@@ -233,7 +233,7 @@ fn front_digest_replays_under_one_seed() {
 // spec: MEDULLA-DECISION-ENGINE-R800.4
 #[test]
 fn front_inputs_refuse_with_stable_codes() {
-    use medulla_decision_types::decision::held_out::GraderKind;
+    use medulla_decision_policy_types::decision::held_out::GraderKind;
     use medulla_program::{ExampleSplit, OptimizerKind};
     let driver = medulla_server::spawn_engine_driver(|| {
         let runtime = tokio::runtime::Builder::new_multi_thread()

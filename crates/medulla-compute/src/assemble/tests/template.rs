@@ -7,7 +7,10 @@ use medulla_agent_types::{
     agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode, agent_graph::AgentGraphNodeKind,
     agent_graph::AgentGraphShape,
 };
-use medulla_decision_types::{decision::DecisionOutcome, decision::TemplateFacts};
+use {
+    medulla_decision_types::decision::record::DecisionOutcome,
+    medulla_decision_types::decision::record::TemplateFacts,
+};
 
 use super::fixture::*;
 use {
@@ -85,7 +88,7 @@ fn decide_over(templates: Vec<TemplateFacts>) -> medulla_compute_assemble::assem
         asked,
         research_library(),
         templates,
-        medulla_decision_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let assembly = assemble(inputs, identity()).expect("assembles");
@@ -151,12 +154,12 @@ fn a_template_that_is_not_the_named_revision_is_refused() {
         asked,
         research_library(),
         vec![solo],
-        medulla_decision_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_statistical_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let error = assemble(inputs, identity()).expect_err("refused");
     assert_eq!(
         error.code,
-        medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid
+        medulla_decision_statistical_types::decision::DecisionErrorCode::AssemblyInputsInvalid
     );
 }

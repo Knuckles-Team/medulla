@@ -23,30 +23,46 @@
 
 use medulla_decision_outcome_types::decision::rapid_r056::StatisticalSolverCertificate;
 use medulla_decision_policy::solve::{solve, verify, Model};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::record::outcome::RefusalOrigin;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::solve::certificate::{SolveStatus, SolverConfig};
+use medulla_decision_types::decision::record::AbstainReason;
 use medulla_decision_types::{
     decision::statistical::tool_subset::ToolCoverageCandidate,
     decision::statistical::tool_subset::ToolSubsetRefusal,
     decision::statistical::tool_subset::ToolSubsetRequestBody,
 };
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::QuestionKind, decision::statistical::ScoredOption,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
-    decision::statistical::TypedValue,
-};
-use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
-use medulla_decision_types::{
-    solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec,
-    solve::ObjectiveLevelSpec, solve::ObjectiveTerm, solve::Relation, solve::Term, solve::VarId,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::solve::certificate::SolveStatus,
+    medulla_decision_policy_types::solve::certificate::SolverConfig,
+};
+use {
+    medulla_decision_policy_types::solve::Coefficient,
+    medulla_decision_policy_types::solve::ConstraintBody,
+    medulla_decision_policy_types::solve::ConstraintSpec,
+    medulla_decision_policy_types::solve::ModelSpec,
+    medulla_decision_policy_types::solve::ObjectiveLevelSpec,
+    medulla_decision_policy_types::solve::ObjectiveTerm,
+    medulla_decision_policy_types::solve::Relation, medulla_decision_policy_types::solve::Term,
+    medulla_decision_policy_types::solve::VarId,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+};
 
-use medulla_decision_types::decision::promotion_tier::{
-    ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED,
+use {
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_CAPABILITIES,
+    medulla_decision_statistical_types::decision::promotion_tier::ALWAYS_ON_TOOL_REMOVED,
 };
 
 use super::stat_support::refusal;

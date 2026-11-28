@@ -10,11 +10,18 @@ use medulla_agent_types::{
     agent_component::FactQuality, agent_component::ModalityFacts, agent_component::PriceSource,
     agent_component::PromptMode, agent_component::ToolEffect,
 };
-use medulla_decision_types::decision::{
-    AssemblyRequest, AssemblyRequirements, CandidateFacts, DecisionInputs, DecisionPolicy,
-    LibraryCandidateScope, PremiseClass, PremiseProvenance, PremiseRef,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::CandidateFacts,
+    medulla_decision_types::decision::record::DecisionInputs,
+    medulla_decision_types::decision::request::AssemblyRequest,
+    medulla_decision_types::decision::request::AssemblyRequirements,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
 
 use medulla_compute_assemble::assemble::RecordIdentity;
 

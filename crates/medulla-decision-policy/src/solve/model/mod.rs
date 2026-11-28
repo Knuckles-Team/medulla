@@ -15,11 +15,17 @@ mod validate;
 use serde::{Deserialize, Serialize};
 
 pub use error::{Location, ModelError};
-use medulla_decision_types::solve::objective::ObjectiveValue;
-use medulla_decision_types::solve::spec::{ConstraintBody, ModelSpec, Relation, Term, VarId};
+use medulla_decision_statistical_types::solve::objective::ObjectiveValue;
 pub use validate::{
     MAX_ABS_COEFFICIENT, MAX_ABS_RHS, MAX_CONSTRAINTS, MAX_LABEL_BYTES, MAX_OBJECTIVE_LEVELS,
     MAX_VARIABLES,
+};
+use {
+    medulla_decision_policy_types::solve::spec::ConstraintBody,
+    medulla_decision_policy_types::solve::spec::ModelSpec,
+    medulla_decision_policy_types::solve::spec::Relation,
+    medulla_decision_policy_types::solve::spec::Term,
+    medulla_decision_policy_types::solve::spec::VarId,
 };
 
 use medulla_query_types::solve_scalar::Sha256Digest;

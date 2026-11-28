@@ -156,7 +156,10 @@ pub(super) fn trust_flag_intents(
 pub(super) fn memory_event_intents(
     methods: &[medulla_protocol_types::protocol::Method],
 ) -> Result<Vec<MutationOutboxIntent>, String> {
-    use medulla_decision_types::memory_events::{MEMORY_EVENT_LABEL, MEMORY_EVENT_TOPICS};
+    use {
+        medulla_decision_statistical_types::memory_events::MEMORY_EVENT_LABEL,
+        medulla_decision_statistical_types::memory_events::MEMORY_EVENT_TOPICS,
+    };
     let mut intents = Vec::new();
     for method in methods {
         let medulla_protocol_types::protocol::Method::BatchUpdate { operations_msgpack } = method
@@ -317,10 +320,16 @@ pub(super) fn compiled_outbox(
 #[cfg(test)]
 mod memory_event_tests {
     use super::*;
-    use medulla_decision_types::claims::{ClaimState, ObserverRef};
-    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
     use medulla_protocol_types::protocol::Method;
     use medulla_work_types::participant::ParticipantId;
+    use {
+        medulla_decision_statistical_types::claims::ClaimState,
+        medulla_decision_statistical_types::claims::ObserverRef,
+    };
+    use {
+        medulla_decision_statistical_types::memory_events::ClaimChanged,
+        medulla_decision_statistical_types::memory_events::MemoryEvent,
+    };
 
     fn batch_of(operations: Vec<serde_json::Value>) -> Method {
         Method::BatchUpdate {

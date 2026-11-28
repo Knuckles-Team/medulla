@@ -7,15 +7,22 @@
 use super::*;
 use crate::decide::stat_designation::{shared_capability_index, DesignationRuntime};
 use crate::decide::stat_usage_guidance::{facts_of, Fact, Object, UsageGuidanceRead};
+use medulla_decision_policy_types::decision::capability_designation::SchemaProjection;
 use medulla_decision_stats::decision::usage_guidance::ToolRate;
-use medulla_decision_types::decision::capability_designation::SchemaProjection;
-use medulla_decision_types::decision::usage_guidance::{
-    UsageGuidance, USAGE_GUIDANCE_CONNECTOR_PARAM, USAGE_GUIDANCE_CYCLIC_STEPS,
-    USAGE_GUIDANCE_GRAPH_PARAM, USAGE_GUIDANCE_JOB_CLASS_PARAM, USAGE_GUIDANCE_NO_STEPS,
-    USAGE_GUIDANCE_UNKNOWN_CONNECTOR,
-};
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use std::collections::BTreeMap;
+use {
+    medulla_decision_program_types::decision::usage_guidance::UsageGuidance,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_CONNECTOR_PARAM,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_CYCLIC_STEPS,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_GRAPH_PARAM,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_JOB_CLASS_PARAM,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_NO_STEPS,
+    medulla_decision_program_types::decision::usage_guidance::USAGE_GUIDANCE_UNKNOWN_CONNECTOR,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const CP: &str = medulla_types::ontology_iri!("connector-pack#");
 const CORE: &str = medulla_types::ontology_iri!("core#");
@@ -142,7 +149,7 @@ fn guidance_request(
         },
         candidates: CandidateSource::Declared {
             options: BoundedVec::new(vec![
-                medulla_decision_types::decision::statistical::declared::DeclaredOption {
+                medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption {
                     option_id: question_id,
                     classification: BoundedVec::default(),
                     numbers: BoundedVec::default(),

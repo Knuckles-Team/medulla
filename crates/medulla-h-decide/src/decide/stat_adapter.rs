@@ -10,17 +10,13 @@
 //! passing receipt that qualified exactly this body; every pointer move is an
 //! audited event, and rollback returns to the adapter active before.
 
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::decision::statistical::feedback::{
     FeedbackEvent, StoredFeedback, FEEDBACK_PREFIX,
 };
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
-use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
 use medulla_decision_types::decision::statistical::run_credit::RunCreditReceipt;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::{
-    decision::statistical::body::canonical_body_bytes,
-    decision::statistical::body::content_digest_of,
-};
 use medulla_decision_types::{
     decision::statistical::retrieval_adapter::AdapterEvalReceipt,
     decision::statistical::retrieval_adapter::AdapterFitRequest,
@@ -37,6 +33,10 @@ use medulla_decision_types::{
 };
 use medulla_query_types::solve_scalar::digest_text;
 use std::collections::{BTreeMap, BTreeSet};
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
 use {
     medulla_decision_stats_records::decision::adapter::directions_of,
     medulla_decision_stats_records::decision::adapter::to_body,

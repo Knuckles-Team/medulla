@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use medulla_decision_types::decision::capability_designation::CapabilityRecord;
+use medulla_decision_policy_types::decision::capability_designation::CapabilityRecord;
 use medulla_types::contract::{OpaqueId, TenantId};
 use parking_lot::RwLock;
 

@@ -3,7 +3,7 @@
 
 use medulla_agent_types::agent_topology::LeaseDemand;
 use medulla_agent_types::agent_topology::StopRule;
-use medulla_decision_types::decision::SolverBudget;
+use medulla_decision_types::decision::request::SolverBudget;
 
 use super::*;
 use medulla_compute_assemble::SplitMix64;

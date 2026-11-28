@@ -1,8 +1,12 @@
 //! The `load_set.*` knobs (MEDULLA-DECISION-ENGINE-R176.2), registered through
 //! [`super::knob_families::REGISTRY`] and read through the policy.
 
-use super::knobs::{KnobSafety, KnobSpec, KnobValue};
-use super::policy::DecisionPolicy;
+use medulla_decision_statistical_types::decision::policy::DecisionPolicy;
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Designations asked per required capability, and the cap on skills.
 pub const KNOBS: &[KnobSpec] = &[

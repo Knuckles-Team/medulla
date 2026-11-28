@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_types::{decision::replay::WalkForward, decision::replay::MAX_REPLAY_FOLDS};
 
 use {

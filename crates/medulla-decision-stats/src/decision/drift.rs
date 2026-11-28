@@ -10,14 +10,20 @@
 //! on two consecutive evaluations. Only `+ - * /` touch floats, so the crate's
 //! ban on transcendental functions holds, and nothing here reads a clock.
 
-use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use std::collections::VecDeque;
-
-use medulla_decision_types::decision::statistical::retrieval_drift::{
-    DriftKind, RegionRef, MAX_REFRESH_REGIONS,
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::DecisionPolicy;
+
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::DecisionPolicy;
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftKind,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RegionRef,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::MAX_REFRESH_REGIONS,
+};
 
 use {
     medulla_decision_stats_records::decision::refusal::Refusal,

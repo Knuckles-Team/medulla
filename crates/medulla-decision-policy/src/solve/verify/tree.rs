@@ -8,8 +8,15 @@
 use super::dual::{integer_bound, scaled_lagrangian, Target};
 use super::error::VerifyError;
 use crate::solve::model::Model;
-use medulla_decision_types::solve::certificate::{LagrangeDual, LeafProof, ProofNode};
-use medulla_decision_types::solve::spec::{RowId, VarId};
+use {
+    medulla_decision_policy_types::solve::certificate::LagrangeDual,
+    medulla_decision_policy_types::solve::certificate::LeafProof,
+    medulla_decision_policy_types::solve::certificate::ProofNode,
+};
+use {
+    medulla_decision_policy_types::solve::spec::RowId,
+    medulla_decision_policy_types::solve::spec::VarId,
+};
 
 /// What the verified leaves establish.
 #[derive(Debug, Default)]

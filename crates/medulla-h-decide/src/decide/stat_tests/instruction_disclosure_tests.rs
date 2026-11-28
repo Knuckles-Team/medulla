@@ -10,7 +10,10 @@ use super::*;
 use medulla_decision_types::decision::instruction_disclosure::{
     instructions_hash, DisclosureTiming, InstructionVersion,
 };
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+};
 
 const GRAPH: &str = "instructions";
 const TRIGGER_A: &str = "eg:trigger/relevance";
@@ -151,7 +154,7 @@ fn disclosed(record: &StatisticalDecisionRecord) -> Vec<String> {
 fn fact<'a>(
     record: &'a StatisticalDecisionRecord,
     fact: &str,
-) -> Option<&'a medulla_decision_types::decision::PremiseRef> {
+) -> Option<&'a medulla_decision_statistical_types::decision::record::premise::PremiseRef> {
     record.premises.iter().find(|p| p.fact == fact)
 }
 
@@ -325,10 +328,13 @@ async fn stale_or_foreign_version_refuses() {
 use medulla_decision_types::decision::instruction_disclosure::{
     DisclosureEvent, DisclosureTrigger,
 };
-use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
+use medulla_decision_types::decision::record::ResolutionKind;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::ResolutionKind;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredText,
+};
 
 const SET: &str = "set-events";
 

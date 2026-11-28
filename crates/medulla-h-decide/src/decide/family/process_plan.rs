@@ -10,21 +10,11 @@
 use std::cell::RefCell;
 
 use medulla_compute_assemble::process_plan::rank::ranked_bindings;
+use medulla_decision_program_types::decision::task_plan::plan_explicit_tasks;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_stats::decision::ladder::LadderResult;
-use medulla_decision_types::decision::process_plan::{
-    BindingSource, BindingTarget, ProcessPlanKnobs, ProcessPlanRefusal, ProcessPlanRequest,
-    StepBinding, PROCESS_PLAN_REFUSALS,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalOutcome,
-};
-use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
 use medulla_decision_types::decision::tool_relevance::{
     AssignedTool, ToolAssignmentRequest, MAX_TOP_K, TOOL_RELEVANCE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
@@ -40,6 +30,27 @@ use {
     medulla_compute_assemble::process_plan::plan::plan_from_workflow,
     medulla_compute_assemble::process_plan::plan::Callee,
     medulla_compute_assemble::process_plan::plan::ConditionQuestion,
+};
+use {
+    medulla_decision_statistical_types::decision::process_plan::BindingSource,
+    medulla_decision_statistical_types::decision::process_plan::BindingTarget,
+    medulla_decision_statistical_types::decision::process_plan::ProcessPlanKnobs,
+    medulla_decision_statistical_types::decision::process_plan::ProcessPlanRefusal,
+    medulla_decision_statistical_types::decision::process_plan::ProcessPlanRequest,
+    medulla_decision_statistical_types::decision::process_plan::StepBinding,
+    medulla_decision_statistical_types::decision::process_plan::PROCESS_PLAN_REFUSALS,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::AbstainReason,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
 };
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
@@ -284,7 +295,9 @@ pub(in crate::decide) fn plan(
     let unknown = || {
         abstain(
             &asked,
-            RefusalCode::new(medulla_decision_types::decision::process_plan::WORKFLOW_UNKNOWN),
+            RefusalCode::new(
+                medulla_decision_statistical_types::decision::process_plan::WORKFLOW_UNKNOWN,
+            ),
             &[],
         )
     };

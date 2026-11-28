@@ -10,7 +10,7 @@
 //! same record is an idempotent replay.
 
 use super::SharedState;
-use medulla_decision_types::decision::DecisionCommitRequest;
+use medulla_decision_types::decision::request::DecisionCommitRequest;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -42,7 +42,7 @@ fn crash_if(point: CrashPoint) -> Result<(), String> {
     if CRASH_AT.try_with(|at| *at == point).unwrap_or(false) {
         return Err(format!(
             "{}: injected crash at {point:?}",
-            medulla_decision_types::decision::DecisionErrorCode::DecisionCoordinatorUnavailable
+            medulla_decision_statistical_types::decision::DecisionErrorCode::DecisionCoordinatorUnavailable
                 .as_str()
         ));
     }
@@ -74,11 +74,12 @@ async fn commit(
     req_id: u64,
     verified: &VerifiedRequestContext,
     request: DecisionCommitRequest,
-) -> Result<medulla_decision_types::decision::DecisionCommitResult, String> {
-    use medulla_decision_types::{
-        decision::DecisionErrorCode, decision::MAX_DECISION_RECORD_BYTES,
-    };
+) -> Result<medulla_decision_types::decision::request::DecisionCommitResult, String> {
     use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;
+    use {
+        medulla_decision_statistical_types::decision::DecisionErrorCode,
+        medulla_decision_statistical_types::decision::MAX_DECISION_RECORD_BYTES,
+    };
 
     let DecisionCommitRequest {
         context,
@@ -96,12 +97,14 @@ async fn commit(
     // MEDULLA-DECISION-ENGINE-R019.100.2: a pinned policy that requires approval commits only a
     // record its reviewer's receipt names, before the replay check and before any write.
     if record.inputs.policy.approval_required {
-        medulla_decision_types::decision::approval::check_approval(
+        medulla_decision_policy_types::decision::approval::check_approval(
             approval.as_ref(),
             &record.record_id,
             &record.record_digest,
             medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-            medulla_decision_types::decision::approval::approval_max_age_s(&record.inputs.policy),
+            medulla_decision_policy_types::decision::approval::approval_max_age_s(
+                &record.inputs.policy,
+            ),
         )
         .map_err(|refusal| refusal.message())?;
     }
@@ -439,21 +442,24 @@ async fn commit(
         tracing::info!(%premise, "decision-commit coordinator decision");
     }
     super::assemble::audit_line("decision-commit", &record, verified);
-    Ok(medulla_decision_types::decision::DecisionCommitResult {
-        schema_version: medulla_decision_types::decision::DECISION_COMMIT_RESULT_SCHEMA_VERSION,
-        record_id: record.record_id,
-        component: written.result,
-        replayed: written.replayed,
-        topology: evidence_graph
-            .zip(evidence_revision)
-            .map(
-                |(graph, revision)| medulla_decision_types::decision::TopologyCommitOutcome {
-                    evidence_graph_id: graph,
-                    evidence_revision: revision,
-                    premises: lease_premises,
-                },
-            ),
-    })
+    Ok(
+        medulla_decision_types::decision::request::DecisionCommitResult {
+            schema_version:
+                medulla_decision_types::decision::request::DECISION_COMMIT_RESULT_SCHEMA_VERSION,
+            record_id: record.record_id,
+            component: written.result,
+            replayed: written.replayed,
+            topology: evidence_graph
+                .zip(evidence_revision)
+                .map(|(graph, revision)| {
+                    medulla_decision_types::decision::request::TopologyCommitOutcome {
+                        evidence_graph_id: graph,
+                        evidence_revision: revision,
+                        premises: lease_premises,
+                    }
+                }),
+        },
+    )
 }
 
 /// A build without the Decide layer still serves the method: it refuses by

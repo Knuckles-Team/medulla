@@ -143,7 +143,8 @@ fn put_option_record(
     entry.record.outcome =
         medulla_decision_types::decision::statistical::StatisticalOutcome::Explored {
             option_id: option.to_string(),
-            propensity: medulla_decision_types::decision::UnitRationalWire::new(1, 1).unwrap(),
+            propensity: medulla_decision_statistical_types::decision::UnitRationalWire::new(1, 1)
+                .unwrap(),
         };
     let key = medulla_persistence_records::decision_jobs::record_key(record_id);
     let bytes = medulla_persistence_records::decision_jobs::encode_artifact(&entry).unwrap();
@@ -179,7 +180,7 @@ fn foreign_dense_history(
     option: &str,
     n: usize,
 ) {
-    use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
+    use medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity;
     use medulla_decision_types::decision::statistical::log::{
         DecisionOutcomeEvaluation, StoredEvaluation,
     };
@@ -227,9 +228,9 @@ struct PoolReads {
     /// `SOURCE RELIABILITY <subject>`: (reliability, abstained) for the sparse and dense subject.
     uql: [(Option<f64>, Option<f64>); 2],
     /// `EpistemicStatus` over the subject node: the authority's governed read.
-    status: [medulla_decision_types::decision::reputation::SourceReliability; 2],
+    status: [medulla_decision_policy_types::decision::reputation::SourceReliability; 2],
     /// `RankByProvenance` over a candidate of each subject: the candidate's governed read.
-    ranked: [medulla_decision_types::decision::reputation::SourceReliability; 2],
+    ranked: [medulla_decision_policy_types::decision::reputation::SourceReliability; 2],
 }
 
 /// `SOURCE RELIABILITY <subject>` over a graph whose subject nodes carry `prior`, as the
@@ -385,10 +386,11 @@ async fn read_pool(
 #[cfg(feature = "epistemic")]
 #[tokio::test]
 async fn three_readers_agree_on_sparse_abstention_and_dense_estimate() {
-    use medulla_decision_types::decision::reputation::{
-        SourceReliability, REPUTATION_INSUFFICIENT_HISTORY,
-    };
     use medulla_protocol_types::protocol::RankWeightsWire;
+    use {
+        medulla_decision_policy_types::decision::reputation::SourceReliability,
+        medulla_decision_policy_types::decision::reputation::REPUTATION_INSUFFICIENT_HISTORY,
+    };
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     assert!(medulla_server_ops::api::admin::install_decide_seam(
         &h.state.read().await.seams,

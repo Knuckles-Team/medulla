@@ -10,8 +10,8 @@ use super::assemble_tests::{
 use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind, PromptMode};
 use medulla_compute_assemble::assemble::prompt::select_system_prompt;
 use medulla_decision_outcome_types::decision::prompt_candidate::{PromptCandidate, PromptRole};
-use medulla_decision_types::decision::knob_families::prompt_candidate::KNOBS;
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_policy_types::decision::knob_families::prompt_candidate::KNOBS;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::record::outcome::AbstainReason;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
@@ -132,7 +132,7 @@ fn publish_prompt_scope(h: &Harness) {
 async fn assembled(
     h: &Harness,
     capability: &str,
-) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
+) -> Result<medulla_decision_types::decision::request::AssemblyResult, String> {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
     let mut asked = request(Vec::new());
     asked.requirements.capabilities =
@@ -140,7 +140,7 @@ async fn assembled(
     assemble_with_policy(h, &verified, Some(ALLOWED), asked).await
 }
 
-fn facts_of(result: &medulla_decision_types::decision::AssemblyResult) -> Vec<String> {
+fn facts_of(result: &medulla_decision_types::decision::request::AssemblyResult) -> Vec<String> {
     result
         .record
         .premises
@@ -258,7 +258,7 @@ async fn unbound_prompt_refuses_and_rejected_connector_is_excluded() {
 
     // The registered code is the closed one the projection check raises.
     assert_eq!(
-        medulla_decision_types::decision::DecisionErrorCode::PromptUnbound.as_str(),
+        medulla_decision_statistical_types::decision::DecisionErrorCode::PromptUnbound.as_str(),
         "PROMPT_UNBOUND"
     );
 }
@@ -276,7 +276,7 @@ async fn prompt_candidate_journey() {
         assert!(
             matches!(
                 result.record.outcome,
-                medulla_decision_types::decision::DecisionOutcome::Solved { .. }
+                medulla_decision_types::decision::record::DecisionOutcome::Solved { .. }
             ),
             "{capability}"
         );

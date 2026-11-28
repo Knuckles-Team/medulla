@@ -7,16 +7,22 @@
 //! evidence among the sources and resolves as an `Optimization`. The harness
 //! applies the winner.
 
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::trajectory_verdict::JoinRequest;
 use medulla_decision_stats::decision::trajectory_join::{join, MAX_JOIN_TRAJECTORIES};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::statistical::{
-    DecideRequest, StatisticalErrorCode, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::trajectory_verdict::JoinRequest;
-use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

@@ -14,10 +14,6 @@
 //! -- its fixed-point softmax over the scored options (EH-293). One core,
 //! [`calibrate_logits`], serves both.
 
-use medulla_decision_types::decision::statistical::{CalibrationMethod, StatisticalErrorCode};
-use medulla_decision_types::{
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-};
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadCalibration,
     decision::statistical::head::IsotonicBlock, decision::statistical::head::IsotonicTable,
@@ -25,8 +21,19 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::RiskMethod, decision::statistical::RiskStatement,
 };
-use medulla_decision_types::{decision::QuantisedValue, decision::StatisticalPolicy};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CalibrationMethod,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+};
 
 use super::fit::Example;
 use super::head_eval::{apply_isotonic, logit, scaled_softmax, top_index};
@@ -385,8 +392,11 @@ pub(crate) fn calibrate_logits(
 mod tests {
     use super::*;
     use crate::decision::head_eval::isotonic_value;
-    use medulla_decision_types::decision::{QuantScaleTag, UnitRationalWire};
     use medulla_numeric::calibration::isotonic::fit_isotonic_weighted;
+    use {
+        medulla_decision_statistical_types::decision::QuantScaleTag,
+        medulla_decision_statistical_types::decision::UnitRationalWire,
+    };
 
     fn policy() -> StatisticalPolicy {
         let rational = |n, d| UnitRationalWire::new(n, d).expect("rational");
@@ -400,7 +410,8 @@ mod tests {
                 scale: QuantScaleTag::Q32,
                 value: 10 << 32,
             },
-            min_outcome_fidelity: medulla_decision_types::decision::TraceFidelityLevel::ToolCalls,
+            min_outcome_fidelity:
+                medulla_decision_statistical_types::decision::TraceFidelityLevel::ToolCalls,
             tenant_public_features: false,
             audit_sample: rational(1, 20),
             approved_commit_principals: BoundedVec::new(vec!["approved".to_string()])

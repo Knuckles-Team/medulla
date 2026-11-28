@@ -5,8 +5,15 @@
 //! three labelled options of which the chosen one scores 1.0.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::{codes, AbstainReason, ResolutionKind};
+use {
+    medulla_decision_statistical_types::decision::codes,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 const OTHER: &str = "tenant-other";
 
@@ -321,8 +328,11 @@ async fn missing_scorer_abstains() {
 // spec: MEDULLA-DECISION-ENGINE-R138.5
 #[tokio::test]
 async fn premises_name_scorers_and_scores() {
-    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
     use medulla_types::evidence_class::EvidenceClass;
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    };
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_red_team(&h);
@@ -395,7 +405,7 @@ async fn premises_name_scorers_and_scores() {
 // spec: MEDULLA-DECISION-ENGINE-R138.6
 #[tokio::test]
 async fn probe_verdict_journey() {
-    use medulla_decision_types::decision::PremiseClass;
+    use medulla_decision_statistical_types::decision::record::premise::PremiseClass;
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     // Publish one attack, one transform and two scorers through the harness.

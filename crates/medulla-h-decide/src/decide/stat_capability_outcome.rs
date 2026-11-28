@@ -10,14 +10,21 @@
 
 use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_memory::memory::capability_index::CapabilityIndex;
-use medulla_decision_types::decision::capability_designation::{
-    apply_capability_outcome, capability_outcome_key, CapabilityOutcomeApplied,
-    CapabilityOutcomeTrace, CapabilityReward, DesignationKnobs, ObservedOutcome, RewardPolicy,
-    DESIGNATION_OUTCOME_VALUE_CONFLICT, DESIGNATION_OUTCOME_VALUE_MISSING,
-};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{BoundedVec, OpaqueId, TenantId};
+use {
+    medulla_decision_policy_types::decision::capability_designation::apply_capability_outcome,
+    medulla_decision_policy_types::decision::capability_designation::capability_outcome_key,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityOutcomeApplied,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityOutcomeTrace,
+    medulla_decision_policy_types::decision::capability_designation::CapabilityReward,
+    medulla_decision_policy_types::decision::capability_designation::DesignationKnobs,
+    medulla_decision_policy_types::decision::capability_designation::ObservedOutcome,
+    medulla_decision_policy_types::decision::capability_designation::RewardPolicy,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_OUTCOME_VALUE_CONFLICT,
+    medulla_decision_policy_types::decision::capability_designation::DESIGNATION_OUTCOME_VALUE_MISSING,
+};
 
 use super::stat_designation::coded;
 use super::stat_executor::ExecutionContext;

@@ -7,14 +7,26 @@
 //! `decision::serving_technique`). A missing, mismatched or regressed receipt
 //! set is a coded refusal. Advisory; `Decide` writes nothing.
 
-use medulla_decision_types::decision::serving_technique::{
-    max_regression_ppm, min_gain_ppm, verdict, ServingReceipt, Subject, ACTIVATION_OPTION,
-    PARAM_CONFIG_DIGEST, PARAM_MODEL, PARAM_RECEIPTS, PARAM_TECHNIQUE,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::DecideRequest;
-use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use {
+    medulla_decision_program_types::decision::serving_technique::max_regression_ppm,
+    medulla_decision_program_types::decision::serving_technique::min_gain_ppm,
+    medulla_decision_program_types::decision::serving_technique::verdict,
+    medulla_decision_program_types::decision::serving_technique::ServingReceipt,
+    medulla_decision_program_types::decision::serving_technique::Subject,
+    medulla_decision_program_types::decision::serving_technique::ACTIVATION_OPTION,
+    medulla_decision_program_types::decision::serving_technique::PARAM_CONFIG_DIGEST,
+    medulla_decision_program_types::decision::serving_technique::PARAM_MODEL,
+    medulla_decision_program_types::decision::serving_technique::PARAM_RECEIPTS,
+    medulla_decision_program_types::decision::serving_technique::PARAM_TECHNIQUE,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

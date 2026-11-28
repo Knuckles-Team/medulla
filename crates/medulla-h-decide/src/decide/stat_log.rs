@@ -22,18 +22,6 @@ use medulla_decision_stats::{
     decision::aggregate::JoinedRecord,
 };
 use medulla_decision_stats_records::decision::candidate::CandidateView;
-use medulla_decision_types::decision::transfer::{is_digest, TransferEstimate, TransferRequest};
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
-    decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
-    decision::statistical::dataset::OutcomeEvaluation,
-    decision::statistical::dataset::PropensitySource,
-    decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
-};
-use medulla_decision_types::{
-    decision::statistical::features::FeatureKind,
-    decision::statistical::features::FeatureSchemaBody,
-};
 use medulla_decision_types::{
     decision::statistical::log::CorrectionLabel, decision::statistical::log::DecisionLogCommitted,
     decision::statistical::log::DecisionLogEntry, decision::statistical::log::DecisionLogOp,
@@ -43,14 +31,36 @@ use medulla_decision_types::{
     decision::statistical::log::RecordVisibility, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::DECISION_LOG_SCHEMA_VERSION,
 };
-use medulla_decision_types::{
-    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
-    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
-};
-use medulla_decision_types::{
-    decision::CandidateSourceRecord, decision::QuantScaleTag, decision::RecordWindow,
-};
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+    medulla_decision_policy_types::decision::statistical::dataset::LoggedOutcome,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeEvaluation,
+    medulla_decision_policy_types::decision::statistical::dataset::PropensitySource,
+    medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_policy_types::decision::transfer::is_digest,
+    medulla_decision_policy_types::decision::transfer::TransferEstimate,
+    medulla_decision_policy_types::decision::transfer::TransferRequest,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::FeatureMatrixRef,
+    medulla_decision_types::decision::statistical::StatisticalDecisionRecord,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
+use {
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_types::decision::jobs::RecordWindow,
+    medulla_decision_types::decision::record::CandidateSourceRecord,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_replay::{replay_view, replay_with_view, verify_graph_rows, GraphSnapshots};
@@ -225,7 +235,7 @@ pub(super) fn latest_disclosure(
     scan_limit: usize,
 ) -> Result<Option<medulla_decision_types::decision::instruction_disclosure::DisclosureEvent>, String>
 {
-    use medulla_decision_types::decision::statistical::QuestionKind;
+    use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
     let mut entries: Vec<DecisionLogEntry> = visible_entries(store, reader)?
         .into_iter()
         .filter(|entry| entry.record.question.kind == QuestionKind::InstructionDisclosure)
@@ -289,7 +299,7 @@ fn commit(
     reader: &LogReader,
     record: &StatisticalDecisionRecord,
     evaluator: Option<&medulla_decision_types::decision::statistical::log::NamedEvaluator>,
-    approval: Option<&medulla_decision_types::decision::approval::RecommendationApproval>,
+    approval: Option<&medulla_decision_policy_types::decision::approval::RecommendationApproval>,
     replay_graph: Option<&medulla_graph_core::graph::GraphView>,
     graphs: &GraphSnapshots,
 ) -> Result<DecisionLogCommitted, String> {
@@ -304,12 +314,12 @@ fn commit(
     let resolved =
         super::stat_support::resolve_policy(ctx.store, ctx.tenant_id, &record.inputs.policy)?;
     if resolved.policy.approval_required {
-        medulla_decision_types::decision::approval::check_approval(
+        medulla_decision_policy_types::decision::approval::check_approval(
             approval,
             &record.record_id,
             &record.record_digest,
             ctx.now_ms,
-            medulla_decision_types::decision::approval::approval_max_age_s(&resolved.policy),
+            medulla_decision_policy_types::decision::approval::approval_max_age_s(&resolved.policy),
         )
         .map_err(|refusal| refusal.message())?;
     }
@@ -365,8 +375,11 @@ fn skill_program_rows(
     ctx: &ExecutionContext,
     record: &StatisticalDecisionRecord,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {
-    use medulla_decision_types::decision::program_store::{program_key, CompiledProgram};
     use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    use {
+        medulla_decision_program_types::decision::program_store::program_key,
+        medulla_decision_program_types::decision::program_store::CompiledProgram,
+    };
     let Some(FamilyAnswer::SkillWorkflow(program)) = &record.answer else {
         return Ok(Vec::new());
     };
@@ -714,9 +727,11 @@ fn recent_label_set_where(
 /// resolved registry values.
 fn skill_candidate_rows(
     rows: &[(DecisionLogEntry, Vec<StoredEvaluation>)],
-    fidelity_floor: medulla_decision_types::decision::TraceFidelityLevel,
-) -> Result<BoundedVec<medulla_decision_types::decision::transfer::SkillCandidateRow, 1024>, String>
-{
+    fidelity_floor: medulla_decision_statistical_types::decision::TraceFidelityLevel,
+) -> Result<
+    BoundedVec<medulla_decision_policy_types::decision::transfer::SkillCandidateRow, 1024>,
+    String,
+> {
     let resolved = medulla_server_api::knob_config::knobs();
     let knobs = SkillKnobs {
         after_successes: resolved.transfer_skill_after_successes,
@@ -748,9 +763,13 @@ fn skill_candidate_rows(
 fn transfer_estimate(
     rows: &[(DecisionLogEntry, Vec<StoredEvaluation>)],
     request: &TransferRequest,
-    fidelity_floor: medulla_decision_types::decision::TraceFidelityLevel,
+    fidelity_floor: medulla_decision_statistical_types::decision::TraceFidelityLevel,
 ) -> Result<TransferEstimate, String> {
-    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
+    use {
+        medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+        medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+        medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    };
     if !is_digest(&request.skill_key) {
         return Err(refusal(
             StatisticalErrorCode::ParameterInvalid,
@@ -1055,7 +1074,7 @@ fn dispatch(
         DecisionLogOp::FeedbackContinuation { loop_id, .. } => ResultPayload::of::<
             medulla_protocol_types::result_contract::coordination::DecisionLogFeedbackContinuation,
         >(
-            medulla_decision_types::decision::checker_feedback::ContinuationRead {
+            medulla_decision_program_types::decision::checker_feedback::ContinuationRead {
                 continuation: super::family::feedback_loop::latest_continuation(
                     ctx.store, reader, &loop_id,
                 )?,
@@ -1395,8 +1414,8 @@ async fn breach_link(
     verified: &VerifiedRequestContext,
     op: &DecisionLogOp,
 ) -> Result<Option<super::run_record::StagedLink>, String> {
+    use medulla_decision_types::decision::record::AbstainReason;
     use medulla_decision_types::decision::statistical::TypedValue;
-    use medulla_decision_types::decision::AbstainReason;
     use medulla_protocol_types::protocol::Method;
     let DecisionLogOp::Commit { record, .. } = op else {
         return Ok(None);
@@ -1574,7 +1593,7 @@ pub(super) fn fill_observed_costs(
             format!("the usage ledger refused the read: {error:?}"),
         )
     };
-    let catalog = medulla_decision_types::usage::PriceCatalog {
+    let catalog = medulla_decision_policy_types::usage::PriceCatalog {
         aliases: BTreeMap::new(),
         entries: store.price_entries(tenant_id).map_err(refused)?,
     };

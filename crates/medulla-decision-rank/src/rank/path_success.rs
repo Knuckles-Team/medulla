@@ -10,7 +10,10 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::path_success::{PathPreferenceRule, SuccessRateEvidence};
+use {
+    medulla_decision_statistical_types::decision::path_success::PathPreferenceRule,
+    medulla_decision_statistical_types::decision::path_success::SuccessRateEvidence,
+};
 
 /// One ratio is `1_000_000` millionths.
 const MICROS: u64 = 1_000_000;

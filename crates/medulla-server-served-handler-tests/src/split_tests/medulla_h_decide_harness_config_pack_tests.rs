@@ -7,7 +7,6 @@
 //! read back from the imported components, not typed in again.
 
 use medulla_agent_types::agent_component::AgentComponentFacts;
-use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 use medulla_decision_types::decision::statistical::harness_config::HarnessPart;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, DecisionBatch, StatisticalDecisionRecord,
@@ -17,6 +16,10 @@ use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::protocol::{Method, Request};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredNumber,
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption,
+};
 
 use super::medulla_h_decide_capability_pack_feed_tests::{
     build_pack_with, Served, CONNECTOR, TENANT,

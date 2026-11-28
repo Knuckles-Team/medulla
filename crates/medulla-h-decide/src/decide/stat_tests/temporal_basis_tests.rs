@@ -3,12 +3,18 @@
 //! and a widened fallback window is named when the first pass found too few rows.
 
 use super::*;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::temporal_query::{
-    TemporalContext, TemporalQueryInput, REFUSALS, TEMPORAL_QUERY_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_types::contract::Digest256;
+use {
+    medulla_decision_program_types::decision::temporal_query::TemporalContext,
+    medulla_decision_program_types::decision::temporal_query::TemporalQueryInput,
+    medulla_decision_program_types::decision::temporal_query::REFUSALS,
+    medulla_decision_program_types::decision::temporal_query::TEMPORAL_QUERY_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 const DAY: i64 = 86_400_000;
 
@@ -144,9 +150,11 @@ async fn three_clock_confusion_selects_a_basis_and_builds_a_fallback() {
     assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
 }
 
-fn missing_detail(reason: &medulla_decision_types::decision::AbstainReason) -> String {
+fn missing_detail(reason: &medulla_decision_types::decision::record::AbstainReason) -> String {
     match reason {
-        medulla_decision_types::decision::AbstainReason::Family { detail, .. } => detail.clone(),
+        medulla_decision_types::decision::record::AbstainReason::Family { detail, .. } => {
+            detail.clone()
+        }
         other => panic!("expected a family abstention, got {other:?}"),
     }
 }

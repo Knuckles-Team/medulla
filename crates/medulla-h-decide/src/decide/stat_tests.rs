@@ -13,30 +13,14 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::statistical::body::encode_body;
-use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
+use medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity;
+use medulla_decision_program_types::decision::statistical::body::encode_body;
 use medulla_decision_types::decision::statistical::FeatureMatrixRef;
 use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
-use medulla_decision_types::decision::{
-    ColdStart, DecisionEvalOp, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobRecord, ExplorationBudget, HeadKind, LibraryCandidateScope, QuantScaleTag,
-    QuantisedValue, UnitRationalWire,
-};
 use medulla_decision_types::{
     decision::jobs::DatasetSource, decision::jobs::DecisionJobOutcome,
     decision::jobs::DecisionJobOutput, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
     decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec, decision::jobs::RecordWindow,
-};
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-    decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
-};
-use medulla_decision_types::{
-    decision::statistical::features::FeatureKind,
-    decision::statistical::features::FeatureSchemaBody,
-    decision::statistical::features::FeatureSpec, decision::statistical::features::MissingValue,
-    decision::statistical::features::FEATURE_SCHEMA_VERSION,
 };
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogCommitted, decision::statistical::log::DecisionLogEntry,
@@ -46,15 +30,47 @@ use medulla_decision_types::{
     decision::statistical::log::OutcomeAggregateRequest,
     decision::statistical::log::StoredEvaluation,
 };
-use medulla_decision_types::{
-    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
-    decision::statistical::DecisionBatch, decision::statistical::QuestionKind,
-    decision::statistical::QuestionSafety, decision::statistical::StatisticalOutcome,
-    decision::statistical::StatisticalQuestion, decision::statistical::TypedParam,
-    decision::statistical::TypedValue,
-};
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+    medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::DecisionBatch,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::ExplorationBudget,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_types::decision::jobs::DecisionEvalOp,
+    medulla_decision_types::decision::jobs::DecisionEvalRequest,
+    medulla_decision_types::decision::jobs::DecisionFitOp,
+    medulla_decision_types::decision::jobs::DecisionFitRequest,
+    medulla_decision_types::decision::jobs::DecisionJobRecord,
+    medulla_decision_types::decision::jobs::HeadKind,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
 
 use super::stat_test_support::*;
 use medulla_persistence_records::agent_component::test_component_draft;
@@ -70,8 +86,8 @@ fn rational(n: u64, d: u64) -> UnitRationalWire {
     UnitRationalWire::new(n, d).unwrap()
 }
 
-fn ordinary_exploration_policy() -> medulla_decision_types::decision::DecisionPolicy {
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+fn ordinary_exploration_policy() -> medulla_decision_statistical_types::decision::DecisionPolicy {
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::Explore {
         budget: ExplorationBudget {
             fraction: rational(1, 1),
@@ -133,14 +149,14 @@ async fn decide_and_assert_abstains(
 async fn receipt_timeline_first_page(
     h: &Harness,
     req_id: u64,
-) -> medulla_decision_types::decision::DecisionReceiptTimelinePage {
+) -> medulla_decision_types::decision::jobs::DecisionReceiptTimelinePage {
     decode(
         super::jobs::handle_decision_eval(
             &h.state,
             req_id,
             &verified(),
             DecisionEvalOp::Timeline {
-                request: medulla_decision_types::decision::DecisionReceiptTimelineRequest {
+                request: medulla_decision_types::decision::jobs::DecisionReceiptTimelineRequest {
                     tenant_id: TENANT.to_string(),
                     after: None,
                     limit: 1,
@@ -286,7 +302,7 @@ async fn inline_human_labels_cannot_publish_threshold(
                     source: DatasetSource::Inline {
                         dataset: Box::new(heldout),
                     },
-                    mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+                    mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
                     gold_guarantee: None,
                 }),
             },
@@ -300,15 +316,16 @@ async fn inline_human_labels_cannot_publish_threshold(
     assert!(receipt.synthetic);
     assert!(receipt.calibration.as_ref().is_some_and(|cal| {
         cal.synthetic
-            && cal.method == medulla_decision_types::decision::CalibrationMethod::Conformal
+            && cal.method
+                == medulla_decision_types::decision::statistical::CalibrationMethod::Conformal
     }));
-    let timeline: medulla_decision_types::decision::DecisionReceiptTimelinePage = decode(
+    let timeline: medulla_decision_types::decision::jobs::DecisionReceiptTimelinePage = decode(
         super::jobs::handle_decision_eval(
             &h.state,
             59,
             &verified(),
             DecisionEvalOp::Timeline {
-                request: medulla_decision_types::decision::DecisionReceiptTimelineRequest {
+                request: medulla_decision_types::decision::jobs::DecisionReceiptTimelineRequest {
                     tenant_id: TENANT.to_string(),
                     after: None,
                     limit: 10,
@@ -487,7 +504,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         source: DatasetSource::Inline {
             dataset: Box::new(data),
         },
-        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
         gold_guarantee: None,
     };
     let job: DecisionJobRecord = decode(
@@ -511,13 +528,13 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         "gates: {:?}",
         receipt.failed_gates.as_slice()
     );
-    let read: Option<medulla_decision_types::decision::DecisionEvalReceipt> = decode(
+    let read: Option<medulla_decision_types::decision::jobs::DecisionEvalReceipt> = decode(
         super::jobs::handle_decision_eval(
             &h.state,
             51,
             &verified(),
             DecisionEvalOp::Receipt {
-                request: medulla_decision_types::decision::DecisionReceiptGetRequest {
+                request: medulla_decision_types::decision::jobs::DecisionReceiptGetRequest {
                     tenant_id: TENANT.to_string(),
                     receipt_digest: receipt.receipt_digest.clone(),
                 },
@@ -527,13 +544,13 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
     )
     .unwrap();
     assert_eq!(read.as_ref(), Some(&receipt));
-    let page: medulla_decision_types::decision::DecisionReceiptPage = decode(
+    let page: medulla_decision_types::decision::jobs::DecisionReceiptPage = decode(
         super::jobs::handle_decision_eval(
             &h.state,
             52,
             &verified(),
             DecisionEvalOp::Receipts {
-                request: medulla_decision_types::decision::DecisionReceiptListRequest {
+                request: medulla_decision_types::decision::jobs::DecisionReceiptListRequest {
                     tenant_id: TENANT.to_string(),
                     after: None,
                     limit: 1,
@@ -586,7 +603,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         source: DatasetSource::Inline {
             dataset: Box::new(human_data),
         },
-        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::replay::EvalMode::OffPolicy,
         gold_guarantee: None,
     };
     let human_job: DecisionJobRecord = decode(
@@ -634,13 +651,13 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         .unwrap()
         .is_none());
     inline_human_labels_cannot_publish_threshold(&h, &schema_pin, heldout_data).await;
-    let foreign = decode::<Option<medulla_decision_types::decision::DecisionEvalReceipt>>(
+    let foreign = decode::<Option<medulla_decision_types::decision::jobs::DecisionEvalReceipt>>(
         super::jobs::handle_decision_eval(
             &h.state,
             53,
             &verified(),
             DecisionEvalOp::Receipt {
-                request: medulla_decision_types::decision::DecisionReceiptGetRequest {
+                request: medulla_decision_types::decision::jobs::DecisionReceiptGetRequest {
                     tenant_id: "foreign".into(),
                     receipt_digest: receipt.receipt_digest.clone(),
                 },
@@ -724,7 +741,7 @@ async fn exploration_on_a_security_question_is_refused_by_the_served_path() {
             None,
         )
         .unwrap();
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy.cold_start = ColdStart::Explore {
         budget: ExplorationBudget {
             fraction: rational(1, 2),
@@ -922,7 +939,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
     assert_eq!(values.len(), 4, "two visible rows, two features");
     assert!(matches!(
         record.candidate_source,
-        medulla_decision_types::decision::CandidateSourceRecord::Graph { .. }
+        medulla_decision_types::decision::record::CandidateSourceRecord::Graph { .. }
     ));
 
     let ranked = medulla_query_types::wire::Plan::new(vec![
@@ -957,7 +974,7 @@ async fn graph_sourced_records_are_principal_scoped_not_tenant_scoped_on_log_rea
     let record = graph_log_record(&h).await;
     assert!(matches!(
         record.candidate_source,
-        medulla_decision_types::decision::CandidateSourceRecord::Graph { .. }
+        medulla_decision_types::decision::record::CandidateSourceRecord::Graph { .. }
     ));
     let commit = DecisionLogOp::Commit {
         record: Box::new(record.clone()),

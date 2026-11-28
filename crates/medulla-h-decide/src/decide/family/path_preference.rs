@@ -16,31 +16,43 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_rank::rank::path_success::rank_paths;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::jobs::RecordWindow;
-use medulla_decision_types::decision::path_success::{
-    PathPreferenceRule, SuccessRateEvidence, PATH_OUTCOME_MISSING, PATH_UNMEASURED,
-    PATH_WINDOW_STALE,
-};
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
-};
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue,
-    ResolutionKind,
-};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_decision_statistical_types::decision::path_success::PathPreferenceRule,
+    medulla_decision_statistical_types::decision::path_success::SuccessRateEvidence,
+    medulla_decision_statistical_types::decision::path_success::PATH_OUTCOME_MISSING,
+    medulla_decision_statistical_types::decision::path_success::PATH_UNMEASURED,
+    medulla_decision_statistical_types::decision::path_success::PATH_WINDOW_STALE,
+};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+};
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
 use crate::decide::stat_log::{aggregate_log, recent_labels, LogReader};
 use crate::decide::stat_support::refusal;
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 use super::support::{advisory, invalid};
 use super::DecisionFamily;

@@ -12,7 +12,7 @@ name = "medulla_sdlc"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-types = { path = "../medulla-types" }
 

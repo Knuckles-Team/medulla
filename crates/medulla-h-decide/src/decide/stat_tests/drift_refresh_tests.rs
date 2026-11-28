@@ -2,26 +2,34 @@
 //! (MEDULLA-DECISION-ENGINE-R174.8): only the shard whose vocabulary grew
 //! fires, and the refresh plan names exactly that shard's region.
 
+use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::drift::{DriftMonitor, DriftThresholds, Moments, VocabBloom};
-use medulla_decision_types::decision::statistical::retrieval_drift::{
-    DriftKind, RefreshPlan, RefreshPriority, RegionRef,
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftKind,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPlan,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RefreshPriority,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::RegionRef,
 };
-use medulla_decision_types::decision::DecisionPolicy;
 
 use super::super::drift_registry::install;
 use super::retrieval_tests::learn;
 use super::*;
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
-use medulla_decision_types::decision::statistical::retrieval_drift::{
-    drift_refresh_receipt_node_id, shard_generation_node_id, DriftEvaluated, DriftPolicyNode,
-    DriftRefreshed, ScheduledRefresh, ShardSwap,
-};
 use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_retrieval::discover_signals::{discover_signals, WrittenVector};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_work_types::native_control::{CapacityCellUpdateRequest, NativeControlSchemaVersion};
+use {
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::drift_refresh_receipt_node_id,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::shard_generation_node_id,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftEvaluated,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftPolicyNode,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::DriftRefreshed,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::ScheduledRefresh,
+    medulla_decision_policy_types::decision::statistical::retrieval_drift::ShardSwap,
+};
 
 const DIM: usize = 3;
 

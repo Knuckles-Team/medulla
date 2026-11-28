@@ -18,6 +18,8 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 # The capability wire name in placement reads the serde spelling.
 serde_json = "1.0"
 tracing = "0.1"
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 
@@ -26,6 +28,8 @@ solve = []
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }
+medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 criterion = "0.8"
 rand = "0.8"

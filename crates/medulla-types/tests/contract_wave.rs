@@ -25,15 +25,18 @@ use medulla_agent_types::{agent_library::refuse_withdrawn, agent_library::AgentL
 use medulla_catalog_types::catalog_fixtures::contract_control as control;
 use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
 use medulla_catalog_types::connector_pack::digest as pack_digests;
+use medulla_decision_policy_types::decision_fixtures::contract_solver as solver;
 use medulla_decision_types::decision_fixtures::contract_decision as decision;
-use medulla_decision_types::decision_fixtures::contract_solver as solver;
 use medulla_decision_types::decision_fixtures::contract_statistical as statistical;
-use medulla_decision_types::{
-    decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
-    decision::UnitRationalWire, decision::MAX_UNIT_RATIONAL_DENOMINATOR,
-};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
+use {
+    medulla_decision_statistical_types::decision::DecisionErrorCode,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_statistical_types::decision::MAX_UNIT_RATIONAL_DENOMINATOR,
+    medulla_decision_types::decision::record::DecisionRecord,
+};
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -148,7 +151,7 @@ fn a_newer_record_version_is_a_typed_refusal() {
     assert!(
         matches!(
             acted,
-            medulla_decision_types::decision::StatisticalOutcome::Acted { .. }
+            medulla_decision_types::decision::statistical::StatisticalOutcome::Acted { .. }
         ),
         "the first statistical sample must be the acted one"
     );
@@ -200,8 +203,10 @@ fn a_bounded_collection_refuses_one_item_past_its_maximum() {
         .expect("tasks is an array")
         .push(serde_json::Value::String("eg:task/overflow".to_string()));
     assert!(
-        serde_json::from_value::<medulla_decision_types::decision::AssemblyRequest>(encoded)
-            .is_err(),
+        serde_json::from_value::<medulla_decision_types::decision::request::AssemblyRequest>(
+            encoded
+        )
+        .is_err(),
         "the wire decoder must refuse a collection past its bound"
     );
 }
@@ -399,7 +404,9 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
     );
     assert_ne!(
         policy_under_record_domain,
-        digest::policy_digest(&decision::policy()),
+        medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(
+            &decision::policy()
+        ),
         "two domains must not produce the same digest for one value"
     );
 }

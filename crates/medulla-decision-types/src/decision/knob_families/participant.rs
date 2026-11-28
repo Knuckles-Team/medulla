@@ -1,6 +1,10 @@
 //! The `participant.*` knobs (MEDULLA-DECISION-ENGINE-R179.8).
 
-use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
+use {
+    medulla_decision_statistical_types::decision::knobs::KnobSafety,
+    medulla_decision_statistical_types::decision::knobs::KnobSpec,
+    medulla_decision_statistical_types::decision::knobs::KnobValue,
+};
 
 /// Every `participant.*` knob, each `Tunable` unless stated.
 pub const KNOBS: &[KnobSpec] = &[
@@ -70,7 +74,7 @@ pub fn default_u64(name: &str) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::decision::knobs::KnobSafety;
+    use medulla_decision_statistical_types::decision::knobs::KnobSafety;
 
     /// Verifies MEDULLA-DECISION-ENGINE-R179.8: Participant memory knobs.
     // spec: MEDULLA-DECISION-ENGINE-R179.8
@@ -80,11 +84,11 @@ mod tests {
         // The participant memory tables of R179.8 (memory, participant,
         // profile) and the topology caps; the full REGISTRY holds other
         // families' Fixed knobs, which R179.8 does not govern.
-        let tables: [&[crate::decision::knobs::KnobSpec]; 4] = [
-            super::super::memory::KNOBS,
+        let tables: [&[medulla_decision_statistical_types::decision::knobs::KnobSpec]; 4] = [
+            medulla_decision_policy_types::decision::knob_families::memory::KNOBS,
             super::KNOBS,
-            super::super::profile::KNOBS,
-            super::super::topology::KNOBS,
+            medulla_decision_statistical_types::decision::knob_families::profile::KNOBS,
+            medulla_decision_statistical_types::decision::knob_families::topology::KNOBS,
         ];
         for spec in tables.iter().flat_map(|family| family.iter()) {
             assert!(spec.admits(&spec.default), "{} default", spec.name);

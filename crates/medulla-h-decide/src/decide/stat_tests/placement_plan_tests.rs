@@ -1,15 +1,19 @@
 //! Served `Decide` of kind `PlacementPlan` (MEDULLA-PLACEMENT-R700.3): services
 //! placed onto the `placement:Host` budgets of a graph, sealed with the plan.
 
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::placement::HeavyCapability;
 use medulla_decision_types::decision::statistical::placement_plan::{
     PlacementPlanQuestion, PlacementPlanRead, PlacementPlanRequestBody, ServiceSpec,
     PLACEMENT_PLAN_OPTION, PLACEMENT_PLAN_PARAM,
 };
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_types::decision::record::AbstainReason,
+    medulla_decision_types::decision::record::ResolutionKind,
+};
 
 use super::*;
 

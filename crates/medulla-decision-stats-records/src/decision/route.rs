@@ -8,7 +8,7 @@
 //! pinned decision policy.
 
 use super::refusal::{Refusal, RefusalResult};
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 
 /// The classification that marks an option as the fast-path route.
 pub const FAST_PATH_CLASS: &str = "eg:route/fast-path";

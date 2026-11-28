@@ -16,19 +16,29 @@ use medulla_agent_types::agent_component::{AgentComponentEntry, AgentComponentKi
 use medulla_decision_outcome_types::decision::red_team::{
     decide_probe_verdict, select_scorers, ProbeRefusal, RedTeamPolicy, ScorerResult,
 };
-use medulla_decision_types::decision::record::outcome::DecisionRefusal;
-use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedValue,
-};
-use medulla_decision_types::decision::trajectory_verdict::ProbeVerdict;
-use medulla_decision_types::decision::{
-    DecisionPolicy, LibraryCandidateScope, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue,
-    ResolutionKind,
-};
+use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
+use medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_statistical_types::decision::trajectory_verdict::ProbeVerdict;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_types::decision::record::ResolutionKind,
+    medulla_decision_types::decision::request::LibraryCandidateScope,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::ScoredOption,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 use crate::decide::candidates::library_candidates;
 use crate::decide::stat_executor::{

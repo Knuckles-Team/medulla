@@ -1,221 +1,32 @@
-//! The Decide layer's wire contract (RF-ADR-010).
-//!
-//! Four methods share this vocabulary: `AgentAssemble` proves an agent graph
-//! out of a tenant's own component library, `DecisionCommit` makes one of its
-//! records durable, `Decide` answers a statistical question evaluate-only, and
-//! `DecisionFit`/`DecisionEval` are the admin jobs that produce and qualify a
-//! calibrated head.
-//!
-//! Three properties hold across all of them:
-//!
-//! * **A conclusion carries its premises.** Every record names the facts it
-//!   used, the class of evidence each one is, and where it came from, so it is
-//!   classified by its WEAKEST premise instead of by its own confidence.
-//! * **Abstention is a first-class answer.** There is no arm that returns a
-//!   guess shaped like a proof. An engine that cannot decide says what it could
-//!   not resolve.
-//! * **Nothing here is a float, and nothing reads a clock.** Times are recorded
-//!   and never read by the math, so replaying a record anywhere reproduces its
-//!   digest exactly.
-//!
-//! Every algorithm -- derivation, solving, verification, execution, fitting --
-//! lives above this module. These are data types and their bounds.
-
 pub mod a2a_route;
-pub mod analyst_synthesis;
-pub mod answer_ranking_request;
-pub mod approval;
-pub mod autonomy;
-pub mod branch_fusion;
-pub mod capability_designation;
-pub mod capability_rank;
-pub mod changeset_review;
-pub mod checker_feedback;
 pub mod code_registry;
-pub mod codes;
-pub mod coding_agent;
-pub mod command_config;
-pub mod comparative_analysis;
 pub mod context_bundle;
 pub mod context_package;
 pub mod context_replacement;
 pub mod context_source;
-pub mod council;
-pub mod curriculum;
-pub mod defect_triage;
-pub mod delegation;
-pub mod delegation_quality;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod digest;
-pub mod entity_resolution;
-pub mod entry_types;
-pub mod errors;
-pub mod evidence_stream;
-pub mod execution_part;
-pub mod feature_match;
-pub mod field_shielding;
-pub mod graph_intake;
 pub mod harness_contrast;
 pub mod held_item;
-pub mod held_out;
-pub mod importance_penalty;
-pub mod indexless_retrieval;
-pub mod ingest_shortfall;
-pub mod ingestion_admission;
 pub mod instruction_disclosure;
-pub mod item_recommendation;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod jobs;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod knob_families;
-pub mod knobs;
-pub mod lifecycle;
-pub mod limit_types;
-pub mod load_set;
 pub mod load_set_knobs;
 pub mod local_certification;
-pub mod memory_benchmark;
-pub mod memory_rewrite;
-pub mod merge_arming;
-pub mod model_capacity;
-pub mod numeric;
 pub mod package_validation;
-pub mod paper_admission;
-pub mod path_success;
-pub mod planner_cost_head;
-pub mod planning_admission;
-pub mod playbook;
-pub mod policy;
-pub mod population;
 pub mod primitive;
-pub mod process_decision;
-pub mod process_plan;
-pub mod process_remediation;
 pub mod program;
-pub mod program_store;
-pub mod promotion_answer;
-pub mod promotion_tier;
 pub mod rapid_r015;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod record;
-pub mod recruit;
-pub mod recursive_trace;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod replay;
-pub mod reputation;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod request;
-pub mod research_voi;
-pub mod resolve_conflict;
-pub mod revert_or_fix_forward;
-pub mod reward;
-pub mod run_adjustment;
-pub mod run_governance;
-pub mod safety;
-pub mod serving_technique;
-pub mod size;
-pub mod skill_evolution;
-pub mod skill_upgrade_request;
-pub mod skill_workflow;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod statistical;
-pub mod sub_call;
-pub mod task_plan;
-pub mod team_coordination;
-pub mod temporal_query;
-pub mod thought_search;
-pub mod tool_action;
-pub mod tool_necessity;
 pub mod tool_relevance;
 pub mod trace_fix_binding;
-pub mod trajectory_ladder;
-pub mod trajectory_verdict;
-pub mod transfer;
 pub mod usage;
-pub mod usage_guidance;
-pub mod verifier_case_machine;
-pub mod verifier_receipt;
-
-/// Format identity (RF-ADR-006) of an assembly decision record.
-pub const DECISION_RECORD_SCHEMA_VERSION: u16 = 1;
-/// Format identity of a statistical decision record. It starts at 2 because a
-/// statistical record is the SECOND shape of the same durable record family,
-/// not a second family.
-pub const STATISTICAL_DECISION_RECORD_SCHEMA_VERSION: u16 = 2;
-/// Format identity of an assembly record whose request asked for a topology
-/// (SWARM-TOPOLOGY-DECIDE-DESIGN §6.5). A v1 record keeps its exact bytes and
-/// digest: every topology field is absent from it, never serialized as null.
-pub const TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION: u16 = 3;
-/// Format identity of a decision policy body.
-pub const DECISION_POLICY_SCHEMA_VERSION: u16 = 1;
-/// Format identity of a durable decision-job row.
-pub const DECISION_JOB_SCHEMA_VERSION: u16 = 1;
-
-/// Largest encoded decision record that may be committed.
-pub const MAX_DECISION_RECORD_BYTES: usize = 64 * 1024;
-/// Largest candidate set one assembly may consider.
-pub const MAX_ASSEMBLY_CANDIDATES: usize = 64;
-/// Largest required-capability set one assembly request may carry.
-pub const MAX_ASSEMBLY_REQUIRED_CAPABILITIES: usize = 32;
-/// Largest number of graph templates one assembly may enumerate.
-pub const MAX_ASSEMBLY_TEMPLATES: usize = 8;
-/// Largest number of slots one template may declare.
-pub const MAX_TEMPLATE_SLOTS: usize = 6;
-
-pub use errors::DecisionErrorCode;
-pub use importance_penalty::{FeatureImportance, ImportanceFeatures, PenaltyObjective};
-pub use ingestion_admission::ContentClass;
-pub use jobs::{
-    DecisionEvalOp, DecisionEvalReceipt, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobKind, DecisionJobOutcome, DecisionJobOutput, DecisionJobRecord,
-    DecisionJobStatusRequest, DecisionReceiptGetRequest, DecisionReceiptListRequest,
-    DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
-    DecisionReceiptTimelineRequest, EvalCandidate, GoldGuarantee, GoldGuaranteeEvidence, HeadKind,
-    LabelRegime, OpeEstimateView, OpeEstimatorKind, OptimiserSpec, RecordWindow,
-};
-pub use numeric::{
-    QuantScaleTag, QuantisedValue, UnitRationalFields, UnitRationalWire,
-    MAX_UNIT_RATIONAL_DENOMINATOR,
-};
-pub use policy::{
-    ColdStart, DecisionPolicy, ExplorationBudget, ObjectiveLevelKind, ObjectiveOrder,
-    StatisticalPolicy, TraceFidelityLevel, UnknownCostRule, WeightedLevel,
-};
-pub use record::{
-    AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation,
-    DecisionInputs, DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass,
-    DerivationEdge, EdgeSource, Elimination, PremiseClass, PremiseProvenance, PremiseRef,
-    PromptSelection, ResolutionKind, SelectedPromptFacts, SlotAssignment, SolverIdentity,
-    TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope, Violation, WhyNot,
-};
-pub use replay::{
-    EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
-    MAX_IC_DECAY_LAGS,
-};
-pub use request::{
-    AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
-    ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult,
-    LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, PromptAssignment, RenderedPrompt,
-    SolverBudget, SourceSlotMap, StepContract, StepShield, TopologyCommitEvidence,
-    TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION, DECISION_COMMIT_RESULT_SCHEMA_VERSION,
-    DECISION_COMPONENT_ID_PREFIX,
-};
-pub use statistical::{
-    CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,
-    DecisionBatch, ExplorationRecord, FeatureMatrixRef, QuestionKind, QuestionSafety, RiskMethod,
-    RiskStatement, ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
-    StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
-};
-
-/// The columns of the `decisions` relation a caller's decision log exposes, in order
-/// (MEDULLA-FEDERATED-QUERY-R058.4.7.2.1). `medulla-h-decide` builds the relation from its
-/// own column table and a unit test there pins the two lists equal, so natural-language
-/// grounding of `DECISIONS WHERE <column>` reads the schema the log actually serves.
-pub const DECISION_LOG_COLUMNS: &[&str] = &[
-    "record_id",
-    "question_id",
-    "question_kind",
-    "safety",
-    "source",
-    "outcome",
-    "option_id",
-    "resolution_kind",
-    "evidence_class",
-    "policy_digest",
-    "committed_by",
-    "created_at_ms",
-    "committed_at_ms",
-];

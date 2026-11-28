@@ -31,14 +31,16 @@ pub enum CertificateRefusal {
     BranchBudgetExceeded { branch_count: u64, budget: u64 },
 }
 
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for CertificateRefusal {
+impl medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal
+    for CertificateRefusal
+{
     fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::ModelDigestMismatch { .. } => {
-                medulla_decision_types::decision::codes::CERTIFICATE_MODEL_DIGEST_MISMATCH
+                medulla_decision_statistical_types::decision::codes::CERTIFICATE_MODEL_DIGEST_MISMATCH
             }
             Self::BranchBudgetExceeded { .. } => {
-                medulla_decision_types::decision::codes::CERTIFICATE_BRANCH_BUDGET_EXCEEDED
+                medulla_decision_statistical_types::decision::codes::CERTIFICATE_BRANCH_BUDGET_EXCEEDED
             }
         }
     }

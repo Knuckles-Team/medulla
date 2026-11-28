@@ -9,22 +9,23 @@
 //! [`MAX_CALIBRATION_KNOTS`] knots by pooling the closest neighbours. Its pointer
 //! is the champion of the `rerank_calibration` revision subject (R805).
 
+use medulla_decision_policy_types::decision::held_out::RevisionSubject;
+use medulla_decision_statistical_types::decision::codes::CALIBRATION_TOO_FEW_PAIRS;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_stats_records::decision::retrieval::Verdict;
-use medulla_decision_types::decision::codes::CALIBRATION_TOO_FEW_PAIRS;
-use medulla_decision_types::decision::held_out::RevisionSubject;
-use medulla_decision_types::decision::statistical::body::{
-    canonical_body_bytes, content_digest_of,
-};
 use medulla_decision_types::decision::statistical::retrieval_calibration::{
     CalibrationCurve, CalibrationFitRequest, CalibrationFitted, CalibrationKnot,
     CalibrationReceipt, CALIBRATION_SCHEMA_VERSION, MAX_CALIBRATION_KNOTS, PPM,
 };
-use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{
     calibration_key, encode_artifact, read_calibration,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;

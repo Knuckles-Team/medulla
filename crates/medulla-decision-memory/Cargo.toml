@@ -14,11 +14,11 @@ path = "src/lib.rs"
 [dependencies]
 arc-swap = "1"
 medulla-ann = { path = "../medulla-ann" }
-medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 parking_lot = "0.12"
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-decision-policy-types = { path = "../medulla-decision-policy-types", features = ["test-support"] }

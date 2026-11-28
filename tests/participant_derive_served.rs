@@ -12,7 +12,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_decision_types::claims::ObserverRef;
+use medulla_decision_statistical_types::claims::ObserverRef;
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_server_api::knob_config;
 use medulla_server_ops::api::ingest::jobs_seam;

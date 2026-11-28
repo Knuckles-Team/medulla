@@ -11,13 +11,9 @@
 //! bisection line search in [`crate::detkernel::optimise`]. No randomness, no
 //! parallelism, fixed sweep order: the same items produce the same bits.
 
+use medulla_decision_program_types::decision::statistical::body::content_digest_of;
+use medulla_decision_statistical_types::decision::StatisticalPolicy;
 use medulla_decision_types::decision::jobs::OptimiserSpec;
-use medulla_decision_types::decision::statistical::body::content_digest_of;
-use medulla_decision_types::decision::statistical::{CalibrationMethod, StatisticalErrorCode};
-use medulla_decision_types::decision::StatisticalPolicy;
-use medulla_decision_types::{
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-};
 use medulla_decision_types::{
     decision::statistical::head::DecisionHeadBody,
     decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
@@ -25,6 +21,14 @@ use medulla_decision_types::{
     decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
 };
 use medulla_query_types::solve_scalar::digest_text;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::CalibrationMethod,
+};
 
 use super::fit_calibrate::{calibrate, calibrate_scorer, checked_method};
 use super::quant::{q32, raw_value, value_of};
@@ -351,11 +355,17 @@ pub fn fit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::statistical::dataset::{
-        ItemLabel, LabelSource, LABELLED_DATASET_SCHEMA_VERSION,
-    };
-    use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue, UnitRationalWire};
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+        medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+        medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+    };
+    use {
+        medulla_decision_statistical_types::decision::QuantScaleTag,
+        medulla_decision_statistical_types::decision::QuantisedValue,
+        medulla_decision_statistical_types::decision::UnitRationalWire,
+    };
 
     use medulla_decision_stats_records::decision::importance_penalty::ImportancePenalty;
 
@@ -375,7 +385,8 @@ mod tests {
                 scale: QuantScaleTag::Q32,
                 value: 10 << 32,
             },
-            min_outcome_fidelity: medulla_decision_types::decision::TraceFidelityLevel::ToolCalls,
+            min_outcome_fidelity:
+                medulla_decision_statistical_types::decision::TraceFidelityLevel::ToolCalls,
             tenant_public_features: false,
             audit_sample: rational(1, 20),
             approved_commit_principals: bv(vec!["approved".to_string()]),

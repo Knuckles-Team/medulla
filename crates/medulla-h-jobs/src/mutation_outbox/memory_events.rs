@@ -11,8 +11,8 @@
 
 use std::sync::Arc;
 
+use medulla_decision_statistical_types::memory_events::MEMORY_EVENT_TOPICS;
 use medulla_decision_types::decision::knob_families::participant::default_u64;
-use medulla_decision_types::memory_events::MEMORY_EVENT_TOPICS;
 use medulla_mutation_types::mutation_outbox::{OutboxAcked, OutboxPulled, OutboxTarget};
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_server_api::api::persistence::PersistenceBackend;

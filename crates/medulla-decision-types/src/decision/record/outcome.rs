@@ -6,10 +6,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::premise::Violation;
-use crate::solve::Certificate;
-use crate::solve::ObjectiveValue;
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_decision_policy_types::solve::Certificate;
+use medulla_decision_statistical_types::decision::record::premise::Violation;
+use medulla_decision_statistical_types::solve::objective::ObjectiveValue;
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
 
@@ -62,7 +62,8 @@ pub enum AbstainReason {
     },
     /// A refusal from one family's registered table, or a shared request code.
     Family {
-        family: crate::decision::statistical::QuestionKind,
+        family:
+            medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
         #[serde(deserialize_with = "deserialize_registered")]
         code: RefusalCode,
         detail: String,
@@ -96,7 +97,7 @@ pub enum RefusalSurface {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RefusalOrigin {
     /// The `Decide` path, with the request's question kind.
-    Decide(crate::decision::statistical::QuestionKind),
+    Decide(medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind),
     /// A decision-plane method other than `Decide`.
     Surface(RefusalSurface),
 }
@@ -106,9 +107,7 @@ impl RefusalOrigin {
     pub const ASSEMBLE: Self = Self::Surface(RefusalSurface::Assemble);
 }
 
-pub use refusal::DecisionRefusal;
-
-mod refusal;
+pub use medulla_decision_statistical_types::decision::record::outcome::refusal::DecisionRefusal;
 
 use medulla_types::refusal_code::RefusalCode;
 
@@ -149,7 +148,9 @@ impl AbstainReason {
             Self::RecordTooLarge { .. } => 7,
             Self::PolicyLoosening { .. } => 8,
             Self::InsufficientConfidence => 9,
-            Self::LimitBreach { .. } => return crate::decision::limit_types::LIMIT_BREACH,
+            Self::LimitBreach { .. } => {
+                return medulla_decision_statistical_types::decision::limit_types::LIMIT_BREACH
+            }
             Self::Family { code, .. } | Self::Surface { code, .. } => return *code,
         };
         FIXED_CODES[index]
@@ -218,8 +219,8 @@ pub enum DecisionOutcome {
 mod tests {
     use super::*;
     use crate::decision::code_registry;
-    use crate::decision::codes;
-    use crate::decision::errors::DecisionErrorCode;
+    use medulla_decision_statistical_types::decision::codes;
+    use medulla_decision_statistical_types::decision::errors::DecisionErrorCode;
 
     // spec: MEDULLA-DECISION-ENGINE-R010.100.1, MEDULLA-DECISION-ENGINE-R010.100.4
     #[test]
@@ -234,12 +235,14 @@ mod tests {
         all.extend(
             crate::decision::usage::REFUSALS
                 .iter()
-                .chain(crate::decision::evidence_stream::REFUSALS.iter())
-                .chain(crate::decision::reputation::REFUSALS.iter())
-                .chain(crate::decision::transfer::REFUSALS.iter())
-                .chain(crate::decision::importance_penalty::REFUSALS.iter())
+                .chain(medulla_decision_policy_types::decision::evidence_stream::REFUSALS.iter())
+                .chain(medulla_decision_policy_types::decision::reputation::REFUSALS.iter())
+                .chain(medulla_decision_policy_types::decision::transfer::REFUSALS.iter())
+                .chain(medulla_decision_policy_types::decision::importance_penalty::REFUSALS.iter())
                 .chain(medulla_agent_types::agent_component::red_team::REFUSALS.iter())
-                .chain(crate::decision::memory_rewrite::REFUSALS.iter())
+                .chain(
+                    medulla_decision_statistical_types::decision::memory_rewrite::REFUSALS.iter(),
+                )
                 .chain(crate::decision::statistical::retrieval_generation::REFUSALS.iter())
                 .map(|code| code.as_str()),
         );
@@ -273,7 +276,7 @@ mod tests {
             "INSUFFICIENT_CONFIDENCE"
         );
         let family = AbstainReason::Family {
-            family: crate::decision::statistical::QuestionKind::Route,
+            family: medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::Route,
             code: codes::PARAMETER_INVALID,
             detail: "column.name".into(),
         };
@@ -310,7 +313,7 @@ mod tests {
         };
         use crate::decision::rapid_r015::HeadKindRefusal;
         use crate::decision::statistical::tool_subset::ToolSubsetRefusal;
-        use crate::decision::statistical::QuestionKind;
+        use medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind;
 
         // Every folded code is a registered wire code, and resolves back.
         for code in codes::FOLDED {

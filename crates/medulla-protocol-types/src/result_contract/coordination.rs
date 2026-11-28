@@ -19,8 +19,8 @@ pub use statechart_instance_machine::*;
 pub use work_items::*;
 
 use medulla_agent_types::delegation::KgDelegateResult;
+use medulla_decision_types::decision::jobs::DecisionJobRecord;
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
-use medulla_decision_types::decision::DecisionJobRecord;
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogCommitted,
     decision::statistical::log::DecisionLogCompacted, decision::statistical::log::DecisionLogEntry,
@@ -136,7 +136,7 @@ method_results! {
     GetEffectReceipt(GetEffectReceipt) => Raw<Option<medulla_work_types::work_item_read::EffectReceipt>>;
     GetAdmittedRequest(GetAdmittedRequest) => Raw<Option<medulla_work_types::work_item_read::AdmittedRequestRecord>>;
     // MEDULLA-DECISION-ENGINE-R133.7.3: one authorized page of a stored recursive trace.
-    TraceCritique(TraceCritique) => Raw<medulla_decision_types::decision::recursive_trace::TraceCritiquePage>;
+    TraceCritique(TraceCritique) => Raw<medulla_decision_program_types::decision::recursive_trace::TraceCritiquePage>;
     ListWorkItems(ListWorkItems) => Raw<WorkItemPage>;
     // graph-os MEDULLA-3: `null` when the WorkItem is not visible or has no bundle.
     GetWorkItemOutcome(GetWorkItemOutcome) => Raw<Option<WorkItemOutcomeView>>;
@@ -234,14 +234,14 @@ method_results! {
     DecisionEvalCertifyLocalSkill(DecisionEval / "certify_local_skill") => Raw<DecisionJobRecord>;
     DecisionEvalHeldItemCritique(DecisionEval / "held_item_critique") => Raw<medulla_decision_types::decision::held_item::HeldItemCritiqueRecorded>;
     DecisionEvalCertification(DecisionEval / "certification") => Raw<medulla_decision_types::decision::local_certification::CertificationReadAnswer>;
-    DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::DecisionEvalReceipt>>;
-    DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::DecisionReceiptPage>;
-    DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_decision_types::decision::DecisionReceiptTimelinePage>;
-    DecisionEvalSkillEval(DecisionEval / "skill_eval") => Raw<medulla_decision_types::skill_eval::SkillEvalOutcome>;
-    DecisionEvalSkillEvalCaseAdd(DecisionEval / "skill_eval_case_add") => Raw<medulla_decision_types::skill_eval::SkillEvalCaseAdded>;
-    DecisionEvalSkillEvalReport(DecisionEval / "skill_eval_report") => Raw<medulla_decision_types::skill_eval::SkillEvalReportAnswer>;
-    DecisionEvalSkillEvalCalibrate(DecisionEval / "skill_eval_calibrate") => Raw<medulla_decision_types::skill_eval::SkillEvalCalibrated>;
-    DecisionEvalDelegationQuality(DecisionEval / "delegation_quality") => Raw<medulla_decision_types::decision::delegation_quality::DelegationQualityOutcome>;
+    DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::jobs::DecisionEvalReceipt>>;
+    DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::jobs::DecisionReceiptPage>;
+    DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_decision_types::decision::jobs::DecisionReceiptTimelinePage>;
+    DecisionEvalSkillEval(DecisionEval / "skill_eval") => Raw<medulla_decision_policy_types::skill_eval::SkillEvalOutcome>;
+    DecisionEvalSkillEvalCaseAdd(DecisionEval / "skill_eval_case_add") => Raw<medulla_decision_policy_types::skill_eval::SkillEvalCaseAdded>;
+    DecisionEvalSkillEvalReport(DecisionEval / "skill_eval_report") => Raw<medulla_decision_policy_types::skill_eval::SkillEvalReportAnswer>;
+    DecisionEvalSkillEvalCalibrate(DecisionEval / "skill_eval_calibrate") => Raw<medulla_decision_policy_types::skill_eval::SkillEvalCalibrated>;
+    DecisionEvalDelegationQuality(DecisionEval / "delegation_quality") => Raw<medulla_decision_policy_types::decision::delegation_quality::DelegationQualityOutcome>;
     DecisionLogCommit(DecisionLog / "commit") => Raw<DecisionLogCommitted>;
     DecisionLogEvaluate(DecisionLog / "evaluate") => Raw<StoredEvaluation>;
     DecisionLogGet(DecisionLog / "get") => Raw<Option<DecisionLogEntry>>;
@@ -255,78 +255,78 @@ method_results! {
     DecisionLogApproveRule(DecisionLog / "approve_rule") => Raw<medulla_agent_types::agent_guardrail::RuleVersion>;
     DecisionLogRevokeRule(DecisionLog / "revoke_rule") => Raw<medulla_agent_types::agent_guardrail::RuleVersion>;
     DecisionLogPolicyActivation(DecisionLog / "policy_activation") => Raw<medulla_types::policy_document::PolicyActivated>;
-    DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackOutcome>;
-    DecisionLogRunRecord(DecisionLog / "run_record") => Raw<medulla_decision_types::decision::program_store::RunRecordStored>;
-    DecisionLogCapabilityOutcome(DecisionLog / "capability_outcome") => Raw<medulla_decision_types::decision::capability_designation::CapabilityOutcomeApplied>;
+    DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_program_types::decision::statistical::writeback::WritebackOutcome>;
+    DecisionLogRunRecord(DecisionLog / "run_record") => Raw<medulla_decision_program_types::decision::program_store::RunRecordStored>;
+    DecisionLogCapabilityOutcome(DecisionLog / "capability_outcome") => Raw<medulla_decision_policy_types::decision::capability_designation::CapabilityOutcomeApplied>;
     DecisionLogGenerationSpace(DecisionLog / "generation_space") => Raw<medulla_decision_types::decision::statistical::retrieval_generation::GenerationSpaceRead>;
-    DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackAuditRows>;
-    DecisionLogFeedbackContinuation(DecisionLog / "feedback_continuation") => Raw<medulla_decision_types::decision::checker_feedback::ContinuationRead>;
+    DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_program_types::decision::statistical::writeback::WritebackAuditRows>;
+    DecisionLogFeedbackContinuation(DecisionLog / "feedback_continuation") => Raw<medulla_decision_program_types::decision::checker_feedback::ContinuationRead>;
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
     DecisionLogPointer(DecisionLog / "pointer") => Raw<medulla_decision_outcome_types::decision::promotion::ChampionPointer>;
-    DecisionLogLifecycleRecord(DecisionLog / "lifecycle_record") => Raw<medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored>;
-    DecisionLogLifecycleRecords(DecisionLog / "lifecycle_records") => Raw<medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordsFound>;
+    DecisionLogLifecycleRecord(DecisionLog / "lifecycle_record") => Raw<medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordStored>;
+    DecisionLogLifecycleRecords(DecisionLog / "lifecycle_records") => Raw<medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordsFound>;
     DecisionLogList(DecisionLog / "list") => Raw<medulla_decision_types::decision::statistical::log::DecisionLogList>;
     DecisionLogProvenance(DecisionLog / "provenance") => Raw<medulla_decision_types::decision::statistical::log::DecisionProvenance>;
     DecisionLogWhyNot(DecisionLog / "why_not") => Raw<medulla_decision_types::decision::statistical::log::DecisionWhyNot>;
-    FeatureLedgerOpen(FeatureLedger / "open") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
-    FeatureLedgerPlan(FeatureLedger / "plan") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
-    FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
-    FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
-    BeliefRevise(BeliefRevise) => Raw<medulla_decision_types::belief_revision::BeliefPassResult>;
+    FeatureLedgerOpen(FeatureLedger / "open") => Raw<medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerPlan(FeatureLedger / "plan") => Raw<medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView>;
+    FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_statistical_types::decision::feature_match::FeatureLedgerView>;
+    BeliefRevise(BeliefRevise) => Raw<medulla_decision_statistical_types::belief_revision::BeliefPassResult>;
     PublishSkillPackage(PublishSkillPackage) => Raw<medulla_decision_types::decision::package_validation::PublicationReceipt>;
     // MEDULLA-DECISION-ENGINE-R702.3: a recorded correction, its nearest neighbours and a read by receipt.
-    CorrectionRecordRun(CorrectionRecord / "record") => Raw<medulla_decision_types::correction::CorrectionRecorded>;
-    CorrectionRecordNearest(CorrectionRecord / "nearest") => Raw<medulla_decision_types::correction::CorrectionNearest>;
-    CorrectionRecordGet(CorrectionRecord / "get") => Raw<medulla_decision_types::correction::CorrectionRead>;
+    CorrectionRecordRun(CorrectionRecord / "record") => Raw<medulla_decision_policy_types::correction::CorrectionRecorded>;
+    CorrectionRecordNearest(CorrectionRecord / "nearest") => Raw<medulla_decision_policy_types::correction::CorrectionNearest>;
+    CorrectionRecordGet(CorrectionRecord / "get") => Raw<medulla_decision_policy_types::correction::CorrectionRead>;
     // MEDULLA-DECISION-ENGINE-R702.8: the independent outcomes per rule candidate.
-    CorrectionRecordOutcomes(CorrectionRecord / "outcomes") => Raw<medulla_decision_types::correction::CorrectionOutcomes>;
+    CorrectionRecordOutcomes(CorrectionRecord / "outcomes") => Raw<medulla_decision_policy_types::correction::CorrectionOutcomes>;
     // MEDULLA-DECISION-ENGINE-R701.3: failure-pattern ingest, mark-addressed and get.
-    FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_types::failure_patterns::FailureIngestResult>;
-    FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
-    FailureGet(FailureIngest / "get") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
+    FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_statistical_types::failure_patterns::FailureIngestResult>;
+    FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_statistical_types::failure_patterns::GapTopic>;
+    FailureGet(FailureIngest / "get") => Raw<medulla_decision_statistical_types::failure_patterns::GapTopic>;
     // MEDULLA-DECISION-ENGINE-R708.3: knowledge flag raise, resolve, get and list.
-    KnowledgeFlagRaise(KnowledgeFlag / "raise") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt>;
-    KnowledgeFlagResolve(KnowledgeFlag / "resolve") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt>;
-    KnowledgeFlagGet(KnowledgeFlag / "get") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagView>;
-    KnowledgeFlagListFlags(KnowledgeFlag / "list") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagList>;
+    KnowledgeFlagRaise(KnowledgeFlag / "raise") => Raw<medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagReceipt>;
+    KnowledgeFlagResolve(KnowledgeFlag / "resolve") => Raw<medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagReceipt>;
+    KnowledgeFlagGet(KnowledgeFlag / "get") => Raw<medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagView>;
+    KnowledgeFlagListFlags(KnowledgeFlag / "list") => Raw<medulla_decision_statistical_types::knowledge_flag::KnowledgeFlagList>;
     // MEDULLA-DECISION-ENGINE-R709.3: knowledge curation inputs, propose, status and metrics.
-    KnowledgeCurationInputs(KnowledgeCuration / "inputs") => Raw<medulla_decision_types::knowledge_curation::CurationInputs>;
-    KnowledgeCurationPropose(KnowledgeCuration / "propose") => Raw<medulla_decision_types::knowledge_curation::CurationAdmitted>;
-    KnowledgeCurationStatus(KnowledgeCuration / "status") => Raw<medulla_decision_types::knowledge_curation::CurationStatus>;
-    KnowledgeCurationMetrics(KnowledgeCuration / "metrics") => Raw<medulla_decision_types::knowledge_curation::LoopMetrics>;
+    KnowledgeCurationInputs(KnowledgeCuration / "inputs") => Raw<medulla_decision_policy_types::knowledge_curation::CurationInputs>;
+    KnowledgeCurationPropose(KnowledgeCuration / "propose") => Raw<medulla_decision_policy_types::knowledge_curation::CurationAdmitted>;
+    KnowledgeCurationStatus(KnowledgeCuration / "status") => Raw<medulla_decision_policy_types::knowledge_curation::CurationStatus>;
+    KnowledgeCurationMetrics(KnowledgeCuration / "metrics") => Raw<medulla_decision_policy_types::knowledge_curation::LoopMetrics>;
     // MEDULLA-DECISION-ENGINE-R710.3: friction report, transition, group and get.
-    FrictionReportFile(FrictionReport / "report") => Raw<medulla_decision_types::friction::FrictionFiled>;
-    FrictionReportMove(FrictionReport / "transition") => Raw<medulla_decision_types::friction::FrictionMoved>;
-    FrictionReportGroup(FrictionReport / "group") => Raw<medulla_decision_types::friction::FrictionGroups>;
-    FrictionReportGet(FrictionReport / "get") => Raw<medulla_decision_types::friction::FrictionGroupView>;
+    FrictionReportFile(FrictionReport / "report") => Raw<medulla_decision_program_types::friction::FrictionFiled>;
+    FrictionReportMove(FrictionReport / "transition") => Raw<medulla_decision_program_types::friction::FrictionMoved>;
+    FrictionReportGroup(FrictionReport / "group") => Raw<medulla_decision_program_types::friction::FrictionGroups>;
+    FrictionReportGet(FrictionReport / "get") => Raw<medulla_decision_program_types::friction::FrictionGroupView>;
     // MEDULLA-DECISION-ENGINE-R713.3: skill telemetry ingest, measures, rank, peers and traces.
-    SkillTelemetryIngest(SkillTelemetry / "ingest") => Raw<medulla_decision_types::skill_telemetry::IngestReceipt>;
-    SkillTelemetryMeasures(SkillTelemetry / "measures") => Raw<medulla_decision_types::skill_telemetry::SkillMeasures>;
-    SkillTelemetryRank(SkillTelemetry / "rank") => Raw<medulla_decision_types::skill_telemetry::RankAnswer>;
-    SkillTelemetryPeers(SkillTelemetry / "peers") => Raw<medulla_decision_types::skill_telemetry::PeersAnswer>;
-    SkillTelemetryTraces(SkillTelemetry / "traces_by_eval") => Raw<medulla_decision_types::skill_telemetry::TracesAnswer>;
+    SkillTelemetryIngest(SkillTelemetry / "ingest") => Raw<medulla_decision_statistical_types::skill_telemetry::IngestReceipt>;
+    SkillTelemetryMeasures(SkillTelemetry / "measures") => Raw<medulla_decision_statistical_types::skill_telemetry::SkillMeasures>;
+    SkillTelemetryRank(SkillTelemetry / "rank") => Raw<medulla_decision_statistical_types::skill_telemetry::RankAnswer>;
+    SkillTelemetryPeers(SkillTelemetry / "peers") => Raw<medulla_decision_statistical_types::skill_telemetry::PeersAnswer>;
+    SkillTelemetryTraces(SkillTelemetry / "traces_by_eval") => Raw<medulla_decision_statistical_types::skill_telemetry::TracesAnswer>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
-    UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
-    UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;
+    UsageAppend(Usage / "append") => Raw<medulla_decision_policy_types::usage::UsageAppended>;
+    UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_policy_types::usage::UsagePriceStored>;
     // MEDULLA-DECISION-ENGINE-R801.7: the tenant-scoped usage read.
-    UsageRead(Usage / "read") => Raw<medulla_decision_types::usage::UsageReadResult>;
-    ClaimsPropose(Claims / "propose") => Raw<medulla_decision_types::claims::ClaimRecord>;
-    ClaimsAdvance(Claims / "advance") => Raw<medulla_decision_types::claims::ClaimRecord>;
-    ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_decision_types::claims::ClaimRecord>;
-    ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_decision_types::claims::ResearchArtifact>;
-    ClaimsGet(Claims / "get") => Raw<medulla_decision_types::claims::ClaimGetResult>;
-    ClaimsProvenClaims(Claims / "proven_claims") => Raw<medulla_decision_types::claims::ProvenClaimsResult>;
-    LoopsClaim(Loops / "claim") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsRelease(Loops / "release") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsBeacon(Loops / "beacon") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsFileGap(Loops / "file_gap") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsOffer(Loops / "offer") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsSettle(Loops / "settle") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsRecordSample(Loops / "record_sample") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsRatchet(Loops / "ratchet") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsMine(Loops / "mine") => Raw<medulla_decision_types::loops::LoopView>;
-    LoopsGet(Loops / "get") => Raw<medulla_decision_types::loops::LoopView>;
+    UsageRead(Usage / "read") => Raw<medulla_decision_policy_types::usage::UsageReadResult>;
+    ClaimsPropose(Claims / "propose") => Raw<medulla_decision_statistical_types::claims::ClaimRecord>;
+    ClaimsAdvance(Claims / "advance") => Raw<medulla_decision_statistical_types::claims::ClaimRecord>;
+    ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_decision_statistical_types::claims::ClaimRecord>;
+    ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_decision_statistical_types::claims::ResearchArtifact>;
+    ClaimsGet(Claims / "get") => Raw<medulla_decision_statistical_types::claims::ClaimGetResult>;
+    ClaimsProvenClaims(Claims / "proven_claims") => Raw<medulla_decision_statistical_types::claims::ProvenClaimsResult>;
+    LoopsClaim(Loops / "claim") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsRelease(Loops / "release") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsBeacon(Loops / "beacon") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsFileGap(Loops / "file_gap") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsOffer(Loops / "offer") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsSettle(Loops / "settle") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsRecordSample(Loops / "record_sample") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsRatchet(Loops / "ratchet") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsMine(Loops / "mine") => Raw<medulla_decision_policy_types::loops::LoopView>;
+    LoopsGet(Loops / "get") => Raw<medulla_decision_policy_types::loops::LoopView>;
     WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     // MEDULLA-CQ-ORCH-R700.3: the stored workflow version a process compile wrote.
@@ -356,7 +356,7 @@ method_results! {
     ParticipantAddMember(Participant / "add_member") => Raw<medulla_work_types::participant::Membership>;
     ParticipantPutScope(Participant / "put_scope") => Raw<medulla_work_types::memory_scope::MemoryScope>;
     ParticipantSetObservation(Participant / "set_observation") => Raw<medulla_work_types::memory_scope::ObservationConfig>;
-    ParticipantCompleteDerivation(Participant / "complete_derivation") => Raw<medulla_decision_types::memory_events::DerivationCompleted>;
+    ParticipantCompleteDerivation(Participant / "complete_derivation") => Raw<medulla_decision_statistical_types::memory_events::DerivationCompleted>;
     ParticipantReadGet(ParticipantRead / "get") => Raw<medulla_work_types::participant::Participant>;
     ParticipantReadList(ParticipantRead / "list") => Raw<Vec<medulla_work_types::participant::Participant>>;
     ParticipantReadAsk(ParticipantRead / "ask") => Raw<medulla_decision_types::participant_memory::ParticipantAnswer>;

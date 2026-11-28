@@ -6,11 +6,19 @@
 
 use super::consumer_tests::{declared, declared_request, score_schema};
 use super::*;
-use medulla_decision_types::decision::entry_types::POISONED_ENTRY;
-use medulla_decision_types::decision::entry_types::{
-    EntryCheck, EntryTrust, RefusedEntry, RetrievedEntry, TrustTier,
+use medulla_decision_statistical_types::decision::entry_types::POISONED_ENTRY;
+use {
+    medulla_decision_statistical_types::decision::entry_types::EntryCheck,
+    medulla_decision_statistical_types::decision::entry_types::EntryTrust,
+    medulla_decision_statistical_types::decision::entry_types::RefusedEntry,
+    medulla_decision_statistical_types::decision::entry_types::RetrievedEntry,
+    medulla_decision_statistical_types::decision::entry_types::TrustTier,
 };
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use {
+    medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+    medulla_decision_types::decision::record::AbstainReason,
+};
 
 const SOURCE: &str = "sha256:known-source";
 
@@ -41,7 +49,7 @@ async fn unverified_entry_cannot_override_a_verified_fact() {
             None,
         )
         .unwrap();
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .entry_trust
         .known_source_digests
@@ -152,7 +160,7 @@ async fn poisoned_only_required_fact_abstains() {
             None,
         )
         .unwrap();
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .entry_trust
         .known_source_digests
@@ -262,7 +270,7 @@ async fn refused_entries_are_recorded_and_replay() {
             None,
         )
         .unwrap();
-    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let mut policy = medulla_decision_statistical_types::decision::DecisionPolicy::engine_default();
     policy
         .entry_trust
         .known_source_digests

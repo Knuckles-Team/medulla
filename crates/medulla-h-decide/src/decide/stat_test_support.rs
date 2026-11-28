@@ -16,15 +16,8 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::statistical::body::encode_body;
-use medulla_decision_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion, TypedParam,
-    TypedValue,
-};
-use medulla_decision_types::decision::LibraryCandidateScope;
+use medulla_decision_program_types::decision::statistical::body::encode_body;
+use medulla_decision_types::decision::request::LibraryCandidateScope;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -32,6 +25,22 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_program_types::decision::statistical::features::FeatureKind,
+    medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody,
+    medulla_decision_program_types::decision::statistical::features::FeatureSpec,
+    medulla_decision_program_types::decision::statistical::features::MissingValue,
+    medulla_decision_program_types::decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::CandidateSource,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::QuestionSafety,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
 
 pub const TENANT: &str = "tenant-shared";
 
@@ -297,13 +306,17 @@ impl Harness {
     pub fn publish_policy(
         &self,
         id: &str,
-        policy: &medulla_decision_types::decision::DecisionPolicy,
+        policy: &medulla_decision_statistical_types::decision::DecisionPolicy,
     ) -> ComponentDependency {
         let mut draft = test_component_draft(TENANT, id);
         draft.kind = AgentComponentKind::DecisionPolicy;
-        draft.content_digest = medulla_decision_types::decision::digest::policy_digest(policy);
+        draft.content_digest =
+            medulla_decision_statistical_types::decision::digest::policy_part::policy_digest(
+                policy,
+            );
         draft.attributes.insert(
-            medulla_decision_types::decision::policy::DECISION_POLICY_ATTRIBUTE.to_string(),
+            medulla_decision_statistical_types::decision::policy::DECISION_POLICY_ATTRIBUTE
+                .to_string(),
             serde_json::to_string(policy).unwrap(),
         );
         self.commit(draft, None).unwrap()
@@ -398,8 +411,8 @@ pub fn request(
 /// A declared option with no features.
 pub fn declared_option(
     id: &str,
-) -> medulla_decision_types::decision::statistical::declared::DeclaredOption {
-    medulla_decision_types::decision::statistical::declared::DeclaredOption {
+) -> medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption {
+    medulla_decision_statistical_types::decision::statistical::declared::DeclaredOption {
         option_id: id.to_string(),
         classification: BoundedVec::default(),
         numbers: BoundedVec::default(),
@@ -612,15 +625,23 @@ pub fn store_admit_receipts(
     record_id: &str,
     head_revision: u64,
     candidate_digest: &str,
-    kind: medulla_decision_types::decision::memory_benchmark::ChangeKind,
+    kind: medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
 ) -> Result<Vec<String>, String> {
-    use medulla_decision_types::decision::memory_benchmark::{
-        BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt, RevisionRef as BenchRevision,
-        RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
+    use {
+        medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkVerdictKind,
+        medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
+        medulla_decision_statistical_types::decision::memory_benchmark::MemoryBenchmarkReceipt,
+        medulla_decision_statistical_types::decision::memory_benchmark::RevisionRef as BenchRevision,
+        medulla_decision_statistical_types::decision::memory_benchmark::RunMetricsReceipt,
+        medulla_decision_statistical_types::decision::memory_benchmark::MEMORY_BENCHMARK_SCHEMA_VERSION,
     };
-    use medulla_decision_types::decision::memory_rewrite::{
-        HistoryEntry, MemoryRewriteKnobs, MemoryRewriteProposal, RevisionRef, RewriteHistory,
-        MEMORY_REWRITE_SCHEMA_VERSION,
+    use {
+        medulla_decision_statistical_types::decision::memory_rewrite::HistoryEntry,
+        medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteKnobs,
+        medulla_decision_statistical_types::decision::memory_rewrite::MemoryRewriteProposal,
+        medulla_decision_statistical_types::decision::memory_rewrite::RevisionRef,
+        medulla_decision_statistical_types::decision::memory_rewrite::RewriteHistory,
+        medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REWRITE_SCHEMA_VERSION,
     };
     let resolved = super::stat_support::resolve_policy(store, tenant, &DecisionPolicyRef::Default)?;
     let metrics = RunMetricsReceipt {

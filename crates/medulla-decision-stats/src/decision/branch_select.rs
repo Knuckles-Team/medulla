@@ -9,9 +9,16 @@
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::process_decision::{BranchVerdict, DmnValue};
-use medulla_decision_types::decision::task_plan::{
-    BranchArm, BranchCondition, BranchKind, BranchSpec, CompareOp,
+use {
+    medulla_decision_program_types::decision::process_decision::BranchVerdict,
+    medulla_decision_program_types::decision::process_decision::DmnValue,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::BranchArm,
+    medulla_decision_program_types::decision::task_plan::BranchCondition,
+    medulla_decision_program_types::decision::task_plan::BranchKind,
+    medulla_decision_program_types::decision::task_plan::BranchSpec,
+    medulla_decision_program_types::decision::task_plan::CompareOp,
 };
 
 use {
@@ -174,8 +181,11 @@ pub fn select_branch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::task_plan::{BranchComparison, BranchDecisionCondition};
     use medulla_types::contract::BoundedVec;
+    use {
+        medulla_decision_program_types::decision::task_plan::BranchComparison,
+        medulla_decision_program_types::decision::task_plan::BranchDecisionCondition,
+    };
     use {
         medulla_decision_stats_records::decision::dmn_eval::DmnOutput,
         medulla_decision_stats_records::decision::dmn_eval::DmnRule,

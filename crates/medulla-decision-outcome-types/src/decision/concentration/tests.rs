@@ -49,7 +49,7 @@ fn policy_round_trips() {
     );
     assert_eq!(
         serde_json::to_value(
-            medulla_decision_types::decision::statistical::QuestionKind::EditConcentration
+            medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind::EditConcentration
         )
         .unwrap(),
         "edit_concentration"

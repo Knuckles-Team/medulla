@@ -13,9 +13,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_catalog_types::connector_pack::ConnectorSchemaMapping;
 use medulla_decision_outcome_types::decision::ingestion_ladder::ProvenanceRung;
-use medulla_decision_types::decision::ingestion_admission::{
-    classify_unit, AdmissionKnobs, ContentClass,
-};
 use medulla_document::processing::{
     build_section_tree, chunk_text, leaf_coverage_milli, section_for, verify_section_tree,
     ChunkSpan, ChunkingConfig, LinkAnchor, SectionNode, SectionSource, SectionTreeCheck,
@@ -29,6 +26,11 @@ use medulla_source_types::{
 };
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
+use {
+    medulla_decision_policy_types::decision::ingestion_admission::classify_unit,
+    medulla_decision_policy_types::decision::ingestion_admission::AdmissionKnobs,
+    medulla_decision_policy_types::decision::ingestion_admission::ContentClass,
+};
 
 use medulla_protocol_types::protocol::Method;
 use {

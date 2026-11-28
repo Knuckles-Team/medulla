@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 
 use medulla_decision_stats::decision::quant::q32;
 use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
-use medulla_decision_types::decision::RecordWindow;
+use medulla_decision_types::decision::jobs::RecordWindow;
 use medulla_decision_types::{
     decision::statistical::log::ComponentContribution,
     decision::statistical::log::SlateAttribution,

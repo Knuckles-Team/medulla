@@ -1,22 +1,33 @@
 //! Fixtures shared by the decision tests.
 
-use medulla_decision_types::decision::{
-    ColdStart, DecisionPolicy, ObjectiveLevelKind, ObjectiveOrder, QuantScaleTag, QuantisedValue,
-    RecordWindow, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire, UnknownCostRule,
-    DECISION_POLICY_SCHEMA_VERSION,
-};
-use medulla_decision_types::{
-    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
-    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
-    decision::statistical::dataset::LoggedOutcome,
-    decision::statistical::dataset::OutcomeEvaluation,
-    decision::statistical::dataset::OutcomeFidelity,
-    decision::statistical::dataset::PropensitySource,
-    decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
-};
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
+use {
+    medulla_decision_policy_types::decision::statistical::dataset::ItemLabel,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelSource,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledDataset,
+    medulla_decision_policy_types::decision::statistical::dataset::LabelledItem,
+    medulla_decision_policy_types::decision::statistical::dataset::LoggedOutcome,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeEvaluation,
+    medulla_decision_policy_types::decision::statistical::dataset::OutcomeFidelity,
+    medulla_decision_policy_types::decision::statistical::dataset::PropensitySource,
+    medulla_decision_policy_types::decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use {
+    medulla_decision_statistical_types::decision::ColdStart,
+    medulla_decision_statistical_types::decision::DecisionPolicy,
+    medulla_decision_statistical_types::decision::ObjectiveLevelKind,
+    medulla_decision_statistical_types::decision::ObjectiveOrder,
+    medulla_decision_statistical_types::decision::QuantScaleTag,
+    medulla_decision_statistical_types::decision::QuantisedValue,
+    medulla_decision_statistical_types::decision::StatisticalPolicy,
+    medulla_decision_statistical_types::decision::TraceFidelityLevel,
+    medulla_decision_statistical_types::decision::UnitRationalWire,
+    medulla_decision_statistical_types::decision::UnknownCostRule,
+    medulla_decision_statistical_types::decision::DECISION_POLICY_SCHEMA_VERSION,
+    medulla_decision_types::decision::jobs::RecordWindow,
+};
 
 pub const OPTIONS: usize = 3;
 pub const FEATURES: [&str; 2] = ["quality", "noise"];

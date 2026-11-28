@@ -24,8 +24,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use medulla_core::stewardship::TargetScopes;
-use medulla_decision_types::decision::knob_families::classification as classification_knobs;
-use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_statistical_types::decision::knob_families::classification as classification_knobs;
+use medulla_decision_statistical_types::decision::knobs::KnobValue;
 use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{
     claim_id as derive_claim_id, ClaimRecord, ClaimState, ClassificationClaim,

@@ -25,7 +25,10 @@ use super::harness_contrast_tests::{
 };
 use super::log_tests::log_op;
 use super::*;
-use medulla_decision_types::decision::run_governance::{StepKind, StepOutcome};
+use {
+    medulla_decision_statistical_types::decision::run_governance::StepKind,
+    medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+};
 
 const A: &str = "harness-component:prompt:a";
 const B: &str = "harness-component:prompt:b";

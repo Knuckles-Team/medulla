@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use medulla_decision_types::decision::DecisionRecord;
+use medulla_decision_types::decision::record::DecisionRecord;
 use medulla_protocol_types::protocol::Method;
 use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;
 use medulla_server_api::api::persistence::PersistenceBackend;
