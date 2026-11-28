@@ -47,7 +47,12 @@ pub fn reader_isolation(
     let role = format!("{agent}-reader");
     #[cfg(feature = "security")]
     {
-        use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use {
+            medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+            medulla_identity_core_types::acl::RbacAction,
+            medulla_identity_core_types::acl::ResourceSelector,
+            medulla_identity_core_types::acl::Role,
+        };
         isolation.add_role(Role::new(role.clone()));
         for graph in graphs {
             isolation.add_grant(Grant {
@@ -58,9 +63,9 @@ pub fn reader_isolation(
             });
         }
     }
-    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
         agent_id: agent.into(),
-        role: medulla_identity_types::acl::AgentRole::Agent,
+        role: medulla_identity_core_types::acl::AgentRole::Agent,
         teams: graphs.iter().map(|graph| (*graph).to_string()).collect(),
         roles: vec![role],
     });

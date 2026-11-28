@@ -533,8 +533,8 @@ pub mod worker {
             let state = state.read().await;
             (state.local_anonymous, state.context.clone())
         };
-        let graph = medulla_identity_types::tenancy::tenant_graph(
-            &medulla_identity_types::tenancy::TenantId::new(tenant)
+        let graph = medulla_identity_core_types::tenancy::tenant_graph(
+            &medulla_identity_core_types::tenancy::TenantId::new(tenant)
                 .map_err(|error| error.to_string())?,
         );
         let session = format!(

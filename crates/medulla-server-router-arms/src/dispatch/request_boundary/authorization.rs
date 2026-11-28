@@ -409,7 +409,7 @@ fn check_batch_inner_scopes(
 fn is_share_op(method: &Method) -> bool {
     #[cfg(feature = "security")]
     {
-        use medulla_identity_types::acl::RbacAdminOp;
+        use medulla_identity_core_types::acl::RbacAdminOp;
         matches!(
             method,
             Method::RbacAdmin {
@@ -610,7 +610,10 @@ async fn agent_run_lapsed(
     tenant: &str,
     delegation_id: &str,
 ) -> bool {
-    use medulla_identity_types::identity::{DelegationKind, DelegationStanding};
+    use {
+        medulla_identity_core_types::identity::DelegationKind,
+        medulla_identity_core_types::identity::DelegationStanding,
+    };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let found = timed_read(state)
         .await

@@ -409,7 +409,7 @@ mod tests {
                 "native-test-key",
                 "pgwire",
                 "actor-a",
-                &medulla_identity_types::identity::default_wire_login_scopes(),
+                &medulla_identity_core_types::identity::default_wire_login_scopes(),
             )
             .unwrap(),
         )
@@ -420,7 +420,7 @@ mod tests {
                 "native-test-key",
                 "mysql-wire",
                 "actor-a",
-                &medulla_identity_types::identity::default_wire_login_scopes(),
+                &medulla_identity_core_types::identity::default_wire_login_scopes(),
             )
             .unwrap(),
         )

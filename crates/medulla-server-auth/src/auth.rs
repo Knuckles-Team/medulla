@@ -35,8 +35,8 @@
 //! defaults into that downgrade; an operator must type it.
 
 use hmac::{Hmac, Mac};
-use medulla_identity_types::acl::AgentRole;
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::AgentRole;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use medulla_protocol_types::protocol::build_context_operation_signature_bytes;
 use medulla_protocol_types::protocol::build_envelope_v2_bytes;
@@ -3163,7 +3163,7 @@ mod tests {
             "secret-a",
             "pgwire",
             "local-login",
-            &medulla_identity_types::identity::default_wire_login_scopes(),
+            &medulla_identity_core_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
         let mysql = VerifiedRequestContext::authenticated_sql_wire_actor(
@@ -3171,7 +3171,7 @@ mod tests {
             "secret-a",
             "mysql-wire",
             "local-login",
-            &medulla_identity_types::identity::default_wire_login_scopes(),
+            &medulla_identity_core_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
         let other_key = VerifiedRequestContext::authenticated_sql_wire_actor(
@@ -3179,7 +3179,7 @@ mod tests {
             "secret-b",
             "pgwire",
             "local-login",
-            &medulla_identity_types::identity::default_wire_login_scopes(),
+            &medulla_identity_core_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
 
@@ -3192,7 +3192,7 @@ mod tests {
             "secret-a",
             "unknown-wire",
             "local-login",
-            &medulla_identity_types::identity::default_wire_login_scopes()
+            &medulla_identity_core_types::identity::default_wire_login_scopes()
         )
         .is_err());
         assert!(VerifiedRequestContext::authenticated_sql_wire_actor(
@@ -3200,7 +3200,7 @@ mod tests {
             "secret-a",
             "pgwire",
             "",
-            &medulla_identity_types::identity::default_wire_login_scopes()
+            &medulla_identity_core_types::identity::default_wire_login_scopes()
         )
         .is_err());
     }

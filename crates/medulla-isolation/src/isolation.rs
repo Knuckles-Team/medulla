@@ -79,8 +79,8 @@ pub fn stamp_owner_id_if_absent(blob: &[u8], caller_agent_id: &str) -> Option<Ve
 /// enum's `RegisterIdentity` carries `AgentRole` over the wire, and `protocol`
 /// sits below `isolation` in the DAG); re-exported here so `IsolationLayer` and
 /// every call site reference `crate::isolation::AgentRole` unchanged.
-use medulla_identity_types::acl::AgentIdentity;
-use medulla_identity_types::acl::AgentRole;
+use medulla_identity_core_types::acl::AgentIdentity;
+use medulla_identity_core_types::acl::AgentRole;
 
 #[cfg(feature = "security")]
 mod policy_lease;
@@ -125,7 +125,7 @@ pub struct IsolationLayer {
     /// (MEDULLA-SDLC-R023). Clones of one layer share it; two layers built
     /// apart share nothing.
     #[cfg(feature = "security")]
-    denials: std::sync::Arc<std::sync::Mutex<medulla_identity_types::identity::DenialSampler>>,
+    denials: std::sync::Arc<std::sync::Mutex<medulla_identity_core_types::identity::DenialSampler>>,
     /// The R002 audit annotation (tenant + authorization digest change)
     /// staged to commit in this layer's next policy store save.
     #[cfg(feature = "security")]
@@ -1165,11 +1165,11 @@ mod tests {
     #[cfg(feature = "security")]
     mod rbac_access {
         use super::*;
-        use medulla_identity_types::acl::Grant;
-        use medulla_identity_types::acl::GrantEffect;
-        use medulla_identity_types::acl::RbacAction;
-        use medulla_identity_types::acl::ResourceSelector;
-        use medulla_identity_types::acl::Role;
+        use medulla_identity_core_types::acl::Grant;
+        use medulla_identity_core_types::acl::GrantEffect;
+        use medulla_identity_core_types::acl::RbacAction;
+        use medulla_identity_core_types::acl::ResourceSelector;
+        use medulla_identity_core_types::acl::Role;
 
         /// Register an agent holding `roles`.
         fn with_roles(layer: &mut IsolationLayer, id: &str, roles: Vec<String>) {
@@ -1309,7 +1309,7 @@ mod tests {
     #[cfg(feature = "security")]
     mod tenant_graph_auto_grant {
         use super::*;
-        use medulla_identity_types::acl::RbacAction;
+        use medulla_identity_core_types::acl::RbacAction;
 
         /// Register an agent holding `roles` (mirrors `rbac_access::with_roles` —
         /// duplicated rather than shared since sibling test modules cannot see
@@ -1563,12 +1563,12 @@ mod tests {
         use crate::test_scope_grant::TestScopeVerifier;
         use crate::test_scope_grant::TEST_PRINCIPAL;
         use crate::test_scope_grant::TEST_PROOF;
-        use medulla_identity_types::acl::Grant;
-        use medulla_identity_types::acl::GrantEffect;
-        use medulla_identity_types::acl::RbacAction;
-        use medulla_identity_types::acl::ResourceContext;
-        use medulla_identity_types::acl::ResourceSelector;
-        use medulla_identity_types::acl::Role;
+        use medulla_identity_core_types::acl::Grant;
+        use medulla_identity_core_types::acl::GrantEffect;
+        use medulla_identity_core_types::acl::RbacAction;
+        use medulla_identity_core_types::acl::ResourceContext;
+        use medulla_identity_core_types::acl::ResourceSelector;
+        use medulla_identity_core_types::acl::Role;
         use std::collections::BTreeMap;
 
         /// Open the durable layer the way the composition root would.

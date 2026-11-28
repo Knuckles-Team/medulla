@@ -905,7 +905,7 @@ mod tests {
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
         CONNECTOR_PACK_SCHEMA_VERSION,
     };
-    use medulla_identity_types::acl::RequestContextClaims;
+    use medulla_identity_core_types::acl::RequestContextClaims;
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_types::contract::ResourceId;
 

@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::acl::{GrantEffect, RbacAction};
+use {medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction};
 
 /// Version of the serialized profile types.
 pub const ASSISTANT_PROFILE_SCHEMA_VERSION: u32 = 1;
@@ -124,12 +124,17 @@ pub fn document_set_resource(set_id: &str) -> String {
 }
 
 /// Each share as the RBAC grant it stands for on `resource`.
-pub fn shares_as_grants(shares: &[ProfileShare], resource: &str) -> Vec<crate::acl::Grant> {
+pub fn shares_as_grants(
+    shares: &[ProfileShare],
+    resource: &str,
+) -> Vec<medulla_identity_core_types::acl::Grant> {
     shares
         .iter()
-        .map(|share| crate::acl::Grant {
+        .map(|share| medulla_identity_core_types::acl::Grant {
             role: share.role.clone(),
-            resource: crate::acl::ResourceSelector::Graph(resource.to_string()),
+            resource: medulla_identity_core_types::acl::ResourceSelector::Graph(
+                resource.to_string(),
+            ),
             action: share.action,
             effect: share.effect,
         })

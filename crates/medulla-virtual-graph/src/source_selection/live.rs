@@ -12,7 +12,7 @@ use oxrdf::{Term, Triple};
 
 use super::{AuthorityOrigin, AuthorityRow, CoverageFixture, Materialisation};
 use crate::source_sync::{RecordRole, SyncAuthority, SyncDirection};
-use medulla_identity_types::authority_audit::SourceRole;
+use medulla_identity_core_types::authority_audit::SourceRole;
 
 const VG: &str = medulla_types::ontology_iri!("virtual-graph#");
 const SC: &str = medulla_types::ontology_iri!("surface-contract#");

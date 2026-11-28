@@ -13,8 +13,8 @@ use std::sync::Arc;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub fn two_agent_isolation() -> IsolationLayer {
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
 
     let mut isolation = IsolationLayer::new();
     for agent_id in ["alice", "bob"] {
@@ -199,11 +199,11 @@ pub fn principal_may_access(
     graph_name: &str,
     graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
-    access: medulla_identity_types::acl::AccessCheck,
+    access: medulla_identity_core_types::acl::AccessCheck,
 ) -> bool {
     let level = match access {
-        medulla_identity_types::acl::AccessCheck::Read => AccessLevel::Read,
-        medulla_identity_types::acl::AccessCheck::Write => AccessLevel::Write,
+        medulla_identity_core_types::acl::AccessCheck::Read => AccessLevel::Read,
+        medulla_identity_core_types::acl::AccessCheck::Write => AccessLevel::Write,
     };
     !agent_id.is_empty()
         && isolation.has_rules()
@@ -499,8 +499,8 @@ mod secure_empty_policy_tests {
     #[cfg(feature = "security")]
     #[test]
     fn served_graph_access_refuses_a_system_identity_demoted_by_another_clone() {
-        use medulla_identity_types::acl::AgentIdentity;
-        use medulla_identity_types::acl::AgentRole;
+        use medulla_identity_core_types::acl::AgentIdentity;
+        use medulla_identity_core_types::acl::AgentRole;
         let mut writer = IsolationLayer::new();
         let mut identity = AgentIdentity {
             agent_id: "revoked-system".into(),
@@ -764,8 +764,8 @@ mod durability_closure_tests {
 #[cfg(all(test, feature = "security"))]
 mod universal_row_read_tests {
     use super::*;
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
 
     fn properties(values: &[(&str, &str)]) -> Vec<u8> {
         let map: std::collections::BTreeMap<String, String> = values
@@ -1155,8 +1155,12 @@ mod universal_row_read_tests {
     #[cfg(feature = "security")]
     #[test]
     fn principal_may_access_follows_registration_and_revocation() {
-        use medulla_identity_types::acl::{
-            AccessCheck, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+        use {
+            medulla_identity_core_types::acl::AccessCheck, medulla_identity_core_types::acl::Grant,
+            medulla_identity_core_types::acl::GrantEffect,
+            medulla_identity_core_types::acl::RbacAction,
+            medulla_identity_core_types::acl::ResourceSelector,
+            medulla_identity_core_types::acl::Role,
         };
         let reader = |roles: Vec<String>| AgentIdentity {
             agent_id: "alice".to_string(),

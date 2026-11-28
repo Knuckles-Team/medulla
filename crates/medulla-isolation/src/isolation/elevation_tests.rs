@@ -3,8 +3,6 @@
 use super::{
     access_clock_ms, AccessBasis, AccessLevel, AccessQuery, ElevationError, IsolationLayer,
 };
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
-use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,
     rbac_elevation::ElevationApproval, rbac_elevation::ElevationDelegation,
@@ -13,6 +11,14 @@ use medulla_identity_types::{
     rbac_elevation::ElevationStanding,
 };
 use medulla_protocol_types::protocol::GraphType;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
+use {
+    medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+    medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+};
 
 const GRAPH: &str = "tenant__acme__default";
 const MINUTE: u64 = 60 * 1000;

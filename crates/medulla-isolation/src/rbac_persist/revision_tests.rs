@@ -2,9 +2,9 @@
 use super::*;
 use crate::isolation::IsolationLayer;
 use crate::test_threads::{BoundedThreads, StartGate};
-use medulla_identity_types::acl::{AgentRole, Role};
 use std::sync::{mpsc, Arc};
 use std::time::Duration;
+use {medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Role};
 
 fn directory(label: &str) -> std::path::PathBuf {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -304,8 +304,12 @@ fn legacy_adapter_cannot_fall_back_to_unchecked_save() {
 
 fn exercise_access_refresh(store: Arc<dyn RbacPolicyStore>, admin: bool) {
     use crate::isolation::AccessLevel;
-    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
     use medulla_protocol_types::protocol::GraphType;
+    use {
+        medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector,
+    };
 
     let initial = store.authority_snapshot().unwrap();
     let mut policy = initial.policy().clone();

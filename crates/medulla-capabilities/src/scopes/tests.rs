@@ -77,7 +77,7 @@ fn the_rot_check_catches_an_unregistered_scope() {
 // spec: MEDULLA-DECISION-ENGINE-R801.3
 #[test]
 fn usage_domain_registers_read_and_service_only_write_scopes() {
-    use medulla_identity_types::identity::UserKind;
+    use medulla_identity_core_types::identity::UserKind;
     let read = scope_entry("usage:read").expect("usage read scope");
     assert_eq!(read.class, ScopeClass::User);
     assert_eq!(read.owner, "graph-os");
@@ -117,10 +117,10 @@ fn every_approver_scope_has_exactly_its_built_in_group() {
         assert_eq!(ScopeRegistry.class_of(scope), Some(ScopeClass::Approver));
     }
     let built_in = [
-        medulla_identity_types::identity::ELEVATION_APPROVERS_GROUP,
-        medulla_identity_types::identity::LIVE_ORDER_APPROVERS_GROUP,
-        medulla_identity_types::identity::SCHEMA_APPROVERS_GROUP,
-        medulla_identity_types::identity::SOURCE_AUTHORITY_APPROVERS_GROUP,
+        medulla_identity_core_types::identity::ELEVATION_APPROVERS_GROUP,
+        medulla_identity_core_types::identity::LIVE_ORDER_APPROVERS_GROUP,
+        medulla_identity_core_types::identity::SCHEMA_APPROVERS_GROUP,
+        medulla_identity_core_types::identity::SOURCE_AUTHORITY_APPROVERS_GROUP,
         "action-approvers",
     ];
     for (_, group) in APPROVER_GROUPS {
@@ -210,7 +210,7 @@ fn the_rulings_hold_in_the_registry() {
 // spec: MEDULLA-IDENTITY-R004
 #[test]
 fn graph_os_curated_scopes_preserve_principal_and_key_boundaries() {
-    use medulla_identity_types::identity::UserKind;
+    use medulla_identity_core_types::identity::UserKind;
     for scope in [
         "decide:commit",
         "policy:read",
@@ -344,7 +344,7 @@ fn a_graph_algorithm_scope_is_chosen_by_whether_the_request_names_node_ids() {
 // spec: MEDULLA-IDENTITY-R744
 #[test]
 fn acting_under_a_delegation_is_a_service_only_scope_a_human_never_holds() {
-    use medulla_identity_types::identity::UserKind;
+    use medulla_identity_core_types::identity::UserKind;
     let entry = scope_entry("identity:delegate").expect("delegation host scope");
     assert_eq!(entry.class, ScopeClass::ServiceOnly);
     assert_eq!(entry.owner, "engine");

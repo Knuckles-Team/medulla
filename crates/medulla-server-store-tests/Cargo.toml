@@ -35,7 +35,7 @@ medulla-store = { path = "../medulla-store" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"
@@ -109,7 +109,7 @@ medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
 medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }

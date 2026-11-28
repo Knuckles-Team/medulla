@@ -359,9 +359,9 @@ impl Served {
     /// row rules decide what its reads return.
     pub(super) async fn register_reader(&self, agent_id: &str) {
         self.state.write().await.isolation.register_agent(
-            medulla_identity_types::acl::AgentIdentity {
+            medulla_identity_core_types::acl::AgentIdentity {
                 agent_id: agent_id.to_string(),
-                role: medulla_identity_types::acl::AgentRole::Agent,
+                role: medulla_identity_core_types::acl::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: Vec::new(),
             },

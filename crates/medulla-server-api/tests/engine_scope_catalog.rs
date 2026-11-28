@@ -6,8 +6,12 @@
 #![cfg(feature = "test-support")]
 
 use medulla_capabilities::scopes::{scope_entry, ScopeRegistry};
-use medulla_identity_types::identity::{ScopeClass, ScopeClassifier, UserKind};
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_identity_core_types::identity::ScopeClass,
+    medulla_identity_core_types::identity::ScopeClassifier,
+    medulla_identity_core_types::identity::UserKind,
+};
 
 const ADDED: [&str; 5] = [
     "skills:eval",

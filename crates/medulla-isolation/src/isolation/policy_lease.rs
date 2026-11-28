@@ -1,8 +1,10 @@
 #![cfg(feature = "security")]
 
 use super::{row_visibility, AccessLevel, IsolationLayer, RowVisibility};
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use std::collections::HashSet;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 mod accessors;
 
@@ -282,7 +284,7 @@ impl std::error::Error for MintAuthorizationError {}
 /// source-code detail, not a contract this MAC should be brittle to.
 #[cfg(feature = "security")]
 fn mint_authorization_claims_bytes(
-    claims: &medulla_identity_types::acl::RequestContextClaims,
+    claims: &medulla_identity_core_types::acl::RequestContextClaims,
 ) -> Vec<u8> {
     #[derive(serde::Serialize)]
     struct CanonicalClaims<'a> {
@@ -315,7 +317,7 @@ fn mint_authorization_claims_bytes(
 #[cfg(feature = "security")]
 fn mint_authorization_mac(
     auth_secret: &str,
-    claims: &medulla_identity_types::acl::RequestContextClaims,
+    claims: &medulla_identity_core_types::acl::RequestContextClaims,
 ) -> Result<MintAuthorizationMac, MintAuthorizationError> {
     let mut mac = MintAuthorizationMac::new_from_slice(auth_secret.as_bytes())
         .map_err(|_| MintAuthorizationError::InvalidSecret)?;
@@ -334,7 +336,7 @@ fn mint_authorization_mac(
 /// exactly what this control does and does not prevent.
 #[cfg(feature = "security")]
 pub struct MintAuthorization {
-    claims: medulla_identity_types::acl::RequestContextClaims,
+    claims: medulla_identity_core_types::acl::RequestContextClaims,
 }
 
 #[cfg(feature = "security")]
@@ -346,7 +348,7 @@ impl MintAuthorization {
     /// presented bytes as ground truth.
     pub fn compute_mac(
         auth_secret: &str,
-        claims: &medulla_identity_types::acl::RequestContextClaims,
+        claims: &medulla_identity_core_types::acl::RequestContextClaims,
     ) -> Result<Vec<u8>, MintAuthorizationError> {
         if auth_secret.is_empty() {
             return Err(MintAuthorizationError::EmptySecret);
@@ -366,7 +368,7 @@ impl MintAuthorization {
     /// always passes through this cryptographic check.
     pub fn new(
         auth_secret: &str,
-        claims: &medulla_identity_types::acl::RequestContextClaims,
+        claims: &medulla_identity_core_types::acl::RequestContextClaims,
         mac: &[u8],
     ) -> Result<Self, MintAuthorizationError> {
         if auth_secret.is_empty() {
@@ -381,7 +383,7 @@ impl MintAuthorization {
     }
 
     /// The verified claims this token carries.
-    pub fn claims(&self) -> &medulla_identity_types::acl::RequestContextClaims {
+    pub fn claims(&self) -> &medulla_identity_core_types::acl::RequestContextClaims {
         &self.claims
     }
 }
@@ -603,14 +605,14 @@ impl IsolationLayer {
         let decision_basis = if identity.role == AgentRole::System {
             PolicyDecisionBasis::System
         } else {
-            let ctx = medulla_identity_types::acl::ResourceContext::graph(resource);
+            let ctx = medulla_identity_core_types::acl::ResourceContext::graph(resource);
             let allowed = matches!(
                 authority.policy().evaluate(
                     &identity.roles,
                     &ctx,
-                    medulla_identity_types::acl::RbacAction::Read
+                    medulla_identity_core_types::acl::RbacAction::Read
                 ),
-                Some(medulla_identity_types::acl::GrantEffect::Allow)
+                Some(medulla_identity_core_types::acl::GrantEffect::Allow)
             );
             if !allowed {
                 return Err(MintLeaseError::AccessDenied);

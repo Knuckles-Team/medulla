@@ -340,7 +340,7 @@ mod one_store {
         fn context(
             agent: &str,
             scopes: &[&str],
-        ) -> medulla_identity_types::acl::RequestContextClaims {
+        ) -> medulla_identity_core_types::acl::RequestContextClaims {
             let mut claims = common::context_for(agent);
             claims.scopes = scopes.iter().map(|scope| scope.to_string()).collect();
             claims
@@ -348,7 +348,7 @@ mod one_store {
 
         async fn call(
             &mut self,
-            context: &medulla_identity_types::acl::RequestContextClaims,
+            context: &medulla_identity_core_types::acl::RequestContextClaims,
             method: Method,
             signer: Option<&str>,
         ) -> medulla_protocol_types::protocol::Response {
@@ -444,7 +444,7 @@ mod one_store {
 
         async fn ok(
             &mut self,
-            context: &medulla_identity_types::acl::RequestContextClaims,
+            context: &medulla_identity_core_types::acl::RequestContextClaims,
             method: Method,
         ) -> Option<medulla_protocol_types::protocol::ResultPayload> {
             let response = self.call(context, method, None).await;
@@ -691,7 +691,7 @@ mod one_store {
                 &bootstrap,
                 Method::RegisterIdentity {
                     agent_id: ADMIN.to_string(),
-                    role: medulla_identity_types::acl::AgentRole::System,
+                    role: medulla_identity_core_types::acl::AgentRole::System,
                     teams: Vec::new(),
                     signature: String::new(),
                     roles: Vec::new(),

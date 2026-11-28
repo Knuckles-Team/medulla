@@ -24,7 +24,7 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-types = { path = "../medulla-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
 petgraph = { version = "0.8.3", features = ["serde-1"] }
@@ -64,7 +64,7 @@ medulla-server-api = { path = "../medulla-server-api", features = ["test-support
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["harness", "test-support"] }

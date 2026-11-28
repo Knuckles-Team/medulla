@@ -7,10 +7,10 @@
 //! id, the sample size, the hit ratio and the scan time and never a matched value.
 
 use medulla_core::sensitive_scan::{passing, ScanError, ScanLimits};
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{
     ClaimKind, ClaimProvenance, ClaimRecord, ClaimState, ClassificationClaim, CLAIM_OF_RELATIONSHIP,
 };
-use medulla_identity_types::tenancy::Marking;
 use medulla_query_types::sensitive_detect::{builtin_detectors, Detection, SensitiveDetector};
 
 use super::data_plane_write::{edge_method, node_method};

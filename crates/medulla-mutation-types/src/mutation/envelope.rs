@@ -13,14 +13,16 @@ use super::payload::{
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
 use crate::outbox::OutboxIntent;
-use medulla_identity_types::{
-    authority::AuthorityScope, authority::NonceReplayKey, authority::OperationReplayIdentity,
-    authority::VerifiedAuthority,
-};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId,
     contract::RequestedMutationResult, contract::ResourceId, contract::MAX_MUTATION_EFFECTS,
     contract::MAX_OUTBOX_INTENTS,
+};
+use {
+    medulla_identity_core_types::authority::AuthorityScope,
+    medulla_identity_core_types::authority::NonceReplayKey,
+    medulla_identity_core_types::authority::OperationReplayIdentity,
+    medulla_identity_core_types::authority::VerifiedAuthority,
 };
 /// Compiler-produced mutation payload before authority evidence is attached.
 /// It is intentionally not deserializable: producers use the checked

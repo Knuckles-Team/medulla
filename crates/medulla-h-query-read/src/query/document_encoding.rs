@@ -19,7 +19,7 @@ use medulla_core::compute::chunk_windows::{
     aggregate_mean_chunks, encode_chunks, split_windows, ChunkEncoder, ChunkRefusal, PositionMode,
 };
 use medulla_exec::exec::TextEmbedder;
-use medulla_identity_types::identity::UnitPrincipal;
+use medulla_identity_core_types::identity::UnitPrincipal;
 use medulla_index_types::embedding::{
     DocumentAggregation, DocumentEncodingPolicy, DocumentPositionMode, EmbeddingSpaceRef, Modality,
     DOCUMENT_ENCODING_POLICY_REVISION,

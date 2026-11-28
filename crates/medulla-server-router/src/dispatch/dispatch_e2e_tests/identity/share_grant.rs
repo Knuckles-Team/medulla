@@ -2,8 +2,11 @@
 //! keys through the graph gateway, and the same keys read back unchanged.
 
 use super::*;
-use medulla_identity_types::acl::{RbacAdminOp, ShareGrant, ShareRevoke};
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
+use {
+    medulla_identity_core_types::acl::RbacAdminOp, medulla_identity_core_types::acl::ShareGrant,
+    medulla_identity_core_types::acl::ShareRevoke,
+};
 
 const NODE: &str = "share-node-1";
 const OWNER: &str = "usr:owner";

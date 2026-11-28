@@ -24,7 +24,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 parking_lot = "0.12"
 rmp-serde = "1.3"
@@ -77,7 +77,7 @@ tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medu
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }

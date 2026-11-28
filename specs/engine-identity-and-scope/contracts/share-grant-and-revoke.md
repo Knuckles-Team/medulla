@@ -13,8 +13,8 @@ Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","commons
 
 ## Authoritative types
 
-`RbacAdminOp`, `ShareGrant` and `ShareRevoke` in `crates/medulla-identity-types/src/acl.rs`; `ShareScope` in `crates/medulla-identity-types/src/identity/segment.rs`.
+`RbacAdminOp`, `ShareGrant` and `ShareRevoke` in `crates/medulla-identity-core-types/src/acl.rs`; `ShareScope` in `crates/medulla-identity-core-types/src/identity/segment.rs`.
 
 ## Test vectors
 
-`tests/identity/test_share_restart_served.py` (planned) holds the served vectors; the Rust round-trip vector is `crates/medulla-identity-types/src/acl.rs::tests::share_ops_round_trip` (planned).
+`tests/identity/test_share_restart_served.py` (planned) holds the served vectors; the Rust round-trip vector is `crates/medulla-identity-core-types/src/acl.rs::tests::share_ops_round_trip` (planned).

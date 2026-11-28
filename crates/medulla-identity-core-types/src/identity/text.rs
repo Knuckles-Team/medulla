@@ -59,7 +59,7 @@ pub fn validate_principal_id(principal_id: &str) -> Result<(), IdentityRefusal> 
 }
 
 /// A bounded, non-empty, control-free text field.
-pub(crate) fn bounded(value: &str, max: usize) -> Result<(), IdentityRefusal> {
+pub fn bounded(value: &str, max: usize) -> Result<(), IdentityRefusal> {
     bounded_text_or(value, max, IdentityRefusal::InvalidRequest)
 }
 
@@ -69,7 +69,7 @@ pub(crate) fn bounded_opt(value: Option<&str>, max: usize) -> Result<(), Identit
 }
 
 /// An identifier: `[a-z0-9._:-]`, bounded.
-pub(crate) fn identifier(value: &str) -> Result<(), IdentityRefusal> {
+pub fn identifier(value: &str) -> Result<(), IdentityRefusal> {
     let allowed = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit() || "._:-".contains(c);
     if value.is_empty() || value.len() > MAX_ID_BYTES || !value.chars().all(allowed) {
         return Err(IdentityRefusal::InvalidRequest);

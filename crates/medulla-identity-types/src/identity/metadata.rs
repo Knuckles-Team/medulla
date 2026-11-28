@@ -11,8 +11,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-use super::segment::ShareScope;
-use super::text::validate_principal_id;
+use medulla_identity_core_types::identity::segment::ShareScope;
+use medulla_identity_core_types::identity::text::validate_principal_id;
 
 /// The wire schema version of the typed metadata.
 pub const METADATA_SCHEMA_VERSION: u32 = 1;

@@ -21,7 +21,7 @@ use tokio::sync::RwLock;
 use super::medulla_h_query_sql_source_read_tests::{
     binding_draft, commit_sql_change, dispatch_table_fixture, selector,
 };
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,

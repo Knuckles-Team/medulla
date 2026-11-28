@@ -183,7 +183,7 @@ fn refusals_and_idempotent_replay() {
 #[cfg(all(unix, feature = "shacl", feature = "security"))]
 mod why_chain {
     use super::super::connector_pack_harness::{next_id, ok, Served, GRAPH, TENANT};
-    use medulla_identity_types::identity::ShareScope;
+    use medulla_identity_core_types::identity::ShareScope;
     use medulla_protocol_types::protocol::Method;
     use medulla_source_types::source_ingestion::SourceIngestionRequest;
     use medulla_source_types::stored_query::{

@@ -529,8 +529,8 @@ mod tests {
     #[cfg(feature = "server")]
     #[test]
     fn ros2_cdc_fails_closed_only_once_row_ownership_is_active() {
-        use medulla_identity_types::acl::AgentIdentity;
-        use medulla_identity_types::acl::AgentRole;
+        use medulla_identity_core_types::acl::AgentIdentity;
+        use medulla_identity_core_types::acl::AgentRole;
         use medulla_isolation::isolation::IsolationLayer;
 
         // No identities registered yet: nothing to protect, so the unauthenticated

@@ -68,7 +68,7 @@ async fn write_read_revoke_and_foreign_tenant_read() {
         (broker(), initialize(PASSWORD)),
         (
             admin(),
-            medulla_identity_types::identity_fixtures::identity::create_administrator_op(
+            medulla_identity_core_types::identity_fixtures::identity::create_administrator_op(
                 "owner", OWNER,
             ),
         ),

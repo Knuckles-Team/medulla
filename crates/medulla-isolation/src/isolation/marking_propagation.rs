@@ -10,10 +10,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{
     ClaimKind, ClaimProvenance, ClaimState, ClassificationClaim,
 };
-use medulla_identity_types::tenancy::Marking;
 
 /// The `cat:lineageTo` adjacency: each node and the nodes directly downstream.
 pub type LineageEdges = BTreeMap<String, BTreeSet<String>>;

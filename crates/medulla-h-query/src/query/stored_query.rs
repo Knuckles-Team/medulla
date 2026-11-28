@@ -18,7 +18,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::identity::UnitPrincipal;
+use medulla_identity_core_types::identity::UnitPrincipal;
 use medulla_query_types::wire::{UqlParam, UqlResult, UqlRow};
 use medulla_server_api::read_scope::ReadCaller;
 use medulla_source_types::stored_query::{

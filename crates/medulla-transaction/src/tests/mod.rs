@@ -17,11 +17,6 @@ mod write_authority;
 use crate::read::{read_ledger, read_outbox, read_private_payload, version};
 use crate::tables::{FENCES, OUTBOX, PRIVATE_PAYLOADS};
 use crate::{Begin, MutationKernel};
-use medulla_identity_types::{
-    authority::AuthorityContext, authority::AuthorityScope, authority::NonceReplayKey,
-    authority::OperationReplayIdentity, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
-    authority::AUTHORITY_PROTOCOL_V1,
-};
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
@@ -47,6 +42,14 @@ use redb::{TableDefinition, TableHandle};
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
+use {
+    medulla_identity_core_types::authority::AuthorityContext,
+    medulla_identity_core_types::authority::AuthorityScope,
+    medulla_identity_core_types::authority::NonceReplayKey,
+    medulla_identity_core_types::authority::OperationReplayIdentity,
+    medulla_identity_core_types::authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+    medulla_identity_core_types::authority::AUTHORITY_PROTOCOL_V1,
+};
 
 /// One `cas_blobs` owner-row key.
 ///

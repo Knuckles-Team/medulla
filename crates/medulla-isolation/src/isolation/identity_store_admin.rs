@@ -11,18 +11,31 @@
 //! principal, and `RbacAdmin` cannot touch an `idm:` role or grant.
 #![cfg(feature = "security")]
 
-use medulla_identity_types::acl::{
-    ApplyOwnership, Grant, GrantEffect, RbacAction, RbacAdminOp, Role, RollbackOwnership,
+use {
+    medulla_identity_core_types::acl::ApplyOwnership, medulla_identity_core_types::acl::Grant,
+    medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::RbacAdminOp, medulla_identity_core_types::acl::Role,
+    medulla_identity_core_types::acl::RollbackOwnership,
 };
-use medulla_identity_types::{
-    identity::ApplyContext, identity::AuditRecord, identity::ConfigOp, identity::DenialSample,
-    identity::IdentityEvent, identity::IdentityOp, identity::IdentityRefusal,
-    identity::IdentityReply, identity::IdentityStamp, identity::IdentityStore,
-    identity::ScopeClassifier, identity::RBAC_ROLE_PREFIX,
+use {
+    medulla_identity_core_types::identity::ApplyContext,
+    medulla_identity_core_types::identity::AuditRecord,
+    medulla_identity_core_types::identity::ConfigOp,
+    medulla_identity_core_types::identity::DenialSample,
+    medulla_identity_core_types::identity::IdentityEvent,
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityReply,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::IdentityStore,
+    medulla_identity_core_types::identity::ScopeClassifier,
+    medulla_identity_core_types::identity::RBAC_ROLE_PREFIX,
 };
 
 use super::IsolationLayer;
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 /// The agent a System-identity repair names, if `op` is one.
 fn system_repair_target(op: &IdentityOp) -> Option<&str> {
@@ -101,8 +114,8 @@ impl IsolationLayer {
         if matches!(
             op,
             IdentityOp::Session(
-                medulla_identity_types::identity::SessionOp::InspectReference { .. }
-                    | medulla_identity_types::identity::SessionOp::RenewReference { .. }
+                medulla_identity_core_types::identity::SessionOp::InspectReference { .. }
+                    | medulla_identity_core_types::identity::SessionOp::RenewReference { .. }
             )
         ) {
             return self.apply_session_authority(op, stamp, now_ms, classifier);
@@ -515,7 +528,10 @@ impl IsolationLayer {
     /// The refusals of an ownership apply, in the order the row states them, before any write.
     fn check_ownership_apply(&self, op: &ApplyOwnership) -> Result<(), String> {
         use super::ownership::ownership_role;
-        use medulla_identity_types::identity::{plan_digest, OwnershipDisposition};
+        use {
+            medulla_identity_core_types::identity::plan_digest,
+            medulla_identity_core_types::identity::OwnershipDisposition,
+        };
         // (1) the plan is well formed and every principal can be changed.
         if op.plan.is_empty() {
             return Err("INVALID_ARGUMENT: the ownership plan has no entries".to_string());
@@ -596,7 +612,7 @@ impl IsolationLayer {
                 "this plan is already applied; roll it back first",
             )),
             None if store.ownership_record_count()
-                >= medulla_identity_types::identity::MAX_OWNERSHIP_RECORDS =>
+                >= medulla_identity_core_types::identity::MAX_OWNERSHIP_RECORDS =>
             {
                 Err(ownership_refusal(
                     IdentityRefusal::OwnershipNoRollback,
@@ -615,7 +631,10 @@ impl IsolationLayer {
         op: ApplyOwnership,
         actor: AuditActor<'_>,
     ) -> Result<u32, String> {
-        use medulla_identity_types::identity::{OwnershipRecord, OWNERSHIP_SCHEMA_VERSION};
+        use {
+            medulla_identity_core_types::identity::OwnershipRecord,
+            medulla_identity_core_types::identity::OWNERSHIP_SCHEMA_VERSION,
+        };
         self.check_ownership_apply(&op)?;
         let principals = u32::try_from(op.plan.len()).unwrap_or(u32::MAX);
         let prior_agents = self.agents.clone();

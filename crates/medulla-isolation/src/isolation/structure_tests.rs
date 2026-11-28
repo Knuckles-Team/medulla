@@ -1,7 +1,13 @@
 use super::{AccessLevel, IsolationLayer};
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
-use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use medulla_protocol_types::protocol::GraphType;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
+use {
+    medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+    medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+};
 
 #[test]
 fn lease_is_opaque_non_clone_and_has_one_mint_authority() {

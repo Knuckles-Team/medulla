@@ -41,6 +41,7 @@ medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-finance-types = { path = "../medulla-finance-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-uql = { path = "../medulla-uql" }
 rmp-serde = "1.3"

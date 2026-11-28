@@ -13,7 +13,7 @@ Arbora's verifier calls `Method::Identity` with `SessionOp::Resolve` (optional `
 
 ## Authoritative types
 
-`SessionRecordProjection` in `crates/medulla-identity-types/src/identity/projection.rs`; `SessionOp` in `crates/medulla-identity-types/src/identity/ops.rs`.
+`SessionRecordProjection` in `crates/medulla-identity-core-types/src/identity/projection.rs`; `SessionOp` in `crates/medulla-identity-core-types/src/identity/ops.rs`.
 
 ## Test vectors
 

@@ -50,6 +50,7 @@ medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-wire = { path = "../medulla-wire" }
@@ -160,6 +161,7 @@ medulla-server-api = { path = "../medulla-server-api", features = ["test-support
 medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-wire = { path = "../medulla-wire", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }

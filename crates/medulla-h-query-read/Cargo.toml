@@ -26,7 +26,7 @@ medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality", optional = true }

@@ -56,11 +56,14 @@ pub fn derive_hmac_hex(secret: &str, domain: &[u8], principal: &str) -> String {
 // Wire logins (MEDULLA-ENGINE-PARITY-R007.1): a login resolves to one principal.
 // ---------------------------------------------------------------------------
 
-use medulla_identity_types::identity::{WireLoginKind, WireLoginRecord};
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
+use {
+    medulla_identity_core_types::identity::WireLoginKind,
+    medulla_identity_core_types::identity::WireLoginRecord,
+};
 
 /// Stable refusal code of an unknown, revoked or mismatched wire login.
 pub const INVALID_LOGIN: &str = "INVALID_LOGIN";
@@ -137,11 +140,11 @@ pub fn resolve_wire_login(
     let verified = match proof {
         WireProof::ScramVerified => true,
         WireProof::Certificate { certificate_der } => constant_time_eq(
-            medulla_identity_types::identity::sha256_verifier(certificate_der).as_bytes(),
+            medulla_identity_core_types::identity::sha256_verifier(certificate_der).as_bytes(),
             record.verifier.as_bytes(),
         ),
         WireProof::Token(token) => constant_time_eq(
-            medulla_identity_types::identity::sha256_verifier(token.as_bytes()).as_bytes(),
+            medulla_identity_core_types::identity::sha256_verifier(token.as_bytes()).as_bytes(),
             record.verifier.as_bytes(),
         ),
     };

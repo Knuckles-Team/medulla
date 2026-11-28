@@ -14,8 +14,10 @@
 //! the closed reason `Unconnected` — never an empty success. The answer-branch
 //! fixture SPARQL lands with the producer rows (the `.3` acceptance children).
 
-use medulla_identity_types::{
-    authority_audit::AuditEntry, authority_audit::AuthorityAudit, authority_audit::NotUsedReason,
+use {
+    medulla_identity_core_types::authority_audit::AuditEntry,
+    medulla_identity_core_types::authority_audit::AuthorityAudit,
+    medulla_identity_core_types::authority_audit::NotUsedReason,
 };
 
 fn unconnected_entry(source: &str, concept: &str) -> AuditEntry {

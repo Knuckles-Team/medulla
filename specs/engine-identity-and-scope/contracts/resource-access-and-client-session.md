@@ -13,7 +13,7 @@ Decision reasons (in the reply, `allow: false`): `RESOURCE_UNKNOWN`, `RESOURCE_G
 
 ## Authoritative types
 
-`ResourceAccessDecision`, `ResourceGrant` and `ResourceProtocol` in `crates/medulla-identity-types/src/acl.rs` (new); the `ClientSession` label in the identity pack ontology (new).
+`ResourceAccessDecision`, `ResourceGrant` and `ResourceProtocol` in `crates/medulla-identity-core-types/src/acl.rs` (new); the `ClientSession` label in the identity pack ontology (new).
 
 ## Test vectors
 

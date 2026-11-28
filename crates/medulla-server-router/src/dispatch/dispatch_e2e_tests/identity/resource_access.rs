@@ -2,9 +2,12 @@
 //! decision through the real request boundary, with a refusal reason as a reply.
 
 use super::*;
-use medulla_identity_types::acl::{
-    AgentIdentity, AgentRole, ResourceAccessDecision, ResourceGrant, ResourceGrantSubject,
-    ResourceProtocol,
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+    medulla_identity_core_types::acl::ResourceAccessDecision,
+    medulla_identity_core_types::acl::ResourceGrant,
+    medulla_identity_core_types::acl::ResourceGrantSubject,
+    medulla_identity_core_types::acl::ResourceProtocol,
 };
 
 const AGENT: &str = "agent-worker";

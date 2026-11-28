@@ -187,7 +187,7 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_and_rbac_commands_share_the_commons_consensus_order() {
         let method = Method::RbacAdmin {
-            op: medulla_identity_types::acl::RbacAdminOp::List,
+            op: medulla_identity_core_types::acl::RbacAdminOp::List,
         };
         let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             method.clone(),
@@ -203,11 +203,11 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_mutations_share_the_commons_order_across_caller_graphs_and_tenants() {
         let method = Method::Identity {
-            op: medulla_identity_types::identity::IdentityOp::User(
-                medulla_identity_types::identity::UserOp::SetStatus {
-                    request: medulla_identity_types::identity::UserStatusChange {
+            op: medulla_identity_core_types::identity::IdentityOp::User(
+                medulla_identity_core_types::identity::UserOp::SetStatus {
+                    request: medulla_identity_core_types::identity::UserStatusChange {
                         principal_id: "usr:route-test".to_string(),
-                        status: medulla_identity_types::identity::UserStatus::Disabled,
+                        status: medulla_identity_core_types::identity::UserStatus::Disabled,
                     },
                 },
             ),

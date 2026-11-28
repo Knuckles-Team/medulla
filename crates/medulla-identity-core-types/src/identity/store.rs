@@ -175,7 +175,7 @@ fn reshapes_authority(op: &IdentityOp) -> bool {
 }
 
 /// A domain-separated SHA-256 hex digest.
-pub(crate) fn digest_hex(domain: &[u8], body: &str) -> String {
+pub fn digest_hex(domain: &[u8], body: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(domain);
     hasher.update(body.as_bytes());

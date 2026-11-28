@@ -363,7 +363,7 @@ $($variants)*
     /// resource for which operation, with what outcome and under which binding digest. The
     /// receipt carries no secret. Scope `security:audit-write`.
     CredentialReceipt {
-        op: Box<medulla_identity_types::credential_receipt::CredentialReceiptOp>,
+        op: Box<medulla_identity_core_types::credential_receipt::CredentialReceiptOp>,
     },
 
     // ── Stewardship (MEDULLA-TYPED-PACKS-R802.3) ───────────────────────────

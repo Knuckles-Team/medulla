@@ -338,6 +338,8 @@ Upward references: none.
 
 Upward references to resolve (4 module pairs, 8 references): `identity::store` (crate medulla-identity-core-types) uses `identity::ops` (crate medulla-identity-types) x5; `identity::store` (crate medulla-identity-core-types) uses `identity::views` (crate medulla-identity-types) x1; `identity::store` (crate medulla-identity-core-types) uses `identity::policy_bundle` (crate medulla-identity-types) x1; `identity::requests_provision` (crate medulla-identity-core-types) uses `identity::views` (crate medulla-identity-types) x1.
 
+Resolution as landed: an inherent `impl IdentityStore` must sit in the crate that defines the type, so every `identity::store` child module (access_ops, approval_keys, auth, authority, credentials, delegation, external, import, invariants, mfa, modes, provision, recovery, sessions, tenant, throttle, tokens, users, verdict, webauthn, wire_logins), the `ops`, `views`, `policy_bundle`, `projection`, `relations` and `sql_dump` modules they use, and the tests `identity::tests::{approval_keys,modes,policy_bundle}` live in `medulla-identity-core-types`. `medulla-identity-types` keeps `application_admission_machine`, `assistant_profile`, `classification`, `platform_admission`, `rbac_elevation`, `resource_grant` and `identity::metadata`.
+
 #### `medulla-decision-stats`: 29,136 lines into 2 crates
 
 | Target crate | Lines | Modules (paths under `src/`, `::` form) |

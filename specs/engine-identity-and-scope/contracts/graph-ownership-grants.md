@@ -13,7 +13,7 @@ Arbora calls the read-only `Method::GraphOwnershipPlan { graph }`, which answers
 
 ## Authoritative types
 
-`GrantPlanEntry`, `RollbackEntry`, `GraphOwnershipSignals`, `GraphOwnershipPlanReply` and `OwnershipRecord` in `crates/medulla-identity-types/src/identity/ownership.rs`; `ApplyOwnership` and `RollbackOwnership` in `crates/medulla-identity-types/src/acl.rs`.
+`GrantPlanEntry`, `RollbackEntry`, `GraphOwnershipSignals`, `GraphOwnershipPlanReply` and `OwnershipRecord` in `crates/medulla-identity-core-types/src/identity/ownership.rs`; `ApplyOwnership` and `RollbackOwnership` in `crates/medulla-identity-core-types/src/acl.rs`.
 
 ## Test vectors
 

@@ -13,7 +13,7 @@ Medulla returns `SourceCoverageReply { verdicts, audit }` from `Method::SourceCo
 
 ## Authoritative types
 
-`AuthorityAudit`, `AuditEntry`, `AuditSourceMode`, `NotUsedReason` and `SourceRole` in `crates/medulla-identity-types/src/authority_audit.rs`.
+`AuthorityAudit`, `AuditEntry`, `AuditSourceMode`, `NotUsedReason` and `SourceRole` in `crates/medulla-identity-core-types/src/authority_audit.rs`.
 
 ## Test vectors
 

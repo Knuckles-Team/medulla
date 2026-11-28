@@ -33,7 +33,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-agent-types = { path = "../medulla-agent-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
@@ -69,7 +69,7 @@ oidc = ["dep:ureq", "dep:jsonwebtoken", "medulla-server-api/oidc"]
 query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-exec/query", "medulla-kernel/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["medulla-server-api/raft", "medulla-exec/raft", "medulla-kernel/raft"]
 security = ["oidc", "medulla-server-api/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
-test-support = ["medulla-server-api/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-exec/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-core-types/test-support", "medulla-protocol-types/test-support", "medulla-exec/test-support"]
 wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf", "medulla-exec/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf", "medulla-wasm?/wasm-udf"]
 [dev-dependencies]
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
@@ -77,7 +77,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

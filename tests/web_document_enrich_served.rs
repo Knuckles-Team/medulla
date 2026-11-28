@@ -207,9 +207,9 @@ fn graph_version(state: &test_support::SharedState) -> u64 {
 /// processed documents back (MEDULLA-REPO-INGEST-R652.5).
 fn isolation_with_root() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
-    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
         agent_id: "root".to_string(),
-        role: medulla_identity_types::acl::AgentRole::System,
+        role: medulla_identity_core_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     });

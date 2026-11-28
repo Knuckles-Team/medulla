@@ -11,7 +11,7 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla_identity_types::acl::AgentRole;
+use medulla_identity_core_types::acl::AgentRole;
 use medulla_protocol_types::protocol::{
     GraphLearnParams, GraphSource, Method, Request, Response, ResultPayload,
 };
@@ -24,7 +24,11 @@ const COMMUNITY: usize = 5;
 
 fn isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
-    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use {
+        medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+    };
     isolation.add_role(Role::new(COMMONS_USER_ROLE));
     for action in [RbacAction::Read, RbacAction::Write] {
         isolation.add_grant(Grant {

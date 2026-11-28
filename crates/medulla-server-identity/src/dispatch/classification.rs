@@ -26,11 +26,11 @@ use std::sync::Arc;
 use medulla_core::stewardship::TargetScopes;
 use medulla_decision_types::decision::knob_families::classification as classification_knobs;
 use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{
     claim_id as derive_claim_id, ClaimRecord, ClaimState, ClassificationClaim,
     ClassificationClaimOp, ClassificationClaimResult,
 };
-use medulla_identity_types::tenancy::Marking;
 use medulla_isolation::isolation::marking_propagation::{legal_move, propagate, LineageEdges};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::ClassificationClaim as ClassificationClaimResultContract;

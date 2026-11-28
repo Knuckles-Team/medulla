@@ -8,9 +8,12 @@
 
 use std::sync::Arc;
 
-use medulla_identity_types::{authority::NonceReplayKey, authority::OperationReplayIdentity};
 use medulla_storage::OwnedStoreHandle;
 use medulla_transaction::{AdmittedMutation, Begin, MutationKernel};
+use {
+    medulla_identity_core_types::authority::NonceReplayKey,
+    medulla_identity_core_types::authority::OperationReplayIdentity,
+};
 
 use super::super::agent_library::{
     admitted_context, agent_library_operation_identity, batch_id,

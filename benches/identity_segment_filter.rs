@@ -16,8 +16,8 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use medulla_graph_core::graph::{GraphCore, GraphView};
-use medulla_identity_types::identity::UnitPrincipal;
-use medulla_identity_types::tenancy::TenantId;
+use medulla_identity_core_types::identity::UnitPrincipal;
+use medulla_identity_core_types::tenancy::TenantId;
 use medulla_server_api::read_scope::{scope_view, ReadCaller};
 
 const UNITS_PER_READ: usize = 10_000;

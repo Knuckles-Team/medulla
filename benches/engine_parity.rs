@@ -76,7 +76,6 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use medulla_identity_types::identity::{sha256_verifier, WireLoginKind, WireLoginRecord};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -89,6 +88,11 @@ use medulla_wire_core::sql_wire_auth::{
     resolve_wire_login, CachedWireLogins, WireLoginSource, WireProof,
 };
 use serde_json::json;
+use {
+    medulla_identity_core_types::identity::sha256_verifier,
+    medulla_identity_core_types::identity::WireLoginKind,
+    medulla_identity_core_types::identity::WireLoginRecord,
+};
 
 const W1_WRITES: usize = 2_000;
 const W2_WRITERS: usize = 64;

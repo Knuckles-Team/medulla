@@ -636,7 +636,7 @@ async fn require_scope_grants(ctx: &QueryHandlerCtx<'_>, agent: &str) -> Result<
         .require_resource_grants(
             ctx.caller,
             &scope.knowledge_sets,
-            medulla_identity_types::acl::ResourceProtocol::Knowledge,
+            medulla_identity_core_types::acl::ResourceProtocol::Knowledge,
             "compile",
             now_ms,
         )

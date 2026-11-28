@@ -10,13 +10,23 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphView;
-use medulla_identity_types::identity::{
-    visible_units, KnowledgeUnit, ShareScope, UnitOutOfScope, UnitPrincipal, MAX_AUDITED_UNIT_IDS,
-};
-use medulla_identity_types::tenancy::{
-    scope_predicate, tenant_graph, TenancyError, TenantId, TenantParent, TenantTree,
-};
 use serde_json::{Map, Value};
+use {
+    medulla_identity_core_types::identity::visible_units,
+    medulla_identity_core_types::identity::KnowledgeUnit,
+    medulla_identity_core_types::identity::ShareScope,
+    medulla_identity_core_types::identity::UnitOutOfScope,
+    medulla_identity_core_types::identity::UnitPrincipal,
+    medulla_identity_core_types::identity::MAX_AUDITED_UNIT_IDS,
+};
+use {
+    medulla_identity_core_types::tenancy::scope_predicate,
+    medulla_identity_core_types::tenancy::tenant_graph,
+    medulla_identity_core_types::tenancy::TenancyError,
+    medulla_identity_core_types::tenancy::TenantId,
+    medulla_identity_core_types::tenancy::TenantParent,
+    medulla_identity_core_types::tenancy::TenantTree,
+};
 
 use crate::carrier::GraphReadAuthority;
 

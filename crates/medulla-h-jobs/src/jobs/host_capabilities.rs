@@ -12,7 +12,7 @@ use std::sync::Arc;
 use medulla_decision_types::decision::statistical::placement::{
     HeavyCapability, NO_CAPABLE_HOST, PLACEMENT_FACTS_INVALID,
 };
-use medulla_identity_types::tenancy::COMMONS_GRAPH;
+use medulla_identity_core_types::tenancy::COMMONS_GRAPH;
 use medulla_jobs::{RoutingCandidates, RoutingEvidence};
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;

@@ -2,11 +2,16 @@
 //! from a broker's arbitrary principal lookup. No delegation authority is
 //! implemented here: a chain or broker scope cannot establish a subject login.
 
-use medulla_identity_types::acl::RequestContextClaims;
-use medulla_identity_types::{
-    identity::IdentityOp, identity::IdentityRefusal, identity::IdentityReply,
-    identity::IdentityStamp, identity::IdentityStore, identity::PrincipalResolution,
-    identity::SessionOp, identity::TokenOp, identity::UserOp,
+use medulla_identity_core_types::acl::RequestContextClaims;
+use {
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityReply,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::IdentityStore,
+    medulla_identity_core_types::identity::PrincipalResolution,
+    medulla_identity_core_types::identity::SessionOp,
+    medulla_identity_core_types::identity::TokenOp, medulla_identity_core_types::identity::UserOp,
 };
 
 use super::ElevationStampAuthority;

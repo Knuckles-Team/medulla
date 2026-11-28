@@ -5,7 +5,10 @@ impl IsolationLayer {
     /// written it (MEDULLA-ENGINE-PARITY-R007.4): the fixture seam of the in-process pgwire
     /// listener tests, which have no initialized identity store to grant through.
     #[cfg(all(feature = "security", feature = "test-support"))]
-    pub fn seed_wire_login(&mut self, record: medulla_identity_types::identity::WireLoginRecord) {
+    pub fn seed_wire_login(
+        &mut self,
+        record: medulla_identity_core_types::identity::WireLoginRecord,
+    ) {
         self.rbac.identity_store_mut().seed_wire_login(record);
     }
 

@@ -37,8 +37,8 @@ async fn installed_readers_confirm_a_current_revision_and_refuse_another_tenant(
     state.set_blob_cursors(Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(
         Arc::clone(&store),
     ))));
-    let graph_a = medulla_identity_types::tenancy::tenant_graph(
-        &medulla_identity_types::tenancy::TenantId::new(TENANT_A).expect("tenant id"),
+    let graph_a = medulla_identity_core_types::tenancy::tenant_graph(
+        &medulla_identity_core_types::tenancy::TenantId::new(TENANT_A).expect("tenant id"),
     );
     state
         .registry

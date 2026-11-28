@@ -136,7 +136,12 @@ fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
     #[cfg(feature = "security")]
     {
-        use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use {
+            medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+            medulla_identity_core_types::acl::RbacAction,
+            medulla_identity_core_types::acl::ResourceSelector,
+            medulla_identity_core_types::acl::Role,
+        };
         isolation.add_role(Role::new("commons-user"));
         let grant = |action: RbacAction| Grant {
             role: "commons-user".to_string(),
@@ -832,7 +837,7 @@ fn register_identity_req(
     id: u64,
     actor: &str,
     agent_id: &str,
-    role: medulla_identity_types::acl::AgentRole,
+    role: medulla_identity_core_types::acl::AgentRole,
 ) -> Request {
     common::signed_register_identity_request(common::SignedRegisterIdentity {
         secret: SECRET,
@@ -869,7 +874,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
         graph: "__commons__",
         actor,
         registered_agent: "root",
-        role: medulla_identity_types::acl::AgentRole::Agent,
+        role: medulla_identity_core_types::acl::AgentRole::Agent,
         teams: Vec::new(),
         // `root` never itself reads/writes `__commons__` in these fixtures -- it only
         // signs `RegisterIdentity` for the ordinary peers below, which needs admin
@@ -901,7 +906,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -1162,9 +1167,9 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     {
         let mut s = state.write().await;
         s.isolation
-            .register_agent(medulla_identity_types::acl::AgentIdentity {
+            .register_agent(medulla_identity_core_types::acl::AgentIdentity {
                 agent_id: "tester".to_string(),
-                role: medulla_identity_types::acl::AgentRole::Agent,
+                role: medulla_identity_core_types::acl::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: vec!["commons-user".to_string()],
             });
@@ -1871,7 +1876,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -2049,7 +2054,7 @@ async fn explain_belief_returns_full_justification_tree() {
 #[cfg(feature = "epistemic-redaction")]
 #[tokio::test]
 async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_protocol_types::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
 
     let state = state().await;
@@ -2419,7 +2424,7 @@ async fn explain_evidence_resolves_a_located_citation_over_rpc() {
 #[cfg(all(feature = "evidence-graph", feature = "security"))]
 #[tokio::test]
 async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ExplainEvidenceResult;
 
     let state = state().await;
@@ -2899,7 +2904,7 @@ async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
 #[cfg(all(feature = "epistemic-tms", feature = "security"))]
 #[tokio::test]
 async fn resolve_conflict_hides_other_agents_private_argument_over_rpc() {
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;

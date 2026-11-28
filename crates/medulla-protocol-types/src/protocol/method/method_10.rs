@@ -732,7 +732,7 @@ $($variants)*
     SourceCoverage {
         classes: Vec<String>,
         #[serde(default)]
-        facets: Vec<medulla_identity_types::source_coverage::SourceCoverageFacet>,
+        facets: Vec<medulla_identity_core_types::source_coverage::SourceCoverageFacet>,
         #[serde(default)]
         hop_budget: Option<u32>,
         #[serde(default)]

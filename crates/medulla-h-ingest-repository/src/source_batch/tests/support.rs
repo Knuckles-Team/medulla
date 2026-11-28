@@ -1,5 +1,5 @@
 use super::*;
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol_fixtures::sql_source::SqlSourceTarget;
 use medulla_protocol_types::storage_wire::SqlSourceJson;
 use medulla_protocol_types::storage_wire::SqlSourceText;

@@ -44,7 +44,7 @@ async fn commit_as_decider(
 /// `who`, verified with `roles` in its signed request context.
 fn holding(who: &str, roles: &[&str]) -> VerifiedRequestContext {
     VerifiedRequestContext::from_verified_claims(
-        medulla_identity_types::acl::RequestContextClaims {
+        medulla_identity_core_types::acl::RequestContextClaims {
             principal: format!("principal:{who}"),
             tenant: TENANT.to_string(),
             agent_id: who.to_string(),
@@ -52,7 +52,7 @@ fn holding(who: &str, roles: &[&str]) -> VerifiedRequestContext {
             policy_version: "policy-test".to_string(),
             scopes: vec!["kg:read".to_string()],
             roles: roles.iter().map(|r| r.to_string()).collect(),
-            ..medulla_identity_types::acl::RequestContextClaims::default()
+            ..medulla_identity_core_types::acl::RequestContextClaims::default()
         },
         format!("test:{who}"),
     )

@@ -6,13 +6,16 @@
 
 use super::assistant_profile::{admit_put, read_op, Admitted, ReadOut};
 use medulla_graph_core::graph::GraphCore;
-use medulla_identity_types::acl::{AgentIdentity, AgentRole, GrantEffect, RbacAction};
 use medulla_identity_types::assistant_profile::{
     AssistantProfile, DocumentSet, DocumentSetKind, ModelHints, ProfileOp, ProfileShare,
     ASSISTANT_PROFILE_SCHEMA_VERSION,
 };
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_mutation::mutation::apply_coalescable_write;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+    medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
+};
 
 const SCOPE_A: &str = "scope-a";
 const SCOPE_B: &str = "scope-b";

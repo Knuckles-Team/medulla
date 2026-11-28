@@ -33,7 +33,7 @@ const REVIEWER: &str = "decider";
 /// delegation and no service prefix, so the engine binds it as the reviewer.
 fn reviewer() -> VerifiedRequestContext {
     VerifiedRequestContext::from_verified_claims(
-        medulla_identity_types::acl::RequestContextClaims {
+        medulla_identity_core_types::acl::RequestContextClaims {
             principal: REVIEWER.to_string(),
             tenant: TENANT.to_string(),
             audience: "medulla".to_string(),

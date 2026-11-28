@@ -88,8 +88,8 @@ impl GraphIndexReader {
         tenant: &str,
         read: impl Fn(&medulla_graph_core::graph::GraphCore) -> Option<T>,
     ) -> Option<T> {
-        let tenant = medulla_identity_types::tenancy::TenantId::new(tenant).ok()?;
-        let whole = medulla_identity_types::tenancy::tenant_graph(&tenant);
+        let tenant = medulla_identity_core_types::tenancy::TenantId::new(tenant).ok()?;
+        let whole = medulla_identity_core_types::tenancy::tenant_graph(&tenant);
         let prefix = format!("{whole}__");
         with_state(&self.state, |state| {
             let mut names: Vec<String> = state

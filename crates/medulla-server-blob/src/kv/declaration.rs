@@ -267,7 +267,7 @@ mod reserved_namespace_tests {
         };
         assert!(refuse_reserved_namespace(
             &write,
-            medulla_identity_types::identity::REPLICATION_SLOT_AGENT
+            medulla_identity_core_types::identity::REPLICATION_SLOT_AGENT
         )
         .is_ok());
         assert!(refuse_reserved_namespace(&write, "service:other").is_err());

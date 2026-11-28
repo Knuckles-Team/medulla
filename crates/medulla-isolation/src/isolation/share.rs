@@ -14,8 +14,8 @@
 //! revoke of a promoted node removes it in the same commit
 //! ([`commons_copy_change`] names which).
 
-use medulla_identity_types::acl::{ShareGrant, ShareRevoke};
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
+use {medulla_identity_core_types::acl::ShareGrant, medulla_identity_core_types::acl::ShareRevoke};
 
 /// The node key of the share scope: `private`, `org` or `commons`.
 pub const SHARED_SCOPE_KEY: &str = "_shared_scope";

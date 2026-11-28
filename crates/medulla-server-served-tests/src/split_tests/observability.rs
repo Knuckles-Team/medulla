@@ -8,7 +8,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_persistence::cold_offload::{lazy_open, DEFAULT_PRODUCTION_MAX_RESIDENT_GRAPHS};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;

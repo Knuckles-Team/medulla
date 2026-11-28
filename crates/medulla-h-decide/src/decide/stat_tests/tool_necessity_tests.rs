@@ -7,8 +7,10 @@ use super::path_preference_tests::{pins, OTHER};
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 const TOOL: &str = "tool:search";
 const MODEL: &str = "model:a";

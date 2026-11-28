@@ -416,7 +416,7 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    wire_isolation_with_role(users, medulla_identity_types::acl::AgentRole::Agent)
+    wire_isolation_with_role(users, medulla_identity_core_types::acl::AgentRole::Agent)
 }
 
 /// The wire fixture's isolation with every user registered under `role`. A `System`
@@ -424,10 +424,14 @@ pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
 #[cfg(feature = "security")]
 pub fn wire_isolation_with_role(
     users: &[&str],
-    role: medulla_identity_types::acl::AgentRole,
+    role: medulla_identity_core_types::acl::AgentRole,
 ) -> IsolationLayer {
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use {
+        medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+    };
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));
@@ -485,7 +489,7 @@ pub fn seeded_system_wire_state(
 ) -> SharedState {
     let mut state = make_state(
         auth_secret,
-        wire_isolation_with_role(&[user], medulla_identity_types::acl::AgentRole::System),
+        wire_isolation_with_role(&[user], medulla_identity_core_types::acl::AgentRole::System),
         persist_dir,
         persistence,
     );

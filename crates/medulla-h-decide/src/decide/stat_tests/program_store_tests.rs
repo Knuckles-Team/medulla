@@ -72,9 +72,9 @@ pub(super) struct Fixture {
 impl Fixture {
     pub(super) async fn new() -> Self {
         let mut isolation = ServerState::test_isolation("recorder");
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: "decider".into(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

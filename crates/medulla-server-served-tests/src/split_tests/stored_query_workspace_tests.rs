@@ -3,7 +3,7 @@
 // all answer the same refusal, the list is cursor-paged and bound to its tenant, and a retired
 // name keeps its versions but is never served or published again.
 
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_source_types::stored_query::{
     RefreshPolicy, StoredParamType, StoredQuery, StoredQueryLanguage, StoredQueryPage,
@@ -43,8 +43,12 @@ async fn put(served: &Served, query: StoredQuery) {
 /// graph, so a refusal of its requests can only come from the stored-query handler and not from
 /// the graph's access check.
 async fn admit(served: &Served, agent: &str, writable: bool) {
-    use medulla_identity_types::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Grant,
+        medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
     };
     let role = format!("stored-query-{agent}");
     let mut state = served.state().write().await;

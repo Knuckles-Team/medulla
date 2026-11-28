@@ -844,9 +844,9 @@ mod tests {
     #[cfg(feature = "security")]
     fn limited_isolation(agent: &str) -> medulla_isolation::isolation::IsolationLayer {
         let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: agent.to_string(),
-            role: medulla_identity_types::acl::AgentRole::Agent,
+            role: medulla_identity_core_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: Vec::new(),
         });

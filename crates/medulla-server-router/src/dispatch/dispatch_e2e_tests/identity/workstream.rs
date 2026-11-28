@@ -47,16 +47,14 @@ async fn workstream_attach_round_trip_and_principal_mismatch_refused() {
         ));
     }
     for agent_id in ["usr:ann", "usr:root"] {
-        state
-            .write()
-            .await
-            .isolation
-            .register_agent(medulla_identity_types::acl::AgentIdentity {
+        state.write().await.isolation.register_agent(
+            medulla_identity_core_types::acl::AgentIdentity {
                 agent_id: agent_id.to_string(),
-                role: medulla_identity_types::acl::AgentRole::System,
+                role: medulla_identity_core_types::acl::AgentRole::System,
                 teams: Vec::new(),
                 roles: Vec::new(),
-            });
+            },
+        );
     }
     let own_id = workstream_node_id(TENANT, DIGEST);
     let other_tenant_id = workstream_node_id("tenant-other", DIGEST);

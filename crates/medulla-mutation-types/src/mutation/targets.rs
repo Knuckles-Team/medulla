@@ -4,7 +4,7 @@ use super::budget::{
     deserialize_and_charge, MutationBudgetCharge, MutationBudgetDeserialize, StructuralBudget,
     PRECONDITION_FIXED_BUDGET,
 };
-use medulla_identity_types::authority::AuthorityScope;
+use medulla_identity_core_types::authority::AuthorityScope;
 use medulla_types::contract::MutationDomain;
 use medulla_types::{
     contract::Digest256, contract::ResourceId, contract::SchemaId, contract::TenantId,

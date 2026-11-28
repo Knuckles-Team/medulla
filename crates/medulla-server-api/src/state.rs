@@ -631,9 +631,9 @@ impl ServerState {
     #[doc(hidden)]
     pub fn test_isolation(agent_id: impl Into<String>) -> IsolationLayer {
         let mut isolation = IsolationLayer::new();
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: agent_id.into(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

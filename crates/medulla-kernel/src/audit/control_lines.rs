@@ -192,8 +192,9 @@ fn incident_audit_line(method: &Method) -> Option<String> {
         }
         // MEDULLA-IDENTITY-R753: the line names the client and the connector, never a secret.
         Method::CredentialReceipt { op } => {
-            let medulla_identity_types::credential_receipt::CredentialReceiptOp::Record { receipt } =
-                op.as_ref();
+            let medulla_identity_core_types::credential_receipt::CredentialReceiptOp::Record {
+                receipt,
+            } = op.as_ref();
             Some(format!(
                 "CREDENTIAL_RECEIPT|record|{}|{}",
                 receipt.client, receipt.connector
@@ -439,8 +440,8 @@ fn identity_audit_line(method: &Method) -> Option<String> {
     }
 }
 
-fn rbac_admin_audit_line(op: &medulla_identity_types::acl::RbacAdminOp) -> Option<String> {
-    use medulla_identity_types::acl::RbacAdminOp;
+fn rbac_admin_audit_line(op: &medulla_identity_core_types::acl::RbacAdminOp) -> Option<String> {
+    use medulla_identity_core_types::acl::RbacAdminOp;
     match op {
         RbacAdminOp::AddRole(role) => Some(format!("RBAC_ADMIN|add_role|{}", role.name)),
         RbacAdminOp::RemoveRole(name) => Some(format!("RBAC_ADMIN|remove_role|{name}")),

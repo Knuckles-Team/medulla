@@ -23,7 +23,7 @@ use sha2::Sha256;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_ingestion_types::knowledge_stream::KnowledgeResultFamily;
 use medulla_ingestion_types::knowledge_stream::KnowledgeStreamBatch;
 use medulla_ingestion_types::knowledge_stream::KnowledgeStreamCursor;

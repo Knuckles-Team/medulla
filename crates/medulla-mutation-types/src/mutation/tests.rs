@@ -8,11 +8,6 @@ use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::outbox::{OutboxHeader, OutboxIntent};
-use medulla_identity_types::authority::{
-    AuthorityContext, AuthorityScope, NonceReplayKey, OperationReplayIdentity, ReplayReceipt,
-    SignedAuthorityEnvelopeEvidence, VerifiedAuthority, AUTHORITY_CONTEXT_SCHEMA_V1,
-    AUTHORITY_PROTOCOL_V1,
-};
 use medulla_types::contract::{
     AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, ReplayOutcome,
     ScopeKind, VerificationStatus,
@@ -24,6 +19,17 @@ use medulla_types::{
     contract::ResourceId, contract::SchemaId, contract::TenantId, contract::UtcUnixNanos,
     contract::MAX_MUTATION_EFFECTS, contract::MAX_MUTATION_ENVELOPE_BYTES,
     contract::MAX_OUTBOX_INTENTS, contract::MAX_SCOPE_COMPONENTS,
+};
+use {
+    medulla_identity_core_types::authority::AuthorityContext,
+    medulla_identity_core_types::authority::AuthorityScope,
+    medulla_identity_core_types::authority::NonceReplayKey,
+    medulla_identity_core_types::authority::OperationReplayIdentity,
+    medulla_identity_core_types::authority::ReplayReceipt,
+    medulla_identity_core_types::authority::SignedAuthorityEnvelopeEvidence,
+    medulla_identity_core_types::authority::VerifiedAuthority,
+    medulla_identity_core_types::authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+    medulla_identity_core_types::authority::AUTHORITY_PROTOCOL_V1,
 };
 
 fn digest(byte: u8) -> Digest256 {

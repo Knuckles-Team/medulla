@@ -401,14 +401,14 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     );
     assert_native_round_trip(
         Method::RbacAdmin {
-            op: medulla_identity_types::acl::RbacAdminOp::List,
+            op: medulla_identity_core_types::acl::RbacAdminOp::List,
         },
         NativeMutationDomain::Identity,
     );
     assert_native_round_trip(
         Method::Identity {
-            op: medulla_identity_types::identity::IdentityOp::Config(
-                medulla_identity_types::identity::ConfigOp::Get,
+            op: medulla_identity_core_types::identity::IdentityOp::Config(
+                medulla_identity_core_types::identity::ConfigOp::Get,
             ),
             stamp: None,
         },

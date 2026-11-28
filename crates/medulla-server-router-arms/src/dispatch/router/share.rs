@@ -7,7 +7,7 @@
 //! `row_visibility` reads the committed keys. No second visibility store exists.
 
 use super::*;
-use medulla_identity_types::acl::RbacAdminOp;
+use medulla_identity_core_types::acl::RbacAdminOp;
 use medulla_isolation::isolation::share::{
     commons_copy_change, share_transition, CommonsCopyChange, ShareActor, ShareOp, ShareState,
     COMMONS_COPY_KEY, GRANTS_KEY, OWNER_ID_KEY, SHARED_SCOPE_KEY,

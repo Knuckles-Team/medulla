@@ -77,7 +77,7 @@ impl ReadScope {
         revision: u64,
         scoped: &ScopedView,
     ) -> Result<(), ServerErrorCode> {
-        use medulla_identity_types::identity::SegmentReadAudit;
+        use medulla_identity_core_types::identity::SegmentReadAudit;
         use sha2::{Digest, Sha256};
 
         let Some(persistence) = self.persistence.clone() else {
@@ -228,6 +228,6 @@ pub fn filter_visible_units(
     view: Arc<GraphView>,
     caller: &ReadCaller,
     plan_variables: &[String],
-) -> Result<ScopedView, medulla_identity_types::tenancy::TenancyError> {
+) -> Result<ScopedView, medulla_identity_core_types::tenancy::TenancyError> {
     scope_view(view, caller, plan_variables)
 }

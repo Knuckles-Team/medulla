@@ -25,10 +25,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_core::registry::GraphRegistry;
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use medulla_wire::pgwire;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 fn sql_test_persist_dir() -> String {
     test_support::sql_test_persist_dir("pgwire")
@@ -813,7 +815,12 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     // graph while still being denied `peer`'s.
     #[cfg(feature = "security")]
     {
-        use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use {
+            medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+            medulla_identity_core_types::acl::RbacAction,
+            medulla_identity_core_types::acl::ResourceSelector,
+            medulla_identity_core_types::acl::Role,
+        };
         for (owner, graph) in [("worker", "agent:worker"), ("peer", "agent:peer")] {
             let role = format!("owner-{owner}");
             isolation.add_role(Role::new(role.clone()));
@@ -2226,7 +2233,7 @@ fn login_state(principals: &[&str]) -> Arc<RwLock<ServerState>> {
 /// (MEDULLA-ENGINE-PARITY-R007.4).
 async fn register_wire_login(
     state: &test_support::SharedState,
-    record: medulla_identity_types::identity::WireLoginRecord,
+    record: medulla_identity_core_types::identity::WireLoginRecord,
 ) {
     state.write().await.isolation.seed_wire_login(record);
 }
@@ -2237,9 +2244,9 @@ async fn register_password_login(
     principal: &str,
     tenant: &str,
 ) {
-    let record = medulla_identity_types::identity::WireLoginRecord::new(
+    let record = medulla_identity_core_types::identity::WireLoginRecord::new(
         login,
-        medulla_identity_types::identity::WireLoginKind::Password,
+        medulla_identity_core_types::identity::WireLoginKind::Password,
         &pgwire::password_verifier(LOGIN_PASSWORD, &LOGIN_SALT),
         principal,
         tenant,
@@ -2357,10 +2364,10 @@ async fn login_maps_to_principal() {
     register_password_login(&state, "bi-login-a", "login-a", common::TEST_TENANT).await;
     register_wire_login(
         &state,
-        medulla_identity_types::identity::WireLoginRecord::new(
+        medulla_identity_core_types::identity::WireLoginRecord::new(
             "bi-token-a",
-            medulla_identity_types::identity::WireLoginKind::Token,
-            &medulla_identity_types::identity::sha256_verifier(TOKEN.as_bytes()),
+            medulla_identity_core_types::identity::WireLoginKind::Token,
+            &medulla_identity_core_types::identity::sha256_verifier(TOKEN.as_bytes()),
             "login-a",
             common::TEST_TENANT,
             1,
@@ -2514,10 +2521,10 @@ async fn certificate_login_maps_to_principal() {
     let fixture = mtls_fixture();
     let addr = spawn_mtls_listener(state.clone(), &fixture).await;
     let register = |login: &str, der: &[u8]| {
-        medulla_identity_types::identity::WireLoginRecord::new(
+        medulla_identity_core_types::identity::WireLoginRecord::new(
             login,
-            medulla_identity_types::identity::WireLoginKind::Certificate,
-            &medulla_identity_types::identity::sha256_verifier(der),
+            medulla_identity_core_types::identity::WireLoginKind::Certificate,
+            &medulla_identity_core_types::identity::sha256_verifier(der),
             "login-a",
             common::TEST_TENANT,
             1,

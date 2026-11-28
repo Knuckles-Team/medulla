@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-catalog-types = { path = "../medulla-catalog-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-query-types = { path = "../medulla-query-types" }
@@ -29,8 +29,8 @@ hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
 
 [features]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-identity-types/contract-schema", "medulla-ingestion-types/contract-schema", "medulla-work-types/contract-schema"]
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support", "medulla-ingestion-types/test-support", "medulla-work-types/test-support"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-core-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-identity-core-types/contract-schema", "medulla-ingestion-types/contract-schema", "medulla-work-types/contract-schema"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-core-types/test-support", "medulla-ingestion-types/test-support", "medulla-work-types/test-support"]
 
 [dev-dependencies]
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

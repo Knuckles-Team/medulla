@@ -283,6 +283,7 @@ units = [
   "medulla-decision-outcome-types",
   "medulla-decision-types",
   "medulla-finance-types",
+  "medulla-identity-core-types",
   "medulla-identity-types",
   "medulla-index-types",
   "medulla-ingestion-types",

@@ -23,9 +23,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Barrier, RwLock};
 
-use medulla_identity_types::acl::AgentIdentity;
-use medulla_identity_types::acl::AgentRole;
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::AgentIdentity;
+use medulla_identity_core_types::acl::AgentRole;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;

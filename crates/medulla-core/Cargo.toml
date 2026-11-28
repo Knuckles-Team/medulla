@@ -130,7 +130,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
@@ -166,7 +166,7 @@ medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["te
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse
 # the registered core documents with the native RDF stack. Dev-only: a default

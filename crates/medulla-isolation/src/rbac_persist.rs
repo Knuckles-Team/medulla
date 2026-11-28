@@ -32,7 +32,7 @@ use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
 use crate::rbac::RbacPolicy;
-use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_core_types::acl::AgentIdentity;
 use {
     medulla_catalog_source_types::data_product::AccessRequest,
     medulla_catalog_source_types::data_product::DataContract,
@@ -250,8 +250,8 @@ impl RbacAuthoritySnapshot {
 pub(crate) fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistError> {
     #[derive(serde::Serialize)]
     struct CanonicalPolicy<'a> {
-        roles: BTreeMap<&'a str, &'a medulla_identity_types::acl::Role>,
-        grants: &'a [medulla_identity_types::acl::Grant],
+        roles: BTreeMap<&'a str, &'a medulla_identity_core_types::acl::Role>,
+        grants: &'a [medulla_identity_core_types::acl::Grant],
         // EH-404: an elevation transition (above all a revocation) moves the
         // digest, so a policy decision lease minted before it fails closed.
         // Omitted while empty, so an image without elevations keeps its digest.
@@ -885,9 +885,13 @@ mod tests {
         IdentityBootstrapState, MemoryRbacStore, RbacPersistError, RbacPolicyStore, IDENTITIES_KEY,
     };
     use crate::rbac::RbacPolicy;
-    use medulla_identity_types::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceContext,
-        ResourceSelector, Role,
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Grant,
+        medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceContext,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
     };
 
     /// A unique temp dir per test invocation (no external dev-dep needed).

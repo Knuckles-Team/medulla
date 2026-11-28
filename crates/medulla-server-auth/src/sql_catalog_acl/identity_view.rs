@@ -16,7 +16,7 @@
 
 use std::path::Path;
 
-use medulla_identity_types::identity::SqlType;
+use medulla_identity_core_types::identity::SqlType;
 use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
 use super::AuthorizedReadStore;

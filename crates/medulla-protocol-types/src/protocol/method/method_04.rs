@@ -422,7 +422,7 @@ $($variants)*
     // ── Zero-Trust Consensus ─────────────────────────────────────────
     RegisterIdentity {
         agent_id: String,
-        role: medulla_identity_types::acl::AgentRole,
+        role: medulla_identity_core_types::acl::AgentRole,
         teams: Vec<String>,
         signature: String,
         /// RBAC role names this agent holds (CONCEPT:MEDULLA-KG.compute.feature).
@@ -469,7 +469,7 @@ $($variants)*
     /// never the identity or policy. See [`crate::acl::AccessDecision`].
     CheckAccess {
         agent_id: String,
-        access: medulla_identity_types::acl::AccessCheck,
+        access: medulla_identity_core_types::acl::AccessCheck,
     },
 
     /// May `agent_id` call `operation` of the protocol resource `resource_ref` right now
@@ -480,7 +480,7 @@ $($variants)*
     CheckResourceAccess {
         agent_id: String,
         resource_ref: String,
-        protocol: medulla_identity_types::acl::ResourceProtocol,
+        protocol: medulla_identity_core_types::acl::ResourceProtocol,
         operation: String,
     },
 
@@ -489,7 +489,7 @@ $($variants)*
     /// falls to the dispatch "not available in this build" catch-all, like MEDULLA-090's
     /// backup/restore on a non-redb build).
     RbacAdmin {
-        op: medulla_identity_types::acl::RbacAdminOp,
+        op: medulla_identity_core_types::acl::RbacAdminOp,
     },
 
     /// Just-in-time RBAC elevation (EH-404): request, approve (two-person),
@@ -521,9 +521,9 @@ $($variants)*
     /// the replicated command nor a log ever carries one; a caller-supplied
     /// stamp is always overwritten.
     Identity {
-        op: medulla_identity_types::identity::IdentityOp,
+        op: medulla_identity_core_types::identity::IdentityOp,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        stamp: Option<medulla_identity_types::identity::IdentityStamp>,
+        stamp: Option<medulla_identity_core_types::identity::IdentityStamp>,
     },
 
     ApplyMultisigMutation {

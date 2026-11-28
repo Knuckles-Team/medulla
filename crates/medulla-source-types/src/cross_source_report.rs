@@ -185,7 +185,7 @@ pub fn assemble_cross_source_report(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::authority_audit::AuditSourceMode;
+    use medulla_identity_core_types::authority_audit::AuditSourceMode;
 
     fn related(relation: &str, value: &str) -> RelatedValue {
         RelatedValue {

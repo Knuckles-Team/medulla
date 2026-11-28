@@ -7,7 +7,7 @@ use crate::mutation::{MutationReceipt, MutationRequestEnvelope};
 use crate::outbox_delivery_machine::{
     OutboxDeliveryEvent, OutboxDeliveryFacts, OUTBOX_DELIVERY_MACHINE,
 };
-use medulla_identity_types::authority::AuthorityScope;
+use medulla_identity_core_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::RecordBytes,
     contract::ResourceId, contract::TenantId, contract::UtcUnixNanos,

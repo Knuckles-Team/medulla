@@ -126,7 +126,7 @@ mod tests {
             "MFA_LOCKED",
             "MFA_ENROLLMENT_REQUIRED",
         ];
-        for refusal in medulla_identity_types::identity::IdentityRefusal::ALL {
+        for refusal in medulla_identity_core_types::identity::IdentityRefusal::ALL {
             let code = refusal.to_string();
             assert!(
                 code.starts_with("IDENTITY_") || NAMED_OUTSIDE_FAMILY.contains(&code.as_str()),

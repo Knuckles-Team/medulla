@@ -12,11 +12,14 @@ use medulla_server_blob::blob::BlobStateExt;
 #[cfg(all(test, feature = "security"))]
 #[tokio::test(flavor = "multi_thread")]
 async fn registry_serves_one_method_per_domain() {
-    use medulla_identity_types::acl::{AgentIdentity, AgentRole};
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_auth::auth::sign_current_test_request;
     use std::sync::Arc;
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole,
+    };
 
     const SECRET: &str = "registry-test-secret";
     let names = crate::dispatch::router::method_handler_registry().names();
@@ -76,14 +79,14 @@ async fn registry_serves_one_method_per_domain() {
 #[cfg(all(test, feature = "security"))]
 mod admin_scope_tests {
     use super::*;
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
-    use medulla_identity_types::acl::Grant;
-    use medulla_identity_types::acl::GrantEffect;
-    use medulla_identity_types::acl::RbacAction;
-    use medulla_identity_types::acl::RbacAdminOp;
-    use medulla_identity_types::acl::ResourceSelector;
-    use medulla_identity_types::acl::Role;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::Grant;
+    use medulla_identity_core_types::acl::GrantEffect;
+    use medulla_identity_core_types::acl::RbacAction;
+    use medulla_identity_core_types::acl::RbacAdminOp;
+    use medulla_identity_core_types::acl::ResourceSelector;
+    use medulla_identity_core_types::acl::Role;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
@@ -922,7 +925,7 @@ mod blob_dispatch_tests {
 #[cfg(test)]
 mod placement_route_carrier_tests {
     use super::*;
-    use medulla_identity_types::acl::RequestContextClaims;
+    use medulla_identity_core_types::acl::RequestContextClaims;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;

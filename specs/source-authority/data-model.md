@@ -19,7 +19,7 @@ This file describes the entities that source authority adds: the ontology row, t
 ### AuthorityAudit
 
 - Fields: used entries and not-used entries, each with source, concept, facet, role, premises, mode and reason.
-- Owner: `crates/medulla-identity-types/src/authority_audit.rs`.
+- Owner: `crates/medulla-identity-core-types/src/authority_audit.rs`.
 - Rule: the wire refuses unknown fields and open values.
 
 ### TrustMark

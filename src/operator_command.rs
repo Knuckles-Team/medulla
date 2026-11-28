@@ -226,7 +226,7 @@ fn run_identity_mode(verb: IdentityModeVerb) -> i32 {
     let report = medulla_server::identity_mode_offline::set_local(
         &data_dir,
         &admin_username,
-        medulla_identity_types::identity::Secret::new(password),
+        medulla_identity_core_types::identity::Secret::new(password),
         confirm,
     );
     print!("{}", report.render());

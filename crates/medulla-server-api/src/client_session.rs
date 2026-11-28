@@ -12,7 +12,7 @@
 //! verified caller; no scope lifts that rule, because a workstream is always
 //! the caller's own.
 
-use medulla_identity_types::identity::IDENTITY_ADMIN_SCOPE;
+use medulla_identity_core_types::identity::IDENTITY_ADMIN_SCOPE;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::ServerErrorCode;
 

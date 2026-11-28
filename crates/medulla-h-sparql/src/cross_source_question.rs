@@ -14,7 +14,7 @@
 use std::collections::BTreeSet;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_identity_types::authority_audit::AuditSourceMode;
+use medulla_identity_core_types::authority_audit::AuditSourceMode;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::carrier::GraphReadAuthority;

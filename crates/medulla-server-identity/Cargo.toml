@@ -17,6 +17,7 @@ hex = "0.4"
 hmac = "0.12"
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
@@ -49,12 +50,13 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 ast = []
-test-support = ["medulla-server-graph/test-support", "medulla-identity-types/test-support", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-server-auth/test-support"]
+test-support = ["medulla-server-graph/test-support", "medulla-identity-core-types/test-support", "medulla-identity-types/test-support", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-server-auth/test-support"]
 oidc = ["medulla-server-graph/oidc", "dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
 redb = ["medulla-server-graph/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb"]
 security = ["medulla-server-graph/security", "dep:sha1", "dep:argon2", "redb", "oidc", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-types/security"]
 
 [dev-dependencies]
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

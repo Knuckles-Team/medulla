@@ -150,20 +150,20 @@ impl IsolationLayer {
         query: &AccessQuery<'_>,
     ) -> AccessBasis {
         // Mandatory RBAC means no pre-RBAC ACL fall-through on empty/no-match.
-        let context = medulla_identity_types::acl::ResourceContext::graph(query.graph_name);
+        let context = medulla_identity_core_types::acl::ResourceContext::graph(query.graph_name);
         let (action, elevation_action) = match query.access {
             AccessLevel::Read => (
-                medulla_identity_types::acl::RbacAction::Read,
+                medulla_identity_core_types::acl::RbacAction::Read,
                 medulla_identity_types::rbac_elevation::ElevationAction::Read,
             ),
             AccessLevel::Write => (
-                medulla_identity_types::acl::RbacAction::Write,
+                medulla_identity_core_types::acl::RbacAction::Write,
                 medulla_identity_types::rbac_elevation::ElevationAction::Write,
             ),
         };
         match policy.evaluate(&identity.roles, &context, action) {
-            Some(medulla_identity_types::acl::GrantEffect::Allow) => AccessBasis::Standing,
-            Some(medulla_identity_types::acl::GrantEffect::Deny) => AccessBasis::Denied,
+            Some(medulla_identity_core_types::acl::GrantEffect::Allow) => AccessBasis::Standing,
+            Some(medulla_identity_core_types::acl::GrantEffect::Deny) => AccessBasis::Denied,
             None => policy
                 .elevations()
                 .permitting(
@@ -333,14 +333,14 @@ impl IsolationLayer {
             if identity.role == AgentRole::System {
                 return true;
             }
-            let context = medulla_identity_types::acl::ResourceContext::graph("__admin__");
+            let context = medulla_identity_core_types::acl::ResourceContext::graph("__admin__");
             matches!(
                 authority.policy().evaluate(
                     &identity.roles,
                     &context,
-                    medulla_identity_types::acl::RbacAction::Admin,
+                    medulla_identity_core_types::acl::RbacAction::Admin,
                 ),
-                Some(medulla_identity_types::acl::GrantEffect::Allow)
+                Some(medulla_identity_core_types::acl::GrantEffect::Allow)
             )
         }
         #[cfg(not(feature = "security"))]

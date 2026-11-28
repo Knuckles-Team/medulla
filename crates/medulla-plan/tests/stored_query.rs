@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
 use medulla_source_types::stored_query::{
     serve_materialized, RefreshPolicy, Served, StoredParamType, StoredQuery, StoredQueryLanguage,
     StoredResult,

@@ -15,7 +15,7 @@ use medulla_catalog::emit::{Object, Triple, CAT};
 use medulla_catalog::guard::{
     check_batch_size, check_catalog_write, flag_ownerless, CatalogGuardContext, CatalogGuardError,
 };
-use medulla_identity_types::tenancy::Marking;
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_rdf::oxrdf::{self, NamedOrBlankNode, Term};
 use medulla_server_api::carrier::GraphReadAuthority;
 

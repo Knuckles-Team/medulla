@@ -747,9 +747,9 @@ referrer-policy: no-referrer\r\n\
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
-    use medulla_identity_types::acl::RequestContextClaims;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::RequestContextClaims;
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use serde_json::json;
@@ -789,11 +789,11 @@ mod tests {
         // retired open-bus ACL semantics.
         #[cfg(feature = "security")]
         {
-            use medulla_identity_types::acl::Grant;
-            use medulla_identity_types::acl::GrantEffect;
-            use medulla_identity_types::acl::RbacAction;
-            use medulla_identity_types::acl::ResourceSelector;
-            use medulla_identity_types::acl::Role;
+            use medulla_identity_core_types::acl::Grant;
+            use medulla_identity_core_types::acl::GrantEffect;
+            use medulla_identity_core_types::acl::RbacAction;
+            use medulla_identity_core_types::acl::ResourceSelector;
+            use medulla_identity_core_types::acl::Role;
             isolation.add_role(Role::new("commons-user"));
             let grant = |action: RbacAction| Grant {
                 role: "commons-user".to_string(),

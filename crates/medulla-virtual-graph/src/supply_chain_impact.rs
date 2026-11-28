@@ -154,7 +154,7 @@ pub fn abstentions_from(results: &[CoverageResult]) -> Vec<ReportAbstention> {
 mod tests {
     use super::*;
     use crate::source_selection::select_sources;
-    use medulla_identity_types::authority_audit::SourceRole;
+    use medulla_identity_core_types::authority_audit::SourceRole;
 
     // spec: MEDULLA-CQ-XSRC-R006.5
     #[test]
@@ -298,7 +298,7 @@ mod tests {
     // spec: MEDULLA-CQ-XSRC-R006.3
     #[test]
     fn one_report_per_abstention_kind() {
-        use medulla_identity_types::authority_audit::NotUsedReason;
+        use medulla_identity_core_types::authority_audit::NotUsedReason;
         use std::collections::BTreeSet;
 
         let reasons = [

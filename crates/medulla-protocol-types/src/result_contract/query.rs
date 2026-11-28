@@ -86,7 +86,7 @@ method_results! {
     // MEDULLA-FEDERATED-QUERY-R081.103.3: the raw points of one resolved selection token.
     ResolveViewportSelection(ResolveViewportSelection) => Raw<medulla_types::viewport::ResolvedSelection>;
     // MEDULLA-SRC-AUTH-R004.6.1: the verdicts and audit of one source-coverage read.
-    SourceCoverage(SourceCoverage) => Raw<medulla_identity_types::source_coverage::SourceCoverageReply>;
+    SourceCoverage(SourceCoverage) => Raw<medulla_identity_core_types::source_coverage::SourceCoverageReply>;
     // MEDULLA-DECISION-ENGINE-R100.100.4: the spans of one context search.
     RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchResult>;
     // MEDULLA-DECISION-ENGINE-R144.3: the rows and the cost report of one indexless retrieval.

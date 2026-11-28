@@ -95,7 +95,7 @@ async fn a_revoked_agent_run_delegation_refuses_the_work_item_and_other_ids_stay
         (broker(), initialize(PASSWORD)),
         (
             admin(),
-            medulla_identity_types::identity_fixtures::identity::create_administrator_op(
+            medulla_identity_core_types::identity_fixtures::identity::create_administrator_op(
                 "owner", OWNER,
             ),
         ),
@@ -177,7 +177,7 @@ async fn an_envelope_naming_a_delegation_runs_as_its_principal_bounded_to_its_op
         (broker(), initialize(PASSWORD)),
         (
             admin(),
-            medulla_identity_types::identity_fixtures::identity::create_administrator_op(
+            medulla_identity_core_types::identity_fixtures::identity::create_administrator_op(
                 "owner", OWNER,
             ),
         ),

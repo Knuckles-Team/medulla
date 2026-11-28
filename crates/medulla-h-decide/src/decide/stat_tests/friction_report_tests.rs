@@ -35,9 +35,9 @@ fn approver() -> VerifiedRequestContext {
 /// A harness that knows both callers.
 async fn two_callers() -> Harness {
     let mut isolation = ServerState::test_isolation("agent-7");
-    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+    isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
         agent_id: "agent-9".into(),
-        role: medulla_identity_types::acl::AgentRole::System,
+        role: medulla_identity_core_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     });

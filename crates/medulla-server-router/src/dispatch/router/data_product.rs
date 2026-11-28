@@ -16,8 +16,8 @@ use super::share::{
 };
 use super::*;
 use medulla_core::stewardship::{reviewers, TargetScopes};
-use medulla_identity_types::acl::ShareGrant;
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::acl::ShareGrant;
+use medulla_identity_core_types::identity::ShareScope;
 use medulla_isolation::isolation::share::{
     share_authority, share_transition, ShareActor, ShareDelegation, ShareOp, ShareState,
     SCOPE_COMMONS, SCOPE_ORG,

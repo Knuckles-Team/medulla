@@ -43,7 +43,7 @@ crates/medulla-server-api/src/read_audit.rs                  new: read and claim
 crates/medulla-server-auth/src/auth.rs                       existing: admission, mode epoch, issuer material
 crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs
 crates/medulla-identity-types/src/identity/                  existing: ops, store, segment; new: mode.rs, ownership.rs, metadata.rs, delegation.rs
-crates/medulla-identity-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
+crates/medulla-identity-core-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
 crates/medulla-h-query-read/src/query/segment_filter.rs           new: visible-unit filter and point-read check
 crates/medulla-h-admin-schema/src/admin/ownership.rs                new: ownership plan handler
 crates/medulla-server-router/src/dispatch/router/identity_access.rs  existing: Identity, RbacAdmin and access arms
@@ -73,15 +73,15 @@ One line per answer.
 
 - **Owner.** Medulla. Admission in `crates/medulla-server-api/src/oidc.rs` and `crates/medulla-server-auth/src/auth.rs`; the identity method in `crates/medulla-server-router/src/dispatch/router/identity_access.rs`; isolation in `crates/medulla-isolation/src/isolation.rs`; row visibility in `crates/medulla-graph-core/src/rls.rs`; audit in `crates/medulla-kernel/src/audit.rs`.
 - **Cohesion.** Identity and RBAC mutations, the mode singleton and their audit entry commit in one control transaction, so they share one owner; visibility has one store, `row_visibility`.
-- **Dependency direction.** Admission and dispatch point down to `medulla-isolation`, `medulla-graph-core` and `medulla-kernel`; the tenancy model of `crates/medulla-identity-types/src/tenancy.rs` sits below all of them. No lower crate reads a request field.
+- **Dependency direction.** Admission and dispatch point down to `medulla-isolation`, `medulla-graph-core` and `medulla-kernel`; the tenancy model of `crates/medulla-identity-core-types/src/tenancy.rs` sits below all of them. No lower crate reads a request field.
 - **Interface depth.** One served identity method (`Method::Identity`, with `RbacAdmin`) carries share, ownership, session-record and approval-key operations. Scopes come from one generated registry of capability declarations. Rows extend `ScopeBound`, `KnowledgeUnit`, `ShareScope` and `visible_units`.
 - **Special cases.** None per caller. Authority comes only from the verified context, and a missing policy node is the empty bound.
-- **State.** The identity mode is a compare-and-set singleton with an epoch, following the mode state machine below; role sets, the audit chain and unit ownership keyed by the (tenant, principal) pair are durable. User lifecycle follows the `UserStatus` machine of `crates/medulla-identity-types/src/identity/model.rs`.
+- **State.** The identity mode is a compare-and-set singleton with an epoch, following the mode state machine below; role sets, the audit chain and unit ownership keyed by the (tenant, principal) pair are durable. User lifecycle follows the `UserStatus` machine of `crates/medulla-identity-core-types/src/identity/model.rs`.
 - **Environment.** Issuer, audience and JWKS URL are read at startup from `MEDULLA_OIDC_JWT_ISSUER`, `MEDULLA_OIDC_JWT_AUDIENCE` and `MEDULLA_OIDC_JWKS_URL` (with the platform `OIDC_ISSUER` and `OIDC_AUDIENCE` fallbacks) in `crates/medulla-server-api/src/oidc.rs`. Handlers read no environment variable.
 
 ### Existing system and reuse
 
-The identity store, the isolation layer, the scope registry and the policy store exist; rows extend them. `ScopeBound`, `scope_within_bound`, `KnowledgeUnit`, `ShareScope`, `visible_units` and the tenancy model of `crates/medulla-identity-types/src/tenancy.rs` already exist and are verified by their own tests.
+The identity store, the isolation layer, the scope registry and the policy store exist; rows extend them. `ScopeBound`, `scope_within_bound`, `KnowledgeUnit`, `ShareScope`, `visible_units` and the tenancy model of `crates/medulla-identity-core-types/src/tenancy.rs` already exist and are verified by their own tests.
 
 ### Architecture
 
@@ -145,7 +145,7 @@ Handoff: Arbora must check the same bound when work enters; Meristem only applie
 
 ### Principal-scoped knowledge segments (R023)
 
-Data flow: content-read wire method -> the retrieval function -> `visible_units` (`crates/medulla-identity-types/src/identity/segment.rs`) -> permitted current units plus an audit entry.
+Data flow: content-read wire method -> the retrieval function -> `visible_units` (`crates/medulla-identity-core-types/src/identity/segment.rs`) -> permitted current units plus an audit entry.
 
 Types: `KnowledgeUnit`, `share_scope`. Attach point: the retrieval function in the content-read path. Production caller: the content-read handler, created by the Wiring row. Failure behavior: out-of-scope reads return `OutOfScope` with the id only.
 
@@ -159,14 +159,14 @@ Decision: access labels live in the unit itself, so every reader enforces them. 
 
 Medulla owns typed preferences, client descriptions and interaction networks as graph records.
 The canonical identity store remains the sole principal, credential and grant authority.
-`crates/medulla-identity-types/src/identity/model.rs:41` defines UserRecord and its stable principal_id.
-`crates/medulla-identity-types/src/identity.rs:1` documents that authority and its RBAC projection.
+`crates/medulla-identity-core-types/src/identity/model.rs:41` defines UserRecord and its stable principal_id.
+`crates/medulla-identity-core-types/src/identity.rs:1` documents that authority and its RBAC projection.
 Metadata references exact canonical principal IDs. It never infers identity from an alias, hash or display name.
 A client description references its controlling principal. It does not register a principal or confer a credential.
 Interaction links describe observed relationships. They never create membership, sharing grants or trust.
 R023 sharing still requires an explicit authorized scope. Private scope is the default.
 
-Extend the proposed `crates/medulla-identity-types/src/identity/segment.rs` model from R023.1.
+Extend the proposed `crates/medulla-identity-core-types/src/identity/segment.rs` model from R023.1.
 Its metadata payload is a closed union: Preference, ClientMetadata or InteractionNetwork.
 Common fields are node ID, owner principal, tenant, graph incarnation, revision, schema digest and provenance.
 Preference contains a registered preference key and a value matching that key's declared type.
@@ -331,7 +331,7 @@ none
 ## Production caller chain
 
 - Request admission: `crates/medulla-server-api/src/oidc.rs` verifier to `crates/medulla-server-auth/src/auth.rs` to `dispatch_identity_and_access_methods` (`crates/medulla-server-router/src/dispatch/router/identity_access.rs:10`).
-- `Method::Identity` to `dispatch_identity_store_method` (`identity_access.rs:90`) to `IdentityStore` (`crates/medulla-identity-types/src/identity/store.rs`).
+- `Method::Identity` to `dispatch_identity_store_method` (`identity_access.rs:90`) to `IdentityStore` (`crates/medulla-identity-core-types/src/identity/store.rs`).
 - `Method::RbacAdmin` to the arm at `identity_access.rs:305`, which gains the share and ownership apply calls.
 - `Method::Uql` and `Method::UnifiedQuery` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs`) to `run_unified_off_lock_with` (`crates/medulla-h-query-read/src/query/planning.rs`), which gains the tenant predicate and the visible-unit filter.
 - `Method::AgentAssemble` to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (line 46), which gains `enforce_scope`.
@@ -341,7 +341,7 @@ none
 ### Machine wiring
 
 - `GovernedChangeMachine`: entry point served governed change methods → `GovernedStatus::apply` → `GovernedStatus::apply` in `crates/medulla-mutation-types/src/governed_change.rs`, the one assign site → stored state field. Attach points: `governed_change.rs:472,512,549`. Wiring row: MEDULLA-IDENTITY-R720.1. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R720.1.
-- `UserStatusMachine`: entry point served identity methods → `transition_status` → `UserStatus::apply` in `crates/medulla-identity-types/src/identity/model.rs`, called only by `transition_status` in `crates/medulla-identity-types/src/identity/store/users.rs:259` → stored state field. Attach points: `store/users.rs` (`transition_status`), `store/auth.rs`, `store/provision.rs`; the mode-switch write in `store/modes.rs` is deleted. Wiring row: MEDULLA-IDENTITY-R721.1. Hot-path proof row: `no_write_bypasses_transition_status` of MEDULLA-IDENTITY-R721.1.
+- `UserStatusMachine`: entry point served identity methods → `transition_status` → `UserStatus::apply` in `crates/medulla-identity-core-types/src/identity/model.rs`, called only by `transition_status` in `crates/medulla-identity-core-types/src/identity/store/users.rs:259` → stored state field. Attach points: `store/users.rs` (`transition_status`), `store/auth.rs`, `store/provision.rs`; the mode-switch write in `store/modes.rs` is deleted. Wiring row: MEDULLA-IDENTITY-R721.1. Hot-path proof row: `no_write_bypasses_transition_status` of MEDULLA-IDENTITY-R721.1.
 - `RbacElevationMachine`: entry point served elevation methods → `move_to` → `ElevationLedger::move_to` at `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:133`, the one assign site (`:137`) → stored state field. Attach points: `rbac_elevation/ledger.rs:133,137`. Wiring row: MEDULLA-IDENTITY-R722.2. Hot-path proof row: `no_writer_sets_state_outside_apply` of MEDULLA-IDENTITY-R722.2.
 - `ApplicationAdmissionMachine`: entry point `AdmissionRunner` methods → `ApplicationAdmission::advance(event)` → `AdmissionStage::apply` in `crates/medulla-identity-types/src/application_admission_machine.rs` → the `stage` field of `crates/medulla-identity-types/src/platform_admission.rs`. Edges A01 to A05. Wiring and proof row: MEDULLA-IDENTITY-R724.1 (`no_writer_sets_stage_outside_apply`).
 

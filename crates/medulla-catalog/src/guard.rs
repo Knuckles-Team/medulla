@@ -15,7 +15,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_identity_types::tenancy::Marking;
+use medulla_identity_core_types::tenancy::Marking;
 
 use crate::emit::{Object, Triple, ASSET_NODE_PREFIX, CAT, OWNER_MISSING_FLAG};
 

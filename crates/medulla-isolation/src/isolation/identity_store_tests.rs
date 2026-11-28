@@ -8,11 +8,20 @@ use crate::rbac::RbacPolicy;
 use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,
 };
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
-use medulla_identity_types::acl::{ApplyOwnership, RollbackOwnership};
-use medulla_identity_types::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
-use medulla_identity_types::identity::*;
+use medulla_identity_core_types::identity::*;
 use medulla_protocol_types::protocol::GraphType;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
+use {
+    medulla_identity_core_types::acl::ApplyOwnership,
+    medulla_identity_core_types::acl::RollbackOwnership,
+};
+use {
+    medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::RbacAdminOp,
+    medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+};
 
 pub(super) const NOW: u64 = 1_800_000_000_000;
 const GRAPH: &str = "g-reports";
@@ -294,7 +303,7 @@ fn create_user_cannot_take_over_a_registered_principal() {
 /// A layer with an administrator role `ops` and three registered agents: `usr:a` holds `ops`,
 /// `usr:b` holds nothing and `usr:c` holds `extra`.
 fn ownership_layer() -> IsolationLayer {
-    use medulla_identity_types::acl::Grant;
+    use medulla_identity_core_types::acl::Grant;
     let mut layer = bootstrapped();
     layer
         .try_rbac_admin_audited(RbacAdminOp::AddRole(Role::new("ops")), actor())
@@ -810,7 +819,11 @@ fn session_fixture(owner: &IdentityStamp) -> IsolationLayer {
 #[test]
 fn resource_grant_survives_reopen_and_revoke_is_audited() {
     use crate::rbac_persist::test_support::open_test_store;
-    use medulla_identity_types::acl::{ResourceGrant, ResourceGrantSubject, ResourceProtocol};
+    use {
+        medulla_identity_core_types::acl::ResourceGrant,
+        medulla_identity_core_types::acl::ResourceGrantSubject,
+        medulla_identity_core_types::acl::ResourceProtocol,
+    };
 
     let grant = ResourceGrant::new(
         ResourceGrantSubject::Principal("usr:alice".to_string()),

@@ -9,12 +9,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_identity_types::identity::{
-    owner_or_matching_scope, KnowledgeUnit, ShareScope, UnitPrincipal,
-};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use {
+    medulla_identity_core_types::identity::owner_or_matching_scope,
+    medulla_identity_core_types::identity::KnowledgeUnit,
+    medulla_identity_core_types::identity::ShareScope,
+    medulla_identity_core_types::identity::UnitPrincipal,
+};
 
 pub const STORED_QUERY_INVALID: &str = "STORED_QUERY_INVALID";
 pub const STORED_QUERY_PARAM_MISSING: &str = "STORED_QUERY_PARAM_MISSING";

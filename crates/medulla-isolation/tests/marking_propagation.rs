@@ -2,8 +2,8 @@
 
 use std::collections::BTreeSet;
 
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{ClaimKind, ClaimState};
-use medulla_identity_types::tenancy::Marking;
 use medulla_isolation::isolation::marking_propagation::{legal_move, propagate, LineageEdges};
 
 fn edges(pairs: &[(&str, &str)]) -> LineageEdges {

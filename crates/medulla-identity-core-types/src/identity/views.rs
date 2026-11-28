@@ -84,7 +84,7 @@ impl UserView {
 
 /// Which credentials a principal has, without any of their material.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub(crate) struct CredentialFacts {
+pub struct CredentialFacts {
     pub(crate) has_password: bool,
     pub(crate) totp_enrolled: bool,
     pub(crate) recovery_codes_left: usize,
@@ -111,7 +111,7 @@ pub struct SessionView {
 
 /// The handle a session listing shows: the first characters of a re-hash of the session hash.
 /// It names a session for revocation and grants nothing.
-pub(crate) fn session_handle(session_hash: &str) -> String {
+pub fn session_handle(session_hash: &str) -> String {
     let handle = super::store::digest_hex(b"eg/identity-session-handle/v1\0", session_hash);
     handle[..super::credentials::SESSION_HANDLE_CHARS].to_string()
 }

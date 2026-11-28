@@ -915,7 +915,7 @@ mod tests {
             materialize: false,
             refresh: RefreshPolicy::OnChange,
             author: "alice".into(),
-            share: medulla_identity_types::identity::ShareScope::Private,
+            share: medulla_identity_core_types::identity::ShareScope::Private,
         };
         let triples = emit_asset(AssetRecord::StoredQuery(&query), &AssetLinks::default()).unwrap();
         let node = asset_node("stored-query", "sales-by-region:2");

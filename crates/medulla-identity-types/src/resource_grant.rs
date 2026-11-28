@@ -9,7 +9,11 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::acl::{ResourceGrant, ResourceGrantSubject, ResourceProtocol};
+use {
+    medulla_identity_core_types::acl::ResourceGrant,
+    medulla_identity_core_types::acl::ResourceGrantSubject,
+    medulla_identity_core_types::acl::ResourceProtocol,
+};
 
 /// Every resource grant, by grant id.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,7 +71,7 @@ impl ResourceGrantLedger {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::identity::IdentityRefusal;
+    use medulla_identity_core_types::identity::IdentityRefusal;
 
     fn grant(
         subject: ResourceGrantSubject,

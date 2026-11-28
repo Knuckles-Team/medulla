@@ -711,7 +711,7 @@ where
 pub async fn apply_rbac_admin(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    op: medulla_identity_types::acl::RbacAdminOp,
+    op: medulla_identity_core_types::acl::RbacAdminOp,
     actor: &str,
 ) -> Response {
     let mut s = timed_write(state).await;
@@ -731,10 +731,10 @@ pub async fn apply_rbac_admin(
 fn rbac_admin_response(
     s: &mut ServerState,
     req_id: u64,
-    op: medulla_identity_types::acl::RbacAdminOp,
+    op: medulla_identity_core_types::acl::RbacAdminOp,
     audit: medulla_isolation::isolation::AuditActor<'_>,
 ) -> Response {
-    use medulla_identity_types::acl::RbacAdminOp;
+    use medulla_identity_core_types::acl::RbacAdminOp;
     use medulla_protocol_types::result_contract::security as results;
     match op {
         RbacAdminOp::List => {

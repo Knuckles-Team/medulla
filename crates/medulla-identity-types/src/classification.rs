@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::tenancy::Marking;
+use medulla_identity_core_types::tenancy::Marking;
 
 /// MEDULLA-FEDERATED-QUERY-R706.4: the label of a tenant's registered marking node.
 pub const MARKING_LABEL: &str = "Marking";

@@ -62,7 +62,7 @@ pub fn slot_key(tenant: &str, name: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::identity::REPLICATION_SLOT_AGENT;
+    use medulla_identity_core_types::identity::REPLICATION_SLOT_AGENT;
 
     // spec: MEDULLA-DURABLE-KERNEL-R035.7.1
     #[test]
@@ -130,7 +130,7 @@ mod tests {
             REPLICATION_SLOT_AGENT,
             format!("service:{REPLICATION_SLOT_SERVICE}")
         );
-        assert!(medulla_identity_types::identity::is_reserved_agent_id(
+        assert!(medulla_identity_core_types::identity::is_reserved_agent_id(
             REPLICATION_SLOT_AGENT
         ));
     }

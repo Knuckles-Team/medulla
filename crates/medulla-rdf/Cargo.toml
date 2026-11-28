@@ -121,6 +121,7 @@ oxjsonld = { version = "0.2", optional = true }
 # new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
@@ -149,6 +150,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-s
 # GeoSPARQL kernel parity test (MEDULLA-FEDERATED-QUERY-R709.2).
 medulla-geo = { path = "../medulla-geo" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 # Ingest-worker machines (MEDULLA-INGEST-WORKER-R911, MEDULLA-INGEST-WORKER-R912.1): the ontology test compares their edge tables.

@@ -10,12 +10,19 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use medulla_identity_types::identity::{
-    AuthMode, ConfigOp, IdentityActor, IdentityOp, IdentityRefusal, IdentityStamp,
-    InitializeRequest, Secret, DEFAULT_PASSWORD_MIN_CHARS,
-};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_identity::dispatch::identity_store::stamp::stamp_initialize;
+use {
+    medulla_identity_core_types::identity::AuthMode,
+    medulla_identity_core_types::identity::ConfigOp,
+    medulla_identity_core_types::identity::IdentityActor,
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::InitializeRequest,
+    medulla_identity_core_types::identity::Secret,
+    medulla_identity_core_types::identity::DEFAULT_PASSWORD_MIN_CHARS,
+};
 
 use crate::server_startup::{ANONYMOUS_AGENT_ID, ANONYMOUS_MARKER_BYTES, ANONYMOUS_MARKER_FILE};
 

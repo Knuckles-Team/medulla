@@ -20,7 +20,7 @@ medulla-types = { path = "../medulla-types" }
 oxrdf = { version = "0.3", optional = true }
 spargebra = { version = "0.4", optional = true }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-source-types = { path = "../medulla-source-types" }
 
@@ -31,5 +31,5 @@ sparql = ["rdf", "dep:spargebra", "medulla-rdf/sparql", "medulla-types/sparql"]
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }

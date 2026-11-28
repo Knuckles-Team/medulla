@@ -15,7 +15,7 @@ use medulla_catalog_types::connector_pack::{
     McpCatalogSnapshotBinding, PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind,
     PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
 };
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_nlq::nl::context::{NlPlanStep, SchemaContext};
 use medulla_nlq::nl::NlQueryError;
 use medulla_protocol_types::protocol::{

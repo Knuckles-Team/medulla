@@ -25,7 +25,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-core = { path = "../medulla-core" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality", optional = true }

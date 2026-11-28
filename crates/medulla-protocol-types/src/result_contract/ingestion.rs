@@ -76,7 +76,7 @@ method_results! {
     MeetingTranscriptRead(MeetingTranscriptRead) => Raw<medulla_source_types::meeting_transcript::MeetingTranscriptReadAnswer>;
     MeetingSummaryGet(MeetingSummaryGet) => Raw<medulla_source_types::meeting_transcript::MeetingSummaryGetAnswer>;
     // MEDULLA-IDENTITY-R753: the node a recorded credential receipt is stored under.
-    CredentialReceipt(CredentialReceipt) => Raw<medulla_identity_types::credential_receipt::CredentialReceiptRecorded>;
+    CredentialReceipt(CredentialReceipt) => Raw<medulla_identity_core_types::credential_receipt::CredentialReceiptRecorded>;
     // MEDULLA-INGEST-WORKER-R001.1007/.1008: what one declaration did, and the stored declaration.
     DataPrepDeclare(DataPrepDeclare) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclareReceipt>;
     DataPrepDeclarationRead(DataPrepDeclarationRead) => Raw<medulla_ingestion_types::data_prep_declaration::DataPrepDeclarationView>;

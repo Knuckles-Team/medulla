@@ -391,10 +391,14 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use medulla_identity_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Request, ResultPayload};
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole,
+        medulla_identity_core_types::acl::RequestContextClaims,
+    };
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
@@ -886,8 +890,12 @@ async fn default_startup_stays_single_group_unchanged() {
 
 mod placement_admin_wire_rpc {
     use super::*;
-    use medulla_identity_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole,
+        medulla_identity_core_types::acl::RequestContextClaims,
+    };
 
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
@@ -2290,10 +2298,10 @@ async fn all_members_observe_leader(
 }
 
 /// A `System`-role identity with no teams or extra roles.
-fn system_agent(agent_id: &str) -> medulla_identity_types::acl::AgentIdentity {
-    medulla_identity_types::acl::AgentIdentity {
+fn system_agent(agent_id: &str) -> medulla_identity_core_types::acl::AgentIdentity {
+    medulla_identity_core_types::acl::AgentIdentity {
         agent_id: agent_id.to_string(),
-        role: medulla_identity_types::acl::AgentRole::System,
+        role: medulla_identity_core_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     }
@@ -2689,8 +2697,11 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_identity_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::ResultPayload;
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole,
+    };
 
     const TEST_AGENT: &str = "raft-admin-wire-test-agent";
     const SECRET: &str = "raft-test";
@@ -2988,11 +2999,14 @@ async fn member_add_follows_the_current_leader_after_a_leader_change() {
 #[cfg(feature = "compute-dist")]
 mod dist_compute {
     use super::*;
-    use medulla_identity_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
     use medulla_raft_xshard::pregel;
     use medulla_result_types::compute_result::distributed::DistResult;
     use medulla_server_api::carrier::GraphReadAuthority;
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole,
+    };
 
     fn props(n: &str) -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": "N", "id": n})).unwrap()

@@ -11,7 +11,7 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Identity mode record
 
-- Fields: the existing `AuthMode { None, Local, External }`, `IdentityConfig { mode, epoch, issuer_kid_current, local_fallback }` and `ConfigOp::Transition { request: ModeTransition { expected_epoch, to, issuer_kid, local_fallback } }` (`MEDULLA-IDENTITY-R003.4`, `crates/medulla-identity-types/src/identity/store/modes.rs`).
+- Fields: the existing `AuthMode { None, Local, External }`, `IdentityConfig { mode, epoch, issuer_kid_current, local_fallback }` and `ConfigOp::Transition { request: ModeTransition { expected_epoch, to, issuer_kid, local_fallback } }` (`MEDULLA-IDENTITY-R003.4`, `crates/medulla-identity-core-types/src/identity/store/modes.rs`).
 - Rule: a transition commits by compare-and-set on the epoch (`EpochConflict` on a mismatch); a transition to or from `None` refuses `MODE_TRANSITION_FORBIDDEN`; every session and envelope carries `mode_epoch`.
 
 ### Scope bound and run-scope policy node
@@ -21,7 +21,7 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Knowledge unit and sharing
 
-- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, placement, tenant }`, `UnitPrincipal` (exist, `crates/medulla-identity-types/src/identity/segment.rs`); payload structs `ShareGrant { node_id, scope, commons, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`) carried by the variants `RbacAdminOp::ShareGrant(ShareGrant)` and `RbacAdminOp::ShareRevoke(ShareRevoke)` (`MEDULLA-IDENTITY-R023.13.3`), all in `crates/medulla-identity-types/src/acl.rs`.
+- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, placement, tenant }`, `UnitPrincipal` (exist, `crates/medulla-identity-core-types/src/identity/segment.rs`); payload structs `ShareGrant { node_id, scope, commons, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`) carried by the variants `RbacAdminOp::ShareGrant(ShareGrant)` and `RbacAdminOp::ShareRevoke(ShareRevoke)` (`MEDULLA-IDENTITY-R023.13.3`), all in `crates/medulla-identity-core-types/src/acl.rs`.
 - Rule: `private` and `commons = true` take no grantees (`commons = true` requires `scope = tenant`); `placement` is refused; `grantees` holds at most 64 ids; node keys are `_owner_id`, `_shared_scope`, `_grants`, `_commons_copy`.
 
 ### Typed principal metadata
@@ -31,17 +31,17 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Tenancy
 
-- Fields: `TenantParent`, `AccessibleGraphs`, `Marking`, `ReadAudit`, `OwnershipClaim`, `ClaimPreview`, `TenantPredicate` (exist, `crates/medulla-identity-types/src/tenancy.rs`).
+- Fields: `TenantParent`, `AccessibleGraphs`, `Marking`, `ReadAudit`, `OwnershipClaim`, `ClaimPreview`, `TenantPredicate` (exist, `crates/medulla-identity-core-types/src/tenancy.rs`).
 - Rule: identifiers are validated at construction; an unscopable query is refused.
 
 ### Ownership plan
 
-- Fields: `GraphOwnershipSignals`, `OwnershipDisposition`, `GrantPlanEntry`, `RollbackEntry`, `plan_digest` (`MEDULLA-IDENTITY-R700.1`), `GraphOwnershipPlanReply`, `OwnershipRecord` stored as `IdentityStore.ownership_records` (`MEDULLA-IDENTITY-R700.3`, `MEDULLA-IDENTITY-R700.5`), and the write ledger tables `WRITE_DAYS` and `GRAPH_CREATOR` (`MEDULLA-IDENTITY-R700.7`) (types in `crates/medulla-identity-types/src/identity/ownership.rs`).
+- Fields: `GraphOwnershipSignals`, `OwnershipDisposition`, `GrantPlanEntry`, `RollbackEntry`, `plan_digest` (`MEDULLA-IDENTITY-R700.1`), `GraphOwnershipPlanReply`, `OwnershipRecord` stored as `IdentityStore.ownership_records` (`MEDULLA-IDENTITY-R700.3`, `MEDULLA-IDENTITY-R700.5`), and the write ledger tables `WRITE_DAYS` and `GRAPH_CREATOR` (`MEDULLA-IDENTITY-R700.7`) (types in `crates/medulla-identity-core-types/src/identity/ownership.rs`).
 - Rule: at most 256 writers and 64 roles per entry; rollback restores the exact prior role set.
 
 ### Delegation, policy bundle, resource access and client session
 
-- Fields: `DelegationRecord` (`MEDULLA-IDENTITY-R701`), `PolicyRuleBundle { schema_version, bundle_id, scope, rules }`, `PolicyBundleScope { tenant, graph }` and `PolicyRule { principal_group, action, resource_scope, effect }` (`MEDULLA-IDENTITY-R702`, `crates/medulla-identity-types/src/identity/policy_bundle.rs`, stored as `IdentityStore.policy_bundles`), `ResourceGrant` (`MEDULLA-IDENTITY-R704.1`, kept in `RbacPolicy.resource_grants`) and `ResourceAccessDecision` (`MEDULLA-IDENTITY-R704.2`), all in `crates/medulla-identity-types/src/acl.rs` except the policy bundle, the `ClientSession` label (`MEDULLA-IDENTITY-R705`).
+- Fields: `DelegationRecord` (`MEDULLA-IDENTITY-R701`), `PolicyRuleBundle { schema_version, bundle_id, scope, rules }`, `PolicyBundleScope { tenant, graph }` and `PolicyRule { principal_group, action, resource_scope, effect }` (`MEDULLA-IDENTITY-R702`, `crates/medulla-identity-core-types/src/identity/policy_bundle.rs`, stored as `IdentityStore.policy_bundles`), `ResourceGrant` (`MEDULLA-IDENTITY-R704.1`, kept in `RbacPolicy.resource_grants`) and `ResourceAccessDecision` (`MEDULLA-IDENTITY-R704.2`), all in `crates/medulla-identity-core-types/src/acl.rs` except the policy bundle, the `ClientSession` label (`MEDULLA-IDENTITY-R705`).
 - Rule: a bundle binds one scope at most; a decision defaults to deny.
 
 ### Session records and approval keys
@@ -66,5 +66,5 @@ A term is reused from an open vocabulary when an equivalent exists; otherwise it
 ### State machine fields
 
 - `GovernedChangeMachine`. States: `Proposed`, `Approved`, `Consumed`, `Revoked`, `Expired`. Persisted state: `status` (enum `GovernedStatus`, `crates/medulla-mutation-types/src/governed_change.rs:117`). `effective_status(now)` derives time expiry for reads.
-- `UserStatusMachine`. States: `Active`, `Disabled`, `PendingReset`, `PendingVerification`, `Deprovisioned` (not terminal; the directory re-provisions it). Persisted state: `status` (enum `UserStatus`, `crates/medulla-identity-types/src/identity/model.rs`). The directory `active` input and the session `revoked` flag are kept.
+- `UserStatusMachine`. States: `Active`, `Disabled`, `PendingReset`, `PendingVerification`, `Deprovisioned` (not terminal; the directory re-provisions it). Persisted state: `status` (enum `UserStatus`, `crates/medulla-identity-core-types/src/identity/model.rs`). The directory `active` input and the session `revoked` flag are kept.
 - `RbacElevationMachine`. States: `Requested`, `Active`, `Revoked`, `Expired`. Persisted state: `status` (enum `ElevationStatus`, `crates/medulla-identity-types/src/rbac_elevation/ledger.rs:31`). `is_live` is derived.

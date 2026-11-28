@@ -53,7 +53,7 @@ fn sandbox_scopes() -> Vec<String> {
         .filter(|entry| {
             matches!(
                 entry.class,
-                medulla_identity_types::identity::ScopeClass::User
+                medulla_identity_core_types::identity::ScopeClass::User
             )
         })
         .map(|entry| entry.scope.to_string())

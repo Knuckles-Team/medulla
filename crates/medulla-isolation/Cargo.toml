@@ -26,14 +26,16 @@ hmac = { version = "0.12", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
-test-support = ["medulla-identity-types/test-support"]
+test-support = ["medulla-identity-core-types/test-support", "medulla-identity-types/test-support"]
 security = ["medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction", "medulla-protocol-types/security", "medulla-types/security"]
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

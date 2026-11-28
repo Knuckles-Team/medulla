@@ -35,16 +35,18 @@ use super::{
     MutationOperation, MutationOutboxIntent, MutationScope, MutationScopeIdentity,
     MutationStateDescriptor,
 };
-use medulla_identity_types::{
-    authority::AuthorityContext, authority::AuthorityScope, authority::NonceReplayKey,
-    authority::OperationReplayIdentity,
-};
 use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
     contract::IdempotencyKey, contract::IngressSurface, contract::MethodId, contract::Nonce,
     contract::OpaqueId, contract::Operation, contract::PolicyRevision, contract::ProtocolId,
     contract::PurposeKind, contract::ResourceId, contract::SchemaId, contract::ScopeKind,
     contract::TenantId, contract::UtcUnixNanos,
+};
+use {
+    medulla_identity_core_types::authority::AuthorityContext,
+    medulla_identity_core_types::authority::AuthorityScope,
+    medulla_identity_core_types::authority::NonceReplayKey,
+    medulla_identity_core_types::authority::OperationReplayIdentity,
 };
 
 /// The engine has one policy generation per deployment.
@@ -635,9 +637,11 @@ impl MutationEnvelope {
         let purpose_resource = authority_scope.scope_id.clone();
         let mut authority = AuthorityContext {
             schema_version: ResourceId::new(
-                medulla_identity_types::authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+                medulla_identity_core_types::authority::AUTHORITY_CONTEXT_SCHEMA_V1,
             )?,
-            protocol_id: ProtocolId::new(medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1)?,
+            protocol_id: ProtocolId::new(
+                medulla_identity_core_types::authority::AUTHORITY_PROTOCOL_V1,
+            )?,
             catalog_digest: parts.catalog_digest,
             request_id: OpaqueId::new(parts.request_id.as_str())?,
             trace_id: OpaqueId::new(parts.trace_id.as_str())?,

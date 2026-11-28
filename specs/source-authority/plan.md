@@ -34,7 +34,7 @@ crates/medulla-core/ontology/virtual_graph-v1.shapes.ttl    existing: SourceAuth
 crates/medulla-virtual-graph/src/source_selection.rs        existing: selection, premises, audit builder
 crates/medulla-virtual-graph/src/source_selection/live.rs   existing: schema-source reader
 crates/medulla-virtual-graph/src/source_selection/trust.rs  existing: trust mark policy
-crates/medulla-identity-types/src/authority_audit.rs        existing: AuthorityAudit, SourceRole, NotUsedReason
+crates/medulla-identity-core-types/src/authority_audit.rs        existing: AuthorityAudit, SourceRole, NotUsedReason
 crates/medulla-graph-core/src/graph/schema_sources.rs       existing: attach check for approval claims
 crates/medulla-mutation-types/src/governed_change.rs        existing: source-authority kind
 crates/medulla-h-admin-schema/src/graph_schema/approved.rs         existing: AttachApproved
@@ -183,7 +183,7 @@ sources_used: [{ concept, facet?, source, contract, rank, scope, freshness_seen,
 not_used:     [{ concept, source, reason: Unconnected|UnapprovedMapping|Stale|ContractMismatch|Ambiguous|Proposed }]
 ```
 
-The type is `AuthorityAudit` in `crates/medulla-identity-types/src/authority_audit.rs` (so it appears in the contract schema); Arbora renders it. It is computed from premises, never separately, so it cannot disagree with the selection.
+The type is `AuthorityAudit` in `crates/medulla-identity-core-types/src/authority_audit.rs` (so it appears in the contract schema); Arbora renders it. It is computed from premises, never separately, so it cannot disagree with the selection.
 
 ### Worked example
 
@@ -215,7 +215,7 @@ Executing the fetch, pushdown and the copy pipeline (R073, R046, R069, R038); en
 
 Data flow: served `Method::SourceCoverage` → `crates/medulla-h-query-read/src/query/source_coverage.rs::handle_source_coverage` → `select_sources_with` (`crates/medulla-virtual-graph/src/source_selection.rs`) → `RoleOrder` → verdict, premises and audit.
 
-Types: `SourceRole`, `NotUsedReason::RoleInsufficient` in `crates/medulla-identity-types/src/authority_audit.rs`, and `Premise::Role`. Attach point: candidate ordering in `Candidate::key`. Failure behavior: an inspiration-only source abstains for a current-state question.
+Types: `SourceRole`, `NotUsedReason::RoleInsufficient` in `crates/medulla-identity-core-types/src/authority_audit.rs`, and `Premise::Role`. Attach point: candidate ordering in `Candidate::key`. Failure behavior: an inspiration-only source abstains for a current-state question.
 
 Decision: store the role on the connection and order by it before rank, so one declaration governs every mapped class. Rejected alternative: encode the role as a low rank number, because rank is per class and cannot express trust.
 
@@ -277,4 +277,4 @@ none
 - Policy source binding after human review: `MEDULLA-SRC-AUTH-R801` provides, `ARBORA-OPS-R050.2.1` consumes. Contract: [arbora-policy-source-bind.md](contracts/arbora-policy-source-bind.md).
 - Connector data locations: `SCION-CONNECTOR-CONTROL-R916.3` provides the `sc:DataLocation` individuals and `PIPE-GATES-R014.7` requires them; `MEDULLA-SRC-AUTH-R013` consumes them. Contract: [scion-data-locations.md](contracts/scion-data-locations.md).
 
-Served SourceCoverage (R004.6, R004.6.1): `crates/medulla-h-query-read/src/query/source_coverage.rs::handle_source_coverage` validates the request against the registry knobs `source_coverage.hop_budget` and `source_coverage.max_classes`, builds the fixture with `fixture_from_schema_sources`, takes the approved names from `connected_sources_from_turtle`, builds `ConnectedSources::from_registry` from `ForeignSourceCatalog::registry_for`, marks every authority-row source outside the view unconnected, runs `select_sources_with` and builds the reply with `audit_from`. The wire types are in `crates/medulla-identity-types/src/source_coverage.rs`. The served tests are `crates/medulla-server-served-tests/src/tests/foreign_tenancy.rs` (L2) and `tests/federated/test_source_coverage_served.py` (L3).
+Served SourceCoverage (R004.6, R004.6.1): `crates/medulla-h-query-read/src/query/source_coverage.rs::handle_source_coverage` validates the request against the registry knobs `source_coverage.hop_budget` and `source_coverage.max_classes`, builds the fixture with `fixture_from_schema_sources`, takes the approved names from `connected_sources_from_turtle`, builds `ConnectedSources::from_registry` from `ForeignSourceCatalog::registry_for`, marks every authority-row source outside the view unconnected, runs `select_sources_with` and builds the reply with `audit_from`. The wire types are in `crates/medulla-identity-core-types/src/source_coverage.rs`. The served tests are `crates/medulla-server-served-tests/src/tests/foreign_tenancy.rs` (L2) and `tests/federated/test_source_coverage_served.py` (L3).

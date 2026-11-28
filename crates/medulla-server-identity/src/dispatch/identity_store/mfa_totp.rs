@@ -8,13 +8,19 @@
 //! answers the provisioning URI built from the sealed record, once, here. The plaintext secret
 //! is never stored, replicated or logged.
 
-use medulla_identity_types::acl::RequestContextClaims;
-use medulla_identity_types::{
-    identity::AuthenticateOutcome, identity::IdentityOp, identity::IdentityRefusal,
-    identity::IdentityReply, identity::IdentityStamp, identity::LoginStateReleased,
-    identity::MfaOp, identity::MfaProvisioning, identity::TokenOp,
-};
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_server_api::state::ServerState;
+use {
+    medulla_identity_core_types::identity::AuthenticateOutcome,
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityReply,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::LoginStateReleased,
+    medulla_identity_core_types::identity::MfaOp,
+    medulla_identity_core_types::identity::MfaProvisioning,
+    medulla_identity_core_types::identity::TokenOp,
+};
 
 use super::secrets;
 

@@ -9,7 +9,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
 use medulla_server_api::authority_context::VerifiedRequestContext;

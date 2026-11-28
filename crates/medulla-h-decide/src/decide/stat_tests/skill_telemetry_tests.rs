@@ -688,7 +688,7 @@ async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently()
 /// agent prefix, so the engine treats it as a human principal.
 fn person(name: &str, tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
     VerifiedRequestContext::from_verified_claims(
-        medulla_identity_types::acl::RequestContextClaims {
+        medulla_identity_core_types::acl::RequestContextClaims {
             principal: name.to_string(),
             tenant: tenant.to_string(),
             audience: "medulla".to_string(),
@@ -711,9 +711,9 @@ async fn person_harness() -> (
 ) {
     let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
     for name in ["alice", "bob"] {
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: name.into(),
-            role: medulla_identity_types::acl::AgentRole::Agent,
+            role: medulla_identity_core_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: Vec::new(),
         });

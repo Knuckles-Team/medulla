@@ -1,9 +1,9 @@
 //! Classification claim model (MEDULLA-TYPED-PACKS-R652.1).
 
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_identity_types::classification::{
     ClaimKind, ClaimProvenance, ClaimState, ClassificationClaim,
 };
-use medulla_identity_types::tenancy::Marking;
 
 fn claim(kind: ClaimKind) -> ClassificationClaim {
     let detector = kind == ClaimKind::Detector;

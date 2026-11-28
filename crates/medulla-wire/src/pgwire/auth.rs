@@ -51,9 +51,12 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::startup::Authentication;
 use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
 
-use medulla_identity_types::identity::{WireLoginKind, WireLoginRecord};
 use medulla_wire_core::sql_wire_auth::{
     resolve_wire_login, InvalidLogin, WireLoginSource, WireProof, INVALID_LOGIN_SQLSTATE,
+};
+use {
+    medulla_identity_core_types::identity::WireLoginKind,
+    medulla_identity_core_types::identity::WireLoginRecord,
 };
 
 /// Env var selecting the pgwire auth mode. Only `scram` is accepted; unset also
@@ -417,7 +420,7 @@ impl StartupHandler for EngineStartupHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::identity::sha256_verifier;
+    use medulla_identity_core_types::identity::sha256_verifier;
     use medulla_wire_core::sql_wire_auth::CachedWireLogins;
     use std::collections::HashMap;
     use std::sync::RwLock;
@@ -516,7 +519,7 @@ mod tests {
             let err = refused.expect_err("must refuse");
             assert!(err.to_string().starts_with("INVALID_LOGIN"));
         }
-        rec.apply(medulla_identity_types::identity::WireLoginEvent::Revoke { now_ms: 5 })
+        rec.apply(medulla_identity_core_types::identity::WireLoginEvent::Revoke { now_ms: 5 })
             .expect("revoke");
         let revoked = one(rec);
         assert!(resolve_wire_login(&revoked, "bi", WireProof::Token(token)).is_err());

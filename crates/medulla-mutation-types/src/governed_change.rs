@@ -27,8 +27,10 @@ use medulla_types::transition_refused::{
 };
 use serde::{Deserialize, Serialize};
 
-use medulla_identity_types::{
-    identity::AuditRecord, identity::AuditTrail, identity::IdentityEvent,
+use {
+    medulla_identity_core_types::identity::AuditRecord,
+    medulla_identity_core_types::identity::AuditTrail,
+    medulla_identity_core_types::identity::IdentityEvent,
 };
 
 /// Prefix of every governed kind; reserved against generic control leases.

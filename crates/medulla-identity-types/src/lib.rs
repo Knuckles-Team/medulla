@@ -6,22 +6,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-// The access-control vocabulary: roles, grants, resource selectors and request context claims
-// (MEDULLA-SDLC-R021.4 moved it here from `medulla-types`).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod acl;
 // MEDULLA-DECISION-ENGINE-R656.1 — the assistant profile and document-set wire model.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod assistant_profile;
-// RF-RULING-004 — canonical serializable authority/replay evidence for the future
-// medulla-transaction admission boundary. This module grants no executable capability.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod authority;
-// MEDULLA-SRC-AUTH-R007.1 — typed audit entries for source selection evidence.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod authority_audit;
-// MEDULLA-SRC-AUTH-R004.6.1 — the wire verdicts and reply of the served SourceCoverage.
-pub mod source_coverage;
 // MEDULLA-UNIFIED-DATA-PLANE-R024.1 — typed one-at-a-time application admission
 // stage machine, refusing to retire an ingest connector before parity is
 // confirmed. Pure data; the admission runner, rollback path, and the
@@ -31,15 +18,8 @@ pub mod platform_admission;
 // MEDULLA-IDENTITY-R724.1 — the explicit state machine of `ApplicationAdmission.stage`.
 #[allow(missing_docs)] // docs pending: new machine module
 pub mod application_admission_machine;
-// MEDULLA-SCM-R013 — graph-native symbol edits.
-#[cfg(any(test, feature = "test-support"))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod identity_fixtures;
 // MEDULLA-TYPED-PACKS-R652.1 — the classification claim model.
 pub mod classification;
-// MEDULLA-IDENTITY-R610 — tenant parent chains, secured reads and ownership claims.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod tenancy;
 // The engine-owned identity store: principals, credentials,
 // sessions, roles/groups/IdPs, the auth-mode singleton and scope classes.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -50,5 +30,3 @@ pub mod identity;
 pub mod rbac_elevation;
 // MEDULLA-IDENTITY-R704.1 — the resource grant ledger in the RBAC policy image.
 pub mod resource_grant;
-// MEDULLA-IDENTITY-R753 — the credential use receipt.
-pub mod credential_receipt;

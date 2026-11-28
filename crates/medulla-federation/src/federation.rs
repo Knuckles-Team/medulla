@@ -398,7 +398,7 @@ pub struct RemoteEngineSource<'a> {
     endpoint: &'a str,
     graph: &'a str,
     secret: &'a str,
-    context: &'a medulla_identity_types::acl::RequestContextClaims,
+    context: &'a medulla_identity_core_types::acl::RequestContextClaims,
     uql: &'a str,
     cypher: &'a str,
     id_field: &'a str,
@@ -417,7 +417,7 @@ impl ForeignSource for RemoteEngineSource<'_> {
 /// None of `principal`/`tenant`/`audience`/`agent_id`/`policy_version` may be
 /// empty (after trimming).
 fn check_context_fields_nonempty(
-    context: &medulla_identity_types::acl::RequestContextClaims,
+    context: &medulla_identity_core_types::acl::RequestContextClaims,
 ) -> Result<(), String> {
     for (name, value) in [
         ("principal", context.principal.as_str()),
@@ -438,7 +438,7 @@ fn check_context_fields_nonempty(
 /// None of `roles`/`scopes`/`delegation` may contain an empty or duplicated
 /// entry.
 fn check_context_lists_valid(
-    context: &medulla_identity_types::acl::RequestContextClaims,
+    context: &medulla_identity_core_types::acl::RequestContextClaims,
 ) -> Result<(), String> {
     for (name, values) in [
         ("role", context.roles.as_slice()),
@@ -462,7 +462,7 @@ fn check_context_lists_valid(
 /// delegation path; a delegated one must bind `principal` → … → `agent_id`
 /// through at least two hops.
 fn check_delegation_chain(
-    context: &medulla_identity_types::acl::RequestContextClaims,
+    context: &medulla_identity_core_types::acl::RequestContextClaims,
 ) -> Result<(), String> {
     if context.principal == context.agent_id {
         if !context.delegation.is_empty() {
@@ -2699,7 +2699,7 @@ mod envelope_signer_tests {
     //! as every other served client. These tests pin its canonical bindings and
     //! prove the former v0/empty-secret downgrade no longer exists.
     use super::RemoteEngineSource;
-    use medulla_identity_types::acl::RequestContextClaims;
+    use medulla_identity_core_types::acl::RequestContextClaims;
     use medulla_protocol_types::{protocol::Method, protocol::Request};
 
     fn context() -> RequestContextClaims {

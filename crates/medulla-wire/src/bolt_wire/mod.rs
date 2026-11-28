@@ -954,11 +954,11 @@ mod tests {
         let mut isolation = IsolationLayer::default();
         #[cfg(feature = "security")]
         {
-            use medulla_identity_types::acl::Grant;
-            use medulla_identity_types::acl::GrantEffect;
-            use medulla_identity_types::acl::RbacAction;
-            use medulla_identity_types::acl::ResourceSelector;
-            use medulla_identity_types::acl::Role;
+            use medulla_identity_core_types::acl::Grant;
+            use medulla_identity_core_types::acl::GrantEffect;
+            use medulla_identity_core_types::acl::RbacAction;
+            use medulla_identity_core_types::acl::ResourceSelector;
+            use medulla_identity_core_types::acl::Role;
             isolation.add_role(Role::new("commons-user"));
             let grant = |action| Grant {
                 role: "commons-user".to_owned(),
@@ -971,9 +971,9 @@ mod tests {
             }
         }
 
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: "service:bolt-test".to_owned(),
-            role: medulla_identity_types::acl::AgentRole::Agent,
+            role: medulla_identity_core_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: if cfg!(feature = "security") {
                 vec!["commons-user".to_owned()]
@@ -1130,7 +1130,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_identity_types::acl::RequestContextClaims;
+        use medulla_identity_core_types::acl::RequestContextClaims;
         use medulla_server_auth::auth::compute_verified_envelope_token;
         use medulla_server_auth::auth::VerifiedEnvelopeParams;
 

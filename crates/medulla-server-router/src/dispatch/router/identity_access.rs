@@ -206,7 +206,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
                         return Response::err(req_id, message);
                     }
                     let mut s = timed_write(state).await;
-                    let identity = medulla_identity_types::acl::AgentIdentity {
+                    let identity = medulla_identity_core_types::acl::AgentIdentity {
                         agent_id: agent_id.clone(),
                         role,
                         teams,
@@ -243,7 +243,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
 async fn dispatch_check_access(
     ctx: DispatchCtx<'_>,
     agent_id: String,
-    access: medulla_identity_types::acl::AccessCheck,
+    access: medulla_identity_core_types::acl::AccessCheck,
 ) -> Response {
     let (req_id, graph) = (ctx.req.id, ctx.req.graph.clone());
     let s = timed_read(ctx.state).await;
@@ -272,7 +272,7 @@ async fn dispatch_check_access(
         access,
     );
     drop(s);
-    let decision = medulla_identity_types::acl::AccessDecision {
+    let decision = medulla_identity_core_types::acl::AccessDecision {
         agent_id,
         graph,
         access,
@@ -293,7 +293,7 @@ async fn dispatch_check_resource_access(
     ctx: DispatchCtx<'_>,
     agent_id: String,
     resource_ref: String,
-    protocol: medulla_identity_types::acl::ResourceProtocol,
+    protocol: medulla_identity_core_types::acl::ResourceProtocol,
     operation: String,
 ) -> Response {
     let req_id = ctx.req.id;
@@ -324,7 +324,7 @@ struct IdentityRegistrationMode<'a> {
 
 fn register_identity(
     state: &mut ServerState,
-    identity: medulla_identity_types::acl::AgentIdentity,
+    identity: medulla_identity_core_types::acl::AgentIdentity,
     mode: IdentityRegistrationMode<'_>,
 ) -> Result<(), String> {
     if mode.bootstrap
@@ -388,8 +388,8 @@ async fn dispatch_identity_and_access_methods_arm_2(
     match method {
         Method::RbacAdmin {
             op:
-                op @ (medulla_identity_types::acl::RbacAdminOp::ShareGrant(_)
-                | medulla_identity_types::acl::RbacAdminOp::ShareRevoke(_)),
+                op @ (medulla_identity_core_types::acl::RbacAdminOp::ShareGrant(_)
+                | medulla_identity_core_types::acl::RbacAdminOp::ShareRevoke(_)),
         } => {
             // A share commits through the graph gateway of the request's graph
             // (MEDULLA-IDENTITY-R023.13.3), not through the RBAC image.

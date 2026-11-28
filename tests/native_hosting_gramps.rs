@@ -201,7 +201,7 @@ impl Native {
         }
     }
 
-    fn context(scopes: &[&str]) -> medulla_identity_types::acl::RequestContextClaims {
+    fn context(scopes: &[&str]) -> medulla_identity_core_types::acl::RequestContextClaims {
         let mut claims = common::context_for(ADMIN);
         claims.scopes = scopes.iter().map(|scope| scope.to_string()).collect();
         claims
@@ -210,7 +210,7 @@ impl Native {
     async fn call(
         &mut self,
         graph: &str,
-        context: &medulla_identity_types::acl::RequestContextClaims,
+        context: &medulla_identity_core_types::acl::RequestContextClaims,
         method: Method,
         signer: Option<&str>,
     ) -> medulla_protocol_types::protocol::Response {
@@ -222,7 +222,7 @@ impl Native {
     async fn send(
         &mut self,
         graph: &str,
-        context: &medulla_identity_types::acl::RequestContextClaims,
+        context: &medulla_identity_core_types::acl::RequestContextClaims,
         method: Method,
         signer: Option<&str>,
     ) {
@@ -320,7 +320,7 @@ impl Native {
     async fn ok(
         &mut self,
         graph: &str,
-        context: &medulla_identity_types::acl::RequestContextClaims,
+        context: &medulla_identity_core_types::acl::RequestContextClaims,
         method: Method,
     ) -> Option<ResultPayload> {
         let response = self.call(graph, context, method, None).await;
@@ -465,7 +465,7 @@ async fn p0_p1_p2_exit_artifacts() {
             &bootstrap,
             Method::RegisterIdentity {
                 agent_id: ADMIN.to_string(),
-                role: medulla_identity_types::acl::AgentRole::System,
+                role: medulla_identity_core_types::acl::AgentRole::System,
                 teams: Vec::new(),
                 signature: String::new(),
                 roles: Vec::new(),
@@ -582,7 +582,7 @@ async fn ensure_admin(native: &mut Native) {
                 &Native::context(&["security:bootstrap"]),
                 Method::RegisterIdentity {
                     agent_id: ADMIN.to_string(),
-                    role: medulla_identity_types::acl::AgentRole::System,
+                    role: medulla_identity_core_types::acl::AgentRole::System,
                     teams: Vec::new(),
                     signature: String::new(),
                     roles: Vec::new(),

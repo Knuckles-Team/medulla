@@ -6,13 +6,26 @@
 //! TOTP step. The op that continues to consensus and the store carries no
 //! secret.
 
-use medulla_identity_types::{
-    identity::check_password, identity::check_recovery_code, identity::check_token,
-    identity::normalize_username, identity::ConfigOp, identity::CredentialOp, identity::IdentityOp,
-    identity::IdentityRefusal, identity::IdentityStamp, identity::IdentityStore, identity::IdpOp,
-    identity::InitializeRequest, identity::MfaOp, identity::PasswordCheck,
-    identity::PasswordCredential, identity::Secret, identity::SessionOp, identity::TokenOp,
-    identity::UserOp, identity::DEFAULT_PASSWORD_MIN_CHARS,
+use {
+    medulla_identity_core_types::identity::check_password,
+    medulla_identity_core_types::identity::check_recovery_code,
+    medulla_identity_core_types::identity::check_token,
+    medulla_identity_core_types::identity::normalize_username,
+    medulla_identity_core_types::identity::ConfigOp,
+    medulla_identity_core_types::identity::CredentialOp,
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::IdentityStore,
+    medulla_identity_core_types::identity::IdpOp,
+    medulla_identity_core_types::identity::InitializeRequest,
+    medulla_identity_core_types::identity::MfaOp,
+    medulla_identity_core_types::identity::PasswordCheck,
+    medulla_identity_core_types::identity::PasswordCredential,
+    medulla_identity_core_types::identity::Secret,
+    medulla_identity_core_types::identity::SessionOp,
+    medulla_identity_core_types::identity::TokenOp, medulla_identity_core_types::identity::UserOp,
+    medulla_identity_core_types::identity::DEFAULT_PASSWORD_MIN_CHARS,
 };
 
 use super::secrets;
@@ -260,7 +273,7 @@ fn derive_credential(
 }
 
 fn derive_sign_in(
-    request: &mut medulla_identity_types::identity::AuthenticateRequest,
+    request: &mut medulla_identity_core_types::identity::AuthenticateRequest,
     stamp: &mut IdentityStamp,
     env: &StampEnv<'_>,
 ) -> Derived {

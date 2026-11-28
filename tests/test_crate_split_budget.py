@@ -95,3 +95,9 @@ def test_h_admin_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.6")
 def test_compute_split_is_within_budget() -> None:
     _assert_split(["medulla-compute-assemble", "medulla-compute"])
+
+
+# spec: MEDULLA-CONTRACT-R067.4
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.4")
+def test_identity_types_split_is_within_budget() -> None:
+    _assert_split(["medulla-identity-core-types", "medulla-identity-types"])

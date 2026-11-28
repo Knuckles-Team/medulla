@@ -370,10 +370,10 @@ fn classification_claim_ops() -> Vec<(
     &'static str,
     medulla_identity_types::classification::ClassificationClaimOp,
 )> {
+    use medulla_identity_core_types::tenancy::Marking;
     use medulla_identity_types::classification::{
         ClaimKind, ClaimProvenance, ClaimState, ClassificationClaim, ClassificationClaimOp,
     };
-    use medulla_identity_types::tenancy::Marking;
     let claim = ClassificationClaim {
         asset: "col:orders.card".to_string(),
         categories: vec![Marking::new("payment_card").expect("a valid marking")],

@@ -52,12 +52,14 @@
 use std::sync::Arc;
 
 #[cfg(any(feature = "python", all(test, feature = "security")))]
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
-#[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
 #[cfg(any(feature = "python", all(test, feature = "security")))]
 use medulla_protocol_types::protocol::GraphType;
+#[cfg(any(feature = "python", all(test, feature = "security")))]
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 /// The one RLS contract every domain module threads through: an asserted
 /// caller identity plus the SAME `IsolationLayer` the wire dispatch consults.

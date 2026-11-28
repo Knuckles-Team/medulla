@@ -1,15 +1,6 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
-use medulla_identity_types::acl::RequestContextClaims;
-use medulla_identity_types::{
-    identity::ApiKeyUse, identity::ObjectRef, identity::Secret, identity::SessionTouch,
-    identity::UserKind, identity::UserStatus, identity::IDENTITY_AUTHENTICATE_SCOPE,
-};
-use medulla_identity_types::{
-    identity::IdentityOp, identity::IdentityRefusal, identity::IdentityReply,
-    identity::IdentityStamp, identity::IdentityStore, identity::PrincipalResolution,
-    identity::SessionOp, identity::TokenOp, identity::UserOp,
-};
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_server_api::authority_context::RequestContextPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::identity_view::identity_actor;
@@ -18,6 +9,25 @@ use medulla_server_api::state::ServerState;
 use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
 use medulla_server_identity::dispatch::identity_store::resolution_context::*;
 use serde_json::json;
+use {
+    medulla_identity_core_types::identity::ApiKeyUse,
+    medulla_identity_core_types::identity::ObjectRef,
+    medulla_identity_core_types::identity::Secret,
+    medulla_identity_core_types::identity::SessionTouch,
+    medulla_identity_core_types::identity::UserKind,
+    medulla_identity_core_types::identity::UserStatus,
+    medulla_identity_core_types::identity::IDENTITY_AUTHENTICATE_SCOPE,
+};
+use {
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityRefusal,
+    medulla_identity_core_types::identity::IdentityReply,
+    medulla_identity_core_types::identity::IdentityStamp,
+    medulla_identity_core_types::identity::IdentityStore,
+    medulla_identity_core_types::identity::PrincipalResolution,
+    medulla_identity_core_types::identity::SessionOp,
+    medulla_identity_core_types::identity::TokenOp, medulla_identity_core_types::identity::UserOp,
+};
 
 fn policy() -> RequestContextPolicy {
     RequestContextPolicy {
@@ -351,16 +361,22 @@ async fn unauthorized_broker_cannot_use_subject_credential() {
 use crate::dispatch::test_support::bootstrapped_state;
 use crate::dispatch::test_support::send;
 use crate::dispatch::test_support::verified;
-use medulla_identity_types::{
-    identity::AccessOp, identity::AuthMode, identity::AuthenticateRequest, identity::ConfigOp,
-    identity::CredentialOp, identity::InitializeRequest, identity::MfaOp,
-    identity::BOOTSTRAP_PRINCIPAL, identity::IDENTITY_ADMIN_SCOPE,
-};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use {
+    medulla_identity_core_types::identity::AccessOp,
+    medulla_identity_core_types::identity::AuthMode,
+    medulla_identity_core_types::identity::AuthenticateRequest,
+    medulla_identity_core_types::identity::ConfigOp,
+    medulla_identity_core_types::identity::CredentialOp,
+    medulla_identity_core_types::identity::InitializeRequest,
+    medulla_identity_core_types::identity::MfaOp,
+    medulla_identity_core_types::identity::BOOTSTRAP_PRINCIPAL,
+    medulla_identity_core_types::identity::IDENTITY_ADMIN_SCOPE,
+};
 
 const PASSWORD: &str = "source regression password phrase";
 const SESSION: &str = "source-session-0123456789abcdefghijklmnopqrstuv";
@@ -714,7 +730,7 @@ fn session_authority(response: &Response) -> IdentityReply<RequestContextClaims>
 // spec: MEDULLA-IDENTITY-R710
 #[tokio::test]
 async fn reference_renewal_rechecks_boundary_and_global_revision() {
-    use medulla_identity_types::identity::IDENTITY_SELF_SCOPE;
+    use medulla_identity_core_types::identity::IDENTITY_SELF_SCOPE;
     let state = ready_engine().await;
     let resolution = resolved(&send_op(&state, live_broker(), session_request()).await);
     let record = resolution.session_record.unwrap();
@@ -814,7 +830,7 @@ async fn reference_renewal_rechecks_boundary_and_global_revision() {
 // spec: MEDULLA-TYPED-PACKS-R085.4.3
 #[tokio::test]
 async fn served_reference_renewal_refuses_scope_mismatch_without_touching_authority() {
-    use medulla_identity_types::identity::IDENTITY_SELF_SCOPE;
+    use medulla_identity_core_types::identity::IDENTITY_SELF_SCOPE;
     let state = ready_engine().await;
     let resolution = resolved(&send_op(&state, live_broker(), session_request()).await);
     let record = resolution.session_record.unwrap();

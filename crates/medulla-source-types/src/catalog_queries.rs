@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
 
 use medulla_catalog_types::catalog_read::{
     CATALOG_ASSETS_BY_KIND, CATALOG_ASSETS_SEARCH, CATALOG_ASSET_DETAIL, CATALOG_ASSET_KINDS,

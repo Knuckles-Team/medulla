@@ -12,11 +12,6 @@
 
 use super::*;
 use medulla_federation::federation::ConnectedSources;
-use medulla_identity_types::source_coverage::{
-    CoverageHop, CoverageVerdict, SourceCoverageFacet, SourceCoverageReply, MAX_HOP_BUDGET,
-    SOURCE_COVERAGE_HOP_BUDGET_INVALID, SOURCE_COVERAGE_NO_CLASSES,
-    SOURCE_COVERAGE_TOO_MANY_CLASSES,
-};
 use medulla_protocol_types::result_contract::query::SourceCoverage;
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_virtual_graph::source_selection::{
@@ -25,6 +20,16 @@ use medulla_virtual_graph::source_selection::{
     SourceSelectionHop,
 };
 use std::collections::BTreeSet;
+use {
+    medulla_identity_core_types::source_coverage::CoverageHop,
+    medulla_identity_core_types::source_coverage::CoverageVerdict,
+    medulla_identity_core_types::source_coverage::SourceCoverageFacet,
+    medulla_identity_core_types::source_coverage::SourceCoverageReply,
+    medulla_identity_core_types::source_coverage::MAX_HOP_BUDGET,
+    medulla_identity_core_types::source_coverage::SOURCE_COVERAGE_HOP_BUDGET_INVALID,
+    medulla_identity_core_types::source_coverage::SOURCE_COVERAGE_NO_CLASSES,
+    medulla_identity_core_types::source_coverage::SOURCE_COVERAGE_TOO_MANY_CLASSES,
+};
 
 fn render(premises: &[Premise]) -> Vec<String> {
     premises.iter().map(Premise::render).collect()
@@ -205,7 +210,7 @@ pub async fn handle_source_coverage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::authority_audit::NotUsedReason;
+    use medulla_identity_core_types::authority_audit::NotUsedReason;
 
     // spec: MEDULLA-SRC-AUTH-R004.6.1
     #[test]

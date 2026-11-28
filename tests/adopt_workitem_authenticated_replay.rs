@@ -20,7 +20,7 @@ use std::sync::{
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_core::registry::GraphRegistry;
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_result_types::epistemic_operations::{
@@ -416,7 +416,11 @@ async fn run_state_with(
     backend: Arc<dyn PersistenceBackend>,
     dir: String,
 ) -> test_support::SharedState {
-    use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
+    use {
+        medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector,
+    };
 
     let state = state_with(backend, dir);
     let mut isolation = test_support::wire_isolation(&[

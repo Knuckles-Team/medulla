@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
@@ -85,9 +85,9 @@ pub fn state() -> Arc<RwLock<ServerState>> {
 pub fn bootstrapped_state() -> Arc<RwLock<ServerState>> {
     let mut layer = medulla_isolation::isolation::IsolationLayer::new();
     layer
-        .try_bootstrap_system_identity(medulla_identity_types::acl::AgentIdentity {
+        .try_bootstrap_system_identity(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: "engine-root".to_string(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         })

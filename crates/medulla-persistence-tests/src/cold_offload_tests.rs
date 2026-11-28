@@ -138,8 +138,8 @@ mod admission_tests {
     //! graph rehydrates from, and the tier that makes eviction loss-free.
     use super::*;
     #[cfg(feature = "security")]
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_persistence::read_through::BackendGraphMaterializer;
     use medulla_persistence::read_through::BackendReadThroughFactory;
@@ -165,11 +165,11 @@ mod admission_tests {
 
     #[cfg(feature = "security")]
     fn rls_isolation() -> IsolationLayer {
-        use medulla_identity_types::acl::Grant;
-        use medulla_identity_types::acl::GrantEffect;
-        use medulla_identity_types::acl::RbacAction;
-        use medulla_identity_types::acl::ResourceSelector;
-        use medulla_identity_types::acl::Role;
+        use medulla_identity_core_types::acl::Grant;
+        use medulla_identity_core_types::acl::GrantEffect;
+        use medulla_identity_core_types::acl::RbacAction;
+        use medulla_identity_core_types::acl::ResourceSelector;
+        use medulla_identity_core_types::acl::Role;
 
         let mut isolation = ServerState::test_isolation(TEST_AGENT);
         isolation.register_agent(AgentIdentity {

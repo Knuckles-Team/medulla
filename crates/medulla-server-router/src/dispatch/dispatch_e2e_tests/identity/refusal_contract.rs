@@ -4,8 +4,8 @@
 //! goes through the full signed dispatch.
 
 use super::*;
-use medulla_identity_types::acl::AgentIdentity;
-use medulla_identity_types::acl::AgentRole;
+use medulla_identity_core_types::acl::AgentIdentity;
+use medulla_identity_core_types::acl::AgentRole;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_auth::auth::sign_current_test_request;
@@ -32,7 +32,7 @@ fn engine() -> Arc<RwLock<ServerState>> {
     stamp.password_hash = Some("$argon2id$bootstrap".to_string());
     isolation
         .try_apply_identity(
-            &medulla_identity_types::identity_fixtures::identity::bootstrap_local_op(),
+            &medulla_identity_core_types::identity_fixtures::identity::bootstrap_local_op(),
             &stamp,
             1_800_000_000_000,
             &medulla_capabilities::scopes::ScopeRegistry,

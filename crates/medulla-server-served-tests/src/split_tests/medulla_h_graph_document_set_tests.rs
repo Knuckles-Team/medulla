@@ -9,7 +9,6 @@
     feature = "security"
 ))]
 mod served {
-    use medulla_identity_types::acl::{GrantEffect, RbacAction};
     use medulla_identity_types::assistant_profile::{
         DocumentSet, DocumentSetKind, ProfileOp, ProfileShare, ASSISTANT_PROFILE_SCHEMA_VERSION,
     };
@@ -20,6 +19,9 @@ mod served {
         MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
     };
     use serde_json::json;
+    use {
+        medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
+    };
 
     use super::super::connector_pack_harness::{next_id, ok, Served, OTHER_TENANT, TENANT};
 

@@ -177,7 +177,7 @@ pub async fn compute_identity_bootstrap(
                 &req.method,
                 Method::RegisterIdentity {
                     agent_id,
-                    role: medulla_identity_types::acl::AgentRole::System,
+                    role: medulla_identity_core_types::acl::AgentRole::System,
                     teams,
                     roles,
                     ..
@@ -232,7 +232,10 @@ pub async fn admit_sandbox_agent(
 ) -> Result<(), String> {
     #[cfg(feature = "security")]
     {
-        use medulla_identity_types::acl::{AgentIdentity, AgentRole};
+        use {
+            medulla_identity_core_types::acl::AgentIdentity,
+            medulla_identity_core_types::acl::AgentRole,
+        };
         let refused = || medulla_server_api::anonymous::SANDBOX_REFUSAL.to_string();
         let principal = verified_context.agent_id();
         let held = timed_read(state).await.isolation.get_identity(principal);

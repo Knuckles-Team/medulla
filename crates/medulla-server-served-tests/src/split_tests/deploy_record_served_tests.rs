@@ -75,8 +75,12 @@ fn list(limit: Option<u32>, cursor: Option<String>) -> Method {
 /// Admit `agent` as a regular identity with read, and optionally write, on the ingest graph, so a
 /// refusal of its requests can only come from the handler and not from the graph's access check.
 pub(super) async fn admit(served: &Served, agent: &str, writable: bool) {
-    use medulla_identity_types::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Grant,
+        medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
     };
     let role = format!("deploy-record-{agent}");
     let mut state = served.state().write().await;

@@ -27,13 +27,17 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use medulla_identity_types::authority_audit::{
-    AuditEntry, AuditSourceMode, AuthorityAudit, NotUsedReason, SourceRole,
-};
 use serde::{Deserialize, Serialize};
 use {
     medulla_catalog_source_types::metadata_acceleration::AccelerationPolicy,
     medulla_catalog_source_types::metadata_acceleration::FragmentExecutionMode,
+};
+use {
+    medulla_identity_core_types::authority_audit::AuditEntry,
+    medulla_identity_core_types::authority_audit::AuditSourceMode,
+    medulla_identity_core_types::authority_audit::AuthorityAudit,
+    medulla_identity_core_types::authority_audit::NotUsedReason,
+    medulla_identity_core_types::authority_audit::SourceRole,
 };
 
 #[cfg(feature = "rdf")]

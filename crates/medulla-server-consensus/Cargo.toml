@@ -18,7 +18,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-h-jobs = { path = "../medulla-h-jobs" }
 medulla-h-txn = { path = "../medulla-h-txn" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
@@ -82,7 +82,7 @@ server = ["medulla-server-graph/server", "medulla-h-jobs/server", "medulla-h-txn
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-h-txn = { path = "../medulla-h-txn", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["test-support"] }

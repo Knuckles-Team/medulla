@@ -6030,9 +6030,9 @@ impl WireSession {
 pub fn test_isolation(agents: &[&str]) -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
     for agent in agents {
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: (*agent).into(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

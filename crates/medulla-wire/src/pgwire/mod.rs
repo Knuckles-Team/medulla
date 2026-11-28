@@ -929,7 +929,7 @@ impl EngineBackend {
         // The connection carries the login record's scopes (`kg:read` and `kg:write` unless the
         // grant named others); an engine agent login carries the default pair.
         let scopes = record.as_ref().map_or_else(
-            medulla_identity_types::identity::default_wire_login_scopes,
+            medulla_identity_core_types::identity::default_wire_login_scopes,
             |record| record.scopes.clone(),
         );
         self.session

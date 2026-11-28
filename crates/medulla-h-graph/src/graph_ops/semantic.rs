@@ -856,7 +856,7 @@ async fn require_scope_grants(
     state.isolation.require_resource_grants(
         &principal,
         &scope.knowledge_sets,
-        medulla_identity_types::acl::ResourceProtocol::Knowledge,
+        medulla_identity_core_types::acl::ResourceProtocol::Knowledge,
         "discover",
         now_ms,
     )

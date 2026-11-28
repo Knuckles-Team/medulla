@@ -5,11 +5,13 @@
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
-use medulla_identity_types::identity::AuthMode;
+use medulla_identity_core_types::identity::AuthMode;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server::server_startup::{
     prepare_auth_store, ANONYMOUS_AGENT_ID, ANONYMOUS_MARKER_FILE,
+};
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
 };
 
 fn server_bin() -> std::path::PathBuf {

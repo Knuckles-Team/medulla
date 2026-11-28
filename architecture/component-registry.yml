@@ -1008,7 +1008,7 @@ components:
       - "crates/medulla-agent-types/src/agent_template.rs"
       - "crates/medulla-types/src/asr_wire.rs"
       - "crates/medulla-types/src/authority"
-      - "crates/medulla-identity-types/src/authority.rs"
+      - "crates/medulla-identity-core-types/src/authority.rs"
       - "crates/medulla-mutation-types/src/capacity_lease.rs"
       - "crates/medulla-protocol-types/src/change_envelope.rs"
       - "crates/medulla-mutation-types/src/commit_descriptor.rs"

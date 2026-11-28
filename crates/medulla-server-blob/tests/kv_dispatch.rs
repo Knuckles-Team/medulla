@@ -4,7 +4,7 @@
 //! (which depends on this crate) downcasts to; a unit test would link a second copy of the crate.
 #![cfg(feature = "kv")]
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::ResultPayload;

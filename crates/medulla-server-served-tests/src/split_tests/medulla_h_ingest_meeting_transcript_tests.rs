@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_server_auth::auth::compute_verified_envelope_token;

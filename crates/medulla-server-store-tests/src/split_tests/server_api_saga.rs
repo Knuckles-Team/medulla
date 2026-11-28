@@ -9,7 +9,7 @@ use medulla_server_ops::api::admin::saga::*;
 use sha2::Digest;
 
 fn authority(actor: &str, tenant: &str, key: &str) -> CarrierAuthority {
-    let claims = medulla_identity_types::acl::RequestContextClaims {
+    let claims = medulla_identity_core_types::acl::RequestContextClaims {
         principal: actor.to_string(),
         agent_id: actor.to_string(),
         tenant: tenant.to_string(),

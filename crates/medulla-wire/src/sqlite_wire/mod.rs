@@ -258,8 +258,8 @@ fn sqlite_type_name(t: PgColType) -> &'static str {
 mod tests {
     use super::*;
 
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     #[cfg(feature = "redb")]
     use medulla_persistence::redb_backend::RedbBackend;
@@ -467,7 +467,7 @@ mod tests {
             .bind_authenticated_sql_actor(
                 "pgwire",
                 "system",
-                &medulla_identity_types::identity::default_wire_login_scopes(),
+                &medulla_identity_core_types::identity::default_wire_login_scopes(),
             )
             .await
             .unwrap();
@@ -481,7 +481,7 @@ mod tests {
             .bind_authenticated_sql_actor(
                 "mysql-wire",
                 "system",
-                &medulla_identity_types::identity::default_wire_login_scopes(),
+                &medulla_identity_core_types::identity::default_wire_login_scopes(),
             )
             .await
             .unwrap();
@@ -494,7 +494,7 @@ mod tests {
         peer.bind_authenticated_sql_actor(
             "mssql-wire",
             "peer",
-            &medulla_identity_types::identity::default_wire_login_scopes(),
+            &medulla_identity_core_types::identity::default_wire_login_scopes(),
         )
         .await
         .unwrap();

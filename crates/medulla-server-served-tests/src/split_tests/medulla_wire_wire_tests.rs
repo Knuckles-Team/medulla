@@ -132,7 +132,7 @@ mod ne_004_ne_005_tests {
             .bind_authenticated_sql_actor(
                 "pgwire",
                 AGENT,
-                &medulla_identity_types::identity::default_wire_login_scopes(),
+                &medulla_identity_core_types::identity::default_wire_login_scopes(),
             )
             .await
             .expect("bind test identity");

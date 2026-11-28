@@ -3,10 +3,13 @@
 //! may not, and `Unbind` removes the access.
 
 use super::*;
-use medulla_identity_types::acl::{GrantEffect, RbacAction, ResourceSelector};
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_server_auth::access::check_graph_access;
+use {
+    medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::ResourceSelector,
+};
 
 const MEMBER: &str = "usr:member";
 const OUTSIDER: &str = "usr:outsider";
@@ -28,9 +31,9 @@ fn durable_state(dir: &std::path::Path) -> Arc<RwLock<ServerState>> {
     )
     .expect("open a durable policy store");
     layer
-        .try_bootstrap_system_identity(medulla_identity_types::acl::AgentIdentity {
+        .try_bootstrap_system_identity(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: "engine-root".to_string(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         })

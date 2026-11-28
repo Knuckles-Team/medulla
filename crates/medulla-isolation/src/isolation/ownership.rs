@@ -12,9 +12,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_identity_types::identity::{
-    GrantPlanEntry, GraphOwnershipSignals, OwnershipDisposition, RollbackEntry,
-    OWNERSHIP_SCHEMA_VERSION,
+use {
+    medulla_identity_core_types::identity::GrantPlanEntry,
+    medulla_identity_core_types::identity::GraphOwnershipSignals,
+    medulla_identity_core_types::identity::OwnershipDisposition,
+    medulla_identity_core_types::identity::RollbackEntry,
+    medulla_identity_core_types::identity::OWNERSHIP_SCHEMA_VERSION,
 };
 
 /// Default of the `identity.ownership_writer_share` knob (fraction).

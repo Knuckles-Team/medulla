@@ -82,7 +82,7 @@ pub struct AcceptanceQuestion<'a> {
 pub fn assert_acceptance(questions: &[AcceptanceQuestion<'_>]) {
     use std::collections::BTreeMap;
 
-    use medulla_identity_types::authority_audit::NotUsedReason;
+    use medulla_identity_core_types::authority_audit::NotUsedReason;
     use medulla_virtual_graph::source_selection::{
         connected_sources_from_turtle, question_abstention,
     };

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::parent_transaction_machine::ParentTransactionEvent;
 use crate::participant_transaction_machine::ParticipantTransactionEvent;
-use medulla_identity_types::authority::AuthorityScope;
+use medulla_identity_core_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
     contract::UtcUnixNanos, contract::MAX_PARTICIPANTS,

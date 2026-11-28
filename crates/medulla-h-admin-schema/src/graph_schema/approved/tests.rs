@@ -70,9 +70,9 @@ fn test_isolation(
     let mut isolation =
         ServerState::test_isolation(ADMIN).with_governed_clock(std::sync::Arc::new(clock));
     for agent in [PROPOSER, APPROVER] {
-        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        isolation.register_agent(medulla_identity_core_types::acl::AgentIdentity {
             agent_id: agent.into(),
-            role: medulla_identity_types::acl::AgentRole::System,
+            role: medulla_identity_core_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

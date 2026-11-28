@@ -754,7 +754,7 @@ fn governed_change_machine_classes_extend_core() {
 // spec: MEDULLA-IDENTITY-R721.2
 #[test]
 fn user_status_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_identity_types::identity::USER_STATUS_MACHINE);
+    sm::assert_matches(&medulla_identity_core_types::identity::USER_STATUS_MACHINE);
 }
 // spec: MEDULLA-IDENTITY-R721.2
 #[test]

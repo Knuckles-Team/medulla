@@ -37,7 +37,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T030 [US5] MEDULLA-IDENTITY-R023.10 Refusal: invalid metadata writes
 - [ ] T031 [US5] MEDULLA-IDENTITY-R023.11 Evidence: metadata import provenance
 - [ ] T032 [US5] MEDULLA-IDENTITY-R023.12 Hot-path journey: typed metadata over the wire
-- [ ] T033 [US6] MEDULLA-IDENTITY-R023.13.1 Model: share operation payloads `ShareGrant`/`ShareRevoke` in `crates/medulla-identity-types/src/acl.rs`
+- [ ] T033 [US6] MEDULLA-IDENTITY-R023.13.1 Model: share operation payloads `ShareGrant`/`ShareRevoke` in `crates/medulla-identity-core-types/src/acl.rs`
 - [ ] T034 [US6] MEDULLA-IDENTITY-R023.13.2 Behavior: share transition function
 - [ ] T035 [US6] MEDULLA-IDENTITY-R023.13.3 Wiring: RbacAdmin arm calls the transition
 - [ ] T036 [US6] MEDULLA-IDENTITY-R023.13.4 Refusal: share operations

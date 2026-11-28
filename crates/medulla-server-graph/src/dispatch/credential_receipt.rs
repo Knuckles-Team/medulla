@@ -9,13 +9,15 @@
 
 use std::sync::Arc;
 
-use medulla_identity_types::credential_receipt::{
-    CredentialReceiptOp, CredentialReceiptRecorded, RECEIPT_NODE_TYPE,
-};
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_protocol_types::result_contract::ingestion::CredentialReceipt as CredentialReceiptResult;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
+use {
+    medulla_identity_core_types::credential_receipt::CredentialReceiptOp,
+    medulla_identity_core_types::credential_receipt::CredentialReceiptRecorded,
+    medulla_identity_core_types::credential_receipt::RECEIPT_NODE_TYPE,
+};
 
 use super::graph_client::{encode, write, GraphTarget, Properties, TENANT_PROPERTY};
 use super::shared::typed_response;

@@ -43,7 +43,7 @@ medulla-h-jobs = { path = "../medulla-h-jobs" }
 medulla-h-query = { path = "../medulla-h-query" }
 medulla-h-query-read = { path = "../medulla-h-query-read" }
 medulla-h-txn = { path = "../medulla-h-txn" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-observe = { path = "../medulla-observe" }
 medulla-kvcache = { path = "../medulla-kvcache", optional = true }
@@ -133,7 +133,7 @@ medulla-server-router-arms = { path = "../medulla-server-router-arms" }
 medulla-resource = { path = "../medulla-resource" }
 
 [features]
-test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-compute/test-support", "medulla-decision-types/test-support", "medulla-h-admin/test-support", "medulla-h-admin-schema/test-support", "medulla-h-decide/test-support", "medulla-h-ingest/test-support", "medulla-h-ingest-repository/test-support", "medulla-h-query/test-support", "medulla-h-query-read/test-support", "medulla-h-txn/test-support", "medulla-identity-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-raft-xshard/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-wire/test-support", "medulla-direct-state/test-support", "medulla-decision-outcome-types/test-support", "medulla-source-types/test-support", "medulla-work-types/test-support", "medulla-store-apply/test-support", "medulla-work-store/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support", "medulla-federation/test-support", "medulla-wire-core/test-support", "medulla-server-graph/test-support", "medulla-server-identity/test-support"]
+test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-compute/test-support", "medulla-decision-types/test-support", "medulla-h-admin/test-support", "medulla-h-admin-schema/test-support", "medulla-h-decide/test-support", "medulla-h-ingest/test-support", "medulla-h-ingest-repository/test-support", "medulla-h-query/test-support", "medulla-h-query-read/test-support", "medulla-h-txn/test-support", "medulla-identity-core-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-raft-xshard/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-wire/test-support", "medulla-direct-state/test-support", "medulla-decision-outcome-types/test-support", "medulla-source-types/test-support", "medulla-work-types/test-support", "medulla-store-apply/test-support", "medulla-work-store/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support", "medulla-federation/test-support", "medulla-wire-core/test-support", "medulla-server-graph/test-support", "medulla-server-identity/test-support"]
 amqp-wire = ["medulla-server-router/amqp-wire", "medulla-server-lake/amqp-wire", "server", "medulla-server-api/amqp-wire", "medulla-wire/amqp-wire"]
 ann = ["medulla-server-router/ann", "medulla-server-graph/ann", "medulla-core/ann", "medulla-graph-core/ann", "medulla-h-decide/ann", "medulla-semantic-index/ann", "medulla-wire/ann"]
 ann-redb = ["medulla-server-router/ann-redb", "medulla-server-graph/ann-redb", "ann", "redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-h-jobs/ann-redb", "medulla-h-query/ann-redb", "medulla-h-query-read/ann-redb", "medulla-h-retrieve/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb", "medulla-wire/ann-redb"]
@@ -245,7 +245,7 @@ medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository", feature
 medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
 medulla-h-query-read = { path = "../medulla-h-query-read", features = ["test-support"] }
 medulla-h-txn = { path = "../medulla-h-txn", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

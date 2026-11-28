@@ -37,8 +37,12 @@ type Shared = Arc<RwLock<ServerState>>;
 /// The served engine: the signing test agent sees the whole graph; `READER` holds a read
 /// grant only and `MUTATOR` holds a read grant and a separate graph write grant.
 fn state() -> Shared {
-    use medulla_identity_types::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Grant,
+        medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
     };
     let (persist_dir, persistence) = common::tempdir_persistence();
     let mut isolation = common::current_isolation();

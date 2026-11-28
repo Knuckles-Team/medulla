@@ -114,8 +114,9 @@ pub struct ForeignLeg {
 /// (absent from the caller's owner-scoped catalog), rendered by its own serde form so
 /// the coverage block has no second list of reasons.
 fn unreadable_reason() -> String {
-    match serde_json::to_value(medulla_identity_types::authority_audit::NotUsedReason::Unconnected)
-    {
+    match serde_json::to_value(
+        medulla_identity_core_types::authority_audit::NotUsedReason::Unconnected,
+    ) {
         Ok(serde_json::Value::String(reason)) => reason,
         _ => "unconnected".to_string(),
     }

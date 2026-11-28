@@ -12,7 +12,7 @@
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
 
-use medulla_identity_types::tenancy::Marking;
+use medulla_identity_core_types::tenancy::Marking;
 use medulla_isolation::isolation::marking_propagation::{propagate, LineageEdges};
 
 const NODES: usize = 100_000;

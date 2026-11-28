@@ -85,7 +85,7 @@ fn swapping_two_ranks_changes_sources_used_with_equal_query_text() {
     let after = fixture_from_schema_sources(&attached(&document(2, 1))).unwrap();
     let after_audit = audit_from(&[incident_verdict(&after)]);
     assert_eq!(before_question, after_question, "the query text is equal");
-    let used = |audit: &medulla_identity_types::authority_audit::AuthorityAudit| {
+    let used = |audit: &medulla_identity_core_types::authority_audit::AuthorityAudit| {
         audit
             .used
             .iter()

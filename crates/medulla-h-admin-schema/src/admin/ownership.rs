@@ -8,10 +8,6 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_identity_types::identity::{
-    plan_digest, signals_digest, AppliedSummary, GraphOwnershipPlanReply, GraphOwnershipSignals,
-    OWNERSHIP_SCHEMA_VERSION,
-};
 use medulla_isolation::isolation::ownership::{plan, OwnershipWriterShare};
 use medulla_persistence::AsRedb;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
@@ -19,6 +15,14 @@ use medulla_protocol_types::result_contract::security::GraphOwnershipPlan;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_store::write_ledger::day_of;
+use {
+    medulla_identity_core_types::identity::plan_digest,
+    medulla_identity_core_types::identity::signals_digest,
+    medulla_identity_core_types::identity::AppliedSummary,
+    medulla_identity_core_types::identity::GraphOwnershipPlanReply,
+    medulla_identity_core_types::identity::GraphOwnershipSignals,
+    medulla_identity_core_types::identity::OWNERSHIP_SCHEMA_VERSION,
+};
 
 /// The window of `writes_30d`: today and the 29 days before it.
 const WINDOW_DAYS: u32 = 30;

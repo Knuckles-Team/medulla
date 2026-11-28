@@ -331,8 +331,8 @@ pub(super) struct DurableReadLease {
     pub(super) directory: std::path::PathBuf,
     pub(super) policy: medulla_isolation::rbac::RbacPolicy,
     pub(super) identities:
-        std::collections::BTreeMap<String, medulla_identity_types::acl::AgentIdentity>,
-    pub(super) grant: medulla_identity_types::acl::Grant,
+        std::collections::BTreeMap<String, medulla_identity_core_types::acl::AgentIdentity>,
+    pub(super) grant: medulla_identity_core_types::acl::Grant,
     pub(super) isolation: medulla_isolation::isolation::IsolationLayer,
     pub(super) claims: RequestContextClaims,
     pub(super) carrier: CarrierAuthority,
@@ -346,12 +346,16 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use medulla_identity_types::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
-    };
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_isolation::rbac::RbacPolicy;
     use medulla_isolation::rbac_persist::{IdentityBootstrapState, RbacStore};
+    use {
+        medulla_identity_core_types::acl::AgentIdentity,
+        medulla_identity_core_types::acl::AgentRole, medulla_identity_core_types::acl::Grant,
+        medulla_identity_core_types::acl::GrantEffect,
+        medulla_identity_core_types::acl::RbacAction,
+        medulla_identity_core_types::acl::ResourceSelector, medulla_identity_core_types::acl::Role,
+    };
 
     let directory = std::env::temp_dir().join(format!(
         "medulla-knowledge-stream-lease-{}-{}",

@@ -10,7 +10,7 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_protocol_types::{
     protocol::Method, protocol::Request, protocol::Response, protocol::ResultPayload,
 };
@@ -448,7 +448,7 @@ mod engine_remote_tests {
     use std::io::{Read, Write};
     use std::net::TcpListener;
 
-    use medulla_identity_types::acl::RequestContextClaims;
+    use medulla_identity_core_types::acl::RequestContextClaims;
     use medulla_query_types::wire::ForeignSourceSpec;
 
     use super::verified_claims;

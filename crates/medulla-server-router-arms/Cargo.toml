@@ -35,7 +35,7 @@ medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-h-jobs = { path = "../medulla-h-jobs" }
 medulla-h-query-read = { path = "../medulla-h-query-read" }
 medulla-h-txn = { path = "../medulla-h-txn" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-persistence = { path = "../medulla-persistence" }
@@ -163,7 +163,7 @@ medulla-h-ingest = { path = "../medulla-h-ingest", features = ["test-support"] }
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository", features = ["test-support"] }
 medulla-h-query-read = { path = "../medulla-h-query-read", features = ["test-support"] }
 medulla-h-txn = { path = "../medulla-h-txn", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

@@ -257,7 +257,7 @@ where
         .bind_authenticated_sql_actor(
             "mssql-wire",
             &login.user,
-            &medulla_identity_types::identity::default_wire_login_scopes(),
+            &medulla_identity_core_types::identity::default_wire_login_scopes(),
         )
         .await
     {

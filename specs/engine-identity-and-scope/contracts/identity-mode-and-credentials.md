@@ -13,7 +13,7 @@ Served: `IDENTITY_EPOCH_CONFLICT`, `IDENTITY_PRECONDITION_FAILED`, `IDENTITY_ILL
 
 ## Authoritative types
 
-`IdentityOp` in `crates/medulla-identity-types/src/identity/ops.rs`; `AuthMode`, `IdentityConfig` and `ModeTransition` in `crates/medulla-identity-types/src/identity/config.rs`.
+`IdentityOp` in `crates/medulla-identity-core-types/src/identity/ops.rs`; `AuthMode`, `IdentityConfig` and `ModeTransition` in `crates/medulla-identity-core-types/src/identity/config.rs`.
 
 ## Test vectors
 

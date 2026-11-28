@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::identity::ShareScope;
+use medulla_identity_core_types::identity::ShareScope;
 
 use crate::stored_query::{RefreshPolicy, StoredParamType, StoredQuery, StoredQueryLanguage};
 

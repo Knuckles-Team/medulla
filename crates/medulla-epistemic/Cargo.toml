@@ -12,7 +12,7 @@ name = "medulla_epistemic"
 [dependencies]
 # Bottom of the DAG: the stored typed model + Distribution value.
 medulla-types = { path = "../medulla-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 # The GraphView snapshot the propagation walk runs over (read-only, off-lock).
@@ -44,7 +44,7 @@ medulla-work-types = { path = "../medulla-work-types" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }

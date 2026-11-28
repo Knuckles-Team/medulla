@@ -69,7 +69,7 @@ async fn lookup(
     state: &Arc<RwLock<ServerState>>,
     tenant: &str,
     delegation_id: &str,
-) -> Option<medulla_identity_types::identity::DelegatedActor> {
+) -> Option<medulla_identity_core_types::identity::DelegatedActor> {
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     timed_read(state)
         .await

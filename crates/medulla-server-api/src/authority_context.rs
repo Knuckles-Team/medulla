@@ -7,7 +7,7 @@
 //! context through an alternate path.
 
 use hmac::{Hmac, Mac};
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_types::contract::{Digest256, Nonce};
 use sha2::Sha256;
 use std::collections::HashSet;

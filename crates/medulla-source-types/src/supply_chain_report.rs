@@ -13,8 +13,11 @@
 
 use std::collections::BTreeMap;
 
-use medulla_identity_types::authority_audit::{AuditEntry, AuditSourceMode};
 use serde::{Deserialize, Serialize};
+use {
+    medulla_identity_core_types::authority_audit::AuditEntry,
+    medulla_identity_core_types::authority_audit::AuditSourceMode,
+};
 
 /// The unified report: impact per service, the items behind each, the sources
 /// used and why, and the typed abstentions.

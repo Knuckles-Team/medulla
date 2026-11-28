@@ -1427,8 +1427,8 @@ mod tenant_scope_served_tests {
     use super::{run_unified_off_lock_with, ServedPlanLegs, UnifiedRead};
     use crate::query::segment_filter::ReadScope;
     use medulla_graph_core::graph::{GraphCore, GraphView};
-    use medulla_identity_types::identity::UnitPrincipal;
-    use medulla_identity_types::tenancy::TenantId;
+    use medulla_identity_core_types::identity::UnitPrincipal;
+    use medulla_identity_core_types::tenancy::TenantId;
     use medulla_query_types::wire::{Op, Plan};
     use medulla_server_api::read_scope::{bound_variables, ReadCaller};
     use medulla_server_api::state::ServerState;

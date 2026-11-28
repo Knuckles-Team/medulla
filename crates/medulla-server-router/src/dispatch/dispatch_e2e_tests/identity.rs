@@ -2,8 +2,7 @@
 //! verified context, exact identity scopes are required, every secret is
 //! hashed and cleared before apply, and the floors refuse weak secrets.
 
-use medulla_identity_types::identity::*;
-use medulla_identity_types::{identity::IdentityOp, identity::IdentityStamp};
+use medulla_identity_core_types::identity::*;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -14,6 +13,10 @@ use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
 use medulla_server_identity::dispatch::identity_store::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use {
+    medulla_identity_core_types::identity::IdentityOp,
+    medulla_identity_core_types::identity::IdentityStamp,
+};
 
 const PASSWORD: &str = "correct horse battery staple";
 const SESSION: &str = "sess-0123456789abcdefghijklmnopqrstuv";

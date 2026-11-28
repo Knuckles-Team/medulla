@@ -13,7 +13,7 @@ Arbora calls the existing served method `Identity` with the ops `grant_wire_logi
 
 ## Authoritative types
 
-`WireLoginRecord` and `WireLoginKind` in `crates/medulla-identity-types/src/identity/wire_login.rs`; the operation is `IdentityOp::WireLogin` in `crates/medulla-identity-types/src/identity/ops.rs`.
+`WireLoginRecord` and `WireLoginKind` in `crates/medulla-identity-core-types/src/identity/wire_login.rs`; the operation is `IdentityOp::WireLogin` in `crates/medulla-identity-core-types/src/identity/ops.rs`.
 
 ## Test vectors
 

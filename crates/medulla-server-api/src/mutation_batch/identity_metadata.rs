@@ -9,11 +9,14 @@
 
 use std::fmt;
 
-use medulla_identity_types::identity::{TypedMetadata, METADATA_SCHEMA_VERSION};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::ServerErrorCode;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
+use {
+    medulla_identity_types::identity::metadata::TypedMetadata,
+    medulla_identity_types::identity::metadata::METADATA_SCHEMA_VERSION,
+};
 
 /// The three graph labels of typed principal metadata.
 pub const METADATA_LABELS: [&str; 3] = ["Preference", "ClientMetadata", "InteractionNetwork"];

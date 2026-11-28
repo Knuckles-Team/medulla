@@ -158,8 +158,8 @@ pub mod current_auth_test_support {
         pub(in super::super) use super::{
             current_isolation, current_isolation_with_agents, current_request, current_request_as,
         };
-        pub(in super::super) use medulla_identity_types::acl::AgentIdentity;
-        pub(in super::super) use medulla_identity_types::acl::AgentRole;
+        pub(in super::super) use medulla_identity_core_types::acl::AgentIdentity;
+        pub(in super::super) use medulla_identity_core_types::acl::AgentRole;
         pub(in super::super) use medulla_protocol_types::protocol::Method;
         pub(in super::super) use medulla_protocol_types::protocol::Request;
         pub(in super::super) use medulla_protocol_types::protocol::Response;
@@ -177,8 +177,8 @@ mod rls_no_exfiltrate_tests {
     //! SQL nor Cypher can exfiltrate a forbidden row. Agent A's query MUST exclude
     //! agent B's private node; a public node is visible to both.
     use medulla_graph_core::graph::GraphView;
-    use medulla_identity_types::acl::AgentIdentity;
-    use medulla_identity_types::acl::AgentRole;
+    use medulla_identity_core_types::acl::AgentIdentity;
+    use medulla_identity_core_types::acl::AgentRole;
     use medulla_isolation::isolation::IsolationLayer;
     use std::sync::Arc;
 
@@ -620,11 +620,11 @@ mod rls_aware_cache_no_cross_agent_leak {
         // closed on an empty RBAC policy before RLS is ever exercised.
         #[cfg(feature = "security")]
         {
-            use medulla_identity_types::acl::Grant;
-            use medulla_identity_types::acl::GrantEffect;
-            use medulla_identity_types::acl::RbacAction;
-            use medulla_identity_types::acl::ResourceSelector;
-            use medulla_identity_types::acl::Role;
+            use medulla_identity_core_types::acl::Grant;
+            use medulla_identity_core_types::acl::GrantEffect;
+            use medulla_identity_core_types::acl::RbacAction;
+            use medulla_identity_core_types::acl::ResourceSelector;
+            use medulla_identity_core_types::acl::Role;
             isolation.add_role(Role::new("commons-rw"));
             for action in [RbacAction::Read, RbacAction::Write] {
                 isolation.add_grant(Grant {
@@ -966,7 +966,7 @@ mod dispatch_write_tests {
         nonce: &str,
         idempotency_key: &str,
     ) -> Request {
-        let context = medulla_identity_types::acl::RequestContextClaims {
+        let context = medulla_identity_core_types::acl::RequestContextClaims {
             principal: agent_id.to_string(),
             tenant: "tenant-shared".to_string(),
             audience: "medulla-test".to_string(),

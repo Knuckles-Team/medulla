@@ -17,12 +17,16 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
-use medulla_identity_types::identity::IdentityStore;
+use medulla_identity_core_types::identity::IdentityStore;
 use medulla_identity_types::rbac_elevation::ElevationLedger;
 use medulla_identity_types::resource_grant::ResourceGrantLedger;
 use medulla_mutation_types::governed_change::GovernedLedger;
 use serde::{Deserialize, Serialize};
+use {
+    medulla_identity_core_types::acl::Grant, medulla_identity_core_types::acl::GrantEffect,
+    medulla_identity_core_types::acl::RbacAction,
+    medulla_identity_core_types::acl::ResourceContext, medulla_identity_core_types::acl::Role,
+};
 
 /// The durable RBAC policy: named roles (with parents) + a flat list of grants.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -132,7 +136,7 @@ impl RbacPolicy {
     /// `roles` and `grants`, leaving every other role and grant untouched.
     pub(crate) fn replace_projected(&mut self, roles: Vec<Role>, grants: Vec<Grant>) {
         let owned =
-            |name: &str| name.starts_with(medulla_identity_types::identity::RBAC_ROLE_PREFIX);
+            |name: &str| name.starts_with(medulla_identity_core_types::identity::RBAC_ROLE_PREFIX);
         self.roles.retain(|name, _| !owned(name));
         self.grants.retain(|grant| !owned(&grant.role));
         for role in roles {
@@ -218,7 +222,7 @@ impl RbacPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::acl::ResourceSelector;
+    use medulla_identity_core_types::acl::ResourceSelector;
 
     fn grant(role: &str, sel: ResourceSelector, action: RbacAction, effect: GrantEffect) -> Grant {
         Grant {

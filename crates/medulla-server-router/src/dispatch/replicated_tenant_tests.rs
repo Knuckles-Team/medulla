@@ -4,13 +4,13 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_identity_types::identity::*;
+use medulla_identity_core_types::identity::*;
 use tokio::sync::RwLock;
 
 use crate::dispatch::test_support::send;
 use crate::dispatch::test_support::verified;
-use medulla_identity_types::acl::AgentIdentity;
-use medulla_identity_types::acl::AgentRole;
+use medulla_identity_core_types::acl::AgentIdentity;
+use medulla_identity_core_types::acl::AgentRole;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_persistence::redb_backend::RedbBackend;

@@ -30,7 +30,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_identity_types::acl::RequestContextClaims;
+use medulla_identity_core_types::acl::RequestContextClaims;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;

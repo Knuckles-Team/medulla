@@ -39,9 +39,11 @@
 #![cfg(feature = "security")]
 
 use medulla_core::registry::GraphRegistry;
-use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_isolation::isolation::{AccessLevel, IsolationLayer};
 use medulla_protocol_types::protocol::GraphType;
+use {
+    medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
+};
 
 /// NE-045, condition 1: cache (resident map) and eviction registry (catalog)
 /// agree after evict -> delete -> recreate under the SAME graph name.
