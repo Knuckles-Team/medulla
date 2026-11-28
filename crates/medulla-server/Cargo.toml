@@ -35,19 +35,19 @@ medulla-decision-program-types = { path = "../medulla-decision-program-types" }
 medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
-medulla-h-admin = { path = "../medulla-h-admin" }
-medulla-h-admin-schema = { path = "../medulla-h-admin-schema" }
-medulla-h-compute = { path = "../medulla-h-compute" }
-medulla-h-decide = { path = "../medulla-h-decide" }
-medulla-h-decide-base = { path = "../medulla-h-decide-base" }
-medulla-h-graph = { path = "../medulla-h-graph" }
-medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway" }
-medulla-h-ingest = { path = "../medulla-h-ingest" }
-medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
-medulla-h-jobs = { path = "../medulla-h-jobs" }
-medulla-h-query = { path = "../medulla-h-query" }
-medulla-h-query-read = { path = "../medulla-h-query-read" }
-medulla-h-txn = { path = "../medulla-h-txn" }
+medulla-h-admin = { path = "../medulla-h-admin", optional = true }
+medulla-h-admin-schema = { path = "../medulla-h-admin-schema", optional = true }
+medulla-h-compute = { path = "../medulla-h-compute", optional = true }
+medulla-h-decide = { path = "../medulla-h-decide", optional = true }
+medulla-h-decide-base = { path = "../medulla-h-decide-base", optional = true }
+medulla-h-graph = { path = "../medulla-h-graph", optional = true }
+medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway", optional = true }
+medulla-h-ingest = { path = "../medulla-h-ingest", optional = true }
+medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository", optional = true }
+medulla-h-jobs = { path = "../medulla-h-jobs", optional = true }
+medulla-h-query = { path = "../medulla-h-query", optional = true }
+medulla-h-query-read = { path = "../medulla-h-query-read", optional = true }
+medulla-h-txn = { path = "../medulla-h-txn", optional = true }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-observe = { path = "../medulla-observe" }
@@ -74,7 +74,7 @@ medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
-medulla-wire = { path = "../medulla-wire" }
+medulla-wire = { path = "../medulla-wire", optional = true }
 parking_lot = "0.12"
 polars-core = { version = "0.54.4", optional = true, default-features = false }
 polars-io = { version = "0.54.4", optional = true, default-features = false, features = ["parquet"] }
@@ -124,10 +124,10 @@ medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
-medulla-wire-core = { path = "../medulla-wire-core" }
-medulla-h-mining = { path = "../medulla-h-mining" }
-medulla-h-sparql = { path = "../medulla-h-sparql" }
-medulla-h-retrieve = { path = "../medulla-h-retrieve" }
+medulla-wire-core = { path = "../medulla-wire-core", optional = true }
+medulla-h-mining = { path = "../medulla-h-mining", optional = true }
+medulla-h-sparql = { path = "../medulla-h-sparql", optional = true }
+medulla-h-retrieve = { path = "../medulla-h-retrieve", optional = true }
 medulla-server-obs = { path = "../medulla-server-obs" }
 medulla-server-lake = { path = "../medulla-server-lake" }
 medulla-server-graph = { path = "../medulla-server-graph" }
