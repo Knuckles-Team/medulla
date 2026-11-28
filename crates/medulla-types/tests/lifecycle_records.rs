@@ -230,6 +230,12 @@ fn unknown_head_and_taken_version_refuse() {
     let refusal = handle_record_release(std::slice::from_ref(&stored), &ids, taken).unwrap_err();
     assert_eq!(refusal.code(), "RELEASE_VERSION_TAKEN");
 
+    // A release that names no head contains no changeset and is not refused.
+    let mut headless = release("3.0.0", &["content-sha256:aa"]);
+    headless.changeset_head = String::new();
+    let write = handle_record_release(std::slice::from_ref(&stored), &[], headless).unwrap();
+    assert!(write.contains.is_empty());
+
     for code in [
         "RELEASE_HEAD_UNKNOWN",
         "RELEASE_VERSION_TAKEN",

@@ -456,7 +456,13 @@ pub fn handle_record_release(
         .filter(|r| chain.contains(&r.changeset_head))
         .max_by_key(|r| r.published_at)
         .map(|r| r.changeset_head.as_str());
-    let contains = release_range(chain, previous_head, &release.changeset_head)?;
+    // A release with no source commit (one an arbora recorded from the package index) contains
+    // no changeset; a named head must be on the chain.
+    let contains = if release.changeset_head.is_empty() {
+        Vec::new()
+    } else {
+        release_range(chain, previous_head, &release.changeset_head)?
+    };
     Ok(ReleaseWrite {
         seal: release_seal(&release),
         release,
