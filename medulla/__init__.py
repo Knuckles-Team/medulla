@@ -85,6 +85,11 @@ from .parser import RustASTParser
 from .policy_evolution import PolicyEvolutionClient, PolicyEvolutionRefused
 from .world_view import (
     CatalogEntry,
+    CityEntity,
+    CityStateReader,
+    CityStateRefused,
+    CityStateSnapshot,
+    CityStateWriter,
     Layout,
     Override,
     OverrideStore,
@@ -149,6 +154,11 @@ __all__ = [
     "FleetCatalogSnapshotError",
     "PolicyEvolutionClient",
     "CatalogEntry",
+    "CityEntity",
+    "CityStateReader",
+    "CityStateRefused",
+    "CityStateSnapshot",
+    "CityStateWriter",
     "Layout",
     "Override",
     "OverrideStore",

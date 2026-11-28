@@ -543,3 +543,56 @@ organizes under one worldview instead of floating per-document tags.""" .
     rdfs:comment "The stated reason a building was moved by hand (MEDULLA-WORLD-VIEW-R002)." ;
     rdfs:domain :Building ;
     rdfs:range xsd:string .
+
+:CityPresence a owl:Class ;
+    rdfs:label "City presence" ;
+    rdfs:comment "One presence in the city: an npc, an ai or a human standing at a world position with an activity and a revision (MEDULLA-WORLD-VIEW-R004). It reuses the shared :observedAt and :revision, each declared once in another module." ;
+    rdfs:subClassOf :Place .
+
+:presenceKind a owl:DatatypeProperty ;
+    rdfs:label "presence kind" ;
+    rdfs:comment "What the presence is: npc, ai or human." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:string .
+
+:worldX a owl:DatatypeProperty ;
+    rdfs:label "world x" ;
+    rdfs:comment "The x coordinate of a presence in the city." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:decimal .
+
+:worldY a owl:DatatypeProperty ;
+    rdfs:label "world y" ;
+    rdfs:comment "The y coordinate of a presence in the city." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:decimal .
+
+:heading a owl:DatatypeProperty ;
+    rdfs:label "heading" ;
+    rdfs:comment "The direction a presence faces, in degrees." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:decimal .
+
+:activityState a owl:DatatypeProperty ;
+    rdfs:label "activity state" ;
+    rdfs:comment "What a presence is doing: walking, driving, flying, sailing or inside." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:string .
+
+:targetRef a owl:DatatypeProperty ;
+    rdfs:label "target ref" ;
+    rdfs:comment "An opaque city id of what a presence is heading to or inside." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:string .
+
+:expiresAt a owl:DatatypeProperty ;
+    rdfs:label "expires at" ;
+    rdfs:comment "When a human presence lapses unless a heartbeat renews it." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:dateTime .
+
+:presenceSubject a owl:DatatypeProperty ;
+    rdfs:label "presence subject" ;
+    rdfs:comment "The principal a human presence belongs to." ;
+    rdfs:domain :CityPresence ;
+    rdfs:range xsd:string .
