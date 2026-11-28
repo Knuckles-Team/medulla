@@ -129,7 +129,7 @@ pub struct ResolvedConnectorSchemaMapping {
     pub schema_mapping: ConnectorSchemaMapping,
     pub body_sha256: Digest256,
     pub entry_revision: u64,
-    pub pack_digest: Digest256,
+    pub content_digest: Digest256,
     pub catalog: McpCatalogSnapshotBinding,
 }
 
@@ -158,7 +158,7 @@ pub struct ResolvedConnectorRelationshipMapping {
     pub relation: ConnectorRelationshipMapping,
     pub body_sha256: Digest256,
     pub entry_revision: u64,
-    pub pack_digest: Digest256,
+    pub content_digest: Digest256,
     pub catalog: McpCatalogSnapshotBinding,
 }
 
@@ -529,7 +529,7 @@ impl AgentLibraryStore {
             schema_mapping: selected,
             body_sha256: declaration.body_sha256,
             entry_revision: declaration.entry_revision,
-            pack_digest: head.head.pack_digest,
+            content_digest: head.head.content_digest,
             catalog: head.head.catalog,
         })
     }
@@ -601,7 +601,7 @@ impl AgentLibraryStore {
             relation,
             body_sha256: declaration.body_sha256,
             entry_revision: declaration.entry_revision,
-            pack_digest: head.head.pack_digest,
+            content_digest: head.head.content_digest,
             catalog: head.head.catalog,
         })
     }

@@ -70,6 +70,8 @@ pub struct PackImportRecord {
     pub binding_revision: u64,
     pub record_id: String,
     pub pack_digest: Digest256,
+    /// The digest of what the connector declares, without the catalog binding.
+    pub content_digest: Digest256,
     pub catalog: McpCatalogSnapshotBinding,
     #[serde(default)]
     pub previous_pack_digest: Option<Digest256>,

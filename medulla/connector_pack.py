@@ -58,6 +58,7 @@ from .generated.storage import (
 )
 
 _PACK_DIGEST_DOMAIN = b"eg/connector-pack/v2"
+_PACK_CONTENT_DIGEST_DOMAIN = b"eg/connector-pack-content/v1"
 _ENTRY_DIGEST_DOMAIN = b"eg/connector-pack-entry/v1"
 _ANNOTATIONS_DIGEST_DOMAIN = b"eg/connector-pack-annotations/v2"
 _MODEL_FACTS_DIGEST_DOMAIN = b"eg/cp-model-facts/v1"
@@ -276,6 +277,30 @@ def _catalog_digest(catalog: McpCatalogSnapshotBinding) -> bytes:
                 _raw_digest(catalog.authorization_scope_digest),
             ],
         )
+    )
+
+
+def pack_content_digest(
+    connector: str,
+    server: PackEntry,
+    entries: Sequence[PackEntry],
+) -> str:
+    """Return the digest computed by Rust ``connector_pack::pack_content_digest``.
+
+    It covers the connector, the server entry and every other entry in URI
+    order, without the catalog binding: the engine owns the binding, so this is
+    the digest a connector can compute for itself.
+    """
+
+    ordered = sorted(entries, key=lambda entry: entry.uri.encode("utf-8"))
+    return framed_sha256(
+        _PACK_CONTENT_DIGEST_DOMAIN,
+        [
+            connector.encode("utf-8"),
+            _entry_digest(server),
+            _u64(len(ordered)),
+            *(_entry_digest(entry) for entry in ordered),
+        ],
     )
 
 
@@ -606,5 +631,6 @@ __all__ = [
     "PackImportResultUnchanged",
     "PackWriteErrorCode",
     "connector_pack_import_key",
+    "pack_content_digest",
     "pack_digest",
 ]

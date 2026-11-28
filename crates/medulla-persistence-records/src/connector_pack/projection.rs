@@ -639,6 +639,7 @@ pub mod tests {
             binding_revision: revision,
             record_id,
             pack_digest,
+            content_digest: pack_digest,
             catalog: McpCatalogSnapshotBinding {
                 configuration_revision: revision,
                 catalog_generation: revision,

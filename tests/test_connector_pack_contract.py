@@ -10,7 +10,12 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from medulla.connector_pack import _annotations_digest, _entry_digest, pack_digest
+from medulla.connector_pack import (
+    _annotations_digest,
+    _entry_digest,
+    pack_content_digest,
+    pack_digest,
+)
 from medulla.generated.connector_pack import ConnectorPackIndex
 
 pytestmark = pytest.mark.no_engine
@@ -44,6 +49,10 @@ def test_python_client_matches_pack_vectors() -> None:
         emitted = index.model_dump(mode="json", exclude_none=True)
         assert ConnectorPackIndex.model_validate(emitted) == index
         assert _digest(index) == sample["pack_digest"]
+        assert (
+            pack_content_digest(index.connector, index.server, index.entries)
+            == sample["pack_content_digest"]
+        )
         for entry in [index.server, *index.entries]:
             expected = sample["entries"][entry.uri]
             assert _entry_digest(entry).hex() == expected["entry_digest"]

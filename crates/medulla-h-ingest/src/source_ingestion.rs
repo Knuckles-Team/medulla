@@ -1759,7 +1759,7 @@ fn resolve_mappings(
             kind: SourceMappingKind::Entity,
             mapping_reference: resolved.mapping_reference.clone(),
             mapping_digest: mapping_digest(&resolved.schema_mapping)?,
-            connector_pack_digest: resolved.pack_digest,
+            connector_pack_content_digest: resolved.content_digest,
             catalog: resolved.catalog.clone(),
         });
         entities.insert(record.mapping_reference.clone(), resolved);
@@ -1780,7 +1780,7 @@ fn resolve_mappings(
             kind: SourceMappingKind::Relationship,
             mapping_reference: resolved.relation_reference.clone(),
             mapping_digest: relationship_mapping_digest(&resolved.relation)?,
-            connector_pack_digest: resolved.pack_digest,
+            connector_pack_content_digest: resolved.content_digest,
             catalog: resolved.catalog.clone(),
         });
         relationships.insert(relationship.relation_reference.clone(), resolved);
@@ -5147,7 +5147,7 @@ mod tests {
                     },
                     body_sha256: Digest256::from_bytes([8; 32]),
                     entry_revision: 1,
-                    pack_digest: Digest256::from_bytes([9; 32]),
+                    content_digest: Digest256::from_bytes([9; 32]),
                     catalog: catalog.clone(),
                 },
             )]),
@@ -5169,7 +5169,7 @@ mod tests {
                     },
                     body_sha256: Digest256::from_bytes([6; 32]),
                     entry_revision: 1,
-                    pack_digest: Digest256::from_bytes([7; 32]),
+                    content_digest: Digest256::from_bytes([7; 32]),
                     catalog: catalog.clone(),
                 };
             resolved.relationships.insert(

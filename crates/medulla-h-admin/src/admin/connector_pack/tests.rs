@@ -739,6 +739,8 @@ pub(in crate::admin) async fn seed_server_only_import(
         binding_revision: previous.binding_revision + 1,
         record_id,
         pack_digest: index.pack_digest,
+        content_digest: medulla_catalog_types::connector_pack::digest::pack_content_digest(index)
+            .unwrap(),
         catalog: index.catalog.clone(),
         previous_pack_digest: Some(previous.pack_digest),
         server: PackServerRecord {

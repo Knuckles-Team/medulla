@@ -35,6 +35,8 @@ pub const MODEL_FACTS_DIGEST_DOMAIN: &[u8] = b"eg/cp-model-facts/v1";
 pub const REFERENCES_DIGEST_DOMAIN: &[u8] = b"eg/connector-pack-references/v1";
 /// Framing domain of a whole pack.
 pub const PACK_DIGEST_DOMAIN: &[u8] = b"eg/connector-pack/v2";
+/// Domain of the pack content digest: the pack without its catalog binding.
+pub const PACK_CONTENT_DIGEST_DOMAIN: &[u8] = b"eg/connector-pack-content/v1";
 /// Framing domain for an exact served MCP catalog identity.
 pub const MCP_CATALOG_BINDING_DIGEST_DOMAIN: &[u8] = b"eg/mcp-catalog-binding/v1";
 
@@ -320,17 +322,24 @@ pub fn entry_digest(entry: &PackEntry) -> Result<Digest256, String> {
     )
 }
 
-/// The digest of a whole pack: its connector, its server entry, and every
-/// other entry's digest in URI order.
-pub fn pack_digest(index: &ConnectorPackIndex) -> Result<Digest256, String> {
+/// The server entry digest and every other entry's digest in URI order: the
+/// pass `pack_digest` and `pack_content_digest` share.
+fn entry_digests(index: &ConnectorPackIndex) -> Result<(Digest256, Vec<Digest256>), String> {
     let server = entry_digest(&index.server)?;
-    let catalog = catalog_binding_digest(&index.catalog)?;
     let mut entries: Vec<&PackEntry> = index.entries.iter().collect();
     entries.sort_by(|left, right| left.uri.cmp(&right.uri));
     let digests = entries
         .iter()
         .map(|entry| entry_digest(entry))
         .collect::<Result<Vec<Digest256>, String>>()?;
+    Ok((server, digests))
+}
+
+/// The digest of a whole pack: its connector, its catalog binding, its server
+/// entry, and every other entry's digest in URI order.
+pub fn pack_digest(index: &ConnectorPackIndex) -> Result<Digest256, String> {
+    let (server, digests) = entry_digests(index)?;
+    let catalog = catalog_binding_digest(&index.catalog)?;
     let count = (digests.len() as u64).to_be_bytes();
     let mut fields: Vec<&[u8]> = vec![
         index.connector.as_str().as_bytes(),
@@ -340,6 +349,22 @@ pub fn pack_digest(index: &ConnectorPackIndex) -> Result<Digest256, String> {
     ];
     fields.extend(digests.iter().map(|digest| digest.as_bytes().as_slice()));
     Digest256::framed(PACK_DIGEST_DOMAIN, &fields)
+}
+
+/// The digest of what a connector declares: its connector, its server entry,
+/// and every other entry's digest in URI order, without the catalog binding.
+/// The catalog binding is the engine's authority state, so this digest is the
+/// one a connector can compute for itself.
+pub fn pack_content_digest(index: &ConnectorPackIndex) -> Result<Digest256, String> {
+    let (server, digests) = entry_digests(index)?;
+    let count = (digests.len() as u64).to_be_bytes();
+    let mut fields: Vec<&[u8]> = vec![
+        index.connector.as_str().as_bytes(),
+        server.as_bytes(),
+        &count,
+    ];
+    fields.extend(digests.iter().map(|digest| digest.as_bytes().as_slice()));
+    Digest256::framed(PACK_CONTENT_DIGEST_DOMAIN, &fields)
 }
 
 #[cfg(test)]
@@ -568,6 +593,11 @@ mod tests {
                 pack_digest(&index).unwrap().to_hex(),
                 sample["pack_digest"],
                 "sample {name}: the pack digest drifted from the committed fixture"
+            );
+            assert_eq!(
+                pack_content_digest(&index).unwrap().to_hex(),
+                sample["pack_content_digest"],
+                "sample {name}: the pack content digest drifted from the committed fixture"
             );
             let entries = sample["entries"]
                 .as_object()

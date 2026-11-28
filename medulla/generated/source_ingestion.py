@@ -536,7 +536,7 @@ class SourceMappingReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     catalog: McpCatalogSnapshotBinding
-    connector_pack_digest: Digest256
+    connector_pack_content_digest: Digest256
     kind: SourceMappingKind
     mapping_digest: Digest256
     mapping_reference: str

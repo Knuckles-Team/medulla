@@ -407,7 +407,7 @@ pub struct SourceMappingReceipt {
     pub kind: SourceMappingKind,
     pub mapping_reference: String,
     pub mapping_digest: Digest256,
-    pub connector_pack_digest: Digest256,
+    pub connector_pack_content_digest: Digest256,
     pub catalog: medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding,
 }
 

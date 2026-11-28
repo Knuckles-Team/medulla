@@ -447,6 +447,7 @@ class PackHeadView(BaseModel):
     binding_revision: Annotated[int, Field(ge=0)]
     catalog: McpCatalogSnapshotBinding
     committed_at_ms: Annotated[int, Field(ge=0)]
+    content_digest: Digest256
     pack_digest: Digest256
     record_id: str
     server_contract_version: str | None = None
@@ -501,6 +502,7 @@ class PackImportReceipt(BaseModel):
     committed_version: Annotated[int, Field(ge=0)]
     conformance: ConformanceReport | None = None
     connector: str
+    content_digest: Digest256
     counts: PackDispositionCounts
     object_model_shape_digest: Digest256 | None = None
     pack_digest: Digest256

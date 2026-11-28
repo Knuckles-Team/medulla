@@ -842,7 +842,8 @@
         "server_package_version": "2.3.1"
       },
       "name": "contract_pack_index",
-      "pack_digest": "bf379d4af75cc24a6b8c1edb46abc5747390d9e5758ea3ea98e79ad5ed46a286"
+      "pack_digest": "bf379d4af75cc24a6b8c1edb46abc5747390d9e5758ea3ea98e79ad5ed46a286",
+      "pack_content_digest": "8970962274e060eb33e11f075ab1c126a5733f0a263a5052a9d50448a25a5c56"
     }
   ]
 }

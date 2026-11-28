@@ -227,6 +227,8 @@ pub struct PackImportReceipt {
     pub connector: ResourceId,
     pub binding_revision: u64,
     pub pack_digest: Digest256,
+    /// The digest of what the connector declares, without the catalog binding.
+    pub content_digest: Digest256,
     pub catalog: McpCatalogSnapshotBinding,
     #[serde(default)]
     pub previous_pack_digest: Option<Digest256>,
@@ -287,6 +289,8 @@ pub enum PackImportResult {
 pub struct PackHeadView {
     pub binding_revision: u64,
     pub pack_digest: Digest256,
+    /// The digest of what the connector declares, without the catalog binding.
+    pub content_digest: Digest256,
     pub catalog: McpCatalogSnapshotBinding,
     #[serde(default)]
     pub server_contract_version: Option<String>,

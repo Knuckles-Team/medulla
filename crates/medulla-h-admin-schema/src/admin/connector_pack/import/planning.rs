@@ -751,6 +751,9 @@ fn import_record(
         binding_revision: revision,
         record_id,
         pack_digest: request.index.pack_digest,
+        content_digest: medulla_catalog_types::connector_pack::digest::pack_content_digest(
+            &request.index,
+        )?,
         catalog: request.index.catalog.clone(),
         previous_pack_digest: request.expected_head.as_ref().map(|head| head.pack_digest),
         server: PackServerRecord {
