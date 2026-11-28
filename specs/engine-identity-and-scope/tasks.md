@@ -43,7 +43,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T036 [US6] MEDULLA-IDENTITY-R023.13.4 Refusal: share operations
 - [ ] T037 [US6] MEDULLA-IDENTITY-R023.13.5 Evidence: share audit event
 - [ ] T038 [US6] MEDULLA-IDENTITY-R023.13.6 Hot-path journey: org share revoke survives restart
-- [ ] T038a [US6] MEDULLA-IDENTITY-R023.13.7 Reconcile: a commons sweep removes an orphan `__commons__` copy
+- [ ] T092 [US6] MEDULLA-IDENTITY-R023.13.7 Reconcile: a commons sweep removes an orphan `__commons__` copy
 - [ ] T039 [US5] MEDULLA-IDENTITY-R610.1 Model
 - [ ] T040 [US5] MEDULLA-IDENTITY-R610.2 Behavior
 - [ ] T041 [US5] MEDULLA-IDENTITY-R610.3 Wiring: tenant predicate in the UQL executor
@@ -56,12 +56,12 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T048 [US6] MEDULLA-IDENTITY-R700.4 Refusal: unsafe ownership plans
 - [ ] T049 [US6] MEDULLA-IDENTITY-R700.5 Evidence: stored plan and rollback record
 - [ ] T050 [US6] MEDULLA-IDENTITY-R700.6 Hot-path journey: apply then rollback
-- [x] T050a [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
+- [x] T093 [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
 - [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
 - [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: validate, bind and enforce (`IdentityOp::Policy`, lowered into `idm:policy:` roles and grants by `rbac_projection`)
 - [ ] T054 [US6] MEDULLA-IDENTITY-R704 Resource-scoped access decision method
-- [ ] T054a [US6] MEDULLA-IDENTITY-R704.1 Resource grant record in the RBAC policy image and `RbacAdminOp::GrantResource`/`RevokeResource`
-- [ ] T054b [US6] MEDULLA-IDENTITY-R704.2 Served `Method::CheckResourceAccess` decision
+- [ ] T094 [US6] MEDULLA-IDENTITY-R704.1 Resource grant record in the RBAC policy image and `RbacAdminOp::GrantResource`/`RevokeResource`
+- [ ] T095 [US6] MEDULLA-IDENTITY-R704.2 Served `Method::CheckResourceAccess` decision
 - [ ] T055 [US6] MEDULLA-IDENTITY-R705 ClientSession record vocabulary
 - [ ] T056 [US5] MEDULLA-IDENTITY-R706 Read gate expands source groups and honors source access properties
 - [ ] T057 [US7] MEDULLA-IDENTITY-R707 Identity domain operations with Argon2id and redacted views
@@ -99,5 +99,6 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T089 MEDULLA-IDENTITY-R023.15 Operator-class audit records
 - [ ] T090 MEDULLA-IDENTITY-R750 Pre-login OIDC state: register and consume once
 - [ ] T091 MEDULLA-IDENTITY-R751 SAML assertion id register-if-new
-- [ ] T091a MEDULLA-IDENTITY-R752 Resolve an external identity link to its principal
-- [ ] T091b MEDULLA-IDENTITY-R753 Record one credential use receipt
+- [ ] T096 MEDULLA-IDENTITY-R752 Resolve an external identity link to its principal
+- [ ] T097 MEDULLA-IDENTITY-R753 Record one credential use receipt
+- [ ] T098 MEDULLA-IDENTITY-R023.16 Tenant observer event log

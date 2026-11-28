@@ -10,3 +10,4 @@ Producer first: the vocabulary (R001) lands before the layout derivation (R002),
 - [ ] T004 [US1] MEDULLA-WORLD-VIEW-R001 Land the bound vocabulary test from [test-spec.md](test-spec.md) and run the ontology gate checks.
 - [ ] T005 [US1] MEDULLA-WORLD-VIEW-R002 Land the bound layout test from [test-spec.md](test-spec.md) (derived placement never stored; override wins; stale override reported).
 - [ ] T006 [US1] MEDULLA-WORLD-VIEW-R003 Land the bound test from [test-spec.md](test-spec.md) (envelope; empty catalog; no write on read).
+- [ ] T007 MEDULLA-WORLD-VIEW-R004 Revisioned city-state facts

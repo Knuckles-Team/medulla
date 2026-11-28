@@ -47,6 +47,7 @@ Governing spec: [spec.md](spec.md).
 - `MEDULLA-MACHINE-R007`: `crates/medulla-pyengine/tests/test_machine_functions.py::test_every_vector_and_refusal_matches_the_rust_functions`. (planned; the owning change adds the files)
 - `MEDULLA-MACHINE-R008`: `tests/test_machine_wiring.py::test_every_new_symbol_has_a_production_caller`. The check searches each new public function for a caller outside tests. (planned; the owning change adds the files)
 - `MEDULLA-MACHINE-R009`: `tests/test_machine_inventory_ingest_served.py::test_three_connector_records_resolve_to_one_machine_with_its_state` (served), and `crates/medulla-rdf/tests/machine_competency.rs::three_connector_records_answer_one_machine_question` (L2). (planned; the owning change adds the files)
+- `MEDULLA-MACHINE-R010`: `crates/medulla-core/tests/machine_vocab.rs::machine_observation_is_declared_with_its_measures` (L2); `tests/test_machine_inventory_ingest_served.py::test_the_newest_observation_answers_each_machine` (L3) (planned): proves an observation with `:diskUsedFraction` 1.2 fails the shape; an observation with no measure fails the shape.
 
 ## Negative and boundary cases
 

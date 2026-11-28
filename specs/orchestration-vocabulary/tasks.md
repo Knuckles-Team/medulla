@@ -173,3 +173,4 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T195 [US9] MEDULLA-ORCH-VOCAB-R817.2 Add the object properties
 - [ ] T196 [US9] MEDULLA-ORCH-VOCAB-R817.3 Add the shapes
 - [ ] T197 [US9] MEDULLA-ORCH-VOCAB-R817.4 Served competency query
+- [ ] T198 MEDULLA-ORCH-VOCAB-R818 Query tool_call_page

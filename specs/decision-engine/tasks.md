@@ -931,7 +931,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T912 [US7] MEDULLA-DECISION-ENGINE-R180.5 Process decision refusal
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
 - [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof
-- [ ] T914a [US7] MEDULLA-DECISION-ENGINE-R180.8 Feature schema of the control-step points
+- [ ] T1048 [US7] MEDULLA-DECISION-ENGINE-R180.8 Feature schema of the control-step points
 - [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
 - [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours; the answer keeps the best 64 scores and adds `Advisory.ranked_total` (ladder truncation, `calibrated_scores` by id, matrix rows of the retained ids).
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
@@ -1046,10 +1046,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1037 [US7] MEDULLA-DECISION-ENGINE-R614.2.6 Wiring: fitted topics persist as Topic nodes.
 - [ ] T1038 [US7] MEDULLA-DECISION-ENGINE-R614.2.7 Hot-path proof: fit then classify through the served method.
 - [ ] T1041 MEDULLA-DECISION-ENGINE-R829.4 Canonical feature schema of the catalog rank points
-- [ ] T1041a MEDULLA-DECISION-ENGINE-R833 Scale intent family
-- [ ] T1041b MEDULLA-DECISION-ENGINE-R834 Scale inventory classes
+- [ ] T1049 MEDULLA-DECISION-ENGINE-R833 Scale intent family
+- [ ] T1050 MEDULLA-DECISION-ENGINE-R834 Scale inventory classes
 - [ ] T1042 MEDULLA-DECISION-ENGINE-R029.3 Typed retrieval-plan request for an engine-backed retriever
 - [ ] T1043 MEDULLA-DECISION-ENGINE-R142.103 DecisionEval certification read of the current attestation of a skill revision
 - [ ] T1044 MEDULLA-DECISION-ENGINE-R166.7 Workflow registration declares and reads back its skills
 - [ ] T1045 MEDULLA-DECISION-ENGINE-R038.6 Held-item answer checklist and the engine-recorded critique
 - [ ] T1046 MEDULLA-DECISION-ENGINE-R802.7 Web page selection answer names its decision
+- [ ] T1047 MEDULLA-DECISION-ENGINE-R902 A committed decision emits one decision observer event

@@ -36,3 +36,4 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. Tasks run p
 - [ ] T030 [US1] MEDULLA-MACHINE-R009 Hot-path proof and competency question.
 - [ ] T031 [US2] MEDULLA-MACHINE-R002.4 Key anchor id.
 - [ ] T032 [US1] MEDULLA-MACHINE-R004.3 Machine key anchor.
+- [ ] T033 MEDULLA-MACHINE-R010 Machine pressure observations

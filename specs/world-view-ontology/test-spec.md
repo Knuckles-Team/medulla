@@ -38,3 +38,5 @@ Governing spec: [spec.md](spec.md).
   (no duplicate authority, one module per domain).
 - No benchmark row yet: the served method joins the engine's typed-query
   benchmark lane when it lands; the method is bounded by one district layout.
+
+- `MEDULLA-WORLD-VIEW-R004`: `tests/test_world_view_city_state.py::test_snapshot_is_revisioned_and_heartbeat_is_subject_bound_and_fenced` (L2) (planned): proves a stale revision refuses `REVISION_CONFLICT`; another subject's write refuses; an expired human node is absent from the snapshot.

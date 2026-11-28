@@ -193,3 +193,4 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-ORCH-VOCAB-R817.2`: `crates/medulla-core/tests/ontology_knowledge_factory.rs::properties_have_domain_and_range` (planned, L2): proves: Add the object properties
 - `MEDULLA-ORCH-VOCAB-R817.3`: `crates/medulla-core/tests/ontology_knowledge_factory.rs::shapes_reject_free_text_on_an_invocation` (planned, L2): proves: Add the shapes
 - `MEDULLA-ORCH-VOCAB-R817.4`: `tests/typed_packs/test_connector_vocabulary_served.py::test_skill_health_query_joins_flags_friction_and_eval` (planned, L4): proves: Served competency query
+- `MEDULLA-ORCH-VOCAB-R818`: `tests/orchestration/test_harness_metrics_served.py::test_tool_call_page_pages_newest_first_without_values` (L4) (planned): proves an unknown cursor refuses `INVALID_ARGUMENT`; a tenant with no tool calls returns no rows.

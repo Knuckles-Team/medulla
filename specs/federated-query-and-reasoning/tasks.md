@@ -87,7 +87,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T462 [US1] MEDULLA-FEDERATED-QUERY-R039.1.7 Multimodal space: served declaration
 - [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
 - [x] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior (L2 compiler test only; served carrier is R040.1.7)
-- [x] T083a [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
+- [x] T513 [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
 - [ ] T084 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.3 Constraints: wiring
 - [ ] T085 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.4 Constraints: refusal
 - [ ] T086 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.5 Constraints: evidence
@@ -437,7 +437,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T407 [US5] MEDULLA-FEDERATED-QUERY-R708.5 Evidence of Named stored queries and materialized results
 - [ ] T408 [US5] MEDULLA-FEDERATED-QUERY-R708.6 Hot-path proof of Named stored queries and materialized results
 - [ ] T409 [US5] MEDULLA-FEDERATED-QUERY-R708.7 Shared query workspace (rollup): the root served test, after R708.8, R708.9 and R708.11
-- [ ] T409a [US5] MEDULLA-FEDERATED-QUERY-R708.11 Refresh-period floor knob `stored_query.min_period_s` replaces `MIN_REFRESH_PERIOD_S`; `StoredQuery::validate(min_period_s)`
+- [ ] T514 [US5] MEDULLA-FEDERATED-QUERY-R708.11 Refresh-period floor knob `stored_query.min_period_s` replaces `MIN_REFRESH_PERIOD_S`; `StoredQuery::validate(min_period_s)`
 - [ ] T410 [P] [US5] MEDULLA-FEDERATED-QUERY-R709.1 Model of GeoSPARQL query functions
 - [ ] T411 [US5] MEDULLA-FEDERATED-QUERY-R709.2 Behavior of GeoSPARQL query functions
 - [ ] T412 [US5] MEDULLA-FEDERATED-QUERY-R709.3 Wiring of GeoSPARQL query functions
@@ -497,7 +497,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T487 [US5] MEDULLA-FEDERATED-QUERY-R742 The SPARQL evaluator implements the complete SPARQL 1.1 builtin function set (rollup).
 - [ ] T488 [US5] MEDULLA-FEDERATED-QUERY-R742.1 Behavior: the builtin set and its error rule.
 - [ ] T489 [US5] MEDULLA-FEDERATED-QUERY-R742.2 Hot-path proof: an identifier-building query through the served method.
-- [ ] T489A [US5] MEDULLA-FEDERATED-QUERY-R742.3 Behavior: a solution binding carries an RDF term.
+- [ ] T515 [US5] MEDULLA-FEDERATED-QUERY-R742.3 Behavior: a solution binding carries an RDF term.
 - [ ] T501 [US5] MEDULLA-FEDERATED-QUERY-R743 Graph algorithms accept a visibility-limited `node_ids` scope and answer typed views (rollup)
 - [ ] T502 [US5] MEDULLA-FEDERATED-QUERY-R743.1 Model: the `node_ids` field and the typed result views
 - [ ] T503 [US5] MEDULLA-FEDERATED-QUERY-R743.2 Behavior: the induced subgraph, limited to the visible set, with no existence oracle
@@ -505,8 +505,9 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T505 [US5] MEDULLA-FEDERATED-QUERY-R743.4 Refusal: a scope above the batch bound
 - [ ] T506 [US5] MEDULLA-FEDERATED-QUERY-R743.5 Python mirror: the typed views and the `node_ids` argument
 - [ ] T507 [US5] MEDULLA-FEDERATED-QUERY-R743.6 Hot-path proof: a hidden node and an unknown node answer identically through the served client
-- [ ] T507a [US5] MEDULLA-FEDERATED-QUERY-R743.7 Wiring: the scope of a graph algorithm follows the request shape
+- [ ] T516 [US5] MEDULLA-FEDERATED-QUERY-R743.7 Wiring: the scope of a graph algorithm follows the request shape
 - [ ] T508 [US5] MEDULLA-FEDERATED-QUERY-R744 The cluster hierarchy reads answer the published `ClusterLevelView` and `ClusterExpansion` (rollup)
 - [ ] T509 [US5] MEDULLA-FEDERATED-QUERY-R744.1 Model: the published views compare and round-trip
 - [ ] T510 [US5] MEDULLA-FEDERATED-QUERY-R744.2 Python mirror: the client returns the published views
 - [ ] T511 [US5] MEDULLA-FEDERATED-QUERY-R744.3 Wiring: the served reads answer the typed views from the cached hierarchy
+- [ ] T512 MEDULLA-FEDERATED-QUERY-R745 Every query emits one query observer event
