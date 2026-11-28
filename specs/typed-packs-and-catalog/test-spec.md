@@ -139,7 +139,7 @@ These partial regressions intentionally carry no acceptance binding that would m
 - `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors`.
 - `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused`.
 - `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven`.
-- `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
+- `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
 - `MEDULLA-TYPED-PACKS-R045.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget`.
@@ -648,7 +648,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors` (existing)
 - `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused` (existing)
 - `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin-schema/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven` (existing)
-- `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tool_subset.rs::request_body` (existing); `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains` (existing)
+- `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide-base/src/decide/stat_tool_subset.rs::request_body` (existing); `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains` (existing)
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-reasoner/src/rules/capability/tests.rs::a_read_only_claim_is_certified_only_by_a_trusted_declarer`
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
@@ -694,7 +694,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R073`: `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::world_model_modules_are_core_modules_within_the_catalog_bound` (existing); `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::every_world_model_class_is_mapped_and_nothing_external_is_imported` (existing)
 - `MEDULLA-TYPED-PACKS-R074`: `crates/medulla-h-admin/src/connector_pack_projection/grant.rs::tests::the_projection_actor_writes_only_the_pack_graph_it_was_granted` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/outbox.rs::failed_projection_records_durable_failed_status` (existing)
 - `MEDULLA-TYPED-PACKS-R077`: `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_paged_walk_returns_every_term_once_in_order_at_one_digest` (existing)
-- `MEDULLA-TYPED-PACKS-R078`: `crates/medulla-h-decide/src/decide/stat_tests/retrieval_plan_tests.rs::templates_are_keyed_by_task_class_and_schema_digest` (existing)
+- `MEDULLA-TYPED-PACKS-R078`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retrieval_plan_tests.rs::templates_are_keyed_by_task_class_and_schema_digest` (existing)
 - `MEDULLA-TYPED-PACKS-R081`: `tests/test_ontology_package.py::test_api_returns_every_source_file` (existing)
 - `MEDULLA-TYPED-PACKS-R082`: `tests/test_rdf_client.py::test_validate_shacl_sends_both_inline_graphs` (existing); `tests/test_graph_schema_vectors.py::test_client_models_match_rust_vectors` (planned)
 - `MEDULLA-TYPED-PACKS-R083`: `tests/packs/test_schema_drift_served.py::test_breaking_drift_quarantines_and_activation_needs_approval` (existing)

@@ -50,9 +50,9 @@ use {
     medulla_decision_policy_types::decision::capability_designation::PackOrigin,
 };
 
-pub use super::stat_designation::shared_capability_index;
-use super::stat_generation_cycle::ConfiguredEmbedder;
-pub use super::stat_generation_cycle::Reembedder;
+pub use medulla_h_decide_base::decide::stat_designation::shared_capability_index;
+use medulla_h_decide_runlog::decide::stat_generation_cycle::ConfiguredEmbedder;
+pub use medulla_h_decide_runlog::decide::stat_generation_cycle::Reembedder;
 
 /// The component consumer's durable name on every tenant's outbox.
 pub const COMPONENT_CONSUMER: &str = "capability-feed-component-v1";
@@ -127,10 +127,15 @@ async fn active_generation(
         )
     };
     let scope = medulla_server_api::carrier::tenant_scope_of(tenant);
-    let space = super::stat_generation_space::active_space(state, store, &scope, COMMONS_GRAPH)
-        .await
-        .map_err(|error| unavailable(&error))?
-        .ok_or_else(|| unavailable("the commons generation declares no embedding space"))?;
+    let space = medulla_h_decide_runlog::decide::stat_generation_space::active_space(
+        state,
+        store,
+        &scope,
+        COMMONS_GRAPH,
+    )
+    .await
+    .map_err(|error| unavailable(&error))?
+    .ok_or_else(|| unavailable("the commons generation declares no embedding space"))?;
     let dim = u16::try_from(space.dimensions)
         .map_err(|_| unavailable("the declared dimension does not fit a record"))?;
     Ok((space.space_digest, dim))

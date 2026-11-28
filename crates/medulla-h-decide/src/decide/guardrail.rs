@@ -1,8 +1,8 @@
 //! Advisory guardrail entailment from one tenant-bound Agent Library snapshot.
 //! The owning policy gate remains the authority for enforcement.
 
-use super::SharedState;
 use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_h_decide_base::decide::SharedState;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;

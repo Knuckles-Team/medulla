@@ -700,7 +700,7 @@ fn plan_code_names_no_source_format() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = vec![
         root.join("src/process_plan.rs"),
-        root.join("../medulla-h-decide/src/decide/family/process_plan.rs"),
+        root.join("../medulla-h-decide-learning/src/decide/family/process_plan.rs"),
     ];
     for entry in std::fs::read_dir(root.join("src/process_plan")).unwrap() {
         let path = entry.unwrap().path();

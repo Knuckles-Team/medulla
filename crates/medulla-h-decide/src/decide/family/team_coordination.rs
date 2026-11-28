@@ -14,10 +14,13 @@ use {
     medulla_decision_types::decision::record::ResolutionKind,
 };
 
-use crate::decide::stat_executor::{Executed, ExecutionContext};
 use crate::decide::stat_team;
+use {
+    medulla_h_decide_base::decide::stat_executor::Executed,
+    medulla_h_decide_base::decide::stat_executor::ExecutionContext,
+};
 
-use super::DecisionFamily;
+use medulla_h_decide_base::decide::family::DecisionFamily;
 
 /// The family of the `team_coordination` question kind.
 pub struct TeamCoordinationFamily;

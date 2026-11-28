@@ -34,8 +34,8 @@ use {
     medulla_decision_types::decision::record::AbstainReason,
 };
 
-use super::stat_executor::Executed;
-use super::stat_support::invalid_parameter;
+use medulla_h_decide_base::decide::stat_executor::Executed;
+use medulla_h_decide_base::decide::stat_support::invalid_parameter;
 
 /// The request param naming the facts the question requires.
 pub(super) const REQUIRED_FACTS_PARAM: &str = "entry.required_facts";

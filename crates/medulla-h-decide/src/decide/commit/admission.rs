@@ -14,7 +14,7 @@ use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::reservation_machine::ReservationEvent as AdmissionEvent;
 
-use super::super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 
 /// The reservations one commit holds.
 pub(in crate::decide) struct Admitted {

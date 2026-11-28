@@ -14,7 +14,7 @@ use medulla_decision_policy_types::usage::UsageOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-use crate::decide::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 
 /// Append usage records or store a price catalog for the verified tenant.
 pub async fn handle_usage(
@@ -40,7 +40,7 @@ pub async fn handle_usage(
 #[cfg(feature = "redb")]
 mod served {
     use super::{UsageOp, VerifiedRequestContext};
-    use crate::decide::SharedState;
+    use medulla_h_decide_base::decide::SharedState;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::usage_ledger::UsageRefusal;
     use medulla_persistence_records::usage_ledger::{DAY_MS, USAGE_READ_PAGE};

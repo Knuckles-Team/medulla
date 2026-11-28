@@ -4,7 +4,7 @@
 //! Served by [`super::stat_jobs`] in a build with the `decide` feature; a
 //! build without it answers a typed refusal naming the feature.
 
-use super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -17,7 +17,7 @@ pub async fn handle_decision_fit(
 ) -> Response {
     #[cfg(feature = "decide")]
     {
-        super::stat_jobs::handle_fit(state, req_id, verified, op).await
+        medulla_h_decide_learning::decide::stat_jobs::handle_fit(state, req_id, verified, op).await
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -35,7 +35,7 @@ pub async fn handle_decision_eval(
 ) -> Response {
     #[cfg(feature = "decide")]
     {
-        super::stat_jobs::handle_eval(state, req_id, verified, op).await
+        medulla_h_decide_learning::decide::stat_jobs::handle_eval(state, req_id, verified, op).await
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -51,10 +51,13 @@ pub async fn handle_skill_eval(
     verified: &VerifiedRequestContext,
     graph: &str,
     request: medulla_decision_policy_types::skill_eval::SkillEvalRequest,
-) -> Result<super::planned_write::PlannedWrite, String> {
+) -> Result<medulla_h_decide_base::decide::planned_write::PlannedWrite, String> {
     #[cfg(feature = "decide")]
     {
-        super::stat_jobs::plan_skill_eval(state, verified, graph, request).await
+        medulla_h_decide_learning::decide::stat_jobs::plan_skill_eval(
+            state, verified, graph, request,
+        )
+        .await
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -69,10 +72,13 @@ pub async fn handle_held_item_critique(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: medulla_decision_types::decision::held_item::HeldItemCritiqueRequest,
-) -> Result<super::planned_write::PlannedWrite, String> {
+) -> Result<medulla_h_decide_base::decide::planned_write::PlannedWrite, String> {
     #[cfg(feature = "decide")]
     {
-        super::stat_jobs::plan_held_item_critique(state, verified, request).await
+        medulla_h_decide_learning::decide::stat_jobs::plan_held_item_critique(
+            state, verified, request,
+        )
+        .await
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -87,10 +93,13 @@ pub async fn handle_skill_eval_case_add(
     verified: &VerifiedRequestContext,
     graph: &str,
     request: medulla_decision_policy_types::skill_eval::SkillEvalCaseAddRequest,
-) -> Result<super::planned_write::PlannedWrite, String> {
+) -> Result<medulla_h_decide_base::decide::planned_write::PlannedWrite, String> {
     #[cfg(feature = "decide")]
     {
-        super::stat_jobs::plan_skill_eval_case_add(verified, graph, request).await
+        medulla_h_decide_learning::decide::stat_jobs::plan_skill_eval_case_add(
+            verified, graph, request,
+        )
+        .await
     }
     #[cfg(not(feature = "decide"))]
     {

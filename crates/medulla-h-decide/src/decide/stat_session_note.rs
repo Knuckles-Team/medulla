@@ -12,15 +12,15 @@ use medulla_work_types::memory::{
     SessionNoteBody, SessionNoteStored, NOTE_RUN_NOT_SUCCESSFUL, NOTE_USER_MISSING,
 };
 
-use super::stat_executor::ExecutionContext;
-use super::stat_generation_cycle::Reembedder;
-use super::stat_log::LogReader;
 use super::stat_run_credit::stored_receipt;
-use super::stat_vectors::GraphVectors;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_log_reader::LogReader;
+use medulla_h_decide_base::decide::stat_vectors::GraphVectors;
+use medulla_h_decide_runlog::decide::stat_generation_cycle::Reembedder;
 
 /// Validate and stage one note. Every refusal is decided before anything is
 /// staged, so a refused note writes nothing.
-pub(super) fn record_note(
+pub fn record_note(
     ctx: &ExecutionContext,
     reader: &LogReader,
     tenant_scope: &str,

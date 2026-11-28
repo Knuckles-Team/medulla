@@ -25,8 +25,8 @@ use {
     medulla_decision_types::decision::record::AbstainReason,
 };
 
-use super::stat_executor::Executed;
-use super::stat_support::invalid_parameter;
+use medulla_h_decide_base::decide::stat_executor::Executed;
+use medulla_h_decide_base::decide::stat_support::invalid_parameter;
 
 /// The proposed action the request carries; none when the param is absent.
 fn guarded_action(request: &DecideRequest) -> Result<Option<&GuardedAction>, String> {

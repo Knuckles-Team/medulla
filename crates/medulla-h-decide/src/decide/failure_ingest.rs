@@ -12,8 +12,8 @@
 use medulla_decision_statistical_types::failure_patterns::FailureOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-use super::planned_write::PlannedWrite;
-use super::SharedState;
+use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+use medulla_h_decide_base::decide::SharedState;
 
 /// Plan one `FailureIngest` operation for the verified caller.
 pub async fn handle_failure_ingest(
@@ -66,9 +66,12 @@ mod served {
         medulla_decision_statistical_types::failure_patterns::TOPIC_SOURCE_UNLINKED,
     };
 
-    use crate::decide::planned_write::PlannedWrite;
-    use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};
-    use crate::decide::SharedState;
+    use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+    use medulla_h_decide_base::decide::SharedState;
+    use {
+        medulla_h_decide_base::decide::stat_support::filtered_view_versioned,
+        medulla_h_decide_base::decide::stat_support::invalid_parameter,
+    };
 
     /// The `node_type` of a run's trace node.
     const RUN_TRACE: &str = "RunTrace";

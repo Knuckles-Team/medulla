@@ -21,7 +21,7 @@ use medulla_work_types::native_control::{
     NativeControlSchemaVersion,
 };
 
-use super::super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 
 /// Further decisions one denial allows (MEDULLA-DECISION-ENGINE-R113.1 `RetryAllowance`).
 const DENIAL_RETRY_ALLOWANCE: u32 = 1;

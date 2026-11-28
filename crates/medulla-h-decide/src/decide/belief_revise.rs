@@ -19,8 +19,8 @@
 //!
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
-use super::SharedState;
 use medulla_decision_statistical_types::belief_revision::BeliefReviseRequest;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 

@@ -6,7 +6,7 @@
 //! nothing is checkpointed. The checkpoint itself is the graph write of
 //! `Method::Participant { CompleteDerivation }`, which the router continues to after this check.
 
-use super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// Refuse a `CompleteDerivation` whose `claims_written` is not the number of claims the claim

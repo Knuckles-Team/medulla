@@ -3,7 +3,7 @@
 //! Served by [`super::stat_log`] in a build with the `decide` feature; a build
 //! without it answers a typed refusal naming the feature.
 
-use super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -16,7 +16,7 @@ pub async fn handle_decision_log(
 ) -> Response {
     #[cfg(feature = "decide")]
     {
-        super::stat_log::handle_log(state, req_id, verified, op).await
+        super::stat_log_serve::handle_log(state, req_id, verified, op).await
     }
     #[cfg(not(feature = "decide"))]
     {

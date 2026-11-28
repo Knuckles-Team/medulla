@@ -12,8 +12,8 @@
 use medulla_decision_program_types::friction::FrictionOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-use super::planned_write::PlannedWrite;
-use super::SharedState;
+use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+use medulla_h_decide_base::decide::SharedState;
 
 /// The scope a `Report` needs.
 pub const SCOPE_REPORT: &str = "knowledge:flag";
@@ -82,11 +82,17 @@ mod served {
     };
 
     use super::{SCOPE_REPORT, SCOPE_TRANSITION};
-    use crate::decide::knowledge_flag::served::{edge_operation, run_trace_of};
-    use crate::decide::planned_write::PlannedWrite;
-    use crate::decide::stat_promotion::rollouts_key;
-    use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};
-    use crate::decide::SharedState;
+    use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+    use medulla_h_decide_base::decide::stat_promotion::rollouts_key;
+    use medulla_h_decide_base::decide::SharedState;
+    use {
+        medulla_h_decide_base::decide::stat_support::filtered_view_versioned,
+        medulla_h_decide_base::decide::stat_support::invalid_parameter,
+    };
+    use {
+        medulla_h_decide_learning::decide::knowledge_flag::served::edge_operation,
+        medulla_h_decide_learning::decide::knowledge_flag::served::run_trace_of,
+    };
 
     const ABOUT: &str = "about";
     const OBSERVED_IN: &str = "observed_in";

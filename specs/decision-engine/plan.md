@@ -16,18 +16,18 @@ arbora (admission, auth, principal) --> medulla dispatch
 
 | Stage | Owning code | Contract |
 |---|---|---|
-| 0 Admit | `crates/medulla-h-decide/src/decide/served_adapter.rs` | Typed request parse. Caps: 64 KiB, 64 candidates, 32 capabilities. Principal and tenant come from the verified context. |
-| 1 Visibility | `crates/medulla-h-decide/src/decide/candidates.rs` | Tenant and row visibility apply before any feature or count. |
-| 2 Candidates | `crates/medulla-h-decide/src/decide/candidates.rs` | Only published, tenant-visible component revisions enter. Pack facts enter as claims. |
+| 0 Admit | `crates/medulla-h-decide-base/src/decide/served_adapter.rs` | Typed request parse. Caps: 64 KiB, 64 candidates, 32 capabilities. Principal and tenant come from the verified context. |
+| 1 Visibility | `crates/medulla-h-decide-base/src/decide/candidates.rs` | Tenant and row visibility apply before any feature or count. |
+| 2 Candidates | `crates/medulla-h-decide-base/src/decide/candidates.rs` | Only published, tenant-visible component revisions enter. Pack facts enter as claims. |
 | 3 Policy and constraints | `crates/medulla-h-decide/src/decide/guardrail.rs`, `crates/medulla-decision-outcome-types/src/decision/limit_guard.rs` | Pins, denials, guardrails and limits remove options. Each removal is an eliminated-constraint premise. |
 | 4 Entailment | `crates/medulla-decision-types/src/decision/record/` | Derivation records back entailed answers. |
 | 5 Exact solve | `crates/medulla-decision-policy/src/solve`, `crates/medulla-compute/src/assemble` | Bounded 0-1 model, certificate and node budget. |
 | 6 Statistical rank | `crates/medulla-decision-stats/src/decision`, `crates/medulla-h-decide/src/decide/stat_decide.rs` | Fitted heads rank legal options or abstain. They never widen the legal set. |
 | 7 Conclude | `crates/medulla-compute-assemble/src/assemble/conclude.rs`, `crates/medulla-h-decide/src/decide/stat_decide.rs` | One `ResolutionKind`, one `EvidenceClass`, one typed abstention. |
-| 8 Record | `crates/medulla-decision-types/src/decision/record.rs`, `crates/medulla-h-decide/src/decide/stat_log.rs` | The sealed record pins inputs, premises, digests and result. |
+| 8 Record | `crates/medulla-decision-types/src/decision/record.rs`, `crates/medulla-h-decide-base/src/decide/stat_log.rs` | The sealed record pins inputs, premises, digests and result. |
 | 9 Commit | `crates/medulla-h-decide/src/decide/commit.rs` | Re-derive, verify, catalog compare-and-set, idempotent retry. |
-| 10 Learn | `crates/medulla-h-decide/src/decide/stat_learning.rs`, `crates/medulla-h-decide/src/decide/stat_jobs.rs` | Outcomes, off-policy estimates, fit, evaluate, guarded publish. |
-| 11 Replay | `crates/medulla-h-decide/src/decide/stat_replay.rs`, `crates/medulla-h-decide/src/decide/stat_walk_forward.rs` | Byte-identical replay and walk-forward evaluation. |
+| 10 Learn | `crates/medulla-h-decide/src/decide/stat_learning.rs`, `crates/medulla-h-decide-learning/src/decide/stat_jobs.rs` | Outcomes, off-policy estimates, fit, evaluate, guarded publish. |
+| 11 Replay | `crates/medulla-h-decide-learning/src/decide/stat_replay.rs`, `crates/medulla-h-decide-learning/src/decide/stat_walk_forward.rs` | Byte-identical replay and walk-forward evaluation. |
 
 ## Technical Context
 
@@ -98,7 +98,7 @@ Data entities are in [data-model.md](data-model.md). The shortest served proof i
 
 ### Process control steps and decisions (R134.111.14 to R134.111.18, R180)
 
-A task plan gains four control step kinds beside prompt and tool steps: branch, join, decision and approval wait. `plan_explicit_tasks` stays the one canonicalizer. It checks arm targets, defaults, joins and approval timeouts. The plan digest covers every control field. Branch choice at run time is a `Decide` question, not harness logic. `BranchSelect` evaluates the arm conditions over bound step outputs. `DecisionTableEval` evaluates a stored DMN table (`MEDULLA-CQ-ORCH-R702.5`) under its hit policy. Expressions use the simple unary test subset; anything else refuses `DMN_EXPRESSION_UNSUPPORTED`. The meristem run loop applies the verdict; the consumer rows are in `../orchestration-competency/contracts/meristem-process-control-steps.md`. Call path: `Method::Decide` → `handle_decide` → `crates/medulla-h-decide/src/decide/family/process_decision.rs` → `evaluate_table` and `select_branch` in `medulla-decision-stats`.
+A task plan gains four control step kinds beside prompt and tool steps: branch, join, decision and approval wait. `plan_explicit_tasks` stays the one canonicalizer. It checks arm targets, defaults, joins and approval timeouts. The plan digest covers every control field. Branch choice at run time is a `Decide` question, not harness logic. `BranchSelect` evaluates the arm conditions over bound step outputs. `DecisionTableEval` evaluates a stored DMN table (`MEDULLA-CQ-ORCH-R702.5`) under its hit policy. Expressions use the simple unary test subset; anything else refuses `DMN_EXPRESSION_UNSUPPORTED`. The meristem run loop applies the verdict; the consumer rows are in `../orchestration-competency/contracts/meristem-process-control-steps.md`. Call path: `Method::Decide` → `handle_decide` → `crates/medulla-h-decide-learning/src/decide/family/process_decision.rs` → `evaluate_table` and `select_branch` in `medulla-decision-stats`.
 
 ### Decomposition and skill planning (R134.3, R134.4)
 
@@ -158,7 +158,7 @@ Scoped adapter wiring (R174.7.3, R174.7.4): `stat_adapter.rs` fits graph-scope r
 - R172.7 / R172.8: `family/capability_designation.rs` concludes from the resident index through `stat_designation.rs` (`DesignationRuntime`, `shared_capability_index`, `with_runtime`), `stat_decide::serve` reads the runtime, `seal` carries `FamilyAnswer::CapabilityDesignation` and its premises; tests in `stat_tests/capability_designation_tests.rs`.
 
 ### MEDULLA-DECISION-ENGINE-R172.12.6: commons generation space (current state)
-`DecisionLog.generation_space { logical, model? }` (class Read) returns `GenerationSpaceRead { logical, active?, model_space_digest? }`. Resolution lives in `crates/medulla-h-decide/src/decide/stat_generation_space.rs`; the cycle declares the shadow space through `GraphVectors::ensure_space`. The L4 journey (`tests/decide/test_capability_designation_pack_served.py`) establishes the commons generation through the served cycle, reads the space digest through `generation_space`, imports a pack and asks the designation question with a vector in that space.
+`DecisionLog.generation_space { logical, model? }` (class Read) returns `GenerationSpaceRead { logical, active?, model_space_digest? }`. Resolution lives in `crates/medulla-h-decide-runlog/src/decide/stat_generation_space.rs`; the cycle declares the shadow space through `GraphVectors::ensure_space`. The L4 journey (`tests/decide/test_capability_designation_pack_served.py`) establishes the commons generation through the served cycle, reads the space digest through `generation_space`, imports a pack and asks the designation question with a vector in that space.
 
 Usage guidance ordering (R177.2): `order_steps` is a Kahn walk over the `:precedes` edges; each round it takes the best of the ready steps, scanned in tool-id order so the result never depends on input order. A rate decides only between two ready steps whose tools both have `usage.min_trials` outcomes; the cycle error names the steps on the cycle so R177.4 can refuse with them.
 Index-side adapters (R174.7.3.2): `FitAdapter` accepts `side = index`; `qualified_index` checks the receipt for a cycle's `index_adapter`, `stat_learning::prepare` decodes the kernel and gives the cycle a `NoEndpoint` embedder and a CPU lease, and `stat_generation_cycle::materialize_batch` applies the kernel to stored vectors batch by batch under the same checkpoint and state machine as a re-embed.
@@ -214,10 +214,10 @@ none
 ## Production caller chain
 
 - `Method::Decide` arm (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112`) to `handle_decide` (`crates/medulla-h-decide/src/decide/statistical.rs:11`) to `stat_decide::handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:60`) to the family hooks, the executor and the sealed record.
-- `Method::AgentAssemble` arm (`decision_plane.rs:64`) to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (`assemble.rs:46`) to `crates/medulla-compute/src/assemble/` and `crates/medulla-decision-policy/src/solve`.
+- `Method::AgentAssemble` arm (`decision_plane.rs:64`) to `handle_agent_assemble` (`crates/medulla-h-decide-runlog/src/decide/assemble.rs:25`) to `assemble_for` (`assemble.rs:46`) to `crates/medulla-compute/src/assemble/` and `crates/medulla-decision-policy/src/solve`.
 - `Method::DecisionCommit` arm (`decision_plane.rs:100`) to `handle_decision_commit` (`crates/medulla-h-decide/src/decide/commit.rs:22`) to the Agent Library transaction.
 - `Method::DecisionFit`, `Method::DecisionEval` and `Method::DecisionLog` arms (`decision_plane.rs:119`, `:126`, `:133`) to `crates/medulla-h-decide/src/decide/jobs.rs` and `log.rs`.
-- Program lookup by request text (R135.16): `stat_decide::serve` (`crates/medulla-h-decide/src/decide/stat_decide.rs:77`) to `with_program_candidates` in `crates/medulla-h-decide/src/decide/family/program_store.rs`, then `decide_blocking` (`stat_decide.rs:319`) to `ProgramLookupFamily::conclude`. The commit side is `stat_log::handle_log` (`stat_log.rs:541`) to `run_record::stage` (`run_record.rs:169`).
+- Program lookup by request text (R135.16): `stat_decide::serve` (`crates/medulla-h-decide/src/decide/stat_decide.rs:77`) to `with_program_candidates` in `crates/medulla-h-decide-learning/src/decide/family/program_store.rs`, then `decide_blocking` (`stat_decide.rs:319`) to `ProgramLookupFamily::conclude`. The commit side is `stat_log::handle_log` (`stat_log.rs:541`) to `run_record::stage` (`run_record.rs:169`).
 - `Method::ConnectorPack` arm (`decision_plane.rs:161`) to `project_head` (`crates/medulla-h-admin/src/admin/connector_pack/reproject.rs:74`), which leaves an outbox row for the capability feed of `MEDULLA-DECISION-ENGINE-R172.7.2`.
 - Obsolete paths to delete: the per-kind `if` chains in `stat_decide.rs` and `candidates.rs` once the family registry lands.
 
@@ -303,7 +303,7 @@ Friction reports (R710) feed `FailureIngest` (R701) and walk one explicit state 
 
 ## Foreach task steps and fitted topics (R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
 
-- Foreach: `Method::Decide` → `handle_decide` → `task_plan` (`crates/medulla-h-decide/src/decide/stat_task_plan.rs:503`) → `plan_explicit_tasks` (`crates/medulla-decision-program-types/src/decision/task_plan.rs:411`). The engine validates the bounds and the bindings. The engine never runs a step. Arbora runs the expansion (`ARBORA-RELEASE-R003.4.14`).
+- Foreach: `Method::Decide` → `handle_decide` → `task_plan` (`crates/medulla-h-decide-runlog/src/decide/stat_task_plan.rs:503`) → `plan_explicit_tasks` (`crates/medulla-decision-program-types/src/decision/task_plan.rs:411`). The engine validates the bounds and the bindings. The engine never runs a step. Arbora runs the expansion (`ARBORA-RELEASE-R003.4.14`).
 - Fitted topics: `Method::SemanticEnrich` op `FitTopics` → `crates/medulla-server-graph/src/dispatch/graph_pipeline/semantic_enrichment.rs` → `fit_topics` in `crates/medulla-enrich/src/semantic.rs`, beside `classify` (`:353`).
 
 Decisions. A foreach step has a fixed maximum, because the engine must prove a bound before any run. A data-dependent loop has no static bound, so it is not adopted. The hold-out floor replaces a fixed confidence cut of R614.2.3 only when a fit exists.

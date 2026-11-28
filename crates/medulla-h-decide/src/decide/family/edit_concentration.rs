@@ -8,9 +8,12 @@ use medulla_decision_types::decision::statistical::DecideRequest;
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_concentration;
-use crate::decide::stat_executor::{Executed, ExecutionContext};
+use {
+    medulla_h_decide_base::decide::stat_executor::Executed,
+    medulla_h_decide_base::decide::stat_executor::ExecutionContext,
+};
 
-use super::DecisionFamily;
+use medulla_h_decide_base::decide::family::DecisionFamily;
 
 /// The family of the `edit_concentration` question kind.
 pub struct EditConcentrationFamily;

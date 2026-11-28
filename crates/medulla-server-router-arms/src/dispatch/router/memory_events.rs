@@ -19,7 +19,8 @@ pub async fn serve_claims_and_publish(
     op: medulla_decision_statistical_types::claims::ClaimOp,
 ) -> Response {
     let served =
-        medulla_h_decide::decide::handle_claims_planned(state, req_id, graph, verified, op).await;
+        medulla_h_decide::decide::claims::handle_claims_planned(state, req_id, graph, verified, op)
+            .await;
     if served.response.refusal_text().is_none() {
         #[cfg(feature = "statechart")]
         if !served.events.is_empty() {
@@ -55,7 +56,7 @@ async fn refresh_cards(
         if !seen.insert((changed.subject.clone(), changed.observer.clone())) {
             continue;
         }
-        let planned = medulla_h_decide::decide::plan_card_refresh(
+        let planned = medulla_h_decide::decide::participant_card::plan_card_refresh(
             state,
             graph,
             verified,

@@ -176,7 +176,7 @@ async fn drift_mode_names_adapter_and_shard_generations() {
     }
     let tenant = medulla_server_api::carrier::tenant_scope_of(common::TEST_TENANT);
     let thresholds = DriftThresholds::from_policy(&DecisionPolicy::engine_default());
-    let registry = medulla_h_decide::decide::drift_registry::registry();
+    let registry = medulla_h_decide_base::decide::drift_registry::registry();
     for _ in 0..2 {
         registry.evaluate(&tenant, GRAPH, &thresholds);
     }

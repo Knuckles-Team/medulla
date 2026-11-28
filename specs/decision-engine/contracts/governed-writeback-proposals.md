@@ -13,7 +13,7 @@ Arbora issues the approval (`ARBORA-OPS-R865`). Medulla refuses a release withou
 
 ## Authoritative types
 
-`DecisionLog` write-back operations in `crates/medulla-h-decide/src/decide/stat_log.rs`.
+`DecisionLog` write-back operations in `crates/medulla-h-decide-base/src/decide/stat_log.rs`.
 
 ## Test vectors
 

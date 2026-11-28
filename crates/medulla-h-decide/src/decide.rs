@@ -1,144 +1,69 @@
-//! The Decide layer's served surface (RF-ADR-010).
-//!
-//! Four methods, four files: assembly, its commit, the statistical executor
-//! and the two admin jobs. Each entry point's signature is frozen by the
-//! contract wave; the package that lands a handler replaces only its body.
-
-/// The server state every Decide entry point is handed.
-pub type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
-
-pub(crate) mod assemble;
-pub(crate) mod belief_revise;
-pub(crate) mod claims;
-pub(crate) mod commit;
-pub mod correction;
-pub(crate) mod coverage;
-#[cfg(all(test, feature = "decide"))]
-mod coverage_tests;
-pub(crate) mod execution_answer;
-#[cfg(all(test, feature = "decide", feature = "redb"))]
-mod execution_answer_tests;
-pub mod failure_ingest;
-pub(crate) mod feature_ledger;
-pub mod friction;
-pub(crate) mod guardrail;
-pub(crate) mod jobs;
-pub mod knowledge_curation;
-pub mod knowledge_flag;
-pub(crate) mod log;
-pub(crate) mod loops;
-pub(crate) mod participant_ask;
-pub(crate) mod participant_card;
-pub(crate) mod participant_derivation;
-pub mod planned_write;
-#[cfg(feature = "decide")]
-pub(crate) mod shape;
-pub mod skill_telemetry;
-pub(crate) mod statistical;
-
-// The statistical package (EH-056 ... EH-074): candidate sources, the
-// decision executor, the NL template binding and the two admin jobs.
-#[cfg(feature = "decide")]
-mod candidates;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod belief_revise;
 #[cfg(feature = "decide")]
 #[cfg(feature = "redb")]
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod capability_feed;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod claims;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod commit;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod coverage;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod execution_answer;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod failure_ingest;
 #[cfg(feature = "decide")]
-pub mod connector_points;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod family;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod feature_ledger;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod friction;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod guardrail;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod jobs;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod knowledge_curation;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod log;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod loops;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod participant_ask;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod participant_card;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod participant_derivation;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod seam;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod skill_telemetry;
 #[cfg(feature = "decide")]
-pub mod drift_registry;
-#[cfg(feature = "decide")]
-mod family;
-#[cfg(feature = "decide")]
-pub mod features;
-#[cfg(feature = "decide")]
-mod prompt_candidates;
-#[cfg(feature = "decide")]
-pub use family::process_decision::{process_control_feature_schema, PROCESS_CONTROL_QUESTION_IDS};
-#[cfg(feature = "decide")]
-pub use family::task_context::read_task_context;
-#[cfg(feature = "decide")]
-mod stat_adapter;
-#[cfg(feature = "decide")]
-mod stat_belief;
-#[cfg(feature = "decide")]
-mod stat_calibration;
-#[cfg(feature = "decide")]
-mod stat_capability_outcome;
-#[cfg(feature = "decide")]
-mod stat_classes;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod stat_calibration;
 #[cfg(feature = "decide")]
 mod stat_concentration;
 #[cfg(feature = "decide")]
 #[allow(missing_docs)]
 pub mod stat_decide;
 #[cfg(feature = "decide")]
-mod stat_decision_reads;
-#[cfg(feature = "decide")]
-mod stat_delegation;
-#[cfg(feature = "decide")]
-mod stat_designation;
-#[cfg(feature = "decide")]
 mod stat_distilled;
 #[cfg(feature = "decide")]
-mod stat_evaluator;
-#[cfg(feature = "decide")]
-mod stat_executor;
-#[cfg(feature = "decide")]
-mod stat_generation;
-#[cfg(feature = "decide")]
-mod stat_generation_cycle;
-#[cfg(feature = "decide")]
-pub(crate) mod stat_generation_space;
-#[cfg(feature = "decide")]
-mod stat_gold_guarantee;
-#[cfg(feature = "decide")]
-mod stat_grounded_eval;
-mod stat_harness_adoption;
-#[cfg(feature = "decide")]
-mod stat_harness_contrast;
-#[cfg(feature = "decide")]
-mod stat_jobs;
-#[cfg(feature = "decide")]
 mod stat_learning;
-mod stat_lifecycle_record;
 #[cfg(feature = "decide")]
-mod stat_load_set;
+pub(super) mod stat_log_commit;
 #[cfg(feature = "decide")]
-mod stat_log;
-#[cfg(feature = "decide")]
-pub mod stat_memory_change;
-mod stat_model_capacity;
+pub(super) mod stat_log_serve;
 #[cfg(feature = "decide")]
 mod stat_nl;
 #[cfg(feature = "decide")]
-mod stat_penalty;
-#[cfg(feature = "decide")]
-mod stat_skill_ablation;
-mod stat_skill_eval;
-mod stat_skill_tier;
-// MEDULLA-ORCH-VOCAB-R012.7.3: the policy review record, the activation guard and the loader.
-#[cfg(feature = "decide")]
-mod policy_activation;
-#[cfg(feature = "decide")]
-mod stat_pointer;
-mod stat_promotion;
-mod stat_proposals;
-#[cfg(feature = "decide")]
-mod stat_recommend;
-// MEDULLA-DECISION-ENGINE-R142.101: the served local-skill certification.
-#[cfg(feature = "decide")]
-mod stat_certification;
-// MEDULLA-DECISION-ENGINE-R038.6: the engine records a run output proposal's critique.
-#[cfg(feature = "decide")]
-mod stat_held_item_critique;
-#[cfg(feature = "decide")]
-mod stat_ranking_eval;
-#[cfg(feature = "decide")]
-mod stat_replay;
-// MEDULLA-DECISION-ENGINE-R001.100.2: the served safety bound stage.
-#[cfg(feature = "decide")]
-mod safety_stage;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod stat_replay_hi;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod statistical;
 // MEDULLA-DECISION-ENGINE-R131.3: the served limit stage.
 #[cfg(feature = "decide")]
 mod limit_stage;
@@ -150,196 +75,30 @@ mod stat_feedback;
 #[cfg(feature = "decide")]
 mod stat_package_run;
 #[cfg(feature = "decide")]
-mod stat_resolve;
+pub(super) mod stat_retention_hi;
 #[cfg(feature = "decide")]
 mod stat_team;
-#[cfg(feature = "decide")]
-mod stat_usage_guidance;
-mod stat_verdict_dataset;
-#[cfg(feature = "decide")]
-mod stat_writeback;
-// MEDULLA-DECISION-ENGINE-R129.1: rule promotion attach point.
-#[cfg(feature = "decide")]
-mod program_embedding;
-#[cfg(feature = "decide")]
-mod run_record;
-#[cfg(feature = "decide")]
-mod stat_retention;
-#[cfg(feature = "decide")]
-mod stat_rule_promotion;
-#[cfg(feature = "decide")]
-mod stat_slate;
-#[cfg(feature = "decide")]
-mod tool_index;
-// EH-523: the per-component split of a slate's outcome on the outcome aggregate.
-#[cfg(feature = "decide")]
-mod stat_slate_attribution;
-#[cfg(feature = "decide")]
-mod stat_support;
 // MEDULLA-DECISION-ENGINE-R824: capacity adjustment proposals.
 #[cfg(feature = "decide")]
 mod stat_capacity;
-// MEDULLA-DECISION-ENGINE-R045: the smallest covering tool subset within a
-// context-token budget.
-#[cfg(feature = "decide")]
-mod stat_placement;
-#[cfg(feature = "decide")]
-mod stat_placement_plan;
-#[cfg(feature = "decide")]
-mod stat_task_plan;
 // MEDULLA-DECISION-ENGINE-R174.9.3: fresh data through the search source.
 #[cfg(feature = "decide")]
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod stat_freshness;
 #[cfg(feature = "decide")]
-mod stat_thought_search;
-// MEDULLA-DECISION-ENGINE-R140.104: the trajectory decisions of a task plan.
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod stat_run_credit;
 #[cfg(feature = "decide")]
-mod stat_tool_subset;
-#[cfg(feature = "decide")]
-mod stat_topology;
-#[cfg(feature = "decide")]
-mod stat_trajectory;
-#[cfg(feature = "decide")]
-mod stat_vectors;
-// EH-528: walk-forward replay evaluation (its validation kernels are finance's).
-#[cfg(all(feature = "decide", feature = "finance"))]
-mod stat_walk_forward;
-// EH-394/395: retrieval outcomes on the decision log.
-#[cfg(feature = "decide")]
-mod stat_retrieval;
-#[cfg(feature = "decide")]
-mod stat_run_credit;
-#[cfg(feature = "decide")]
-mod stat_session_note;
-// EH-394..398: the retrieval-learning relations of the decision views.
-#[cfg(all(feature = "decide", feature = "query"))]
-mod stat_retrieval_views;
-// EH-525: the learned reputation relation of the decision views.
-#[cfg(all(feature = "decide", feature = "query"))]
-mod stat_reputation;
-// EH-396: the query adapter on the served read paths.
-#[cfg(feature = "decide")]
-pub(crate) mod served_adapter;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod stat_session_note;
 #[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
 #[allow(missing_docs)]
 pub mod stat_test_support;
 #[cfg(all(test, feature = "decide"))]
-mod stat_tests;
-// EH-066 — the decision record views (SQL catalog relations + the UQL `DECISIONS` source).
-#[cfg(all(feature = "decide", feature = "query"))]
-mod stat_view;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod stat_tests;
 #[cfg(feature = "decide")]
-mod telemetry;
-
-// Swarm topology through the assembly decision (SWARM-TOPOLOGY-DECIDE-DESIGN):
-// the schema entailments and capacity headroom a topology question reads, and
-// the publish-time topology shape check.
+mod stat_trajectory;
 #[cfg(feature = "decide")]
-mod assemble_shield;
-#[cfg(feature = "decide")]
-mod capacity_premise;
-#[cfg(feature = "decide")]
-mod definitions_read;
-#[cfg(feature = "decide")]
-mod steps_read;
-#[cfg(feature = "decide")]
-mod topology_read;
-#[cfg(feature = "decide")]
-mod topology_schema;
-#[cfg(feature = "decide")]
-mod triage;
-mod triage_read;
-mod windows_read;
-
-pub use assemble::handle_agent_assemble;
-#[cfg(feature = "statechart")]
-pub use belief_revise::enqueue_touched;
-pub use belief_revise::handle_belief_revise;
-pub use claims::{handle_claims, handle_claims_planned, ClaimsServed};
-pub use commit::handle_decision_commit;
-pub use coverage::handle_capability_coverage;
-pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};
-pub use feature_ledger::handle_feature_ledger;
-pub use guardrail::handle_guardrail_entailment;
-pub use jobs::{
-    handle_decision_eval, handle_decision_fit, handle_held_item_critique, handle_skill_eval,
-    handle_skill_eval_case_add,
-};
-pub use log::handle_decision_log;
-pub use loops::handle_loops;
-pub use participant_ask::handle_participant_ask;
-pub use participant_card::{handle_participant_card, plan_card_refresh};
-pub use participant_derivation::check_derivation_count;
-pub use stat_proposals::handle_revision_proposal_list;
-pub use statistical::handle_decide;
-pub use triage::{handle_triage_defect, TriageDefectOutcome};
-
-/// The caller's read-only SQL relations — the decision record views (EH-066) — when
-/// `query` can see them; `None` otherwise, or in a build without the Decide layer.
-#[cfg(feature = "query")]
-async fn read_only_relations(
-    state: &SharedState,
-    authority: &medulla_server_api::carrier::CarrierAuthority,
-    query: &str,
-) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations> {
-    #[cfg(feature = "decide")]
-    {
-        if !medulla_server_auth::sql_catalog_acl::wants_read_only_relations(query) {
-            return None;
-        }
-        let views = stat_view::DecisionViews::served(state, authority).await?;
-        Some(views as medulla_server_auth::sql_catalog_acl::SharedRelations)
-    }
-    #[cfg(not(feature = "decide"))]
-    {
-        let _ = (state, authority, query);
-        None
-    }
-}
-
-/// The caller's visible decision log as a UQL `DECISIONS` source (EH-066).
-#[cfg(all(feature = "decide", feature = "query"))]
-async fn decision_source(
-    state: &SharedState,
-    authority: &medulla_server_api::carrier::CarrierAuthority,
-) -> Option<std::sync::Arc<dyn medulla_exec::exec::DecisionSource>> {
-    let views = stat_view::DecisionViews::served(state, authority).await?;
-    Some(views as std::sync::Arc<dyn medulla_exec::exec::DecisionSource>)
-}
-
-/// The decide handler's implementation of [`DecideApi`](medulla_server::api::admin::DecideApi).
-pub struct DecideSeam;
-
-#[async_trait::async_trait]
-impl medulla_server_ops::api::admin::DecideApi for DecideSeam {
-    #[cfg(feature = "decide")]
-    async fn served_adapter(
-        &self,
-        state: &SharedState,
-        tenant: Option<&str>,
-        graph: &str,
-        core: &medulla_graph_core::graph::GraphCore,
-        capability: Option<&str>,
-    ) -> Option<std::sync::Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>> {
-        served_adapter::served_for(state, tenant, graph, core, capability).await
-    }
-
-    #[cfg(feature = "query")]
-    async fn read_only_relations(
-        &self,
-        state: &SharedState,
-        authority: &medulla_server_api::carrier::CarrierAuthority,
-        query: &str,
-    ) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations> {
-        read_only_relations(state, authority, query).await
-    }
-
-    #[cfg(all(feature = "decide", feature = "query"))]
-    async fn decision_source(
-        &self,
-        state: &SharedState,
-        authority: &medulla_server_api::carrier::CarrierAuthority,
-    ) -> Option<std::sync::Arc<dyn medulla_exec::exec::DecisionSource>> {
-        decision_source(state, authority).await
-    }
-}
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod triage;

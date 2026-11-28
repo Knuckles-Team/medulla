@@ -37,9 +37,13 @@ use {
     medulla_decision_program_types::decision::task_plan::trajectory::TRAJECTORY_PARAM,
 };
 
-use super::stat_executor::ExecutionContext;
-use super::stat_log::{evaluations_of, visible_entry, LogReader};
-use super::stat_support::ResolvedPolicy;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_support::ResolvedPolicy;
+use {
+    medulla_h_decide_base::decide::stat_log::evaluations_of,
+    medulla_h_decide_base::decide::stat_log_reader::visible_entry,
+    medulla_h_decide_base::decide::stat_log_reader::LogReader,
+};
 
 /// The trajectory query a request carries, when it carries one.
 pub(super) fn query_of(request: &DecideRequest) -> Option<&TrajectoryQuery> {

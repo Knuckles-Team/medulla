@@ -30,7 +30,7 @@ async fn commit_planned_write(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    plan: medulla_h_decide::decide::planned_write::PlannedWrite,
+    plan: medulla_h_decide_base::decide::planned_write::PlannedWrite,
 ) -> Response {
     if !plan.operations.is_empty() {
         let operations_msgpack = match rmp_serde::to_vec_named(&plan.operations) {
@@ -251,7 +251,7 @@ async fn queue_outbound(
         .iter()
         .map(|queued| queued.proposal.id.clone())
         .collect();
-    let queued = medulla_h_decide::decide::handle_decision_log(
+    let queued = medulla_h_decide::decide::log::handle_decision_log(
         state,
         req_id,
         verified,
@@ -293,7 +293,7 @@ async fn dispatch_decision_methods(
     ControlFlow::Break(match method {
         Method::AgentAssemble { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_agent_assemble(
+                medulla_h_decide_runlog::decide::assemble::handle_agent_assemble(
                     state,
                     req.id,
                     (&req.graph, verified_context),
@@ -305,7 +305,7 @@ async fn dispatch_decision_methods(
         }
         Method::CapabilityCoverage { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_capability_coverage(
+                medulla_h_decide::decide::coverage::handle_capability_coverage(
                     state,
                     req.id,
                     verified_context,
@@ -317,7 +317,7 @@ async fn dispatch_decision_methods(
         }
         Method::AgentExecutionAnswer { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_agent_execution_answer(
+                medulla_h_decide::decide::execution_answer::handle_agent_execution_answer(
                     state,
                     req.id,
                     (&req.graph, verified_context),
@@ -329,7 +329,7 @@ async fn dispatch_decision_methods(
         }
         Method::RevisionProposalList { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_revision_proposal_list(
+                medulla_h_decide_base::decide::handle_revision_proposal_list(
                     state,
                     req.id,
                     verified_context,
@@ -341,7 +341,7 @@ async fn dispatch_decision_methods(
         }
         Method::GuardrailEntailment { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_guardrail_entailment(
+                medulla_h_decide::decide::guardrail::handle_guardrail_entailment(
                     state,
                     req.id,
                     verified_context,
@@ -353,7 +353,7 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionCommit { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_commit(
+                medulla_h_decide::decide::commit::handle_decision_commit(
                     state,
                     req.id,
                     verified_context,
@@ -365,8 +365,13 @@ async fn dispatch_decision_methods(
         }
         Method::Decide { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decide(state, req.id, verified_context, *request)
-                    .await
+                medulla_h_decide::decide::statistical::handle_decide(
+                    state,
+                    req.id,
+                    verified_context,
+                    *request,
+                )
+                .await
             })
             .await
         }
@@ -382,8 +387,13 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionFit { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_fit(state, req.id, verified_context, *op)
-                    .await
+                medulla_h_decide::decide::jobs::handle_decision_fit(
+                    state,
+                    req.id,
+                    verified_context,
+                    *op,
+                )
+                .await
             })
             .await
         }
@@ -395,7 +405,7 @@ async fn dispatch_decision_methods(
                     medulla_decision_types::decision::jobs::DecisionEvalOp::SkillEval {
                         request,
                     } => {
-                        match medulla_h_decide::decide::handle_skill_eval(
+                        match medulla_h_decide::decide::jobs::handle_skill_eval(
                             state,
                             verified_context,
                             &req.graph,
@@ -413,7 +423,7 @@ async fn dispatch_decision_methods(
                     medulla_decision_types::decision::jobs::DecisionEvalOp::SkillEvalCaseAdd {
                         request,
                     } => {
-                        match medulla_h_decide::decide::handle_skill_eval_case_add(
+                        match medulla_h_decide::decide::jobs::handle_skill_eval_case_add(
                             verified_context,
                             &req.graph,
                             *request,
@@ -430,7 +440,7 @@ async fn dispatch_decision_methods(
                     medulla_decision_types::decision::jobs::DecisionEvalOp::HeldItemCritique {
                         request,
                     } => {
-                        match medulla_h_decide::decide::handle_held_item_critique(
+                        match medulla_h_decide::decide::jobs::handle_held_item_critique(
                             state,
                             verified_context,
                             request,
@@ -444,7 +454,7 @@ async fn dispatch_decision_methods(
                         }
                     }
                     op => {
-                        medulla_h_decide::decide::handle_decision_eval(
+                        medulla_h_decide::decide::jobs::handle_decision_eval(
                             state,
                             req.id,
                             verified_context,
@@ -458,14 +468,19 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionLog { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_log(state, req.id, verified_context, *op)
-                    .await
+                medulla_h_decide::decide::log::handle_decision_log(
+                    state,
+                    req.id,
+                    verified_context,
+                    *op,
+                )
+                .await
             })
             .await
         }
         Method::CorrectionRecord { op } => {
             dispatch_boxed(async {
-                match medulla_h_decide::decide::correction::handle_correction_record(
+                match medulla_h_decide_learning::decide::correction::handle_correction_record(
                     state,
                     verified_context,
                     &req.graph,
@@ -496,7 +511,7 @@ async fn dispatch_decision_methods(
         }
         Method::KnowledgeFlag { op } => {
             dispatch_boxed(async {
-                match medulla_h_decide::decide::knowledge_flag::handle_knowledge_flag(
+                match medulla_h_decide_learning::decide::knowledge_flag::handle_knowledge_flag(
                     state,
                     verified_context,
                     *op,
@@ -562,7 +577,7 @@ async fn dispatch_decision_methods(
         }
         Method::FeatureLedger { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_feature_ledger(
+                medulla_h_decide::decide::feature_ledger::handle_feature_ledger(
                     state,
                     req.id,
                     verified_context,
@@ -574,7 +589,7 @@ async fn dispatch_decision_methods(
         }
         Method::BeliefRevise { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_belief_revise(
+                medulla_h_decide::decide::belief_revise::handle_belief_revise(
                     state,
                     req.id,
                     verified_context,
@@ -602,7 +617,7 @@ async fn dispatch_decision_methods(
         Method::ParticipantRead { op } => match *op {
             medulla_decision_types::participant_memory::ParticipantReadOp::Ask { question } => {
                 dispatch_boxed(async {
-                    medulla_h_decide::decide::handle_participant_ask(
+                    medulla_h_decide::decide::participant_ask::handle_participant_ask(
                         state,
                         req.id,
                         &req.graph,
@@ -619,7 +634,7 @@ async fn dispatch_decision_methods(
                 observer,
             } => {
                 dispatch_boxed(async {
-                    medulla_h_decide::decide::handle_participant_card(
+                    medulla_h_decide::decide::participant_card::handle_participant_card(
                         state,
                         req.id,
                         &req.graph,
@@ -644,14 +659,15 @@ async fn dispatch_decision_methods(
                 payload_ref,
                 claims_written,
             } => {
-                if let Err(error) = medulla_h_decide::decide::check_derivation_count(
-                    state,
-                    &req.graph,
-                    verified_context,
-                    &payload_ref,
-                    claims_written,
-                )
-                .await
+                if let Err(error) =
+                    medulla_h_decide::decide::participant_derivation::check_derivation_count(
+                        state,
+                        &req.graph,
+                        verified_context,
+                        &payload_ref,
+                        claims_written,
+                    )
+                    .await
                 {
                     return ControlFlow::Break(Response::err(req.id, error));
                 }
@@ -672,13 +688,16 @@ async fn dispatch_decision_methods(
         },
         Method::Loops { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_loops(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::loops::handle_loops(state, req.id, verified_context, *op)
+                    .await
             })
             .await
         }
         Method::Solve { request } => {
-            dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await })
-                .await
+            dispatch_boxed(async {
+                medulla_h_decide_base::solve::handle_solve(req.id, *request).await
+            })
+            .await
         }
         other => return ControlFlow::Continue(other),
     })
@@ -1121,9 +1140,10 @@ async fn triage_defect(
     use medulla_protocol_types::result_contract::ingestion::TriageDefect as TriageDefectResult;
     let graph = request.graph.clone();
     let result = async {
-        let outcome =
-            medulla_h_decide::decide::handle_triage_defect(state, req_id, verified, request)
-                .await?;
+        let outcome = medulla_h_decide::decide::triage::handle_triage_defect(
+            state, req_id, verified, request,
+        )
+        .await?;
         let mut edges_written = 0u32;
         if outcome.decision.abstain_reason.is_none() {
             let operations: Vec<serde_json::Value> = outcome

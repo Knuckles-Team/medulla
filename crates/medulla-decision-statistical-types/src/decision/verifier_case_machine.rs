@@ -250,7 +250,9 @@ mod tests {
     #[test]
     fn no_writer_sets_state_outside_apply() {
         for source in [
-            include_str!("../../../medulla-h-decide/src/decide/family/generated_code_admission.rs"),
+            include_str!(
+                "../../../medulla-h-decide-runlog/src/decide/family/generated_code_admission.rs"
+            ),
             include_str!("../../../medulla-decision-stats/src/decision/verifier_receipt.rs"),
             include_str!("verifier_receipt.rs"),
         ] {

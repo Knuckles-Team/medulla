@@ -3,7 +3,7 @@
 //! Served by [`super::stat_decide`] in a build with the `decide` feature; a
 //! build without it answers a typed refusal naming the feature.
 
-use super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 

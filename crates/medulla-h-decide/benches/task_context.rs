@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_decide::decide::read_task_context;
+use medulla_h_decide_base::decide::read_task_context;
 
 const BUDGET_P99: Duration = Duration::from_millis(150);
 const MAX_BYTES: usize = 65_536;

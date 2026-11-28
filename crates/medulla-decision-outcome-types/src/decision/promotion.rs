@@ -709,9 +709,9 @@ mod tests {
     #[test]
     fn no_writer_sets_stage_outside_transition() {
         for source in [
-            include_str!("../../../medulla-h-decide/src/decide/stat_proposals.rs"),
-            include_str!("../../../medulla-h-decide/src/decide/stat_pointer.rs"),
-            include_str!("../../../medulla-h-decide/src/decide/stat_harness_adoption.rs"),
+            include_str!("../../../medulla-h-decide-base/src/decide/stat_proposals.rs"),
+            include_str!("../../../medulla-h-decide-base/src/decide/stat_pointer.rs"),
+            include_str!("../../../medulla-h-decide-base/src/decide/stat_harness_adoption.rs"),
             include_str!("../../../medulla-program/src/optimizer.rs"),
             include_str!("revision_list.rs"),
         ] {

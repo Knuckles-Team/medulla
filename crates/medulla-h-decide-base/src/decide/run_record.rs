@@ -1,0 +1,785 @@
+//! `DecisionLog` run records (MEDULLA-DECISION-ENGINE-R135.3).
+//!
+//! The engine compiles a successful run into a stored program keyed by task
+//! signature. The key is `run_record/compiled_program/<task_signature>` in the
+//! tenant's decision artifact store. `Decide` reads it and writes nothing;
+//! this handler is the single write authority.
+
+use medulla_decision_stats::decision::trajectory_ladder::check_paired_verdict;
+use std::sync::Arc;
+use {
+    medulla_decision_statistical_types::decision::branch_fusion::branch_record_key,
+    medulla_decision_statistical_types::decision::branch_fusion::branch_retrieval_key,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRecord,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRef,
+    medulla_decision_statistical_types::decision::branch_fusion::BranchRetrievalReceipt,
+    medulla_decision_statistical_types::decision::branch_fusion::BRANCH_DUPLICATE,
+    medulla_decision_statistical_types::decision::branch_fusion::BRANCH_READBACK_STALE,
+};
+
+use medulla_decision_program_types::decision::program_store::preplan::PrePlanError;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
+use medulla_persistence_records::decision_jobs::record_key as decision_record_key;
+use {
+    medulla_decision_program_types::decision::program_store::compile_program,
+    medulla_decision_program_types::decision::program_store::preplan::max_receipt_age_ms,
+    medulla_decision_program_types::decision::program_store::preplan::pattern_key,
+    medulla_decision_program_types::decision::program_store::preplan::verify_preplan,
+    medulla_decision_program_types::decision::program_store::preplan::ManifestReading,
+    medulla_decision_program_types::decision::program_store::preplan::PrePlanTestReceipt,
+    medulla_decision_program_types::decision::program_store::preplan::ReusablePattern,
+    medulla_decision_program_types::decision::program_store::program_key,
+    medulla_decision_program_types::decision::program_store::program_node_id,
+    medulla_decision_program_types::decision::program_store::run_trace_key,
+    medulla_decision_program_types::decision::program_store::semantic::build_match_index,
+    medulla_decision_program_types::decision::program_store::semantic::match_key,
+    medulla_decision_program_types::decision::program_store::semantic::phrasing_node_id,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramMatchIndex,
+    medulla_decision_program_types::decision::program_store::semantic::ProgramPhrasing,
+    medulla_decision_program_types::decision::program_store::semantic::PHRASING_NODE_CLASS,
+    medulla_decision_program_types::decision::program_store::semantic::PHRASING_OF,
+    medulla_decision_program_types::decision::program_store::CompiledProgram,
+    medulla_decision_program_types::decision::program_store::ProgramError,
+    medulla_decision_program_types::decision::program_store::ProgramKnobs,
+    medulla_decision_program_types::decision::program_store::RunRecord,
+    medulla_decision_program_types::decision::program_store::RunRecordStored,
+    medulla_decision_program_types::decision::program_store::StoredRun,
+    medulla_decision_program_types::decision::program_store::StoredRunTrace,
+    medulla_decision_program_types::decision::program_store::COMPILED_FROM,
+    medulla_decision_program_types::decision::program_store::PROGRAM_NODE_CLASS,
+    medulla_decision_program_types::decision::program_store::RUN_TRACE_FIELD,
+    medulla_decision_statistical_types::decision::program_store::insight::insight_key,
+    medulla_decision_statistical_types::decision::program_store::insight::Insight,
+    medulla_decision_statistical_types::decision::program_store::insight::InsightError,
+    medulla_decision_statistical_types::decision::program_store::replay::replay_key,
+    medulla_decision_statistical_types::decision::program_store::replay::StoredReplay,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::attach_horizons,
+    medulla_decision_program_types::decision::task_plan::check_horizon_checkpoint,
+    medulla_decision_program_types::decision::task_plan::checkpoint_key,
+    medulla_decision_program_types::decision::task_plan::compute_plan_digest,
+    medulla_decision_program_types::decision::task_plan::HorizonKnobs,
+};
+use {
+    medulla_decision_program_types::decision::task_plan::horizon::HORIZON_CHECKPOINT_MISSING,
+    medulla_decision_program_types::decision::task_plan::horizon::HORIZON_PLAN_STALE,
+};
+use {
+    medulla_decision_program_types::decision::trajectory_ladder::PairedVerdict,
+    medulla_decision_program_types::decision::trajectory_ladder::TrajectoryLadderRequest,
+    medulla_decision_program_types::decision::trajectory_ladder::TRAJECTORY_DECISION_UNKNOWN,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::question_kind::QuestionKind,
+    medulla_decision_types::decision::statistical::TypedValue,
+};
+
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
+
+use super::stat_executor::ExecutionContext;
+use super::stat_log_reader::store_once;
+use super::stat_retention::Retention;
+use super::stat_support::{graph_at_level, refusal, resolve_policy};
+use super::stat_vectors::GraphVectors;
+use super::SharedState;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+
+/// The vectors one committed program carries into the graph (MEDULLA-DECISION-ENGINE-R135.16.3):
+/// internal to the commit, never on the wire.
+pub(super) struct ProgramVectors {
+    /// The vector of the task signature, the program node's embedding.
+    pub signature: Vec<f32>,
+    /// One vector per phrasing, in phrasing order.
+    pub phrasings: Vec<Vec<f32>>,
+}
+
+/// The graph node and edge a compiled run commits through the durable path.
+pub struct StagedLink {
+    pub graph: String,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    /// The program node write, its `compiled_from` edge write, then (with vectors) the program
+    /// embedding and each phrasing's node, `phrasing_of` edge and embedding.
+    pub methods: Vec<Method>,
+}
+
+/// A run record whose artifacts are stored and whose graph link, when it has
+/// one, is still to commit (MEDULLA-DECISION-ENGINE-R135.5).
+pub struct Staged {
+    pub stored: RunRecordStored,
+    pub link: Option<StagedLink>,
+}
+
+/// Open the graph a compiled run writes its link into, for the verified
+/// caller. `None` for a run record that writes no graph fact.
+pub async fn open_graph(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    op: &medulla_decision_types::decision::statistical::log::DecisionLogOp,
+) -> Result<Option<Arc<GraphVectors>>, String> {
+    use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    use medulla_isolation::isolation::AccessLevel;
+    let DecisionLogOp::RunRecord {
+        record: RunRecord::CompiledProgram { source, .. },
+        ..
+    } = op
+    else {
+        return Ok(None);
+    };
+    let (core, isolation) = graph_at_level(
+        state,
+        verified.agent_id(),
+        &source.graph,
+        StatisticalErrorCode::ParameterInvalid,
+        AccessLevel::Write,
+    )
+    .await?;
+    Ok(Some(Arc::new(GraphVectors::from_parts(
+        core,
+        isolation,
+        verified.agent_id().to_string(),
+    ))))
+}
+
+fn program_refusal(error: ProgramError) -> String {
+    // A match-index refusal carries its own code and leads the detail with it.
+    if let ProgramError::Invalid(detail) = &error {
+        let code = detail.split(':').next().unwrap_or_default();
+        if !code.is_empty() && code.bytes().all(|b| b.is_ascii_uppercase() || b == b'_') {
+            return refusal(StatisticalErrorCode::ParameterInvalid, detail);
+        }
+    }
+    refusal(StatisticalErrorCode::ParameterInvalid, error)
+}
+
+/// The source node must be a `RunTrace` receipt node the caller can see, whose
+/// record names the run the program compiles. A node that is absent and a node
+/// the caller may not see refuse the same way.
+fn check_trace_node(
+    view: &GraphVectors,
+    graph: &str,
+    node_id: &str,
+    run_id: &str,
+) -> Result<(), ProgramError> {
+    let unknown = || ProgramError::TraceUnknown {
+        graph: graph.to_string(),
+        node_id: node_id.to_string(),
+    };
+    let properties = view.visible_properties(node_id).ok_or_else(unknown)?;
+    if properties.get("kind").and_then(|kind| kind.as_str()) != Some("run_trace") {
+        return Err(unknown());
+    }
+    let named = properties
+        .get(RUN_TRACE_FIELD)
+        .and_then(|record| record.get("run_id"))
+        .and_then(|id| id.as_str());
+    if named != Some(run_id) {
+        return Err(ProgramError::Invalid(format!(
+            "trace node `{node_id}` records another run than `{run_id}`"
+        )));
+    }
+    Ok(())
+}
+
+/// The node and edge writes of the program node, typed with its ontology class,
+/// and its `compiled_from` edge. Each is a method the internal graph commit
+/// projects onto the serving graph; a retry of a commit whose graph write
+/// failed writes the same node and edge again.
+fn link_batch(
+    node_id: &str,
+    program: &CompiledProgram,
+    trace_node: &str,
+    tenant: &str,
+    principal: &str,
+    phrasings: &[ProgramPhrasing],
+    vectors: Option<&ProgramVectors>,
+) -> Result<Vec<Method>, String> {
+    let encode = |value: serde_json::Value| {
+        rmp_serde::to_vec_named(&value).map_err(|error| {
+            refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                format!("run record link encoding failed: {error}"),
+            )
+        })
+    };
+    let node = encode(serde_json::json!({
+        "type": PROGRAM_NODE_CLASS,
+        "task_signature": program.task_signature,
+        "program_digest": program.program_digest,
+        "source_run_id": program.source_run_id,
+        "step_count": program.steps.len(),
+        "_owner": principal,
+    }))?;
+    let edge = encode(serde_json::json!({"relationship": COMPILED_FROM, "tenant": tenant}))?;
+    let mut methods = vec![
+        Method::AddNode {
+            node_id: node_id.to_string(),
+            properties_msgpack: node,
+        },
+        Method::AddEdge {
+            source_id: node_id.to_string(),
+            target_id: trace_node.to_string(),
+            properties_msgpack: edge,
+        },
+    ];
+    let Some(vectors) = vectors else {
+        return Ok(methods);
+    };
+    methods.push(Method::AddEmbedding {
+        node_id: node_id.to_string(),
+        embedding: vectors.signature.clone(),
+    });
+    for (k, (phrasing, vector)) in phrasings.iter().zip(&vectors.phrasings).enumerate() {
+        let phrasing_id = phrasing_node_id(&program.task_signature, k);
+        methods.push(Method::AddNode {
+            node_id: phrasing_id.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "type": PHRASING_NODE_CLASS,
+                "task_signature": program.task_signature,
+                "program_digest": program.program_digest,
+                "text": phrasing.text,
+                "_owner": principal,
+            }))?,
+        });
+        methods.push(Method::AddEdge {
+            source_id: phrasing_id.clone(),
+            target_id: node_id.to_string(),
+            properties_msgpack: encode(
+                serde_json::json!({"relationship": PHRASING_OF, "tenant": tenant}),
+            )?,
+        });
+        methods.push(Method::AddEmbedding {
+            node_id: phrasing_id,
+            embedding: vector.clone(),
+        });
+    }
+    Ok(methods)
+}
+
+/// The text a phrasing is embedded from: each `{p<k>}` placeholder replaced by one space and
+/// whitespace collapsed.
+fn phrasing_embedding_text(text: &str) -> String {
+    let mut plain = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find("{p") {
+        plain.push_str(&rest[..open]);
+        let tail = &rest[open + 1..];
+        match tail.find('}') {
+            Some(close) if tail[1..close].bytes().all(|b| b.is_ascii_digit()) && close > 1 => {
+                plain.push(' ');
+                rest = &tail[close + 1..];
+            }
+            _ => {
+                plain.push_str("{p");
+                rest = &rest[open + 2..];
+            }
+        }
+    }
+    plain.push_str(rest);
+    plain.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Store one run record's artifacts and stage its graph link. A refused
+/// compile stores nothing; the link of a compiled run commits after the
+/// artifacts, through the durable mutation path (`stat_log`).
+pub fn stage(
+    ctx: &ExecutionContext,
+    retention: &Retention,
+    record: RunRecord,
+    view: Option<&GraphVectors>,
+    principal: &str,
+    committer: &str,
+) -> Result<Staged, String> {
+    let source = match &record {
+        RunRecord::CompiledProgram { source, .. } => Some(source.clone()),
+        _ => None,
+    };
+    let phrasings: Vec<ProgramPhrasing> = match &record {
+        RunRecord::CompiledProgram { phrasings, .. } => phrasings
+            .as_slice()
+            .iter()
+            .map(|phrasing| ProgramPhrasing {
+                text: phrasing.text.trim().to_string(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    let mut vectors = None;
+    let stored = commit(ctx, retention, committer, record, view, &mut vectors)?;
+    let link = match (&stored.stored, source, view) {
+        (
+            StoredRun::CompiledProgram {
+                program,
+                program_node,
+                ..
+            },
+            Some(source),
+            Some(view),
+        ) => {
+            let methods = link_batch(
+                program_node,
+                program,
+                &source.node_id,
+                ctx.tenant_id,
+                principal,
+                &phrasings,
+                vectors.as_ref(),
+            )?;
+            Some(StagedLink {
+                graph: source.graph,
+                core: Arc::clone(view.core()),
+                methods,
+            })
+        }
+        _ => None,
+    };
+    Ok(Staged { stored, link })
+}
+
+/// The trace stored for `run_id`, when the caller's reader may see it: the
+/// row belongs to the reader's tenant by its key and to the principal that
+/// committed it (MEDULLA-DECISION-ENGINE-R803.7). Another tenant's or
+/// principal's trace is absent.
+pub(super) fn read_run_trace(
+    ctx: &ExecutionContext,
+    run_id: &str,
+) -> Result<
+    Option<medulla_decision_statistical_types::decision::run_governance::RunTraceRecord>,
+    String,
+> {
+    let Some(reader) = ctx.reader else {
+        return Ok(None);
+    };
+    let Some(bytes) = ctx
+        .store
+        .decision_artifact(&reader.tenant_id, &run_trace_key(run_id))?
+    else {
+        return Ok(None);
+    };
+    let stored: StoredRunTrace = decode_artifact(&bytes, "run trace")?;
+    Ok((stored.principal == reader.principal).then_some(stored.trace))
+}
+
+/// Commit one run record. A refused compile stores nothing; a retry with equal
+/// content answers the stored row and other content under the key refuses
+/// `IDEMPOTENCY_CONFLICT`.
+fn commit(
+    ctx: &ExecutionContext,
+    retention: &Retention,
+    principal: &str,
+    record: RunRecord,
+    view: Option<&GraphVectors>,
+    vectors: &mut Option<ProgramVectors>,
+) -> Result<RunRecordStored, String> {
+    match record {
+        RunRecord::CompiledProgram {
+            trace,
+            policy,
+            source,
+            reusable,
+            plan_binding,
+            preplan_receipt,
+            phrasings,
+            match_threshold_micros,
+        } => {
+            let resolved = resolve_policy(ctx.store, ctx.tenant_id, &policy)?;
+            let knobs = ProgramKnobs::from_policy(&resolved.policy);
+            let program = compile_program(&trace, &knobs).map_err(program_refusal)?;
+            // MEDULLA-DECISION-ENGINE-R135.5: the source must be a run trace the
+            // caller sees, checked before anything is stored.
+            let view = view.ok_or_else(|| {
+                refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "a compiled run is staged against its opened graph",
+                )
+            })?;
+            check_trace_node(view, &source.graph, &source.node_id, &trace.run_id)
+                .map_err(program_refusal)?;
+            // MEDULLA-DECISION-ENGINE-R135.7: a refused promotion stores nothing, so the
+            // prior library stays as it was.
+            let promoted = if reusable {
+                let binding = plan_binding.ok_or_else(|| PrePlanError::Missing.to_string())?;
+                let manifest = read_manifest(ctx, retention, preplan_receipt.as_deref());
+                let verdict = verify_preplan(
+                    ctx.tenant_id,
+                    preplan_receipt.as_deref(),
+                    &binding,
+                    manifest?,
+                    max_receipt_age_ms(&resolved.policy),
+                    // Recorded as bare SHA-256 hex, like every other digest
+                    // the verdict and receipt carry.
+                    resolved.digest.trim_start_matches("sha256:"),
+                )
+                .map_err(|error| error.to_string())?;
+                let receipt = preplan_receipt.ok_or_else(|| PrePlanError::Missing.to_string())?;
+                Some(ReusablePattern {
+                    task_signature: program.task_signature.clone(),
+                    program_digest: program.program_digest.clone(),
+                    source_run_id: program.source_run_id.clone().ok_or_else(|| {
+                        "a program compiled from a skill has no source run to promote".to_string()
+                    })?,
+                    plan: binding,
+                    receipt: *receipt,
+                    verdict,
+                })
+            } else {
+                None
+            };
+            // MEDULLA-DECISION-ENGINE-R135.16.3: the match index is built, and with phrasings
+            // the graph's embedding space is checked and the texts embedded, before any
+            // `store_once`, so a refusal stores nothing.
+            let trimmed: Vec<ProgramPhrasing> = phrasings
+                .as_slice()
+                .iter()
+                .map(|phrasing| ProgramPhrasing {
+                    text: phrasing.text.trim().to_string(),
+                })
+                .collect();
+            let mut index = build_match_index(&trace, &program, &trimmed, match_threshold_micros)
+                .map_err(program_refusal)?;
+            if !trimmed.is_empty() {
+                let embedder = super::program_embedding::SpacedEmbedder::configured()
+                    .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                if !view.admits_space(&embedder.space.digest) {
+                    return Err(refusal(
+                        StatisticalErrorCode::ParameterInvalid,
+                        "PROGRAM_EMBEDDING_SPACE_MISMATCH: the graph declares another embedding \
+                         space than the configured one",
+                    ));
+                }
+                view.ensure_space(&embedder.space)
+                    .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                index.space_digest = Some(embedder.space.digest.clone());
+                let texts: Vec<String> = std::iter::once(program.task_signature.clone())
+                    .chain(
+                        trimmed
+                            .iter()
+                            .map(|phrasing| phrasing_embedding_text(&phrasing.text)),
+                    )
+                    .collect();
+                let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+                let (mut embedded, _calls) = super::program_embedding::embed_texts(
+                    &embedder,
+                    ctx.tenant_id,
+                    &resolved.digest,
+                    &refs,
+                )
+                .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
+                let signature = embedded.remove(0);
+                *vectors = Some(ProgramVectors {
+                    signature,
+                    phrasings: embedded,
+                });
+            }
+            let key = program_key(&program.task_signature);
+            let program_node = program_node_id(&program.task_signature);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let program = store_once(ctx, key.clone(), "compiled program", program, |a, b| a == b)?;
+            let _index: ProgramMatchIndex = store_once(
+                ctx,
+                match_key(&program.task_signature),
+                "program match index",
+                index,
+                |a, b| a == b,
+            )?;
+            let pattern = match promoted {
+                None => None,
+                Some(pattern) => Some(store_once(
+                    ctx,
+                    pattern_key(&program.task_signature),
+                    "reusable pattern",
+                    pattern,
+                    |a, b| a == b,
+                )?),
+            };
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::CompiledProgram {
+                    program,
+                    program_node,
+                    pattern: pattern.map(Box::new),
+                },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R135.12/R135.13: an insight with no source run, or one that
+        // breaks an invariant, stores nothing; the row is keyed by its context signature
+        // digest and id, and a retry with equal content answers the stored row.
+        // MEDULLA-DECISION-ENGINE-R134.11: a checkpoint of another plan revision, or
+        // one that breaks the accounting rule, stores nothing; horizon n > 0 is
+        // stored only after horizon n - 1 was.
+        RunRecord::HorizonCheckpoint {
+            plan,
+            policy,
+            checkpoint,
+        } => {
+            let resolved = resolve_policy(ctx.store, ctx.tenant_id, &policy)?;
+            let derived = plan.horizons.as_ref().filter(|held| {
+                let mut fresh = (*plan).clone();
+                compute_plan_digest(&plan) == plan.plan_digest
+                    && attach_horizons(&mut fresh, &HorizonKnobs::from_policy(&resolved.policy))
+                        .is_ok()
+                    && fresh.horizons.as_ref() == Some(*held)
+            });
+            let partition = derived.ok_or_else(|| {
+                format!(
+                    "{HORIZON_PLAN_STALE}: the plan's horizons are not those its policy derives"
+                )
+            })?;
+            check_horizon_checkpoint(&checkpoint, partition)?;
+            if checkpoint.horizon_index > 0 {
+                let before = checkpoint_key(&checkpoint.plan_digest, checkpoint.horizon_index - 1);
+                if ctx
+                    .store
+                    .decision_artifact(ctx.tenant_id, &before)?
+                    .is_none()
+                {
+                    return Err(format!(
+                        "{HORIZON_CHECKPOINT_MISSING}: horizon {} has no stored checkpoint",
+                        checkpoint.horizon_index - 1
+                    ));
+                }
+            }
+            let key = checkpoint_key(&checkpoint.plan_digest, checkpoint.horizon_index);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let checkpoint = store_once(
+                ctx,
+                key.clone(),
+                "horizon checkpoint",
+                checkpoint,
+                |a, b| a == b,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::HorizonCheckpoint { checkpoint },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R134.14: a record with no result, no digest or a
+        // pre-assigned position stores nothing; other content under the key refuses
+        // `BRANCH_DUPLICATE` and leaves the stored row as it was.
+        RunRecord::BranchRecord { record } => {
+            record.validate()?;
+            let key = record.key();
+            let replayed = match ctx.store.decision_artifact(ctx.tenant_id, &key)? {
+                None => {
+                    ctx.store.put_decision_artifacts(
+                        ctx.tenant_id,
+                        &[(key.clone(), encode_artifact(&record)?)],
+                    )?;
+                    false
+                }
+                Some(bytes) => {
+                    let held: BranchRecord = decode_artifact(&bytes, "branch record")?;
+                    if held != record {
+                        return Err(format!(
+                            "{BRANCH_DUPLICATE}: branch `{}` is recorded with other content",
+                            record.branch_id
+                        ));
+                    }
+                    true
+                }
+            };
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::BranchRecord { record },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R134.14: every cited ref must read back as cited from
+        // the caller's own tenant, else nothing is stored.
+        RunRecord::BranchRetrieval { receipt } => {
+            if receipt.refs.is_empty() || receipt.consumer_branch_id.trim().is_empty() {
+                return Err(format!(
+                    "{BRANCH_READBACK_STALE}: a retrieval receipt cites at least one record"
+                ));
+            }
+            for cited in &receipt.refs {
+                let Some(bytes) = ctx
+                    .store
+                    .decision_artifact(ctx.tenant_id, &cited.record_id)?
+                else {
+                    return Err(format!(
+                        "{BRANCH_READBACK_STALE}: `{}` is not stored",
+                        cited.record_id
+                    ));
+                };
+                let held: BranchRecord = decode_artifact(&bytes, "branch record")?;
+                if BranchRef::of(&held) != *cited
+                    || branch_record_key(&held.plan_digest, &held.branch_id) != cited.record_id
+                    || held.plan_digest != receipt.plan_digest
+                {
+                    return Err(format!(
+                        "{BRANCH_READBACK_STALE}: `{}` no longer reads back as cited",
+                        cited.record_id
+                    ));
+                }
+            }
+            let key = branch_retrieval_key(&receipt.plan_digest, &receipt.consumer_branch_id);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let receipt: BranchRetrievalReceipt = store_once(
+                ctx,
+                key.clone(),
+                "branch retrieval receipt",
+                receipt,
+                |a, b| a == b,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::BranchRetrieval { receipt },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R803.7: the trace is stored once per run id
+        // under the committing principal; equal content replays, other
+        // content under the id refuses `IDEMPOTENCY_CONFLICT`.
+        RunRecord::Trace { trace } => {
+            if trace.run_id.trim().is_empty() {
+                return Err(refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "a run trace names its run".to_string(),
+                ));
+            }
+            let key = run_trace_key(&trace.run_id);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let stored = store_once(
+                ctx,
+                key.clone(),
+                "run trace",
+                StoredRunTrace {
+                    principal: principal.to_string(),
+                    trace,
+                },
+                |a, b| a == b,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::Trace { stored },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R134.12.1: a verdict is stored only for a trajectory-ladder
+        // decision of the caller's own tenant, with both arms and the decision's own
+        // snapshot; a retry with equal content answers the stored row.
+        RunRecord::PairedVerdict { verdict } => {
+            let unknown = || {
+                format!(
+                    "{TRAJECTORY_DECISION_UNKNOWN}: `{}` is not a trajectory-ladder decision of this tenant",
+                    verdict.decision_id
+                )
+            };
+            let Some(bytes) = ctx
+                .store
+                .decision_artifact(ctx.tenant_id, &decision_record_key(&verdict.decision_id))?
+            else {
+                return Err(unknown());
+            };
+            let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
+            let asked = ladder_of_entry(&entry).ok_or_else(unknown)?;
+            check_paired_verdict(&verdict, &asked.input_snapshot_digest)?;
+            let key = verdict.key();
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let verdict: PairedVerdict =
+                store_once(ctx, key.clone(), "paired verdict", verdict, |a, b| a == b)?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::PairedVerdict { verdict },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R135.17.1: one replay row per run and task signature, stamped
+        // with the engine time and the committer; equal content replays, other content under
+        // the key refuses `IDEMPOTENCY_CONFLICT`.
+        RunRecord::ProgramReplay { replay } => {
+            replay
+                .validate()
+                .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+            let key = replay_key(&replay.task_signature, &replay.run_id);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let replay = store_once(
+                ctx,
+                key.clone(),
+                "program replay",
+                StoredReplay {
+                    replay,
+                    recorded_at_ms: ctx.now_ms,
+                    principal: principal.to_string(),
+                },
+                |a, b| a.replay == b.replay,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::ProgramReplay { replay },
+                replayed,
+            })
+        }
+        RunRecord::Insight { insight } => {
+            let insight = Insight::from_value(insight).map_err(|error| match error {
+                // The registered code leads the text, as every typed refusal does.
+                missing @ InsightError::MissingSourceRun => missing.to_string(),
+                other => refusal(StatisticalErrorCode::ParameterInvalid, other),
+            })?;
+            let key = insight_key(&insight);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let insight = store_once(ctx, key.clone(), "insight", insight, |a, b| a == b)?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::Insight { insight },
+                replayed,
+            })
+        }
+    }
+}
+
+/// What the tenant's Blob CAS holds at the receipt's manifest digest. With no
+/// receipt there is nothing to read; with no Blob CAS the manifest is
+/// unreadable. A read error is surfaced, never read as "absent".
+fn read_manifest(
+    ctx: &ExecutionContext,
+    retention: &Retention,
+    receipt: Option<&PrePlanTestReceipt>,
+) -> Result<ManifestReading, String> {
+    let Some(receipt) = receipt else {
+        return Ok(ManifestReading::Unreadable);
+    };
+    #[cfg(feature = "blob")]
+    {
+        let Some(blob) = retention.blob.as_ref() else {
+            return Ok(ManifestReading::Unreadable);
+        };
+        let length = medulla_server_blob::blob::engine_bodies::engine_manifest_length(
+            blob.store.as_ref(),
+            ctx.tenant_id,
+            &receipt.artifact_manifest_digest,
+        )?;
+        Ok(match length {
+            None => ManifestReading::Unreadable,
+            Some(0) => ManifestReading::Empty,
+            Some(_) => ManifestReading::Readable,
+        })
+    }
+    #[cfg(not(feature = "blob"))]
+    {
+        let _ = (ctx, retention, receipt);
+        Ok(ManifestReading::Unreadable)
+    }
+}
+
+/// The ladder request a logged trajectory-ladder decision was asked with, or
+/// `None` when the entry is another kind of decision.
+pub fn ladder_of_entry(entry: &DecisionLogEntry) -> Option<TrajectoryLadderRequest> {
+    entry
+        .record
+        .inputs
+        .params
+        .iter()
+        .find(|param| param.name == "ladder")
+        .and_then(|param| match &param.value {
+            TypedValue::Text(text) => serde_json::from_str::<TrajectoryLadderRequest>(text).ok(),
+            _ => None,
+        })
+        .filter(|_| entry.record.question.kind == QuestionKind::TrajectoryLadder)
+}

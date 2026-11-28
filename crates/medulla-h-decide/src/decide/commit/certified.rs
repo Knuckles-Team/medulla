@@ -23,7 +23,7 @@ use {
     medulla_decision_types::decision::record::DecisionRecord,
 };
 
-use super::super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 
 #[cfg(test)]
 tokio::task_local! {

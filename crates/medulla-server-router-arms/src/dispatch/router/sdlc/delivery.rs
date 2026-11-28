@@ -57,7 +57,7 @@ async fn commit_would_dispatch(
 ) -> Result<LifecycleRecordStored, String> {
     use medulla_decision_policy_types::decision::statistical::lifecycle_record::LifecycleRecordWrite;
     use medulla_decision_types::decision::statistical::log::DecisionLogOp;
-    let response = medulla_h_decide::decide::handle_decision_log(
+    let response = medulla_h_decide::decide::log::handle_decision_log(
         state,
         target.req_id,
         target.verified,

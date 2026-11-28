@@ -1,7 +1,7 @@
 """The feature schema of the ``process.*`` control-step decision points.
 
 Row MEDULLA-DECISION-ENGINE-R180.8. Mirrors ``process_control_feature_schema`` in
-``crates/medulla-h-decide/src/decide/family/process_decision.rs`` (the source of
+``crates/medulla-h-decide-learning/src/decide/family/process_decision.rs`` (the source of
 truth); keep the two in step by hand.
 
 A host publishes each entry once per tenant as a ``feature_schema`` component under

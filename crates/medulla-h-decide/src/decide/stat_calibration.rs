@@ -27,11 +27,17 @@ use {
     medulla_decision_program_types::decision::statistical::body::content_digest_of,
 };
 
-use super::stat_executor::ExecutionContext;
-use super::stat_log::LogReader;
-use super::stat_pointer::Qualified;
-use super::stat_retrieval::{judged_outcomes, Scope};
-use super::stat_support::{invalid_parameter as invalid, refusal};
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_log_reader::LogReader;
+use medulla_h_decide_base::decide::stat_pointer::Qualified;
+use {
+    medulla_h_decide_base::decide::stat_support::invalid_parameter as invalid,
+    medulla_h_decide_base::decide::stat_support::refusal,
+};
+use {
+    medulla_h_decide_runlog::decide::stat_retrieval::judged_outcomes,
+    medulla_h_decide_runlog::decide::stat_retrieval::Scope,
+};
 
 /// The pointer key of one scorer version's calibration champion.
 pub(super) fn calibration_pointer(scorer_version: &str) -> String {
@@ -72,7 +78,7 @@ impl Block {
 
 /// The isotonic knots of `(raw score ppm, relevant)` pairs: pool-adjacent-
 /// violators over the distinct scores, then at most 64 knots.
-pub(crate) fn fit_isotonic(pairs: &[(u32, bool)]) -> Vec<CalibrationKnot> {
+pub fn fit_isotonic(pairs: &[(u32, bool)]) -> Vec<CalibrationKnot> {
     let mut sorted = pairs.to_vec();
     sorted.sort_unstable_by_key(|(score, _)| *score);
     let mut distinct: Vec<(u32, Block)> = Vec::new();

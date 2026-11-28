@@ -1,0 +1,513 @@
+//! The decision executor behind `Method::Decide` (EH-059, EH-005/006/023–025).
+//!
+//! It never builds a `RowSet` and never touches `wire::Op`: the candidates are
+//! already the visible options, the feature schema and head are pinned
+//! component bodies, and the whole answer is one schematised record. Order of
+//! work, per the composition rule (§3.4): visibility (the candidate read) →
+//! features over exactly those options → the head's advisory reading → the
+//! act/abstain rule and any budgeted exploration inside the legal set.
+
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
+use medulla_decision_program_types::decision::statistical::features::FeatureSchemaBody;
+use medulla_decision_stats::decision::exploration::{permit, ExplorationPermit};
+use medulla_decision_stats::{
+    decision::features::feature_matrix, decision::features::FeatureInputs,
+    decision::features::FeatureMatrix, decision::features::MatrixOutcome,
+};
+use medulla_decision_stats::{
+    decision::head_eval::check_compatible, decision::head_eval::explanation,
+    decision::head_eval::read_head, decision::head_eval::Evaluated,
+    decision::head_eval::HeadReading,
+};
+use medulla_decision_stats::{
+    decision::ladder::decide, decision::ladder::LadderInputs, decision::ladder::LadderResult,
+};
+use medulla_decision_stats_records::decision::candidate::CandidateView;
+use medulla_decision_types::decision::record::AbstainReason;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::CandidatePool;
+use medulla_types::contract::BoundedVec;
+use {
+    medulla_decision_policy_types::decision::statistical::keyed::decision_seed,
+    medulla_decision_policy_types::decision::statistical::keyed::exploration_key,
+};
+use {
+    medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode,
+    medulla_decision_types::decision::statistical::DecideRequest,
+    medulla_decision_types::decision::statistical::StatisticalOutcome,
+    medulla_decision_types::decision::statistical::StatisticalQuestion,
+    medulla_decision_types::decision::statistical::TypedParam,
+};
+
+use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+
+/// What the executor needs besides the request.
+#[derive(Clone, Copy)]
+pub struct ExecutionContext<'a> {
+    pub store: &'a AgentLibraryStore,
+    pub tenant_id: &'a str,
+    pub now_ms: u64,
+    pub server_secret: &'a [u8],
+    /// The caller's own earlier executed decisions that share the question's
+    /// context (MEDULLA-DECISION-ENGINE-R020.1.1), where a decision reads them;
+    /// empty for every job that decides nothing.
+    pub matched: &'a [super::stat_log_reader::MatchedTrajectory],
+    /// What a `capability_designation` question read beside the library: the
+    /// resident index and the schema closure (MEDULLA-DECISION-ENGINE-R172.7).
+    pub designation: Option<&'a super::stat_designation::DesignationRuntime>,
+    /// The caller's reader over the decision log, for a family that reads the
+    /// caller's own earlier records (the same visibility rule as the log).
+    /// `None` where a decision runs without a served caller.
+    pub reader: Option<&'a super::stat_log_reader::LogReader>,
+    /// The assistant profile a `harness_config` request names, read by the
+    /// serving path under the profile store's visibility rule
+    /// (MEDULLA-DECISION-ENGINE-R128.16).
+    pub assistant_profile: Option<&'a medulla_identity_types::assistant_profile::AssistantProfile>,
+    /// The observation windows of the run a `run_adjustment` question names,
+    /// read by the serving path (`windows_read::read_windows`); `None` for every
+    /// other kind (MEDULLA-ORCH-VOCAB-R009.18.3).
+    pub observation_windows:
+        Option<&'a [medulla_work_types::run_observation::RunObservationWindow]>,
+    /// The composed schema digest of the graph the question reads, for the
+    /// type-registry comparison of a skill binding (MEDULLA-REPO-INGEST-R002.1.3);
+    /// `None` skips only that comparison.
+    pub type_digest: Option<medulla_types::contract::Digest256>,
+    /// The item catalog an `item_recommendation` question ranks, read by the
+    /// serving path from the graph its request names under the caller's access
+    /// (MEDULLA-DECISION-ENGINE-R175.3); `None` for every other kind.
+    pub recommend_catalog: Option<&'a super::stat_recommend::CatalogRead>,
+    /// The facts a `defect_triage` question reads before the executor (the defect, its frames,
+    /// their symbols and blame, the open defects), by `triage_read::read_triage_facts`
+    /// (MEDULLA-SDLC-R004.3); `None` for every other kind.
+    pub defect_triage: Option<&'a super::triage_read::TriageFacts>,
+}
+
+/// The pinned inputs of one decision.
+pub struct Pinned {
+    pub schema: FeatureSchemaBody,
+    pub(super) schema_digest: String,
+    pub head: Option<(DecisionHeadBody, String)>,
+}
+
+/// What the executor concluded, before it is sealed into a record.
+pub struct Executed {
+    pub matrix: Option<FeatureMatrix>,
+    pub ladder: LadderResult,
+    pub reading: Option<Evaluated>,
+    pub seed: [u8; 32],
+    /// The contrast decision a `HarnessContrast` question sealed
+    /// (MEDULLA-DECISION-ENGINE-R803); `None` for every other kind.
+    pub harness_contrast:
+        Option<medulla_decision_types::decision::harness_contrast::HarnessContrastDecision>,
+    /// The premises a family computed while it concluded, where a family's
+    /// premises need what only the conclude stage reads (a profile lookup, the
+    /// pinned policy's knobs); the family's `premises` hook seals them.
+    pub family_premises: Vec<FamilyPremise>,
+    /// The route stage that answered a `Route` question
+    /// (MEDULLA-DECISION-ENGINE-R035.750.1); `None` for every other kind and
+    /// when the shared ladder (the learned policy) answered.
+    pub route: Option<RouteExecuted>,
+    /// The typed answer and the premises a family sealed beyond the shared
+    /// outcome: the proven plan of a `Topology` question
+    /// (MEDULLA-DECISION-ENGINE-R111.1), the expansion choice or stop of a
+    /// `ThoughtSearch` question (MEDULLA-DECISION-ENGINE-R750.754) and the
+    /// claims a `ContextBudget` partition sealed
+    /// (MEDULLA-DECISION-ENGINE-R029.2.2), and the answer a `CapabilityDesignation`,
+    /// `LoadSet` or `UsageGuidance` question sealed (MEDULLA-DECISION-ENGINE-R172.7,
+    /// R176.3, R177.4); `None` for every other kind and for
+    /// a family abstention. A family carries its answer in `FamilyAnswer`,
+    /// never in a field of its own here.
+    pub family: Option<FamilyExecuted>,
+}
+
+/// A family's typed answer with the premises it rests on.
+pub struct FamilyExecuted {
+    /// The typed answer sealed in the record; `None` where the family's answer
+    /// is its outcome alone and only its premises are sealed in full.
+    pub answer: Option<medulla_decision_types::decision::statistical::outcome::FamilyAnswer>,
+    pub premises: Vec<medulla_decision_statistical_types::decision::record::premise::PremiseRef>,
+    /// The resolution kind the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the family hook's.
+    pub resolution: Option<medulla_decision_types::decision::record::ResolutionKind>,
+    /// The evidence class the family seals its answer with, when the answer
+    /// itself decides it; `None` keeps the claim rule of the record stage.
+    pub evidence: Option<medulla_types::evidence_class::EvidenceClass>,
+}
+
+impl Executed {
+    /// What a family that answers without the matrix ladder concluded.
+    pub fn from_family(
+        outcome: medulla_decision_types::decision::statistical::StatisticalOutcome,
+        family: Option<FamilyExecuted>,
+    ) -> Self {
+        Self {
+            matrix: None,
+            ladder: LadderResult {
+                outcome,
+                calibration: None,
+                explained: None,
+                audit: None,
+                logging: Vec::new(),
+            },
+            reading: None,
+            seed: [0u8; 32],
+            harness_contrast: None,
+            family,
+            family_premises: Vec::new(),
+            route: None,
+        }
+    }
+}
+
+/// Where a premise a family computed at conclude time came from; a policy
+/// premise is bound to the digest of the policy in force when it is sealed.
+pub enum FamilyPremiseSource {
+    /// The request stated it in the named field.
+    Request(&'static str),
+    /// A component publisher's declaration at an exact revision.
+    Publisher {
+        component_id: String,
+        definition_digest: String,
+    },
+    /// The decision policy in force.
+    Policy,
+    /// A recorded fact read from the graph, by the node that holds it.
+    Observation(String),
+    /// A provenance the family already bound itself, where its field or
+    /// policy digest is only known at conclude time.
+    Bound(medulla_decision_statistical_types::decision::record::premise::PremiseProvenance),
+}
+
+/// One premise a family computed while it concluded.
+pub struct FamilyPremise {
+    pub subject: std::borrow::Cow<'static, str>,
+    pub fact: String,
+    pub class: medulla_decision_statistical_types::decision::record::premise::PremiseClass,
+    pub source: FamilyPremiseSource,
+}
+
+impl FamilyPremise {
+    /// The sealed premise, bound to `policy_digest` when it came from the policy.
+    pub fn seal(
+        &self,
+        policy_digest: &str,
+    ) -> medulla_decision_statistical_types::decision::record::premise::PremiseRef {
+        use {
+            medulla_decision_statistical_types::decision::record::premise::PremiseProvenance,
+            medulla_decision_statistical_types::decision::record::premise::PremiseRef,
+        };
+        PremiseRef {
+            subject: self.subject.to_string(),
+            fact: self.fact.clone(),
+            class: self.class,
+            provenance: match &self.source {
+                FamilyPremiseSource::Request(field) => PremiseProvenance::Request {
+                    field: (*field).to_string(),
+                },
+                FamilyPremiseSource::Publisher {
+                    component_id,
+                    definition_digest,
+                } => PremiseProvenance::Publisher {
+                    component_id: component_id.clone(),
+                    definition_digest: definition_digest.clone(),
+                },
+                FamilyPremiseSource::Policy => PremiseProvenance::Policy {
+                    policy_digest: policy_digest.to_string(),
+                },
+                FamilyPremiseSource::Observation(node_id) => PremiseProvenance::Observation {
+                    evaluation_id: node_id.clone(),
+                },
+                FamilyPremiseSource::Bound(provenance) => provenance.clone(),
+            },
+            trust_tier: None,
+        }
+    }
+}
+
+/// The rule stage that answered a route question.
+pub struct RouteExecuted {
+    /// The rule name recorded in the `route_stage=<stage>` premise.
+    pub rule: &'static str,
+    /// The option the stage chose.
+    pub option_id: String,
+    /// How the answer was reached: a rule is a constraint, evaluated history
+    /// is statistical.
+    pub resolution: medulla_decision_types::decision::record::ResolutionKind,
+    /// The matched earlier decisions that ran the chosen option, when the
+    /// stage reads history (team reuse); empty otherwise.
+    pub matched_records: Vec<String>,
+}
+
+/// Read and validate the feature schema and head a decision pins.
+pub fn pinned_inputs(
+    ctx: &ExecutionContext,
+    schema_pin: &ComponentDependency,
+    head_pin: Option<&ComponentDependency>,
+) -> Result<Pinned, String> {
+    let (schema, schema_digest) = pinned_body::<FeatureSchemaBody>(
+        ctx.store,
+        ctx.tenant_id,
+        schema_pin,
+        AgentComponentKind::FeatureSchema,
+        StatisticalErrorCode::FeatureSchemaInvalid,
+    )?;
+    let schema = schema
+        .checked()
+        .map_err(|detail| refusal(StatisticalErrorCode::FeatureSchemaInvalid, detail))?;
+    let head = head_pin
+        .map(|pin| {
+            let (body, digest) = pinned_body::<DecisionHeadBody>(
+                ctx.store,
+                ctx.tenant_id,
+                pin,
+                AgentComponentKind::DecisionHead,
+                StatisticalErrorCode::HeadInvalid,
+            )?;
+            let body = body
+                .checked()
+                .map_err(|detail| refusal(StatisticalErrorCode::HeadInvalid, detail))?;
+            Ok::<_, String>((body, digest))
+        })
+        .transpose()?;
+    Ok(Pinned {
+        schema,
+        schema_digest,
+        head,
+    })
+}
+
+fn abstained(reason: AbstainReason) -> LadderResult {
+    LadderResult {
+        outcome: StatisticalOutcome::Abstained {
+            reasons: BoundedVec::new(vec![reason]).expect("one reason is inside the bound"),
+        },
+        calibration: None,
+        explained: None,
+        audit: None,
+        logging: Vec::new(),
+    }
+}
+
+fn head_reading(
+    pinned: &Pinned,
+    matrix: &FeatureMatrix,
+) -> Result<Option<Result<Evaluated, AbstainReason>>, String> {
+    let Some((head, _)) = &pinned.head else {
+        return Ok(None);
+    };
+    check_compatible(head, &pinned.schema_digest, matrix).map_err(|r| r.render())?;
+    Ok(Some(
+        match read_head(head, matrix).map_err(|r| r.render())? {
+            HeadReading::InDistribution(evaluated) => Ok(evaluated),
+            HeadReading::OutOfDistribution { .. } => Err(AbstainReason::InsufficientConfidence),
+        },
+    ))
+}
+
+/// The state digest the exploration seed is keyed on: everything the decision
+/// read, so a caller cannot change the draw without changing the inputs.
+pub(super) fn state_digest(
+    question: &StatisticalQuestion,
+    params: &[TypedParam],
+    matrix: &FeatureMatrix,
+    policy: &ResolvedPolicy,
+    now_ms: u64,
+) -> String {
+    medulla_query_types::solve_scalar::digest_text(
+        "eg/decide-state/v1",
+        &(
+            question,
+            Some((&matrix.candidate_ids, &matrix.values)),
+            &policy.digest,
+            params,
+            now_ms,
+        ),
+    )
+}
+
+/// What the decision function reads once the matrix exists. `execute` builds
+/// it from live candidates; the log's verify-replay builds it from a record.
+pub struct MatrixInputs<'a> {
+    pub question: &'a StatisticalQuestion,
+    pub params: &'a [TypedParam],
+    pub now_ms: u64,
+    pub server_secret: &'a [u8],
+    /// The context-matched pool the record sealed; a non-empty exploitation
+    /// pool forces exploration off (MEDULLA-DECISION-ENGINE-R020.1.2).
+    pub pool: Option<&'a CandidatePool>,
+}
+
+/// The decision function over a complete matrix: head reading, drift check,
+/// keyed seed and the act/abstain ladder.
+pub fn run_on_matrix(
+    inputs: &MatrixInputs,
+    pinned: &Pinned,
+    policy: &ResolvedPolicy,
+    matrix: FeatureMatrix,
+) -> Result<Executed, String> {
+    let mut exploration = permit(&policy.policy, inputs.question).map_err(|r| r.render())?;
+    if inputs
+        .pool
+        .is_some_and(|pool| !pool.exploitation.is_empty())
+    {
+        exploration = ExplorationPermit::Off;
+    }
+    let digest = state_digest(
+        inputs.question,
+        inputs.params,
+        &matrix,
+        policy,
+        inputs.now_ms,
+    );
+    let seed = decision_seed(
+        &exploration_key(inputs.server_secret),
+        &digest,
+        &inputs.question.question_id,
+    );
+    let reading = match head_reading(pinned, &matrix)? {
+        Some(Err(reason)) => {
+            return Ok(Executed {
+                matrix: Some(matrix),
+                ladder: abstained(reason),
+                reading: None,
+                seed,
+                harness_contrast: None,
+                family: None,
+                family_premises: Vec::new(),
+                route: None,
+            });
+        }
+        Some(Ok(evaluated)) => Some(evaluated),
+        None => None,
+    };
+    let ladder = decide(&LadderInputs {
+        candidate_ids: &matrix.candidate_ids,
+        head: pinned.head.as_ref().map(|(head, _)| head),
+        reading: reading.as_ref(),
+        policy: &policy.policy,
+        statistical: &policy.statistical,
+        permit: exploration,
+        seed: &seed,
+    })
+    .map_err(|r| r.render())?;
+    Ok(Executed {
+        matrix: Some(matrix),
+        ladder,
+        reading,
+        seed,
+        harness_contrast: None,
+        family: None,
+        family_premises: Vec::new(),
+        route: None,
+    })
+}
+
+/// Run the ladder over the candidates.
+pub fn execute(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    pinned: &Pinned,
+    policy: &ResolvedPolicy,
+    views: &[CandidateView],
+    pool: Option<&CandidatePool>,
+) -> Result<Executed, String> {
+    permit(&policy.policy, &request.question).map_err(|r| r.render())?;
+    let features = FeatureInputs {
+        params: request.params.as_slice(),
+        now_ms: ctx.now_ms,
+    };
+    let matrix = match feature_matrix(&pinned.schema, views, &features).map_err(|r| r.render())? {
+        MatrixOutcome::Complete(matrix) => matrix,
+        MatrixOutcome::UnknownFact {
+            component_id,
+            field,
+        } => {
+            return Ok(Executed {
+                matrix: None,
+                ladder: abstained(AbstainReason::UnknownFact {
+                    component_id,
+                    field,
+                }),
+                reading: None,
+                seed: [0u8; 32],
+                harness_contrast: None,
+                family: None,
+                family_premises: Vec::new(),
+                route: None,
+            });
+        }
+    };
+    let inputs = MatrixInputs {
+        question: &request.question,
+        params: request.params.as_slice(),
+        now_ms: ctx.now_ms,
+        server_secret: ctx.server_secret,
+        pool,
+    };
+    run_on_matrix(&inputs, pinned, policy, matrix)
+}
+
+/// The ids of the best `limit` of `views` under the pinned head, for a rank
+/// catalog larger than the 64 options one record seals
+/// (MEDULLA-DECISION-ENGINE-R829.1). Each candidate is read once; the order is
+/// the head's logit, highest first, ties by candidate order (ids are sorted).
+/// Without a head reading (no pinned head, an unknown fact or an
+/// out-of-distribution cell) the decision abstains on the leading `limit`
+/// ids. The ids come back in candidate order.
+pub fn best_candidate_ids(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    pinned: &Pinned,
+    views: &[CandidateView],
+    limit: usize,
+) -> Result<Vec<String>, String> {
+    let leading = || views.iter().take(limit).map(|v| v.id.clone()).collect();
+    let features = FeatureInputs {
+        params: request.params.as_slice(),
+        now_ms: ctx.now_ms,
+    };
+    let matrix = match feature_matrix(&pinned.schema, views, &features).map_err(|r| r.render())? {
+        MatrixOutcome::Complete(matrix) => matrix,
+        MatrixOutcome::UnknownFact { .. } => return Ok(leading()),
+    };
+    let Some(Ok(evaluated)) = head_reading(pinned, &matrix)? else {
+        return Ok(leading());
+    };
+    let mut order: Vec<usize> = (0..matrix.candidate_ids.len()).collect();
+    order.sort_by(|&a, &b| {
+        evaluated.logits[b]
+            .total_cmp(&evaluated.logits[a])
+            .then(a.cmp(&b))
+    });
+    order.truncate(limit);
+    order.sort_unstable();
+    Ok(order
+        .into_iter()
+        .map(|i| matrix.candidate_ids[i].clone())
+        .collect())
+}
+
+/// The recorded explanation of the explained option, for a linear head
+/// (an `OptionAttention` head records none).
+pub fn recorded_explanation(
+    pinned: &Pinned,
+    executed: &Executed,
+) -> Result<Option<medulla_decision_types::decision::statistical::LinearExplanation>, String> {
+    let (Some((head, _)), Some(reading), Some(index), Some(matrix)) = (
+        &pinned.head,
+        &executed.reading,
+        executed.ladder.explained,
+        &executed.matrix,
+    ) else {
+        return Ok(None);
+    };
+    explanation(
+        head,
+        &matrix.candidate_ids[index],
+        &reading.standardised[index],
+    )
+    .map_err(|r| r.render())
+}

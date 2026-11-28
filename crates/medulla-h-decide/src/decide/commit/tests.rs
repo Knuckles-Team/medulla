@@ -318,10 +318,10 @@ async fn topology_commit_refuses_uncoordinated_owners() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn topology_denial_accepts_one_followup_request() {
     use crate::decide::commit::handle_decision_commit;
-    use crate::decide::commit::retry::allowance_context;
     use crate::decide::stat_tests::commit_admission_tests::{
         block_cell, decode_commit, topology_world, verified,
     };
+    use medulla_h_decide_base::decide::commit::retry::allowance_context;
     use medulla_persistence_records::decision_record::retry_allowance::DenialAllowanceState;
     use medulla_persistence_records::decision_record::tests::decided_at;
 

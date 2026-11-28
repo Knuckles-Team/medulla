@@ -643,7 +643,11 @@ pub fn store_admit_receipts(
         medulla_decision_statistical_types::decision::memory_rewrite::RewriteHistory,
         medulla_decision_statistical_types::decision::memory_rewrite::MEMORY_REWRITE_SCHEMA_VERSION,
     };
-    let resolved = super::stat_support::resolve_policy(store, tenant, &DecisionPolicyRef::Default)?;
+    let resolved = medulla_h_decide_base::decide::stat_support::resolve_policy(
+        store,
+        tenant,
+        &DecisionPolicyRef::Default,
+    )?;
     let metrics = RunMetricsReceipt {
         recall_ppm_sum: 1_000_000,
         correct: 1,
@@ -678,9 +682,9 @@ pub fn store_admit_receipts(
         receipt_digest: String::new(),
     };
     benchmark.receipt_digest = benchmark.compute_receipt_digest();
-    let mut rows = vec![super::stat_memory_change::benchmark_receipt_row(
-        &benchmark,
-    )?];
+    let mut rows = vec![
+        medulla_h_decide_learning::decide::stat_memory_change::benchmark_receipt_row(&benchmark)?,
+    ];
     let mut digests = vec![benchmark.receipt_digest.clone()];
     if kind == ChangeKind::Rewrite {
         let signals = |count: usize| -> Vec<String> {
@@ -715,7 +719,11 @@ pub fn store_admit_receipts(
                 head_revision,
             )
             .map_err(|code| format!("the rewrite receipt was refused: {code:?}"))?;
-        rows.push(super::stat_memory_change::rewrite_receipt_row(&evaluation)?);
+        rows.push(
+            medulla_h_decide_learning::decide::stat_memory_change::rewrite_receipt_row(
+                &evaluation,
+            )?,
+        );
         digests.push(evaluation.receipt_digest);
     }
     store.put_decision_artifacts(tenant, &rows)?;

@@ -1,0 +1,338 @@
+//! `DecisionLog.harness_adoption` served (MEDULLA-DECISION-ENGINE-R803.8): the
+//! adopted harness, its contrast and its lesson commit together from one
+//! committed contrast decision, a repeat answers the stored refs, a second
+//! adoption writes no supersession edge (currency is the champion pointer,
+//! MEDULLA-ORCH-VOCAB-R801.7), and each refusal writes nothing.
+
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+use medulla_decision_types::decision::statistical::log::{
+    DecisionLogCommitted, DecisionLogOp, HarnessAdoptionStored, HarnessAdoptionWrite,
+    HarnessLessonQuery, HarnessLessonsFound,
+};
+use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
+use medulla_types::contract::BoundedVec;
+use medulla_work_types::orchestration::improvement::{
+    AdoptedHarness, HarnessContrast, HarnessLesson, ImprovementLibraryRefusal,
+};
+use medulla_work_types::orchestration::HarnessComponentKind;
+
+use medulla_h_decide_stat_tests::decide::stat_tests::log_tests::log_op;
+use medulla_h_decide_stat_tests::decide::stat_tests::*;
+use {
+    medulla_decision_statistical_types::decision::run_governance::StepKind,
+    medulla_decision_statistical_types::decision::run_governance::StepOutcome,
+};
+use {
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::commit_trace,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::contrast_request,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::contrast_schema,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::decide_contrast,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::graph_view,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::ledger,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::option,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::trace_record,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::BASELINE,
+    medulla_h_decide_stat_tests::decide::stat_tests::harness_contrast_tests::CONDITIONS,
+};
+
+const A: &str = "harness-component:prompt:a";
+const B: &str = "harness-component:prompt:b";
+
+async fn committed_contrast(h: &Harness, a_eval: f64, b_eval: f64) -> StatisticalDecisionRecord {
+    let schema_pin = h
+        .publish_test_component(
+            &format!("schema-adoption-{a_eval}-{b_eval}"),
+            AgentComponentKind::FeatureSchema,
+            "contrast deltas",
+            Some(&contrast_schema()),
+            None,
+        )
+        .unwrap();
+    let view = graph_view(
+        &[A, B],
+        &[BASELINE, "trace:a", "trace:b"],
+        &[
+            (BASELINE, 0.5, "human"),
+            ("trace:a", 0.5 + a_eval, "human"),
+            ("trace:b", 0.5 + b_eval, "human"),
+        ],
+    );
+    let run = [(StepKind::ToolCall, "t", StepOutcome::Ok)];
+    for id in [BASELINE, "trace:a", "trace:b"] {
+        commit_trace(h, "decider", trace_record(id, &run)).await;
+    }
+    ledger(h, TENANT, &[(BASELINE, 0), ("trace:a", 1), ("trace:b", 1)]).await;
+    let options = vec![option(A, "trace:a"), option(B, "trace:b")];
+    let record = decide_contrast(
+        h,
+        &contrast_request(&schema_pin, DecisionPolicyRef::Default, options),
+        &view,
+    );
+    let _: DecisionLogCommitted = decode(
+        log_op(
+            h,
+            "decider",
+            DecisionLogOp::Commit {
+                record: Box::new(record.clone()),
+                evaluator: None,
+                approval: None,
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    record
+}
+
+fn write_for(record: &StatisticalDecisionRecord, adopted: &str) -> HarnessAdoptionWrite {
+    HarnessAdoptionWrite {
+        task_ref: "task:deploy".to_string(),
+        task_class: "eg:taskclass/deploy".to_string(),
+        agent_ref: "agent:deployer".to_string(),
+        decision_record_digest: record.record_digest.clone(),
+        conditions_digest: CONDITIONS.to_string(),
+        adopted_version_ref: adopted.to_string(),
+        deficiency: "retries".to_string(),
+        situation: "a deploy that retried its tool call".to_string(),
+        changed_component_kind: HarnessComponentKind::SystemPrompt,
+        what_changed: "the prompt names the tool contract".to_string(),
+        applicability: BoundedVec::new(vec!["tool_error".to_string()]).unwrap(),
+        confidence_ppm: 800_000,
+        evidence_run_ids: BoundedVec::new(vec![BASELINE.to_string(), "trace:b".to_string()])
+            .unwrap(),
+    }
+}
+
+async fn adopt(h: &Harness, write: HarnessAdoptionWrite) -> Result<HarnessAdoptionStored, String> {
+    decode(
+        log_op(
+            h,
+            "decider",
+            DecisionLogOp::HarnessAdoption {
+                tenant_id: TENANT.to_string(),
+                write,
+            },
+        )
+        .await,
+    )
+}
+
+fn rows(h: &Harness, prefix: &str) -> usize {
+    h.store
+        .decision_artifacts_with_prefix(TENANT, prefix, 1_000)
+        .unwrap()
+        .len()
+}
+
+fn counts(h: &Harness) -> [usize; 6] {
+    [
+        rows(h, "harness-adopted:"),
+        rows(h, "harness-contrast:"),
+        rows(h, "harness-lesson:"),
+        rows(h, "harness-supersession:adoption:"),
+        rows(h, "harness-supersession:lesson:"),
+        rows(h, "harness-adoption-write:"),
+    ]
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R803.8: the adoption, contrast and lesson commit together.
+// spec: MEDULLA-DECISION-ENGINE-R803.8
+#[tokio::test]
+async fn adoption_contrast_and_lesson_commit_together() {
+    let h = Harness::new().await;
+    let first = committed_contrast(&h, 0.05, 0.10).await;
+    let write = write_for(&first, B);
+
+    let stored = adopt(&h, write.clone()).await.unwrap();
+    assert!(!stored.replayed);
+    // One adoption, one contrast, one lesson, one lesson head edge, one write
+    // row, and no adoption edge.
+    assert_eq!(counts(&h), [1, 1, 1, 0, 1, 1]);
+    // The adoption is an Evaluated revision of the agent's harness bundle.
+    let revisions = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "revision:", 10)
+        .unwrap();
+    assert_eq!(revisions.len(), 1);
+    let revision: RevisionRow = decode_stored(&revisions[0].1);
+    assert_eq!(revision.id, stored.adopted_harness_ref);
+    assert_eq!(revision.stage, RevisionStage::Evaluated);
+    assert_eq!(revision.subject_kind, "definition");
+    assert_eq!(
+        revision.subject_ref,
+        "harness_bundle:agent:deployer:eg:taskclass/deploy"
+    );
+
+    let adoption_rows = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "harness-adopted:", 10)
+        .unwrap();
+    let adoption: AdoptedHarness = decode_stored(&adoption_rows[0].1);
+    assert_eq!(adoption.node_id(), stored.adopted_harness_ref);
+    assert_eq!(adoption.decision_ref, first.record_id);
+    assert_eq!(
+        adoption.contrast_ref.as_deref(),
+        Some(stored.contrast_ref.as_str())
+    );
+    let contrast_rows = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "harness-contrast:", 10)
+        .unwrap();
+    let contrast: HarnessContrast = decode_stored(&contrast_rows[0].1);
+    assert_eq!(contrast.node_id(), stored.contrast_ref);
+    assert_eq!(contrast.run_a_trace_id, BASELINE);
+    assert_eq!(contrast.run_b_trace_id, "trace:b");
+    let lesson_rows = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "harness-lesson:", 10)
+        .unwrap();
+    let lesson: HarnessLesson = decode_stored(&lesson_rows[0].1);
+    assert_eq!(lesson.node_id(), stored.lesson_ref);
+    assert_eq!(lesson.evidence_run_ids.as_slice(), [BASELINE, "trace:b"]);
+
+    // A repeat of the same write answers the stored refs and writes nothing.
+    let repeat = adopt(&h, write).await.unwrap();
+    assert!(repeat.replayed);
+    assert_eq!(repeat.adopted_harness_ref, stored.adopted_harness_ref);
+    assert_eq!(repeat.lesson_ref, stored.lesson_ref);
+    assert_eq!(counts(&h), [1, 1, 1, 0, 1, 1]);
+
+    // A later adoption of the same agent and task class is another stored
+    // revision; the first stays readable and no edge links them.
+    let second = committed_contrast(&h, 0.30, 0.10).await;
+    let mut next = write_for(&second, A);
+    next.evidence_run_ids =
+        BoundedVec::new(vec![BASELINE.to_string(), "trace:a".to_string()]).unwrap();
+    next.what_changed = "the prompt names the retry budget".to_string();
+    let later = adopt(&h, next).await.unwrap();
+    assert_ne!(later.adopted_harness_ref, stored.adopted_harness_ref);
+    assert_eq!(counts(&h)[0], 2);
+    assert_eq!(counts(&h)[3], 0);
+}
+
+/// Verifies MEDULLA-ORCH-VOCAB-R801.7: an adoption writes no supersession edge.
+// spec: MEDULLA-ORCH-VOCAB-R801.7
+#[tokio::test]
+async fn adoption_writes_no_supersession_edge() {
+    let h = Harness::new().await;
+    let first = committed_contrast(&h, 0.05, 0.10).await;
+    adopt(&h, write_for(&first, B)).await.unwrap();
+    let second = committed_contrast(&h, 0.30, 0.10).await;
+    let mut next = write_for(&second, A);
+    next.evidence_run_ids =
+        BoundedVec::new(vec![BASELINE.to_string(), "trace:a".to_string()]).unwrap();
+    next.what_changed = "the prompt names the retry budget".to_string();
+    adopt(&h, next).await.unwrap();
+
+    assert_eq!(rows(&h, "harness-adopted:"), 2);
+    assert_eq!(rows(&h, "harness-supersession:adoption:"), 0);
+    // Each adoption is an Evaluated revision of the bundle subject, and none is
+    // a Champion: only a pointer move makes one current.
+    let revisions = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "revision:", 10)
+        .unwrap();
+    assert_eq!(revisions.len(), 2);
+    for (_, bytes) in &revisions {
+        let revision: RevisionRow = decode_stored(bytes);
+        assert_eq!(revision.stage, RevisionStage::Evaluated);
+    }
+}
+
+fn decode_stored<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
+    medulla_persistence_records::decision_jobs::decode_artifact(bytes, "stored record").unwrap()
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R803.8: each refusal is typed and writes nothing.
+// spec: MEDULLA-DECISION-ENGINE-R803.8
+#[tokio::test]
+async fn adoption_refusals_are_typed_and_write_nothing() {
+    let h = Harness::new().await;
+    let record = committed_contrast(&h, 0.05, 0.10).await;
+    let refused = |error: String, refusal: ImprovementLibraryRefusal| {
+        assert!(
+            error.starts_with(refusal.code()),
+            "{error} should start with {}",
+            refusal.code()
+        );
+    };
+
+    let mut no_evidence = write_for(&record, B);
+    no_evidence.evidence_run_ids = BoundedVec::default();
+    refused(
+        adopt(&h, no_evidence).await.unwrap_err(),
+        ImprovementLibraryRefusal::LessonWithoutEvidence,
+    );
+
+    let mut other_conditions = write_for(&record, B);
+    other_conditions.conditions_digest = "sha256:other".to_string();
+    refused(
+        adopt(&h, other_conditions).await.unwrap_err(),
+        ImprovementLibraryRefusal::ContrastConditionsMismatch,
+    );
+
+    let mut unknown = write_for(&record, B);
+    unknown.decision_record_digest = "sha256:not-committed".to_string();
+    refused(
+        adopt(&h, unknown).await.unwrap_err(),
+        ImprovementLibraryRefusal::AdoptedHarnessNoDecision,
+    );
+
+    // The decision adopted B; naming A names a decision that did not adopt it.
+    refused(
+        adopt(&h, write_for(&record, A)).await.unwrap_err(),
+        ImprovementLibraryRefusal::AdoptedHarnessNoDecision,
+    );
+    assert_eq!(counts(&h), [0, 0, 0, 0, 0, 0]);
+}
+
+async fn lessons(h: &Harness, as_of_ms: u64, features: &[&str]) -> HarnessLessonsFound {
+    decode(
+        log_op(
+            h,
+            "decider",
+            DecisionLogOp::HarnessLessons {
+                tenant_id: TENANT.to_string(),
+                query: HarnessLessonQuery {
+                    task_class: "eg:taskclass/deploy".to_string(),
+                    deficiency: "retries".to_string(),
+                    trajectory_features: BoundedVec::new(
+                        features.iter().map(|f| f.to_string()).collect(),
+                    )
+                    .unwrap(),
+                    as_of_ms,
+                },
+            },
+        )
+        .await,
+    )
+    .unwrap()
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R803.8: a stored lesson is retrieved through the served read.
+// spec: MEDULLA-DECISION-ENGINE-R803.8
+#[tokio::test]
+async fn adopted_lesson_is_retrieved_through_the_served_read() {
+    let h = Harness::new().await;
+    // Nothing stored: the read abstains with the registered code, no lesson.
+    let none = lessons(&h, u64::MAX, &[]).await;
+    assert!(none.lessons.is_empty());
+    assert_eq!(
+        none.abstain_reason.as_deref(),
+        Some(ImprovementLibraryRefusal::NoLessons.code())
+    );
+
+    let record = committed_contrast(&h, 0.05, 0.10).await;
+    let stored = adopt(&h, write_for(&record, B)).await.unwrap();
+    let found = lessons(&h, u64::MAX, &["tool_error"]).await;
+    assert_eq!(found.abstain_reason, None);
+    assert_eq!(found.lessons.len(), 1);
+    assert_eq!(found.lessons[0].node_id(), stored.lesson_ref);
+    // A feature the lesson does not list filters it out.
+    let other = lessons(&h, u64::MAX, &["timeout"]).await;
+    assert!(other.lessons.is_empty());
+    assert!(other.abstain_reason.is_some());
+}

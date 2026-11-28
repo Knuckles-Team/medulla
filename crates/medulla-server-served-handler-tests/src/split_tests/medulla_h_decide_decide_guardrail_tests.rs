@@ -53,7 +53,11 @@ fn publish(store: &AgentLibraryStore, tenant: &str, id: &str, class: &str, nonce
         .unwrap();
 }
 
-async fn ask(state: &medulla_h_decide::decide::SharedState, tenant: &str, task: &str) -> Response {
+async fn ask(
+    state: &medulla_h_decide_base::decide::SharedState,
+    tenant: &str,
+    task: &str,
+) -> Response {
     let method = Method::GuardrailEntailment {
         request: Box::new(GuardrailEntailmentRequest {
             tenant_id: tenant.into(),

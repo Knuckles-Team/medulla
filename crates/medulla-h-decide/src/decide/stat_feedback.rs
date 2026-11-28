@@ -18,10 +18,18 @@ use medulla_decision_types::decision::statistical::feedback::{
 };
 use medulla_types::refusal_code::RefusalCode;
 
-use super::stat_executor::ExecutionContext;
-use super::stat_log::{executed_option, store_once, visible_entry, LogReader};
-use super::stat_retrieval::{check_joinable, stored_outcome};
-use super::stat_support::invalid_parameter as invalid;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_support::invalid_parameter as invalid;
+use {
+    medulla_h_decide_base::decide::stat_log::executed_option,
+    medulla_h_decide_base::decide::stat_log_reader::store_once,
+    medulla_h_decide_base::decide::stat_log_reader::visible_entry,
+    medulla_h_decide_base::decide::stat_log_reader::LogReader,
+};
+use {
+    medulla_h_decide_runlog::decide::stat_retrieval::check_joinable,
+    medulla_h_decide_runlog::decide::stat_retrieval::stored_outcome,
+};
 
 fn coded(code: RefusalCode, detail: impl std::fmt::Display) -> String {
     format!("{}: {detail}", code.as_str())

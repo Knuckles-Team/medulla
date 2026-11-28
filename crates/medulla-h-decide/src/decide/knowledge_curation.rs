@@ -15,8 +15,8 @@
 use medulla_decision_policy_types::knowledge_curation::CurationOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-use super::planned_write::PlannedWrite;
-use super::SharedState;
+use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+use medulla_h_decide_base::decide::SharedState;
 
 /// The scope every curation op needs.
 pub const SCOPE_CURATE: &str = "knowledge:curate";
@@ -94,10 +94,17 @@ mod served {
     };
 
     use super::{CurationOp, SCOPE_CURATE};
-    use crate::decide::knowledge_flag::served::{all_flags, edge_operation, flag_by_id};
-    use crate::decide::planned_write::PlannedWrite;
-    use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};
-    use crate::decide::SharedState;
+    use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+    use medulla_h_decide_base::decide::SharedState;
+    use {
+        medulla_h_decide_base::decide::stat_support::filtered_view_versioned,
+        medulla_h_decide_base::decide::stat_support::invalid_parameter,
+    };
+    use {
+        medulla_h_decide_learning::decide::knowledge_flag::served::all_flags,
+        medulla_h_decide_learning::decide::knowledge_flag::served::edge_operation,
+        medulla_h_decide_learning::decide::knowledge_flag::served::flag_by_id,
+    };
 
     /// The proposal record key prefix of the decision store.
     const PROPOSAL_PREFIX: &str = "knowledge-proposal:";
@@ -744,7 +751,7 @@ mod served {
                     .map(|flag| flag.state == FlagState::Open)
                     .unwrap_or(false);
                 if still_open {
-                    operations.extend(crate::decide::knowledge_flag::served::adopt_operations(
+                    operations.extend(medulla_h_decide_learning::decide::knowledge_flag::served::adopt_operations(
                         view, tenant, flag_id, &node,
                     )?);
                     adopted.push(flag_id.clone());

@@ -31,10 +31,10 @@ use {
 
 use medulla_protocol_types::protocol::Method;
 
-use super::run_record::StagedLink;
-use super::stat_executor::ExecutionContext;
-use super::stat_support::refusal;
-use super::stat_vectors::GraphVectors;
+use medulla_h_decide_base::decide::run_record::StagedLink;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_support::refusal;
+use medulla_h_decide_base::decide::stat_vectors::GraphVectors;
 
 /// Key family of held rows: `freshness:row:<graph>:<canonical url>`.
 const ROW_PREFIX: &str = "freshness:row:";
@@ -186,7 +186,7 @@ fn held_digests(ctx: &ExecutionContext, graph: &str) -> Result<BTreeMap<String, 
 
 /// Every row `graph` holds, by canonical URL.
 #[cfg_attr(not(test), allow(dead_code))]
-pub(super) fn held_rows(
+pub fn held_rows(
     ctx: &ExecutionContext,
     graph: &str,
 ) -> Result<BTreeMap<String, StoredFreshRow>, String> {
@@ -204,7 +204,7 @@ pub(super) fn held_rows(
 
 /// The receipt of refresh `refresh_id`, if this tenant ran it.
 #[cfg_attr(not(test), allow(dead_code))]
-pub(super) fn stored_receipt(
+pub fn stored_receipt(
     ctx: &ExecutionContext,
     refresh_id: &str,
 ) -> Result<Option<FreshnessReceipt>, String> {
@@ -226,7 +226,7 @@ fn counters(ctx: &ExecutionContext, graph: &str) -> Result<(u64, u64), String> {
 
 /// The region marks written for `graph` so far: its revision counter.
 #[cfg_attr(not(test), allow(dead_code))]
-pub(super) fn region_revision(ctx: &ExecutionContext, graph: &str) -> Result<u64, String> {
+pub fn region_revision(ctx: &ExecutionContext, graph: &str) -> Result<u64, String> {
     Ok(counters(ctx, graph)?.0)
 }
 
@@ -294,7 +294,7 @@ pub(super) fn row_node_id(graph: &str, canonical: &str) -> String {
 
 /// What one served refresh produced: the receipt and, when the logical graph is a
 /// materialized tenant graph, the node writes still to commit through the durable path.
-pub(super) struct Refreshed {
+pub struct Refreshed {
     pub receipt: FreshnessReceipt,
     pub link: Option<StagedLink>,
 }
@@ -310,7 +310,7 @@ fn node_writes(
     principal: &str,
     stored: &[(FreshResult, Option<String>, String, String)],
 ) -> Result<StagedLink, String> {
-    let embedder = super::program_embedding::SpacedEmbedder::configured()
+    let embedder = medulla_h_decide_base::decide::program_embedding::SpacedEmbedder::configured()
         .map_err(|error| refusal(StatisticalErrorCode::ParameterInvalid, error))?;
     if !view.admits_space(&embedder.space.digest) {
         return Err(refusal(
@@ -326,7 +326,7 @@ fn node_writes(
         .map(|(_, _, title, snippet)| format!("{title} {snippet}"))
         .collect();
     let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
-    let (vectors, _calls) = super::program_embedding::embed_texts(
+    let (vectors, _calls) = medulla_h_decide_base::decide::program_embedding::embed_texts(
         &embedder,
         ctx.tenant_id,
         EMBED_POLICY_REVISION,
@@ -379,7 +379,7 @@ fn node_writes(
 
 /// Serve one refresh through `port`. With `view` (the materialized tenant graph named by
 /// the request) the refreshed rows are also staged as graph nodes with an embedding.
-pub(super) fn refresh_with(
+pub fn refresh_with(
     ctx: &ExecutionContext,
     port: &dyn SearchSourcePort,
     request: &FreshnessRefresh,
@@ -523,7 +523,7 @@ pub(super) fn refresh_with(
 /// caller. `None` when the request's logical graph is virtual only (no tenant graph of that
 /// name is registered): the rows are then held as decision artifacts alone.
 pub(super) async fn open_graph(
-    state: &super::SharedState,
+    state: &medulla_h_decide_base::decide::SharedState,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     request: &FreshnessRefresh,
 ) -> Result<Option<GraphVectors>, String> {
@@ -531,7 +531,7 @@ pub(super) async fn open_graph(
     if state.read().await.registry.catalog_record(graph).is_none() {
         return Ok(None);
     }
-    let (core, isolation) = super::stat_support::graph_at_level(
+    let (core, isolation) = medulla_h_decide_base::decide::stat_support::graph_at_level(
         state,
         verified.agent_id(),
         graph,

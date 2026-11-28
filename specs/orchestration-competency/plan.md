@@ -181,11 +181,11 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 ## Production caller chain
 
 - Question vocabularies: `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs:207`) → `current_core_catalog` (:656) → `core_specs` modules `orchestration` (:930), `capability` (:740), `swarm-topology` (:1047) and the shape modules `orchestration-shapes` (:940) and `swarm-topology-shapes` (:1055).
-- Composed answer: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs::dispatch_decision_methods` → `crates/medulla-h-decide/src/decide/execution_answer.rs::handle_execution_answer` (new) → `assemble_for` (`crates/medulla-h-decide/src/decide/assemble.rs:46`).
+- Composed answer: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs::dispatch_decision_methods` → `crates/medulla-h-decide/src/decide/execution_answer.rs::handle_execution_answer` (new) → `assemble_for` (`crates/medulla-h-decide-runlog/src/decide/assemble.rs:46`).
 - Architecture view: `crates/medulla-server-router/src/dispatch/router.rs::dispatch_request_method_inner` (:208) → `dispatch_graph_op` (`crates/medulla-server-graph/src/dispatch/graph_pipeline.rs:68`) → `crates/medulla-h-mining/src/mining.rs::try_handle` (:80).
 - Workflows: the same graph-op chain → `crates/medulla-h-graph/src/graph_ops/terminal.rs::try_handle_graph_domains` (:14) → the new `process_compile` handler.
 - Process documents, sync and architecture exchange: the same graph-op chain → `try_handle_graph_domains` (:14) → `handle_process_document_import`, `handle_process_document_export`, `handle_process_model_sync` and `handle_process_model_deploy` in `crates/medulla-h-graph-gateway/src/graph_ops/process_compile.rs`, and `crates/medulla-h-graph-gateway/src/graph_ops/architecture_exchange.rs`.
-- Process plans: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112` → `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:60`) → the new family `crates/medulla-h-decide/src/decide/family/process_plan.rs`.
+- Process plans: `crates/medulla-server-router/src/dispatch/router/decision_plane.rs:112` → `handle_decide` (`crates/medulla-h-decide/src/decide/stat_decide.rs:60`) → the new family `crates/medulla-h-decide-learning/src/decide/family/process_plan.rs`.
 - Obsolete paths to delete: none.
 
 ### Machine wiring

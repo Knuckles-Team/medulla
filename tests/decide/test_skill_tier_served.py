@@ -16,7 +16,7 @@ and the champion pointer moved, which stores the tier it carries.
 
 The count boundary of 99 and 100 always-on skills needs a tenant with a known number
 of them; it is proven at L3 by
-``crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs``.
+``crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_tier_tests.rs``.
 """
 
 from __future__ import annotations

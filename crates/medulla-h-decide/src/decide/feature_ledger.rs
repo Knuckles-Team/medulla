@@ -16,8 +16,8 @@
 //!
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
-use super::SharedState;
 use medulla_decision_statistical_types::decision::feature_match::FeatureLedgerOp;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -82,7 +82,12 @@ async fn change_known(
         .collect();
     for graph in graphs {
         // A graph the caller may not read is not part of what the caller knows.
-        let Ok(view) = super::stat_vectors::graph_vectors(state, verified.agent_id(), &graph).await
+        let Ok(view) = medulla_h_decide_base::decide::stat_vectors::graph_vectors(
+            state,
+            verified.agent_id(),
+            &graph,
+        )
+        .await
         else {
             continue;
         };

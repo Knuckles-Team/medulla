@@ -7,8 +7,8 @@
 //! `medulla_decision_outcome_types::decision::derivation::capability_coverage_query`. No model, no
 //! ranking, no commit.
 
-use super::SharedState;
 use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
+use medulla_h_decide_base::decide::SharedState;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;

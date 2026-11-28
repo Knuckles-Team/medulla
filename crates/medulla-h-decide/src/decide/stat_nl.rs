@@ -21,7 +21,7 @@ use {
     medulla_decision_types::decision::statistical::TypedValue,
 };
 
-use super::stat_support::refusal;
+use medulla_h_decide_base::decide::stat_support::refusal;
 
 /// The utterance parameter a template-choice question reads.
 pub(super) const UTTERANCE_PARAM: &str = "utterance";
@@ -104,7 +104,7 @@ pub(super) fn binding(
     outcome: &StatisticalOutcome,
     entries: &[AgentComponentEntry],
 ) -> Result<Option<NlBinding>, String> {
-    if !super::family::for_kind(request.question.kind).binds_utterance() {
+    if !super::family::registry::for_kind(request.question.kind).binds_utterance() {
         return Ok(None);
     }
     let utterance = text_param(request, UTTERANCE_PARAM).ok_or_else(|| {

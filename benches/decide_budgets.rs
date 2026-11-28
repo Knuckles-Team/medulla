@@ -788,7 +788,7 @@ const CLAIM_EVIDENCE_ITEMS: usize = 50;
 /// One claim operation through the served handler.
 fn claims(rt: &Runtime, h: &Harness, op: ClaimOp) -> Response {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
-    rt.block_on(medulla_h_decide::decide::handle_claims(
+    rt.block_on(medulla_h_decide::decide::claims::handle_claims(
         &h.state, 1, "default", &verified, op,
     ))
 }
@@ -886,7 +886,7 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
 /// One write-back operation through the served `DecisionLog` handler.
 fn writeback(rt: &Runtime, h: &Harness, computation: WritebackOp) -> Response {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
-    rt.block_on(medulla_h_decide::decide::handle_decision_log(
+    rt.block_on(medulla_h_decide::decide::log::handle_decision_log(
         &h.state,
         1,
         &verified,
@@ -1281,7 +1281,7 @@ fn bench_distilled_rank(
             fidelity_hi_q16: 65_536,
         })
         .collect();
-    let uploaded = rt.block_on(medulla_h_decide::decide::handle_decision_log(
+    let uploaded = rt.block_on(medulla_h_decide::decide::log::handle_decision_log(
         &h.state,
         9,
         &VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT),
@@ -2901,18 +2901,20 @@ fn bench_belief_revision(
         );
     };
     let pass = |ids: Vec<String>| {
-        let response = rt.block_on(medulla_h_decide::decide::handle_belief_revise(
-            &h.state,
-            2,
-            &verified,
-            BeliefReviseRequest {
-                graph: BELIEF_GRAPH.to_string(),
-                claim_ids: ids,
-                texts: BTreeMap::new(),
-                premises: Vec::new(),
-                advance: Vec::new(),
-            },
-        ));
+        let response = rt.block_on(
+            medulla_h_decide::decide::belief_revise::handle_belief_revise(
+                &h.state,
+                2,
+                &verified,
+                BeliefReviseRequest {
+                    graph: BELIEF_GRAPH.to_string(),
+                    claim_ids: ids,
+                    texts: BTreeMap::new(),
+                    premises: Vec::new(),
+                    advance: Vec::new(),
+                },
+            ),
+        );
         assert!(
             response.error.is_none(),
             "belief bench fixture: {response:?}"

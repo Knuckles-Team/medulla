@@ -334,7 +334,7 @@ none
 - `Method::Identity` to `dispatch_identity_store_method` (`identity_access.rs:90`) to `IdentityStore` (`crates/medulla-identity-core-types/src/identity/store.rs`).
 - `Method::RbacAdmin` to the arm at `identity_access.rs:305`, which gains the share and ownership apply calls.
 - `Method::Uql` and `Method::UnifiedQuery` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs`) to `run_unified_off_lock_with` (`crates/medulla-h-query-read/src/query/planning.rs`), which gains the tenant predicate and the visible-unit filter.
-- `Method::AgentAssemble` to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (line 46), which gains `enforce_scope`.
+- `Method::AgentAssemble` to `handle_agent_assemble` (`crates/medulla-h-decide-runlog/src/decide/assemble.rs:25`) to `assemble_for` (line 46), which gains `enforce_scope`.
 - `Method::ApplyMutation` to `compile_methods` (`crates/medulla-server-api/src/batch_compile/compile.rs:124`), which gains `identity_metadata::admit`.
 - Obsolete paths to delete: none; every row adds to an existing path.
 

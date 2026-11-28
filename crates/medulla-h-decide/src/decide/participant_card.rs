@@ -5,9 +5,9 @@
 //! router commits them after the claim that changed them. `handle_participant_card` is the card
 //! read: a lookup of the stored node, never a model call, under the visibility rule of the ask.
 
-use super::SharedState;
 use medulla_decision_types::decision::knob_families::participant::default_u64;
 use medulla_decision_types::participant_memory::ParticipantCard;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination::ParticipantReadCard;
 use medulla_server_api::authority_context::VerifiedRequestContext;

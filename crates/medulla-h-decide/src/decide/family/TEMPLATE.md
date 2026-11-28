@@ -2,8 +2,9 @@
 
 A new question root is four edits and one test. Copy this file's pieces.
 
-1. **One family file**, `family/<kind>.rs`, implementing `DecisionFamily`
-   (override only the stages the kind owns; the defaults do nothing). The
+1. **One family file**, `family/<kind>.rs` in the lowest handler crate that
+   holds what the family reads, implementing `DecisionFamily` (override only
+   the stages the kind owns; the defaults do nothing). The
    file below is compiled by the `template_compiles` test, so it cannot rot:
 
 ```rust
@@ -13,7 +14,7 @@ A new question root is four edits and one test. Copy this file's pieces.
 //! keeps the two identical, so the template a contributor copies always
 //! compiles against the current `DecisionFamily` trait.
 
-use super::DecisionFamily;
+use medulla_h_decide_base::decide::family::DecisionFamily;
 
 /// The refusal table: one row per stage failure the family names.
 const REFUSALS: &[(&str, &str)] = &[("no candidate", "template_no_candidate")];
@@ -34,9 +35,10 @@ impl DecisionFamily for TemplateFamily {
 }
 ```
 
-2. **One registration line** in `family/mod.rs`: a `mod <kind>;` line, a
-   `static <KIND>FAMILY` in `for_kind`, and the `QuestionKind::<Kind>` arm.
-   The exhaustive `match` makes a kind without a family a compile error.
+2. **One registration**: a `mod <kind>;` line in `family/mod.rs` of that crate,
+   and in `for_kind` (`family/registry.rs`, in `medulla-h-decide`) a
+   `static <KIND>FAMILY` and the `QuestionKind::<Kind>` arm. The exhaustive
+   `match` makes a kind without a family a compile error.
 3. **One refusal table** in the family file (`REFUSALS` above): each row maps a
    stage failure to its typed refusal code, applied through `refusals`.
 4. **One served test** in `stat_tests/<kind>_tests.rs` that calls

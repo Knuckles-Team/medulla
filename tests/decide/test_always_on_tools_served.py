@@ -7,7 +7,7 @@ then the two always-on capabilities, ``knowledge.flag`` and ``skills.friction``,
 outside it. The same question with a tenant policy that removes one of them
 (``removed_capabilities``) refuses ``ALWAYS_ON_TOOL_REMOVED``. The tool-subset leg of
 the row (``max_tools`` 1) is proven at L3 by
-``crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs`` and
+``crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs`` and
 ``tool_subset_tests.rs``.
 """
 

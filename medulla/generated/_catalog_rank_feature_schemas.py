@@ -1,7 +1,7 @@
 """The canonical feature schema of the ``catalog.*_rank`` decision points.
 
 Rows MEDULLA-DECISION-ENGINE-R829.4. Mirrors ``catalog_rank_feature_schema`` in
-``crates/medulla-h-decide/src/decide/features/capability_text.rs`` (the source
+``crates/medulla-h-decide-base/src/decide/features/capability_text.rs`` (the source
 of truth); keep the two in step by hand.
 
 A host publishes each entry once per tenant as a ``feature_schema`` component

@@ -13,8 +13,8 @@
 //!
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
-use super::SharedState;
 use medulla_decision_policy_types::loops::LoopOp;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -79,7 +79,7 @@ pub(super) async fn holds_live_lease(
 }
 
 #[cfg(feature = "statechart")]
-pub(super) mod served {
+pub mod served {
     use std::sync::Arc;
 
     use medulla_protocol_types::protocol::ResultPayload;
@@ -163,7 +163,7 @@ pub(super) mod served {
     }
 
     /// The loop store of one verified principal.
-    pub(in crate::decide) struct LoopStore {
+    pub struct LoopStore {
         store: Arc<StatechartStore>,
         loop_def: String,
         record_def: String,
@@ -174,11 +174,7 @@ pub(super) mod served {
 
     impl LoopStore {
         /// Open the shared statechart store and register both charts.
-        pub(in crate::decide) fn open(
-            persist_dir: Option<&str>,
-            tenant: &str,
-            actor: &str,
-        ) -> Result<Self, String> {
+        pub fn open(persist_dir: Option<&str>, tenant: &str, actor: &str) -> Result<Self, String> {
             let store = medulla_h_jobs::statechart::statechart_store(persist_dir)?;
             let loop_def = store
                 .define(&loop_statechart_def())
@@ -197,21 +193,21 @@ pub(super) mod served {
         }
 
         /// The same store with other knobs (tests).
-        #[cfg(test)]
-        pub(in crate::decide) fn with_knobs(mut self, knobs: LoopKnobs) -> Self {
+        #[cfg(any(test, feature = "test-support"))]
+        pub fn with_knobs(mut self, knobs: LoopKnobs) -> Self {
             self.knobs = knobs;
             self
         }
 
         /// The underlying statechart store (tests seed corrupt state with it).
-        #[cfg(test)]
-        pub(in crate::decide) fn statecharts(&self) -> &Arc<StatechartStore> {
+        #[cfg(any(test, feature = "test-support"))]
+        pub fn statecharts(&self) -> &Arc<StatechartStore> {
             &self.store
         }
 
         /// The instance key of `kind` for `loop_id` in this tenant.
-        #[cfg(test)]
-        pub(in crate::decide) fn key(&self, kind: &str, loop_id: &str) -> String {
+        #[cfg(any(test, feature = "test-support"))]
+        pub fn key(&self, kind: &str, loop_id: &str) -> String {
             request_key(kind, &self.tenant, loop_id)
         }
 
@@ -225,11 +221,7 @@ pub(super) mod served {
         }
 
         /// Run one operation at `now_ms`.
-        pub(in crate::decide) fn serve_at(
-            &self,
-            op: LoopOp,
-            now_ms: u64,
-        ) -> Result<ResultPayload, String> {
+        pub fn serve_at(&self, op: LoopOp, now_ms: u64) -> Result<ResultPayload, String> {
             match op {
                 LoopOp::Claim {
                     loop_id,
@@ -385,10 +377,7 @@ pub(super) mod served {
         }
 
         /// Both instances of a loop, or `LOOP_NOT_FOUND`.
-        pub(in crate::decide) fn require(
-            &self,
-            loop_id: &str,
-        ) -> Result<(MachineInstance, MachineInstance), String> {
+        pub fn require(&self, loop_id: &str) -> Result<(MachineInstance, MachineInstance), String> {
             let state = self.find("loop", loop_id)?;
             let record = self.find("loop_record", loop_id)?;
             match (state, record) {
@@ -421,7 +410,7 @@ pub(super) mod served {
 
         /// Deliver one event under the instance's version; a refused or
         /// conflicting event writes nothing.
-        pub(in crate::decide) fn send(
+        pub fn send(
             &self,
             instance: &MachineInstance,
             event: EventInput,

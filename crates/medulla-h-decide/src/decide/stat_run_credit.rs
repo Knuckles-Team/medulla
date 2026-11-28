@@ -34,27 +34,36 @@ use {
     medulla_decision_stats_records::decision::run_credit::Baseline,
 };
 
-use super::stat_executor::ExecutionContext;
-use super::stat_log::{visible_entry, LogReader};
-use super::stat_retrieval::{check_joinable, stored_outcome};
-use super::stat_support::{refusal, resolve_policy};
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use {
+    medulla_h_decide_base::decide::stat_log_reader::visible_entry,
+    medulla_h_decide_base::decide::stat_log_reader::LogReader,
+};
+use {
+    medulla_h_decide_base::decide::stat_support::refusal,
+    medulla_h_decide_base::decide::stat_support::resolve_policy,
+};
+use {
+    medulla_h_decide_runlog::decide::stat_retrieval::check_joinable,
+    medulla_h_decide_runlog::decide::stat_retrieval::stored_outcome,
+};
 
 const RUN_PREFIX: &str = "run_credit/run/";
 const BASELINE_PREFIX: &str = "run_credit/baseline/";
 
 /// One stored baseline revision of a capability.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(super) struct StoredBaseline {
+pub struct StoredBaseline {
     pub(super) capability_iri: String,
-    pub(super) value_q16: i32,
-    pub(super) revision: u32,
+    pub value_q16: i32,
+    pub revision: u32,
 }
 
 fn invalid_argument(detail: impl std::fmt::Display) -> String {
     format!("INVALID_ARGUMENT: {detail}")
 }
 
-pub(super) fn run_key(run_id: &str) -> String {
+pub fn run_key(run_id: &str) -> String {
     format!("{RUN_PREFIX}{run_id}")
 }
 
@@ -72,7 +81,7 @@ fn baseline_key(capability_iri: &str, revision: u32) -> String {
 }
 
 /// The latest stored baseline of `capability_iri`, if any.
-pub(super) fn latest_baseline(
+pub fn latest_baseline(
     store: &AgentLibraryStore,
     tenant_id: &str,
     capability_iri: &str,
@@ -86,7 +95,7 @@ pub(super) fn latest_baseline(
 }
 
 /// The stored receipt of run `run_id`, if any.
-pub(super) fn stored_receipt(
+pub fn stored_receipt(
     store: &AgentLibraryStore,
     tenant_id: &str,
     run_id: &str,

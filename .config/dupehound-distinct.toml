@@ -478,10 +478,10 @@ reviewed_on = "2026-09-25"
 reason = """IndexKind labels identify index implementations in a manifest; IndexValidity labels represent the lifecycle state of those indexes. The enum types and field meanings differ, so a shared table would mix identity with state."""
 
 [[pair]]
-left_file = "crates/medulla-h-decide/src/decide/stat_jobs.rs"
+left_file = "crates/medulla-h-decide-learning/src/decide/stat_jobs.rs"
 left_name = "serve_eval"
 left_digest = "sha256:25dea6686927585782e5bbec3ca54c12eabab6536aa41b7ca4919872a6ff9376"
-right_file = "crates/medulla-h-decide/src/decide/stat_jobs.rs"
+right_file = "crates/medulla-h-decide-learning/src/decide/stat_jobs.rs"
 right_name = "serve_fit"
 right_digest = "sha256:93b7831ec80c1dcffff25609536897d8c7578224a18fc9f008dcf5f6aaba3325"
 reviewed_on = "2026-09-27"

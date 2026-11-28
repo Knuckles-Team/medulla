@@ -529,7 +529,7 @@ async fn research_tools(
     state: &Arc<RwLock<ServerState>>,
     target: &SdlcTarget<'_>,
 ) -> Result<Vec<medulla_sdlc::lifecycle::research::ResearchTool>, String> {
-    let read = medulla_h_decide::decide::read_contract_tools(
+    let read = medulla_h_decide::decide::execution_answer::read_contract_tools(
         state,
         target.graph,
         target.verified,

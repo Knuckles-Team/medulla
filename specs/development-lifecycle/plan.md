@@ -40,8 +40,8 @@ crates/medulla-h-ingest/src/lifecycle.rs                           new       ser
 crates/medulla-h-ingest/src/lifecycle_tests.rs                     new       tenant-scope and refusal tests of those handlers
 crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs    new       spec document and artifact projection, incremental ingest, linking (R009, R014)
 crates/medulla-h-decide/src/decide/triage.rs                       new       TriageDefect handler (R004.3)
-crates/medulla-h-decide/src/decide/family/defect_triage.rs         new       DefectTriage decide family (R004)
-crates/medulla-h-decide/src/decide/family/task_context.rs          new       run-context assembly (R015.2)
+crates/medulla-h-decide-learning/src/decide/family/defect_triage.rs         new       DefectTriage decide family (R004)
+crates/medulla-h-decide-base/src/decide/family/task_context.rs          new       run-context assembly (R015.2)
 crates/medulla-decision-outcome-types/src/decision/defect_triage.rs  existing  triage types, knobs and refusals (R004.1, R004.7)
 crates/medulla-decision-stats/src/decision/defect_triage.rs        new       triage kernel (R004.8)
 crates/medulla-competency/src/spec_artifact_questions.rs           new       spec artifact competency questions (R014.6, R018.2)

@@ -5,6 +5,7 @@ The budget and the split rows are MEDULLA-CONTRACT-R067.
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -147,3 +148,37 @@ def test_decision_types_split_is_within_budget() -> None:
             "medulla-decision-types",
         ]
     )
+
+
+# spec: MEDULLA-CONTRACT-R067.7
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.7")
+def test_h_decide_split_is_within_budget() -> None:
+    crates = [
+        "medulla-h-decide-base",
+        "medulla-h-decide-runlog",
+        "medulla-h-decide-learning",
+        "medulla-h-decide",
+        "medulla-h-decide-stat-tests",
+        "medulla-h-decide-family-tests",
+        "medulla-h-decide-served-tests",
+    ]
+    _assert_split(crates)
+    # No upward edge: a crate never depends on a crate listed after it.
+    for rank, crate in enumerate(crates):
+        manifest = tomllib.loads((REPO / "crates" / crate / "Cargo.toml").read_text())
+        deps = manifest.get("dependencies", {})
+        for higher in crates[rank + 1 :]:
+            if crate in ("medulla-h-decide-family-tests", "medulla-h-decide-served-tests") and higher == "medulla-h-decide-stat-tests":
+                continue
+            assert higher not in deps, f"{crate} depends on the higher crate {higher}"
+    # The two later test crates reach the shared test helpers of the first one.
+    for crate in ("medulla-h-decide-family-tests", "medulla-h-decide-served-tests"):
+        manifest = tomllib.loads((REPO / "crates" / crate / "Cargo.toml").read_text())
+        assert "test-support" in manifest["dependencies"]["medulla-h-decide-stat-tests"]["features"]
+    # The old paths are gone: a moved module is no longer a module of the kept crate.
+    kept = REPO / "crates" / "medulla-h-decide" / "src" / "decide"
+    for moved in ("stat_log.rs", "stat_replay.rs", "assemble.rs", "family/rank.rs"):
+        assert not (kept / moved).exists(), f"{moved} still sits in medulla-h-decide"
+    # The family registry and the seam sit above every module they name.
+    assert (kept / "family" / "registry.rs").is_file()
+    assert (kept / "seam.rs").is_file()

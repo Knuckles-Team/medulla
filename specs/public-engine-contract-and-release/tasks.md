@@ -153,7 +153,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T146 [US5] MEDULLA-CONTRACT-R067.4 Split `medulla-identity-types` into two crates.
 - [ ] T147 [US5] MEDULLA-CONTRACT-R067.5 Split `medulla-decision-stats` into two crates.
 - [ ] T148 [US5] MEDULLA-CONTRACT-R067.6 Split `medulla-compute` into two crates.
-- [ ] T149 [US5] MEDULLA-CONTRACT-R067.7 Split `medulla-h-decide` into seven crates.
+- [ ] T149 [US5] MEDULLA-CONTRACT-R067.7 Split `medulla-h-decide` into seven crates: three lower handler crates, the kept `medulla-h-decide` and three test crates, each at most 25,000 lines.
 - [ ] T150 [US5] MEDULLA-CONTRACT-R067.8 Split `medulla-h-admin` into two crates.
 - [ ] T151 [US5] MEDULLA-CONTRACT-R067.9 Split `medulla-h-ingest` into two crates.
 - [ ] T152 [US5] MEDULLA-CONTRACT-R067.10 Split `medulla-h-graph` into two crates.

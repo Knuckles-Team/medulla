@@ -4,7 +4,7 @@
 //! keeps the two identical, so the template a contributor copies always
 //! compiles against the current `DecisionFamily` trait.
 
-use super::DecisionFamily;
+use medulla_h_decide_base::decide::family::DecisionFamily;
 
 /// The refusal table: one row per stage failure the family names.
 const REFUSALS: &[(&str, &str)] = &[("no candidate", "template_no_candidate")];

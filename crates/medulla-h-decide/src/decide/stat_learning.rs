@@ -24,33 +24,17 @@ use medulla_decision_types::{
     decision::statistical::retrieval::PointerRef,
 };
 
-use super::drift_registry::registry;
-use super::policy_activation::{guard_activation, record_review};
-use super::stat_adapter::{
-    adapter_pointer, ensure_room, fit_adapter, monitor, qualified, qualified_index,
-    scoped_adapter_pointer,
-};
 use super::stat_calibration::{calibration_pointer, fit_calibration, qualified_calibration};
 use super::stat_distilled::upload_scores;
-use super::stat_executor::ExecutionContext;
-use super::stat_generation::{
-    evaluate_generation, generation_pointer, qualified_generation, Generations,
-};
-use super::stat_generation_cycle::{
-    job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
-};
-use super::stat_log::{store_once, LogReader};
-use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
-use super::stat_promotion::{qualified_champion, record_rollouts};
-use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
-use super::stat_support::{invalid_parameter, refusal};
-use super::stat_vectors::{graph_vectors, GraphVectors};
-use super::SharedState;
 use medulla_decision_policy_types::decision::held_out::RevisionSubject;
 use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
 use medulla_decision_statistical_types::decision::DecisionPolicy;
 use medulla_decision_stats::decision::drift::DriftThresholds;
+use medulla_h_decide_base::decide::drift_registry::registry;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::SharedState;
+use medulla_h_decide_runlog::decide::stat_retrieval::record_outcome;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::read_pointer;
@@ -80,6 +64,55 @@ use {
     medulla_decision_policy_types::decision::statistical::retrieval_drift::RETRIEVAL_DRIFT_SCHEMA_VERSION,
     medulla_decision_policy_types::decision::statistical::retrieval_drift::SHARD_GENERATION_NODE_TYPE,
 };
+use {
+    medulla_h_decide_base::decide::stat_adapter_lo::adapter_pointer,
+    medulla_h_decide_base::decide::stat_adapter_lo::scoped_adapter_pointer,
+    medulla_h_decide_learning::decide::stat_adapter::ensure_room,
+    medulla_h_decide_learning::decide::stat_adapter::fit_adapter,
+    medulla_h_decide_learning::decide::stat_adapter::monitor,
+    medulla_h_decide_learning::decide::stat_adapter::qualified,
+    medulla_h_decide_learning::decide::stat_adapter::qualified_index,
+};
+use {
+    medulla_h_decide_base::decide::stat_generation::generation_pointer,
+    medulla_h_decide_base::decide::stat_generation::qualified_generation,
+    medulla_h_decide_base::decide::stat_generation::Generations,
+    medulla_h_decide_runlog::decide::stat_generation_hi::evaluate_generation,
+};
+use {
+    medulla_h_decide_base::decide::stat_log_reader::store_once,
+    medulla_h_decide_base::decide::stat_log_reader::LogReader,
+};
+use {
+    medulla_h_decide_base::decide::stat_pointer::activate,
+    medulla_h_decide_base::decide::stat_pointer::rollback,
+    medulla_h_decide_base::decide::stat_pointer::PointerMove,
+    medulla_h_decide_base::decide::stat_pointer::Qualified,
+};
+use {
+    medulla_h_decide_base::decide::stat_promotion::qualified_champion,
+    medulla_h_decide_base::decide::stat_promotion::record_rollouts,
+};
+use {
+    medulla_h_decide_base::decide::stat_support::invalid_parameter,
+    medulla_h_decide_base::decide::stat_support::refusal,
+};
+use {
+    medulla_h_decide_base::decide::stat_vectors::graph_vectors,
+    medulla_h_decide_base::decide::stat_vectors::GraphVectors,
+};
+use {
+    medulla_h_decide_runlog::decide::policy_activation::guard_activation,
+    medulla_h_decide_runlog::decide::policy_activation::record_review,
+};
+use {
+    medulla_h_decide_runlog::decide::stat_generation_cycle::job_id,
+    medulla_h_decide_runlog::decide::stat_generation_cycle::run_cycle,
+    medulla_h_decide_runlog::decide::stat_generation_cycle::ConfiguredEmbedder,
+    medulla_h_decide_runlog::decide::stat_generation_cycle::CycleRun,
+    medulla_h_decide_runlog::decide::stat_generation_cycle::NoEndpoint,
+    medulla_h_decide_runlog::decide::stat_generation_cycle::Reembedder,
+};
 
 /// What a learning write resolved before its blocking store work.
 pub(super) struct LearningInputs {
@@ -101,8 +134,9 @@ pub(super) struct LearningInputs {
     refresh_graph: Option<GraphVectors>,
     /// The graph nodes a refresh staged; the served `DecisionLog` commits them through the
     /// durable mutation path once the blocking half returned.
-    pub(super) refresh_link:
-        std::sync::Arc<std::sync::Mutex<Option<super::run_record::StagedLink>>>,
+    pub(super) refresh_link: std::sync::Arc<
+        std::sync::Mutex<Option<medulla_h_decide_base::decide::run_record::StagedLink>>,
+    >,
     /// What a drift refresh applies in memory (the shard swap and the monitors' new reference)
     /// once its generation pointers committed; dropped when the commit fails.
     pub(super) refresh_apply: std::sync::Arc<std::sync::Mutex<Option<RefreshApply>>>,
@@ -173,8 +207,13 @@ impl Serving<'_> {
     }
 
     fn fit_catalog(&self, catalog_ref: &str) -> Result<LearningRecorded, String> {
-        let catalog = super::stat_recommend::CatalogRead::read(self.graph(0)?);
-        let fitted = super::stat_recommend::fit_catalog_encoder(self.ctx, catalog_ref, &catalog)?;
+        let catalog =
+            medulla_h_decide_base::decide::stat_recommend::CatalogRead::read(self.graph(0)?);
+        let fitted = medulla_h_decide_base::decide::stat_recommend::fit_catalog_encoder(
+            self.ctx,
+            catalog_ref,
+            &catalog,
+        )?;
         Ok(LearningRecorded::CatalogEncoder(Box::new(fitted)))
     }
 
@@ -403,7 +442,7 @@ impl Serving<'_> {
             .as_ref()
             .ok_or("a drift refresh was not prepared")?;
         let durable = self.durable_generations(graph, logical, &scheduled);
-        let conflict = |found: super::drift_registry::SwapConflict| {
+        let conflict = |found: medulla_h_decide_base::decide::drift_registry::SwapConflict| {
             refusal(
                 StatisticalErrorCode::ShardSwapConflict,
                 format!(
@@ -560,7 +599,7 @@ impl Serving<'_> {
                 .refresh_link
                 .lock()
                 .map_err(|_| "the staged refresh slot is poisoned".to_string())? =
-                Some(super::run_record::StagedLink {
+                Some(medulla_h_decide_base::decide::run_record::StagedLink {
                     graph: logical.to_string(),
                     core: std::sync::Arc::clone(graph.core()),
                     methods,
@@ -596,7 +635,7 @@ impl Serving<'_> {
                 .refresh_link
                 .lock()
                 .map_err(|_| "the staged refresh slot is poisoned".to_string())? =
-                Some(super::run_record::StagedLink {
+                Some(medulla_h_decide_base::decide::run_record::StagedLink {
                     graph: graph.to_string(),
                     core: std::sync::Arc::clone(vectors.core()),
                     methods,
@@ -689,12 +728,14 @@ impl Serving<'_> {
                     subject: RevisionSubject::Skill { skill_ref, .. },
                 } = pointer
                 {
-                    if let Some(tier) = super::stat_promotion::promoted_tier(
-                        self.ctx.store,
-                        self.tenant(),
-                        receipt_digest,
-                    )? {
-                        super::stat_skill_tier::write_tier(
+                    if let Some(tier) =
+                        medulla_h_decide_base::decide::stat_promotion::promoted_tier(
+                            self.ctx.store,
+                            self.tenant(),
+                            receipt_digest,
+                        )?
+                    {
+                        medulla_h_decide_base::decide::stat_skill_tier::write_tier(
                             self.ctx.store,
                             self.tenant(),
                             skill_ref,
@@ -1076,17 +1117,19 @@ pub(super) fn dispatch(
             record_rollouts(ctx, *set)?,
         ))),
         LearningWrite::RecordCanary { canary, verdict } => Ok(LearningRecorded::Canary(Box::new(
-            super::stat_skill_ablation::record_canary(ctx, *canary, verdict)?,
+            medulla_h_decide_base::decide::stat_skill_ablation::record_canary(
+                ctx, *canary, verdict,
+            )?,
         ))),
         LearningWrite::RecordAblation { record } => Ok(LearningRecorded::Ablation(Box::new(
-            super::stat_skill_ablation::record_ablation(ctx, *record)?,
+            medulla_h_decide_base::decide::stat_skill_ablation::record_ablation(ctx, *record)?,
         ))),
         LearningWrite::RecordModelCompile {
             compile,
             model_revision,
             ..
         } => Ok(LearningRecorded::ModelCompile(Box::new(
-            super::stat_skill_ablation::record_model_compile(
+            medulla_h_decide_base::decide::stat_skill_ablation::record_model_compile(
                 ctx,
                 s.graph(0)?,
                 *compile,

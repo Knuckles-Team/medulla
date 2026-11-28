@@ -237,118 +237,118 @@ These tests are planned and have not run.
 
 Each entry below is planned. The test file or function does not exist in the tree yet; the row that binds it adds it at the stated post-split path.
 
-- `MEDULLA-DECISION-ENGINE-R130.4`: `crates/medulla-h-decide/src/decide/stat_tests/rank_tests.rs::uncalibrated_option_abstains_with_its_code` (planned, L3): proves uncalibrated option abstains. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R130.5`: `crates/medulla-h-decide/src/decide/stat_tests/rank_tests.rs::tied_pair_records_tie_break_premises` (planned, L3): proves ranking premises in the sealed record. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R130.6`: `crates/medulla-h-decide/src/decide/stat_tests/rank_tests.rs::tied_codes_resolve_by_item_score_end_to_end` (planned, L3): proves hot-path proof for calibrated ranking. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R131`: `crates/medulla-h-decide/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (planned, L3): proves limit guard refuses a breaching action with a typed reason (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R131.3`: `crates/medulla-h-decide/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (L3): proves limit stage wired into Decide.
-- `MEDULLA-DECISION-ENGINE-R131.4`: `crates/medulla-h-decide/src/decide/stat_tests/limit_guard_tests.rs::breach_abstains_naming_the_first_rule` (planned, L3): proves limit breach abstention. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R131.5`: `crates/medulla-h-decide/src/decide/stat_tests/limit_guard_tests.rs::committed_breach_writes_one_observation_linked_to_the_signal` (planned, L3): proves committed breach becomes an observation linked to the signal. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R131.6`: `crates/medulla-h-decide/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (planned, L3): proves hot-path proof for the limit guard. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R132`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves retrieved entries carry a trust tier and a poison check gates premises (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R132.3`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves entry admission wired into Decide. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R132.4`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::poisoned_only_required_fact_abstains` (planned, L3): proves poisoned-entry abstention. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R132.5`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::refused_entries_are_recorded_and_replay` (planned, L3): proves refused entries and tiers in the sealed record. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R132.6`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves hot-path proof for entry trust. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves run traces as typed facts and runtime quotas (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves quota and run-trace records. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves quota resolution only tightens. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::cross_tenant_task_class_is_not_read` (planned, L3): proves runtime quota family wiring. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::above_ceiling_refuses_before_task_lookup` (planned, L3): proves quota refusals and the missing-task-class answer. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::missing_task_class_answers_defaults` (planned, L3): proves quota refusals and the missing-task-class answer. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R133.5`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::premises_name_each_value_and_default_source` (planned, L3): proves quota premises. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves tool selection, decomposition and planning (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R130.4`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rank_tests.rs::uncalibrated_option_abstains_with_its_code` (planned, L3): proves uncalibrated option abstains. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R130.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rank_tests.rs::tied_pair_records_tie_break_premises` (planned, L3): proves ranking premises in the sealed record. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R130.6`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rank_tests.rs::tied_codes_resolve_by_item_score_end_to_end` (planned, L3): proves hot-path proof for calibrated ranking. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R131`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (planned, L3): proves limit guard refuses a breaching action with a typed reason (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R131.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (L3): proves limit stage wired into Decide.
+- `MEDULLA-DECISION-ENGINE-R131.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/limit_guard_tests.rs::breach_abstains_naming_the_first_rule` (planned, L3): proves limit breach abstention. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R131.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/limit_guard_tests.rs::committed_breach_writes_one_observation_linked_to_the_signal` (planned, L3): proves committed breach becomes an observation linked to the signal. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R131.6`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/limit_guard_tests.rs::breaching_action_abstains_and_commit_records_the_breach` (planned, L3): proves hot-path proof for the limit guard. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R132`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves retrieved entries carry a trust tier and a poison check gates premises (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R132.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves entry admission wired into Decide. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R132.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::poisoned_only_required_fact_abstains` (planned, L3): proves poisoned-entry abstention. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R132.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::refused_entries_are_recorded_and_replay` (planned, L3): proves refused entries and tiers in the sealed record. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R132.6`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact` (planned, L3): proves hot-path proof for entry trust. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves run traces as typed facts and runtime quotas (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves quota and run-trace records. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::runtime_quota_journey` (planned, L3): proves quota resolution only tightens. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::cross_tenant_task_class_is_not_read` (planned, L3): proves runtime quota family wiring. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::above_ceiling_refuses_before_task_lookup` (planned, L3): proves quota refusals and the missing-task-class answer. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::missing_task_class_answers_defaults` (planned, L3): proves quota refusals and the missing-task-class answer. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R133.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::premises_name_each_value_and_default_source` (planned, L3): proves quota premises. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves tool selection, decomposition and planning (rollup). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::aggregation_round_trips` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::aggregation_off_the_output_task_refuses` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.1`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::relevant_tools_fit_budget` (L1): proves behavior: tool relevance ranking and covering subset.
-- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` (L3): proves behavior: tool relevance ranking and covering subset.
+- `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` (L3): proves behavior: tool relevance ranking and covering subset.
 - `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::independent_subtasks_yield_no_edges_and_operator` (planned, L3): proves behavior: task decomposition. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves behavior: task decomposition. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves behavior: task decomposition. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-decision-stats/src/decision/skill_plan.rs::tests::skill_plan_respects_dependencies` (planned, L3): proves behavior: planning over the skill library. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves behavior: planning over the skill library. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.5`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves wiring: automatic task plans through `Decide`. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves behavior: planning over the skill library. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves wiring: automatic task plans through `Decide`. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.8`: `tests/decide/test_task_plan_served.py::test_automatic_plan_end_to_end` (planned, L4): proves hot-path proof: automatic plan served end to end. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.8`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves hot-path proof: automatic plan served end to end. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R136.7`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::served_verdict_and_allocation_journey` (planned, L3): proves hot-path proof: served round journey. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::over_window_journey` (planned, L3): proves context budget, recursive limits and certified package selection (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves context budget, recursive limits and certified package selection (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::window_source_order` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::cross_tenant_profile_is_not_read` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::budget_exhausted_names_the_limit` (planned, L3): proves over-window refusals. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.8`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_automatic_task_plan` (planned, L3): proves hot-path proof: automatic plan served end to end. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R136.7`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::served_verdict_and_allocation_journey` (planned, L3): proves hot-path proof: served round journey. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_budget_tests.rs::over_window_journey` (planned, L3): proves context budget, recursive limits and certified package selection (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves context budget, recursive limits and certified package selection (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::window_source_order` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::cross_tenant_profile_is_not_read` (planned, L3): proves over-window plan family wiring. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::budget_exhausted_names_the_limit` (planned, L3): proves over-window refusals. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-decision-types/src/decision/context_package.rs::tests::package_records_round_trip` (planned, L1): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves context package records. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/context_package/tests.rs::matches_tiny_multiresolution_oracle` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/context_package/tests.rs::each_ceiling_can_be_the_tightest` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/context_package/tests.rs::order_does_not_change_the_optimum` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::decide_routes_package_selection` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::corrupted_certificate_is_refused` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::cross_tenant_candidate_is_not_visible` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_refusals_are_typed` (L3): proves package refusals and abstentions.
-- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::stale_source_is_refused` (L3): proves package refusals and abstentions.
-- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::exhausted_budget_abstains_with_incumbent` (L3): proves package refusals and abstentions.
-- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_evidence_binds_inputs` (L3): proves package evidence.
-- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::totals_are_recomputed_not_trusted` (L3): proves package evidence.
-- `MEDULLA-DECISION-ENGINE-R138`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves the engine holds red-team records and returns a verdict for each probe (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict` (L3): proves wiring.
-- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_refusals` (L3): proves refusal.
-- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores` (planned, L3): proves evidence. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R138.6`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (L3): proves hot-path proof.
+- `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_journey` (planned, L3): proves package lowering and exact selection kernel. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::decide_routes_package_selection` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::corrupted_certificate_is_refused` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::cross_tenant_candidate_is_not_visible` (planned, L3): proves package family wiring with independent certificate check. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_refusals_are_typed` (L3): proves package refusals and abstentions.
+- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::stale_source_is_refused` (L3): proves package refusals and abstentions.
+- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::exhausted_budget_abstains_with_incumbent` (L3): proves package refusals and abstentions.
+- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_evidence_binds_inputs` (L3): proves package evidence.
+- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::totals_are_recomputed_not_trusted` (L3): proves package evidence.
+- `MEDULLA-DECISION-ENGINE-R138`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves the engine holds red-team records and returns a verdict for each probe (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict` (L3): proves wiring.
+- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_refusals` (L3): proves refusal.
+- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores` (planned, L3): proves evidence. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R138.6`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (L3): proves hot-path proof.
 - `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-agent-types/src/agent_component/validation.rs::tests::red_team_bodies_validate_and_refuse_unknown_fields` (planned, L1): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves comparative-analysis plan producer (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R138.7`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::probe_verdict_journey` (planned, L3): proves store red-team records as library components. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves comparative-analysis plan producer (rollup). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-decision-statistical-types/src/decision/comparative_analysis.rs::tests::comparative_types_round_trip` (planned, L1): proves model. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves model. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-stats-records/src/decision/comparative_analysis.rs::tests::thresholds_inclusive_and_budgets` (planned, L1): proves behaviour. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves behaviour. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (L3): proves wiring and authority.
-- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::other_tenant_candidates_never_enter_the_plan` (L3): proves wiring and authority.
-- `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::comparative_refusals` (planned, L3): proves typed refusal. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::mutating_a_bound_input_changes_the_plan_digest` (planned, L3): proves evidence. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R100.101`: `crates/medulla-h-decide/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (planned, L3): proves grounded topic coverage and probability-scored unsupported claims (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (planned, L3): proves behaviour. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::served_decide_returns_budgeted_plan` (L3): proves wiring and authority.
+- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::other_tenant_candidates_never_enter_the_plan` (L3): proves wiring and authority.
+- `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::comparative_refusals` (planned, L3): proves typed refusal. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::mutating_a_bound_input_changes_the_plan_digest` (planned, L3): proves evidence. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R100.101`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (planned, L3): proves grounded topic coverage and probability-scored unsupported claims (rollup). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R100.101.1`: `crates/medulla-decision-stats-records/src/decision/grounded_eval.rs::tests::coverage_sums_numerators_before_dividing` (L1): proves grounded topic coverage.
-- `MEDULLA-DECISION-ENGINE-R100.101.1`: `crates/medulla-h-decide/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (L3): proves grounded topic coverage.
+- `MEDULLA-DECISION-ENGINE-R100.101.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (L3): proves grounded topic coverage.
 - `MEDULLA-DECISION-ENGINE-R100.101.2`: `crates/medulla-decision-stats-records/src/decision/grounded_eval.rs::tests::brier_changes_by_the_formula_when_only_p_varies` (L1): proves soft-label unsupported-claim Brier score.
-- `MEDULLA-DECISION-ENGINE-R100.101.2`: `crates/medulla-h-decide/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (L3): proves soft-label unsupported-claim Brier score.
-- `MEDULLA-DECISION-ENGINE-R100.101.3`: `crates/medulla-h-decide/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (planned, L3): proves grounded evaluation wiring, scorer isolation and evidence. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R001.100`: `crates/medulla-h-decide/src/decide/stat_tests/safety_bound_tests.rs::in_bound_passes_and_out_of_bound_withholds` (planned, L3): proves quantitative safety bounds before a recommendation surfaces. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R100.101.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (L3): proves soft-label unsupported-claim Brier score.
+- `MEDULLA-DECISION-ENGINE-R100.101.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/grounded_eval_tests.rs::grounded_evaluation_is_sealed_with_scorer_isolation` (planned, L3): proves grounded evaluation wiring, scorer isolation and evidence. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R001.100`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/safety_bound_tests.rs::in_bound_passes_and_out_of_bound_withholds` (planned, L3): proves quantitative safety bounds before a recommendation surfaces. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R001.100.1`: `crates/medulla-decision-stats-records/src/decision/safety.rs::tests::first_violated_bound_withholds` (L1): proves safety bound types and evaluator.
-- `MEDULLA-DECISION-ENGINE-R001.100.1`: `crates/medulla-h-decide/src/decide/stat_tests/safety_bound_tests.rs::in_bound_passes_and_out_of_bound_withholds` (planned, L3): proves safety bound types and evaluator. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R001.100.2`: `crates/medulla-h-decide/src/decide/stat_tests/safety_bound_tests.rs::missing_stale_and_mismatched_measurements_refuse` (planned, L3): proves served safety bound check and refusals. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R001.101.1`: `crates/medulla-h-decide/src/decide/family/mod.rs::tests::every_question_kind_has_a_family` (L1): proves `DecisionFamily` trait and registry.
-- `MEDULLA-DECISION-ENGINE-R001.101.2`: `crates/medulla-h-decide/src/decide/stat_tests/registry_tests.rs::decide_dispatches_every_kind_through_its_family` (L3): proves route `decide_blocking` through the registry.
-- `MEDULLA-DECISION-ENGINE-R001.101.3`: `crates/medulla-h-decide/src/decide/stat_tests/registry_tests.rs::assemble_and_decide_text_use_the_registry` (planned, L3): proves route `AgentAssemble` and `DecideText` through the registry. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R001.100.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/safety_bound_tests.rs::in_bound_passes_and_out_of_bound_withholds` (planned, L3): proves safety bound types and evaluator. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R001.100.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/safety_bound_tests.rs::missing_stale_and_mismatched_measurements_refuse` (planned, L3): proves served safety bound check and refusals. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R001.101.1`: `crates/medulla-h-decide-base/src/decide/family/mod.rs::tests::every_question_kind_has_a_family` (L1): proves `DecisionFamily` trait and registry.
+- `MEDULLA-DECISION-ENGINE-R001.101.2`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/registry_tests.rs::decide_dispatches_every_kind_through_its_family` (L3): proves route `decide_blocking` through the registry.
+- `MEDULLA-DECISION-ENGINE-R001.101.3`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/registry_tests.rs::assemble_and_decide_text_use_the_registry` (planned, L3): proves route `AgentAssemble` and `DecideText` through the registry. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R001.101.5`: `crates/medulla-decision-types/src/decision/statistical.rs::tests::family_body_and_answer_round_trip` (planned, L1): proves typed family body and answer carriers. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R001.101.5`: `crates/medulla-h-decide/src/decide/stat_tests/registry_tests.rs::decide_dispatches_every_kind_through_its_family` (planned, L3): proves typed family body and answer carriers. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.7`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::preplan::reusable_pattern_requires_a_verified_preplan_receipt` (L3): proves pre-plan test receipt gates pattern promotion. L1: `preplan.rs::tests::every_blocking_case_names_its_code`.
-- `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-h-decide/src/decide/stat_tests/council_tests.rs::council_quorum_conflict_and_refusals` (planned, L3): proves council positions coordinate into one evidence-bound decision. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R001.101.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/registry_tests.rs::decide_dispatches_every_kind_through_its_family` (planned, L3): proves typed family body and answer carriers. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.7`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/program_store_tests.rs::preplan::reusable_pattern_requires_a_verified_preplan_receipt` (L3): proves pre-plan test receipt gates pattern promotion. L1: `preplan.rs::tests::every_blocking_case_names_its_code`.
+- `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/council_tests.rs::council_quorum_conflict_and_refusals` (planned, L3): proves council positions coordinate into one evidence-bound decision. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R106.1`: `crates/medulla-decision-program-types/src/decision/council.rs::tests::council_types_and_digests_round_trip` (planned, L1): proves the council types round trip and both digests are stable. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide/src/decide/stat_tests/recursion_mode_tests.rs::thresholds_select_mode` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide/src/decide/stat_tests/recursion_mode_tests.rs::bad_signals_refuse` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.9`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::served_decide_returns_ranked_skill_tree` (planned, L3): proves behavior: ranked skill tree per task. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.14`: `crates/medulla-h-decide/src/decide/stat_tests/context_replacement_tests.rs::replacement_follows_tolerance` (planned, L3): proves held-out comparison gates context replacement. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.14`: `crates/medulla-h-decide/src/decide/stat_tests/context_replacement_tests.rs::incomplete_verdicts_retain_raw` (planned, L3): proves held-out comparison gates context replacement. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.10`: `crates/medulla-h-decide/src/decide/stat_tests/fanout_tests.rs::summary_only_children_fit_the_parent_budget` (L3): proves summary-only child returns and parent budget.
-- `MEDULLA-DECISION-ENGINE-R137.15`: `crates/medulla-h-decide/src/decide/stat_tests/sub_call_admission_tests.rs::admits_a_matching_call` (planned, L3): proves sub-call signatures are checked before dispatch. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.15`: `crates/medulla-h-decide/src/decide/stat_tests/sub_call_admission_tests.rs::each_mismatch_refuses_with_expected_and_actual` (planned, L3): proves sub-call signatures are checked before dispatch. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.11`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::long_plan_splits_and_checkpoints_reconcile` (planned, L3): proves horizon partition and credit checkpoints. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.1`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves robust transfer estimate across model backbones (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/recursion_mode_tests.rs::thresholds_select_mode` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.13`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/recursion_mode_tests.rs::bad_signals_refuse` (planned, L3): proves measured signals select direct or recursive mode. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.9`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::served_decide_returns_ranked_skill_tree` (planned, L3): proves behavior: ranked skill tree per task. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.14`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_replacement_tests.rs::replacement_follows_tolerance` (planned, L3): proves held-out comparison gates context replacement. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.14`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_replacement_tests.rs::incomplete_verdicts_retain_raw` (planned, L3): proves held-out comparison gates context replacement. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/fanout_tests.rs::summary_only_children_fit_the_parent_budget` (L3): proves summary-only child returns and parent budget.
+- `MEDULLA-DECISION-ENGINE-R137.15`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/sub_call_admission_tests.rs::admits_a_matching_call` (planned, L3): proves sub-call signatures are checked before dispatch. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.15`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/sub_call_admission_tests.rs::each_mismatch_refuses_with_expected_and_actual` (planned, L3): proves sub-call signatures are checked before dispatch. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.11`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::long_plan_splits_and_checkpoints_reconcile` (planned, L3): proves horizon partition and credit checkpoints. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves robust transfer estimate across model backbones (rollup). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-decision-policy-types/src/decision/transfer.rs::tests::binding_and_estimate_round_trip` (planned, L1): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.1.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves model: backbone binding and transfer estimate. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R059.1.2`: `crates/medulla-decision-stats/src/decision/transfer.rs::tests::robust_rate_is_the_backbone_minimum_and_missing_backbones_refuse` (planned, L1): proves behaviour: minimum over backbones with complete independent rows. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.1.2`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves behaviour: minimum over backbones with complete independent rows. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.1.3`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves wiring, refusals and evidence of the served transfer read. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R059.2`: `crates/medulla-h-decide/src/decide/stat_tests/transfer_tests.rs::three_independent_successes_make_a_skill_candidate` (L3): proves skill candidates from repeated independent successes; the L1 kernel test `crates/medulla-decision-stats/src/decision/transfer.rs::tests::skill_needs_successes_from_enough_distinct_records` covers the distinct-record floor.
-- `MEDULLA-DECISION-ENGINE-R134.12`: `crates/medulla-h-decide/src/decide/stat_tests/trajectory_ladder_tests.rs::ladder_picks_smallest_rung_without_head_and_head_rung_with_one` (planned, L3): proves behavior: width and depth rung choice. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.12.1`: `crates/medulla-h-decide/src/decide/stat_tests/trajectory_ladder_tests.rs::paired_verdict_requires_complete_arms` (L3): proves paired-comparison verdict record.
-- `MEDULLA-DECISION-ENGINE-R134.12.1`: `crates/medulla-h-decide/src/decide/stat_tests/trajectory_ladder_tests.rs::fit_reads_stored_verdicts_as_the_ladder_dataset` (L3): proves `DecisionFit` reads the stored verdicts as the ladder head's dataset.
-- `MEDULLA-DECISION-ENGINE-R134.13`: `crates/medulla-h-decide/src/decide/stat_tests/synthesis_tests.rs::cited_compatible_findings_account_for_every_analyst` (L3): proves cited analyst synthesis with required abstention.
-- `MEDULLA-DECISION-ENGINE-R029.1`: `crates/medulla-h-decide/src/decide/stat_tests/retrieval_tests.rs::provider_binding_is_independent_and_never_substituted` (L3): proves committed retrieval provider binding with no substitution.
-- `MEDULLA-DECISION-ENGINE-R134.14`: `crates/medulla-h-decide/src/decide/stat_tests/branch_outcomes_tests.rs::complete_branch_set_yields_ordered_fusion_receipt` (planned, L3): proves branch outcome records and fusion receipt. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R020.1`: `crates/medulla-h-decide/src/decide/stat_tests/exploration_pool_tests.rs::matched_context_exploits_and_unmatched_context_may_explore` (planned, L3): proves context-matched exploitation pool before exploration (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R020.1.1`: `crates/medulla-h-decide/src/decide/stat_tests/exploration_pool_tests.rs::only_same_principal_history_matches` (planned, L3): proves context digest sealed and matched against prior records. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R020.1.2`: `crates/medulla-h-decide/src/decide/stat_tests/exploration_pool_tests.rs::matched_context_exploits_and_unmatched_context_may_explore` (planned, L3): proves exploitation pool gates exploration. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.1.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves behaviour: minimum over backbones with complete independent rows. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.1.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/transfer_tests.rs::aggregate_reports_robust_transfer_across_backbones` (planned, L3): proves wiring, refusals and evidence of the served transfer read. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R059.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/transfer_tests.rs::three_independent_successes_make_a_skill_candidate` (L3): proves skill candidates from repeated independent successes; the L1 kernel test `crates/medulla-decision-stats/src/decision/transfer.rs::tests::skill_needs_successes_from_enough_distinct_records` covers the distinct-record floor.
+- `MEDULLA-DECISION-ENGINE-R134.12`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_ladder_tests.rs::ladder_picks_smallest_rung_without_head_and_head_rung_with_one` (planned, L3): proves behavior: width and depth rung choice. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.12.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_ladder_tests.rs::paired_verdict_requires_complete_arms` (L3): proves paired-comparison verdict record.
+- `MEDULLA-DECISION-ENGINE-R134.12.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_ladder_tests.rs::fit_reads_stored_verdicts_as_the_ladder_dataset` (L3): proves `DecisionFit` reads the stored verdicts as the ladder head's dataset.
+- `MEDULLA-DECISION-ENGINE-R134.13`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/synthesis_tests.rs::cited_compatible_findings_account_for_every_analyst` (L3): proves cited analyst synthesis with required abstention.
+- `MEDULLA-DECISION-ENGINE-R029.1`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/retrieval_tests.rs::provider_binding_is_independent_and_never_substituted` (L3): proves committed retrieval provider binding with no substitution.
+- `MEDULLA-DECISION-ENGINE-R134.14`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/branch_outcomes_tests.rs::complete_branch_set_yields_ordered_fusion_receipt` (planned, L3): proves branch outcome records and fusion receipt. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R020.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/exploration_pool_tests.rs::matched_context_exploits_and_unmatched_context_may_explore` (planned, L3): proves context-matched exploitation pool before exploration (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R020.1.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/exploration_pool_tests.rs::only_same_principal_history_matches` (planned, L3): proves context digest sealed and matched against prior records. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R020.1.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/exploration_pool_tests.rs::matched_context_exploits_and_unmatched_context_may_explore` (planned, L3): proves exploitation pool gates exploration. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R133.7`: `crates/medulla-h-jobs/src/work_item_tests.rs::nested_trace_ingests_and_reads_back` (L3): commits a nested trace through signed dispatch, reads every node back by id with its record and class label, then reads the whole tree and a leaf with complete ancestry at the one snapshot.
 - `MEDULLA-DECISION-ENGINE-R133.7.1`: `crates/medulla-decision-program-types/src/decision/recursive_trace.rs::tests::snapshot_checks` (L1): proves a valid tree, a missing parent, a child that does not name this node as parent, a node of another snapshot, a cycle and a short digest.
 - `MEDULLA-DECISION-ENGINE-R133.7.1`: `crates/medulla-h-jobs/src/work_item_tests.rs::nested_trace_ingests_and_reads_back` (L3): the root slice test of the rollup R133.7; it commits a valid nested snapshot.
@@ -361,39 +361,39 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-DECISION-ENGINE-R133.8`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::run_trace_is_linked_to_unit` (L2): proves a graph read from the execution unit returns the stored trace node and its `produced` edge.
 - `MEDULLA-DECISION-ENGINE-R133.8`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::fenced_or_retry_commit_writes_no_trace` (L2): proves a fenced or retry-scheduled terminal commit writes neither node nor edge.
 - `MEDULLA-DECISION-ENGINE-R133.8`: `crates/medulla-h-jobs/src/work_item_tests.rs::terminal_commit_with_run_trace_receipt` (L3): runs signed dispatch (AddNode, ClaimWorkItem, CommitWorkItemResult), asserts a trace naming another run is refused RUN_TRACE_INVALID with nothing stored, then that the terminal commit stores the trace node and one `produced` edge from the work item.
-- `MEDULLA-DECISION-ENGINE-R100.1`: `crates/medulla-h-decide/src/decide/stat_tests/feedback_tests.rs::feedback_labels_reach_the_adapter_fit` (planned, L3): proves feedback examples join decisions with outcomes (rollup). The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R100.1.1`: `crates/medulla-h-decide/src/decide/stat_tests/feedback_tests.rs::feedback_event_joins_once_and_refuses_incomplete_joins` (planned, L3): proves feedback event write. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R100.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_tests.rs::feedback_labels_reach_the_adapter_fit` (planned, L3): proves feedback examples join decisions with outcomes (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R100.1.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_tests.rs::feedback_event_joins_once_and_refuses_incomplete_joins` (planned, L3): proves feedback event write. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R100.1.1`: `crates/medulla-decision-types/src/decision/statistical/feedback.rs::tests::feedback_event_round_trips` (planned, L1): proves feedback event write. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R100.1.2`: `crates/medulla-h-decide/src/decide/stat_tests/feedback_tests.rs::feedback_labels_reach_the_adapter_fit` (L3): proves feedback labels reach the adapter fit.
+- `MEDULLA-DECISION-ENGINE-R100.1.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_tests.rs::feedback_labels_reach_the_adapter_fit` (L3): proves feedback labels reach the adapter fit.
 - `MEDULLA-DECISION-ENGINE-R100.1.2`: `crates/medulla-decision-stats-records/src/decision/adapter.rs::tests::latest_feedback_label_wins_and_ties_go_negative` (L1): proves feedback labels reach the adapter fit.
-- `MEDULLA-DECISION-ENGINE-R088.2`: `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves ordered event replay with a sealed receipt (rollup). The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R088.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves ordered event replay with a sealed receipt (rollup). The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R088.2.1`: `crates/medulla-decision-stats/src/decision/replay/tests.rs::event_order_refusals` (planned, L3): proves replay event and receipt types. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R088.2.1`: `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves replay event and receipt types. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R088.2.2`: `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves served event replay. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::complexity_changes_the_package_at_fixed_remaining` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::remaining_changes_the_package_at_fixed_complexity` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::negative_remainder_and_tokenizer_mismatch_refuse` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R029.2`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::every_source_is_selected_or_omitted_once` (L3): proves complete selected and omitted context-source partition (rollup).
+- `MEDULLA-DECISION-ENGINE-R088.2.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves replay event and receipt types. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R088.2.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/replay_tests.rs::event_replay_resumes_from_its_cursor_with_the_same_digest` (planned, L3): proves served event replay. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::complexity_changes_the_package_at_fixed_remaining` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::remaining_changes_the_package_at_fixed_complexity` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R137.16`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::negative_remainder_and_tokenizer_mismatch_refuse` (planned, L3): proves task complexity and remaining tokens bound the package. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R029.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_budget_tests.rs::every_source_is_selected_or_omitted_once` (L3): proves complete selected and omitted context-source partition (rollup).
 - `MEDULLA-DECISION-ENGINE-R029.2.1`: `crates/medulla-decision-stats-records/src/decision/context_partition.rs::tests::partition_is_exhaustive_and_disjoint` (planned, L1): proves context-source partition types and rule. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R029.2.1`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::every_source_is_selected_or_omitted_once` (L3): proves context-source partition types and rule.
-- `MEDULLA-DECISION-ENGINE-R029.2.2`: `crates/medulla-h-decide/src/decide/stat_tests/context_budget_tests.rs::refusals_and_unauthorized_sources_leak_nothing` (L3): proves served context-budget family and refusals.
+- `MEDULLA-DECISION-ENGINE-R029.2.1`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_budget_tests.rs::every_source_is_selected_or_omitted_once` (L3): proves context-source partition types and rule.
+- `MEDULLA-DECISION-ENGINE-R029.2.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_budget_tests.rs::refusals_and_unauthorized_sources_leak_nothing` (L3): proves served context-budget family and refusals.
 - `MEDULLA-DECISION-ENGINE-R029.3`: `tests/test_decision_client.py::test_retrieval_plan_request_declares_registered_plans_and_pins_the_provider` (L1): proves: the row
-- `MEDULLA-DECISION-ENGINE-R134.15`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::critical_chain_picks_longest_weighted_path` (planned, L3): proves weighted critical chain over a task plan. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.15`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::critical_chain_picks_longest_weighted_path` (planned, L3): proves weighted critical chain over a task plan. The test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-decision-statistical-types/src/decision/program_store/insight.rs::tests::insight_without_source_rejected` (planned, L1): proves insight model. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (L3): proves insight model. The test is `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs`.
+- `MEDULLA-DECISION-ENGINE-R135.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (L3): proves insight model. The test is `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs`.
 - `MEDULLA-DECISION-ENGINE-R135.11`: `crates/medulla-decision-stats-records/src/decision/insight.rs::tests::consolidation_and_selection_order` (planned, L1): proves behavior: consolidate and select insights. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.11`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves behavior: consolidate and select insights. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.12`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves wiring: insight submission and selection. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.13`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::insight_refusals_store_nothing` (L3): proves refusal: insights. The test is `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::insight_refusals_store_nothing`.
-- `MEDULLA-DECISION-ENGINE-R135.14`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::selection_premises_link_source_runs` (L3): proves evidence: insight selection premises. The test is `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::selection_premises_link_source_runs`.
+- `MEDULLA-DECISION-ENGINE-R135.11`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves behavior: consolidate and select insights. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.12`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (planned, L3): proves wiring: insight submission and selection. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.13`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::insight_refusals_store_nothing` (L3): proves refusal: insights. The test is `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::insight_refusals_store_nothing`.
+- `MEDULLA-DECISION-ENGINE-R135.14`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::selection_premises_link_source_runs` (L3): proves evidence: insight selection premises. The test is `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::selection_premises_link_source_runs`.
 - `MEDULLA-DECISION-ENGINE-R135.15`: `tests/decide/test_insight_selection_served.py::test_post_run_write_then_context_injection` (L4): proves hot-path proof: insight write then selection served. The test is `tests/decide/test_insight_selection_served.py::test_post_run_write_then_context_injection`.
-- `MEDULLA-DECISION-ENGINE-R135.15`: `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (L3): proves hot-path proof: insight write then selection served. The test is `crates/medulla-h-decide/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs`.
-- `MEDULLA-DECISION-ENGINE-R129.100`: `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::rule_versions_move_through_approval_supersession_and_revocation` (planned, L3): proves versioned rule lifecycle from correction to revocation. The test does not exist yet; the owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.100`: `crates/medulla-h-decide/src/decide/stat_tests/fanout_tests.rs::fanout_aggregate_applies_the_plan_operator_and_names_gaps` (L3): proves fan-out aggregation decision.
-- `MEDULLA-DECISION-ENGINE-R134.101`: `crates/medulla-h-decide/src/decide/stat_tests/fanout_tests.rs::coordinator_delivers_one_complete_artifact` (L3): proves designated coordinator and one final artifact.
-- `MEDULLA-DECISION-ENGINE-R137.100`: `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::initial_then_runtime_disclosure` (L3): proves relevance-triggered instruction disclosure.
-- `MEDULLA-DECISION-ENGINE-R137.100`: `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::stale_or_foreign_version_refuses` (L3): proves relevance-triggered instruction disclosure.
-- `MEDULLA-DECISION-ENGINE-R001.101.4`: `crates/medulla-h-decide/src/decide/family/mod.rs::tests::template_compiles` (planned, L1): proves family template for new roots. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.15`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs` (L3): proves hot-path proof: insight write then selection served. The test is `crates/medulla-h-decide-family-tests/src/decide/stat_tests/insight_tests.rs::served_selection_returns_insights_with_source_runs`.
+- `MEDULLA-DECISION-ENGINE-R129.100`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rule_promotion_tests.rs::rule_versions_move_through_approval_supersession_and_revocation` (planned, L3): proves versioned rule lifecycle from correction to revocation. The test does not exist yet; the owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.100`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/fanout_tests.rs::fanout_aggregate_applies_the_plan_operator_and_names_gaps` (L3): proves fan-out aggregation decision.
+- `MEDULLA-DECISION-ENGINE-R134.101`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/fanout_tests.rs::coordinator_delivers_one_complete_artifact` (L3): proves designated coordinator and one final artifact.
+- `MEDULLA-DECISION-ENGINE-R137.100`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::initial_then_runtime_disclosure` (L3): proves relevance-triggered instruction disclosure.
+- `MEDULLA-DECISION-ENGINE-R137.100`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::stale_or_foreign_version_refuses` (L3): proves relevance-triggered instruction disclosure.
+- `MEDULLA-DECISION-ENGINE-R001.101.4`: `crates/medulla-h-decide-base/src/decide/family/mod.rs::tests::template_compiles` (planned, L1): proves family template for new roots. The test does not exist yet; the owning change adds it at this exact path.
 
 ## Static contract checks
 
@@ -428,10 +428,10 @@ Their bindings establish coverage. Native execution remains unrun in this delive
 
 | Requirement | Proving test | Scope |
 |---|---|---|
-| MEDULLA-DECISION-ENGINE-R066.1 | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::library_records_survive_every_retention_window` | Zero windows and maximum time preserve complete library record bytes. |
-| MEDULLA-DECISION-ENGINE-R066.2 | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::graph_inputs_expire_at_the_configured_boundaries` | Graph inputs compact at 100 milliseconds and retire 200 milliseconds later. Summaries retain their digests. |
-| MEDULLA-DECISION-ENGINE-R066.3 | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::evaluate_only_leaves_no_committed_records` | Sixteen evaluations leave statistical and library record stores empty. |
-| MEDULLA-DECISION-ENGINE-R066.4 | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | Graph summaries expire on the policy window. |
+| MEDULLA-DECISION-ENGINE-R066.1 | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retention_tests.rs::library_records_survive_every_retention_window` | Zero windows and maximum time preserve complete library record bytes. |
+| MEDULLA-DECISION-ENGINE-R066.2 | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retention_tests.rs::graph_inputs_expire_at_the_configured_boundaries` | Graph inputs compact at 100 milliseconds and retire 200 milliseconds later. Summaries retain their digests. |
+| MEDULLA-DECISION-ENGINE-R066.3 | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retention_tests.rs::evaluate_only_leaves_no_committed_records` | Sixteen evaluations leave statistical and library record stores empty. |
+| MEDULLA-DECISION-ENGINE-R066.4 | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | Graph summaries expire on the policy window. |
 
 Run `cargo test --lib --features decide,query,blob retention_tests` for the new native fixtures.
 The existing graph-log fixture also checks CAS restoration, forged blobs, and retirement.
@@ -462,7 +462,7 @@ This command has not run for this change.
 
 | Requirement | Proving test |
 |---|---|
-| MEDULLA-DECISION-ENGINE-R122 | `crates/medulla-h-decide/src/decide/stat_tests.rs::fit_evaluate_publish_and_decide_end_to_end` exercises both origins through served handlers. |
+| MEDULLA-DECISION-ENGINE-R122 | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests.rs::fit_evaluate_publish_and_decide_end_to_end` exercises both origins through served handlers. |
 
 The fixture excludes synthetic labels above minimum support and preserves real counts in mixed-origin aggregates.
 It also checks synthetic-only logged fitting and the inline provenance guard.
@@ -471,14 +471,14 @@ Native execution remains pending.
 ## Typed provenance acceptance
 
 - R121.1: `crates/medulla-compute/src/assemble/tests/evidence.rs::assembly_evidence_uses_typed_premises_not_labels` exercises actual assembly and replay.
-- R121.2: planned `crates/medulla-h-decide/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class` covers graph-source provenance.
+- R121.2: planned `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class` covers graph-source provenance.
 
 With `query`, the same fixture creates enough synthetic forecasts to reach the score support floor.
 It checks absent synthetic Brier, log-loss, and ECE rows, plus exact real reputation and learned-reliability counts.
 
 ## R118.1.2 cross-surface acceptance prerequisites
 
-`crates/medulla-h-decide/src/decide/stat_tests/reputation_tests.rs` already contains the served decision-log fixture.
+`crates/medulla-h-decide-served-tests/src/decide/stat_tests/reputation_tests.rs` already contains the served decision-log fixture.
 `below_the_support_floor_a_reputation_has_no_numbers` covers sparse SQL output.
 `source_reliability_is_learned_from_the_visible_log` covers dense UQL learning and invisible-history fallback.
 Neither test proves agreement across authority policy, retrieval ranking, and UQL.
@@ -545,11 +545,11 @@ Then run `cargo test --lib --features blob storage_acceptance` for the adjacent 
 The existing lineage tests retain their independent file-digest and manifest-order assertions.
 The existing admin holder test retains its historical Content assertions.
 - `MEDULLA-DECISION-ENGINE-R129`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::promotion_obeys_invariants`.
-- `MEDULLA-DECISION-ENGINE-R129.1`: `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_is_reached`.
+- `MEDULLA-DECISION-ENGINE-R129.1`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_is_reached`.
 - `MEDULLA-DECISION-ENGINE-R129.2`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::verdict_serialises_snake_case` roundtrips both exact snake_case wire variants and preserves the invariant IRI; `verdict_rejects_unknown_variants_and_malformed_payloads` refuses wrong-case/unknown variants, missing or non-string IRIs, and unknown payload fields. These type tests do not prove the invariant gate.
 - `MEDULLA-DECISION-ENGINE-R129.3`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::first_contradicted_invariant_is_named`.
 - `MEDULLA-DECISION-ENGINE-R129.4`: `crates/medulla-agent-types/src/agent_guardrail.rs::tests::full_consensus_does_not_override`.
-- `MEDULLA-DECISION-ENGINE-R129.5`: `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::rejected_rule_is_audited_not_active`.
+- `MEDULLA-DECISION-ENGINE-R129.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rule_promotion_tests.rs::rejected_rule_is_audited_not_active`.
 - `MEDULLA-DECISION-ENGINE-R129.6`: `tests/decide/test_rule_promotion_served.py::test_invariant_blocks_promotion`.
 
 ### MEDULLA-DECISION-ENGINE-R130 tests
@@ -611,16 +611,16 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 
 - `MEDULLA-DECISION-ENGINE-R132.1`: `crates/medulla-decision-outcome-types/src/decision/entry_trust.rs::tests::entry_trust_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R132.2`: `crates/medulla-decision-outcome-types/src/decision/entry_trust.rs::tests::lower_tier_never_overrides_higher`.
-- `MEDULLA-DECISION-ENGINE-R132.3`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact`.
-- `MEDULLA-DECISION-ENGINE-R132.4`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::poisoned_only_required_fact_abstains`.
+- `MEDULLA-DECISION-ENGINE-R132.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact`.
+- `MEDULLA-DECISION-ENGINE-R132.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/entry_trust_tests.rs::poisoned_only_required_fact_abstains`.
 - `MEDULLA-DECISION-ENGINE-R132.6`: `tests/decide/test_entry_trust_served.py::test_unverified_entry_cannot_override_verified`.
 
 ### MEDULLA-DECISION-ENGINE-R133 tests
 
 - `MEDULLA-DECISION-ENGINE-R133.1`: `crates/medulla-decision-statistical-types/src/decision/run_governance.rs::tests::quota_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R133.2`: `crates/medulla-decision-statistical-types/src/decision/run_governance.rs::tests::request_only_tightens_quota`: omission uses D; tightening uses R; D < R <= C uses D; R > C refuses before clamping.
-- `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::decide_routes_runtime_quota`.
-- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide/src/decide/stat_tests/runtime_quota_tests.rs::above_ceiling_refuses_before_task_lookup` and `::missing_task_class_answers_defaults`.
+- `MEDULLA-DECISION-ENGINE-R133.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::decide_routes_runtime_quota`.
+- `MEDULLA-DECISION-ENGINE-R133.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/runtime_quota_tests.rs::above_ceiling_refuses_before_task_lookup` and `::missing_task_class_answers_defaults`.
 - `MEDULLA-DECISION-ENGINE-R133.5`: `crates/medulla-work-store/src/redb_store/work_item/commit.rs::tests::run_trace_is_linked_to_unit`.
 - `MEDULLA-DECISION-ENGINE-R133.6`: `tests/decide/test_runtime_quota_served.py::test_quota_and_trace_end_to_end`: query quotas through read-only Decide, commit the trace through CommitWorkItemResult, then query the produced link; an invalid fence creates neither trace nor link.
 
@@ -630,18 +630,18 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 - `MEDULLA-DECISION-ENGINE-R134.2`: `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::relevant_tools_fit_budget`: floor/top-k filtering precedes R045 coverage-per-token selection; include cost/id ties, a lower-relevance coverage winner, and uncovered-capability refusal.
 - `MEDULLA-DECISION-ENGINE-R134.3`: `crates/medulla-decision-program-types/src/decision/task_plan.rs::tests::independent_subtasks_set_flag_and_operator`.
 - `MEDULLA-DECISION-ENGINE-R134.4`: `crates/medulla-decision-program-types/src/decision/task_plan.rs::tests::plan_respects_dependencies`.
-- `MEDULLA-DECISION-ENGINE-R134.5`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`.
-- `MEDULLA-DECISION-ENGINE-R134.6`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::uncovered_subtask_abstains`.
-- `MEDULLA-DECISION-ENGINE-R134.7`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::premises_name_skill_and_flag`.
+- `MEDULLA-DECISION-ENGINE-R134.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`.
+- `MEDULLA-DECISION-ENGINE-R134.6`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::uncovered_subtask_abstains`.
+- `MEDULLA-DECISION-ENGINE-R134.7`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::premises_name_skill_and_flag`.
 - `MEDULLA-DECISION-ENGINE-R134.8`: `tests/decide/test_task_plan_served.py::test_automatic_plan_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R135 tests
 
 - `MEDULLA-DECISION-ENGINE-R135.1`: `crates/medulla-decision-program-types/src/decision/program_store.rs::tests::program_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R135.2`: `crates/medulla-decision-program-types/src/decision/program_store.rs::tests::literals_become_parameters`.
-- `MEDULLA-DECISION-ENGINE-R135.3`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::decide_routes_program_lookup`.
-- `MEDULLA-DECISION-ENGINE-R135.4`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::overlong_trace_is_refused`.
-- `MEDULLA-DECISION-ENGINE-R135.5`: `crates/medulla-h-decide/src/decide/stat_tests/program_store_tests.rs::program_links_source_trace`.
+- `MEDULLA-DECISION-ENGINE-R135.3`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/program_store_tests.rs::decide_routes_program_lookup`.
+- `MEDULLA-DECISION-ENGINE-R135.4`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/program_store_tests.rs::overlong_trace_is_refused`.
+- `MEDULLA-DECISION-ENGINE-R135.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/program_store_tests.rs::program_links_source_trace`.
 - `MEDULLA-DECISION-ENGINE-R135.6`: `tests/decide/test_program_store_served.py::test_compile_then_lookup`.
 
 ### MEDULLA-DECISION-ENGINE-R136 tests
@@ -649,27 +649,27 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 - `MEDULLA-DECISION-ENGINE-R136.1`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::round_types_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R136.2`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::verdict_follows_flip_fraction`, including five declared-direction and five opposite flips at 0.5 yielding `unverified`; add `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::simultaneous_thresholds_are_unverified`.
 - `MEDULLA-DECISION-ENGINE-R136.3`: `crates/medulla-decision-outcome-types/src/decision/evolution_round.rs::tests::stronger_models_go_to_high_impact_stages`.
-- `MEDULLA-DECISION-ENGINE-R136.4`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::decide_routes_round_kinds`.
-- `MEDULLA-DECISION-ENGINE-R136.5`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::empty_prediction_abstains`.
-- `MEDULLA-DECISION-ENGINE-R136.6`: `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::premises_name_counts_and_budget`.
+- `MEDULLA-DECISION-ENGINE-R136.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::decide_routes_round_kinds`.
+- `MEDULLA-DECISION-ENGINE-R136.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::empty_prediction_abstains`.
+- `MEDULLA-DECISION-ENGINE-R136.6`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::premises_name_counts_and_budget`.
 - `MEDULLA-DECISION-ENGINE-R136.7`: `tests/decide/test_evolution_round_served.py::test_verdict_and_allocation`.
 
 ### MEDULLA-DECISION-ENGINE-R137 tests
 
 - `MEDULLA-DECISION-ENGINE-R137.1`: `crates/medulla-decision-outcome-types/src/decision/context_budget.rs::tests::context_budget_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R137.2`: `crates/medulla-decision-outcome-types/src/decision/context_budget.rs::tests::over_window_prompt_is_split_within_limits`.
-- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::decide_routes_context_budget`.
-- `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::too_many_items_is_refused`.
-- `MEDULLA-DECISION-ENGINE-R137.5`: `crates/medulla-h-decide/src/decide/stat_tests/over_window_plan_tests.rs::premises_name_window_and_limits`.
+- `MEDULLA-DECISION-ENGINE-R137.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::decide_routes_context_budget`.
+- `MEDULLA-DECISION-ENGINE-R137.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::too_many_items_is_refused`.
+- `MEDULLA-DECISION-ENGINE-R137.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/over_window_plan_tests.rs::premises_name_window_and_limits`.
 - `MEDULLA-DECISION-ENGINE-R137.6`: `tests/decide/test_context_budget_served.py::test_over_window_plan_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R138 tests
 
 - `MEDULLA-DECISION-ENGINE-R138.1`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::red_team_records_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R138.2`: `crates/medulla-decision-outcome-types/src/decision/red_team.rs::tests::one_passing_scorer_compromises`.
-- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict`.
-- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::missing_scorer_abstains`.
-- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores`.
+- `MEDULLA-DECISION-ENGINE-R138.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::decide_routes_probe_verdict`.
+- `MEDULLA-DECISION-ENGINE-R138.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::missing_scorer_abstains`.
+- `MEDULLA-DECISION-ENGINE-R138.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_verdict_tests.rs::premises_name_scorers_and_scores`.
 - `MEDULLA-DECISION-ENGINE-R138.6`: `tests/decide/test_red_team_served.py::test_probe_verdict_end_to_end`.
 
 ### MEDULLA-DECISION-ENGINE-R137 package tests (planned)
@@ -678,10 +678,10 @@ These are acceptance targets, not execution evidence. Retain every existing R137
 
 - `MEDULLA-DECISION-ENGINE-R137.7`: `crates/medulla-decision-types/src/decision/context_package.rs::tests::package_records_round_trip`. Round trips preserve every constraint, source/range/revision and measurement identity. Validation rejects duplicate candidate ids, inconsistent resolution groups and malformed ranges. Negative/nonfinite measurements and arithmetic overflow refuse before solving.
 - `MEDULLA-DECISION-ENGINE-R137.8`: `crates/medulla-decision-policy/src/solve/tests/context_package.rs::matches_tiny_multiresolution_oracle` (planned). Exhaustive tiny models match the optimum and fewer-token tie-break. Independent window, output reservation, caller, money and latency cases each become the tightest bound; fractional and zero-capacity boundaries never overrun. Changing candidate order must not change objective or totals; remaining ties use the recorded stable order.
-- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::decide_routes_package_selection` (planned). An authenticated served `Decide` request reaches package lowering, solver, independent verifier and sealed typed answer. The test rejects an unwired helper or local selection that replaces any step. Package selection, whole-prompt fit and R137.1–.6 recursive decomposition remain distinct operations.
-- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_refusals_are_typed` (L3). Negative cases cover invalid/missing measurements, no fitting nonempty package, empty/zero-capacity results and stale revisions. Work exhaustion tests cover no incumbent and unacceptable gaps. Certificate tests corrupt the proof, digests and selection bindings. No refusal silently relaxes a ceiling or returns a certified selection.
-- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::package_evidence_binds_inputs` (L3). Changes to unchosen candidates, token weights, tokenizer, cited ranges or revisions invalidate reuse. So do changes to active rates, output reservation, ceilings or objective. Independent recomputation checks selection, totals and certificate against the bound model. The record states the weakest evidence class and all defaults used.
-- `MEDULLA-DECISION-ENGINE-R137.12`: `tests/decide/test_context_package_served.py::test_certified_package_end_to_end` (L4). The Medulla served receipt records source SHA, features/configuration, exact command, input/model/certificate digests and results. The linked Meristem receipt records its SHA, served caller and applied package/citations. Cover reserved output, monetary/latency ceilings, caller/window limits, fractional rounding, zero capacity, unknown rates and stale sources. A rejected certificate cannot be reached from served input (no served operation accepts one), so it is proven below the wire by `crates/medulla-decision-policy/src/solve/context_package/tests.rs::select_with_refuses_a_corrupted_certificate` (L2) and `crates/medulla-h-decide/src/decide/stat_tests/context_package_tests.rs::corrupted_certificate_is_refused` (L3). Unit-only solves, mock transports, greedy fits, planned test names and documentation commits do not establish this proof.
+- `MEDULLA-DECISION-ENGINE-R137.9`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::decide_routes_package_selection` (planned). An authenticated served `Decide` request reaches package lowering, solver, independent verifier and sealed typed answer. The test rejects an unwired helper or local selection that replaces any step. Package selection, whole-prompt fit and R137.1–.6 recursive decomposition remain distinct operations.
+- `MEDULLA-DECISION-ENGINE-R137.10`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_refusals_are_typed` (L3). Negative cases cover invalid/missing measurements, no fitting nonempty package, empty/zero-capacity results and stale revisions. Work exhaustion tests cover no incumbent and unacceptable gaps. Certificate tests corrupt the proof, digests and selection bindings. No refusal silently relaxes a ceiling or returns a certified selection.
+- `MEDULLA-DECISION-ENGINE-R137.11`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::package_evidence_binds_inputs` (L3). Changes to unchosen candidates, token weights, tokenizer, cited ranges or revisions invalidate reuse. So do changes to active rates, output reservation, ceilings or objective. Independent recomputation checks selection, totals and certificate against the bound model. The record states the weakest evidence class and all defaults used.
+- `MEDULLA-DECISION-ENGINE-R137.12`: `tests/decide/test_context_package_served.py::test_certified_package_end_to_end` (L4). The Medulla served receipt records source SHA, features/configuration, exact command, input/model/certificate digests and results. The linked Meristem receipt records its SHA, served caller and applied package/citations. Cover reserved output, monetary/latency ceilings, caller/window limits, fractional rounding, zero capacity, unknown rates and stale sources. A rejected certificate cannot be reached from served input (no served operation accepts one), so it is proven below the wire by `crates/medulla-decision-policy/src/solve/context_package/tests.rs::select_with_refuses_a_corrupted_certificate` (L2) and `crates/medulla-h-decide-family-tests/src/decide/stat_tests/context_package_tests.rs::corrupted_certificate_is_refused` (L3). Unit-only solves, mock transports, greedy fits, planned test names and documentation commits do not establish this proof.
 
 <!-- spec-definition-patch:comparative-analysis-r139 -->
 ### MEDULLA-DECISION-ENGINE-R139 tests (planned)
@@ -690,8 +690,8 @@ These are acceptance targets only, not implementation or execution evidence. Ret
 
 - `MEDULLA-DECISION-ENGINE-R139.1`: `crates/medulla-decision-statistical-types/src/decision/comparative_analysis.rs::tests::plan_round_trips_and_binds_all_stages`; preserve every revision, digest, candidate/order, threshold, budget, refusal and question kind; reject duplicate/over-limit candidates.
 - `MEDULLA-DECISION-ENGINE-R139.2`: `crates/medulla-decision-stats-records/src/decision/comparative_analysis.rs::tests::thresholds_inclusive_and_budgets`; cover inclusive 0.50/0.80, one/two synthesis calls, stable ties, zero discovery calls, extraction exclusion and total equality/overflow.
-- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
-- `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide/src/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
+- `MEDULLA-DECISION-ENGINE-R139.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::decide_returns_plan_without_model_execution`; run actual Decide dispatch and assert pinned inputs and zero discovery calls.
+- `MEDULLA-DECISION-ENGINE-R139.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/comparative_analysis_tests.rs::stale_inputs_and_stage_budgets_refuse_before_calls`; cover stale query/vector/universe, invalid weights/thresholds, stage and total exhaustion with typed refusals and no model call.
 - `MEDULLA-DECISION-ENGINE-R139.5`: `crates/medulla-decision-statistical-types/src/decision/comparative_analysis.rs::tests::plan_digest_binds_inputs_and_budgets`; every bound mutation changes digest and Meristem receipt validation rejects a different plan or over-budget calls.
 - `MEDULLA-DECISION-ENGINE-R139.6`: Medulla served target `tests/decide/test_comparative_analysis_served.py::test_plan_and_refusal_through_served_decide` (planned); Meristem consumer target (planned) `tests/decide/test_comparative_analysis_consumer.py::test_served_consumer_obeys_plan_and_binds_invocation_receipt`. Require exact source SHAs and separate receipts; a Medulla-only test cannot establish Meristem invocation.
 <!-- /spec-definition-patch -->
@@ -832,15 +832,15 @@ No test in this section has run.
 
 ### MEDULLA-DECISION-ENGINE-R172 tests
 
-- `MEDULLA-DECISION-ENGINE-R172.1`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::designation_types_round_trip`; `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
-- `MEDULLA-DECISION-ENGINE-R172.2`: `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::incremental_upsert_and_tombstone_match_rebuild`; `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
-- `MEDULLA-DECISION-ENGINE-R172.3`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::eligibility_gates_match_fixtures`; `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
-- `MEDULLA-DECISION-ENGINE-R172.4`: `crates/medulla-decision-rank/src/rank/capability_rank.rs::tests::blend_order_matches_fixtures`; `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
-- `MEDULLA-DECISION-ENGINE-R172.5`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::reward_ema_erasure_and_decay`; `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
+- `MEDULLA-DECISION-ENGINE-R172.1`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::designation_types_round_trip`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
+- `MEDULLA-DECISION-ENGINE-R172.2`: `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::incremental_upsert_and_tombstone_match_rebuild`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
+- `MEDULLA-DECISION-ENGINE-R172.3`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::eligibility_gates_match_fixtures`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
+- `MEDULLA-DECISION-ENGINE-R172.4`: `crates/medulla-decision-rank/src/rank/capability_rank.rs::tests::blend_order_matches_fixtures`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
+- `MEDULLA-DECISION-ENGINE-R172.5`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::reward_ema_erasure_and_decay`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey`.
 - `MEDULLA-DECISION-ENGINE-R172.6`: `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::version_pin_refuses_mixed_spaces`.
-- `MEDULLA-DECISION-ENGINE-R172.7`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::decide_routes_capability_designation`.
-- `MEDULLA-DECISION-ENGINE-R172.8`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals`.
-- `MEDULLA-DECISION-ENGINE-R172.9`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs`.
+- `MEDULLA-DECISION-ENGINE-R172.7`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::decide_routes_capability_designation`.
+- `MEDULLA-DECISION-ENGINE-R172.8`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals`.
+- `MEDULLA-DECISION-ENGINE-R172.9`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs`.
 - `MEDULLA-DECISION-ENGINE-R172.10`: `benches/decide_budgets.rs::capability_designation` (bench group `decide/capability_designation`).
 - `MEDULLA-DECISION-ENGINE-R172.10`: `tools/xtask/src/decide_budgets.rs::tests::a_designation_breach_fails_each_metric`.
 - `MEDULLA-DECISION-ENGINE-R172.11`: `tests/decide/test_capability_designation_served.py::test_designation_end_to_end`.
@@ -848,14 +848,14 @@ No test in this section has run.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
 - `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records`.
-- `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
-- `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
+- `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
+- `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.12`: Rollup closes when every child `.12.1` to `.12.6` passes its proving test.
 - `MEDULLA-DECISION-ENGINE-R172.12.1`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::pack_surface_fields_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R172.12.2`: `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools`.
 - `MEDULLA-DECISION-ENGINE-R172.12.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records`.
-- `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
-- `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
+- `MEDULLA-DECISION-ENGINE-R172.12.4`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals`.
+- `MEDULLA-DECISION-ENGINE-R172.12.5`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.12.6`: `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack`.
 - `MEDULLA-DECISION-ENGINE-R172.13`: `crates/medulla-compute/src/capability_index/tests.rs::capability_adapter_applies_before_rank`.
 
@@ -935,11 +935,11 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174`: `tests/decide/test_generation
 
 | Behavior | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set/tests.rs::bounded_union_in_stable_order`: A job over three packs returns a bounded, duplicate-free set in a stable order. |
 
-| Wiring | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set`: A served `Decide` with a load-set question reaches the new arm. |
+| Wiring | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set`: A served `Decide` with a load-set question reaches the new arm. |
 
-| Refusal | `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::load_set_refusals`: Each case returns its code, and no partial set hides an abstention. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::load_set_refusals`: Each case returns its code, and no partial set hides an abstention. |
 
-| Evidence | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::premises_per_component`: Each chosen tool has one premise with its pack digest. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::premises_per_component`: Each chosen tool has one premise with its pack digest. |
 
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set`: The answer holds 32 tools or fewer, their skills and 4 agent starts or fewer, and meets the time budget. |
 
@@ -957,9 +957,9 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R176`: `tests/decide/test_load_set_s
 
 | Wiring | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::served_decide_reaches_guidance`: A served `Decide` with a guidance question reaches the new arm. |
 
-| Refusal | `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals`: Each case returns its code. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals`: Each case returns its code. |
 
-| Evidence | `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples`: Each step lists its supporting triples. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples`: Each step lists its supporting triples. |
 
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph`: The answer lists the steps in the order with the higher success rate, with citations. |
 
@@ -1010,7 +1010,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174.9`: `tests/decide/test_freshnes
 | Case | Row | Proving test and observation |
 |---|---|---|
 | Refresh | `MEDULLA-DECISION-ENGINE-R174.9.7` | retired; drift refresh is proven by `MEDULLA-DECISION-ENGINE-R174.9.6` and Document supersession by `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2`. |
-| Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
+| Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
 | Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::every_legal_transition_moves_and_every_other_is_refused` | |
 | Bootstrap | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::generation_cycle_machine_matches_edge_table` | |
 | Model | `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips`: A serde round trip keeps every field and rejects 33 fetches. |
@@ -1050,13 +1050,13 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | `MEDULLA-DECISION-ENGINE-R804.4` | `tests/program_optimize_job_served.rs::judge_only_test_split_refuses` |
 | `MEDULLA-DECISION-ENGINE-R804.5` | Retired; see `MEDULLA-DECISION-ENGINE-R810.5`. |
 | `MEDULLA-DECISION-ENGINE-R804.6` | Retired; see `MEDULLA-DECISION-ENGINE-R810.6`. |
-| `MEDULLA-DECISION-ENGINE-R805` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
 | `MEDULLA-DECISION-ENGINE-R805.1` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::records_round_trip` |
-| `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
-| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
-| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
-| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
-| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
+| `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
+| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
+| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
 
 ## Agent-memory substrate claims
 
@@ -1064,7 +1064,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 |---|---|---|
 | Episodic-to-semantic promotion | `MEDULLA-DECISION-ENGINE-R651.7` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::episodes_promote_to_a_linked_semantic_fact`; `tests/memory/test_consolidate_served.py::test_episodes_promote_to_semantic_fact` |
 | Reinforce and decay share one salience update | `MEDULLA-DECISION-ENGINE-R651.8` | `crates/medulla-graph-core/src/graph/txn_maintenance.rs::tests::reinforce_and_decay_share_importance_update`; `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::reinforce_then_decay_matches_the_half_life`; `tests/memory/test_consolidate_served.py::test_reinforce_and_decay_share_importance` |
-| Contradiction records are tracked | `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
+| Contradiction records are tracked | `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
 
 ## MEDULLA-DECISION-ENGINE-R810 to R813 acceptance
 
@@ -1083,7 +1083,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | Evidence | `MEDULLA-DECISION-ENGINE-R811.5` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::receipts_read_back_field_for_field` |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R811.6` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::served_policy_evolution_journey` |
 | Model | `MEDULLA-DECISION-ENGINE-R812.1` | Retired; see `MEDULLA-DECISION-ENGINE-R805.7`. |
-| Behavior | `MEDULLA-DECISION-ENGINE-R812.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::challenger_win_loss_tie_and_judge_refusal`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| Behavior | `MEDULLA-DECISION-ENGINE-R812.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::challenger_win_loss_tie_and_judge_refusal`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
 | Wiring | `MEDULLA-DECISION-ENGINE-R812.3` | Retired; see `MEDULLA-DECISION-ENGINE-R805.3`. |
 | Refusal | `MEDULLA-DECISION-ENGINE-R812.4` | Retired; see `MEDULLA-DECISION-ENGINE-R805.4`. |
 | Evidence | `MEDULLA-DECISION-ENGINE-R812.5` | Retired; see `MEDULLA-DECISION-ENGINE-R805.5`. |
@@ -1108,7 +1108,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R813`: `tests/test_trace_scores_to_c
 It covers invalid ids and edges, cycles, output coverage, byte limits and task/concurrency ceilings.
 The four-task fixture has independent A and B. C depends only on B. The final task depends on A and C. Type tests do not claim scheduler execution.
 
-`crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs` enters `handle_decide`
+`crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs` enters `handle_decide`
 with a published feature schema. It verifies the typed plan, caller-claim
 premises, fixed-policy provenance, digest binding and strict request refusals.
 `tests/decide/test_task_plan_served.py::test_explicit_plan_end_to_end` uses the
@@ -1125,7 +1125,7 @@ These checks do not authenticate a caller-supplied receipt or authorize executio
 
 The `bounded_task_plan` performance receipt for R134.111.6 remains pending.
 
-Typed tool steps (R134.111.8 to R134.111.13) are covered in `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs` and `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs`.
+Typed tool steps (R134.111.8 to R134.111.13) are covered in `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs` and `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs`.
 The bindings are static: no test claims that a path exists in a run-time output.
 
 - `MEDULLA-DECISION-ENGINE-R134.111.8`: `task_plan_round_trips` keeps a tool step, its literals and its bindings. It accepts a mixed plan. It rejects an unknown call field and a `$ref` object with extra keys.
@@ -1139,9 +1139,9 @@ The bindings are static: no test claims that a path exists in a run-time output.
 - `MEDULLA-DECISION-ENGINE-R814.1`: See each child.
 - `MEDULLA-DECISION-ENGINE-R814.1.1`: `crates/medulla-rdf/tests/metadata_catalog_classes.rs::catalog_classes_roll_up_to_eg_core_and_align_to_w3c`, `::owner_steward_and_lineage_properties_specialise_prov`, `::catalog_shapes_accept_a_complete_catalog` and `::catalog_shapes_refuse_incomplete_or_open_vocabulary_records`.
 - `MEDULLA-DECISION-ENGINE-R814.1.2`: `crates/medulla-types/tests/prompt_candidate.rs::candidate_round_trips_and_kind_follows_role` (planned; typed record is absent from this candidate).
-- `MEDULLA-DECISION-ENGINE-R814.2`: `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::assemble_selects_covering_candidate_and_abstains_without_one`.
+- `MEDULLA-DECISION-ENGINE-R814.2`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/prompt_candidate_tests.rs::assemble_selects_covering_candidate_and_abstains_without_one`.
 - `MEDULLA-DECISION-ENGINE-R814.3`: `tests/decide/test_prompt_candidates_served.py::test_assemble_reads_candidates_from_imported_pack`.
-- `MEDULLA-DECISION-ENGINE-R814.4`: `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded`.
+- `MEDULLA-DECISION-ENGINE-R814.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded`.
 - `MEDULLA-DECISION-ENGINE-R814.5`: `tests/decide/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability`.
 - `MEDULLA-DECISION-ENGINE-R814.6`: `tests/decide/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt`.
 - `MEDULLA-DECISION-ENGINE-R814.7`: `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task`. Vector: `SELECT ?prompt ?connector ?digest WHERE { ?prompt a :PromptCandidate ; :systemPromptFor ?t ; cp:ofConnector ?connector ; cp:digest ?digest . ?t :requiresCapability ?need . <Y> :requiresCapability ?need }`. `:systemPromptFor` ranges over `:Task`, so the join goes through the task. The query returns the prompt of the connector that serves task Y and not the other connector's prompt.
@@ -1202,7 +1202,7 @@ Do not infer it from these fixtures or generated status.
 | Observation configuration per participant per session | `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-numeric/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat`; `src/server/handlers/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
 | Appending a turn enqueues one derive job | `MEDULLA-DECISION-ENGINE-R651.11` | `src/server/handlers/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
 | Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `src/server/handlers/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
-| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
+| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
 | Participant class and record | `MEDULLA-DECISION-ENGINE-R617.7` | `crates/medulla-types/src/participant.rs::tests::participant_round_trips_and_iri_is_stable`; `crates/medulla-core/tests/participant_shape.rs::person_without_represents_fails_shape`; `src/server/handlers/graph_ops/participant_memory_tests.rs::participant_journey` |
 | Session membership and speaking participant | `MEDULLA-DECISION-ENGINE-R617.8` | `src/server/handlers/graph_ops/participant_memory_tests.rs::ingest_adds_speakers_as_members`; `crates/medulla-types/src/participant.rs::tests::membership_edges_dedupe_speakers` |
 | Served participant writes | `MEDULLA-DECISION-ENGINE-R617.9` | `src/server/handlers/graph_ops/participant_memory_tests.rs::participant_methods_are_served_and_classified`; `tests/memory/test_participant_memory_served.py::test_participant_put_and_member_round_trip` |
@@ -1210,7 +1210,7 @@ Do not infer it from these fixtures or generated status.
 | Observation configuration per participant per session | `MEDULLA-DECISION-ENGINE-R651.10` | `crates/medulla-decision-stats-records/src/decision/participant_derive.rs::tests::targets_follow_flags_and_never_repeat`; `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::observation_flags_decide_which_perspectives_exist` |
 | Appending a turn enqueues one derive job | `MEDULLA-DECISION-ENGINE-R651.11` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
 | Derive worker writes conclusions as claims | `MEDULLA-DECISION-ENGINE-R651.12` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence`; `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
-| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
+| Claims carry subject and observer | `MEDULLA-DECISION-ENGINE-R652.9` | `crates/medulla-epistemic/src/claims.rs::tests::observer_sees_own_and_visible_system_claims_only`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::perspective_claims_hide_other_observers` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `src/server/handlers/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
 | Memory events enter the graph outbox | `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` |
 | Scope narrows cross-session episode recall | `MEDULLA-DECISION-ENGINE-R155.7` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` |
@@ -1231,8 +1231,8 @@ Do not infer it from these fixtures or generated status.
 | Refusal | `MEDULLA-DECISION-ENGINE-R656.5` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::profile_refusals_change_no_state` |
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R656.6` | `tests/decide/test_harness_config_served.py::test_profile_constrains_a_run` |
 | Assistant profile constrains the HarnessConfig request | `MEDULLA-DECISION-ENGINE-R128.16` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::allowlist_narrows_tool_subset` |
-| AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
-| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-decision-types/src/decision/knob_families/participant.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
+| AgentAssemble respects the profile tool allowlist | `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
+| Participant memory knobs | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-decision-types/src/decision/knob_families/participant.rs::tests::knob_defaults_are_inside_bounds`; `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | Participant memory refusal codes | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::tests::codes_are_unique_and_stable` |
 
 ## Planned bindings, range 7
@@ -1251,31 +1251,31 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-DECISION-ENGINE-R010.100.2` | `crates/medulla-decision-types/src/decision/record/outcome.rs::every_decision_refusal_enum_maps_to_a_registered_code` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R010.100.3` | `crates/medulla-result-types/src/retrieval_arbitration.rs::answer_grounding_round_trip` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R010.100.4` | `crates/medulla-decision-types/src/decision/record/outcome.rs::codes_are_unique_and_stable` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R014` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served` | L3 |
-| `MEDULLA-DECISION-ENGINE-R029` | `crates/medulla-h-decide/src/decide/stat_tests/retrieval_tests.rs::retrieval_plan_is_selected_and_bound_through_decide` | L3 |
-| `MEDULLA-DECISION-ENGINE-R031` | `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::enrichment_schedule_prefers_higher_net_value` | L3 |
-| `MEDULLA-DECISION-ENGINE-R032` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
-| `MEDULLA-DECISION-ENGINE-R032.2` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R014` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served` | L3 |
+| `MEDULLA-DECISION-ENGINE-R029` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/retrieval_tests.rs::retrieval_plan_is_selected_and_bound_through_decide` | L3 |
+| `MEDULLA-DECISION-ENGINE-R031` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/consumer_tests.rs::enrichment_schedule_prefers_higher_net_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
 | `MEDULLA-DECISION-ENGINE-R032.2.1` | `crates/medulla-decision-stats/src/decision/fit_calibrate.rs::isotonic_calibration_is_monotone_and_reproducible` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R032.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
-| `MEDULLA-DECISION-ENGINE-R032.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::pairs_act_only_inside_the_conformal_set` | L3 |
-| `MEDULLA-DECISION-ENGINE-R032.2.3` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
-| `MEDULLA-DECISION-ENGINE-R033` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
-| `MEDULLA-DECISION-ENGINE-R033.2` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.1` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/resolve_entity_tests.rs::pairs_act_only_inside_the_conformal_set` | L3 |
+| `MEDULLA-DECISION-ENGINE-R032.2.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/resolve_entity_tests.rs::gold_set_guarantee_holds_or_the_decision_abstains` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
 | `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-decision-stats-records/src/decision/schema_mapping.rs::score_and_class_follow_the_rule` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
-| `MEDULLA-DECISION-ENGINE-R033.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
-| `MEDULLA-DECISION-ENGINE-R039` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R033.2.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/schema_mapping_tests.rs::columns_map_to_expected_properties_with_evidence_class` | L3 |
+| `MEDULLA-DECISION-ENGINE-R039` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
 | `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-decision-stats/src/decision/ladder.rs::tests::cost_breaks_ties_within_epsilon_only` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
-| `MEDULLA-DECISION-ENGINE-R044` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
-| `MEDULLA-DECISION-ENGINE-R044.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
-| `MEDULLA-DECISION-ENGINE-R044.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R039.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::lower_cost_option_wins_within_the_tie_epsilon` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R044.2.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/a2a_route_tests.rs::inbound_task_routes_through_a_recorded_decision` | L3 |
 | `MEDULLA-DECISION-ENGINE-R050.2` | `tests/test_generated_models.py::test_model_input_capabilities_round_trip_and_refuse_unknown_mime` | L3 |
 | `MEDULLA-DECISION-ENGINE-R050.3` | `crates/medulla-h-admin/src/admin/connector_pack/tests/model_input_capabilities.rs::four_media_types_at_128_parts_import` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R054.1` | `crates/medulla-capabilities/tests/decision_ontology.rs::generated_decision_ontology_is_byte_stable_and_covers_every_contract_class` | L1/L2 |
-| `MEDULLA-DECISION-ENGINE-R066.4` | `crates/medulla-h-decide/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | L3 |
-| `MEDULLA-DECISION-ENGINE-R072.100` | `crates/medulla-h-decide/src/decide/stat_tests/telemetry_tests.rs::served_decide_emits_one_span_per_stage` | L3 |
+| `MEDULLA-DECISION-ENGINE-R066.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retention_tests.rs::graph_summaries_expire_on_policy_window` | L3 |
+| `MEDULLA-DECISION-ENGINE-R072.100` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/telemetry_tests.rs::served_decide_emits_one_span_per_stage` | L3 |
 | `MEDULLA-DECISION-ENGINE-R073.6` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::each_memory_change_emits_one_atomic_event` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R073.7` | `crates/medulla-h-jobs/src/mutation_outbox/memory_events.rs::tests::pull_leases_then_ack_advances_cursor` | L1/L2 |
 | `MEDULLA-DECISION-ENGINE-R073.7` | `tests/memory/test_participant_memory_served.py::test_events_pull_and_ack` | L3 |
@@ -1289,8 +1289,8 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R079.4`: L3 `crates/medulla-h-admin/src/admin/connector_pack/tests/sql_columns.rs::sql_column_kinds_and_cardinality_control_embedding` drives `SourceIngest` with one column per kind and asserts each exclusion reason and the 100-sample free-text floor.
 - `MEDULLA-DECISION-ENGINE-R081`: planned L1 `crates/medulla-graph-algos/src/algorithms/community.rs::tests::resolver_confidence_weights_bind_a_community` compares assignments across two confidence levels.
 - `MEDULLA-DECISION-ENGINE-R085.1`: planned L1 `crates/medulla-decision-stats-records/src/decision/legal_option_filter.rs::tests::an_option_failing_the_predicate_is_excluded` plus the admissible pass-through case.
-- `MEDULLA-DECISION-ENGINE-R085.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_caller_asserted_option_violating_a_shape_never_reaches_the_scorer`.
-- `MEDULLA-DECISION-ENGINE-R088.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/belief_tests.rs::graph_belief_slices_match_direct_belief_as_of_queries` compares each slice to a direct AS OF query.
+- `MEDULLA-DECISION-ENGINE-R085.2`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/consumer_tests.rs::a_caller_asserted_option_violating_a_shape_never_reaches_the_scorer`.
+- `MEDULLA-DECISION-ENGINE-R088.1`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_tests.rs::graph_belief_slices_match_direct_belief_as_of_queries` compares each slice to a direct AS OF query.
 - `MEDULLA-DECISION-ENGINE-R090.1`: planned L1 `crates/medulla-decision-types/src/decision/statistical/scorer.rs::tests::a_budget_over_the_ceiling_is_refused` with the at-ceiling accept case.
 - `MEDULLA-DECISION-ENGINE-R095`: planned L2 `crates/medulla-decision-policy/tests/solve/determinism.rs::the_certificate_digest_matches_the_committed_golden_vector`; the repeated-solves byte-identical test sits beside it.
 - `MEDULLA-DECISION-ENGINE-R096`: planned L3 `crates/medulla-h-mining/src/mining/insight.rs::tests::a_weighted_request_with_a_non_default_quality_function_reaches_the_kernel`.
@@ -1298,76 +1298,76 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R099.1`: planned L3 `crates/medulla-h-admin/src/graph_schema/world_model_tests.rs::wikidata_schema_mappings_validate_against_world_model_shapes` validates the fixture and resolves each entity by key.
 - `MEDULLA-DECISION-ENGINE-R099.2`: planned L3 `crates/medulla-h-ingest/src/web_ingest/tests.rs::entity_document_lowers_to_alignment_claims`.
 - `MEDULLA-DECISION-ENGINE-R117.1.1`: L2 `tests/derive_golden.rs::uql_sql_promql_outputs_agree_on_golden_reference` asserts all fifteen functions agree within 1e-9 on the three surfaces, with the PromQL surface compiling to the shared `Kernel` series program and holding no evaluator of its own.
-- `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
+- `MEDULLA-DECISION-ENGINE-R117.1.2`: planned L1 `crates/medulla-numeric/src/evaluation/skill.rs::tests::bootstrap_interval_is_reproducible` and planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evaluator_tests.rs::decision_eval_reports_feature_power`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.1`: planned L1 `crates/medulla-decision-policy-types/src/decision/reputation.rs::tests::source_reliability_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.2`: L1 `crates/medulla-exec/src/exec/reliability.rs::tests::insufficient_history_abstains_instead_of_using_the_prior`.
 - `MEDULLA-DECISION-ENGINE-R118.1.2.3`: L1 `crates/medulla-h-query-read/src/query/explain_wire_b.rs::tests::caller_reliability_cannot_replace_the_governed_estimate`.
-- `MEDULLA-DECISION-ENGINE-R118.1.2.4`: L3 `crates/medulla-h-decide/src/decide/stat_tests/reputation_tests.rs::three_readers_agree_on_sparse_abstention_and_dense_estimate`.
-- `MEDULLA-DECISION-ENGINE-R119`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/replay_tests.rs::walk_forward_seals_trial_count_pbo_and_dm_figures` compares the sealed trial count, PBO and Diebold-Mariano figures to independently recomputed values and asserts the policy-dependent refusal.
+- `MEDULLA-DECISION-ENGINE-R118.1.2.4`: L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reputation_tests.rs::three_readers_agree_on_sparse_abstention_and_dense_estimate`.
+- `MEDULLA-DECISION-ENGINE-R119`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/replay_tests.rs::walk_forward_seals_trial_count_pbo_and_dm_figures` compares the sealed trial count, PBO and Diebold-Mariano figures to independently recomputed values and asserts the policy-dependent refusal.
 - `MEDULLA-DECISION-ENGINE-R120`: planned L1 `tests/test_decision_static_contracts.py::test_only_persisted_writes_count_as_admission_anchors` runs a read helper, a replay helper and a persisted write path through the script.
-- `MEDULLA-DECISION-ENGINE-R121.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class`.
-- `MEDULLA-DECISION-ENGINE-R122`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/learning_tests.rs::synthetic_origin_records_are_excluded_from_real_calibration`.
+- `MEDULLA-DECISION-ENGINE-R121.2`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/classes_tests.rs::graph_claim_and_evidence_control_answer_class`.
+- `MEDULLA-DECISION-ENGINE-R122`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/learning_tests.rs::synthetic_origin_records_are_excluded_from_real_calibration`.
 - `MEDULLA-DECISION-ENGINE-R124`: planned L1 `crates/medulla-numeric/tests/stat_kernels/clippy_policy.rs::the_declared_self_check_file_exists`.
 - `MEDULLA-DECISION-ENGINE-R128.14`: planned L1 `tests/test_generated_models.py::test_harness_config_kind_is_a_contract_question_kind` asserts the `QuestionKind` literal includes `harness_config`.
-- `MEDULLA-DECISION-ENGINE-R129.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_reads_published_invariants`.
-- `MEDULLA-DECISION-ENGINE-R129.5`: L3 `crates/medulla-h-decide/src/decide/stat_tests/rule_promotion_tests.rs::contradicting_rule_is_rejected_and_compatible_rule_promotes`.
+- `MEDULLA-DECISION-ENGINE-R129.1`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rule_promotion_tests.rs::attach_point_reads_published_invariants`.
+- `MEDULLA-DECISION-ENGINE-R129.5`: L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/rule_promotion_tests.rs::contradicting_rule_is_rejected_and_compatible_rule_promotes`.
 - `MEDULLA-DECISION-ENGINE-R102.1`: planned L1 `crates/medulla-catalog-types/src/graph_schema/shadow_branch.rs::tests::activation_requires_every_step_in_order` with the omitted-shadow-ingest and reordered-approval refusals.
-- `MEDULLA-DECISION-ENGINE-R103`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/scorer_tests.rs::each_forecast_horizon_reports_calibrated_confidence_or_abstains`.
+- `MEDULLA-DECISION-ENGINE-R103`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/scorer_tests.rs::each_forecast_horizon_reports_calibrated_confidence_or_abstains`.
 - `MEDULLA-DECISION-ENGINE-R104`: planned L1 `crates/medulla-nlq/src/decide_text/tests.rs::decide_text_and_uql_share_structured_error_shape` runs the same table-driven fixtures against both parsers.
 - `MEDULLA-DECISION-ENGINE-R107`: planned L2 `crates/medulla-agent-types/src/agent_topology.rs::tests::topology_types_stay_within_twelve_and_goldens_match` and a Python round-trip in tests/test_generated_models.py.
 - `MEDULLA-DECISION-ENGINE-R108`: planned L1 `crates/medulla-server-ops/src/api/admin/topology_shape.rs::tests::an_invalid_topology_is_rejected_at_publish`.
-- `MEDULLA-DECISION-ENGINE-R111.1`: L1 `crates/medulla-decision-statistical-types/src/decision/statistical/topology.rs::tests::question_round_trips_and_omits_unread_facts`; L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
-- `MEDULLA-DECISION-ENGINE-R112`: L3 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result`.
-- `MEDULLA-DECISION-ENGINE-R114`: planned L5 `crates/medulla-h-decide/src/decide/stat_tests/consumer_tests.rs::subagent_allowance_reads_the_topology_facts_of_a_committed_record`.
+- `MEDULLA-DECISION-ENGINE-R111.1`: L1 `crates/medulla-decision-statistical-types/src/decision/statistical/topology.rs::tests::question_round_trips_and_omits_unread_facts`; L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/consumer_tests.rs::a_standalone_topology_decide_question_returns_a_typed_decision_record`.
+- `MEDULLA-DECISION-ENGINE-R112`: L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/consumer_tests.rs::exhausted_capacity_at_a_priority_is_a_lease_named_infeasible_result`.
+- `MEDULLA-DECISION-ENGINE-R114`: planned L5 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/consumer_tests.rs::subagent_allowance_reads_the_topology_facts_of_a_committed_record`.
 ## Planned bindings, range 4
 
 Entries for rows whose named test is not yet in the tree.
 
-- `MEDULLA-DECISION-ENGINE-R134.102`: L3 `crates/medulla-h-decide/src/decide/stat_tests/delegation_tests.rs::window_matrix_admits_or_refuses`.
+- `MEDULLA-DECISION-ENGINE-R134.102`: L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/delegation_tests.rs::window_matrix_admits_or_refuses`.
 - `MEDULLA-DECISION-ENGINE-R134.104`: planned L1 `crates/medulla-decision-outcome-types/src/decision/answer_ranking/tests.rs::ranking_record_round_trips_and_rejects_a_missing_tie_rule`.
 - `MEDULLA-DECISION-ENGINE-R134.105`: planned L1 `crates/medulla-decision-outcome-types/src/decision/answer_ranking/tests.rs::four_candidates_yield_order_retention_and_revisions`.
-- `MEDULLA-DECISION-ENGINE-R134.106`: L3 `crates/medulla-h-decide/src/decide/stat_tests/answer_ranking_tests.rs::served_ranking_round_trips_through_readback`.
-- `MEDULLA-DECISION-ENGINE-R134.107`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/answer_ranking_tests.rs::each_refusal_returns_its_typed_reason_and_records_no_ranking`.
-- `MEDULLA-DECISION-ENGINE-R134.108`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/answer_ranking_tests.rs::premises_name_pairs_and_order`.
+- `MEDULLA-DECISION-ENGINE-R134.106`: L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/answer_ranking_tests.rs::served_ranking_round_trips_through_readback`.
+- `MEDULLA-DECISION-ENGINE-R134.107`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/answer_ranking_tests.rs::each_refusal_returns_its_typed_reason_and_records_no_ranking`.
+- `MEDULLA-DECISION-ENGINE-R134.108`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/answer_ranking_tests.rs::premises_name_pairs_and_order`.
 - `MEDULLA-DECISION-ENGINE-R134.109`: planned L4 `tests/decide/test_answer_ranking_served.py::test_revisions_only_for_non_retained`.
-- `MEDULLA-DECISION-ENGINE-R134.109`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/answer_ranking_tests.rs::served_ranking_round_trips_through_readback`.
-- `MEDULLA-DECISION-ENGINE-R031.100`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/paper_admission_tests.rs::only_relevant_papers_are_admitted_with_claims`.
+- `MEDULLA-DECISION-ENGINE-R134.109`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/answer_ranking_tests.rs::served_ranking_round_trips_through_readback`.
+- `MEDULLA-DECISION-ENGINE-R031.100`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/paper_admission_tests.rs::only_relevant_papers_are_admitted_with_claims`.
 - `MEDULLA-DECISION-ENGINE-R036.100.1`: planned L1 `crates/medulla-decision-types/src/decision/primitive.rs::tests::primitive_contract_round_trips_and_kind_map_is_exhaustive`.
 - `MEDULLA-DECISION-ENGINE-R036.100.2`: L2 `crates/medulla-compute/src/assemble/tests/primitive.rs::substitution_rules_cover_every_refusal` and `::edges_type_check_on_the_schema_digest_and_graphs_are_bounded`.
-- `MEDULLA-DECISION-ENGINE-R036.100.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::primitive_refusals_abstain_with_stable_codes`.
-- `MEDULLA-DECISION-ENGINE-R036.100.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::primitive_premises_and_inactive_proposals`.
-- `MEDULLA-DECISION-ENGINE-R136.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::criterion_regression_holds_the_revision`.
-- `MEDULLA-DECISION-ENGINE-R121.100`: L3 `crates/medulla-h-decide/src/decide/stat_tests/step_verification_tests.rs::failed_and_uncertain_steps_withhold_their_dependents` (the existing `step_verification` family; verified, uncertain with `withheld`, failed with recovery and `withheld`).
+- `MEDULLA-DECISION-ENGINE-R036.100.3`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::primitive_refusals_abstain_with_stable_codes`.
+- `MEDULLA-DECISION-ENGINE-R036.100.4`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::primitive_premises_and_inactive_proposals`.
+- `MEDULLA-DECISION-ENGINE-R136.101`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::criterion_regression_holds_the_revision`.
+- `MEDULLA-DECISION-ENGINE-R121.100`: L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/step_verification_tests.rs::failed_and_uncertain_steps_withhold_their_dependents` (the existing `step_verification` family; verified, uncertain with `withheld`, failed with recovery and `withheld`).
 - `MEDULLA-DECISION-ENGINE-R138.100.1`: planned L1 `crates/medulla-decision-stats/src/decision/verifier_receipt.rs::tests::each_breach_is_reported`.
-- `MEDULLA-DECISION-ENGINE-R138.100.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/generated_code_admission_tests.rs::admission_requires_a_complete_receipt`.
-- `MEDULLA-DECISION-ENGINE-R138.100.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/generated_code_admission_tests.rs::admission_requires_a_complete_receipt`.
-- `MEDULLA-DECISION-ENGINE-R136.102`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::incomplete_grading_refuses_before_review`.
-- `MEDULLA-DECISION-ENGINE-R136.103`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/evolution_round_tests.rs::rising_judge_score_without_outcome_gain_refuses`.
+- `MEDULLA-DECISION-ENGINE-R138.100.1`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/generated_code_admission_tests.rs::admission_requires_a_complete_receipt`.
+- `MEDULLA-DECISION-ENGINE-R138.100.2`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/generated_code_admission_tests.rs::admission_requires_a_complete_receipt`.
+- `MEDULLA-DECISION-ENGINE-R136.102`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::incomplete_grading_refuses_before_review`.
+- `MEDULLA-DECISION-ENGINE-R136.103`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/evolution_round_tests.rs::rising_judge_score_without_outcome_gain_refuses`.
 - `MEDULLA-DECISION-ENGINE-R138.101.1`: planned L1 `crates/medulla-decision-stats-records/src/decision/changeset_review.rs::tests::only_evidenced_low_impact_findings_filter`.
-- `MEDULLA-DECISION-ENGINE-R138.101.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/changeset_review_tests.rs::review_covers_five_classes_and_filters_by_impact`.
-- `MEDULLA-DECISION-ENGINE-R138.101.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/changeset_review_tests.rs::review_covers_five_classes_and_filters_by_impact`.
-- `MEDULLA-DECISION-ENGINE-R036.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::coding_agent_plan_orders_skills_and_refuses_stale_receipts`.
+- `MEDULLA-DECISION-ENGINE-R138.101.1`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/changeset_review_tests.rs::review_covers_five_classes_and_filters_by_impact`.
+- `MEDULLA-DECISION-ENGINE-R138.101.2`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/changeset_review_tests.rs::review_covers_five_classes_and_filters_by_impact`.
+- `MEDULLA-DECISION-ENGINE-R036.101`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::coding_agent_plan_orders_skills_and_refuses_stale_receipts`.
 - `MEDULLA-DECISION-ENGINE-R014.100.1`: L1 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::inadequate_and_unknown_adequacy_are_eliminated`.
-- `MEDULLA-DECISION-ENGINE-R014.100.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
+- `MEDULLA-DECISION-ENGINE-R014.100.1`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
 - `MEDULLA-DECISION-ENGINE-R014.100.2`: L2 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::objective_levels::lexicographic_size_then_cost_matches_brute_force`.
 - `MEDULLA-DECISION-ENGINE-R014.100.2`: L2 `crates/medulla-compute/src/assemble/tests/smallest_adequate.rs::objective_levels::unknown_size_follows_the_unknown_cost_rule`.
-- `MEDULLA-DECISION-ENGINE-R014.100.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
+- `MEDULLA-DECISION-ENGINE-R014.100.2`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_size_tests.rs::smallest_adequate_composition_is_served`.
 - `MEDULLA-DECISION-ENGINE-R147.1`: planned L1 `crates/medulla-decision-statistical-types/src/decision/statistical/distilled.rs::tests::distilled_scores_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R147.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
+- `MEDULLA-DECISION-ENGINE-R147.1`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
 - `MEDULLA-DECISION-ENGINE-R147.2`: planned L1 `crates/medulla-decision-stats-records/src/decision/distilled.rs::tests::no_query_time_calls`.
-- `MEDULLA-DECISION-ENGINE-R147.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
-- `MEDULLA-DECISION-ENGINE-R147.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
-- `MEDULLA-DECISION-ENGINE-R147.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::missing_score_refuses`.
-- `MEDULLA-DECISION-ENGINE-R147.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/distilled_rank_tests.rs::distilled_evidence_binds_scorer`.
+- `MEDULLA-DECISION-ENGINE-R147.2`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
+- `MEDULLA-DECISION-ENGINE-R147.3`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/distilled_rank_tests.rs::stored_scores_rank_without_model_calls`.
+- `MEDULLA-DECISION-ENGINE-R147.4`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/distilled_rank_tests.rs::missing_score_refuses`.
+- `MEDULLA-DECISION-ENGINE-R147.5`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/distilled_rank_tests.rs::distilled_evidence_binds_scorer`.
 - `MEDULLA-DECISION-ENGINE-R147.6`: planned L4 `tests/decide/test_distilled_ranking_served.py::test_index_time_scoring_and_query_ranking`.
 - `MEDULLA-DECISION-ENGINE-R148.1`: planned L1 `crates/medulla-decision-statistical-types/src/decision/command_config.rs::tests::config_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R148.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::command_config_journey`.
+- `MEDULLA-DECISION-ENGINE-R148.1`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/command_config_tests.rs::command_config_journey`.
 - `MEDULLA-DECISION-ENGINE-R148.2`: planned L1 `crates/medulla-decision-statistical-types/src/decision/command_config.rs::tests::replay_idempotence`.
 - `MEDULLA-DECISION-ENGINE-R148.2`: planned L1 `crates/medulla-decision-statistical-types/src/decision/command_config.rs::tests::default_ordinal_selects_a_mode`.
-- `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::decide_routes_mode`.
-- `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::other_tenant_modes_are_not_read`.
-- `MEDULLA-DECISION-ENGINE-R148.4`: L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::invalid_config_refuses` (each code as an abstained record).
-- `MEDULLA-DECISION-ENGINE-R148.5`: L3 `crates/medulla-h-decide/src/decide/stat_tests/command_config_tests.rs::config_evidence_binds_schema`.
+- `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/command_config_tests.rs::decide_routes_mode`.
+- `MEDULLA-DECISION-ENGINE-R148.3`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/command_config_tests.rs::other_tenant_modes_are_not_read`.
+- `MEDULLA-DECISION-ENGINE-R148.4`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/command_config_tests.rs::invalid_config_refuses` (each code as an abstained record).
+- `MEDULLA-DECISION-ENGINE-R148.5`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/command_config_tests.rs::config_evidence_binds_schema`.
 - `MEDULLA-DECISION-ENGINE-R148.6`: planned L4 `tests/decide/test_command_config_served.py::test_mode_decision_and_replay`.
 - `MEDULLA-DECISION-ENGINE-R149.1`: planned L1 `crates/medulla-work-types/src/memory.rs::tests::search_state_round_trips`.
 - `MEDULLA-DECISION-ENGINE-R149.1`: planned L3 `tests/memory_sync_served.rs::search_state_survives_context_eviction`.
@@ -1380,51 +1380,51 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R150.1`: planned L1 `crates/medulla-work-types/src/memory.rs::tests::notes_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R150.1`: planned L3 `tests/memory_sync_served.rs::session_notes_recalled_with_flags`.
 - `MEDULLA-DECISION-ENGINE-R150.2`: planned L1 `crates/medulla-decision-stats-records/src/decision/session_note.rs::tests::capture_and_apply`.
-- `MEDULLA-DECISION-ENGINE-R150.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/session_note_tests.rs::capture_requires_a_successful_run`.
+- `MEDULLA-DECISION-ENGINE-R150.3`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/session_note_tests.rs::capture_requires_a_successful_run`.
 - `MEDULLA-DECISION-ENGINE-R150.3`: planned L3 `tests/memory_sync_served.rs::session_notes_recalled_with_flags`.
-- `MEDULLA-DECISION-ENGINE-R150.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/session_note_tests.rs::unauthorized_refuses`.
+- `MEDULLA-DECISION-ENGINE-R150.4`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/session_note_tests.rs::unauthorized_refuses`.
 - `MEDULLA-DECISION-ENGINE-R150.5`: planned L3 `tests/memory_sync_served.rs::session_note_evidence_lists_flags`.
 - `MEDULLA-DECISION-ENGINE-R150.6`: planned L4 `tests/decide/test_session_notes_served.py::test_capture_and_reuse`.
 - `MEDULLA-DECISION-ENGINE-R151.1`: planned L1 `crates/medulla-decision-policy-types/src/decision/importance_penalty.rs::tests::importance_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R151.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
+- `MEDULLA-DECISION-ENGINE-R151.1`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
 - `MEDULLA-DECISION-ENGINE-R151.2`: planned L1 `crates/medulla-decision-stats-records/src/decision/importance_penalty.rs::tests::penalty_respects_importance`.
-- `MEDULLA-DECISION-ENGINE-R151.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
-- `MEDULLA-DECISION-ENGINE-R151.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::fit_applies_the_penalty_from_the_request`.
-- `MEDULLA-DECISION-ENGINE-R151.4`: L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::invalid_importance_refuses`.
-- `MEDULLA-DECISION-ENGINE-R151.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::penalty_evidence`.
-- `MEDULLA-DECISION-ENGINE-R151.6`: L3 `crates/medulla-h-decide/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
+- `MEDULLA-DECISION-ENGINE-R151.2`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
+- `MEDULLA-DECISION-ENGINE-R151.3`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::fit_applies_the_penalty_from_the_request`.
+- `MEDULLA-DECISION-ENGINE-R151.4`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::invalid_importance_refuses`.
+- `MEDULLA-DECISION-ENGINE-R151.5`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::penalty_evidence`.
+- `MEDULLA-DECISION-ENGINE-R151.6`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/importance_penalty_tests.rs::fit_with_importance_keeps_important_weights`.
 - `MEDULLA-DECISION-ENGINE-R139.100`: retired; no binding.
-- `MEDULLA-DECISION-ENGINE-R019.100.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/commit_tests.rs::evidence_streams_are_sealed_and_read_back`.
-- `MEDULLA-DECISION-ENGINE-R019.100.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/commit_tests.rs::missing_stale_and_mismatched_approval_refuse_without_write` (both commit paths, three codes, no write, approved retry replays) and L1 `crates/medulla-decision-policy-types/src/decision/approval.rs::tests::age_bounds_and_future_receipts`.
-- `MEDULLA-DECISION-ENGINE-R029.100`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/retrieval_tests.rs::inference_mode_and_config_digests_are_bound`.
+- `MEDULLA-DECISION-ENGINE-R019.100.1`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/commit_tests.rs::evidence_streams_are_sealed_and_read_back`.
+- `MEDULLA-DECISION-ENGINE-R019.100.2`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/commit_tests.rs::missing_stale_and_mismatched_approval_refuse_without_write` (both commit paths, three codes, no write, approved retry replays) and L1 `crates/medulla-decision-policy-types/src/decision/approval.rs::tests::age_bounds_and_future_receipts`.
+- `MEDULLA-DECISION-ENGINE-R029.100`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/retrieval_tests.rs::inference_mode_and_config_digests_are_bound`.
 - `MEDULLA-DECISION-ENGINE-R140.100`: planned L2 `crates/medulla-decision-policy-types/src/decision/task_plan/trajectory_budget.rs::tests::score_and_branch_golden_vectors`.
-- `MEDULLA-DECISION-ENGINE-R140.100`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
+- `MEDULLA-DECISION-ENGINE-R140.100`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
 - `MEDULLA-DECISION-ENGINE-R140.101`: planned L2 `crates/medulla-decision-policy-types/src/decision/task_plan/trajectory_projection.rs::tests::order_and_candidate_id_are_deterministic`.
-- `MEDULLA-DECISION-ENGINE-R140.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
+- `MEDULLA-DECISION-ENGINE-R140.101`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
 - `MEDULLA-DECISION-ENGINE-R140.102`: planned L1 `crates/medulla-decision-program-types/src/decision/task_plan/branch_breadth.rs::tests::mapping_and_clamp`.
-- `MEDULLA-DECISION-ENGINE-R140.102`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
+- `MEDULLA-DECISION-ENGINE-R140.102`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
 - `MEDULLA-DECISION-ENGINE-R140.103`: planned L2 `crates/medulla-decision-program-types/src/decision/task_plan/pairwise.rs::tests::copeland_cycle_and_tie_fixture`.
-- `MEDULLA-DECISION-ENGINE-R140.103`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
-- `MEDULLA-DECISION-ENGINE-R140.104`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::decide_returns_pinned_trajectory_decisions`.
-- `MEDULLA-DECISION-ENGINE-R140.105`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
+- `MEDULLA-DECISION-ENGINE-R140.103`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
+- `MEDULLA-DECISION-ENGINE-R140.104`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::decide_returns_pinned_trajectory_decisions`.
+- `MEDULLA-DECISION-ENGINE-R140.105`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/trajectory_tests.rs::trajectory_decisions_journey`.
 - `MEDULLA-DECISION-ENGINE-R141.100`: planned L1 `crates/medulla-decision-stats-records/src/decision/memory_rewrite.rs::tests::fidelity_is_set_overlap_rounded_half_to_even`.
-- `MEDULLA-DECISION-ENGINE-R141.100`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::rewrite_admit_and_discard_through_decision_eval`.
+- `MEDULLA-DECISION-ENGINE-R141.100`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/memory_change_tests.rs::rewrite_admit_and_discard_through_decision_eval`.
 - `MEDULLA-DECISION-ENGINE-R141.101`: planned L1 `crates/medulla-decision-stats-records/src/decision/memory_benchmark.rs::tests::recall_and_accuracy_use_exact_counts`.
-- `MEDULLA-DECISION-ENGINE-R141.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::benchmark_receipt_binds_both_snapshots`.
-- `MEDULLA-DECISION-ENGINE-R141.102`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::rewrite_admit_and_discard_through_decision_eval`.
+- `MEDULLA-DECISION-ENGINE-R141.101`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/memory_change_tests.rs::benchmark_receipt_binds_both_snapshots`.
+- `MEDULLA-DECISION-ENGINE-R141.102`: planned L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/memory_change_tests.rs::rewrite_admit_and_discard_through_decision_eval`.
 - `MEDULLA-DECISION-ENGINE-R141.103`: planned L4 `tests/decide/test_memory_change_served.py::test_consolidate_requires_current_admit_receipt`.
 - `MEDULLA-DECISION-ENGINE-R141.104`: planned L3 `crates/medulla-server-router/src/dispatch/router/memory_change.rs::tests::consolidate_requires_a_current_admit_receipt`.
 - `MEDULLA-DECISION-ENGINE-R142.100`: planned L1 `crates/medulla-decision-types/src/decision/local_certification.rs::tests::attestation_round_trip_and_digest`.
-- `MEDULLA-DECISION-ENGINE-R142.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/certification_tests.rs::attests_atomic_and_gates_workflow`.
+- `MEDULLA-DECISION-ENGINE-R142.101`: planned L3 `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/certification_tests.rs::attests_atomic_and_gates_workflow`.
 - `MEDULLA-DECISION-ENGINE-R142.102`: planned L4 `tests/decide/test_local_skill_certification_served.py::test_certification_journey`.
 - `MEDULLA-DECISION-ENGINE-R143.1`: planned L1 `crates/medulla-decision-types/src/decision/instruction_disclosure.rs::tests::disclosure_events_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R143.1`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.1`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
 - `MEDULLA-DECISION-ENGINE-R143.2`: planned L2 `crates/medulla-decision-stats-records/src/decision/instruction_disclosure.rs::tests::triggers_produce_distinct_versions`.
-- `MEDULLA-DECISION-ENGINE-R143.2`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
-- `MEDULLA-DECISION-ENGINE-R143.3`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::decide_routes_disclosure_events`.
-- `MEDULLA-DECISION-ENGINE-R143.4`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::invalid_trigger_or_hash_refuses`.
-- `MEDULLA-DECISION-ENGINE-R143.5`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_binds_version_and_hash`.
-- `MEDULLA-DECISION-ENGINE-R143.6`: L3 `crates/medulla-h-decide/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.2`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
+- `MEDULLA-DECISION-ENGINE-R143.3`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::decide_routes_disclosure_events`.
+- `MEDULLA-DECISION-ENGINE-R143.4`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::invalid_trigger_or_hash_refuses`.
+- `MEDULLA-DECISION-ENGINE-R143.5`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_binds_version_and_hash`.
+- `MEDULLA-DECISION-ENGINE-R143.6`: L3 `crates/medulla-h-decide-family-tests/src/decide/stat_tests/instruction_disclosure_tests.rs::disclosure_journey`.
 - `MEDULLA-DECISION-ENGINE-R144.1`: planned L1 `crates/medulla-decision-program-types/src/decision/indexless_retrieval.rs::tests::operations_and_budget_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R144.1`: planned L3 `tests/served_indexless_retrieval.rs::indexless_retrieval_reports_cost_and_refuses_over_budget`.
 - `MEDULLA-DECISION-ENGINE-R144.2`: planned L1 `crates/medulla-decision-program-types/src/decision/indexless_retrieval.rs::tests::budget_enforcement`.
@@ -1436,16 +1436,16 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R144.7`: planned L3 `tests/served_indexless_retrieval.rs::consumer_budget_clamped_to_tenant_ceiling`.
 - `MEDULLA-DECISION-ENGINE-R144.7`: planned L3 `tests/decide/test_indexless_retrieval_served.py::test_consumer_budget_clamped_to_tenant_ceiling`.
 - `MEDULLA-DECISION-ENGINE-R146.1`: planned L1 `crates/medulla-decision-program-types/src/decision/temporal_query.rs::tests::temporal_context_round_trip`.
-- `MEDULLA-DECISION-ENGINE-R146.1`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
+- `MEDULLA-DECISION-ENGINE-R146.1`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
 - `MEDULLA-DECISION-ENGINE-R146.2`: planned L1 `crates/medulla-decision-stats/src/decision/temporal_basis.rs::tests::confusion_detection`.
-- `MEDULLA-DECISION-ENGINE-R146.2`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
-- `MEDULLA-DECISION-ENGINE-R146.3`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
-- `MEDULLA-DECISION-ENGINE-R146.4`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/temporal_basis_tests.rs::missing_time_refuses`.
-- `MEDULLA-DECISION-ENGINE-R146.5`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/temporal_basis_tests.rs::temporal_confusion_evidence`.
+- `MEDULLA-DECISION-ENGINE-R146.2`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
+- `MEDULLA-DECISION-ENGINE-R146.3`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/temporal_basis_tests.rs::three_clock_confusion_selects_a_basis_and_builds_a_fallback`.
+- `MEDULLA-DECISION-ENGINE-R146.4`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/temporal_basis_tests.rs::missing_time_refuses`.
+- `MEDULLA-DECISION-ENGINE-R146.5`: planned L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/temporal_basis_tests.rs::temporal_confusion_evidence`.
 - `MEDULLA-DECISION-ENGINE-R146.6`: planned L4 `tests/decide/test_temporal_basis_served.py::test_three_clock_confusion_and_fallback`.
 - `MEDULLA-DECISION-ENGINE-R100.100.1`: L1 `crates/medulla-decision-stats-records/src/decision/ranking_eval.rs::tests::hits_at_k_counts_queries_with_a_relevant_top_k_item`.
-- `MEDULLA-DECISION-ENGINE-R100.100.1`: L3 `crates/medulla-h-decide/src/decide/stat_tests/retrieval_eval_tests.rs::ranking_evaluation_is_sealed_and_readable`.
-- `MEDULLA-DECISION-ENGINE-R100.100.2`: L3 `crates/medulla-h-decide/src/decide/stat_tests/retrieval_eval_tests.rs::ranking_evaluation_is_sealed_and_readable`.
+- `MEDULLA-DECISION-ENGINE-R100.100.1`: L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retrieval_eval_tests.rs::ranking_evaluation_is_sealed_and_readable`.
+- `MEDULLA-DECISION-ENGINE-R100.100.2`: L3 `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retrieval_eval_tests.rs::ranking_evaluation_is_sealed_and_readable`.
 - `MEDULLA-DECISION-ENGINE-R100.100.3`: L1 `crates/medulla-decision-stats-records/src/decision/context_search.rs::tests::offsets_slice_the_original_bytes_for_composed_and_decomposed_text`.
 - `MEDULLA-DECISION-ENGINE-R100.100.3`: L3 `tests/served_context_search.rs::context_search_is_authorized_and_bounded`.
 - `MEDULLA-DECISION-ENGINE-R100.100.4`: L3 `tests/served_context_search.rs::context_search_is_authorized_and_bounded`.
@@ -1490,102 +1490,102 @@ Rows `MEDULLA-DECISION-ENGINE-R154.5` to `MEDULLA-DECISION-ENGINE-R172.12`. Ever
 | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::recall_result_binds_episode_digests` | L3 | `MEDULLA-DECISION-ENGINE-R155.5` | recomputes each digest from the stored records and compares every field |
 | `tests/memory/test_cross_session_retrieval_served.py::test_later_session_recalls_earlier_episode` | L4 | `MEDULLA-DECISION-ENGINE-R155.6` | runs it through the client |
 | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::scoped_recall_returns_only_scope_episodes` | L3 | `MEDULLA-DECISION-ENGINE-R155.7` | seals three sessions, scopes to two and asserts the result |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_workflow_tests.rs::served_compile_then_lookup_by_skill_digest` | L3 | `MEDULLA-DECISION-ENGINE-R156`, `MEDULLA-DECISION-ENGINE-R156.1`, `MEDULLA-DECISION-ENGINE-R156.3` | The test compiles a golden draft, commits it, looks it up by digest and asserts the steps, `ResolutionKind::Constraint` and `EvidenceClass::Claim` |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_workflow_tests.rs::served_compile_then_lookup_by_skill_digest` | L3 | `MEDULLA-DECISION-ENGINE-R156`, `MEDULLA-DECISION-ENGINE-R156.1`, `MEDULLA-DECISION-ENGINE-R156.3` | The test compiles a golden draft, commits it, looks it up by digest and asserts the steps, `ResolutionKind::Constraint` and `EvidenceClass::Claim` |
 | `crates/medulla-decision-program-types/src/decision/skill_workflow.rs::tests::draft_round_trips` | L1 | `MEDULLA-DECISION-ENGINE-R156.1` | round-trips a draft and rejects 41 steps |
 | `crates/medulla-decision-plan/src/plan/skill_workflow.rs::tests::golden_draft_compiles_in_order` | L1 | `MEDULLA-DECISION-ENGINE-R156.2` | asserts step order and the error branch |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_workflow_tests.rs::other_tenant_cannot_look_up_the_program` | L3 | `MEDULLA-DECISION-ENGINE-R156.3` | is the cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_workflow_tests.rs::incomplete_drafts_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R156.4` | submits one draft per code |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_workflow_tests.rs::golden_skill_drafts_have_fixed_program_digests` | L3 | `MEDULLA-DECISION-ENGINE-R156.5` | compiles each golden draft and asserts step order, error branching, types and the program digest |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_workflow_tests.rs::other_tenant_cannot_look_up_the_program` | L3 | `MEDULLA-DECISION-ENGINE-R156.3` | is the cross-tenant negative case |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_workflow_tests.rs::incomplete_drafts_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R156.4` | submits one draft per code |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_workflow_tests.rs::golden_skill_drafts_have_fixed_program_digests` | L3 | `MEDULLA-DECISION-ENGINE-R156.5` | compiles each golden draft and asserts step order, error branching, types and the program digest |
 | `tests/skills/test_skill_to_workflow_compilation_served.py::test_draft_compiles_commits_and_looks_up` | L4 | `MEDULLA-DECISION-ENGINE-R156.6` | asserts the stored program and the skill digest |
-| `crates/medulla-h-decide/src/decide/stat_tests/delegation_quality_tests.rs::quality_gate_routes` | L3 | `MEDULLA-DECISION-ENGINE-R157`, `MEDULLA-DECISION-ENGINE-R157.1`, `MEDULLA-DECISION-ENGINE-R157.2`, `MEDULLA-DECISION-ENGINE-R157.3` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/delegation_quality_tests.rs::quality_gate_routes` | L3 | `MEDULLA-DECISION-ENGINE-R157`, `MEDULLA-DECISION-ENGINE-R157.1`, `MEDULLA-DECISION-ENGINE-R157.2`, `MEDULLA-DECISION-ENGINE-R157.3` | passes |
 | `crates/medulla-decision-policy-types/src/decision/delegation_quality.rs::tests::types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R157.1` | Proves: Delegation quality model |
 | `crates/medulla-decision-policy-types/src/decision/delegation_quality.rs::tests::quality_gate_admission` | L1 | `MEDULLA-DECISION-ENGINE-R157.2` | covers the equal-to-threshold edge, the below-threshold case and the window replacement |
-| `crates/medulla-h-decide/src/decide/stat_tests/delegation_quality_tests.rs::stale_window_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R157.4` | asserts each code and that no artifact exists after a refusal |
-| `crates/medulla-h-decide/src/decide/stat_tests/delegation_quality_tests.rs::quality_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R157.5` | reads the artifact and asserts every listed field and class |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/delegation_quality_tests.rs::stale_window_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R157.4` | asserts each code and that no artifact exists after a refusal |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/delegation_quality_tests.rs::quality_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R157.5` | reads the artifact and asserts every listed field and class |
 | `tests/decide/test_delegation_quality_served.py::test_quality_gate_admits_and_refuses` | L4 | `MEDULLA-DECISION-ENGINE-R157.6` | asserts admit above threshold and refusal below it |
-| `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::run_adjustment_journey` | L3 | `MEDULLA-DECISION-ENGINE-R158`, `MEDULLA-DECISION-ENGINE-R158.1`, `MEDULLA-DECISION-ENGINE-R158.2` | Served proof: `tests/decide/test_error_adjustment_served.py::test_per_run_adjustment` (L4) |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::run_adjustment_journey` | L3 | `MEDULLA-DECISION-ENGINE-R158`, `MEDULLA-DECISION-ENGINE-R158.1`, `MEDULLA-DECISION-ENGINE-R158.2` | Served proof: `tests/decide/test_error_adjustment_served.py::test_per_run_adjustment` (L4) |
 | `tests/decide/test_error_adjustment_served.py::test_per_run_adjustment` | L4 | `MEDULLA-DECISION-ENGINE-R158.6` | Proves: Per-run error frequency drives model and width adjustment |
 | `crates/medulla-decision-policy-types/src/decision/run_adjustment.rs::tests::adjustment_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R158.1` | Proves: Adjustment records |
 | `crates/medulla-decision-policy-types/src/decision/run_adjustment.rs::tests::adjustment_rules` | L1 | `MEDULLA-DECISION-ENGINE-R158.2` | covers 0.03, 0.01 and 0.004 error rates, the top tier, width 1 and the host ceiling |
-| `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::per_run_adjustment_routes` | L3 | `MEDULLA-DECISION-ENGINE-R158.3` | seeds ledger records and asserts the options |
-| `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::other_tenant_runs_are_not_counted` | L3 | `MEDULLA-DECISION-ENGINE-R158.3` | Proves: Run adjustment family wiring |
-| `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::invalid_policy_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R158.4` | covers each code and the abstention |
-| `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::adjustment_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R158.5` | asserts each premise and the before and after values |
-| `crates/medulla-h-decide/src/decide/stat_tests/path_preference_tests.rs::served_decide_prefers_the_higher_success_path` | L3 | `MEDULLA-DECISION-ENGINE-R159`, `MEDULLA-DECISION-ENGINE-R159.1`, `MEDULLA-DECISION-ENGINE-R159.2`, `MEDULLA-DECISION-ENGINE-R159.3` | The test seeds outcomes through `DecisionLog` and asserts the preferred path, `ResolutionKind::Statistical` and `EvidenceClass::Observation` |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::per_run_adjustment_routes` | L3 | `MEDULLA-DECISION-ENGINE-R158.3` | seeds ledger records and asserts the options |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::other_tenant_runs_are_not_counted` | L3 | `MEDULLA-DECISION-ENGINE-R158.3` | Proves: Run adjustment family wiring |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::invalid_policy_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R158.4` | covers each code and the abstention |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::adjustment_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R158.5` | asserts each premise and the before and after values |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/path_preference_tests.rs::served_decide_prefers_the_higher_success_path` | L3 | `MEDULLA-DECISION-ENGINE-R159`, `MEDULLA-DECISION-ENGINE-R159.1`, `MEDULLA-DECISION-ENGINE-R159.2`, `MEDULLA-DECISION-ENGINE-R159.3` | The test seeds outcomes through `DecisionLog` and asserts the preferred path, `ResolutionKind::Statistical` and `EvidenceClass::Observation` |
 | `crates/medulla-decision-statistical-types/src/decision/path_success.rs::tests::path_identity_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R159.1` | asserts a stable `path_id` and a round trip of every type |
 | `crates/medulla-decision-rank/src/rank/path_success.rs::tests::success_preference_gates` | L1 | `MEDULLA-DECISION-ENGINE-R159.2` | asserts the eligibility, preference, skip and tie rules |
-| `crates/medulla-h-decide/src/decide/stat_tests/path_preference_tests.rs::other_tenant_outcomes_never_count` | L3 | `MEDULLA-DECISION-ENGINE-R159.3` | is the cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/path_preference_tests.rs::unmeasured_and_stale_paths_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R159.4` | asserts each code, the elimination premise and the abstention when no path remains |
-| `crates/medulla-h-decide/src/decide/stat_tests/path_preference_tests.rs::path_success_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R159.5` | asserts the identity, the numerator and denominator, the window and the preference decision |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/path_preference_tests.rs::other_tenant_outcomes_never_count` | L3 | `MEDULLA-DECISION-ENGINE-R159.3` | is the cross-tenant negative case |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/path_preference_tests.rs::unmeasured_and_stale_paths_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R159.4` | asserts each code, the elimination premise and the abstention when no path remains |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/path_preference_tests.rs::path_success_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R159.5` | asserts the identity, the numerator and denominator, the window and the preference decision |
 | `tests/decide/test_path_success_served.py::test_success_history_drives_preference` | L4 | `MEDULLA-DECISION-ENGINE-R159.6` | asserts the preferred path and the skip through the wire client |
 | `crates/medulla-h-admin/src/admin/package_validation_tests.rs::invalid_packages_refuse_publication` | L3 | `MEDULLA-DECISION-ENGINE-R160`, `MEDULLA-DECISION-ENGINE-R160.1`, `MEDULLA-DECISION-ENGINE-R160.2` | passes |
 | `crates/medulla-decision-types/src/decision/package_validation.rs::tests::validation_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R160.1` | Proves: Package validation model |
 | `crates/medulla-decision-types/src/decision/package_validation.rs::tests::validation_gates_publication` | L1 | `MEDULLA-DECISION-ENGINE-R160.2` | covers a passing history, a low pass share, a digest mismatch, a short history, a duplicate run and an unparseable digest; the first failing step wins |
 | `crates/medulla-h-admin/src/admin/package_validation_tests.rs::package_validation_routes` | L3 | `MEDULLA-DECISION-ENGINE-R160.3` | records runs with `LearningWrite::PackageRun`, publishes, and asserts the receipt, the replay, the catalog gate (`PACKAGE_UNPUBLISHED` for an unpublished digest) and tenant scoping |
-| `crates/medulla-h-decide/src/decide/stat_tests/package_run_tests.rs::package_run_is_written_once` | L3 | `MEDULLA-DECISION-ENGINE-R160.3` | an equal replay returns the stored run; other content refuses `IDEMPOTENCY_CONFLICT` |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/package_run_tests.rs::package_run_is_written_once` | L3 | `MEDULLA-DECISION-ENGINE-R160.3` | an equal replay returns the stored run; other content refuses `IDEMPOTENCY_CONFLICT` |
 | `crates/medulla-h-admin/src/admin/package_validation_tests.rs::validation_fails_refuse_publication` | L3 | `MEDULLA-DECISION-ENGINE-R160.4` | asserts each code and that no receipt exists after a refusal |
 | `crates/medulla-decision-types/src/decision/package_validation.rs::tests::refusal_codes_are_unique_and_registered` | L1 | `MEDULLA-DECISION-ENGINE-R160.4` | asserts each `PublicationRefusal` code and that `REFUSALS` equals the `EXACT_METHOD_ERRORS` entry |
 | `crates/medulla-h-admin/src/admin/package_validation_tests.rs::validation_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R160.5` | reads the receipt, asserts each bound field and recomputes `run_history_digest` from the stored run rows |
 | `tests/catalog/test_package_validation_served.py::test_invalid_packages_refuse_publication` | L4 | `MEDULLA-DECISION-ENGINE-R160.6` | asserts the invalid refusal and the recorded valid receipt |
-| `crates/medulla-h-decide/src/decide/stat_tests/correction_admission_tests.rs::receipts_gate_correction_admission` | L3 | `MEDULLA-DECISION-ENGINE-R161`, `MEDULLA-DECISION-ENGINE-R161.1`, `MEDULLA-DECISION-ENGINE-R161.2`, `MEDULLA-DECISION-ENGINE-R161.6` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_admission_tests.rs::receipts_gate_correction_admission` | L3 | `MEDULLA-DECISION-ENGINE-R161`, `MEDULLA-DECISION-ENGINE-R161.1`, `MEDULLA-DECISION-ENGINE-R161.2`, `MEDULLA-DECISION-ENGINE-R161.6` | passes |
 | `crates/medulla-decision-types/src/decision/trace_fix_binding.rs::tests::binding_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R161.1` | Proves: Correction binding model |
 | `crates/medulla-decision-types/src/decision/trace_fix_binding.rs::tests::receipt_binding_gates_admission` | L1 | `MEDULLA-DECISION-ENGINE-R161.2` | covers the pass case and each broken link |
-| `crates/medulla-h-decide/src/decide/stat_tests/correction_admission_tests.rs::trace_to_test_routes` | L3 | `MEDULLA-DECISION-ENGINE-R161.3` | asserts the admit outcome, `ResolutionKind::Constraint`, `EvidenceClass::Claim` and one cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/correction_admission_tests.rs::incomplete_binding_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R161.4` | asserts each code and that the store is unchanged |
-| `crates/medulla-h-decide/src/decide/stat_tests/correction_admission_tests.rs::binding_evidence_records` | L3 | `MEDULLA-DECISION-ENGINE-R161.5` | asserts each premise and the class |
-| `crates/medulla-h-decide/src/decide/stat_tests/field_shielding_tests.rs::undeclared_fields_withheld_journey` | L3 | `MEDULLA-DECISION-ENGINE-R162`, `MEDULLA-DECISION-ENGINE-R162.1`, `MEDULLA-DECISION-ENGINE-R162.2`, `MEDULLA-DECISION-ENGINE-R162.6` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_admission_tests.rs::trace_to_test_routes` | L3 | `MEDULLA-DECISION-ENGINE-R161.3` | asserts the admit outcome, `ResolutionKind::Constraint`, `EvidenceClass::Claim` and one cross-tenant negative case |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_admission_tests.rs::incomplete_binding_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R161.4` | asserts each code and that the store is unchanged |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_admission_tests.rs::binding_evidence_records` | L3 | `MEDULLA-DECISION-ENGINE-R161.5` | asserts each premise and the class |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/field_shielding_tests.rs::undeclared_fields_withheld_journey` | L3 | `MEDULLA-DECISION-ENGINE-R162`, `MEDULLA-DECISION-ENGINE-R162.1`, `MEDULLA-DECISION-ENGINE-R162.2`, `MEDULLA-DECISION-ENGINE-R162.6` | passes |
 | `crates/medulla-decision-statistical-types/src/decision/field_shielding.rs::tests::types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R162.1` | Proves: Field shielding model |
 | `crates/medulla-decision-statistical-types/src/decision/field_shielding.rs::tests::shielding_removes_nested` | L1 | `MEDULLA-DECISION-ENGINE-R162.2` | covers nested shielded paths, depth edges and an undeclared sibling |
-| `crates/medulla-h-decide/src/decide/stat_tests/field_shielding_tests.rs::shielding_routes` | L3 | `MEDULLA-DECISION-ENGINE-R162.3` | asserts the allowed and withheld sets, `ResolutionKind::Constraint` and one cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/field_shielding_tests.rs::undeclared_fields_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R162.4` | asserts each code and the named path |
-| `crates/medulla-h-decide/src/decide/stat_tests/field_shielding_tests.rs::shielding_routes` | L3 | `MEDULLA-DECISION-ENGINE-R162.5` | asserts the `shielding:step=`, `shielding:allowed=` and `shielding:withheld=` premises |
-| `crates/medulla-h-decide/src/decide/stat_tests/graph_intake_tests.rs::mixed_source_resolution` | L3 | `MEDULLA-DECISION-ENGINE-R163`, `MEDULLA-DECISION-ENGINE-R163.1`, `MEDULLA-DECISION-ENGINE-R163.2`, `MEDULLA-DECISION-ENGINE-R163.6` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/field_shielding_tests.rs::shielding_routes` | L3 | `MEDULLA-DECISION-ENGINE-R162.3` | asserts the allowed and withheld sets, `ResolutionKind::Constraint` and one cross-tenant negative case |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/field_shielding_tests.rs::undeclared_fields_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R162.4` | asserts each code and the named path |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/field_shielding_tests.rs::shielding_routes` | L3 | `MEDULLA-DECISION-ENGINE-R162.5` | asserts the `shielding:step=`, `shielding:allowed=` and `shielding:withheld=` premises |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/graph_intake_tests.rs::mixed_source_resolution` | L3 | `MEDULLA-DECISION-ENGINE-R163`, `MEDULLA-DECISION-ENGINE-R163.1`, `MEDULLA-DECISION-ENGINE-R163.2`, `MEDULLA-DECISION-ENGINE-R163.6` | passes |
 | `crates/medulla-decision-policy-types/src/decision/graph_intake.rs::tests::intake_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R163.1` | Proves: Graph intake model |
 | `crates/medulla-decision-policy-types/src/decision/graph_intake.rs::tests::resolved_source_keeps_authority_not_body` | L1 | `MEDULLA-DECISION-ENGINE-R163.2` | asserts the resolved type holds no body |
-| `crates/medulla-h-decide/src/decide/stat_tests/graph_intake_tests.rs::graph_intake_routes` | L3 | `MEDULLA-DECISION-ENGINE-R163.3` | asserts option `resolved_set`, each source's revision and digest in request order, `ResolutionKind::Constraint`, and that a node stored under another tenant abstains `GRAPH_INTAKE_RESOLUTION_FAILED` |
-| `crates/medulla-h-decide/src/decide/stat_tests/graph_intake_tests.rs::missing_graph_data_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R163.4` | asserts each `GRAPH_INTAKE_*` code through the abstained record and no resolved premise on a partly bad set |
-| `crates/medulla-h-decide/src/decide/stat_tests/graph_intake_tests.rs::graph_intake_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R163.5` | asserts both premise strings, class `Claim`, the `GraphRow` and request provenance and record evidence class `Claim` |
-| `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::necessity_journey` | L3 | `MEDULLA-DECISION-ENGINE-R165`, `MEDULLA-DECISION-ENGINE-R165.3` | Served proof: `tests/decide/test_tool_necessity_served.py::test_necessity_mismatch_trace` (L4) |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/graph_intake_tests.rs::graph_intake_routes` | L3 | `MEDULLA-DECISION-ENGINE-R163.3` | asserts option `resolved_set`, each source's revision and digest in request order, `ResolutionKind::Constraint`, and that a node stored under another tenant abstains `GRAPH_INTAKE_RESOLUTION_FAILED` |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/graph_intake_tests.rs::missing_graph_data_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R163.4` | asserts each `GRAPH_INTAKE_*` code through the abstained record and no resolved premise on a partly bad set |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/graph_intake_tests.rs::graph_intake_evidence_binds` | L3 | `MEDULLA-DECISION-ENGINE-R163.5` | asserts both premise strings, class `Claim`, the `GraphRow` and request provenance and record evidence class `Claim` |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_necessity_tests.rs::necessity_journey` | L3 | `MEDULLA-DECISION-ENGINE-R165`, `MEDULLA-DECISION-ENGINE-R165.3` | Served proof: `tests/decide/test_tool_necessity_served.py::test_necessity_mismatch_trace` (L4) |
 | `tests/decide/test_tool_necessity_served.py::test_necessity_mismatch_trace` | L4 | `MEDULLA-DECISION-ENGINE-R165`, `MEDULLA-DECISION-ENGINE-R165.6` | Proves: Per-model tool necessity and decision comparison (rollup) |
 | `crates/medulla-decision-program-types/src/decision/tool_necessity.rs::tests::necessity_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R165.1` | Proves: Tool necessity records |
 | `crates/medulla-decision-program-types/src/decision/tool_necessity.rs::tests::necessity_comparison_detects_mismatch` | L1 | `MEDULLA-DECISION-ENGINE-R165.2` | covers both mismatch reasons and the sample floor |
-| `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::necessity_comparison_routes` | L3 | `MEDULLA-DECISION-ENGINE-R165.3` | seeds run traces and asserts the options |
-| `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::other_tenant_traces_are_not_read` | L3 | `MEDULLA-DECISION-ENGINE-R165.3` | Proves: Tool necessity family wiring |
-| `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::unknown_measurements_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R165.4` | covers each code |
-| `crates/medulla-h-decide/src/decide/stat_tests/tool_necessity_tests.rs::mismatch_links_to_the_model_call` | L3 | `MEDULLA-DECISION-ENGINE-R165.5` | asserts the premises and the call id |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_necessity_tests.rs::necessity_comparison_routes` | L3 | `MEDULLA-DECISION-ENGINE-R165.3` | seeds run traces and asserts the options |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_necessity_tests.rs::other_tenant_traces_are_not_read` | L3 | `MEDULLA-DECISION-ENGINE-R165.3` | Proves: Tool necessity family wiring |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_necessity_tests.rs::unknown_measurements_refuse` | L3 | `MEDULLA-DECISION-ENGINE-R165.4` | covers each code |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_necessity_tests.rs::mismatch_links_to_the_model_call` | L3 | `MEDULLA-DECISION-ENGINE-R165.5` | asserts the premises and the call id |
 | `crates/medulla-h-graph-gateway/src/graph_ops/workflow_registry_tests.rs::register_read_and_refuse_unknown` | L3 | `MEDULLA-DECISION-ENGINE-R166`, `MEDULLA-DECISION-ENGINE-R166.3` | passes |
 | `crates/medulla-h-graph-gateway/src/graph_ops/workflow_registry_tests.rs::unknown_identity_refuses_without_default` | L3 | `MEDULLA-DECISION-ENGINE-R166.4` | asserts each code and that a refused `Register` leaves the graph unchanged |
 | `tests/workflows/test_registry_served.py::test_register_read_and_unknown_refusal` | L4 | `MEDULLA-DECISION-ENGINE-R166.6` | asserts readback equality and the unknown-identity code |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_upgrade_tests.rs::upgrade_admission_journey` | L3 | `MEDULLA-DECISION-ENGINE-R167`, `MEDULLA-DECISION-ENGINE-R167.1`, `MEDULLA-DECISION-ENGINE-R167.2`, `MEDULLA-DECISION-ENGINE-R167.6` | passes |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_upgrade_tests.rs::upgrade_admission_journey` | L3 | `MEDULLA-DECISION-ENGINE-R167`, `MEDULLA-DECISION-ENGINE-R167.1`, `MEDULLA-DECISION-ENGINE-R167.2`, `MEDULLA-DECISION-ENGINE-R167.6` | passes |
 | `crates/medulla-decision-outcome-types/src/decision/skill_upgrade.rs::tests::additive_only_diff` | L1 | `MEDULLA-DECISION-ENGINE-R167.2` | covers addition, removal, type change and optional-to-required |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_upgrade_tests.rs::compatible_and_migrated_upgrades_admit` | L3 | `MEDULLA-DECISION-ENGINE-R167.3` | asserts the admit, `ResolutionKind::Constraint`, `EvidenceClass::Claim` and one cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_upgrade_tests.rs::breaking_upgrade_without_migration_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R167.4` | asserts each code and that the store is unchanged |
-| `crates/medulla-h-decide/src/decide/stat_tests/skill_upgrade_tests.rs::upgrade_evidence_names_digests_and_migration` | L3 | `MEDULLA-DECISION-ENGINE-R167.5` | asserts both premises |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_upgrade_tests.rs::compatible_and_migrated_upgrades_admit` | L3 | `MEDULLA-DECISION-ENGINE-R167.3` | asserts the admit, `ResolutionKind::Constraint`, `EvidenceClass::Claim` and one cross-tenant negative case |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_upgrade_tests.rs::breaking_upgrade_without_migration_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R167.4` | asserts each code and that the store is unchanged |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_upgrade_tests.rs::upgrade_evidence_names_digests_and_migration` | L3 | `MEDULLA-DECISION-ENGINE-R167.5` | asserts both premises |
 | `tests/lifecycle/test_agent_lifecycle_served.py::test_agent_lifecycle_roundtrip` | L4 | `MEDULLA-DECISION-ENGINE-R168`, `MEDULLA-DECISION-ENGINE-R168.1`, `MEDULLA-DECISION-ENGINE-R168.2`, `MEDULLA-DECISION-ENGINE-R168.6` | passes |
 | `crates/medulla-agent-types/src/agent_component.rs::tests::lifecycle_boundaries_are_listed` | L1 | `MEDULLA-DECISION-ENGINE-R168.1` | asserts each boundary maps to one type |
 | `crates/medulla-agent-types/src/agent_component.rs::tests::lifecycle_transition_table` | L1 | `MEDULLA-DECISION-ENGINE-R168.2` | covers each allowed and each refused pair |
 | `tests/lifecycle/test_agent_lifecycle_served.py::test_malformed_lifecycle_refuses` | L4 | `MEDULLA-DECISION-ENGINE-R168.4` | asserts each code and that no revision is written |
 | `tests/lifecycle/test_agent_lifecycle_served.py::test_transition_entry_names_states_and_digest` | L4 | `MEDULLA-DECISION-ENGINE-R168.5` | reads the entry and asserts both states and the digest |
-| `crates/medulla-h-decide/src/decide/stat_tests/feedback_loop_tests.rs::feedback_loop_stops` | L3 | `MEDULLA-DECISION-ENGINE-R169`, `MEDULLA-DECISION-ENGINE-R169.1`, `MEDULLA-DECISION-ENGINE-R169.2`, `MEDULLA-DECISION-ENGINE-R169.6` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_loop_tests.rs::feedback_loop_stops` | L3 | `MEDULLA-DECISION-ENGINE-R169`, `MEDULLA-DECISION-ENGINE-R169.1`, `MEDULLA-DECISION-ENGINE-R169.2`, `MEDULLA-DECISION-ENGINE-R169.6` | passes |
 | `crates/medulla-decision-program-types/src/decision/checker_feedback.rs::tests::records_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R169.1` | Proves: Feedback record model |
 | `crates/medulla-decision-program-types/src/decision/checker_feedback.rs::tests::next_round_rule` | L1 | `MEDULLA-DECISION-ENGINE-R169.2` | covers no findings, the bound edge and a continue |
-| `crates/medulla-h-decide/src/decide/stat_tests/feedback_loop_tests.rs::continuation_survives_a_fresh_harness` | L3 | `MEDULLA-DECISION-ENGINE-R169.3` | commits a round and opens a fresh `Harness` over the same store |
-| `crates/medulla-h-decide/src/decide/stat_tests/feedback_loop_tests.rs::feedback_refusals_do_not_advance` | L3 | `MEDULLA-DECISION-ENGINE-R169.4` | asserts each code and an unchanged continuation |
-| `crates/medulla-h-decide/src/decide/stat_tests/feedback_loop_tests.rs::feedback_evidence_names_both_digests` | L3 | `MEDULLA-DECISION-ENGINE-R169.5` | asserts the premises for every round |
-| `crates/medulla-h-decide/src/decide/stat_tests/team_coordination_tests.rs::fallback_and_team_record` | L3 | `MEDULLA-DECISION-ENGINE-R170`, `MEDULLA-DECISION-ENGINE-R170.1`, `MEDULLA-DECISION-ENGINE-R170.2`, `MEDULLA-DECISION-ENGINE-R170.6` | passes |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_loop_tests.rs::continuation_survives_a_fresh_harness` | L3 | `MEDULLA-DECISION-ENGINE-R169.3` | commits a round and opens a fresh `Harness` over the same store |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_loop_tests.rs::feedback_refusals_do_not_advance` | L3 | `MEDULLA-DECISION-ENGINE-R169.4` | asserts each code and an unchanged continuation |
+| `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feedback_loop_tests.rs::feedback_evidence_names_both_digests` | L3 | `MEDULLA-DECISION-ENGINE-R169.5` | asserts the premises for every round |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/team_coordination_tests.rs::fallback_and_team_record` | L3 | `MEDULLA-DECISION-ENGINE-R170`, `MEDULLA-DECISION-ENGINE-R170.1`, `MEDULLA-DECISION-ENGINE-R170.2`, `MEDULLA-DECISION-ENGINE-R170.6` | passes |
 | `crates/medulla-decision-program-types/src/decision/team_coordination.rs::tests::channel_signal_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R170.1` | Proves: Team vocabulary and channel signal |
-| `crates/medulla-h-decide/src/decide/stat_tests/team_coordination_tests.rs::unavailable_channel_selects_team` | L3 | `MEDULLA-DECISION-ENGINE-R170.2` | covers an available channel, an unavailable channel and a stale signal |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/team_coordination_tests.rs::unavailable_channel_selects_team` | L3 | `MEDULLA-DECISION-ENGINE-R170.2` | covers an available channel, an unavailable channel and a stale signal |
 | `tests/decide/test_team_coordination_served.py::test_team_nodes_validate_and_query` | L4 | `MEDULLA-DECISION-ENGINE-R170.3` | writes a team, reads members and task statuses by graph query and checks the shape refusal |
-| `crates/medulla-h-decide/src/decide/stat_tests/team_coordination_tests.rs::team_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R170.4` | asserts each code and that no team node appears |
-| `crates/medulla-h-decide/src/decide/stat_tests/team_coordination_tests.rs::team_evidence_names_signal_and_members` | L3 | `MEDULLA-DECISION-ENGINE-R170.5` | asserts both premises and the class |
-| `crates/medulla-h-decide/src/decide/stat_tests/planning_admission_tests.rs::served_decide_admits_only_wired_features` | L3 | `MEDULLA-DECISION-ENGINE-R171`, `MEDULLA-DECISION-ENGINE-R171.1`, `MEDULLA-DECISION-ENGINE-R171.2`, `MEDULLA-DECISION-ENGINE-R171.3` | The test asserts admitted, unwired-refused and stale-view cases, with `ResolutionKind::Constraint` and `EvidenceClass::Observation` |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/team_coordination_tests.rs::team_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R170.4` | asserts each code and that no team node appears |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/team_coordination_tests.rs::team_evidence_names_signal_and_members` | L3 | `MEDULLA-DECISION-ENGINE-R170.5` | asserts both premises and the class |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/planning_admission_tests.rs::served_decide_admits_only_wired_features` | L3 | `MEDULLA-DECISION-ENGINE-R171`, `MEDULLA-DECISION-ENGINE-R171.1`, `MEDULLA-DECISION-ENGINE-R171.2`, `MEDULLA-DECISION-ENGINE-R171.3` | The test asserts admitted, unwired-refused and stale-view cases, with `ResolutionKind::Constraint` and `EvidenceClass::Observation` |
 | `crates/medulla-decision-program-types/src/decision/planning_admission.rs::tests::admission_request_round_trips` | L1 | `MEDULLA-DECISION-ENGINE-R171.1` | asserts a round trip and rejects 65 features |
 | `crates/medulla-decision-plan/src/plan/planning_admission.rs::tests::set_difference_orders_differences` | L1 | `MEDULLA-DECISION-ENGINE-R171.2` | asserts a wired plan admits and an unwired plan lists differences in feature order |
-| `crates/medulla-h-decide/src/decide/stat_tests/planning_admission_tests.rs::other_tenant_repository_is_invisible` | L3 | `MEDULLA-DECISION-ENGINE-R171.3` | is the cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/planning_admission_tests.rs::admission_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R171.4` | submits one request per code and asserts the stable code, the named feature and no admission |
-| `crates/medulla-h-decide/src/decide/stat_tests/planning_admission_tests.rs::premises_name_view_and_each_attach_point` | L3 | `MEDULLA-DECISION-ENGINE-R171.5` | asserts the view premise, one `admission:attach` premise per feature and one `admission:gap` premise per gap digest |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/planning_admission_tests.rs::other_tenant_repository_is_invisible` | L3 | `MEDULLA-DECISION-ENGINE-R171.3` | is the cross-tenant negative case |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/planning_admission_tests.rs::admission_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R171.4` | submits one request per code and asserts the stable code, the named feature and no admission |
+| `crates/medulla-h-decide-served-tests/src/decide/stat_tests/planning_admission_tests.rs::premises_name_view_and_each_attach_point` | L3 | `MEDULLA-DECISION-ENGINE-R171.5` | asserts the view premise, one `admission:attach` premise per feature and one `admission:gap` premise per gap digest |
 | `tests/planning/test_wiring_admission_served.py::test_unwired_feature_refused` | L4 | `MEDULLA-DECISION-ENGINE-R171.6` | covers the admitted, unwired-refused and stale-view cases |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey` | L3 | `MEDULLA-DECISION-ENGINE-R172`, `MEDULLA-DECISION-ENGINE-R172.1`, `MEDULLA-DECISION-ENGINE-R172.2`, `MEDULLA-DECISION-ENGINE-R172.3`, `MEDULLA-DECISION-ENGINE-R172.4`, `MEDULLA-DECISION-ENGINE-R172.5`, `MEDULLA-DECISION-ENGINE-R172.5.1` | It writes components, asks a filtered question, logs outcomes and asks again |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey` | L3 | `MEDULLA-DECISION-ENGINE-R172`, `MEDULLA-DECISION-ENGINE-R172.1`, `MEDULLA-DECISION-ENGINE-R172.2`, `MEDULLA-DECISION-ENGINE-R172.3`, `MEDULLA-DECISION-ENGINE-R172.4`, `MEDULLA-DECISION-ENGINE-R172.5`, `MEDULLA-DECISION-ENGINE-R172.5.1` | It writes components, asks a filtered question, logs outcomes and asks again |
 | `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::designation_types_round_trip` | L1 | `MEDULLA-DECISION-ENGINE-R172.1` | A serde round trip keeps every field |
 | `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::incremental_upsert_and_tombstone_match_rebuild` | L1 | `MEDULLA-DECISION-ENGINE-R172.2`, `MEDULLA-DECISION-ENGINE-R172.2.3` | An index built by N incremental upserts and deletes returns the same top-k as a full rebuild |
 | `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::postings_intersect_and_union_subtypes` | L2 | `MEDULLA-DECISION-ENGINE-R172.2.1` | A property test compares `filtered_pool` with a brute-force filter over random records |
@@ -1595,11 +1595,11 @@ Rows `MEDULLA-DECISION-ENGINE-R154.5` to `MEDULLA-DECISION-ENGINE-R172.12`. Ever
 | `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::reward_ema_erasure_and_decay` | L1 | `MEDULLA-DECISION-ENGINE-R172.5` | Fixtures show a bounded EMA and a reset on a material re-embed |
 | `crates/medulla-persistence-records/src/agent_library/open_tests.rs::capability_reward_survives_reopen` | L1 | `MEDULLA-DECISION-ENGINE-R172.5.1` | It writes a reward, reopens the store and asserts the same value |
 | `crates/medulla-decision-memory/src/memory/capability_index/tests.rs::version_pin_refuses_mixed_spaces` | L1 | `MEDULLA-DECISION-ENGINE-R172.6` | A mismatched version or dim refuses on upsert and on question |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::decide_routes_capability_designation` | L3 | `MEDULLA-DECISION-ENGINE-R172.7` | It asserts typed designations, `ResolutionKind::Statistical`, `EvidenceClass::Observation`, and a cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::capability_outcome_updates_reward_and_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R172.7.1` | It asserts the new reward and the trace fields: prior, new, alpha, generation and source ids |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::committed_library_write_is_visible_to_next_question` | L3 | `MEDULLA-DECISION-ENGINE-R172.7.2` | It publishes a component, asks, withdraws it, asks again and asserts both answers, plus a cross-tenant negative case |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R172.8` | Each case asserts its code, the outcome, and that no reward, index epoch or decision record changed |
-| `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs` | L3 | `MEDULLA-DECISION-ENGINE-R172.9` | It asserts every score term and knob premise for every designation, and that the outcome trace links its source ids |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::decide_routes_capability_designation` | L3 | `MEDULLA-DECISION-ENGINE-R172.7` | It asserts typed designations, `ResolutionKind::Statistical`, `EvidenceClass::Observation`, and a cross-tenant negative case |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::capability_outcome_updates_reward_and_refuses` | L3 | `MEDULLA-DECISION-ENGINE-R172.7.1` | It asserts the new reward and the trace fields: prior, new, alpha, generation and source ids |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::committed_library_write_is_visible_to_next_question` | L3 | `MEDULLA-DECISION-ENGINE-R172.7.2` | It publishes a component, asks, withdraws it, asks again and asserts both answers, plus a cross-tenant negative case |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::capability_designation_refusals` | L3 | `MEDULLA-DECISION-ENGINE-R172.8` | Each case asserts its code, the outcome, and that no reward, index epoch or decision record changed |
+| `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::premises_name_scores_and_knobs` | L3 | `MEDULLA-DECISION-ENGINE-R172.9` | It asserts every score term and knob premise for every designation, and that the outcome trace links its source ids |
 | `benches/decide_budgets.rs::capability_designation` (bench group `decide/capability_designation`) | L6 | `MEDULLA-DECISION-ENGINE-R172.10` | group `decide/capability_designation` (L6) reports p50, p99, recall@5 and resident bytes |
 | `tools/xtask/src/decide_budgets.rs::tests::a_designation_breach_fails_each_metric` | L1 | `MEDULLA-DECISION-ENGINE-R172.10` | the budget check fails on each breached designation metric |
 | `tests/decide/test_capability_designation_served.py::test_designation_end_to_end` | L4 | `MEDULLA-DECISION-ENGINE-R172.11` | runs against a loopback engine with authentication |
@@ -1615,26 +1615,26 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R172.12.2` | `crates/medulla-decision-policy-types/src/decision/capability_designation.rs::tests::target_class_subsumption_selects_tools` | |
 | `MEDULLA-DECISION-ENGINE-R172.12.2` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | |
 | `MEDULLA-DECISION-ENGINE-R172.12.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::projection_commit_upserts_pack_records` | |
-| `MEDULLA-DECISION-ENGINE-R172.12.4` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals` | |
-| `MEDULLA-DECISION-ENGINE-R172.12.5` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack` | |
+| `MEDULLA-DECISION-ENGINE-R172.12.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::pack_target_refusals` | |
+| `MEDULLA-DECISION-ENGINE-R172.12.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::premises_name_subclass_path_and_pack` | |
 | `MEDULLA-DECISION-ENGINE-R172.12.6` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.13` | `crates/medulla-compute/src/capability_index/tests.rs::capability_adapter_applies_before_rank` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R172.13` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
+| `MEDULLA-DECISION-ENGINE-R172.13` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_journey` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
 | `MEDULLA-DECISION-ENGINE-R175.2` | `crates/medulla-decision-stats-records/src/decision/recommend.rs::tests::seeded_fixture_ranks_identically_twice` | |
-| `MEDULLA-DECISION-ENGINE-R175.2` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
-| `MEDULLA-DECISION-ENGINE-R175.3` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::decide_routes_item_recommendation_to_the_stored_encoder` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175.4` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::item_recommendation_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175.5` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::record_lists_premises_and_claim` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175.6` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
+| `MEDULLA-DECISION-ENGINE-R175.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::decide_routes_item_recommendation_to_the_stored_encoder` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::item_recommendation_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::record_lists_premises_and_claim` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R175.7` | `crates/medulla-decision-outcome-types/src/decision/recommend/tests.rs::request_and_answer_round_trip` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175.7` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175.8` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::fit_stores_an_encoder_keyed_by_catalog_digest` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R173` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::concentration_journey` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.7` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175.8` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/item_recommendation_tests.rs::fit_stores_an_encoder_keyed_by_catalog_digest` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/concentration_tests.rs::concentration_journey` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173` | `tests/decide/test_concentration_served.py::test_third_same_dimension_edit_reverts` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R173.3` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::decide_matches_shacl` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R173.3` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::other_tenant_edits_are_not_counted` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R173.5` | `crates/medulla-h-decide/src/decide/stat_tests/concentration_tests.rs::record_lists_counted_edits` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/concentration_tests.rs::decide_matches_shacl` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/concentration_tests.rs::other_tenant_edits_are_not_counted` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R173.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/concentration_tests.rs::record_lists_counted_edits` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.6` | `tests/decide/test_concentration_served.py::test_third_same_dimension_edit_reverts` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.7` | `crates/medulla-types/src/edit_machine.rs::tests::every_legal_transition_applies` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.7` | `crates/medulla-h-graph-gateway/src/graph_ops/harness_edit_tests.rs::transitions_move_the_status_and_refuse_illegal_pairs` | (planned) |
@@ -1643,106 +1643,106 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::harness_edit_create_is_served` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::second_create_refuses_harness_edit_exists` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R173.8` | `crates/medulla-server-served-tests/src/split_tests/harness_edit_served_tests.rs::served_add_node_of_edit_status_is_refused` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-decision-types/src/decision/tool_relevance.rs::tests::assignment_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R134.110.2` | `crates/medulla-decision-stats/src/decision/tool_relevance.rs::tests::fused_order_and_visible_only_scores` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110.3` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | L3 |
-| `MEDULLA-DECISION-ENGINE-R134.110.4` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::each_refusal_returns_its_code_and_no_tools` | L3 |
-| `MEDULLA-DECISION-ENGINE-R134.110.5` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::record_lists_scores_rank_and_revision` | |
+| `MEDULLA-DECISION-ENGINE-R134.110.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::served_ranking_selects_covering_subset` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | L3 |
+| `MEDULLA-DECISION-ENGINE-R134.110.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::each_refusal_returns_its_code_and_no_tools` | L3 |
+| `MEDULLA-DECISION-ENGINE-R134.110.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::record_lists_scores_rank_and_revision` | |
 | `MEDULLA-DECISION-ENGINE-R134.110.6` | `tests/decide/test_tool_assignment_served.py::test_role_assignment_uses_one_ranking` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110.6` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R134.110.7` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::index_follows_library_generation_and_hides_invisible_tools` and `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::withdrawn_pack_tool_leaves_the_tool_index` | |
-| `MEDULLA-DECISION-ENGINE-R100.102` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::catalog_change_reorders_the_ranking` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R134.110.7` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::index_follows_library_generation_and_hides_invisible_tools` and `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_capability_pack_feed_tests.rs::withdrawn_pack_tool_leaves_the_tool_index` | |
+| `MEDULLA-DECISION-ENGINE-R100.102` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R100.102.1` | `crates/medulla-decision-types/src/decision/statistical/run_credit.rs::tests::run_outcome_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R100.102.1` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R100.102.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R100.102.2` | `crates/medulla-decision-stats-records/src/decision/run_credit.rs::tests::baseline_moves_by_the_weighted_difference` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R100.102.2` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R100.102.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R100.102.3` | `crates/medulla-h-decide/src/decide/stat_run_credit.rs::record_run` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R100.102.3` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R100.102.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_outcome_credits_steps_and_records_hard_negatives` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R100.102.4` | `crates/medulla-h-decide/src/decide/stat_run_credit.rs::record_run` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R100.102.4` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_outcome_refusals_write_nothing` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R100.102.5` | `crates/medulla-h-decide/src/decide/stat_tests/run_credit_tests.rs::run_credit_receipt_reads_back_after_one_run` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R100.102.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_outcome_refusals_write_nothing` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R100.102.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_credit_tests.rs::run_credit_receipt_reads_back_after_one_run` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R100.102.6` | `tests/decide/test_run_credit_served.py::test_cited_rows_and_step_credit_recorded` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::cycle_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.1` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::resume_activates_once` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.3` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::submit_creates_a_job_and_holds_a_lease` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.4` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::refusal_codes` | |
-| `MEDULLA-DECISION-ENGINE-R174.5` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::receipt_holds_model_counts_metrics_and_pointers` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.1` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::resume_activates_once` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::submit_creates_a_job_and_holds_a_lease` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::refusal_codes` | |
+| `MEDULLA-DECISION-ENGINE-R174.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::receipt_holds_model_counts_metrics_and_pointers` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.6` | `tests/decide/test_generation_cycle_served.py::test_cycle_resumes_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.6` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
+| `MEDULLA-DECISION-ENGINE-R174.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
 | `MEDULLA-DECISION-ENGINE-R176` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set/tests.rs::bounded_union_in_stable_order` | |
-| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
-| `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::other_tenant_packs_never_enter_the_set` | |
-| `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::load_set_refusals` | |
-| `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::premises_per_component` | |
+| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
+| `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::other_tenant_packs_never_enter_the_set` | |
+| `MEDULLA-DECISION-ENGINE-R176.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::load_set_refusals` | |
+| `MEDULLA-DECISION-ENGINE-R176.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::premises_per_component` | |
 | `MEDULLA-DECISION-ENGINE-R176.6` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | L4 (served Python) |
-| `MEDULLA-DECISION-ENGINE-R177` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::steps_ordered_by_outcome` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-decision-stats/src/decision/usage_guidance.rs::tests::order_is_deterministic` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::other_tenant_outcomes_never_order_steps` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals` | |
-| `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples` | |
+| `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::other_tenant_outcomes_never_order_steps` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals` | |
+| `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples` | |
 | `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | L4 (served Python) |
 | `MEDULLA-DECISION-ENGINE-R178.2` | `tools/xtask/src/decide_budgets.rs::tests::a_planted_regression_fails` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R178.3` | `tests/test_check_decide_budgets.py::test_workflow_invokes_the_check` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R179.1` | `crates/medulla-decision-statistical-types/src/decision/knobs.rs::tests::knob_specs_round_trip_and_defaults_lie_within_bounds` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R179.2` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::decide_reads_the_pinned_knob_value_and_falls_back_to_the_default` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R179.3` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::a_promoted_knob_revision_changes_the_served_decision_and_rolls_back` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R179.4` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::knob_revision_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R179.5` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::record_lists_every_knob_read` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R179.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::decide_reads_the_pinned_knob_value_and_falls_back_to_the_default` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R179.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::a_promoted_knob_revision_changes_the_served_decision_and_rolls_back` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R179.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::knob_revision_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R179.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::record_lists_every_knob_read` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R179.6` | `tests/decide/test_knob_evolution_served.py::test_promote_and_roll_back_a_knob` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.1` | `crates/medulla-decision-types/src/decision/statistical/retrieval_adapter.rs::tests::scoped_fit_request_round_trips` | |
 | `MEDULLA-DECISION-ENGINE-R174.7.2` | `crates/medulla-decision-stats-records/src/decision/adapter.rs::tests::scoped_refit_replays_bit_for_bit` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.2` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.2.1` | `crates/medulla-decision-stats-records/src/decision/adapter.rs::tests::monitor_rolls_back_on_degrading_outcomes` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.3` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::scoped_fit_activation_and_rollback_move_the_pointer` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.3.1` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::discover_applies_the_resolved_adapter` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.3.2` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::index_adapter_materializes_without_an_endpoint_call` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.4` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::scoped_adapter_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.7.5` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::fit_and_rollback_receipts_and_verdict_field` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.2.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::scoped_fit_activation_and_rollback_move_the_pointer` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.3.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::discover_applies_the_resolved_adapter` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.3.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::index_adapter_materializes_without_an_endpoint_call` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::scoped_adapter_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::fit_and_rollback_receipts_and_verdict_field` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.7.6` | `tests/decide/test_scoped_adapter_served.py::test_outcome_adapter_lifts_and_reverts` | |
-| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | |
-| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide/src/decide/stat_tests/scoped_adapter_tests.rs::capability_outcome_adapter_lifts_and_reverts` | |
-| `MEDULLA-DECISION-ENGINE-R174.8` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::outcome_adapter_lifts_and_reverts` | |
+| `MEDULLA-DECISION-ENGINE-R174.7.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scoped_adapter_tests.rs::capability_outcome_adapter_lifts_and_reverts` | |
+| `MEDULLA-DECISION-ENGINE-R174.8` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.1` | `crates/medulla-decision-policy-types/src/decision/statistical/retrieval_drift.rs::tests::refresh_plan_round_trips` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.1` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.2` | `crates/medulla-decision-stats/src/decision/drift.rs::tests::shift_signal_fires_after_two_evaluations` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.2` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.2.1` | `crates/medulla-decision-stats/src/decision/drift.rs::tests::quality_decay_and_staleness_fire` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.3` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::monitor_update_schedules_one_plan` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.2.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::monitor_update_schedules_one_plan` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.3.1` | `crates/medulla-h-graph-gateway/src/graph_ops/discover_generation_tests.rs::concurrent_readers_see_one_generation` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.4` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::refresh_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.5` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::signal_premises_and_refresh_receipt` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::refresh_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::signal_premises_and_refresh_receipt` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.8.6` | `tests/decide/test_drift_refresh_served.py::test_vocabulary_drift_refreshes_changed_shards` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.8.6` | `crates/medulla-h-decide/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.8.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/drift_refresh_tests.rs::vocabulary_drift_refreshes_changed_shards` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.1` | `crates/medulla-decision-policy-types/src/decision/statistical/retrieval_refresh.rs::tests::refresh_round_trips` | |
 | `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-decision-policy-types/src/decision/statistical/retrieval_refresh.rs::tests::canonical_urls_and_dedupe_outcomes` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.3` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::refresh_reads_the_virtual_graph_and_marks_one_region` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.3.1` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::registered_web_source_serves_a_refresh` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::refresh_reads_the_virtual_graph_and_marks_one_region` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.3.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::registered_web_source_serves_a_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.3.1` | `crates/medulla-federation/src/federation_opt/web.rs::tests::web_read_returns_candidates_and_none_for_other_sources` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.3.1` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_freshness_search_port_tests.rs::registered_search_source_binds_and_unregistered_does_not` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.4` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::freshness_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.5` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::result_provenance_and_receipt` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::freshness_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::result_provenance_and_receipt` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.6` | `tests/decide/test_freshness_refresh_served.py::test_search_refresh_dedupes_and_feeds_refresh` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R174.9.6` | `crates/medulla-h-decide/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R174.9.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/freshness_refresh_tests.rs::search_refresh_dedupes_and_feeds_drift_refresh` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.9.7` | retired | no binding |
-| `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
+| `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/generation_cycle_tests.rs::first_generation_bootstraps_without_an_evaluation` | |
 | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-decision-types/src/decision/statistical/retrieval_generation.rs::tests::every_legal_transition_moves_and_every_other_is_refused` | |
 | `MEDULLA-DECISION-ENGINE-R174.10` | `crates/medulla-rdf/tests/state_machine_vocabulary.rs::generation_cycle_machine_matches_edge_table` | |
 | `MEDULLA-DECISION-ENGINE-R614` | `tests/decide/test_semantic_enrichment_served.py::test_card_rank_classify_project_journey` | (planned) |
@@ -1755,17 +1755,17 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R614.4` | `tests/decide/test_semantic_enrichment_served.py::test_refusals_write_nothing` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R614.5` | `tests/decide/test_semantic_enrichment_served.py::test_evidence_properties_read_back` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R614.6` | `tests/decide/test_semantic_enrichment_served.py::test_project_one_thousand_nodes_in_one_batch` and bench group `decide/semantic_enrichment` (`project_n100000` p99 at most 1000 ms, `classify_one` p99 at most 30 ms) | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.2` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R615.2.1` | `crates/medulla-decision-stats/src/decision/writeback.rs::tests::preflight_refuses_conflicts_and_queues_high_tier` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.2.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R615.2.2` | `crates/medulla-decision-stats/src/decision/writeback.rs::tests::inventory_and_findings_become_deduplicated_proposals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.3` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide/src/decide/stat_writeback.rs::release` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::unapproved_release_refuses_without_partial_write` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.5` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::release_and_refusal_leave_audit_rows` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R615.6` | `crates/medulla-h-decide/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | L3 |
+| `MEDULLA-DECISION-ENGINE-R615.2.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide-runlog/src/decide/stat_writeback.rs::release` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::unapproved_release_refuses_without_partial_write` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::release_and_refusal_leave_audit_rows` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R615.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/writeback_queue_tests.rs::high_tier_proposal_queues_and_releases_after_approval` | L3 |
 | `MEDULLA-DECISION-ENGINE-R615.6` | `tests/decide/test_writeback_queue_served.py::test_queue_approve_release` | L4 |
 | `MEDULLA-DECISION-ENGINE-R617` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::source_ingest_transcript_becomes_episodic_memory` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R617.2` | `crates/medulla-work-types/src/memory.rs::tests::conversation_projects_to_ordered_episodic_records` | (planned) |
@@ -1791,85 +1791,85 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R617.8` | `crates/medulla-work-types/src/participant.rs::tests::membership_edges_dedupe_speakers` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R617.9` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::participant_methods_are_served_and_classified` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R617.9` | `tests/memory/test_participant_memory_served.py::test_participant_put_and_member_round_trip` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R750.750` | `crates/medulla-decision-statistical-types/src/decision/thought_search.rs::tests::thought_types_round_trip` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.750` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R750.751` | `crates/medulla-decision-stats/src/decision/thought_search.rs::tests::strategies_pick_the_documented_leaves` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.751` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.752` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::thought_search_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.753` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::premises_name_strategy_ledger_and_nodes` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide/src/decide/stat_tests/thought_search_tests.rs::other_tenant_policy_is_not_read` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R751` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R751` | `crates/medulla-h-decide/src/decide/stat_tests/curriculum_promotion_tests.rs::served_decide_promotes_on_a_cleared_window` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.752` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::thought_search_refusals` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.753` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::served_decide_chooses_expansion_then_stops` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::premises_name_strategy_ledger_and_nodes` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R750.754` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/thought_search_tests.rs::other_tenant_policy_is_not_read` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R751` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/curriculum_promotion_tests.rs::served_decide_promotes_on_a_cleared_window` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.750` | `crates/medulla-decision-statistical-types/src/decision/reward.rs::tests::reward_types_round_trip` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R751.750` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R751.750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats-records/src/decision/reward.rs::tests::rewards_sum_exactly_and_floor_applies` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats-records/src/decision/reward.rs::tests::cache_hit_discounts_weight` | L1 |
 | `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-decision-stats-records/src/decision/reward.rs::tests::decomposition_is_idempotent` | L2 |
-| `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::reward_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide/src/decide/stat_tests/curriculum_promotion_tests.rs::curriculum_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::reward_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.752` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/curriculum_promotion_tests.rs::curriculum_refusals` | L3 |
 | `MEDULLA-DECISION-ENGINE-R178.1` | `tests/test_check_decide_budgets.py::test_bench_groups_cover_every_family` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R751.753` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | L3 |
-| `MEDULLA-DECISION-ENGINE-R751.754` | `crates/medulla-h-decide/src/decide/stat_tests/curriculum_promotion_tests.rs::served_decide_promotes_on_a_cleared_window` | L3 |
-| `MEDULLA-DECISION-ENGINE-R751.754` | `crates/medulla-h-decide/src/decide/stat_tests/curriculum_promotion_tests.rs::other_tenant_outcomes_never_count` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.753` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.754` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/curriculum_promotion_tests.rs::served_decide_promotes_on_a_cleared_window` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.754` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/curriculum_promotion_tests.rs::other_tenant_outcomes_never_count` | L3 |
 | `MEDULLA-DECISION-ENGINE-R751.754` | `crates/medulla-decision-stats-records/src/decision/curriculum.rs::tests::promotion_needs_a_full_window` | L1 |
-| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | L3 |
-| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::premises_name_trajectory_and_depth` | L3 |
-| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide/src/decide/stat_tests/reward_decomposition_tests.rs::other_tenant_trajectory_is_not_read` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752` | `crates/medulla-h-decide/src/decide/stat_tests/autonomy_tests.rs::served_decide_requires_confirmation_for_irreversible_actions` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::served_decide_decomposes_a_trajectory_reward` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::premises_name_trajectory_and_depth` | L3 |
+| `MEDULLA-DECISION-ENGINE-R751.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reward_decomposition_tests.rs::other_tenant_trajectory_is_not_read` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/autonomy_tests.rs::served_decide_requires_confirmation_for_irreversible_actions` | L3 |
 | `MEDULLA-DECISION-ENGINE-R752.750` | `crates/medulla-decision-policy-types/src/decision/population.rs::tests::population_types_round_trip` | L1 |
-| `MEDULLA-DECISION-ENGINE-R752.750` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
 | `MEDULLA-DECISION-ENGINE-R752.751` | `crates/medulla-decision-stats-records/src/decision/population.rs::tests::wasserstein_matches_hand_computed_cases` | L1 |
 | `MEDULLA-DECISION-ENGINE-R752.751` | `crates/medulla-decision-stats-records/src/decision/population.rs::tests::width_never_exceeds_the_cap` | L1 |
 | `MEDULLA-DECISION-ENGINE-R752.751` | `crates/medulla-decision-stats-records/src/decision/population.rs::tests::drift_and_width_replay_golden_vectors` | L2 |
-| `MEDULLA-DECISION-ENGINE-R752.751` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.752` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::population_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.752` | `crates/medulla-h-decide/src/decide/stat_tests/autonomy_tests.rs::autonomy_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.753` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.754` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.754` | `crates/medulla-h-decide/src/decide/stat_tests/population_tests.rs::other_tenant_inputs_are_not_read` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide/src/decide/stat_tests/autonomy_tests.rs::served_decide_requires_confirmation_for_irreversible_actions` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide/src/decide/stat_tests/autonomy_tests.rs::trust_clears_after_the_clean_run_and_resets_on_failure` | L3 |
-| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide/src/decide/stat_tests/autonomy_tests.rs::other_tenant_outcomes_never_raise_trust` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.752` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::population_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.752` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/autonomy_tests.rs::autonomy_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.753` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.754` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::served_decide_reads_drift_and_picks_width` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.754` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/population_tests.rs::other_tenant_inputs_are_not_read` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/autonomy_tests.rs::served_decide_requires_confirmation_for_irreversible_actions` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/autonomy_tests.rs::trust_clears_after_the_clean_run_and_resets_on_failure` | L3 |
+| `MEDULLA-DECISION-ENGINE-R752.755` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/autonomy_tests.rs::other_tenant_outcomes_never_raise_trust` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
 | `MEDULLA-DECISION-ENGINE-R753.750` | `crates/medulla-decision-statistical-types/src/decision/trajectory_verdict.rs::tests::verdict_types_round_trip` | L1 |
-| `MEDULLA-DECISION-ENGINE-R753.750` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.750` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
 | `MEDULLA-DECISION-ENGINE-R753.751` | `crates/medulla-decision-stats/src/decision/trajectory_join.rs::tests::join_is_deterministic_under_ties` | L1 |
 | `MEDULLA-DECISION-ENGINE-R753.751` | `crates/medulla-decision-stats/src/decision/step_verify.rs::tests::recovery_follows_attempts` | L1 |
 | `MEDULLA-DECISION-ENGINE-R753.751` | `crates/medulla-decision-stats/src/decision/trajectory_join.rs::tests::join_ignores_input_order` | L2 |
-| `MEDULLA-DECISION-ENGINE-R753.751` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.752` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::join_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.752` | `crates/medulla-h-decide/src/decide/stat_tests/step_verification_tests.rs::verification_and_admission_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.753` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::derivation_names_every_source` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide/src/decide/stat_tests/trajectory_join_tests.rs::other_tenant_trajectories_are_not_read` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide/src/decide/stat_tests/step_verification_tests.rs::served_decide_binds_the_verdict_to_the_trace` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide/src/decide/stat_tests/step_verification_tests.rs::served_decide_rejects_a_compromised_candidate` | L3 |
-| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide/src/decide/stat_tests/step_verification_tests.rs::other_tenant_traces_are_not_read` | L3 |
-| `MEDULLA-DECISION-ENGINE-R035.750` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::first_matching_route_stage_wins` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.751` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.752` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::join_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.752` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/step_verification_tests.rs::verification_and_admission_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.753` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::served_decide_joins_and_distills_trajectories` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::derivation_names_every_source` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.754` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/trajectory_join_tests.rs::other_tenant_trajectories_are_not_read` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/step_verification_tests.rs::served_decide_binds_the_verdict_to_the_trace` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/step_verification_tests.rs::served_decide_rejects_a_compromised_candidate` | L3 |
+| `MEDULLA-DECISION-ENGINE-R753.755` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/step_verification_tests.rs::other_tenant_traces_are_not_read` | L3 |
+| `MEDULLA-DECISION-ENGINE-R035.750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::first_matching_route_stage_wins` | L3 |
 | `MEDULLA-DECISION-ENGINE-R035.750.1` | `crates/medulla-decision-stats-records/src/decision/route.rs::tests::fast_path_wins_below_the_token_bound` | L1 |
-| `MEDULLA-DECISION-ENGINE-R035.750.1` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::first_matching_route_stage_wins` | L3 |
-| `MEDULLA-DECISION-ENGINE-R035.750.2` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::a_proven_team_is_reused_before_the_learned_policy` | L3 |
-| `MEDULLA-DECISION-ENGINE-R035.751` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::route_journey_covers_every_stage` | L3 |
-| `MEDULLA-DECISION-ENGINE-R046.750` | `crates/medulla-h-decide/src/decide/stat_tests/topology_tests.rs::admission_enforces_caps_and_replays` | L3 |
-| `MEDULLA-DECISION-ENGINE-R134.751` | `crates/medulla-h-decide/src/decide/stat_tests/tool_relevance_tests.rs::catalog_above_the_cap_refuses_and_cap_size_is_served` | L3 |
-| `MEDULLA-DECISION-ENGINE-R650` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R650.2` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R035.750.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::first_matching_route_stage_wins` | L3 |
+| `MEDULLA-DECISION-ENGINE-R035.750.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::a_proven_team_is_reused_before_the_learned_policy` | L3 |
+| `MEDULLA-DECISION-ENGINE-R035.751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::route_journey_covers_every_stage` | L3 |
+| `MEDULLA-DECISION-ENGINE-R046.750` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/topology_tests.rs::admission_enforces_caps_and_replays` | L3 |
+| `MEDULLA-DECISION-ENGINE-R134.751` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_relevance_tests.rs::catalog_above_the_cap_refuses_and_cap_size_is_served` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.2.1` | `crates/medulla-agent-types/src/agent_component/capability_descriptor.rs::tests::reliability_is_derived_from_reward_and_never_stored` | L1 |
-| `MEDULLA-DECISION-ENGINE-R650.2.1` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.2.1` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.2.2` | `crates/medulla-agent-types/src/agent_component/capability_descriptor.rs::tests::power_descriptor_is_stable_for_equal_inputs` | L2 |
-| `MEDULLA-DECISION-ENGINE-R650.2.2` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.2.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.2.3` | `crates/medulla-agent-types/src/agent_component/capability_descriptor.rs::tests::closure_is_deterministic_across_runs_and_threads` | L2 |
-| `MEDULLA-DECISION-ENGINE-R650.3` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_returns_descriptor_and_closure` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::designation_returns_descriptor_and_closure` | L3 |
 | `MEDULLA-DECISION-ENGINE-R650.3` | `crates/medulla-persistence-records/src/connector_pack/descriptor.rs::tests::descriptor_round_trips_through_triples` | L1 |
-| `MEDULLA-DECISION-ENGINE-R650.4` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_refusals_and_tenant_isolation` | L3 |
-| `MEDULLA-DECISION-ENGINE-R650.5` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_evidence_is_sealed_in_the_record` | L3 |
-| `MEDULLA-DECISION-ENGINE-R650.6` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_refusals_and_tenant_isolation` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_evidence_is_sealed_in_the_record` | L3 |
+| `MEDULLA-DECISION-ENGINE-R650.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capability_designation_tests.rs::descriptor_closure_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::remember_recall_consolidate_and_export_round_trip` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651.1` | `crates/medulla-work-types/src/memory.rs::tests::memory_record_round_trips_through_node_props` | L1 |
 | `MEDULLA-DECISION-ENGINE-R651.1` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::remember_recall_consolidate_and_export_round_trip` | L3 |
@@ -1888,124 +1888,124 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R651.5` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::consolidation_and_export_evidence_reads_back` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651.6` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::remember_recall_consolidate_and_export_round_trip` | L3 |
 | `MEDULLA-DECISION-ENGINE-R651.6` | `tests/memory/test_memory_served.py::test_remember_recall_plan_export` | L4 |
-| `MEDULLA-DECISION-ENGINE-R652` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R652.1` | `crates/medulla-decision-statistical-types/src/claims.rs::tests::claim_types_round_trip_and_deny_unknown_fields` | L1 |
-| `MEDULLA-DECISION-ENGINE-R652.1` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.1` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R652.2` | `crates/medulla-epistemic/src/claims.rs::tests::lifecycle_table_and_log_odds_are_deterministic` | L2 |
-| `MEDULLA-DECISION-ENGINE-R652.2` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R652.3` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_ops_reach_the_handler` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_ops_reach_the_handler` | L3 |
 | `MEDULLA-DECISION-ENGINE-R652.3` | `tests/decide/test_claims_served.py::test_claim_lifecycle_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R652.4` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_refusals_change_no_state` | L3 |
-| `MEDULLA-DECISION-ENGINE-R652.5` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_evidence_reads_back_through_a_second_principal` | L3 |
-| `MEDULLA-DECISION-ENGINE-R652.6` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_refusals_change_no_state` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_evidence_reads_back_through_a_second_principal` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R652.6` | `tests/decide/test_claims_served.py::test_claim_lifecycle_served` | L4 |
 | `MEDULLA-DECISION-ENGINE-R652.7` | `crates/medulla-epistemic/src/claims.rs::tests::contradiction_pairs_and_feed_grades_are_deterministic` | L2 |
-| `MEDULLA-DECISION-ENGINE-R652.7` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R652.8` | `crates/medulla-epistemic/src/claims.rs::tests::seal_detects_any_field_change` | L1 |
-| `MEDULLA-DECISION-ENGINE-R652.8` | `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R653` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R652.8` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::claim_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R653.1` | `crates/medulla-decision-policy-types/src/loops.rs::tests::loop_types_round_trip_and_deny_unknown_fields` | L1 |
-| `MEDULLA-DECISION-ENGINE-R653.1` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R653.2` | `crates/medulla-statechart/src/loops.rs::tests::lease_epochs_fence_and_queue_order_is_total` | L2 |
-| `MEDULLA-DECISION-ENGINE-R653.2` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R653.3` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_ops_reach_the_handler` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_ops_reach_the_handler` | L3 |
 | `MEDULLA-DECISION-ENGINE-R653.3` | `tests/decide/test_loops_served.py::test_loop_claim_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R653.4` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_refusals_change_no_state` | L3 |
-| `MEDULLA-DECISION-ENGINE-R653.5` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_evidence_reads_back_through_a_second_principal` | L3 |
-| `MEDULLA-DECISION-ENGINE-R653.6` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_refusals_change_no_state` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_evidence_reads_back_through_a_second_principal` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R653.6` | `tests/decide/test_loops_served.py::test_loop_claim_served` | L4 |
 | `MEDULLA-DECISION-ENGINE-R653.7` | `crates/medulla-statechart/src/loops.rs::tests::settle_once_and_offer_rate_formula` | L1 |
-| `MEDULLA-DECISION-ENGINE-R653.7` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.7` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
 | `MEDULLA-DECISION-ENGINE-R653.8` | `crates/medulla-statechart/src/loops.rs::tests::miner_bounds_and_ratchet_verdict` | L2 |
-| `MEDULLA-DECISION-ENGINE-R653.8` | `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R654` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::paired_rollouts_promote_a_skill_revision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R653.8` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::loop_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R654` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::paired_rollouts_promote_a_skill_revision` | L3 |
 | `MEDULLA-DECISION-ENGINE-R654.1` | `crates/medulla-decision-policy-types/src/decision/skill_evolution.rs::tests::rollout_set_round_trips` | L1 |
 | `MEDULLA-DECISION-ENGINE-R654.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::paired_bootstrap_is_deterministic_across_thread_counts` | L2 |
-| `MEDULLA-DECISION-ENGINE-R654.3` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::paired_rollouts_promote_a_skill_revision` | L3 |
-| `MEDULLA-DECISION-ENGINE-R654.4` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::rollout_and_spec_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R654.5` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::rollout_evidence_reads_back_field_for_field` | L3 |
-| `MEDULLA-DECISION-ENGINE-R654.6` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::served_skill_evolution_journey` | L3 |
-| `MEDULLA-DECISION-ENGINE-R700` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
+| `MEDULLA-DECISION-ENGINE-R654.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::paired_rollouts_promote_a_skill_revision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R654.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::rollout_and_spec_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R654.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::rollout_evidence_reads_back_field_for_field` | L3 |
+| `MEDULLA-DECISION-ENGINE-R654.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::served_skill_evolution_journey` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.1` | `crates/medulla-decision-statistical-types/src/belief_revision.rs::tests::belief_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R700.1` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.1` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.2` | `crates/medulla-epistemic/src/belief_revision.rs::tests::pass_cost_is_linear_in_changed_claims` | L2 |
-| `MEDULLA-DECISION-ENGINE-R700.2` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
-| `MEDULLA-DECISION-ENGINE-R700.3` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_reaches_the_handler` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.2` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_reaches_the_handler` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.3` | `tests/decide/test_belief_revision_served.py::test_pass_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R700.4` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_refusals_leave_state_unchanged` | L3 |
-| `MEDULLA-DECISION-ENGINE-R700.5` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::stored_revision_replays_to_the_same_posterior` | L3 |
-| `MEDULLA-DECISION-ENGINE-R700.6` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_refusals_leave_state_unchanged` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::stored_revision_replays_to_the_same_posterior` | L3 |
+| `MEDULLA-DECISION-ENGINE-R700.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::belief_pass_proposes_and_never_retracts` | L3 |
 | `MEDULLA-DECISION-ENGINE-R700.6` | `tests/decide/test_belief_revision_served.py::test_pass_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R701` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
+| `MEDULLA-DECISION-ENGINE-R701` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-decision-statistical-types/src/failure_patterns.rs::tests::failure_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.2` | `crates/medulla-epistemic/src/failure_patterns.rs::tests::cluster_is_linear_and_signatures_normalize` | L2 |
-| `MEDULLA-DECISION-ENGINE-R701.2` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_failure_ingest_tests.rs::ingest_files_one_gap_per_topic` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.3` | `tests/decide/test_failure_patterns_served.py::test_ingest_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R701.4` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failure_refusals_change_no_state` | L3 |
-| `MEDULLA-DECISION-ENGINE-R701.5` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::gap_links_back_to_its_member_runs` | L3 |
-| `MEDULLA-DECISION-ENGINE-R701.6` | `crates/medulla-h-decide/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::failure_refusals_change_no_state` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::gap_links_back_to_its_member_runs` | L3 |
+| `MEDULLA-DECISION-ENGINE-R701.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/failure_patterns_tests.rs::failures_cluster_and_gap_is_idempotent` | L3 |
 | `MEDULLA-DECISION-ENGINE-R701.6` | `tests/decide/test_failure_patterns_served.py::test_ingest_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R702` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` (planned) | L3 |
+| `MEDULLA-DECISION-ENGINE-R702` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` (planned) | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.1` | `crates/medulla-decision-policy-types/src/correction.rs::tests::correction_types_round_trip_with_golden_vector` | L1 |
 | `MEDULLA-DECISION-ENGINE-R702.2` | `crates/medulla-decision-stats-records/src/decision/correction.rs::tests::batch_holds_all_three_effects_and_k_is_bounded` | L2 |
-| `MEDULLA-DECISION-ENGINE-R702.3` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_reaches_the_handler` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::correction_reaches_the_handler` | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.3` | `tests/decide/test_correction_served.py::test_correction_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R702.4` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_refusals_commit_nothing` | L3 |
-| `MEDULLA-DECISION-ENGINE-R702.5` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_reads_back_by_receipt` | L3 |
-| `MEDULLA-DECISION-ENGINE-R702.6` | `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::correction_refusals_commit_nothing` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::correction_reads_back_by_receipt` | L3 |
+| `MEDULLA-DECISION-ENGINE-R702.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::correction_commits_three_effects_atomically` | L3 |
 | `MEDULLA-DECISION-ENGINE-R702.6` | `tests/decide/test_correction_served.py::test_correction_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R703` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
 | `MEDULLA-DECISION-ENGINE-R703.1` | `crates/medulla-decision-policy-types/src/decision/skill_evolution.rs::tests::skill_candidates_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R703.1` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
 | `MEDULLA-DECISION-ENGINE-R703.2` | `crates/medulla-decision-stats/src/decision/skill_evolution.rs::tests::blocking_bounds_pair_comparisons` | L2 |
-| `MEDULLA-DECISION-ENGINE-R703.2` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
-| `MEDULLA-DECISION-ENGINE-R703.3` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::decide_routes_skill_evolution` | L3 |
-| `MEDULLA-DECISION-ENGINE-R703.4` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::merge_pair_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R703.5` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::candidate_cites_traces_and_library_rows` | L3 |
-| `MEDULLA-DECISION-ENGINE-R703.6` | `crates/medulla-h-decide/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
-| `MEDULLA-DECISION-ENGINE-R704` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::decide_routes_skill_evolution` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::merge_pair_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::candidate_cites_traces_and_library_rows` | L3 |
+| `MEDULLA-DECISION-ENGINE-R703.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_evolution_tests.rs::candidates_are_proposals_only` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.1` | `crates/medulla-decision-policy-types/src/decision/playbook.rs::tests::playbook_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R704.1` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
 | `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-decision-stats-records/src/decision/playbook.rs::tests::window_eviction_and_flap_detection` | L2 |
-| `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
-| `MEDULLA-DECISION-ENGINE-R704.3` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
-| `MEDULLA-DECISION-ENGINE-R704.4` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::playbook_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R704.5` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::proposal_records_playbook_id_and_revision` | L3 |
-| `MEDULLA-DECISION-ENGINE-R704.6` | `crates/medulla-h-decide/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
-| `MEDULLA-DECISION-ENGINE-R705` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::decide_routes_playbook_triage` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::playbook_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::proposal_records_playbook_id_and_revision` | L3 |
+| `MEDULLA-DECISION-ENGINE-R704.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/playbook_triage_tests.rs::flapping_service_proposes_without_acting` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
 | `MEDULLA-DECISION-ENGINE-R705.1` | `crates/medulla-decision-statistical-types/src/decision/research_voi.rs::tests::research_types_round_trip_with_golden_vector` | L1 |
-| `MEDULLA-DECISION-ENGINE-R705.1` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.1` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
 | `MEDULLA-DECISION-ENGINE-R705.2` | `crates/medulla-decision-stats-records/src/decision/research_voi.rs::tests::heap_order_node_budget_and_stop_rule` | L2 |
-| `MEDULLA-DECISION-ENGINE-R705.2` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
-| `MEDULLA-DECISION-ENGINE-R705.3` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::decide_routes_research_next` | L3 |
-| `MEDULLA-DECISION-ENGINE-R705.4` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::research_refusals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R705.5` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::spent_units_are_recorded_per_subtask` | L3 |
-| `MEDULLA-DECISION-ENGINE-R705.6` | `crates/medulla-h-decide/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::decide_routes_research_next` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::research_refusals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::spent_units_are_recorded_per_subtask` | L3 |
+| `MEDULLA-DECISION-ENGINE-R705.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/research_voi_tests.rs::budget_stops_at_marginal_value` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.1` | `crates/medulla-decision-statistical-types/src/decision/entity_resolution.rs::tests::er_types_round_trip` | L1 |
-| `MEDULLA-DECISION-ENGINE-R706.1` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-decision-stats-records/src/decision/entity_resolution.rs::tests::unchanged_nodes_skip_embedding_and_drift_is_detected` | L2 |
-| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::resolve_entity_uses_tenant_scoped_candidates` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::review_drift_is_recorded_with_the_proposals` | L3 |
 | `MEDULLA-DECISION-ENGINE-R706.3` | `crates/medulla-decision-stats-records/src/decision/entity_resolution.rs::tests::candidate_index_is_tenant_scoped_and_options_name_their_tier` | L2 |
-| `MEDULLA-DECISION-ENGINE-R706.4` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::er_refusals_and_hypothesis_marking` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706.5` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::proposal_records_model_hash_and_tier` | L3 |
-| `MEDULLA-DECISION-ENGINE-R706.6` | `crates/medulla-h-decide/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
-| `MEDULLA-DECISION-ENGINE-R707` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::er_refusals_and_hypothesis_marking` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::proposal_records_model_hash_and_tier` | L3 |
+| `MEDULLA-DECISION-ENGINE-R706.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/er_proposals_tests.rs::cross_tenant_candidates_never_returned` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.1` | `crates/medulla-decision-statistical-types/src/decision/feature_match.rs::tests::feature_types_round_trip` | L1 |
-| `MEDULLA-DECISION-ENGINE-R707.1` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-decision-stats-records/src/decision/feature_match.rs::tests::blocked_scores_and_entropy_guard` | L2 |
 | `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-decision-stats-records/src/decision/feature_match.rs::tests::status_changes_by_compare_and_set_on_revision` | L1 |
-| `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
-| `MEDULLA-DECISION-ENGINE-R707.3` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::match_and_ledger_reach_their_handlers` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.2` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::match_and_ledger_reach_their_handlers` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.3` | `tests/decide/test_feature_ledger_served.py::test_ledger_served` | L4 |
-| `MEDULLA-DECISION-ENGINE-R707.4` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::ledger_refusals_change_no_state` | L3 |
-| `MEDULLA-DECISION-ENGINE-R707.5` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::ledger_rows_cite_matches_and_plan` | L3 |
-| `MEDULLA-DECISION-ENGINE-R707.6` | `crates/medulla-h-decide/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.4` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::ledger_refusals_change_no_state` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.5` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::ledger_rows_cite_matches_and_plan` | L3 |
+| `MEDULLA-DECISION-ENGINE-R707.6` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/feature_match_tests.rs::closeout_requires_linked_change` | L3 |
 | `MEDULLA-DECISION-ENGINE-R707.6` | `tests/decide/test_feature_ledger_served.py::test_ledger_served` | L4 |
 | `MEDULLA-DECISION-ENGINE-R046.751` | `benches/decide_budgets.rs::decide_topology_admit` | L6 |
 ## Planned bindings, range 8
@@ -2039,44 +2039,44 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R113.2.5` | `crates/medulla-persistence-records/src/decision_record/tests.rs::shared_commit_writes_record_and_evidence_in_one_transaction`; `::shared_commit_is_blocked_by_an_admission_fence`; `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs::topology_shared_commit_journey` (L3) |
 | `MEDULLA-DECISION-ENGINE-R113.3.1.1` | `crates/medulla-persistence-records/src/decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once`; `crates/medulla-storage/src/owner/lineage_tests.rs::agent_library_before_retry_allowances_is_a_frozen_predecessor`; `crates/medulla-storage/src/owner/offline_upgrade/tests.rs::agent_library_upgrade_creates_empty_retry_allowance_table` (all L1) |
 | `MEDULLA-DECISION-ENGINE-R036.106` | `crates/medulla-isolation/src/rbac_persist.rs::tests::upgrade_preserves_rows_and_creates_empty_grant_table`; `commit_admission_tests.rs::cross_owner_admission_journey` |
-| `MEDULLA-DECISION-ENGINE-R038.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_action_admission_tests.rs::untrusted_follow_up_is_denied` (planned); `EvidenceClass::Observation` |
-| `MEDULLA-DECISION-ENGINE-R038.3` | `crates/medulla-h-decide/src/decide/stat_tests/held_item_admission_tests.rs::program_needs_independent_verifier_and_passes` |
-| `MEDULLA-DECISION-ENGINE-R039.3` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::legal_preference_wins_and_illegal_is_recorded` |
+| `MEDULLA-DECISION-ENGINE-R038.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_action_admission_tests.rs::untrusted_follow_up_is_denied` (planned); `EvidenceClass::Observation` |
+| `MEDULLA-DECISION-ENGINE-R038.3` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/held_item_admission_tests.rs::program_needs_independent_verifier_and_passes` |
+| `MEDULLA-DECISION-ENGINE-R039.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/route_tests.rs::legal_preference_wins_and_illegal_is_recorded` |
 | `MEDULLA-DECISION-ENGINE-R805.8` | `tests/program_champion_pointer_served.rs::job_publishes_a_revision_without_moving_the_champion` |
-| `MEDULLA-DECISION-ENGINE-R805.9` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::every_receipt_kind_resolves_to_held_out_evidence` |
-| `MEDULLA-DECISION-ENGINE-R134.111.1` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::task_plan_round_trips`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
-| `MEDULLA-DECISION-ENGINE-R134.111.2` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::plan_respects_dependencies`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
-| `MEDULLA-DECISION-ENGINE-R134.111.3` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`; `tests/decide/test_task_plan_served.py::test_explicit_plan_end_to_end` |
-| `MEDULLA-DECISION-ENGINE-R134.111.4` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::invalid_graphs_refuse`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::invalid_task_requests_refuse` |
-| `MEDULLA-DECISION-ENGINE-R134.111.5` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::task_plan_cannot_use_score_replay`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
-| `MEDULLA-DECISION-ENGINE-R134.111.6` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::maximum_bounded_plan_is_accepted` |
-| `MEDULLA-DECISION-ENGINE-R134.111.7` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::the_canonical_task_plan_feature_schema_is_valid_and_stable`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::canonical_task_plan_schema_publishes_once_and_routes` |
-| `MEDULLA-DECISION-ENGINE-R158.7` | `crates/medulla-h-decide/src/decide/stat_tests/run_adjustment_tests.rs::windows_drive_model_and_width_and_refuse_mid_run_widening` |
-| `MEDULLA-DECISION-ENGINE-R179.7` | `crates/medulla-h-decide/src/decide/stat_tests/harness_contrast_tests.rs::contrast_reads_the_pinned_harness_evolution_knobs` |
-| `MEDULLA-DECISION-ENGINE-R803.7` | `crates/medulla-h-decide/src/decide/stat_tests/harness_contrast_tests.rs::contrast_is_measured_from_stored_traces` |
-| `MEDULLA-DECISION-ENGINE-R803.7` | `crates/medulla-h-decide/src/decide/stat_tests/harness_contrast_tests.rs::contrast_never_reads_another_tenants_runs` |
-| `MEDULLA-DECISION-ENGINE-R803.8` | `crates/medulla-h-decide/src/decide/stat_tests/harness_adoption_tests.rs::adoption_contrast_and_lesson_commit_together`; `crates/medulla-h-decide/src/decide/stat_tests/harness_adoption_tests.rs::adopted_lesson_is_retrieved_through_the_served_read`; `tests/decide/test_harness_adoption_served.py::test_adoption_logged_and_lesson_retrieved` |
-| `MEDULLA-DECISION-ENGINE-R805.10` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::added_subject_kinds_round_trip_with_pointer_keys`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
-| `MEDULLA-DECISION-ENGINE-R805.11` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::gate_rules_per_added_kind`; `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
-| `MEDULLA-DECISION-ENGINE-R805.12` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::harness_definitions_promote_and_roll_back` |
-| `MEDULLA-DECISION-ENGINE-R805.13` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_read_returns_champion_and_refuses_unknown_key` |
-| `MEDULLA-DECISION-ENGINE-R815` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::model_media_capability_and_unknown_code` |
+| `MEDULLA-DECISION-ENGINE-R805.9` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::every_receipt_kind_resolves_to_held_out_evidence` |
+| `MEDULLA-DECISION-ENGINE-R134.111.1` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::task_plan_round_trips`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.2` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::plan_respects_dependencies`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.3` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan`; `tests/decide/test_task_plan_served.py::test_explicit_plan_end_to_end` |
+| `MEDULLA-DECISION-ENGINE-R134.111.4` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::invalid_graphs_refuse`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::invalid_task_requests_refuse` |
+| `MEDULLA-DECISION-ENGINE-R134.111.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::task_plan_cannot_use_score_replay`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
+| `MEDULLA-DECISION-ENGINE-R134.111.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::maximum_bounded_plan_is_accepted` |
+| `MEDULLA-DECISION-ENGINE-R134.111.7` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::the_canonical_task_plan_feature_schema_is_valid_and_stable`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::canonical_task_plan_schema_publishes_once_and_routes` |
+| `MEDULLA-DECISION-ENGINE-R158.7` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/run_adjustment_tests.rs::windows_drive_model_and_width_and_refuse_mid_run_widening` |
+| `MEDULLA-DECISION-ENGINE-R179.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/harness_contrast_tests.rs::contrast_reads_the_pinned_harness_evolution_knobs` |
+| `MEDULLA-DECISION-ENGINE-R803.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/harness_contrast_tests.rs::contrast_is_measured_from_stored_traces` |
+| `MEDULLA-DECISION-ENGINE-R803.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/harness_contrast_tests.rs::contrast_never_reads_another_tenants_runs` |
+| `MEDULLA-DECISION-ENGINE-R803.8` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/harness_adoption_tests.rs::adoption_contrast_and_lesson_commit_together`; `crates/medulla-h-decide-family-tests/src/decide/stat_tests/harness_adoption_tests.rs::adopted_lesson_is_retrieved_through_the_served_read`; `tests/decide/test_harness_adoption_served.py::test_adoption_logged_and_lesson_retrieved` |
+| `MEDULLA-DECISION-ENGINE-R805.10` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::added_subject_kinds_round_trip_with_pointer_keys`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.11` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::gate_rules_per_added_kind`; `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promote_then_roll_back_every_subject_kind` |
+| `MEDULLA-DECISION-ENGINE-R805.12` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::harness_definitions_promote_and_roll_back` |
+| `MEDULLA-DECISION-ENGINE-R805.13` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::pointer_read_returns_champion_and_refuses_unknown_key` |
+| `MEDULLA-DECISION-ENGINE-R815` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::model_media_capability_and_unknown_code` |
 | `MEDULLA-DECISION-ENGINE-R816` | `tests/observation_state_served.rs::state_is_run_bound` (served); `crates/medulla-h-graph-gateway/src/graph_ops/observation_state_tests.rs::records_are_keyed_by_tenant_and_expire` |
-| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::list_is_tenant_scoped_and_paged` |
-| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::malformed_cursor_refuses_by_name` |
-| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide/src/decide/stat_tests/revision_proposal_tests.rs::limit_is_held_to_the_registry_ceiling` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/revision_proposal_tests.rs::list_is_tenant_scoped_and_paged` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/revision_proposal_tests.rs::malformed_cursor_refuses_by_name` |
+| `MEDULLA-DECISION-ENGINE-R817` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/revision_proposal_tests.rs::limit_is_held_to_the_registry_ceiling` |
 | `MEDULLA-DECISION-ENGINE-R817` | `tests/decide/test_revision_proposals_served.py::test_list_is_tenant_scoped_and_paged` |
-| `MEDULLA-DECISION-ENGINE-R818` | `crates/medulla-h-decide/src/decide/stat_tests/probe_selection_tests.rs::selects_declared_entries_and_refuses_empty` |
-| `MEDULLA-DECISION-ENGINE-R819` | `crates/medulla-h-decide/src/decide/stat_tests/serving_technique_tests.rs::verdict_follows_receipts_and_knobs` |
-| `MEDULLA-DECISION-ENGINE-R820` | `crates/medulla-h-decide/src/decide/stat_tests/process_remediation_tests.rs::verdicts_follow_thresholds` |
-| `MEDULLA-DECISION-ENGINE-R821` | `crates/medulla-h-decide/src/decide/stat_tests/retrieval_adoption_tests.rs::paired_run_adopts_and_refuses` |
-| `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_tests/calibration_tests.rs::isotonic_fit_is_monotone_and_promoted` |
-| `MEDULLA-DECISION-ENGINE-R823` | `crates/medulla-h-decide/src/decide/stat_tests/reasoning_paradigm_tests.rs::legal_set_then_rank_and_abstain` |
-| `MEDULLA-DECISION-ENGINE-R824` | `crates/medulla-h-decide/src/decide/stat_tests/capacity_tests.rs::capacity_proposal_verdicts` |
-| `MEDULLA-DECISION-ENGINE-R825` | `crates/medulla-h-decide/src/decide/stat_tests/model_capacity_tests.rs::limit_narrows_on_latency_and_never_exceeds_ceiling` |
-| `MEDULLA-DECISION-ENGINE-R826` | `crates/medulla-h-decide/src/decide/stat_tests/ingest_shortfall_tests.rs::allocation_ties_and_purge_ineligibility` |
-| `MEDULLA-DECISION-ENGINE-R827` | `crates/medulla-h-decide/src/decide/stat_tests/revert_family_tests.rs::dependents_forbid_revert` |
-| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::winner_by_margin_tie_and_abstain_codes` |
+| `MEDULLA-DECISION-ENGINE-R818` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/probe_selection_tests.rs::selects_declared_entries_and_refuses_empty` |
+| `MEDULLA-DECISION-ENGINE-R819` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/serving_technique_tests.rs::verdict_follows_receipts_and_knobs` |
+| `MEDULLA-DECISION-ENGINE-R820` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/process_remediation_tests.rs::verdicts_follow_thresholds` |
+| `MEDULLA-DECISION-ENGINE-R821` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/retrieval_adoption_tests.rs::paired_run_adopts_and_refuses` |
+| `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/calibration_tests.rs::isotonic_fit_is_monotone_and_promoted` |
+| `MEDULLA-DECISION-ENGINE-R823` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/reasoning_paradigm_tests.rs::legal_set_then_rank_and_abstain` |
+| `MEDULLA-DECISION-ENGINE-R824` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/capacity_tests.rs::capacity_proposal_verdicts` |
+| `MEDULLA-DECISION-ENGINE-R825` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/model_capacity_tests.rs::limit_narrows_on_latency_and_never_exceeds_ceiling` |
+| `MEDULLA-DECISION-ENGINE-R826` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/ingest_shortfall_tests.rs::allocation_ties_and_purge_ineligibility` |
+| `MEDULLA-DECISION-ENGINE-R827` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/revert_family_tests.rs::dependents_forbid_revert` |
+| `MEDULLA-DECISION-ENGINE-R828` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/resolve_conflict_tests.rs::winner_by_margin_tie_and_abstain_codes` |
 | `MEDULLA-DECISION-ENGINE-R802.1` | `web_fetch_selection.rs::tests::question_round_trips` |
 | `MEDULLA-DECISION-ENGINE-R810` | `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-program/tests/native_program.rs::compile_reads_train_for_candidates_and_validation_only_for_scoring` |
@@ -2094,13 +2094,13 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R813.4` | `tests/program_score_source_served.rs::score_refusals` |
 | `MEDULLA-DECISION-ENGINE-R813.5` | `tests/program_scores_to_program_served.rs::example_names_score_grader_author_and_run` |
 | `MEDULLA-DECISION-ENGINE-R813.6` | `tests/program_scores_to_program_served.rs::served_scores_to_program_journey` |
-| `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
+| `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
 | `MEDULLA-DECISION-ENGINE-R804` | `tests/program_optimize_job_served.rs::judge_only_test_split_refuses` |
 | `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback` |
-| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide/src/decide/stat_promotion.rs::qualified_champion` |
-| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
-| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
-| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
+| `MEDULLA-DECISION-ENGINE-R805.3` | `crates/medulla-h-decide-base/src/decide/stat_promotion.rs::qualified_champion` |
+| `MEDULLA-DECISION-ENGINE-R805.4` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::promotion_refusals` |
+| `MEDULLA-DECISION-ENGINE-R805.5` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::pointer_history_replays` |
+| `MEDULLA-DECISION-ENGINE-R805.6` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/promotion_tests.rs::served_promotion_journey` |
 | `MEDULLA-DECISION-ENGINE-R805.7` | `crates/medulla-decision-outcome-types/src/decision/promotion.rs::tests::lifecycle_types_round_trip` |
 | `MEDULLA-DECISION-ENGINE-R651.7` | `crates/medulla-h-graph/src/graph_ops/memory_surface_tests.rs::episodes_promote_to_a_linked_semantic_fact` |
 | `MEDULLA-DECISION-ENGINE-R651.7` | `tests/memory/test_consolidate_served.py::test_episodes_promote_to_semantic_fact` |
@@ -2114,44 +2114,44 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R651.11` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::turn_append_enqueues_one_ordered_job_per_key` |
 | `MEDULLA-DECISION-ENGINE-R651.12` | `crates/medulla-h-graph/src/graph_ops/participant_memory_tests.rs::derive_job_writes_claims_with_turn_evidence` |
 | `MEDULLA-DECISION-ENGINE-R651.12` | `tests/memory/test_participant_memory_served.py::test_turns_become_perspective_claims` |
-| `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
+| `MEDULLA-DECISION-ENGINE-R700.7` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/belief_revision_tests.rs::contradiction_is_tracked_and_status_is_ordered` |
 | `MEDULLA-DECISION-ENGINE-R134.111.11` | `tests/test_task_plan_receipt_validation.py::test_receipt_refuses_a_different_call` |
 | `MEDULLA-DECISION-ENGINE-R134.111.13` | `tests/decide/test_task_plan_served.py::test_tool_step_bindings_end_to_end` |
 | `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-decision-types/src/decision/knob_families/participant.rs::tests::knob_defaults_are_inside_bounds` |
-| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-h-decide/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
+| `MEDULLA-DECISION-ENGINE-R179.8` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knob_tests.rs::participant_knobs_are_registered_and_tunable` |
 | `MEDULLA-DECISION-ENGINE-R803.8` | `stat_log.rs::dispatch` |
 | `MEDULLA-DECISION-ENGINE-R814` | `tests/decide/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt` |
 | `MEDULLA-DECISION-ENGINE-R814.1.2` | `crates/medulla-types/tests/prompt_candidate.rs::candidate_round_trips_and_kind_follows_role` |
 | `MEDULLA-DECISION-ENGINE-R814.2` | `crates/medulla-compute/src/assemble/tests/prompt.rs::selection_scores_by_match_and_confidence_and_abstains` |
-| `MEDULLA-DECISION-ENGINE-R814.2` | `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::assemble_selects_covering_candidate_and_abstains_without_one` |
+| `MEDULLA-DECISION-ENGINE-R814.2` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/prompt_candidate_tests.rs::assemble_selects_covering_candidate_and_abstains_without_one` |
 | `MEDULLA-DECISION-ENGINE-R814.3` | `tests/decide/test_prompt_candidates_served.py::test_assemble_reads_candidates_from_imported_pack` |
-| `MEDULLA-DECISION-ENGINE-R814.3` | `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::system_prompt_slot_narrows_to_the_selected_candidate` |
-| `MEDULLA-DECISION-ENGINE-R814.4` | `crates/medulla-h-decide/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded` |
+| `MEDULLA-DECISION-ENGINE-R814.3` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/prompt_candidate_tests.rs::system_prompt_slot_narrows_to_the_selected_candidate` |
+| `MEDULLA-DECISION-ENGINE-R814.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/prompt_candidate_tests.rs::unbound_prompt_refuses_and_rejected_connector_is_excluded` |
 | `MEDULLA-DECISION-ENGINE-R814.5` | `tests/decide/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability` |
 | `MEDULLA-DECISION-ENGINE-R814.7` | `tests/decide/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task` |
 | `MEDULLA-DECISION-ENGINE-R814.8` | `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path` |
 | `MEDULLA-DECISION-ENGINE-R822` | `crates/medulla-h-decide/src/decide/stat_calibration.rs::fit_isotonic` |
-| `MEDULLA-DECISION-ENGINE-R829` | `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_connector_points_and_unknown_id_abstains` |
-| `MEDULLA-DECISION-ENGINE-R829.1` | `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_the_four_rank_points_and_unknown_id_abstains` and `crates/medulla-h-decide/src/decide/stat_tests/connector_toolchoice_tests.rs::rank_catalog_accepts_two_thousand_and_refuses_one_more` (L3) and `crates/medulla-decision-stats/src/decision/ladder.rs::tests::advisory_keeps_the_best_sixty_four` (L1). |
-| `MEDULLA-DECISION-ENGINE-R829.2` | `crates/medulla-h-decide/src/decide/features/capability_text.rs::tests::name_match_counts_double_and_rare_terms_weigh_more` and `crates/medulla-h-decide/src/decide/features/capability_text.rs::tests::semantic_absent_when_embedding_model_not_ready` (L2). |
+| `MEDULLA-DECISION-ENGINE-R829` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_connector_points_and_unknown_id_abstains` |
+| `MEDULLA-DECISION-ENGINE-R829.1` | `crates/medulla-h-decide-family-tests/src/decide/stat_tests/connector_toolchoice_tests.rs::catalog_serves_the_four_rank_points_and_unknown_id_abstains` and `crates/medulla-h-decide-family-tests/src/decide/stat_tests/connector_toolchoice_tests.rs::rank_catalog_accepts_two_thousand_and_refuses_one_more` (L3) and `crates/medulla-decision-stats/src/decision/ladder.rs::tests::advisory_keeps_the_best_sixty_four` (L1). |
+| `MEDULLA-DECISION-ENGINE-R829.2` | `crates/medulla-h-decide-base/src/decide/features/capability_text.rs::tests::name_match_counts_double_and_rare_terms_weigh_more` and `crates/medulla-h-decide-base/src/decide/features/capability_text.rs::tests::semantic_absent_when_embedding_model_not_ready` (L2). |
 | `MEDULLA-DECISION-ENGINE-R829.3` | `tests/decide/test_capability_rank_served.py::test_named_system_and_object_rank_first_in_a_large_catalog`, `tests/decide/test_capability_rank_served.py::test_more_than_two_thousand_candidates_refuse_typed`, `tests/decide/test_capability_rank_served.py::test_p99_ceiling_holds_on_a_warm_slot` and `tests/decide/test_capability_rank_served.py::test_stopped_embedding_model_keeps_the_lexical_head` (L4). |
-| `MEDULLA-DECISION-ENGINE-R829.4` | `crates/medulla-h-decide/src/decide/features/capability_text.rs::tests::the_catalog_rank_schema_reads_the_computed_keys_and_imputes_zero`; `tests/test_decision_client.py::test_catalog_rank_schemas_are_published_per_point_over_one_body` | L1 | planned |
+| `MEDULLA-DECISION-ENGINE-R829.4` | `crates/medulla-h-decide-base/src/decide/features/capability_text.rs::tests::the_catalog_rank_schema_reads_the_computed_keys_and_imputes_zero`; `tests/test_decision_client.py::test_catalog_rank_schemas_are_published_per_point_over_one_body` | L1 | planned |
 | `MEDULLA-DECISION-ENGINE-R134.111.14` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::control_steps_round_trip_and_refuse_two_kinds` |
 | `MEDULLA-DECISION-ENGINE-R134.111.15` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::control_checks_refuse_planted_faults` |
-| `MEDULLA-DECISION-ENGINE-R134.111.16` | `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::control_refusals_name_the_task` |
+| `MEDULLA-DECISION-ENGINE-R134.111.16` | `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::control_refusals_name_the_task` |
 | `MEDULLA-DECISION-ENGINE-R134.111.17` | `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::control_fields_change_the_digest` |
 | `MEDULLA-DECISION-ENGINE-R134.111.18` | `tests/decide/test_task_plan_served.py::test_control_steps_served` |
-| `MEDULLA-DECISION-ENGINE-R180` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
+| `MEDULLA-DECISION-ENGINE-R180` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
 | `MEDULLA-DECISION-ENGINE-R180.1` | `crates/medulla-decision-program-types/src/decision/process_decision.rs::tests::requests_round_trip` |
 | `MEDULLA-DECISION-ENGINE-R180.2` | `crates/medulla-decision-stats-records/src/decision/dmn_eval.rs::tests::every_hit_policy_matches_its_fixture` |
 | `MEDULLA-DECISION-ENGINE-R180.3` | `crates/medulla-decision-stats/src/decision/branch_select.rs::tests::branch_kinds_take_the_right_arms` |
-| `MEDULLA-DECISION-ENGINE-R180.4` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
-| `MEDULLA-DECISION-ENGINE-R180.5` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::decision_refusals_name_the_rule` |
-| `MEDULLA-DECISION-ENGINE-R180.6` | `crates/medulla-h-decide/src/decide/stat_tests/process_decision_tests.rs::premises_cite_rules_and_inputs` |
+| `MEDULLA-DECISION-ENGINE-R180.4` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/process_decision_tests.rs::decide_routes_table_and_branch` |
+| `MEDULLA-DECISION-ENGINE-R180.5` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/process_decision_tests.rs::decision_refusals_name_the_rule` |
+| `MEDULLA-DECISION-ENGINE-R180.6` | `crates/medulla-h-decide-served-tests/src/decide/stat_tests/process_decision_tests.rs::premises_cite_rules_and_inputs` |
 | `MEDULLA-DECISION-ENGINE-R180.7` | `tests/decide/test_process_decision_served.py::test_table_and_branch_served` |
-| `MEDULLA-DECISION-ENGINE-R833` | `crates/medulla-decision-program-types/src/decision/statistical/scale.rs::tests::each_fault_refuses_with_its_own_code_in_check_order`; `crates/medulla-h-decide/src/decide/stat_tests/scale_intent_tests.rs::a_scale_intent_is_judged_against_the_stored_authority`; `tests/test_scale_intent_request.py::test_scale_intent_request_shape` |
+| `MEDULLA-DECISION-ENGINE-R833` | `crates/medulla-decision-program-types/src/decision/statistical/scale.rs::tests::each_fault_refuses_with_its_own_code_in_check_order`; `crates/medulla-h-decide-served-tests/src/decide/stat_tests/scale_intent_tests.rs::a_scale_intent_is_judged_against_the_stored_authority`; `tests/test_scale_intent_request.py::test_scale_intent_request_shape` |
 | `MEDULLA-DECISION-ENGINE-R834` | `crates/medulla-rdf/tests/scale_inventory_classes.rs::the_scale_inventory_classes_are_declared_and_rooted_in_the_core_system` |
-| `MEDULLA-DECISION-ENGINE-R180.8` | `crates/medulla-h-decide/src/decide/family/process_decision.rs::control_schema_tests::the_control_schema_is_valid_and_encodes_one_inert_feature`; `tests/test_decision_client.py::test_process_control_schemas_are_published_per_step_over_one_body` |
+| `MEDULLA-DECISION-ENGINE-R180.8` | `crates/medulla-h-decide-learning/src/decide/family/process_decision.rs::control_schema_tests::the_control_schema_is_valid_and_encodes_one_inert_feature`; `tests/test_decision_client.py::test_process_control_schemas_are_published_per_step_over_one_body` |
 
 ## Explicit state machine rows (Article XXXI)
 
@@ -2161,7 +2161,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 - `MEDULLA-DECISION-ENGINE-R830.3`: `crates/medulla-decision-types/src/decision/jobs.rs::tests::no_writer_sets_state_outside_apply` (L1): proves: `DecisionJobOutcome` has two variants, stored records decode unchanged, `queued`, `running` and `cancelled` are refused, and nothing assigns `outcome` after construction.
 - `MEDULLA-DECISION-ENGINE-R830.4`: `crates/medulla-decision-outcome-types/src/decision/concentration/tests.rs::no_writer_sets_status_outside_apply` (L1): proves: `EditFact.standing` keeps the serde key `status` and nothing assigns it after construction.
 - `MEDULLA-DECISION-ENGINE-R830.5`: `crates/medulla-types/src/gap_machine.rs::tests::every_legal_transition_applies`, `crates/medulla-types/src/gap_machine.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-types/src/gap_machine.rs::tests::no_writer_sets_state_outside_apply`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::gap_machine_matches_edge_table` (L1): proves: Gap/GapState state machine: route 1 census findings through GapState::apply.
-- `MEDULLA-DECISION-ENGINE-R830.6`: `crates/medulla-decision-policy-types/src/loops.rs::tests::loop_state_round_trips_every_stored_form` (L1): every `LoopState` round-trips through `stored` and serde, and an unknown string is refused. `crates/medulla-store/src/loop_statechart.rs::tests::chart_states_are_loop_state_variants` (L1): the chart states, finals and initial equal `LoopState::ALL`, `is_final` and `Submitted`, and `def_id` is unchanged. `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::no_writer_sets_state_outside_view_of` (L1): only `view_of` assigns `view.instance.state`. `crates/medulla-h-decide/src/decide/stat_tests/loops_tests.rs::unfired_event_refuses_transition_refused` (L2): a release on a finished loop refuses `TRANSITION_REFUSED` with reason `terminal_state` and changes nothing. `crates/medulla-rdf/tests/state_machine_vocabulary.rs::loop_machine_matches_statechart` (L1): the Turtle `:LoopMachine` matches `loop_statechart_def`.
+- `MEDULLA-DECISION-ENGINE-R830.6`: `crates/medulla-decision-policy-types/src/loops.rs::tests::loop_state_round_trips_every_stored_form` (L1): every `LoopState` round-trips through `stored` and serde, and an unknown string is refused. `crates/medulla-store/src/loop_statechart.rs::tests::chart_states_are_loop_state_variants` (L1): the chart states, finals and initial equal `LoopState::ALL`, `is_final` and `Submitted`, and `def_id` is unchanged. `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::no_writer_sets_state_outside_view_of` (L1): only `view_of` assigns `view.instance.state`. `crates/medulla-h-decide-family-tests/src/decide/stat_tests/loops_tests.rs::unfired_event_refuses_transition_refused` (L2): a release on a finished loop refuses `TRANSITION_REFUSED` with reason `terminal_state` and changes nothing. `crates/medulla-rdf/tests/state_machine_vocabulary.rs::loop_machine_matches_statechart` (L1): the Turtle `:LoopMachine` matches `loop_statechart_def`.
 - `MEDULLA-DECISION-ENGINE-R830.7`: `crates/medulla-decision-outcome-types/src/current_plan/tests.rs::no_writer_sets_status_outside_apply` (L1): proves: `PlanItem.progress` keeps the wire key `status` and nothing assigns it after construction.
 - `MEDULLA-DECISION-ENGINE-R830.8`: `crates/medulla-decision-policy-types/src/decision/reputation.rs::tests::no_writer_sets_state_outside_apply` (L1): proves: the answer tag is `SourceReliabilityKind`, the wire key `state` is unchanged and nothing assigns it after construction.
 - `MEDULLA-DECISION-ENGINE-R830.9`: `crates/medulla-decision-policy-types/src/loops.rs::tests::no_writer_sets_stage_outside_apply` (L1): proves: `StageBeacon.stage_id` keeps the wire key `stage` and nothing assigns it after construction.
@@ -2194,16 +2194,16 @@ Every row below has a planned test at its exact post-split path; the row text na
 | Demotion | `MEDULLA-DECISION-ENGINE-R135.17.2` | Fallbacks over the rate demote the program, with the count premises. |
 | Replay hot path | `MEDULLA-DECISION-ENGINE-R135.17.3` | Served fallback reports demote one program and leave the other. |
 
-- `MEDULLA-DECISION-ENGINE-R135.16`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::request_text_finds_the_nearest_program_and_binds_it` (planned, L3): proves semantic program lookup by request text. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::request_text_finds_the_nearest_program_and_binds_it` (planned, L3): proves semantic program lookup by request text. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.16.1`: `crates/medulla-decision-program-types/src/decision/program_store/semantic.rs::tests::match_types_round_trip` (L1): proves the match model.
 - `MEDULLA-DECISION-ENGINE-R135.16.2`: `crates/medulla-decision-program-types/src/decision/program_store/semantic.rs::tests::phrasing_binds_slots_and_fixed_values` (planned, L1) and `crates/medulla-decision-program-types/src/decision/program_store/semantic.rs::tests::nearest_program_at_threshold_wins_ties_by_signature` (planned, L1): prove binding and selection. The owning change adds them at these exact paths.
-- `MEDULLA-DECISION-ENGINE-R135.16.3`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::commit_writes_vectors_and_lookup_reads_them` (planned, L3): proves the commit and lookup wiring. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.16.4`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::each_match_refusal_names_its_code` (planned, L3): proves the refusals and abstentions. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.16.5`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::match_record_lists_score_threshold_and_bindings` (planned, L3): proves the match premises. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::commit_writes_vectors_and_lookup_reads_them` (planned, L3): proves the commit and lookup wiring. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::each_match_refusal_names_its_code` (planned, L3): proves the refusals and abstentions. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.16.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::match_record_lists_score_threshold_and_bindings` (planned, L3): proves the match premises. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R135.16.6`: `tests/decide/test_program_store_served.py::test_paraphrase_reuses_program` (planned, L4): proves the served paraphrase match. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.17`: `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): proves replay outcomes and demotion. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R135.17.1`: `crates/medulla-decision-statistical-types/src/decision/program_store/replay.rs::tests::each_outcome_needs_its_fields` (planned, L1) and `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_row_is_stored_once` (planned, L3): prove the replay record. The owning change adds them at these exact paths.
-- `MEDULLA-DECISION-ENGINE-R135.17.2`: `crates/medulla-decision-statistical-types/src/decision/program_store/replay.rs::tests::window_and_rate_decide_demotion` (planned, L1) and `crates/medulla-h-decide/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): prove demotion. The owning change adds them at these exact paths.
+- `MEDULLA-DECISION-ENGINE-R135.17`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): proves replay outcomes and demotion. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R135.17.1`: `crates/medulla-decision-statistical-types/src/decision/program_store/replay.rs::tests::each_outcome_needs_its_fields` (planned, L1) and `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::replay_row_is_stored_once` (planned, L3): prove the replay record. The owning change adds them at these exact paths.
+- `MEDULLA-DECISION-ENGINE-R135.17.2`: `crates/medulla-decision-statistical-types/src/decision/program_store/replay.rs::tests::window_and_rate_decide_demotion` (planned, L1) and `crates/medulla-h-decide-served-tests/src/decide/stat_tests/program_match_tests.rs::replay_fallbacks_demote_the_program` (planned, L3): prove demotion. The owning change adds them at these exact paths.
 - `MEDULLA-DECISION-ENGINE-R135.17.3`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program` (planned, L4): proves the served demotion. The owning change adds it at this exact path.
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program_store_served.py::test_paraphrase_reuses_program`. Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.17`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program`.
@@ -2214,8 +2214,8 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R652.10`: `crates/medulla-decision-statistical-types/src/claims.rs::tests::proof_receipt_round_trips_and_refuses_invalid` (planned, L1): proves: Machine-checked proof evidence kind
 - `MEDULLA-DECISION-ENGINE-R652.11`: `crates/medulla-epistemic/src/claims.rs::tests::proof_standing_needs_pass_no_sorry_and_standard_axioms` (planned, L2): proves: Proven standing rule `PROVEN_STANDING`
 - `MEDULLA-DECISION-ENGINE-R652.12`: `crates/medulla-core/tests/formalizes_edge.rs::formalizes_is_declared_once_in_core_with_entity_domain_and_range` (planned, L1): proves: The `formalizes` edge in the core ontology
-- `MEDULLA-DECISION-ENGINE-R652.13`: `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants` (planned, L3): proves: Query: which claims are machine-checked, under which axioms
-- `MEDULLA-DECISION-ENGINE-R652.14`: `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::proof_journey` (planned, L3): proves: Hot-path proof for machine-checked standing
+- `MEDULLA-DECISION-ENGINE-R652.13`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants` (planned, L3): proves: Query: which claims are machine-checked, under which axioms
+- `MEDULLA-DECISION-ENGINE-R652.14`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/claims_tests.rs::proof_journey` (planned, L3): proves: Hot-path proof for machine-checked standing
 - `MEDULLA-DECISION-ENGINE-R870.1`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::list_pages_filters_and_isolates_tenants` (planned, L3): proves: List committed records of a tenant
 - `MEDULLA-DECISION-ENGINE-R870.2`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::provenance_keeps_used_revision_and_hides_other_tenants` (planned, L3): proves: Read the provenance of one committed record
 - `MEDULLA-DECISION-ENGINE-R870.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::why_not_is_bounded_read_only_and_refuses_retired_inputs` (planned, L3): proves: Re-solve why one option was not chosen, within a bounded budget
@@ -2223,73 +2223,73 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R708`: `tests/decide/test_knowledge_flag_served.py::test_raise_dedup_resolve_list` (planned, L3): proves: Any agent flags missing or wrong knowledge and the engine keeps the flag (rollup)
 - `MEDULLA-DECISION-ENGINE-R708.1`: `crates/medulla-decision-statistical-types/src/knowledge_flag.rs::tests::flag_types_round_trip_with_golden_vector` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R708.2`: `crates/medulla-decision-stats-records/src/decision/knowledge_flag.rs::tests::dedup_key_and_machine_are_total` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R708.3`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::raise_writes_one_node_and_dedups` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R708.4`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::each_refusal_writes_nothing` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R708.5`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::flag_is_agent_asserted_and_linked_to_trace_and_correction` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R708.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_flag_tests.rs::raise_writes_one_node_and_dedups` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R708.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_flag_tests.rs::each_refusal_writes_nothing` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R708.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_flag_tests.rs::flag_is_agent_asserted_and_linked_to_trace_and_correction` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R708.6`: `tests/decide/test_knowledge_flag_served.py::test_raise_dedup_resolve_list` (planned, L4): proves: Hot-path proof
 - `MEDULLA-DECISION-ENGINE-R709`: `tests/decide/test_knowledge_curation_served.py::test_flag_trace_to_fixed_skill_and_entry` (planned, L3): proves: A scheduled curation cycle turns flags, traces and source changes into non-contradicting knowledge updates (rollup)
 - `MEDULLA-DECISION-ENGINE-R709.1`: `crates/medulla-decision-policy-types/src/knowledge_curation.rs::tests::curation_types_round_trip_with_golden_vector` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R709.2`: `crates/medulla-decision-stats-records/src/decision/knowledge_curation.rs::tests::each_contradiction_code_fires_once` (planned, L1): proves: Behavior: contradiction check
-- `MEDULLA-DECISION-ENGINE-R709.3`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::propose_records_an_evaluated_revision` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R709.4`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::refusals_leave_flags_open` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R709.5`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::adoption_closes_the_addressed_flags` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R709.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_curation_tests.rs::propose_records_an_evaluated_revision` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R709.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_curation_tests.rs::refusals_leave_flags_open` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R709.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_curation_tests.rs::adoption_closes_the_addressed_flags` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R709.6`: `tests/decide/test_knowledge_curation_served.py::test_flag_trace_to_fixed_skill_and_entry` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R709.7`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::metrics_report_recurrence_and_latency` (planned, L3): proves: Closed-loop measures
+- `MEDULLA-DECISION-ENGINE-R709.7`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/knowledge_curation_tests.rs::metrics_report_recurrence_and_latency` (planned, L3): proves: Closed-loop measures
 - `MEDULLA-DECISION-ENGINE-R710`: `tests/decide/test_friction_served.py::test_group_walks_the_whole_machine` (planned, L3): proves: Friction reports are grouped by skill and move through one explicit state machine (rollup)
 - `MEDULLA-DECISION-ENGINE-R710.1`: `crates/medulla-decision-program-types/src/friction.rs::tests::friction_types_round_trip_with_golden_vector` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R710.2`: `crates/medulla-store/src/loop_statechart.rs::tests::friction_machine_allows_only_the_listed_moves` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R710.3`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::report_feeds_failure_patterns` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R710.4`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::refusals_write_nothing` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R710.5`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::steps_record_actor_and_evidence` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R710.3`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/friction_report_tests.rs::report_feeds_failure_patterns` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R710.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/friction_report_tests.rs::refusals_write_nothing` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R710.5`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/friction_report_tests.rs::steps_record_actor_and_evidence` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R710.6`: `tests/decide/test_friction_served.py::test_group_walks_the_whole_machine` (planned, L4): proves: Hot-path proof
 - `MEDULLA-DECISION-ENGINE-R711`: `tests/decide/test_skill_eval_served.py::test_mix_band_and_judge_calibration` (planned, L3): proves: A skill eval suite mixes golden, trajectory and judged cases and scores outcome and trajectory apart (rollup)
 - `MEDULLA-DECISION-ENGINE-R711.1`: `crates/medulla-decision-policy-types/src/skill_eval.rs::tests::eval_types_round_trip_with_golden_vector` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R711.2`: `crates/medulla-decision-stats-records/src/decision/skill_eval.rs::tests::trajectory_and_outcome_score_apart` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R711.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::job_stores_results_and_report` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R711.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::uncalibrated_judge_and_dirty_run_refused` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R711.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::saturation_is_flagged_not_trusted` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R711.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_eval_tests.rs::job_stores_results_and_report` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R711.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_eval_tests.rs::uncalibrated_judge_and_dirty_run_refused` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R711.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_eval_tests.rs::saturation_is_flagged_not_trusted` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R711.6`: `tests/decide/test_skill_eval_served.py::test_mix_band_and_judge_calibration` (planned, L4): proves: Hot-path proof
 - `MEDULLA-DECISION-ENGINE-R712`: `tests/decide/test_skill_ablation_served.py::test_effect_noise_canary_and_stale_compile` (planned, L3): proves: Skill ablation, canary rollout and per-model compilation are decisions of the revision lifecycle (rollup)
 - `MEDULLA-DECISION-ENGINE-R712.1`: `crates/medulla-decision-policy-types/src/skill_eval.rs::tests::ablation_types_round_trip_and_hide_the_arm` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R712.2`: `crates/medulla-decision-stats-records/src/decision/skill_eval.rs::tests::noise_band_and_canary_bucket_are_deterministic` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R712.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::canary_decides_ramp_hold_or_rollback` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R712.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::refusal_codes` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R712.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::premises_name_band_and_split` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R712.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_ablation_tests.rs::canary_decides_ramp_hold_or_rollback` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R712.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_ablation_tests.rs::refusal_codes` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R712.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_ablation_tests.rs::premises_name_band_and_split` (planned, L3): proves: Evidence
 - `MEDULLA-DECISION-ENGINE-R712.6`: `tests/decide/test_skill_ablation_served.py::test_effect_noise_canary_and_stale_compile` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R702.7`: `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::review_sources_yield_eval_cases_with_digests_only` (planned, L3): proves: Review comments and rejections are correction sources
-- `MEDULLA-DECISION-ENGINE-R702.8`: `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::independent_outcomes_read_per_rule_candidate` (planned, L3): proves: Independent outcomes per rule candidate
+- `MEDULLA-DECISION-ENGINE-R702.7`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::review_sources_yield_eval_cases_with_digests_only` (planned, L3): proves: Review comments and rejections are correction sources
+- `MEDULLA-DECISION-ENGINE-R702.8`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/correction_tests.rs::independent_outcomes_read_per_rule_candidate` (planned, L3): proves: Independent outcomes per rule candidate
 - `MEDULLA-DECISION-ENGINE-R713`: `tests/decide/test_skill_telemetry_served.py::test_measures_rank_peers_and_traces` (planned, L3): proves: Skill usage telemetry carries no prompt text and yields twelve measures per skill (rollup)
 - `MEDULLA-DECISION-ENGINE-R713.1`: `crates/medulla-decision-statistical-types/src/skill_telemetry.rs::tests::invocation_has_no_free_text_and_measures_has_twelve_fields` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R713.2`: `crates/medulla-decision-stats/src/decision/skill_telemetry.rs::tests::twelve_measures_match_golden_vectors` (planned, L1): proves: Behavior: measures
-- `MEDULLA-DECISION-ENGINE-R713.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_then_measures_round_trip` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R713.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::bad_event_refuses_whole_batch` (planned, L3): proves: Refusal
-- `MEDULLA-DECISION-ENGINE-R713.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::quality_orders_by_evals_then_runs` (planned, L3): proves: Quality score and rank
-- `MEDULLA-DECISION-ENGINE-R713.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::peers_never_named_and_small_cohort_refused` (planned, L3): proves: Peer recommendation
-- `MEDULLA-DECISION-ENGINE-R713.7`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::traces_by_eval_uses_the_edge_index` (planned, L3): proves: Traces indexed by eval
-- `MEDULLA-DECISION-ENGINE-R713.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::a_foreign_tenants_invocation_id_never_collides_or_answers_differently` (planned, L3): proves: a foreign tenant's invocation id never collides with the caller's and answers as on an empty graph.
+- `MEDULLA-DECISION-ENGINE-R713.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_then_measures_round_trip` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R713.4`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::bad_event_refuses_whole_batch` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R713.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::quality_orders_by_evals_then_runs` (planned, L3): proves: Quality score and rank
+- `MEDULLA-DECISION-ENGINE-R713.6`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::peers_never_named_and_small_cohort_refused` (planned, L3): proves: Peer recommendation
+- `MEDULLA-DECISION-ENGINE-R713.7`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::traces_by_eval_uses_the_edge_index` (planned, L3): proves: Traces indexed by eval
+- `MEDULLA-DECISION-ENGINE-R713.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::a_foreign_tenants_invocation_id_never_collides_or_answers_differently` (planned, L3): proves: a foreign tenant's invocation id never collides with the caller's and answers as on an empty graph.
 - `MEDULLA-DECISION-ENGINE-R713.8`: `tests/decide/test_skill_telemetry_served.py::test_measures_rank_peers_and_traces` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R713.8`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_files_each_invocation_under_the_read_index_keys` (planned, L3): proves: the ingest batch files each invocation under the skill, principal and day keys the reads look up. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
+- `MEDULLA-DECISION-ENGINE-R713.8`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_files_each_invocation_under_the_read_index_keys` (planned, L3): proves: the ingest batch files each invocation under the skill, principal and day keys the reads look up. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
 - `MEDULLA-DECISION-ENGINE-R714.1`: `crates/medulla-decision-statistical-types/src/decision/promotion_tier.rs::tests::tier_types_round_trip` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R714.2`: `crates/medulla-decision-stats-records/src/decision/promotion_tier.rs::tests::each_tier_needs_its_review` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::a_persona_set_follows_the_always_on_skills_with_its_tiers` (planned, L3): proves: Persona sets
-- `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_review_that_does_not_qualify_is_refused_and_a_downgrade_needs_an_approver` (planned, L3): proves: Refusal and evidence
+- `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::a_persona_set_follows_the_always_on_skills_with_its_tiers` (planned, L3): proves: Persona sets
+- `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/skill_tier_tests.rs::a_review_that_does_not_qualify_is_refused_and_a_downgrade_needs_an_approver` (planned, L3): proves: Refusal and evidence
 - `MEDULLA-DECISION-ENGINE-R714.6`: `tests/decide/test_skill_tier_served.py::test_a_skill_climbs_tiers_and_the_load_set_follows` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
-- `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R715.2`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::the_always_on_capabilities_stay_outside_max_tools_and_a_policy_cannot_remove_them` (planned, L3): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
+- `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide-served-tests/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R715.2`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/load_set_tests.rs::the_always_on_capabilities_stay_outside_max_tools_and_a_policy_cannot_remove_them` (planned, L3): proves: Hot-path proof
 
 ## Foreach task steps and fitted topics (R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
 
 - `MEDULLA-DECISION-ENGINE-R134.111.19`: `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::foreach_round_trips_and_digest_covers_it` (planned, L1): proves foreach step model and static checks. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.111.20`: `crates/medulla-decision-program-types/src/decision/task_plan/tests.rs::refuses_each_foreach_defect` (planned, L1): proves foreach refusals. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R134.111.21`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan_with_foreach` (planned, L3): proves foreach wiring and schema. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.111.21`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan_with_foreach` (planned, L3): proves foreach wiring and schema. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R134.111.22`: `tests/decide/test_task_plan_served.py::test_foreach_step_end_to_end` (planned, L4): proves hot-path proof: foreach steps served. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R614.2.5`: `crates/medulla-enrich/tests/fit_topics.rs::centroids_floor_and_refusals_on_fixed_examples` (planned, L1): proves fit topic centroids from labelled examples. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R614.2.6`: `crates/medulla-server-graph/tests/semantic_enrichment_fit.rs::fit_writes_topics_and_classify_reads_floor` (planned, L3): proves wiring: fitted topics persist as topic nodes. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R614.2.7`: `tests/decide/test_semantic_enrichment_served.py::test_fit_topics_then_classify_journey` (planned, L4): proves hot-path proof: fit then classify through the served method. The owning change adds it at this exact path.
-- `MEDULLA-DECISION-ENGINE-R142.103`: `crates/medulla-h-decide/src/decide/stat_tests/certification_tests.rs::the_certification_read_answers_the_current_attestation_or_none` (planned, L3): proves wiring: the served read answers the latest attestation of the asked revision, and none for another revision, tenant or skill.
+- `MEDULLA-DECISION-ENGINE-R142.103`: `crates/medulla-h-decide-stat-tests/src/decide/stat_tests/certification_tests.rs::the_certification_read_answers_the_current_attestation_or_none` (planned, L3): proves wiring: the served read answers the latest attestation of the asked revision, and none for another revision, tenant or skill.
 - `MEDULLA-DECISION-ENGINE-R166.7`: `crates/medulla-h-graph-gateway/src/graph_ops/workflow_registry_tests.rs::declared_skills_are_stored_and_read_back_and_a_bad_declaration_refuses` (planned, L1): proves model and refusals: skills are stored on the registration node and read back.
-- `MEDULLA-DECISION-ENGINE-R038.6`: `crates/medulla-h-decide/src/decide/stat_tests/held_item_admission_tests.rs::the_engine_records_the_critique_the_admission_then_reads` (planned, L3): proves wiring: the gate names the checklist, the engine records the critique on the node and the gate then admits or rejects.
+- `MEDULLA-DECISION-ENGINE-R038.6`: `crates/medulla-h-decide-family-tests/src/decide/stat_tests/held_item_admission_tests.rs::the_engine_records_the_critique_the_admission_then_reads` (planned, L3): proves wiring: the gate names the checklist, the engine records the critique on the node and the gate then admits or rejects.
 - `MEDULLA-DECISION-ENGINE-R802.7`: `crates/medulla-decision-stats/src/decision/web_fetch_selection.rs::tests::the_decision_id_names_the_answer_content` (planned, L1): proves model: the decision id is content-addressed and replays.

@@ -136,7 +136,7 @@ pub fn install_state_seams(state: &ServerState) {
     );
     let _ = medulla_server_ops::api::admin::install_decide_seam(
         &state.seams,
-        std::sync::Arc::new(medulla_h_decide::decide::DecideSeam),
+        std::sync::Arc::new(medulla_h_decide::decide::seam::DecideSeam),
     );
 
     // The branch-merge conflict decider (MEDULLA-DECISION-ENGINE-R828).
@@ -148,7 +148,7 @@ pub fn install_state_seams(state: &ServerState) {
 
     // Drift monitors: the Discover signal source and the write observer.
     #[cfg(feature = "decide")]
-    let _ = medulla_h_decide::decide::drift_registry::install();
+    let _ = medulla_h_decide_base::decide::drift_registry::install();
 
     // L5 query, txn, wire.
     #[cfg(all(feature = "query", feature = "nl-query"))]

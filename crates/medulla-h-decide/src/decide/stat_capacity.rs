@@ -20,8 +20,8 @@ use {
     medulla_decision_policy_types::decision::statistical::capacity::PARAM_PROPOSAL,
 };
 
-use super::stat_support::invalid_parameter;
-use super::{capacity_premise, SharedState};
+use medulla_h_decide_base::decide::stat_support::invalid_parameter;
+use {medulla_h_decide_base::decide::capacity_premise, medulla_h_decide_base::decide::SharedState};
 
 fn text<'a>(request: &'a DecideRequest, name: &str) -> Result<&'a str, String> {
     request

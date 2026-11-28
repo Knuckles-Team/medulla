@@ -9,15 +9,15 @@
 use medulla_decision_statistical_types::skill_telemetry::SkillTelemetryOp;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-use super::planned_write::PlannedWrite;
-use super::SharedState;
+use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+use medulla_h_decide_base::decide::SharedState;
 
 /// The graph node id of one invocation (MEDULLA-DECISION-ENGINE-R713.3). The id is namespaced by
 /// the tenant, with the tenant length in front so no tenant and id pair spells another's, so the
 /// repeat check of an ingest looks only at the caller's own tenant: a foreign tenant's invocation
 /// id never collides with the caller's and never answers differently (no existence oracle).
 #[cfg(all(feature = "decide", feature = "redb"))]
-pub(crate) fn invocation_node_id(tenant: &str, invocation_id: &str) -> String {
+pub fn invocation_node_id(tenant: &str, invocation_id: &str) -> String {
     format!("skill-invocation:{}:{tenant}:{invocation_id}", tenant.len())
 }
 
@@ -90,13 +90,16 @@ mod served {
         medulla_decision_statistical_types::skill_telemetry::TRACES_PAGE_MAX,
     };
 
-    use crate::decide::knowledge_flag::served::edge_operation;
-    use crate::decide::planned_write::PlannedWrite;
-    use crate::decide::stat_skill_eval::read_report;
-    use crate::decide::stat_support::{
-        edges_named, filtered_view_versioned, invalid_parameter, readable_graph,
+    use medulla_h_decide_base::decide::planned_write::PlannedWrite;
+    use medulla_h_decide_base::decide::SharedState;
+    use medulla_h_decide_learning::decide::knowledge_flag::served::edge_operation;
+    use medulla_h_decide_learning::decide::stat_skill_eval::read_report;
+    use {
+        medulla_h_decide_base::decide::stat_support::edges_named,
+        medulla_h_decide_base::decide::stat_support::filtered_view_versioned,
+        medulla_h_decide_base::decide::stat_support::invalid_parameter,
+        medulla_h_decide_base::decide::stat_support::readable_graph,
     };
-    use crate::decide::SharedState;
 
     const RUN_TRACE: &str = "RunTrace";
     const OBSERVED_IN: &str = "observed_in";

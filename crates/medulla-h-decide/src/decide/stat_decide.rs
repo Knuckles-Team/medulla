@@ -47,19 +47,38 @@ use {
     medulla_decision_types::decision::statistical::StatisticalOutcome,
 };
 
-use super::candidates::{read_candidates, ReadCandidates};
-use super::stat_belief::{live_slices, Slices};
-use super::stat_executor::{
-    execute, pinned_inputs, recorded_explanation, Executed, ExecutionContext, Pinned,
-};
-use super::stat_log::{fill_observed_costs, fill_outcome_rates, LogReader};
 use super::stat_nl::binding;
-use super::stat_support::{refusal, resolve_policy, ResolvedPolicy};
-use super::telemetry;
+use medulla_h_decide_base::decide::telemetry;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use {
+    medulla_h_decide_base::decide::candidates::read_candidates,
+    medulla_h_decide_base::decide::candidates::ReadCandidates,
+};
+use {
+    medulla_h_decide_base::decide::stat_executor::execute,
+    medulla_h_decide_base::decide::stat_executor::pinned_inputs,
+    medulla_h_decide_base::decide::stat_executor::recorded_explanation,
+    medulla_h_decide_base::decide::stat_executor::Executed,
+    medulla_h_decide_base::decide::stat_executor::ExecutionContext,
+    medulla_h_decide_base::decide::stat_executor::Pinned,
+};
+use {
+    medulla_h_decide_base::decide::stat_log::fill_observed_costs,
+    medulla_h_decide_base::decide::stat_log::fill_outcome_rates,
+    medulla_h_decide_base::decide::stat_log_reader::LogReader,
+};
+use {
+    medulla_h_decide_base::decide::stat_support::refusal,
+    medulla_h_decide_base::decide::stat_support::resolve_policy,
+    medulla_h_decide_base::decide::stat_support::ResolvedPolicy,
+};
+use {
+    medulla_h_decide_learning::decide::stat_belief::live_slices,
+    medulla_h_decide_learning::decide::stat_belief::Slices,
+};
 
 /// Domain of a statistical record's input digest.
 pub const STATISTICAL_INPUTS_DOMAIN: &str = "eg/decision-statistical-inputs/v1";
@@ -87,7 +106,7 @@ pub async fn handle_decide(
 /// The `ConflictDecider` seam (MEDULLA-DECISION-ENGINE-R828): the `BranchMerge`
 /// handler of the graph handler crate decides one conflict through it. It runs
 /// the same served path as [`handle_decide`] under the caller's verified
-/// context -- admission, `decide_blocking`, `execute` and `family::for_kind`
+/// context -- admission, `decide_blocking`, `execute` and `family::registry::for_kind`
 /// -- for a `resolve_conflict` question only, and returns the sealed record.
 pub struct ConflictDeciderSeam;
 
@@ -198,7 +217,9 @@ pub(super) async fn serve(
                 telemetry::Stage::Entailment,
                 &family,
                 verified.tenant(),
-                super::stat_designation::with_runtime(state, verified, &request),
+                medulla_h_decide_base::decide::stat_designation::with_runtime(
+                    state, verified, &request,
+                ),
             )
             .await?,
         ),
@@ -209,7 +230,9 @@ pub(super) async fn serve(
                 telemetry::Stage::Entailment,
                 &family,
                 verified.tenant(),
-                super::stat_load_set::with_load_set_runtime(state, verified, &request),
+                medulla_h_decide_base::decide::stat_load_set::with_load_set_runtime(
+                    state, verified, &request,
+                ),
             )
             .await?,
         ),
@@ -220,7 +243,7 @@ pub(super) async fn serve(
                 telemetry::Stage::Entailment,
                 &family,
                 verified.tenant(),
-                super::stat_usage_guidance::with_usage_guidance_runtime(
+                medulla_h_decide_base::decide::stat_usage_guidance::with_usage_guidance_runtime(
                     state, &store, verified, &request,
                 ),
             )
@@ -233,7 +256,12 @@ pub(super) async fn serve(
             telemetry::Stage::Entailment,
             &family,
             verified.tenant(),
-            super::stat_topology::with_read(state, store.as_ref(), verified, request),
+            medulla_h_decide_runlog::decide::stat_topology::with_read(
+                state,
+                store.as_ref(),
+                verified,
+                request,
+            ),
         )
         .await?
     } else if request.question.kind == QuestionKind::PaperAdmission {
@@ -244,7 +272,12 @@ pub(super) async fn serve(
             telemetry::Stage::Visibility,
             &family,
             verified.tenant(),
-            super::family::with_similarity(state, store.as_ref(), verified, request),
+            medulla_h_decide_learning::decide::family::paper_admission::with_similarity(
+                state,
+                store.as_ref(),
+                verified,
+                request,
+            ),
         )
         .await?
     } else if request.question.kind == QuestionKind::ProgramLookup {
@@ -254,7 +287,12 @@ pub(super) async fn serve(
             telemetry::Stage::Candidates,
             &family,
             verified.tenant(),
-            super::family::with_program_candidates(state, store.as_ref(), verified, request),
+            medulla_h_decide_learning::decide::family::program_store::with_program_candidates(
+                state,
+                store.as_ref(),
+                verified,
+                request,
+            ),
         )
         .await?
     } else if request.question.kind == QuestionKind::ResolveEntity {
@@ -266,7 +304,12 @@ pub(super) async fn serve(
             telemetry::Stage::Candidates,
             &family,
             verified.tenant(),
-            super::family::with_candidates(state, store.as_ref(), verified, request),
+            medulla_h_decide_runlog::decide::family::resolve_entity::with_candidates(
+                state,
+                store.as_ref(),
+                verified,
+                request,
+            ),
         )
         .await?
     } else if request.question.kind == QuestionKind::CapacityProposal {
@@ -288,7 +331,9 @@ pub(super) async fn serve(
             telemetry::Stage::Candidates,
             &family,
             verified.tenant(),
-            super::family::task_context::with_task_context(state, verified, request),
+            medulla_h_decide_base::decide::family::task_context::with_task_context(
+                state, verified, request,
+            ),
         )
         .await?
     } else if request.question.kind == QuestionKind::SkillEvolution {
@@ -299,7 +344,12 @@ pub(super) async fn serve(
             telemetry::Stage::Visibility,
             &family,
             verified.tenant(),
-            super::family::with_skill_embeddings(state, store.as_ref(), verified, request),
+            medulla_h_decide_learning::decide::family::skill_evolution::with_skill_embeddings(
+                state,
+                store.as_ref(),
+                verified,
+                request,
+            ),
         )
         .await?
     } else {
@@ -313,7 +363,7 @@ pub(super) async fn serve(
             telemetry::Stage::Entailment,
             &family,
             verified.tenant(),
-            super::stat_placement::with_read(state, verified, request),
+            medulla_h_decide_base::decide::stat_placement::with_read(state, verified, request),
         )
         .await?
     } else {
@@ -327,7 +377,7 @@ pub(super) async fn serve(
             telemetry::Stage::Entailment,
             &family,
             verified.tenant(),
-            super::stat_placement_plan::with_read(state, verified, request),
+            medulla_h_decide_base::decide::stat_placement_plan::with_read(state, verified, request),
         )
         .await?
     } else {
@@ -336,7 +386,7 @@ pub(super) async fn serve(
     // A tiered `promotion` binds its reviewer to the verified caller and needs the review scope
     // before anything is read (MEDULLA-IDENTITY-R739).
     let request = if request.question.kind == QuestionKind::Promotion {
-        super::stat_skill_tier::bind_reviewer(verified, request)?
+        medulla_h_decide_base::decide::stat_skill_tier::bind_reviewer(verified, request)?
     } else {
         request
     };
@@ -355,7 +405,7 @@ pub(super) async fn serve(
                     | QuestionKind::RecursionMode
                     | QuestionKind::SubCallAdmission
             ) {
-                super::stat_harness_contrast::contrast_evidence_view(
+                medulla_h_decide_base::decide::stat_harness_contrast::contrast_evidence_view(
                     state,
                     verified.agent_id(),
                     &request,
@@ -367,46 +417,46 @@ pub(super) async fn serve(
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::MergeArming {
-                super::family::arming_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::merge_arming::arming_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::HeldItemAdmission {
-                super::family::held_item_view(state, verified.agent_id(), &request)
+                medulla_h_decide_runlog::decide::family::held_item_admission::held_item_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::CommandConfig {
-                super::family::command_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::command_config::command_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::GraphIntake {
                 // A `graph_intake` question resolves its graph sources in the graph
                 // named by its `graph` param, under the same ACL and RLS filter;
                 // a file-only request opens no graph (MEDULLA-DECISION-ENGINE-R163.3).
-                super::family::intake_view(state, verified.agent_id(), &request)
+                medulla_h_decide_runlog::decide::family::graph_intake::intake_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::FanoutAggregate {
-                super::family::fanout_view(state, verified.agent_id(), verified.tenant(), &request)
+                medulla_h_decide_runlog::decide::family::fanout_aggregate::fanout_view(state, verified.agent_id(), verified.tenant(), &request)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::RuntimeQuota {
-                super::family::quota_view(state, verified.agent_id(), &request)
+                medulla_h_decide_runlog::decide::family::runtime_quota::quota_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::InstructionDisclosure {
-                super::family::disclosure_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::instruction_disclosure::disclosure_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ContextPackage {
                 // A `context_package` question declares its candidates and checks
                 // each against its cited source node in the graph named by its
                 // `source_graph` param, under the same ACL and RLS filter.
-                let graph = super::family::context_package::source_graph(&request)?;
-                super::stat_support::filtered_view(state, verified.agent_id(), graph)
+                let graph = medulla_h_decide_learning::decide::family::context_package::source_graph(&request)?;
+                medulla_h_decide_base::decide::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(|view| Some((view, 0)))
-            } else if super::family::planning_admission::reads_repository_graph(&request) {
-                super::family::planning_admission::planning_view(
+            } else if medulla_h_decide_runlog::decide::family::planning_admission_hi::reads_repository_graph(&request) {
+                medulla_h_decide_base::decide::family::planning_admission::planning_view(
                     state,
                     verified.agent_id(),
                     &request,
@@ -418,25 +468,25 @@ pub(super) async fn serve(
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::ToolActionAdmission {
-                super::family::admission_view(state, verified.agent_id(), &request)
+                medulla_h_decide_runlog::decide::family::tool_action_admission::admission_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::AnalystSynthesis {
                 // An `analyst_synthesis` question resolves each citation against the
                 // graph named by its `source_graph` param, under the same ACL and RLS filter.
-                let graph = super::family::context_package::source_graph(&request)?;
-                super::stat_support::filtered_view(state, verified.agent_id(), graph)
+                let graph = medulla_h_decide_learning::decide::family::context_package::source_graph(&request)?;
+                medulla_h_decide_base::decide::stat_support::filtered_view(state, verified.agent_id(), graph)
                     .await
                     .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::HarnessConfig {
-                super::family::harness_config::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::harness_config::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ToolNecessity {
                 // A `tool_necessity` question measures over the `RunTrace` nodes of the
                 // graph named by its `graph` param, under the same ACL and RLS filter
                 // (MEDULLA-DECISION-ENGINE-R165.3).
-                super::family::tool_necessity::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::tool_necessity::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if matches!(
@@ -445,31 +495,31 @@ pub(super) async fn serve(
             ) {
                 // A process decision reads its stored DMN tables in the graph named by its
                 // `graph` param, under the same ACL and RLS filter (MEDULLA-DECISION-ENGINE-R180.4).
-                super::family::process_decision::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::process_decision::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ScaleIntent {
                 // A `scale_intent` question reads the stored `Scale*` authority nodes
                 // of the graph named by its `graph` param, under the same ACL and RLS
                 // filter (MEDULLA-DECISION-ENGINE-R833).
-                super::family::scale_intent::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_runlog::decide::family::scale_intent::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::ProcessPlan {
                 // A `process_plan` question reads its stored workflow in the graph named by
                 // its `graph` param, under the same ACL and RLS filter (MEDULLA-CQ-ORCH-R704.5).
-                super::family::process_plan::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::process_plan::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::Promotion {
                 // A `promotion` question about a program or policy subject reads its
                 // receipt node in the graph named by its `graph` param, under the same
                 // ACL and RLS filter (MEDULLA-DECISION-ENGINE-R805.9).
-                super::family::promotion::evidence_view(state, verified.agent_id(), &request)
+                medulla_h_decide_learning::decide::family::promotion::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
             } else {
-                super::candidates::filtered_graph_view(
+                medulla_h_decide_base::decide::candidates::filtered_graph_view(
                     state,
                     verified.agent_id(),
                     &request.candidates,
@@ -492,7 +542,10 @@ pub(super) async fn serve(
         verified.tenant(),
         async {
             if request.question.kind == QuestionKind::HarnessConfig {
-                super::family::harness_config::resolve_profile(state, verified, &request).await
+                medulla_h_decide_learning::decide::family::harness_config::resolve_profile(
+                    state, verified, &request,
+                )
+                .await
             } else {
                 Ok(None)
             }
@@ -523,12 +576,12 @@ pub(super) async fn serve(
                     ..
                 }) if !graph.is_empty() => graph.as_str(),
                 _ => {
-                    return Err(super::stat_support::invalid_parameter(
+                    return Err(medulla_h_decide_base::decide::stat_support::invalid_parameter(
                         "a run_adjustment question needs the graph param naming the graph that holds the run's windows",
                     ));
                 }
             };
-            super::windows_read::read_windows(state, graph, verified, run_id)
+            medulla_h_decide_learning::decide::windows_read::read_windows(state, graph, verified, run_id)
                 .await
                 .map(Some)
         },
@@ -541,7 +594,11 @@ pub(super) async fn serve(
         telemetry::Stage::Visibility,
         &family,
         verified.tenant(),
-        super::stat_recommend::read_for_question(state, verified.agent_id(), &request),
+        medulla_h_decide_base::decide::stat_recommend::read_for_question(
+            state,
+            verified.agent_id(),
+            &request,
+        ),
     )
     .await?;
     // A `defect_triage` question reads its defect, frames, symbols, blame and the open defects
@@ -566,7 +623,7 @@ pub(super) async fn serve(
                 })
             };
             let graph = text("graph").ok_or_else(|| {
-                super::stat_support::invalid_parameter(
+                medulla_h_decide_base::decide::stat_support::invalid_parameter(
                     "a defect_triage question needs the graph param naming the graph that holds the defect",
                 )
             })?;
@@ -576,18 +633,18 @@ pub(super) async fn serve(
                 } => match options.as_slice() {
                     [only] => only.option_id.clone(),
                     _ => {
-                        return Err(super::stat_support::invalid_parameter(
+                        return Err(medulla_h_decide_base::decide::stat_support::invalid_parameter(
                             "a defect_triage question declares exactly one option, the defect id",
                         ))
                     }
                 },
                 _ => {
-                    return Err(super::stat_support::invalid_parameter(
+                    return Err(medulla_h_decide_base::decide::stat_support::invalid_parameter(
                         "a defect_triage question declares its defect as the one option",
                     ))
                 }
             };
-            super::triage_read::read_triage_facts(state, &graph, verified, &defect_id)
+            medulla_h_decide_base::decide::triage_read::read_triage_facts(state, &graph, verified, &defect_id)
                 .await
                 .map(Some)
         },
@@ -607,7 +664,7 @@ pub(super) async fn serve(
                     tenant_id: request.tenant_id.clone(),
                     principal: principal.clone(),
                     roles: Vec::new(),
-                    retention: super::stat_retention::Retention::none(),
+                    retention: medulla_h_decide_base::decide::stat_retention::Retention::none(),
                 };
                 let ctx = ExecutionContext {
                     store: store.as_ref(),
@@ -640,7 +697,7 @@ pub(super) async fn serve(
     .map_err(|error| format!("Decide task failed: {error}"))?
 }
 
-pub(super) fn decide_blocking(
+pub fn decide_blocking(
     ctx: &ExecutionContext,
     request: &DecideRequest,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
@@ -651,20 +708,24 @@ pub(super) fn decide_blocking(
     use telemetry::Stage;
     let family = telemetry::family(request.question.kind);
     let (family, tenant) = (family.as_str(), ctx.tenant_id);
-    let registry = super::family::for_kind(request.question.kind);
-    let task_plan = super::stat_task_plan::plan_of_request(ctx, request, &principal, graph_view)?;
+    let registry = super::family::registry::for_kind(request.question.kind);
+    let task_plan = medulla_h_decide_learning::decide::stat_task_plan_hi::plan_of_request(
+        ctx, request, &principal, graph_view,
+    )?;
     let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
         // A tool_relevance question reads its own index (R134.110.3), so the
         // stage-2 candidate scan and its cap do not apply to it.
         if request.question.kind == QuestionKind::ToolRelevance {
-            return super::candidates::indexed_tool_candidates(&request.candidates);
+            return medulla_h_decide_base::decide::candidates::indexed_tool_candidates(
+                &request.candidates,
+            );
         }
         read_candidates(
             ctx.store,
             ctx.tenant_id,
             &request.candidates,
-            &super::candidates::CandidateRead {
+            &medulla_h_decide_base::decide::candidates::CandidateRead {
                 graph_view,
                 graph_version,
                 principal: &principal,
@@ -680,7 +741,7 @@ pub(super) fn decide_blocking(
         let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
         Ok::<_, String>((pinned, provider_binding))
     })?;
-    let comparative = super::family::comparative_analysis::plan(
+    let comparative = medulla_h_decide_base::decide::family::comparative_analysis::plan(
         request,
         &candidates.entries,
         ctx.tenant_id,
@@ -691,33 +752,39 @@ pub(super) fn decide_blocking(
         tenant_id: ctx.tenant_id.to_string(),
         principal: principal.clone(),
         roles: Vec::new(),
-        retention: super::stat_retention::Retention::none(),
+        retention: medulla_h_decide_base::decide::stat_retention::Retention::none(),
     };
     // A trajectory query rides on the plan: its facts are the policy knobs, the
     // clock and the outcome records this reader may see (R140.104).
     let (task_plan, trajectory_premises) = match task_plan {
-        Some(super::stat_task_plan::Planned::Plan(mut plan, notes)) => {
+        Some(medulla_h_decide_runlog::decide::stat_task_plan::Planned::Plan(mut plan, notes)) => {
             // The run context the question named rides in the sealed plan (R015.3).
-            plan.context = super::family::task_context::body_of(request)?;
+            plan.context = medulla_h_decide_base::decide::family::task_context::body_of(request)?;
             match super::stat_trajectory::query_of(request) {
                 Some(query) => {
                     let (decision, premises) =
                         super::stat_trajectory::decide(ctx, &reader, &policy, query)?;
                     plan.trajectory = Some(decision);
                     (
-                        Some(super::stat_task_plan::Planned::Plan(plan, notes)),
+                        Some(
+                            medulla_h_decide_runlog::decide::stat_task_plan::Planned::Plan(
+                                plan, notes,
+                            ),
+                        ),
                         premises,
                     )
                 }
                 None => (
-                    Some(super::stat_task_plan::Planned::Plan(plan, notes)),
+                    Some(
+                        medulla_h_decide_runlog::decide::stat_task_plan::Planned::Plan(plan, notes),
+                    ),
                     Vec::new(),
                 ),
             }
         }
         other => (other, Vec::new()),
     };
-    let context_digest = super::stat_log::context_digest_of(
+    let context_digest = medulla_h_decide_base::decide::stat_log::context_digest_of(
         &request.question.question_id,
         request.params.as_slice(),
     );
@@ -763,7 +830,7 @@ pub(super) fn decide_blocking(
     if matches!(request.candidates, CandidateSource::RankCatalog { .. })
         && ranked_total > MAX_DECLARED_OPTIONS
     {
-        let best = super::stat_executor::best_candidate_ids(
+        let best = medulla_h_decide_base::decide::stat_executor::best_candidate_ids(
             ctx,
             request,
             &pinned,
@@ -815,8 +882,12 @@ pub(super) fn decide_blocking(
     }
     // The policy's safety bounds are checked after the decision concludes and
     // before it is sealed (MEDULLA-DECISION-ENGINE-R001.100.2).
-    let (executed, safety_premises) =
-        super::safety_stage::apply(request, &policy.policy, ctx.now_ms, executed)?;
+    let (executed, safety_premises) = medulla_h_decide_base::decide::safety_stage::apply(
+        request,
+        &policy.policy,
+        ctx.now_ms,
+        executed,
+    )?;
     // The policy's limits are checked against the proposed action next
     // (MEDULLA-DECISION-ENGINE-R131.3).
     let (executed, limit_premises) = super::limit_stage::apply(request, &policy.policy, executed)?;
@@ -829,7 +900,8 @@ pub(super) fn decide_blocking(
     trajectory_premises.extend(entries.premises);
     // A decision that loads the active repository policy records its revision and its
     // candidate-set digest (MEDULLA-ORCH-VOCAB-R012.7.4).
-    trajectory_premises.extend(super::policy_activation::policy_premises(ctx, request)?);
+    trajectory_premises
+        .extend(medulla_h_decide_runlog::decide::policy_activation::policy_premises(ctx, request)?);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;
@@ -882,7 +954,7 @@ struct Sealing<'a> {
     candidates: &'a ReadCandidates,
     principal: String,
     slices: &'a Slices,
-    registry: &'a dyn super::family::DecisionFamily,
+    registry: &'a dyn medulla_h_decide_base::decide::family::DecisionFamily,
     context_digest: String,
     /// The context-matched candidate pool; `Some` exactly when exploration is
     /// permitted for this question (MEDULLA-DECISION-ENGINE-R020.1.2).
@@ -902,7 +974,7 @@ fn candidate_pool(
     policy: &ResolvedPolicy,
     context_digest: &str,
     views: &[medulla_decision_stats_records::decision::candidate::CandidateView],
-    matched: &[super::stat_log::MatchedTrajectory],
+    matched: &[medulla_h_decide_base::decide::stat_log_reader::MatchedTrajectory],
 ) -> Option<CandidatePool> {
     use medulla_decision_stats::decision::exploration::{build_pool, permit, ExplorationPermit};
     if !matches!(
@@ -926,7 +998,7 @@ fn matched_history(
     reader: &LogReader,
     policy: &ResolvedPolicy,
     context_digest: &str,
-) -> Result<Vec<super::stat_log::MatchedTrajectory>, String> {
+) -> Result<Vec<medulla_h_decide_base::decide::stat_log_reader::MatchedTrajectory>, String> {
     use medulla_decision_statistical_types::decision::knobs::KnobValue;
     use medulla_decision_stats::decision::exploration::KNOBS;
     let (KnobValue::DurationMs(window_ms), KnobValue::Integer(max_matched)) =
@@ -937,11 +1009,11 @@ fn matched_history(
             "exploration knobs have the wrong value type",
         ));
     };
-    super::stat_log::matched_trajectories(
+    medulla_h_decide_base::decide::stat_log::matched_trajectories(
         ctx.store,
         reader,
         context_digest,
-        super::stat_log::MatchWindow {
+        medulla_h_decide_base::decide::stat_log::MatchWindow {
             now_ms: ctx.now_ms,
             window_ms,
             max_matched: usize::try_from(max_matched).unwrap_or(0),
@@ -1368,7 +1440,7 @@ fn skill_upgrade_receipt(
     {
         return None;
     }
-    let upgrade = super::family::skill_upgrade::upgrade_of(request).ok()?;
+    let upgrade = medulla_h_decide_base::decide::family::skill_upgrade::upgrade_of(request).ok()?;
     let receipt =
         medulla_decision_program_types::decision::skill_upgrade_request::SkillUpgradeReceipt::of_request(
             upgrade,
@@ -1393,7 +1465,7 @@ fn planning_admission_answer(
     {
         return None;
     }
-    let plan = super::family::planning_admission::plan_of(request)?;
+    let plan = medulla_h_decide_base::decide::family::planning_admission::plan_of(request)?;
     Some(
         medulla_decision_types::decision::statistical::outcome::FamilyAnswer::PlanningAdmission(
             Box::new(
@@ -1407,7 +1479,7 @@ fn seal(
     sealing: Sealing,
     executed: &Executed,
     nl: Option<NlBinding>,
-    task_plan: Option<super::stat_task_plan::Planned>,
+    task_plan: Option<medulla_h_decide_runlog::decide::stat_task_plan::Planned>,
     comparative: Option<
         medulla_decision_statistical_types::decision::comparative_analysis::ComparativeAnalysisPlan,
     >,
@@ -1447,18 +1519,23 @@ fn seal(
     );
     let mut premise_list = premises(&sealing, nl.as_ref());
     let task_plan = match task_plan {
-        Some(super::stat_task_plan::Planned::Plan(plan, notes)) => {
-            premise_list.extend(super::stat_task_plan::premises(&plan, &notes));
+        Some(medulla_h_decide_runlog::decide::stat_task_plan::Planned::Plan(plan, notes)) => {
+            premise_list.extend(medulla_h_decide_runlog::decide::stat_task_plan::premises(
+                &plan, &notes,
+            ));
             Some(plan)
         }
-        Some(super::stat_task_plan::Planned::Abstain { premise, .. }) => {
+        Some(medulla_h_decide_runlog::decide::stat_task_plan::Planned::Abstain {
+            premise, ..
+        }) => {
             premise_list.push(premise);
             None
         }
         None => None,
     };
     if let Some(plan) = &comparative {
-        premise_list.extend(super::family::comparative_analysis::premises(plan));
+        premise_list
+            .extend(medulla_h_decide_base::decide::family::comparative_analysis::premises(plan));
     }
     // A plan that carries a trajectory decision is as strong as its weakest
     // premise (R140.104).

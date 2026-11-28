@@ -382,7 +382,7 @@ async fn cross_owner_admission_journey() {
 pub(in crate::decide) struct TopologyWorld {
     _dir: tempfile::TempDir,
     pub(in crate::decide) backend: Arc<RedbBackend>,
-    pub(in crate::decide) state: crate::decide::SharedState,
+    pub(in crate::decide) state: medulla_h_decide_base::decide::SharedState,
     pub(in crate::decide) store: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
     pub(in crate::decide) assembly: medulla_compute_assemble::assemble::Assembly,
 }

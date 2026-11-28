@@ -82,9 +82,10 @@ async fn an_unpublished_claim_event_is_published_once_by_the_recovery_pass() {
     let serve = |op: ClaimOp| {
         let (state, verified) = (state.clone(), verified.clone());
         async move {
-            let served =
-                medulla_h_decide::decide::handle_claims_planned(&state, 1, GRAPH, &verified, op)
-                    .await;
+            let served = medulla_h_decide::decide::claims::handle_claims_planned(
+                &state, 1, GRAPH, &verified, op,
+            )
+            .await;
             assert!(
                 served.response.refusal_text().is_none(),
                 "{:?}",

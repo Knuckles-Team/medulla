@@ -13,8 +13,8 @@
 //!
 //! A build without the `statechart` feature answers a typed refusal naming it.
 
-use super::SharedState;
 use medulla_decision_statistical_types::claims::ClaimOp;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
@@ -194,7 +194,7 @@ fn reader_view(
 }
 
 #[cfg(feature = "statechart")]
-pub(super) mod served {
+pub mod served {
     use std::collections::{BTreeMap, BTreeSet};
     use std::sync::Arc;
 
@@ -359,7 +359,7 @@ pub(super) mod served {
     }
 
     /// The claim store of one verified principal.
-    pub(in crate::decide) struct ClaimStore {
+    pub struct ClaimStore {
         store: Arc<StatechartStore>,
         claim_def: String,
         artifact_def: String,
@@ -387,11 +387,7 @@ pub(super) mod served {
 
     impl ClaimStore {
         /// Open the shared statechart store and register both charts.
-        pub(in crate::decide) fn open(
-            persist_dir: Option<&str>,
-            tenant: &str,
-            actor: &str,
-        ) -> Result<Self, String> {
+        pub fn open(persist_dir: Option<&str>, tenant: &str, actor: &str) -> Result<Self, String> {
             let store = medulla_h_jobs::statechart::statechart_store(persist_dir)?;
             let claim_def = store
                 .define(&claim_statechart_def())
@@ -803,7 +799,7 @@ pub(super) mod served {
 
         /// Store a sealed artifact; an id that already holds the same artifact
         /// answers it, one that holds another is a revision conflict.
-        pub(in crate::decide) fn store_artifact(
+        pub fn store_artifact(
             &self,
             artifact: &ResearchArtifact,
         ) -> Result<ResearchArtifact, String> {
@@ -935,7 +931,7 @@ pub(super) mod served {
         /// `prefix` (the derivation key) and that cite at least one of `turn_ids` as evidence
         /// (MEDULLA-DECISION-ENGINE-R651.12). A claim a later range of the same key wrote cites
         /// other turns and is not counted.
-        pub(in crate::decide) fn derived_claim_count(
+        pub fn derived_claim_count(
             &self,
             prefix: &str,
             turn_ids: &BTreeSet<&str>,

@@ -24,7 +24,7 @@ use {
     medulla_decision_types::decision::statistical::TypedValue,
 };
 
-use super::SharedState;
+use medulla_h_decide_base::decide::SharedState;
 
 /// What one served triage produced: the committed record and its decision.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,7 +38,8 @@ pub struct TriageDefectOutcome {
 /// The `Decide` request a triage builds: one declared option, the defect id, no facts, and the
 /// params sorted by name.
 fn decide_request(request: &TriageDefectRequest) -> Result<DecideRequest, String> {
-    let invalid = |detail: String| super::stat_support::invalid_parameter(detail);
+    let invalid =
+        |detail: String| medulla_h_decide_base::decide::stat_support::invalid_parameter(detail);
     if request.defect_id.trim().is_empty() || request.graph.trim().is_empty() {
         return Err(invalid("a triage names its defect and graph".to_string()));
     }
@@ -119,7 +120,7 @@ pub async fn handle_triage_defect(
     };
     let record_id = record.record_id.clone();
     // The defect's node id needs its repository, which the typed decision does not carry.
-    let defect_node_id = match super::triage_read::read_triage_facts(
+    let defect_node_id = match medulla_h_decide_base::decide::triage_read::read_triage_facts(
         state,
         &request.graph,
         verified,
@@ -131,7 +132,7 @@ pub async fn handle_triage_defect(
         Some(defect) => medulla_source_types::lifecycle::defect_node_id(&defect.repo, &defect.id),
         None => return Err("DEFECT_UNKNOWN: the tenant graph holds no such defect".to_string()),
     };
-    let committed = super::stat_log::handle_log(
+    let committed = super::stat_log_serve::handle_log(
         state,
         req_id,
         verified,

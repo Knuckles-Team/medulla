@@ -44,8 +44,9 @@ async fn handle_consolidate(
     admit_receipt_digests: Vec<String>,
 ) -> Response {
     use medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind;
-    use medulla_h_decide::decide::stat_memory_change::{
-        consolidate_candidate, require_admit_receipts,
+    use {
+        medulla_h_decide_learning::decide::stat_memory_change::consolidate_candidate,
+        medulla_h_decide_learning::decide::stat_memory_change::require_admit_receipts,
     };
     let DispatchCtx {
         state,
@@ -125,7 +126,10 @@ async fn handle_sync_memory(
     request: medulla_mutation_types::memory_sync::SyncRequest,
 ) -> Response {
     use medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind;
-    use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
+    use {
+        medulla_h_decide_learning::decide::stat_memory_change::require_admit_receipts,
+        medulla_h_decide_learning::decide::stat_memory_change::sync_candidate,
+    };
     use {
         medulla_h_graph_gateway::graph_ops::memory_snapshot::check_doc_kind,
         medulla_h_graph_gateway::graph_ops::memory_snapshot::content_change,
@@ -274,8 +278,8 @@ async fn handle_sync_memory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_h_decide::decide::stat_memory_change::benchmark_receipt_row;
     use medulla_h_decide::decide::stat_test_support::{Harness, TENANT};
+    use medulla_h_decide_learning::decide::stat_memory_change::benchmark_receipt_row;
     use {
         medulla_decision_statistical_types::decision::memory_benchmark::BenchmarkVerdictKind,
         medulla_decision_statistical_types::decision::memory_benchmark::ChangeKind,
@@ -387,15 +391,16 @@ mod tests {
         let scopes = ["kg:read", "kg:write"];
         let verified =
             VerifiedRequestContext::verified_for_test_with_scopes("decider", TENANT, &scopes);
-        let candidate = medulla_h_decide::decide::stat_memory_change::consolidate_candidate(
-            &h.state,
-            &verified,
-            "default",
-            &cluster(),
-            &medulla_types::msgpack::decode_property_object(&props()).unwrap(),
-        )
-        .await
-        .expect("a candidate");
+        let candidate =
+            medulla_h_decide_learning::decide::stat_memory_change::consolidate_candidate(
+                &h.state,
+                &verified,
+                "default",
+                &cluster(),
+                &medulla_types::msgpack::decode_property_object(&props()).unwrap(),
+            )
+            .await
+            .expect("a candidate");
         assert_eq!(candidate.head_revision, 0);
         let (id, digest) = (&candidate.record_id, &candidate.candidate_digest);
         let discard = receipt(id, BenchmarkVerdictKind::Discard, digest, 0);

@@ -1,0 +1,309 @@
+//! `DecisionLog.retrieval` generation operations (EH-397): dual-serve the
+//! judged runs of the log against a shadow embedding generation, receipt the
+//! comparison, and move a logical graph's generation pointer only with the
+//! passing receipt measured against the generation active at that moment.
+//!
+//! Both generations are probed as the caller may see them (graph ACL at open,
+//! row-level security on every reported row), so a receipt never summarises a
+//! row the caller could not read.
+
+use super::stat_pointer::Qualified;
+use super::stat_support::{invalid_parameter as invalid, refusal};
+use medulla_decision_policy_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_statistical_types::decision::statistical::errors::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::retrieval_generation::GenerationBootstrapReceipt,
+    decision::statistical::retrieval_generation::GenerationEvalItem,
+    decision::statistical::retrieval_generation::GenerationEvalRequest,
+    decision::statistical::retrieval_generation::GenerationEvaluated,
+    decision::statistical::retrieval_generation::GenerationReceipt,
+    decision::statistical::retrieval_generation::GENERATION_RECEIPT_SCHEMA_VERSION,
+    decision::statistical::retrieval_generation::MAX_GENERATION_TOP_K,
+};
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::read_pointer;
+use {
+    medulla_decision_program_types::decision::statistical::body::canonical_body_bytes,
+    medulla_decision_program_types::decision::statistical::body::content_digest_of,
+};
+use {
+    medulla_decision_stats_records::decision::adapter::to_q16,
+    medulla_decision_stats_records::decision::adapter::wilson_lower,
+};
+
+const Q16: f64 = 65_536.0;
+/// Bins of the top-1 score PSI.
+const PSI_BINS: usize = 10;
+
+/// The pointer key of a logical graph's generation.
+pub fn generation_pointer(logical: &str) -> String {
+    format!("generation:{logical}")
+}
+
+pub fn receipt_key(receipt_digest: &str) -> String {
+    format!("generation-receipt:{receipt_digest}")
+}
+
+/// The active and shadow generations an evaluation probes.
+pub struct Generations<'a> {
+    pub active: &'a super::stat_vectors::GraphVectors,
+    pub shadow: &'a super::stat_vectors::GraphVectors,
+}
+
+/// Per-generation tallies of one evaluation.
+#[derive(Default)]
+pub struct Tally {
+    pub(super) n: u64,
+    pub(super) wins: u64,
+    pub(super) losses: u64,
+    pub(super) ties: u64,
+    pub(super) active_rr: f64,
+    pub(super) shadow_rr: f64,
+    pub(super) active_top1: Vec<f64>,
+    pub(super) shadow_top1: Vec<f64>,
+}
+
+pub fn check_request(request: &GenerationEvalRequest) -> Result<(), String> {
+    let top_k_ok = (1..=MAX_GENERATION_TOP_K).contains(&request.top_k);
+    let named = !request.logical.is_empty() && request.active_graph != request.shadow_graph;
+    if !(top_k_ok && named && request.min_eval_items > 0 && request.max_score_psi_q16 >= 0) {
+        return Err(invalid(
+            "a generation evaluation names a logical graph and two distinct generations, \
+             1..=256 top-k, at least one item and a non-negative PSI bound",
+        ));
+    }
+    Ok(())
+}
+
+fn to_f32(q16: &[i32]) -> Vec<f32> {
+    q16.iter().map(|v| (f64::from(*v) / Q16) as f32).collect()
+}
+
+/// The reciprocal rank of the first cited row in `hits` (0 when none is).
+fn reciprocal_rank(hits: &[(String, f32)], cited: &[String]) -> f64 {
+    hits.iter()
+        .position(|(id, _)| cited.contains(id))
+        .map_or(0.0, |index| 1.0 / (index + 1) as f64)
+}
+
+fn top1(hits: &[(String, f32)]) -> Option<f64> {
+    hits.first().map(|(_, score)| f64::from(*score))
+}
+
+impl Tally {
+    pub fn add(
+        &mut self,
+        item: &GenerationEvalItem,
+        cited: &[String],
+        gens: &Generations,
+        k: usize,
+    ) {
+        let active = gens.active.probe(&to_f32(item.active_q16.as_slice()), k);
+        let shadow = gens.shadow.probe(&to_f32(item.shadow_q16.as_slice()), k);
+        let (a, s) = (
+            reciprocal_rank(&active, cited),
+            reciprocal_rank(&shadow, cited),
+        );
+        self.n += 1;
+        self.active_rr += a;
+        self.shadow_rr += s;
+        self.wins += u64::from(s > a);
+        self.losses += u64::from(s < a);
+        self.ties += u64::from(s == a);
+        self.active_top1.extend(top1(&active));
+        self.shadow_top1.extend(top1(&shadow));
+    }
+
+    pub(super) fn mean(&self, total: f64) -> i64 {
+        if self.n == 0 {
+            return 0;
+        }
+        to_q16(total / self.n as f64)
+    }
+}
+
+#[cfg(feature = "ann")]
+fn score_psi(tally: &Tally) -> Option<i64> {
+    let report = medulla_ann::drift::population_stability_index(
+        &tally.active_top1,
+        &tally.shadow_top1,
+        PSI_BINS,
+    );
+    Some(to_q16(report.psi))
+}
+
+#[cfg(not(feature = "ann"))]
+fn score_psi(tally: &Tally) -> Option<i64> {
+    let _ = (&tally.active_top1, &tally.shadow_top1, PSI_BINS);
+    None
+}
+
+pub fn spaces(
+    request: &GenerationEvalRequest,
+    gens: &Generations,
+) -> Result<(String, String), String> {
+    let (active, shadow) = (&request.active_space, &request.shadow_space);
+    let named = !active.is_empty() && !shadow.is_empty() && active != shadow;
+    if !(named && gens.active.admits_space(active) && gens.shadow.admits_space(shadow)) {
+        return Err(invalid(
+            "the shadow generation is a NEW embedding space, and each store declares \
+             (if anything) exactly the space named for it",
+        ));
+    }
+    Ok((active.clone(), shadow.clone()))
+}
+
+pub fn receipt_of(
+    request: &GenerationEvalRequest,
+    gens: &Generations,
+    (active_space, shadow_space): (String, String),
+    tally: &Tally,
+) -> GenerationReceipt {
+    let (active_embedded, shadow_embedded) = (gens.active.embedded(), gens.shadow.embedded());
+    let lower = to_q16(wilson_lower(tally.wins, tally.wins + tally.losses));
+    let score_psi_q16 = score_psi(tally);
+    if let Some(psi) = score_psi_q16 {
+        medulla_kernel::metrics::process().head_drift("embedding_generation", psi);
+    }
+    let passed = shadow_embedded >= active_embedded
+        && tally.n >= u64::from(request.min_eval_items)
+        && lower > to_q16(0.5)
+        && score_psi_q16.is_some_and(|psi| psi <= request.max_score_psi_q16);
+    GenerationReceipt {
+        schema_version: GENERATION_RECEIPT_SCHEMA_VERSION,
+        logical: request.logical.clone(),
+        active_graph: request.active_graph.clone(),
+        active_space,
+        shadow_graph: request.shadow_graph.clone(),
+        shadow_space,
+        active_embedded,
+        shadow_embedded,
+        n_eval: tally.n,
+        wins: tally.wins,
+        losses: tally.losses,
+        ties: tally.ties,
+        active_mrr_q16: tally.mean(tally.active_rr),
+        shadow_mrr_q16: tally.mean(tally.shadow_rr),
+        win_rate_lower_q16: lower,
+        score_psi_q16,
+        passed,
+    }
+}
+
+/// The stored evaluation receipt with this digest.
+pub fn stored_evaluation(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    receipt_digest: &str,
+) -> Result<GenerationEvaluated, String> {
+    let bytes = store
+        .decision_artifact(tenant, &receipt_key(receipt_digest))?
+        .ok_or_else(|| {
+            refusal(
+                StatisticalErrorCode::EvaluationReceiptMismatch,
+                "no generation receipt with that digest",
+            )
+        })?;
+    decode_artifact(&bytes, "generation receipt")
+}
+
+fn bootstrap_key(receipt_digest: &str) -> String {
+    format!("generation-bootstrap:{receipt_digest}")
+}
+
+/// Store the receipt that qualifies the first generation of a logical graph
+/// (DECISIONS GEN-BOOTSTRAP) and return its digest.
+pub fn store_bootstrap(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    receipt: &GenerationBootstrapReceipt,
+) -> Result<String, String> {
+    let digest = content_digest_of(&canonical_body_bytes(receipt)?);
+    store.put_decision_artifacts(
+        tenant,
+        &[(bootstrap_key(&digest), encode_artifact(receipt)?)],
+    )?;
+    Ok(digest)
+}
+
+/// The first generation `receipt_digest` qualifies, when it is a bootstrap
+/// receipt for exactly this logical graph and shadow and the logical graph
+/// still has no incumbent. `None` when the digest names no bootstrap receipt.
+pub fn bootstrap_qualified(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    (logical, shadow_graph): (&str, &str),
+    receipt_digest: &str,
+) -> Result<Option<Qualified>, String> {
+    let Some(bytes) = store.decision_artifact(tenant, &bootstrap_key(receipt_digest))? else {
+        return Ok(None);
+    };
+    let receipt: GenerationBootstrapReceipt = decode_artifact(&bytes, "generation bootstrap")?;
+    if receipt.logical != logical || receipt.shadow_graph != shadow_graph {
+        return Err(refusal(
+            StatisticalErrorCode::EvaluationReceiptMismatch,
+            "the bootstrap receipt measured another generation",
+        ));
+    }
+    let (_, pointer) = read_pointer(store, tenant, &generation_pointer(logical))?;
+    if pointer
+        .target()
+        .is_some_and(|target| target != shadow_graph)
+    {
+        return Err(refusal(
+            StatisticalErrorCode::EvaluationReceiptMismatch,
+            "the logical graph already has an incumbent generation",
+        ));
+    }
+    Ok(Some(Qualified {
+        target: shadow_graph.to_string(),
+        receipt_digest: receipt_digest.to_string(),
+    }))
+}
+
+/// The move this receipt already made is the active one: re-activating it is a replay
+/// (answered by the pointer as it stands), not a move against a stale baseline.
+fn is_replay(pointer: &PointerState, shadow_graph: &str, receipt_digest: &str) -> bool {
+    pointer.active.as_ref().is_some_and(|active| {
+        active.target.as_deref() == Some(shadow_graph)
+            && active.receipt_digest.as_deref() == Some(receipt_digest)
+    })
+}
+
+/// The shadow generation `logical` may move to: the named receipt passed, it
+/// measured exactly this shadow for this logical graph, and it measured it
+/// against the generation active NOW (a receipt against a stale baseline is
+/// refused).
+pub fn qualified_generation(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    (logical, shadow_graph): (&str, &str),
+    receipt_digest: &str,
+) -> Result<Qualified, String> {
+    let mismatch = |detail: &str| refusal(StatisticalErrorCode::EvaluationReceiptMismatch, detail);
+    let bytes = store
+        .decision_artifact(tenant, &receipt_key(receipt_digest))?
+        .ok_or_else(|| mismatch("no generation receipt with that digest"))?;
+    let evaluated: GenerationEvaluated = decode_artifact(&bytes, "generation receipt")?;
+    let receipt = &evaluated.receipt;
+    if !receipt.passed || receipt.logical != logical || receipt.shadow_graph != shadow_graph {
+        return Err(mismatch(
+            "the receipt did not pass, or measured another generation",
+        ));
+    }
+    let (_, pointer) = read_pointer(store, tenant, &generation_pointer(logical))?;
+    // The measured baseline must still be the active generation -- or this very
+    // receipt already activated the shadow (a replayed activation).
+    let stale = pointer.target().unwrap_or(logical) != receipt.active_graph;
+    if stale && !is_replay(&pointer, shadow_graph, receipt_digest) {
+        return Err(mismatch(
+            "the receipt measured a generation that is no longer the active one",
+        ));
+    }
+    Ok(Qualified {
+        target: shadow_graph.to_string(),
+        receipt_digest: receipt_digest.to_string(),
+    })
+}

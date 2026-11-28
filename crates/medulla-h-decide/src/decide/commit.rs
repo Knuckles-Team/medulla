@@ -9,8 +9,9 @@
 //! as a `DecisionRecord` component plus its verbatim body. A repeat of the
 //! same record is an idempotent replay.
 
-use super::SharedState;
 use medulla_decision_types::decision::request::DecisionCommitRequest;
+use medulla_h_decide_base::decide::commit::retry;
+use medulla_h_decide_base::decide::SharedState;
 #[cfg(feature = "redb")]
 #[cfg(feature = "decide")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -120,7 +121,7 @@ async fn commit(
         .await
         .map_err(|error| format!("decision replay task failed: {error}"))?
         .map_err(|error| error.to_string())?;
-    super::shape::check_decision_shape(&record)?;
+    medulla_h_decide_base::decide::shape::check_decision_shape(&record)?;
     // MEDULLA-DECISION-ENGINE-R113.2.1 and R113.2.5: the library and the capacity ledger have
     // separate owners. A capacity-backed topology decision (a solved plan with positive lease
     // demand) is published by the shared-owner path below, which needs a capacity authority:
@@ -397,8 +398,8 @@ async fn commit(
                 .collect()
         })
         .unwrap_or_default();
-    let written = super::telemetry::stage(
-        super::telemetry::Stage::Commit,
+    let written = medulla_h_decide_base::decide::telemetry::stage(
+        medulla_h_decide_base::decide::telemetry::Stage::Commit,
         "assembly",
         verified.tenant(),
         || match topology {
@@ -441,7 +442,7 @@ async fn commit(
     if let Some(premise) = premise {
         tracing::info!(%premise, "decision-commit coordinator decision");
     }
-    super::assemble::audit_line("decision-commit", &record, verified);
+    medulla_h_decide_runlog::decide::assemble::audit_line("decision-commit", &record, verified);
     Ok(
         medulla_decision_types::decision::request::DecisionCommitResult {
             schema_version:
@@ -480,7 +481,5 @@ pub(in crate::decide) mod admission;
 pub(in crate::decide) mod capacity;
 #[cfg(feature = "decide")]
 pub(in crate::decide) mod certified;
-#[cfg(feature = "decide")]
-pub(in crate::decide) mod retry;
 #[cfg(all(test, feature = "decide", feature = "redb"))]
 pub(in crate::decide) mod tests;

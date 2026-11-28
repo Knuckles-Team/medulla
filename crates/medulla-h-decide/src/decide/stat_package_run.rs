@@ -9,8 +9,8 @@
 
 use medulla_decision_types::decision::package_validation::{package_run_key, RunHistoryEntry};
 
-use super::stat_executor::ExecutionContext;
-use super::stat_log::store_once;
+use medulla_h_decide_base::decide::stat_executor::ExecutionContext;
+use medulla_h_decide_base::decide::stat_log_reader::store_once;
 
 /// Store one package run exactly once.
 pub(super) fn record_package_run(

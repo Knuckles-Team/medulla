@@ -7,8 +7,8 @@
 //! SELECTs over the caller's filtered view of the request graph. Every part
 //! keeps its own answer or typed abstention. Nothing is written.
 
-use super::SharedState;
 use medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAnswerRequest;
+use medulla_h_decide_base::decide::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_types::evidence_class::EvidenceClass;
@@ -152,8 +152,13 @@ async fn answer_for(
     let task_iri = request.task_iri.as_str();
 
     // (2) One assembly. Its failure or abstention is shared by the three parts that read it.
-    let assembly =
-        super::assemble::assemble_for(state, graph, verified, request.assembly.clone()).await;
+    let assembly = medulla_h_decide_runlog::decide::assemble::assemble_for(
+        state,
+        graph,
+        verified,
+        request.assembly.clone(),
+    )
+    .await;
     let (staffing_part, bindings_part, dag_part, certificate_digest) = match &assembly {
         Err(error) => {
             let fault = || PartFault::AssemblyAbstained(error.clone());
@@ -213,7 +218,7 @@ async fn answer_for(
 
 /// Why one part has no answer (MEDULLA-CQ-ORCH-R008.3).
 #[cfg(feature = "decide")]
-pub(super) enum PartFault {
+pub enum PartFault {
     /// The part's source could not be read: the concept has no connected authority.
     NoSource(String),
     /// The part's query returned no row.
@@ -227,7 +232,7 @@ pub(super) enum PartFault {
 /// The part's answer, or its typed abstention: `AbstainReason::Family` with one of the three
 /// `ORCH_PART_*` codes, evidence class `Claim` and the premise `orch:part=<name>/<code>`.
 #[cfg(feature = "decide")]
-pub(super) fn part_or_abstain(
+pub fn part_or_abstain(
     name: &str,
     task_iri: &str,
     outcome: Result<ExecutionAnswerPart, PartFault>,
@@ -457,7 +462,12 @@ async fn steps_and_workflow(
     String,
 > {
     let (view, graph_version) =
-        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
+        medulla_h_decide_base::decide::stat_support::filtered_view_versioned(
+            state,
+            verified.agent_id(),
+            graph,
+        )
+        .await?;
     let max_rows = usize::try_from(
         medulla_server_api::knob_config::knobs().execution_answer_max_rows_per_part,
     )
@@ -871,8 +881,12 @@ pub async fn read_contract_tools(
     verified: &VerifiedRequestContext,
     task_iri: &str,
 ) -> Result<Vec<(String, String)>, String> {
-    let (view, _) =
-        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
+    let (view, _) = medulla_h_decide_base::decide::stat_support::filtered_view_versioned(
+        state,
+        verified.agent_id(),
+        graph,
+    )
+    .await?;
     let max_rows = usize::try_from(
         medulla_server_api::knob_config::knobs().execution_answer_max_rows_per_part,
     )
