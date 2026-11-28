@@ -639,7 +639,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin-schema/src/admin/concept_lineage.rs::handle` |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::read_changes` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700.2` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::step_examines_batch_in_id_order` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700.2` | `crates/medulla-h-graph-gateway/src/graph_ops/retention_cleanup.rs::step_examines_batch_in_id_order` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1` | `crates/medulla-h-jobs/src/work_item/host_start_tests.rs::lease_only_caller_is_refused_the_issue_scope` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.4` | `crates/medulla-h-jobs/src/work_item/host_start_tests.rs::signed_dispatch_issues_and_arbora_client_reads_the_grant` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.1` | `crates/medulla-jobs/src/downtime.rs::job_type_round_trips` (planned) |
@@ -680,7 +680,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-work-types/src/work_item_read/tests.rs::effect_records_round_trip_with_golden_digest` |
 | `MEDULLA-DURABLE-KERNEL-R028.5.4` | `benches/redb_write_latency_bench/work_items.rs::current_plan_publication_readback` |
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `current_plan.rs::validate_publication` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R700` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::cleanup_graph` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R700` | `crates/medulla-h-graph-gateway/src/graph_ops/retention_cleanup.rs::cleanup_graph` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.3` | `tests/adopt_workitem_authenticated_replay.rs::conversation_turn_admission_replays_and_conflicts` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `tests/adopt_workitem_authenticated_replay.rs::fenced_cas_ignores_caller_clock` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/test_store_auto_migrate.py::test_previous_patch_run_admission_replays_after_upgrade` (planned) |

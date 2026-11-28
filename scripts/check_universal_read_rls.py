@@ -276,7 +276,7 @@ def main() -> None:
     isolation, can_see_row = isolation_source()
     dispatch = served_dispatch_source()
     graph_ops = read_module_tree(
-        "crates/medulla-h-graph/src/graph_ops.rs", root_dir=ROOT
+        "crates/medulla-h-graph-gateway/src/graph_ops.rs", root_dir=ROOT
     )
     knowledge = knowledge_stream_handler_source()
     query = "\n".join(

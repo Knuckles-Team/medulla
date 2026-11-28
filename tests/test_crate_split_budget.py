@@ -128,3 +128,9 @@ def test_served_tests_split_is_within_budget() -> None:
     for module in ("connector_pack_harness", "semantic_live_generation"):
         assert not (crates / kept / "src" / "split_tests" / f"{module}.rs").exists()
         assert (crates / harness / "src" / f"{module}.rs").exists()
+
+
+# spec: MEDULLA-CONTRACT-R067.10
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.10")
+def test_h_graph_split_is_within_budget() -> None:
+    _assert_split(["medulla-h-graph-gateway", "medulla-h-graph"])

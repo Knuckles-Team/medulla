@@ -64,7 +64,7 @@ pub async fn route_gateway_and_stateless_domains(
     // single `commit_mutation` gateway — policy-driven authz, durability,
     // audit, CDC, and TMS in ONE call. Native stores use their own explicit
     // MutationBatch kernels. There is no second post-dispatch durability tail.
-    let method = match medulla_h_graph::graph_ops::try_handle_gateway(
+    let method = match medulla_h_graph_gateway::graph_ops::try_handle_gateway(
         ctx.state,
         req_id,
         caller,
@@ -200,7 +200,7 @@ pub async fn route_graph_scoped_domains(
     // GATEWAY_ROUTED (writeback) and never reach this fallback. A build without
     // `ml-pipeline` omits this line.
     #[cfg(feature = "ml-pipeline")]
-    let method = match medulla_h_graph::pipeline::try_handle(
+    let method = match medulla_h_graph_gateway::pipeline::try_handle(
         req_id,
         core.clone(),
         read_authority.as_ref(),
@@ -460,7 +460,7 @@ pub async fn run_dispatch_pipeline(ctx: DispatchPipelineCtx<'_>, method: Method)
             "mutation escaped the universal mutation gateway before terminal dispatch",
         );
     };
-    medulla_h_graph::graph_ops::try_handle(
+    medulla_h_graph::graph_ops::terminal::try_handle(
         ctx.state,
         ctx.req_id,
         ctx.caller,

@@ -1,6 +1,6 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// Resolve a cross-graph union read's graph set to their cores (CONCEPT:MEDULLA-KG.query.cross-graph-union).
 ///

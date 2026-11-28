@@ -287,7 +287,7 @@ SELECT pca(emb, 3) AS top3_components FROM nodes;     -- top-3 principal-compone
 SELECT kmeans(emb, 4) AS cluster_labels FROM nodes;  -- 4-way clustering, one label per row
 ```
 
-**Batch Method** — `Method::BatchL2Normalize { vectors }` (`crates/medulla-h-graph/src/graph_ops.rs`,
+**Batch Method** — `Method::BatchL2Normalize { vectors }` (`crates/medulla-h-graph-gateway/src/graph_ops.rs`,
 handler `#[cfg(feature = "numeric")]`) L2-normalizes a batch in-engine via
 `medulla_numeric::linalg::batch_l2_normalize` through the sole current client method,
 `client.batch_l2_normalize()`.

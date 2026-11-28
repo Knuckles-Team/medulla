@@ -19,7 +19,7 @@ pub async fn check_derivation_count(
     payload_ref: &str,
     claims_written: u32,
 ) -> Result<(), String> {
-    use medulla_h_graph::graph_ops::participant_derive::derive_input;
+    use medulla_h_graph_gateway::graph_ops::participant_derive::derive_input;
     use {
         medulla_decision_stats_records::decision::participant_derive::conclusion_claim_prefix,
         medulla_decision_stats_records::decision::participant_derive::DeriveKey,

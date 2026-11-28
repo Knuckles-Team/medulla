@@ -6,11 +6,11 @@
 //! no fact and an edge to a hidden node does not exist. The ranking and the
 //! budget are the pure functions of `medulla_decision_types::context_facts`.
 
-use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_types::context_facts::{
     select, validate_request, ContextFactsRefusal, ContextFactsRequest, ContextFactsResult, RawFact,
 };
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_server_api::knob_config::knobs;
 use medulla_types::evidence_class::EvidenceClass;
 
@@ -84,7 +84,7 @@ fn node_facts(core: &GraphCore, node_id: &str) -> Vec<RawFact> {
     let Some(blob) = core.get_node_properties(node_id) else {
         return Vec::new();
     };
-    let properties = super::gateway_graph::decode_json_object(&blob);
+    let properties = medulla_h_graph_gateway::graph_ops::gateway_graph::decode_json_object(&blob);
     let node_source = text(&properties, SOURCE_KEY);
     let node_authority = authority(&properties);
     let mut facts = Vec::new();
@@ -105,7 +105,8 @@ fn node_facts(core: &GraphCore, node_id: &str) -> Vec<RawFact> {
     }
     for target in core.get_successors(node_id).unwrap_or_default() {
         for (relation, edge_blob) in core.typed_edges_between(node_id, &target) {
-            let edge = super::gateway_graph::decode_json_object(&edge_blob);
+            let edge =
+                medulla_h_graph_gateway::graph_ops::gateway_graph::decode_json_object(&edge_blob);
             facts.push(RawFact {
                 subject: node_id.to_string(),
                 predicate: relation,

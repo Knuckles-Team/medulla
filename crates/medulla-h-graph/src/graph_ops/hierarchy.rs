@@ -1,7 +1,7 @@
 use super::*;
 
 use super::subgraph::decoded_edge_properties;
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::algorithms::ClusterExpansion,

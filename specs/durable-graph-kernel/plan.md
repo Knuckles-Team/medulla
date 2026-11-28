@@ -247,7 +247,7 @@ They do not define memory snapshots, file listings or synchronization.
 The reviewed base is `3477a5da33d4593b0248558d0501c40685f6c9f7`.
 `crates/medulla-protocol-types/src/protocol.rs::Request` binds graph and verified request context.
 `crates/medulla-server-auth/src/access.rs::check_graph_access` owns graph authority checks.
-`crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` routes durable mutations.
+`crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs::try_handle_gateway` routes durable mutations.
 Its `commit_gateway` is an existing commit entry point.
 `crates/medulla-server-api/src/batch_compile/compile.rs::authoritative_graph_version` reads the durable version.
 `CompileBatch::expected_graph_version` carries the existing optimistic concurrency condition.
@@ -404,7 +404,7 @@ Evidence must preserve that distinction without proposing a replacement public t
 | Presence guard | [store_read.rs:356](../../crates/medulla-store/src/redb_store/store_read.rs#L356) | One snapshot returns aligned presence entries. Presence alone does not prove successful decryption or content equality. |
 | Periodic node cap | [persist.rs:78](../../crates/medulla-kernel/src/persist.rs#L78) | Only confirmed candidates reach resident eviction. |
 | Tenant budget | [budget.rs:264](../../crates/medulla-persistence/src/cost/budget.rs#L264) | The budget caller retains candidates when durability is unconfirmed. |
-| Served eviction | [gateway_graph.rs:111](../../crates/medulla-h-graph/src/graph_ops/gateway_graph.rs#L111) | EvictLRU retains its admission/commit gateway before resident removal. The result reports actual removals. |
+| Served eviction | [gateway_graph.rs:111](../../crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs#L111) | EvictLRU retains its admission/commit gateway before resident removal. The result reports actual removals. |
 | Resident removal | [core_node_mutation.rs:60](../../crates/medulla-graph-core/src/graph/core_node_mutation.rs#L60) | The primitive produces no logical REMOVE_NODE record. Durable bytes remain readable. |
 | Served scoped read | [nodes.rs:85](../../crates/medulla-h-graph/src/graph_ops/nodes.rs#L85) | GetNodeProperties can reach raw-core read-through, then checks row visibility before returning it. |
 
@@ -1162,7 +1162,7 @@ none
 - Run checkpoint: `Method::PublishRunCheckpoint` to `try_handle` (`crates/medulla-h-jobs/src/work_item.rs:40`) to `commit_verified_work_item` (`work_item.rs:104`) to `crates/medulla-work-store/src/redb_store/work_item/checkpoint.rs::publish` (`MEDULLA-DURABLE-KERNEL-R028.1`).
 - Task queue: `Method::TaskQueueEnqueue`, `TaskQueueClaim` and `TaskQueueAck` to `crates/medulla-h-jobs/src/task_queue.rs` over `crates/medulla-jobs` (`MEDULLA-DURABLE-KERNEL-R072`).
 - Host-start grant: `Method::IssueHostStartGrant` to `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start.rs` (`MEDULLA-DURABLE-KERNEL-R030.1`).
-- Supersession: `Method::SupersedeEdge` to `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::apply_supersede_edge` (`MEDULLA-DURABLE-KERNEL-R080`).
+- Supersession: `Method::SupersedeEdge` to `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs::apply_supersede_edge` (`MEDULLA-DURABLE-KERNEL-R080`).
 
 ### Machine wiring
 

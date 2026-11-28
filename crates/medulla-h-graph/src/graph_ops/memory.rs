@@ -1,6 +1,6 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// `ToMsgpack`: pure extract-method from `try_handle`'s match arm, byte-identical
 /// behaviour, no signature change.

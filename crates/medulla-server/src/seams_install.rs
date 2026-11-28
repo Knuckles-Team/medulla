@@ -221,7 +221,7 @@ impl medulla_server_ops::api::ingest::GraphApi for GraphSeam {
         core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: medulla_protocol_types::protocol::Method,
     ) -> medulla_protocol_types::protocol::Response {
-        medulla_h_graph::graph_ops::try_handle(
+        medulla_h_graph::graph_ops::terminal::try_handle(
             state,
             req_id,
             caller,

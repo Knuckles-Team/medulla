@@ -1,11 +1,11 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
 use medulla_graph_algos::graph_algos::{
     analogy_matches, check_topology_graph, checked_mincut, hyperedge_scores, spectral_partition,
     synergy_bridges, AdjacencyGraph, HyperedgeError, LabeledGraph, QualityFunction,
     TopologyKernelError,
 };
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_protocol_types::protocol::CommunityQualityFunction;
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_query_types::topology::{

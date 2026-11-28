@@ -91,7 +91,9 @@ pub(super) fn thread_requests(
         specs.insert(
             last,
             EpisodeSpec {
-                episode_id: super::memory_surface::episode_id_for(&records[first])?,
+                episode_id: medulla_h_graph_gateway::graph_ops::memory_surface::episode_id_for(
+                    &records[first],
+                )?,
                 session_id: records[last].session_id.clone(),
                 preceding: members[..members.len() - 1]
                     .iter()
@@ -119,9 +121,11 @@ pub async fn remember_thread(
 ) -> Result<RememberedThread, String> {
     // A thread of another tenant answers like one that does not exist.
     if conversation.tenant.as_str() != ctx.tenant_scope {
-        return Err(super::memory_surface::absent_record(
-            conversation.conversation_id.as_str(),
-        ));
+        return Err(
+            medulla_h_graph_gateway::graph_ops::memory_surface::absent_record(
+                conversation.conversation_id.as_str(),
+            ),
+        );
     }
     if conversation.messages.is_empty() {
         return Ok(RememberedThread {
@@ -134,7 +138,12 @@ pub async fn remember_thread(
     // not a stored participant refuses the whole write (MEDULLA-DECISION-ENGINE-R617.8).
     let members = match &conversation.thread_anchor {
         Some(anchor) => {
-            super::participant_surface::commit_memberships(ctx, anchor, conversation).await?;
+            medulla_h_graph_gateway::graph_ops::participant_surface::commit_memberships(
+                ctx,
+                anchor,
+                conversation,
+            )
+            .await?;
             medulla_work_types::participant::membership_edges(conversation).len()
         }
         None => 0,
@@ -160,7 +169,7 @@ pub async fn remember_thread(
         let method = Method::MemoryRemember {
             request: Box::new(request),
         };
-        let response = super::memory_surface::handle_remember(
+        let response = medulla_h_graph_gateway::graph_ops::memory_surface::handle_remember(
             ctx,
             ctx.tenant_scope,
             &method,

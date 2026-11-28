@@ -63,7 +63,7 @@ pub(super) async fn stage_content(
     plan: &medulla_mutation_types::memory_sync::SnapshotPlan,
     outcome: &medulla_mutation_types::memory_sync::SyncOutcome,
 ) -> Result<Option<StagedContent>, String> {
-    use medulla_h_graph::graph_ops::memory_snapshot::planned_content;
+    use medulla_h_graph_gateway::graph_ops::memory_snapshot::planned_content;
     use medulla_mutation_types::memory_sync::MemorySyncRefusal;
     use medulla_server_blob::blob::BlobStateExt;
 

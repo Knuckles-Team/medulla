@@ -127,7 +127,7 @@ async fn fresh() -> (
 #[tokio::test(flavor = "multi_thread")]
 async fn register_heartbeat_and_roster_mark_liveness() {
     let (_dir, _backend, state) = fresh().await;
-    let ttl_ms = medulla_h_graph::graph_ops::bus::participant_ttl_s() * 1000;
+    let ttl_ms = medulla_h_graph_gateway::graph_ops::bus::participant_ttl_s() * 1000;
     assert!(send(&state, 2, register("s-old", NOW))
         .await
         .error

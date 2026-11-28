@@ -48,10 +48,10 @@ crates/medulla-finance/src/                                           existing: 
 crates/medulla-finance-market/src/market/                             existing: BacktestRun, AnalysisSnapshot, digest
 crates/medulla-finance-quant/src/                                     existing: factor, leverage, execution kernels
 crates/medulla-h-compute/src/finance/, numeric.rs                     existing and new: stateless handlers
-crates/medulla-h-graph/src/graph_ops/finance_records.rs               new: record, factor and import handlers
-crates/medulla-h-graph/src/graph_ops/finance_accounting.rs            new: projection handler
-crates/medulla-h-graph/src/graph_ops/finance_alerts.rs                new: alert transaction handler
-crates/medulla-h-graph/src/graph_ops/finance_order_proposal.rs        new: stage and promote
+crates/medulla-h-graph-gateway/src/graph_ops/finance_records.rs               new: record, factor and import handlers
+crates/medulla-h-graph-gateway/src/graph_ops/finance_accounting.rs            new: projection handler
+crates/medulla-h-graph-gateway/src/graph_ops/finance_alerts.rs                new: alert transaction handler
+crates/medulla-h-graph-gateway/src/graph_ops/finance_order_proposal.rs        new: stage and promote
 crates/medulla-protocol-types/src/protocol/method/                    existing: Method variants
 crates/medulla-server-router/src/dispatch/router.rs                   existing: dispatch
 tests/                                                                existing and new: served tests
@@ -100,7 +100,7 @@ none
 
 - `Method::FinanceMarket` (signed dispatch, `crates/medulla-server-router/src/dispatch/router.rs::dispatch_request_method_inner`) to `dispatch_graph_op` (`crates/medulla-server-graph/src/dispatch/graph_pipeline.rs`) to `crates/medulla-h-compute/src/finance.rs::try_handle` to `finance/routes.rs::try_handle` to `finance/market.rs::handle_market` to `crates/medulla-finance-market/src/market/backtest_run.rs::seal` and the indicator, strategy and snapshot code.
 - `Method::NumericEvaluate` to `crates/medulla-h-compute/src/numeric.rs` (new) to `crates/medulla-numeric/src/evaluation/registry.rs::evaluate` (new).
-- `Method::FinanceRecordPut`, `FinanceRecordGet` and `FinanceFactorRecord` to `crates/medulla-server-mutation/src/mutation/plan.rs::is_gateway_routed` to `crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` to `gateway_graph_routes.rs` (`Route::FinanceRecords`, new) to `crates/medulla-h-graph/src/graph_ops/finance_records.rs` (new).
+- `Method::FinanceRecordPut`, `FinanceRecordGet` and `FinanceFactorRecord` to `crates/medulla-server-mutation/src/mutation/plan.rs::is_gateway_routed` to `crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs::try_handle_gateway` to `gateway_graph_routes.rs` (`Route::FinanceRecords`, new) to `crates/medulla-h-graph-gateway/src/graph_ops/finance_records.rs` (new).
 - Position and regime reads to `crates/medulla-h-graph/src/graph_ops/terminal.rs` (`try_handle_finance` arm, new) to `finance_accounting.rs::handle_project` and `finance_regime.rs::handle_regime_forecast` (new) to `crates/medulla-finance/src/lot_accounting.rs::apply_activities` and `crates/medulla-numeric/src/series/hmm.rs`.
 - `FinanceAlertRaise` to the gateway route to `finance_alerts.rs::raise` (new) to the owner transaction and outbox.
 - `FinanceOrderStage` and `FinanceOrderPromote` to the gateway route to `finance_order_proposal.rs` (new) to the sealed-record guard in `crates/medulla-mutation-types/src/sealed_record.rs`.

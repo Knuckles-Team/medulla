@@ -6,18 +6,21 @@
 //! caller does not act as is the same `PARTICIPANT_NOT_VISIBLE` envelope, so a reader cannot tell
 //! which of the three it hit.
 
-use super::participant_surface::{
-    participant_unavailable, readable_participants, resolve_scope_ref, sessions_visible_to,
-};
-use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_types::participant_memory::{DerivationStatus, ParticipantReadOp};
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::coordination::{
     ParticipantReadDeriveInput, ParticipantReadGet, ParticipantReadList, ParticipantReadStatus,
 };
 use medulla_work_types::memory_scope::ScopeRef;
 use std::collections::BTreeMap;
+use {
+    medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,
+    medulla_h_graph_gateway::graph_ops::participant_surface::readable_participants,
+    medulla_h_graph_gateway::graph_ops::participant_surface::resolve_scope_ref,
+    medulla_h_graph_gateway::graph_ops::participant_surface::sessions_visible_to,
+};
 
 fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
@@ -74,8 +77,12 @@ async fn serve(
             ctx.core, tenant, agent_id,
         )),
         ParticipantReadOp::DeriveInput { payload_ref } => {
-            super::participant_derive::derive_input(ctx.core, tenant, payload_ref)
-                .and_then(ResultPayload::of::<ParticipantReadDeriveInput>)
+            medulla_h_graph_gateway::graph_ops::participant_derive::derive_input(
+                ctx.core,
+                tenant,
+                payload_ref,
+            )
+            .and_then(ResultPayload::of::<ParticipantReadDeriveInput>)
         }
         ParticipantReadOp::Status { memory_scope } => {
             status(ctx, tenant, agent_id, memory_scope.as_ref())
@@ -111,7 +118,9 @@ async fn status(
     let persist_dir = { ctx.state.read().await.persist_dir.clone() };
     let now_ms = authoritative_now_ms();
     let mut groups: BTreeMap<(String, String, String), (u32, u64)> = BTreeMap::new();
-    for payload in super::participant_derive::stored_payloads(ctx.core, tenant) {
+    for payload in
+        medulla_h_graph_gateway::graph_ops::participant_derive::stored_payloads(ctx.core, tenant)
+    {
         let key = &payload.key;
         if !sessions.contains(&key.session_id)
             || !jobs.task_pending(&persist_dir, tenant, &payload.task_id)?

@@ -95,7 +95,7 @@ def test_graph_ops_facade_declares_complete_non_orphan_module_tree() -> None:
     """
 
     module = _gate_module()
-    facade_path = "crates/medulla-h-graph/src/graph_ops.rs"
+    facade_path = "crates/medulla-h-graph-gateway/src/graph_ops.rs"
     facade = module.read(facade_path)
     family = module.read_compiler_family(facade_path)
 
@@ -134,7 +134,7 @@ def test_graph_ops_gateway_families_contribute_real_method_arms() -> None:
 def test_graph_ops_domain_router_order_is_pinned() -> None:
     module = _gate_module()
     gateway = module._rust_code_mask(
-        module.read("crates/medulla-h-graph/src/graph_ops/gateway.rs")
+        module.read("crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs")
     )
     gateway_order = (
         "gateway_graph::try_handle",
@@ -208,23 +208,23 @@ def test_terminal_gateway_guards_have_reachable_control_flow() -> None:
     assert (
         "allow(unreachable_code)"
         not in module.read_compiler_family(
-            "crates/medulla-h-graph/src/graph_ops.rs"
+            "crates/medulla-h-graph-gateway/src/graph_ops.rs"
         ).with_tests
     )
 
 
 def test_decode_json_object_has_one_visible_owner_and_two_consumers() -> None:
     module = _gate_module()
-    family = module.read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
+    family = module.read_compiler_family("crates/medulla-h-graph-gateway/src/graph_ops.rs")
     family_code = module._rust_code_mask(family.production)
     gateway = module._rust_code_mask(
-        module.read("crates/medulla-h-graph/src/graph_ops/gateway_graph.rs")
+        module.read("crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs")
     )
     routes = module._rust_code_mask(
-        module.read("crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs")
+        module.read("crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph_routes.rs")
     )
     semantic = module._rust_code_mask(
-        module.read("crates/medulla-h-graph/src/graph_ops/semantic.rs")
+        module.read("crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs")
     )
 
     assert len(re.findall(r"\bfn\s+decode_json_object\s*\(", family_code)) == 1

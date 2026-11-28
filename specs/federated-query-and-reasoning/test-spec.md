@@ -362,7 +362,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R088`: `tests/uql_governed_summary.r
 | Refusal | `MEDULLA-FEDERATED-QUERY-R089.4` | Tests assert the code and a failed verdict with rows. |
 | Evidence | `MEDULLA-FEDERATED-QUERY-R089.5` | A test reads the three fields. |
 | Hot-path proof | `MEDULLA-FEDERATED-QUERY-R089.6` | The served test passes, and the measured cost meets the budget. |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R089.7` | `crates/medulla-h-graph/src/graph_ops/discover_quality.rs::tests::drift_mode_reads_monitor_and_names_adapter` sets `drift` and names the adapter and shard generations. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R089.7` | `crates/medulla-h-graph-gateway/src/graph_ops/discover_quality.rs::tests::drift_mode_reads_monitor_and_names_adapter` sets `drift` and names the adapter and shard generations. |
 
 Hot-path proof for `MEDULLA-FEDERATED-QUERY-R089`: `tests/discover_quality_verdict.rs::sparse_index_fails_closed`.
 
@@ -435,7 +435,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R705.2` | `crates/medulla-plan/tests/feedback_boost.rs::boost_decays_and_clamps` |
 | `MEDULLA-FEDERATED-QUERY-R705.3` | `tests/retrieval/test_feedback_boost_served.py::test_upvote_raises_rank` |
 | `MEDULLA-FEDERATED-QUERY-R705.3` | `crates/medulla-retrieval/src/feedback_boost.rs::tests::implicit_events_map_cited_and_uncited_returned_rows` |
-| `MEDULLA-FEDERATED-QUERY-R705.3` | `crates/medulla-h-graph/src/graph_ops/retrieval_feedback.rs::tests::wire_stamp_is_replaced_and_implicit_kinds_refused` |
+| `MEDULLA-FEDERATED-QUERY-R705.3` | `crates/medulla-h-graph-gateway/src/graph_ops/retrieval_feedback.rs::tests::wire_stamp_is_replaced_and_implicit_kinds_refused` |
 | `MEDULLA-FEDERATED-QUERY-R705.4` | `tests/retrieval/test_feedback_boost_served.py::test_feedback_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R705.5` | `tests/retrieval/test_feedback_boost_served.py::test_boost_listed_per_hit` |
 | `MEDULLA-FEDERATED-QUERY-R705.6` | `cargo bench -p medulla-plan --bench feedback_boost` |
@@ -585,7 +585,7 @@ cases against the same frozen source archive before composing this evidence.
 | Case | Row | Proving test and observation |
 |---|---|---|
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.6` | `tests/nl_query_certified_definitions.rs::mismatch_is_corrected_then_disclosed`: one feedback step, the certified terms in the result, and `NL_DEFINITION_CONFLICT` when the loop ends; beside it, the L1 `crates/medulla-nlq/src/nl/certified_tests.rs::candidate_without_the_whole_lineage_is_a_mismatch`. (planned: the test file does not exist yet) |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`; beside it, the L1 `crates/medulla-h-graph/src/graph_ops/nl_correction.rs::a_correction_needs_a_parsable_distinct_approved_query` and `crates/medulla-nlq/src/nl/certified_tests.rs::only_the_same_question_matches_its_corrections`. (planned: the test file does not exist yet) |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`; beside it, the L1 `crates/medulla-h-graph-gateway/src/graph_ops/nl_correction.rs::a_correction_needs_a_parsable_distinct_approved_query` and `crates/medulla-nlq/src/nl/certified_tests.rs::only_the_same_question_matches_its_corrections`. (planned: the test file does not exist yet) |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.8` | `tests/nl_query_bounded_steps.rs::follow_up_is_rewritten_and_disclosed`: the rewritten question is disclosed; without history the question is unchanged. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: two `SourceSync` runs on two connections write one conflict node in the second sync batch, none on a repeat sync; planning does not treat the term as certified. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `crates/medulla-nlq/src/nl/certified.rs::tests::reconcile_term_nodes_reads_catalog_terms_and_skips_existing`: a `CatalogGlossaryTerm` pair from two sources yields one conflict; an existing conflict id yields none. |
@@ -870,14 +870,14 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R088.2:** `tests/uql_governed_summary.rs::hidden_rows_do_not_displace_visible_rows` (planned). Behavior. Runs through Method::Uql with two principals and LIMIT 5.
 - **MEDULLA-FEDERATED-QUERY-R088.3:** `tests/uql_governed_summary.rs::rows_and_header_share_one_snapshot` (planned). Wiring. Writes between two reads and asserts the header matches the rows.
 - **MEDULLA-FEDERATED-QUERY-R088.6:** `tests/uql_governed_summary.rs::governed_rows_carry_knowledge_and_header` (planned). Hot-path proof. The fixture and expected result are stated in the row's Test cell.
-- **MEDULLA-FEDERATED-QUERY-R089.2:** `crates/medulla-h-graph/src/graph_ops/discover_quality.rs::tests::each_mode_fires_on_its_trigger` (planned). Behavior: failure modes. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R089.2:** `crates/medulla-h-graph-gateway/src/graph_ops/discover_quality.rs::tests::each_mode_fires_on_its_trigger` (planned). Behavior: failure modes. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.3:** `tests/discover_quality_verdict.rs::policy_node_overrides_defaults`. Wiring and policy node. Reads the policy node and returns the verdict.
 - **MEDULLA-FEDERATED-QUERY-R089.4:** `tests/discover_quality_verdict.rs::unknown_policy_refuses_and_failed_verdict_keeps_rows` (planned). Refusal. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.5:** `tests/discover_quality_verdict.rs::verdict_carries_revision_generation_and_thresholds` (planned). Evidence. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.6:** `tests/test_discover.py::test_discover_returns_verdict` (planned). Hot-path proof. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R089.7:** `tests/discover_quality_verdict.rs::drift_mode_names_adapter_and_shard_generations` (planned). Behavior: drift mode. Starts a firing monitor and serves Discover.
 - **MEDULLA-FEDERATED-QUERY-R090.1:** `crates/medulla-ingestion-types/src/ingestion_wire.rs::tests::discover_plan_round_trips` (planned). Model. Keeps every field and rejects hops = 3 and a 2,049-byte query_text. The Python client passes the same Rust vector.
-- **MEDULLA-FEDERATED-QUERY-R090.2:** `crates/medulla-h-graph/src/graph_ops/discover_plan.rs::tests::fusion_decay_and_neutral_date` (planned). Behavior: arm fusion and recency. Checks fusion order, decay and the 1.0 cases. covers the served path.
+- **MEDULLA-FEDERATED-QUERY-R090.2:** `crates/medulla-h-graph-gateway/src/graph_ops/discover_plan.rs::tests::fusion_decay_and_neutral_date` (planned). Behavior: arm fusion and recency. Checks fusion order, decay and the 1.0 cases. covers the served path.
 - **MEDULLA-FEDERATED-QUERY-R090.3:** `tests/retrieval/test_discover_planning_served.py::test_deep_mode_calls_one_provider_per_request` (planned). Wiring: planner entry. Counts provider calls through a scripted provider and asserts exactly one.
 - **MEDULLA-FEDERATED-QUERY-R090.4:** `tests/retrieval/test_discover_planning_served.py::test_discover_refusals` (planned). Refusal. Asserts each code, an empty result, and the degraded path with a failing provider.
 - **MEDULLA-FEDERATED-QUERY-R090.5:** `tests/retrieval/test_discover_planning_served.py::test_discover_evidence_fields` (planned). Evidence. Reads every field and recomputes each digest.
@@ -1164,8 +1164,8 @@ Each entry names the test the row binds once its code lands; the path is the pos
 - `MEDULLA-FEDERATED-QUERY-R740.4`: `tests/federated/test_graph_media_types_served.py::test_each_media_type_round_trips` (planned, L4): proves hot-path proof: each media type round-trips through the served entry. The owning change adds it at this exact path.
 - `MEDULLA-FEDERATED-QUERY-R741`: `tests/retrieval/test_guided_discover_served.py::test_seeded_walk_respects_hop_filter_and_rls` (planned, L4): proves discover accepts caller seeds and per-hop restrictions (rollup). The owning change adds it at this exact path.
 - `MEDULLA-FEDERATED-QUERY-R741.1`: `crates/medulla-graph-core/tests/hop_filter.rs::each_axis_filters_one_hop` (planned, L2): proves model and behavior: seeds and hop filter. The owning change adds it at this exact path.
-- `MEDULLA-FEDERATED-QUERY-R741.2`: `crates/medulla-h-graph/src/graph_ops/discover_seed_tests.rs::each_refusal_names_its_code_and_hides_the_cause` (planned, L2): proves refusal: seed and filter errors. The owning change adds it at this exact path.
-- `MEDULLA-FEDERATED-QUERY-R741.3`: `crates/medulla-h-graph/src/graph_ops/discover_seed_tests.rs::discover_routes_filter_to_expand_hops` (planned, L3): proves wiring: the walk takes the filter at the one expansion call. The owning change adds it at this exact path.
+- `MEDULLA-FEDERATED-QUERY-R741.2`: `crates/medulla-h-graph-gateway/src/graph_ops/discover_seed_tests.rs::each_refusal_names_its_code_and_hides_the_cause` (planned, L2): proves refusal: seed and filter errors. The owning change adds it at this exact path.
+- `MEDULLA-FEDERATED-QUERY-R741.3`: `crates/medulla-h-graph-gateway/src/graph_ops/discover_seed_tests.rs::discover_routes_filter_to_expand_hops` (planned, L3): proves wiring: the walk takes the filter at the one expansion call. The owning change adds it at this exact path.
 - `MEDULLA-FEDERATED-QUERY-R741.4`: `tests/retrieval/test_guided_discover_served.py::test_seeded_walk_respects_hop_filter_and_rls` (planned, L4): proves hot-path proof: a seeded, filtered walk through served `discover`. The owning change adds it at this exact path.
 - `MEDULLA-FEDERATED-QUERY-R706.8`: `crates/medulla-exec/src/policy_mask.rs::tests::shape_policy_round_trips_and_empty_set_is_identity` (planned, L1): proves model: a query policy may be a shape with a closed effect. The owning change adds it at this exact path.
 - `MEDULLA-FEDERATED-QUERY-R706.9`: `crates/medulla-exec/tests/shape_policy.rs::three_outcomes_on_a_fixed_graph` (planned, L2): proves behavior: each result node gets one of three outcomes. The owning change adds it at this exact path.

@@ -1,6 +1,6 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// Intelligent overload backstop for the `GetNodes` full-graph dump
 /// (CONCEPT:MEDULLA-KG.ingest.resets-socket-so-assimilation). Given the graph's node `count` and the configured `cap`,
@@ -248,9 +248,13 @@ pub(super) async fn try_handle_node_reads(
             handle_get_node_properties(req_id, core, raw_core, read_authority, &node_id)
         }
         // MEDULLA-DURABLE-KERNEL-R095.1001: the agent bus roster read.
-        Method::BusRoster { tenant, now_ms } => super::bus::roster(req_id, core, &tenant, now_ms),
+        Method::BusRoster { tenant, now_ms } => {
+            medulla_h_graph_gateway::graph_ops::bus::roster(req_id, core, &tenant, now_ms)
+        }
         Method::ReadMemorySnapshot { doc_id, revision } => {
-            super::memory_snapshot::read(req_id, core, &doc_id, revision)
+            medulla_h_graph_gateway::graph_ops::memory_snapshot::read(
+                req_id, core, &doc_id, revision,
+            )
         }
         Method::ListMemorySnapshots {
             prefix,
@@ -258,13 +262,20 @@ pub(super) async fn try_handle_node_reads(
             cursor,
         } => {
             let secret = ctx.state.read().await.auth_secret.clone();
-            let scope = super::memory_snapshot::ListScope {
+            let scope = medulla_h_graph_gateway::graph_ops::memory_snapshot::ListScope {
                 secret: &secret,
                 authority: read_authority,
                 graph_name: ctx.graph_name,
-                now_s: super::memory_snapshot::now_s(),
+                now_s: medulla_h_graph_gateway::graph_ops::memory_snapshot::now_s(),
             };
-            super::memory_snapshot::list(req_id, core, &scope, &prefix, limit, cursor.as_deref())
+            medulla_h_graph_gateway::graph_ops::memory_snapshot::list(
+                req_id,
+                core,
+                &scope,
+                &prefix,
+                limit,
+                cursor.as_deref(),
+            )
         }
         // CompareAndSetNodeFields/ClaimNext (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
         // GATEWAY_ROUTED — see the AddNode/RemoveNode comment above.

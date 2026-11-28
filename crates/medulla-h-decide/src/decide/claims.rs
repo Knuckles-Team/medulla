@@ -152,8 +152,9 @@ fn check_perspective(
     perspective: &medulla_decision_types::claims::ClaimPerspective,
 ) -> Result<(), String> {
     use medulla_decision_types::claims::ObserverRef;
-    use medulla_h_graph::graph_ops::participant_surface::{
-        participant_exists, participant_unavailable,
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_exists,
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,
     };
     let named = std::iter::once(&perspective.subject).chain(match &perspective.observer {
         ObserverRef::Participant(observer) => Some(observer),
@@ -176,7 +177,7 @@ fn reader_view(
     verified: &VerifiedRequestContext,
     requested: Option<&medulla_decision_types::claims::ObserverRef>,
 ) -> Result<medulla_epistemic::claims::ReaderView, String> {
-    use medulla_h_graph::graph_ops::participant_surface::principal_view;
+    use medulla_h_graph_gateway::graph_ops::participant_surface::principal_view;
     let empty;
     let core = match core {
         Some(core) => core.as_ref(),

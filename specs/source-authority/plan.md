@@ -41,8 +41,8 @@ crates/medulla-h-admin-schema/src/graph_schema/approved.rs         existing: Att
 crates/medulla-federation/src/federation.rs                 existing: ConnectedSources added here
 crates/medulla-h-query-read/src/query/source_coverage.rs              new: SourceCoverage handler
 crates/medulla-types/src/source_coverage.rs                 new: request and reply types
-crates/medulla-h-graph/src/graph_ops/gateway_graph.rs       existing: trust mark stamp added here
-crates/medulla-h-graph/src/graph_ops/policy_source.rs       new: PolicySourceBind handler
+crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs       existing: trust mark stamp added here
+crates/medulla-h-graph-gateway/src/graph_ops/policy_source.rs       new: PolicySourceBind handler
 crates/medulla-types/src/policy_source.rs                   new: PolicySourceBinding
 tests/federated/                                            new: served Python tests
 ```
@@ -223,7 +223,7 @@ Cross-repository: Arbora prints the role in the "sources used and why" block (`A
 
 ### Untrusted taint mark (R011)
 
-Data flow: a run writes content → `Method::AddNode` → `crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` → `stamp_trust_mark_if_applicable` (new, `gateway_graph.rs`) → `mark_for_origin` (`crates/medulla-virtual-graph/src/source_selection/trust.rs`) → `vg:trustMark` stored → a read returns the mark with its rule and generation.
+Data flow: a run writes content → `Method::AddNode` → `crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs::try_handle_gateway` → `stamp_trust_mark_if_applicable` (new, `gateway_graph.rs`) → `mark_for_origin` (`crates/medulla-virtual-graph/src/source_selection/trust.rs`) → `vg:trustMark` stored → a read returns the mark with its rule and generation.
 
 Types: `TrustMark{trusted, untrusted}`, `vg:trustMark`, `:markedBy`, `:markedAtGeneration`. Failure: a downgrade without approval returns `TRUST_MARK_DOWNGRADE_REFUSED`.
 
@@ -244,7 +244,7 @@ The graph is the one system of record; this is the one-engine rule applied to sy
 | yes | no | `ProposeOutbound` through `Decide` `ConnectorWriteBack` and the queue of `MEDULLA-DECISION-ENGINE-R615` |
 | yes | yes | `Conflict`; `system_of_record_wins` also proposes the graph value, `hold_for_review` proposes nothing |
 
-Sync state lives as `vg:SyncState` graph facts in the same batch as the inbound change, so no second database exists. The engine never writes to a source: arbora approves a proposal (`ARBORA-OPS-R865`) and the connector sink executes the released change set (`SCION-GOVERNED-WRITEBACK-R006`). Format adapters implement `SyncAdapter`: processes (`MEDULLA-CQ-ORCH-R703.2`), architecture models (`MEDULLA-CQ-ORCH-R705.7`) and open metadata (`MEDULLA-TYPED-PACKS-R110.5`). Call path: `Method::SourceSync` → `crates/medulla-h-graph/src/graph_ops/source_sync.rs::handle_source_sync` → `reconcile` (`crates/medulla-virtual-graph/src/source_sync.rs`) → one `MutationBatch` and the queued proposals.
+Sync state lives as `vg:SyncState` graph facts in the same batch as the inbound change, so no second database exists. The engine never writes to a source: arbora approves a proposal (`ARBORA-OPS-R865`) and the connector sink executes the released change set (`SCION-GOVERNED-WRITEBACK-R006`). Format adapters implement `SyncAdapter`: processes (`MEDULLA-CQ-ORCH-R703.2`), architecture models (`MEDULLA-CQ-ORCH-R705.7`) and open metadata (`MEDULLA-TYPED-PACKS-R110.5`). Call path: `Method::SourceSync` → `crates/medulla-h-graph-gateway/src/graph_ops/source_sync.rs::handle_source_sync` → `reconcile` (`crates/medulla-virtual-graph/src/source_sync.rs`) → one `MutationBatch` and the queued proposals.
 
 Proof level (R012.9): the served sync needs a host-driven foreign read, which only the in-crate `Harness` of `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs` completes. So the hot-path journey is an L3 test there, and no Python fixture duplicates it.
 
@@ -268,7 +268,7 @@ none
 
 - `Method::SourceCoverage` (new) → `crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs:338` → `medulla_h_sparql::foreign_source_handlers::try_handle` (`crates/medulla-h-sparql/src/foreign_source_handlers.rs:30`) → `source_coverage::handle` → `fixture_from_schema_sources` (`crates/medulla-virtual-graph/src/source_selection/live.rs:198`) → `select_sources_with` (`source_selection.rs:596`) → `audit_from` (line 1190).
 - `Method::GraphSchema` with `AttachApproved` → `crates/medulla-h-admin-schema/src/graph_schema/approved.rs::handle_gateway` → `admit` → `verify_schema_approval` (`crates/medulla-catalog-types/src/graph_schema/approval.rs:93`).
-- `Method::AddNode` → `crates/medulla-h-graph/src/graph_ops/gateway.rs::try_handle_gateway` → trust mark stamp (new).
+- `Method::AddNode` → `crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs::try_handle_gateway` → trust mark stamp (new).
 - Obsolete path to delete: the silent overwrite of a second mapping on one class, already replaced by a list in `CoverageFixture`.
 
 ## Cross-repo seams

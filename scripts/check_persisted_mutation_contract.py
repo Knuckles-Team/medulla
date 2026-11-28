@@ -1252,10 +1252,10 @@ def mutation_inventory_sources() -> dict[str, str]:
     batch_compile = read_compiler_family(
         "crates/medulla-server-api/src/batch_compile.rs"
     )
-    graph_ops = read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
+    graph_ops = read_compiler_family("crates/medulla-h-graph-gateway/src/graph_ops.rs")
     graph_gateway, graph_gateway_routes = _graph_gateway_sources(
         read_module_paths(
-            "crates/medulla-h-graph/src/graph_ops.rs", include_tests=False
+            "crates/medulla-h-graph-gateway/src/graph_ops.rs", include_tests=False
         )
         | read_module_paths(
             "crates/medulla-h-mining/src/mining.rs", include_tests=False

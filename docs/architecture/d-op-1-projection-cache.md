@@ -77,7 +77,7 @@ between writes) is exactly the shape this fix targets and fixes.
 
 ## The problem, precisely
 
-`crates/medulla-h-graph/src/graph_ops.rs::try_handle` (the terminal handler every
+`crates/medulla-h-graph-gateway/src/graph_ops.rs::try_handle` (the terminal handler every
 non-gateway-routed graph method reaches) runs, unconditionally, before its
 `match`:
 

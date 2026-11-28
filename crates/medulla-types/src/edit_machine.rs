@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn no_writer_sets_status_outside_apply() {
         for source in [
-            include_str!("../../medulla-h-graph/src/graph_ops/harness_edit.rs"),
+            include_str!("../../medulla-h-graph-gateway/src/graph_ops/harness_edit.rs"),
             include_str!("../../medulla-decision-outcome-types/src/decision/concentration.rs"),
         ] {
             let production = source.split("#[cfg(test)]").next().unwrap();

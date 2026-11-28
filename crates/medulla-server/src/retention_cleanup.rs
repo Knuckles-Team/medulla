@@ -11,7 +11,6 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use medulla_h_graph::graph_ops::retention_cleanup::{configured_policy, RETENTION_ACTOR};
 use medulla_mutation_types::retention_cleanup::{
     RetentionCleanupReport, RetentionCleanupRunRequest,
 };
@@ -19,6 +18,10 @@ use medulla_protocol_types::protocol::{Method, Request, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
+use {
+    medulla_h_graph_gateway::graph_ops::retention_cleanup::configured_policy,
+    medulla_h_graph_gateway::graph_ops::retention_cleanup::RETENTION_ACTOR,
+};
 
 /// Whether a valid `MEDULLA_RETENTION_CLEANUP` policy is configured.
 pub fn is_configured() -> bool {
@@ -27,7 +30,7 @@ pub fn is_configured() -> bool {
 
 /// The sweep interval in seconds, within [60, 86400].
 pub fn sweep_interval_secs() -> u64 {
-    medulla_h_graph::graph_ops::retention_cleanup::sweep_interval_secs()
+    medulla_h_graph_gateway::graph_ops::retention_cleanup::sweep_interval_secs()
 }
 
 /// The cursor each graph's next step resumes after.

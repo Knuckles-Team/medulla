@@ -61,7 +61,7 @@ pub async fn plan_card_refresh(
     at_ms: u64,
 ) -> Result<Option<Vec<serde_json::Value>>, String> {
     use medulla_h_graph::graph_ops::participant_card::refresh_card;
-    use medulla_h_graph::graph_ops::participant_surface::sessions_of_participant;
+    use medulla_h_graph_gateway::graph_ops::participant_surface::sessions_of_participant;
     let tenant = verified.tenant();
     let Some(core) = super::claims::participants_of(state, graph).await else {
         return Ok(None);
@@ -145,8 +145,10 @@ async fn read_card(
     observer: &ObserverRef,
 ) -> Result<ParticipantCard, String> {
     use medulla_h_graph::graph_ops::participant_card::read_card;
-    use medulla_h_graph::graph_ops::participant_surface::{
-        participant_exists, participant_unavailable, principal_view,
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_exists,
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,
+        medulla_h_graph_gateway::graph_ops::participant_surface::principal_view,
     };
     let tenant = verified.tenant();
     let core = super::claims::participants_of(state, graph).await;

@@ -550,7 +550,7 @@ The outbox consumer runs `project` (`crates/medulla-h-admin/src/connector_pack_p
 
 ##### Runtime ontology import (R103)
 
-A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin-schema/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
+A connector imports or revises its domain ontology at runtime without a full pack import. The served `GraphSchema` method reaches the gateway route at `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph_routes.rs:656`. `handle_gateway` (`crates/medulla-h-admin-schema/src/graph_schema.rs:191`) matches `ImportOntology`. The engine parses and validates the body. It commits one tenant-scoped schema source revision under `ontology:<connector>/<ontology IRI>`. The content digest makes a repeated import a no-op.
 
 #### MEDULLA-TYPED-PACKS-R104 — connect-time seed graph import
 
@@ -603,7 +603,7 @@ The plan source `Op::UsageScan { view }` (`crates/medulla-exec/src/exec/usage.rs
 
 ### Domain pack run (R097.700)
 
-Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.
+Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph-gateway/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.
 
 ## Phase 2: Task approach
 

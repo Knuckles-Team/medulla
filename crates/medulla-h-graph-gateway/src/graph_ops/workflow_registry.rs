@@ -1,0 +1,150 @@
+//! Served workflow registry writes (MEDULLA-DECISION-ENGINE-R166.3, R166.4).
+//!
+//! `WorkflowRegistry::Register` is gateway-routed (`Route::WorkflowRegistry`): the
+//! identity is validated by `WorkflowRegistry::register`, then the registration
+//! commits as the one `:WorkflowRegistration` node upsert through the staged
+//! gateway. A refused register writes nothing. Registering the stored record
+//! again is a no-op that returns it; a different lifecycle state is an update of
+//! the same node. `Read` is a graph read served by the catalog admin route in
+//! `medulla-h-admin` and never reaches this module.
+
+use super::*;
+use medulla_protocol_types::result_contract::coordination::WorkflowRegistryRegister;
+use medulla_work_types::orchestration::workflow_machine::WORKFLOW_MACHINE;
+use medulla_work_types::orchestration::workflows::{
+    WorkflowLifecycle, WorkflowRegistrationEntry, WorkflowRegistry, WorkflowRegistryError,
+    WorkflowRegistryOp,
+};
+
+/// The closed refusal codes of the workflow registry; each is a registered
+/// `ServerErrorCode`. Only the registration test reads the closed list.
+#[cfg(test)]
+pub const REFUSALS: &[&str] = &[
+    "WORKFLOW_ID_MISSING",
+    "WORKFLOW_VERSION_MISSING",
+    "WORKFLOW_DIGEST_INVALID",
+    "WORKFLOW_IDENTITY_UNKNOWN",
+    "WORKFLOW_UNAUTHORIZED",
+];
+
+fn refuse(error: WorkflowRegistryError, detail: impl std::fmt::Display) -> String {
+    format!("{}: {detail}", error.code())
+}
+
+/// What an admitted `Register` does.
+#[derive(Debug)]
+pub enum Admitted {
+    /// The same record is already stored: return it, commit nothing.
+    Same(WorkflowRegistrationEntry),
+    /// Commit this node upsert, then return the entry. The method is boxed so
+    /// the enum stays the size of the small variant.
+    Write(Box<Method>, WorkflowRegistrationEntry),
+}
+
+/// Admit one registration against the stored node, writing nothing.
+pub fn admit_registration(
+    core: &GraphCore,
+    tenant_id: &str,
+    tenant_scope: &str,
+    registration: &WorkflowRegistrationEntry,
+) -> Result<Admitted, String> {
+    let identity = &registration.identity;
+    registration.validate_steps()?;
+    registration.validate_skills()?;
+    WorkflowRegistry::default()
+        .register(identity.clone())
+        .map_err(|error| refuse(error, "invalid workflow identity"))?;
+    if !registration.owner_scope.is_empty() && registration.owner_scope != tenant_scope {
+        return Err(refuse(
+            WorkflowRegistryError::Unauthorized,
+            "owner_scope must be the verified tenant scope",
+        ));
+    }
+    let entry = WorkflowRegistrationEntry {
+        identity: identity.clone(),
+        owner_scope: tenant_scope.to_string(),
+        lifecycle: registration.lifecycle,
+        steps: registration.steps.clone(),
+        skills: registration.skills.clone(),
+    };
+    let node_id = WorkflowRegistrationEntry::node_id(identity);
+    let stored = core
+        .get_node_properties(&node_id)
+        .and_then(|blob| medulla_types::msgpack::decode_property_object(&blob).ok());
+    match stored
+        .as_ref()
+        .and_then(WorkflowRegistrationEntry::from_node_properties)
+    {
+        Some(stored) => {
+            if stored.owner_scope != tenant_scope {
+                return Err(refuse(
+                    WorkflowRegistryError::Unauthorized,
+                    format!("{node_id} belongs to another scope"),
+                ));
+            }
+            if stored.lifecycle == entry.lifecycle && stored.skills == entry.skills {
+                return Ok(Admitted::Same(entry));
+            }
+            // MEDULLA-ORCH-VOCAB-R815.9: a changed lifecycle fires the event of the
+            // requested state on the stored one; `Reactivate` has no edge. Declaring other
+            // skills for the stored state is an update of the same node (R166.7).
+            if stored.lifecycle != entry.lifecycle {
+                stored
+                    .lifecycle
+                    .apply(WorkflowLifecycle::event_to(entry.lifecycle))
+                    .map_err(|refused| refused.to_string())?;
+            }
+        }
+        None if entry.lifecycle != WORKFLOW_MACHINE.initial => {
+            return Err("INVALID_ARGUMENT: a first registration is active".to_string());
+        }
+        None => {}
+    }
+    let properties_msgpack = rmp_serde::to_vec_named(&entry.node_properties(tenant_id))
+        .map_err(|error| format!("INVALID_ARGUMENT: workflow encoding failed: {error}"))?;
+    Ok(Admitted::Write(
+        Box::new(Method::AddNode {
+            node_id,
+            properties_msgpack,
+        }),
+        entry,
+    ))
+}
+
+/// The `Route::WorkflowRegistry` entry: admit the registration, then commit it
+/// as the `AddNode` upsert through the coalescable gateway.
+pub async fn handle_workflow_register(
+    ctx: &MutationCtx<'_>,
+    tenant_id: &str,
+    method: &Method,
+) -> Option<Response> {
+    let Method::WorkflowRegistry { op } = method else {
+        return None;
+    };
+    let WorkflowRegistryOp::Register { registration } = op.as_ref() else {
+        return Some(Response::err(
+            ctx.req_id,
+            "INVALID_ARGUMENT: WorkflowRegistry read is served by the catalog admin route",
+        ));
+    };
+    let (write, entry) =
+        match admit_registration(ctx.core, tenant_id, ctx.tenant_scope, registration) {
+            Ok(Admitted::Same(entry)) => {
+                return Some(Response::ok(
+                    ctx.req_id,
+                    ResultPayload::of::<WorkflowRegistryRegister>(entry),
+                ));
+            }
+            Ok(Admitted::Write(write, entry)) => (*write, entry),
+            Err(error) => return Some(Response::err(ctx.req_id, error)),
+        };
+    let plan = MutationPlan::for_method(&write);
+    let owned = write.clone();
+    Some(
+        super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
+            medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;
+            ResultPayload::of::<WorkflowRegistryRegister>(entry)
+        })
+        .await,
+    )
+}

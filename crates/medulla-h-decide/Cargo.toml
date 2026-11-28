@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-h-graph = { path = "../medulla-h-graph" }
+medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway" }
 medulla-cypher = { path = "../medulla-cypher" }
 medulla-table-store = { path = "../medulla-table-store" }
 async-trait = "0.1"
@@ -131,6 +132,7 @@ test-support = ["medulla-server-mutation/test-support", "dep:tempfile", "redb", 
 medulla-h-decide = { path = ".", features = ["decide", "security", "nl-query", "test-support"] }
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-h-graph = { path = "../medulla-h-graph", features = ["query", "decide"] }
+medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway", features = ["query", "decide"] }
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }

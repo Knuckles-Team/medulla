@@ -79,8 +79,11 @@ async fn ask(
     question: &ParticipantQuestion,
 ) -> Result<ParticipantAnswer, String> {
     use medulla_decision_types::claims::ObserverRef;
-    use medulla_h_graph::graph_ops::participant_surface::{
-        participant_exists, participant_unavailable, principal_view, resolve_scope_ref,
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_exists,
+        medulla_h_graph_gateway::graph_ops::participant_surface::participant_unavailable,
+        medulla_h_graph_gateway::graph_ops::participant_surface::principal_view,
+        medulla_h_graph_gateway::graph_ops::participant_surface::resolve_scope_ref,
     };
     let max_chars =
         usize::try_from(default_u64("participant.ask_question_max_chars")).unwrap_or(usize::MAX);

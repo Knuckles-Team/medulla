@@ -46,7 +46,7 @@ const FORBIDDEN: [&str; 12] = [
 /// root. Every durable leg in these is the mutation kernel's.
 const REGIONS: [&str; 2] = [
     "crates/medulla-server-graph/src/semantic_activation.rs",
-    "crates/medulla-h-graph/src/graph_ops/semantic.rs",
+    "crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs",
 ];
 
 /// **Empty, and it must stay empty** — an entry here is a bypass with a comment

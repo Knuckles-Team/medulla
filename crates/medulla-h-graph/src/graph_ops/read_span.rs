@@ -8,13 +8,13 @@
 //! graph) is `DOCUMENT_NOT_FOUND`. It locates the span through the table's line
 //! index, reads the text blob once and writes nothing.
 
-use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_types::source_toc::{
     ReadSpanResult, SourceToc, SOURCE_DIGEST_PROPERTY, SOURCE_REVISION_PROPERTY,
     SOURCE_TOTAL_LINES_PROPERTY, TOC_DIGEST_PROPERTY,
 };
 use medulla_document::toc::locate_span;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_server_api::knob_config::knobs;
 use medulla_types::contract::ServerErrorCode;
 

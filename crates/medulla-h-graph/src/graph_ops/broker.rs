@@ -17,7 +17,7 @@ macro_rules! route_broker_methods {
     }};
 }
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// Route broker exchange, queue, and publish operations.
 pub(super) async fn try_handle_broker_exchange(

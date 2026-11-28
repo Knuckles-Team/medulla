@@ -13,7 +13,6 @@ mod common;
 mod test_support;
 
 use medulla_decision_types::claims::ObserverRef;
-use medulla_h_graph::graph_ops::participant_derive::{payload_node_id, read_payload};
 use medulla_protocol_types::protocol::{Method, Response};
 use medulla_server_api::knob_config;
 use medulla_server_ops::api::ingest::jobs_seam;
@@ -25,6 +24,10 @@ use medulla_work_types::participant::ParticipantId;
 use {
     medulla_decision_stats_records::decision::participant_derive::DeriveKey,
     medulla_decision_stats_records::decision::participant_derive::DerivePayload,
+};
+use {
+    medulla_h_graph_gateway::graph_ops::participant_derive::payload_node_id,
+    medulla_h_graph_gateway::graph_ops::participant_derive::read_payload,
 };
 
 const SECRET: &str = "participant-derive-served-secret";
@@ -233,9 +236,9 @@ async fn turn_append_enqueues_one_ordered_job_per_key() {
         current.registry.get(GRAPH).expect("graph").core.clone()
     };
     assert!(
-        core.get_node_properties(&medulla_h_graph::graph_ops::memory_surface::node_id(
-            tenant, "over"
-        ))
+        core.get_node_properties(
+            &medulla_h_graph_gateway::graph_ops::memory_surface::node_id(tenant, "over")
+        )
         .is_some(),
         "the turn is stored"
     );

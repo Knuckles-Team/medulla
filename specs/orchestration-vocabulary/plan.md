@@ -4,7 +4,7 @@ Governing spec: [spec.md](spec.md). Rows: [requirements.md](requirements.md).
 
 ## Summary
 
-The orchestration vocabulary makes four questions one graph query each: which steps a task has, which agents staff a topology, which skills, tools, prompts and models bind to each step, and how a harness run performed. The ontology terms, shapes and run-trace records live in `crates/medulla-core/ontology/`. Writes enter through the existing admission path of `crates/medulla-h-graph`. Reads enter through `Method::Uql` of `crates/medulla-h-query`. `AgentAssemble` in `crates/medulla-h-decide` consumes the vocabulary and adds no planner. The reuse candidates are the schema composition of `crates/medulla-server-api/src/schema_compose.rs`, the harness admission rules of `crates/medulla-h-graph/src/harness_admission.rs`, the projection worker pattern of `crates/medulla-h-admin/src/connector_pack_projection.rs` and the revision-pointer path of MEDULLA-DECISION-ENGINE-R805.
+The orchestration vocabulary makes four questions one graph query each: which steps a task has, which agents staff a topology, which skills, tools, prompts and models bind to each step, and how a harness run performed. The ontology terms, shapes and run-trace records live in `crates/medulla-core/ontology/`. Writes enter through the existing admission path of `crates/medulla-h-graph`. Reads enter through `Method::Uql` of `crates/medulla-h-query`. `AgentAssemble` in `crates/medulla-h-decide` consumes the vocabulary and adds no planner. The reuse candidates are the schema composition of `crates/medulla-server-api/src/schema_compose.rs`, the harness admission rules of `crates/medulla-h-graph-gateway/src/harness_admission.rs`, the projection worker pattern of `crates/medulla-h-admin/src/connector_pack_projection.rs` and the revision-pointer path of MEDULLA-DECISION-ENGINE-R805.
 
 ## Technical Context
 
@@ -39,7 +39,7 @@ crates/medulla-core/src/spec_folder.rs                      new: SpecNodeKind, c
 crates/medulla-core/src/spec_folder/policy.rs               new: parse_policy_document, synthesize_policy_candidates
 crates/medulla-graph-core/src/graph/schema_sources.rs       existing: core_specs entries for the sources
 crates/medulla-h-admin-schema/src/agent_library_projection.rs      new: projection worker beside connector_pack_projection.rs
-crates/medulla-h-graph/src/harness_admission.rs             existing: run-trace, step, window, unit and gap admission
+crates/medulla-h-graph-gateway/src/harness_admission.rs             existing: run-trace, step, window, unit and gap admission
 crates/medulla-h-query/src/query/                           existing: Uql; new run_views.rs, run_trace_export.rs, session_query.rs
 crates/medulla-h-decide/src/decide/                         existing: assemble.rs, candidates.rs, commit.rs; new family files
 crates/medulla-compute/src/assemble/                        existing: new topology_facts.rs and synthesis.rs
@@ -130,7 +130,7 @@ none
 ## Production caller chain
 
 - Schema: `core_specs` (`crates/medulla-graph-core/src/graph/schema_sources.rs:711`) embeds the orchestration sources; `compose_validated_sources` (`crates/medulla-server-api/src/schema_compose.rs:92`) composes them on every restore and read.
-- Node write: `Method::AddNode` to `try_handle_gateway` (`crates/medulla-h-graph/src/graph_ops/gateway.rs:57`) to `harness_admission::direct_add_node` (`crates/medulla-h-graph/src/harness_admission.rs:745`) to the admission functions of that file; run-trace, step, window, unit and gap validation extend `harness_add_node_admission` (`crates/medulla-h-graph/src/harness_admission.rs:673`).
+- Node write: `Method::AddNode` to `try_handle_gateway` (`crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs:57`) to `harness_admission::direct_add_node` (`crates/medulla-h-graph-gateway/src/harness_admission.rs:745`) to the admission functions of that file; run-trace, step, window, unit and gap validation extend `harness_add_node_admission` (`crates/medulla-h-graph-gateway/src/harness_admission.rs:673`).
 - Envelope write: `Method::ApplyChangeEnvelopes` to `dispatch_change_envelopes` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs:18`) to `harness_boundary_envelope` (`crates/medulla-server-graph/src/dispatch/change_envelope.rs:580`).
 - Read: `Method::Uql` (`crates/medulla-h-query/src/query/dispatch.rs:138`) to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`).
 - Assembly: `Method::AgentAssemble` arm (`crates/medulla-server-router/src/dispatch/router/decision_plane.rs:64`) to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (`crates/medulla-h-decide/src/decide/assemble.rs:46`).

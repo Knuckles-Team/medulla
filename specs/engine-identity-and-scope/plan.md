@@ -198,8 +198,8 @@ Metadata reads use the graph authority and R023 principal scope; metadata cannot
 
 The reviewed source is c0b952776129fd509b9f87b411a298593c2591ec.
 Existing code: `crates/medulla-server-auth/src/auth.rs:901` binds the verified caller; `crates/medulla-server-auth/src/access.rs:702` checks graph access.
-`crates/medulla-h-graph/src/graph_ops/gateway.rs:72` routes structural graph mutations through the existing commit gateway.
-`crates/medulla-h-graph/src/graph_ops/gateway_graph.rs:151` handles ApplyMutation application.
+`crates/medulla-h-graph-gateway/src/graph_ops/gateway.rs:72` routes structural graph mutations through the existing commit gateway.
+`crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs:151` handles ApplyMutation application.
 `crates/medulla-server-api/src/batch_compile/compile.rs:126` defines compile_methods_with_outbox for the canonical write set.
 `crates/medulla-server-mutation/src/mutation_batch/commit/` owns durable commit and projection publication.
 `crates/medulla-h-graph/src/graph_ops/nodes.rs:85` serves GetNodeProperties through the authorized read path.

@@ -6,8 +6,8 @@
 //! `medulla_h_ingest::atom_context::atom_context`. Every selected atom names its provenance
 //! key. The read writes nothing.
 
-use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_ingestion_types::knowledge_atom::{
     atom_node_id, AtomContextResult, KnowledgeAtom, ATOM_NODE_TYPE,
 };
@@ -84,7 +84,8 @@ fn select(
         let Some(blob) = core.get_node_properties(&node_id) else {
             continue;
         };
-        let properties = super::gateway_graph::decode_json_object(&blob);
+        let properties =
+            medulla_h_graph_gateway::graph_ops::gateway_graph::decode_json_object(&blob);
         if properties.get("type").and_then(serde_json::Value::as_str) != Some(ATOM_NODE_TYPE) {
             continue;
         }

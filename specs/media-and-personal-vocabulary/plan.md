@@ -41,7 +41,7 @@ crates/medulla-h-ingest/src/meeting_transcript/                      new
 crates/medulla-h-ingest/src/paper_ingest/                            new
 crates/medulla-h-retrieve/src/bookmark.rs                            new
 crates/medulla-h-query/src/bookmark_relations.rs                     new
-crates/medulla-h-graph/src/graph_ops/memory_surface.rs               new (owned by the decision-engine spec)
+crates/medulla-h-graph-gateway/src/graph_ops/memory_surface.rs               new (owned by the decision-engine spec)
 crates/medulla-modality/src/media_memory.rs                          new
 crates/medulla-types/src/{meeting_transcript,bookmark_query,media_tag,paper_ingest}.rs  new
 crates/medulla-server-served-tests/src/split_tests/                  new served test files named by the rows
@@ -400,7 +400,7 @@ Gates for any change under these rows: `cargo test -p medulla-core --test media_
 
 - Registered vocabulary: `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs:207`) → `current_core_catalog` (:656) → `core_specs` entries for `media`, `personal`, `retrieval` and `nutrition`. Not registered today: `content-v1.ttl` and the media and content shapes.
 - Ingest surfaces: `Method::SourceIngest` → `crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs::route_source_ingestion_or_resources` (:399) → `crates/medulla-h-ingest/src/source_ingestion.rs::prepare` (:167) → `admit_records` (:978) → `build_envelope` (:1658). Media tags, paper facts and meeting transcripts add steps here.
-- Reads: `Method::SemanticSearch` → `crates/medulla-h-graph/src/graph_ops/semantic.rs::try_handle_semantic_compute` (:281); bookmark search through `crates/medulla-server-router/src/dispatch/router/control_plane.rs` (:400) → `crates/medulla-h-retrieve/src/semantic_index.rs` (:59); relations through `crates/medulla-h-query/src/query/dispatch.rs` (:138).
+- Reads: `Method::SemanticSearch` → `crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs::try_handle_semantic_compute` (:281); bookmark search through `crates/medulla-server-router/src/dispatch/router/control_plane.rs` (:400) → `crates/medulla-h-retrieve/src/semantic_index.rs` (:59); relations through `crates/medulla-h-query/src/query/dispatch.rs` (:138).
 - Memory: `crates/medulla-h-graph/src/graph_ops/terminal.rs::try_handle_graph_domains` (:14) → the new `memory_surface` handler.
 - Obsolete paths to delete: none.
 

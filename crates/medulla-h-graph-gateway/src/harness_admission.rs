@@ -1,0 +1,1386 @@
+//! MEDULLA-ORCH-VOCAB-R801/R802 — engine-side admission of the harness
+//! vocabulary's five record kinds — component versions (R801), lessons,
+//! adoptions, contrasts and probe runs (R802) — on BOTH write paths.
+//!
+//! The two paths differ in one thing only: whether the engine may MUTATE the
+//! write before commit.
+//!
+//! * The direct `AddNode` path (the graph-ops gateway) may mutate: the engine
+//!   stamps the transaction time (`tx_from`, MEDULLA-DURABLE-KERNEL-R078/R081) and
+//!   fills the `supersedes_id` pointer of a lesson when the writer left it absent. The mutation happens before the durable commit and before
+//!   the apply closure clones the method, so durable and serving state cannot
+//!   diverge.
+//! * The `ChangeEnvelope` path is byte-stable for replay (the replay check
+//!   compares reserialized bytes) and its digest covers the operations, so the
+//!   engine only VERIFIES: the generated client stamps `tx_from` itself
+//!   (MEDULLA-DURABLE-KERNEL-R081) and a lesson names the lesson it supersedes
+//!   in `supersedes_id`. A lesson that leaves the pointer absent while a
+//!   current one exists is refused, because it would supersede nothing. A
+//!   component version has no supersession at all (R801.7): it becomes current
+//!   only by a champion pointer move.
+//!
+//! The shared rules: the record decodes strictly (the closed kind sets, the
+//! typed evidence and interval checks), the node id is the record's own
+//! identity (content address for versions, lessons, adoptions and contrasts;
+//! the trace id for probe runs), a published record never mutates (the same
+//! writer fields are an idempotent replay; anything else is
+//! `HarnessVersionImmutable` / `HarnessRecordImmutable`; a compare-and-set on
+//! a component version is `HarnessVersionImmutable`), a lesson supersession
+//! names the CURRENT lesson (`LessonSupersessionStale` when it names an
+//! older one, `LessonSupersessionUnknown` when it names nothing the graph
+//! holds), and a contrast agrees with its probe runs (same trace ids, same
+//! conditions digest — `ContrastConditionsMismatch` otherwise).
+//!
+//! The envelope check runs under the graph write lock, before any durable
+//! work. A batch commits atomically, so one [`HarnessBoundaryState`] spans
+//! the batch's envelopes in order: a supersession may name a record written
+//! by an EARLIER envelope of the same write (it is pending, not yet in the
+//! graph), and a head-window-close CAS in one op is visible to the
+//! supersession check of a later op.
+
+use std::collections::BTreeMap;
+
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::protocol::Method;
+use medulla_server_api::walkthrough_readers::{WalkthroughReadRefusal, WalkthroughReaders};
+use medulla_work_types::orchestration::capability_gap::{
+    decode_enhancement_write, decode_gap_write, is_capability_gap_write,
+    is_desired_enhancement_write,
+};
+use medulla_work_types::orchestration::decode_component_write;
+use medulla_work_types::orchestration::improvement::decode_adopted_harness_write;
+use medulla_work_types::orchestration::improvement::decode_harness_contrast_write;
+use medulla_work_types::orchestration::improvement::decode_harness_probe_run_write;
+use medulla_work_types::orchestration::improvement::decode_lesson_write;
+use medulla_work_types::orchestration::improvement::is_adopted_harness_write;
+use medulla_work_types::orchestration::improvement::is_harness_contrast_write;
+use medulla_work_types::orchestration::improvement::is_harness_lesson_write;
+use medulla_work_types::orchestration::improvement::is_harness_probe_run_write;
+use medulla_work_types::orchestration::improvement::ImprovementLibraryRefusal;
+use medulla_work_types::orchestration::is_harness_component_write;
+use medulla_work_types::orchestration::HarnessComponentRefusal;
+use medulla_work_types::orchestration::HarnessVocabularyErrorCode;
+
+type Props = serde_json::Map<String, serde_json::Value>;
+
+fn decode_props(blob: &[u8]) -> Props {
+    medulla_types::msgpack::decode_property_object(blob).unwrap_or_default()
+}
+
+fn refuse_component(refusal: HarnessComponentRefusal, detail: String) -> String {
+    format!("{}: {}", refusal.code(), detail)
+}
+
+fn refuse_improvement(refusal: ImprovementLibraryRefusal, detail: String) -> String {
+    format!("{}: {}", refusal.code(), detail)
+}
+
+/// The transaction-time stamp a harness record must carry (R801.3/R802.4):
+/// `tx_from` set, and a positive number.
+fn tx_stamp(props: &Props) -> Option<u64> {
+    props
+        .get("tx_from")
+        .and_then(|value| value.as_u64())
+        .filter(|stamp| *stamp > 0)
+}
+
+/// The fields the lesson head-scan reads off every candidate: the marker,
+/// the identity the head is scoped by, and the transaction stamp the head
+/// orders by.
+#[derive(serde::Deserialize, Default)]
+#[serde(default)]
+struct LessonHeadProbe {
+    #[serde(rename = "_harness_lesson")]
+    marker: bool,
+    task_class: String,
+    deficiency: String,
+    tx_from: u64,
+}
+
+/// The harness records as a write sees them: the live graph, plus the nodes
+/// the SAME write has already touched (pending AddNodes and the field merges
+/// of pending CASes). The pending layer wins over the graph, because it is
+/// the state the later ops of the write apply against.
+struct HarnessView<'a> {
+    core: &'a GraphCore,
+    pending: &'a BTreeMap<String, Props>,
+}
+
+impl<'a> HarnessView<'a> {
+    /// The effective property object of one node: the pending layer when the
+    /// write touched it, the stored blob otherwise.
+    fn props(&self, node_id: &str) -> Option<Props> {
+        if let Some(props) = self.pending.get(node_id) {
+            return Some(props.clone());
+        }
+        self.core
+            .get_node_properties(node_id)
+            .as_deref()
+            .map(decode_props)
+    }
+
+    /// The stored raw property blob of one node, graph side.
+    fn blob(&self, node_id: &str) -> Option<Vec<u8>> {
+        self.core.get_node_properties(node_id)
+    }
+
+    fn has(&self, node_id: &str) -> bool {
+        self.pending.contains_key(node_id) || self.core.has_node(node_id)
+    }
+
+    /// The effective probe of one node: off the pending layer when it is
+    /// there, the raw stored blob otherwise.
+    fn probe<T: for<'de> serde::Deserialize<'de>>(&self, node_id: &str) -> Option<T> {
+        if self.pending.contains_key(node_id) {
+            return None; // handled by the caller's pending-specific probe
+        }
+        self.blob(node_id)
+            .and_then(|stored| rmp_serde::from_slice::<T>(&stored).ok())
+    }
+
+    /// The effective `(marker, task_class, deficiency, tx_from)` of one
+    /// candidate lesson.
+    fn lesson_probe(&self, node_id: &str) -> Option<LessonHeadProbe> {
+        if let Some(props) = self.pending.get(node_id) {
+            return Some(LessonHeadProbe {
+                marker: props
+                    .get("_harness_lesson")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false),
+                task_class: props
+                    .get("task_class")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                deficiency: props
+                    .get("deficiency")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                tx_from: props
+                    .get("tx_from")
+                    .and_then(|value| value.as_u64())
+                    .unwrap_or(0),
+            });
+        }
+        self.probe(node_id)
+    }
+
+    /// The probe run stored at `harness-probe-run:<trace_id>`, when the write
+    /// sees one (pending first, then the graph).
+    fn probe_run(
+        &self,
+        trace_id: &str,
+    ) -> Option<medulla_work_types::orchestration::improvement::HarnessProbeRun> {
+        let node_id = format!("harness-probe-run:{trace_id}");
+        self.props(&node_id)
+            .and_then(|props| decode_harness_probe_run_write(&props).ok())
+    }
+
+    /// The current lesson of one task class and deficiency, by newest
+    /// `tx_from` — the supersession target of a new lesson (R802.4). The
+    /// record's own task class and deficiency are re-checked off the probe:
+    /// two identity fields in one node id can alias across colons.
+    fn lesson_head(&self, task_class: &str, deficiency: &str) -> Option<String> {
+        let prefix = format!("harness-lesson:{task_class}:{deficiency}:");
+        let mut best: Option<(u64, String)> = None;
+        for node_id in self
+            .core
+            .node_ids()
+            .into_iter()
+            .chain(self.pending.keys().cloned())
+        {
+            if !node_id.starts_with(&prefix) {
+                continue;
+            }
+            let Some(probe) = self.lesson_probe(&node_id) else {
+                continue;
+            };
+            if !probe.marker || probe.task_class != task_class || probe.deficiency != deficiency {
+                continue;
+            }
+            if best.as_ref().is_none_or(|(tx, _)| probe.tx_from >= *tx) {
+                best = Some((probe.tx_from, node_id));
+            }
+        }
+        best.map(|(_, node_id)| node_id)
+    }
+}
+
+/// The graph-relative admission of one harness-record write. `New` when the
+/// node does not exist (the write proceeds), `Replay` when it is an
+/// idempotent rewrite of the stored record (the write is a no-op). `head`
+/// carries the supersession target of the record (when the record supersedes
+/// by pointer and one exists) so the direct path can fill an absent
+/// `supersedes_id` without a second scan. `engine_fills_pointer`
+/// distinguishes the two paths: on the direct AddNode path the engine MAY
+/// fill an absent pointer from the current record (so "absent with a live
+/// head" is legal), while on the ChangeEnvelope path the bytes are
+/// byte-stable for replay and the writer MUST name the current record
+/// itself (so "absent with a live head" would publish a record that
+/// supersedes nothing — refused).
+enum Admission {
+    New { head: Option<String> },
+    Replay,
+}
+
+/// The stored record at `node_id` (pending first, then the graph):
+/// `Replay` when it is the same writer fields, `RecordImmutable` when it
+/// differs, and the `Err` when the node exists but is not the record kind
+/// (or not a harness record at all). `stored_matches` reports whether the
+/// stored record is one of the given kinds and carries the same
+/// writer-supplied fields.
+/// Whether stored properties are one harness record kind.
+type IsKind = fn(&Props) -> bool;
+/// Decode stored properties as one harness record kind.
+type Decode<T> = fn(&Props) -> Result<T, ImprovementLibraryRefusal>;
+
+fn stored_record<T: std::fmt::Debug + PartialEq>(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    is_kind: IsKind,
+    decode: Decode<T>,
+    same: fn(&T, &T) -> bool,
+    record: &T,
+    immutable_code: &str,
+) -> Result<Option<bool>, String> {
+    // None = no stored node; Some(true) = replay; Some(false) = mutable
+    // rewrite; Err = the node exists and is not this record kind.
+    let Some(stored) = view.props(node_id) else {
+        return Ok(None);
+    };
+    if is_kind(&stored) {
+        if let Ok(published) = decode(&stored) {
+            return if same(&published, record) {
+                Ok(Some(true))
+            } else {
+                Err(format!(
+                    "{immutable_code}: node '{node_id}' already holds a different record"
+                ))
+            };
+        }
+    }
+    Err(format!(
+        "HarnessRecordMalformed: node '{node_id}' already exists and is not the expected record"
+    ))
+}
+
+/// `true` when `node_id` already holds exactly `record` (an idempotent
+/// replay), `false` when no node is stored there. Any other stored node
+/// refuses: a different record of the kind is immutable, and a node of
+/// another kind is malformed.
+fn stored_replay<T: std::fmt::Debug + PartialEq>(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    is_kind: IsKind,
+    decode: Decode<T>,
+    record: &T,
+) -> Result<bool, String> {
+    Ok(stored_record(
+        view,
+        node_id,
+        is_kind,
+        decode,
+        |a, b| *a == *b,
+        record,
+        "HarnessRecordImmutable",
+    )?
+    .is_some())
+}
+
+/// The graph-relative admission of one harness-component version write
+/// (R801.3).
+fn component_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Admission, String> {
+    let record = decode_component_write(props).map_err(|refusal| {
+        refuse_component(refusal, "harness component version record".to_string())
+    })?;
+    if record.node_id() != node_id {
+        return Err(refuse_component(
+            HarnessComponentRefusal::ContentDigestMismatch,
+            format!(
+                "node id '{node_id}' does not match the record's content address '{}'",
+                record.node_id()
+            ),
+        ));
+    }
+    record.validate().map_err(|refusal| {
+        refuse_component(refusal, format!("component '{}'", record.component_id))
+    })?;
+    match stored_record(
+        view,
+        node_id,
+        is_harness_component_write,
+        |stored| {
+            decode_component_write(stored).map_err(|_| ImprovementLibraryRefusal::RecordMalformed)
+        },
+        |a, b| a.same_writer_fields(b),
+        &record,
+        "HarnessVersionImmutable",
+    )? {
+        Some(true) => return Ok(Admission::Replay),
+        Some(false) => unreachable!("stored_record refuses a mutable rewrite"),
+        None => {}
+    }
+    // A version is current only by a champion pointer move (R801.7), so the
+    // write is related to no other version.
+    Ok(Admission::New { head: None })
+}
+
+/// The graph-relative admission of one harness-lesson write (R802.4).
+fn lesson_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+    engine_fills_pointer: bool,
+) -> Result<Admission, String> {
+    let record = decode_lesson_write(props)
+        .map_err(|refusal| refuse_improvement(refusal, "harness lesson record".to_string()))?;
+    if record.node_id() != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::ContentDigestMismatch,
+            format!(
+                "node id '{node_id}' does not match the lesson's content address '{}'",
+                record.node_id()
+            ),
+        ));
+    }
+    record.validate().map_err(|refusal| {
+        refuse_improvement(
+            refusal,
+            format!(
+                "task class '{}', deficiency '{}'",
+                record.task_class, record.deficiency
+            ),
+        )
+    })?;
+    match stored_record(
+        view,
+        node_id,
+        is_harness_lesson_write,
+        decode_lesson_write,
+        |a, b| a.same_writer_fields(b),
+        &record,
+        "HarnessRecordImmutable",
+    )? {
+        Some(true) => return Ok(Admission::Replay),
+        Some(false) => unreachable!("stored_record refuses a mutable rewrite"),
+        None => {}
+    }
+    // The lesson's evidence runs are the run nodes the graph (or this same
+    // write) holds; a lesson that cites a run the store does not have has no
+    // evidence (R802.5).
+    for trace in record.evidence_run_ids.iter() {
+        if !view.has(&format!("harness-probe-run:{trace}")) {
+            return Err(refuse_improvement(
+                ImprovementLibraryRefusal::LessonWithoutEvidence,
+                format!("lesson '{node_id}' cites evidence run '{trace}' the graph does not hold"),
+            ));
+        }
+    }
+    // The supersession pointer names the current lesson of the same task
+    // class and deficiency, or nothing when the class and deficiency are new.
+    let head = view.lesson_head(&record.task_class, &record.deficiency);
+    match record.supersedes_id.as_deref() {
+        Some(superseded) => match head.as_deref() {
+            Some(current) if current == superseded => {}
+            Some(current) => {
+                return Err(refuse_improvement(
+                    ImprovementLibraryRefusal::SupersessionStale,
+                    format!(
+                        "task class '{}' deficiency '{}' is current at lesson '{current}', not '{superseded}'",
+                        record.task_class, record.deficiency
+                    ),
+                ))
+            }
+            None => {
+                if !view.has(superseded) {
+                    return Err(refuse_improvement(
+                        ImprovementLibraryRefusal::SupersessionUnknown,
+                        format!(
+                            "lesson '{node_id}' supersedes '{superseded}' the graph does not hold"
+                        ),
+                    ));
+                }
+            }
+        },
+        None if !engine_fills_pointer && head.is_some() => {
+            return Err(refuse_improvement(
+                ImprovementLibraryRefusal::SupersessionStale,
+                format!(
+                    "task class '{}' deficiency '{}' is current at lesson '{}'; a new lesson must name it in `supersedes_id`",
+                    record.task_class,
+                    record.deficiency,
+                    head.expect("head is Some")
+                ),
+            ));
+        }
+        None => {}
+    }
+    Ok(Admission::New { head })
+}
+
+/// The decoded fields of one capability-gap or desired-enhancement write, as a
+/// JSON object (both kinds carry the same fields), or the refusal text.
+fn decode_gap_facts(props: &Props) -> Result<serde_json::Value, String> {
+    let decoded = if is_capability_gap_write(props) {
+        decode_gap_write(props)
+            .map_err(|_| ())
+            .and_then(|gap| serde_json::to_value(gap).map_err(|_| ()))
+    } else {
+        decode_enhancement_write(props)
+            .map_err(|_| ())
+            .and_then(|enhancement| serde_json::to_value(enhancement).map_err(|_| ()))
+    };
+    decoded.map_err(|()| {
+        refuse_improvement(
+            ImprovementLibraryRefusal::RecordMalformed,
+            "capability gap record".to_string(),
+        )
+    })
+}
+
+/// The graph-relative admission of one capability-gap or desired-enhancement
+/// write (MEDULLA-ORCH-VOCAB-R004.6.2). `None` when the write is neither.
+///
+/// * The record decodes strictly and its node id is its own `node_id`.
+/// * A stored record at the node: a different owner refuses
+///   `GAP_OWNER_DENIED`; an identical record is an idempotent replay; any
+///   other write must be the next revision, else `GAP_REVISION_CONFLICT`.
+/// * The capability, task class and domain it names must be nodes the graph
+///   (or this write) holds, else `GAP_REFERENCE_UNKNOWN`, and nothing is
+///   created.
+fn validate_capability_gap(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    if !is_capability_gap_write(props) && !is_desired_enhancement_write(props) {
+        return Ok(None);
+    }
+    let record = decode_gap_facts(props)?;
+    let text = |value: &serde_json::Value, key: &str| -> String {
+        value
+            .get(key)
+            .and_then(|field| field.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    if text(&record, "node_id") != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::RecordMalformed,
+            format!("node id '{node_id}' does not match the record's own node id"),
+        ));
+    }
+    if let Some(stored_props) = view.props(node_id) {
+        let stored = decode_gap_facts(&stored_props)?;
+        if text(&stored, "owner_principal") != text(&record, "owner_principal") {
+            return Err(format!(
+                "{}: node '{node_id}' belongs to another owner",
+                HarnessVocabularyErrorCode::GapOwnerDenied.as_str()
+            ));
+        }
+        if stored == record {
+            return Ok(Some(Admission::Replay));
+        }
+        let stored_revision = stored.get("revision").and_then(|v| v.as_u64()).unwrap_or(0);
+        let revision = record.get("revision").and_then(|v| v.as_u64()).unwrap_or(0);
+        if revision != stored_revision.saturating_add(1) {
+            return Err(format!(
+                "{}: node '{node_id}' is at revision {stored_revision}; revision {revision} is not the next",
+                HarnessVocabularyErrorCode::GapRevisionConflict.as_str()
+            ));
+        }
+    }
+    for key in ["capability_ref", "task_class_ref", "domain_ref"] {
+        let reference = text(&record, key);
+        if !view.has(&reference) {
+            return Err(format!(
+                "{}: {key} '{reference}' names nothing the graph holds",
+                HarnessVocabularyErrorCode::GapReferenceUnknown.as_str()
+            ));
+        }
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
+/// The graph-relative admission of one adopted-harness write (R802.4).
+fn adoption_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Admission, String> {
+    let record = decode_adopted_harness_write(props)
+        .map_err(|refusal| refuse_improvement(refusal, "adopted harness record".to_string()))?;
+    if record.node_id() != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::ContentDigestMismatch,
+            format!(
+                "node id '{node_id}' does not match the adoption's content address '{}'",
+                record.node_id()
+            ),
+        ));
+    }
+    record.validate().map_err(|refusal| {
+        refuse_improvement(
+            refusal,
+            format!(
+                "agent '{}', task class '{}'",
+                record.agent_ref, record.task_class
+            ),
+        )
+    })?;
+    if stored_replay(
+        view,
+        node_id,
+        is_adopted_harness_write,
+        decode_adopted_harness_write,
+        &record,
+    )? {
+        return Ok(Admission::Replay);
+    }
+    // An adoption supersedes the previous adoption of the same agent and task
+    // class by edge (the caller composes it); the record itself carries no
+    // pointer, so there is nothing to verify head-relative here.
+    Ok(Admission::New { head: None })
+}
+
+/// The graph-relative admission of one harness-contrast write (R802.5).
+fn contrast_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Admission, String> {
+    let record = decode_harness_contrast_write(props)
+        .map_err(|refusal| refuse_improvement(refusal, "harness contrast record".to_string()))?;
+    if record.node_id() != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::ContentDigestMismatch,
+            format!(
+                "node id '{node_id}' does not match the contrast's content address '{}'",
+                record.node_id()
+            ),
+        ));
+    }
+    if record.task_ref.trim().is_empty()
+        || record.run_a_trace_id.trim().is_empty()
+        || record.run_b_trace_id.trim().is_empty()
+    {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::IdentityMissing,
+            format!("contrast '{node_id}' names no task or no probe run"),
+        ));
+    }
+    if stored_replay(
+        view,
+        node_id,
+        is_harness_contrast_write,
+        decode_harness_contrast_write,
+        &record,
+    )? {
+        return Ok(Admission::Replay);
+    }
+    // The contrast's probe runs must be held — by the graph or by this same
+    // write — and agree with it: same trace ids, same conditions digest
+    // (R802.5).
+    let run_a = view.probe_run(&record.run_a_trace_id).ok_or_else(|| {
+        refuse_improvement(
+            ImprovementLibraryRefusal::ContrastConditionsMismatch,
+            format!(
+                "contrast '{node_id}' cites probe run '{}' the graph does not hold",
+                record.run_a_trace_id
+            ),
+        )
+    })?;
+    let run_b = view.probe_run(&record.run_b_trace_id).ok_or_else(|| {
+        refuse_improvement(
+            ImprovementLibraryRefusal::ContrastConditionsMismatch,
+            format!(
+                "contrast '{node_id}' cites probe run '{}' the graph does not hold",
+                record.run_b_trace_id
+            ),
+        )
+    })?;
+    record.validate_against(&run_a, &run_b).map_err(|refusal| {
+        refuse_improvement(
+            refusal,
+            format!("contrast '{node_id}' disagrees with its probe runs"),
+        )
+    })?;
+    Ok(Admission::New { head: None })
+}
+
+/// The graph-relative admission of one harness-probe-run write (R802.5).
+fn probe_run_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Admission, String> {
+    let record = decode_harness_probe_run_write(props)
+        .map_err(|refusal| refuse_improvement(refusal, "harness probe run record".to_string()))?;
+    if record.node_id() != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::RecordMalformed,
+            format!(
+                "node id '{node_id}' does not match probe run '{}' trace identity '{}'",
+                record.trace_id,
+                record.node_id()
+            ),
+        ));
+    }
+    record.validate().map_err(|refusal| {
+        refuse_improvement(refusal, format!("probe run '{node_id}' names no trace"))
+    })?;
+    if stored_replay(
+        view,
+        node_id,
+        is_harness_probe_run_write,
+        decode_harness_probe_run_write,
+        &record,
+    )? {
+        return Ok(Admission::Replay);
+    }
+    Ok(Admission::New { head: None })
+}
+
+/// The `node_type` a run-trace vocabulary node declares.
+fn node_type(props: &Props) -> Option<&str> {
+    props.get("node_type").and_then(|value| value.as_str())
+}
+
+fn refuse_code(code: medulla_types::contract::ServerErrorCode, detail: String) -> String {
+    format!("{}: {}", code.as_str(), detail)
+}
+
+/// The closed `terminationReason` set of `RunTraceTerminationShape`.
+const TERMINATION_REASONS: [&str; 5] = [
+    "final_answer",
+    "context_overflow",
+    "stuck",
+    "step_budget",
+    "error",
+];
+/// The non-negative integer counters of `RunTraceCounterShape`.
+const TRACE_COUNTERS: &[&str] = &[
+    "peakContextTokens",
+    "contextBudgetTokens",
+    "elisionCount",
+    "summarizationCount",
+    "turnCount",
+    "toolCallCount",
+    // MEDULLA-ORCH-VOCAB-R010.101: the four disjoint token counters and the
+    // completion time the usage window reads.
+    "uncachedInputTokens",
+    "cachedInputTokens",
+    "outputTokens",
+    "reasoningOutputTokens",
+    "completedAtMs",
+];
+
+/// MEDULLA-ORCH-VOCAB-R010.101: the usage attribution of a trace is text.
+const TRACE_ATTRIBUTION: &[&str] = &["projectId", "agentId", "accountingRevision"];
+
+/// The first violated run-trace shape of `orchestration-v1.shapes.ttl`, if any.
+/// Optional measurements stay absent; a recorded zero is valid.
+fn run_trace_violation(props: &Props) -> Option<(&'static str, String)> {
+    if let Some(reason) = props.get("terminationReason") {
+        if !reason
+            .as_str()
+            .is_some_and(|reason| TERMINATION_REASONS.contains(&reason))
+        {
+            return Some((
+                "RunTraceTerminationShape",
+                format!("terminationReason {reason} is not in the closed set"),
+            ));
+        }
+    }
+    for key in TRACE_ATTRIBUTION {
+        if let Some(value) = props.get(*key) {
+            if value.as_str().is_none_or(|text| text.trim().is_empty()) {
+                return Some((
+                    "RunTraceCounterShape",
+                    format!("{key} must be a non-empty string"),
+                ));
+            }
+        }
+    }
+    for counter in TRACE_COUNTERS {
+        if let Some(value) = props.get(*counter) {
+            if value.as_u64().is_none() {
+                return Some((
+                    "RunTraceCounterShape",
+                    format!("{counter} must be a non-negative integer"),
+                ));
+            }
+        }
+    }
+    if let Some(cost) = props.get("costUsd") {
+        let parsed = match cost {
+            serde_json::Value::String(text) => text.parse::<f64>().ok(),
+            other => other.as_f64(),
+        };
+        if !parsed.is_some_and(|cost| cost.is_finite() && cost >= 0.0) {
+            return Some((
+                "RunTraceCounterShape",
+                "costUsd must be a non-negative decimal".to_string(),
+            ));
+        }
+    }
+    let peak = props.get("peakContextTokens").and_then(|v| v.as_u64());
+    let budget = props.get("contextBudgetTokens").and_then(|v| v.as_u64());
+    if let (Some(peak), Some(budget)) = (peak, budget) {
+        let overflow =
+            props.get("terminationReason").and_then(|v| v.as_str()) == Some("context_overflow");
+        if peak > budget && !overflow {
+            return Some((
+                "RunTraceBudgetShape",
+                "Peak context exceeds its budget without context_overflow.".to_string(),
+            ));
+        }
+    }
+    None
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.15 — a `RunTrace` node is verified against the three
+/// run-trace shapes; a violation refuses with `RUN_TRACE_SHAPE_INVALID`, names
+/// the shape, and writes nothing. A valid trace is not a harness record, so it
+/// passes through (`None`).
+fn validate_run_trace_node(
+    props: &Props,
+    walkthrough: WalkthroughChecks,
+) -> Result<Option<Admission>, String> {
+    if node_type(props) != Some("RunTrace") {
+        return Ok(None);
+    }
+    if let Some((shape, detail)) = run_trace_violation(props) {
+        return Err(refuse_code(
+            medulla_types::contract::ServerErrorCode::RunTraceShapeInvalid,
+            format!("{shape}: {detail}"),
+        ));
+    }
+    validate_step_records(props)?;
+    validate_walkthrough(props, walkthrough)?;
+    Ok(None)
+}
+
+/// MEDULLA-ORCH-VOCAB-R808 — an `AgentDefinition` node that carries a `knowledgeScope` must
+/// hold a well-formed scope whose knowledge sets are nodes of the writer's graph (and of its
+/// tenant, when both name one). A foreign tenant's set answers `SCOPE_SET_UNKNOWN`
+/// byte-identically to a missing one. A definition with no scope, and any other node, passes.
+fn validate_agent_definition_node(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<(), String> {
+    use medulla_work_types::orchestration::knowledge_scope::{
+        parse_knowledge_scope, unknown_set, KNOWLEDGE_SCOPE_PROPERTY,
+    };
+    // An agent definition names its class as `type` (the retrieval read side) or `node_type`.
+    let class = props
+        .get("type")
+        .and_then(|value| value.as_str())
+        .or_else(|| node_type(props));
+    if class != Some("AgentDefinition") {
+        return Ok(());
+    }
+    let Some(raw) = props.get(KNOWLEDGE_SCOPE_PROPERTY) else {
+        return Ok(());
+    };
+    let scope = parse_knowledge_scope(node_id, raw)?;
+    let tenant = props.get("tenant_id").and_then(|value| value.as_str());
+    let holds = |set: &str| {
+        view.props(set).is_some_and(|stored| {
+            match (
+                tenant,
+                stored.get("tenant_id").and_then(|value| value.as_str()),
+            ) {
+                (Some(writer), Some(owner)) => writer == owner,
+                _ => true,
+            }
+        })
+    };
+    match unknown_set(&scope, holds) {
+        Some(refusal) => Err(refusal),
+        None => Ok(()),
+    }
+}
+
+/// The result of the repository-index and blob checks the `AddNode` handler ran
+/// through the server-api read seams before admission (MEDULLA-ORCH-VOCAB-R013.7.2).
+/// Admission itself stays graph-only: it reads this argument, never a store.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalkthroughChecks {
+    /// Every read check passed, or the write carries no walkthrough.
+    Resolved,
+    /// A read check failed.
+    Refused(WalkthroughReadRefusal),
+    /// The write path has no read seams (the change-envelope path): a walkthrough
+    /// cannot be resolved there and is refused as an unresolved revision.
+    NotRun,
+}
+
+/// Run the read checks of a walkthrough-bearing `AddNode` through the injected
+/// readers. A write without a walkthrough is `Resolved`; a walkthrough that does
+/// not decode is left to admission to refuse by shape.
+pub fn resolve_walkthrough_checks(
+    method: &Method,
+    tenant: &str,
+    blob_owner: &str,
+    readers: Option<&WalkthroughReaders>,
+) -> WalkthroughChecks {
+    let Method::AddNode {
+        properties_msgpack, ..
+    } = method
+    else {
+        return WalkthroughChecks::Resolved;
+    };
+    let props = decode_props(properties_msgpack);
+    let Some(manifest) = decode_walkthrough(&props) else {
+        return WalkthroughChecks::Resolved;
+    };
+    match readers {
+        Some(readers) => match readers.resolve(tenant, blob_owner, &manifest) {
+            Ok(()) => WalkthroughChecks::Resolved,
+            Err(refusal) => WalkthroughChecks::Refused(refusal),
+        },
+        None => WalkthroughChecks::Refused(WalkthroughReadRefusal::RevisionStale),
+    }
+}
+
+/// The `CodeWalkthrough` a `RunTrace` node carries under `walkthrough`, if it
+/// decodes.
+fn decode_walkthrough(
+    props: &Props,
+) -> Option<medulla_result_types::outcome_bundle::CodeWalkthrough> {
+    if node_type(props) != Some("RunTrace") {
+        return None;
+    }
+    serde_json::from_value(props.get("walkthrough")?.clone()).ok()
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.7.2 — the graph-only validation of a walkthrough
+/// manifest on a `RunTrace` write. A malformed manifest, a section with no source
+/// ref, a note index that is duplicated or gapped, and a note outside the run each
+/// refuse with their own code and store nothing; the read checks arrive as the
+/// resolved `checks` argument.
+fn validate_walkthrough(props: &Props, checks: WalkthroughChecks) -> Result<(), String> {
+    use medulla_types::contract::ServerErrorCode as Code;
+    let Some(raw) = props.get("walkthrough") else {
+        return Ok(());
+    };
+    let manifest: medulla_result_types::outcome_bundle::CodeWalkthrough =
+        serde_json::from_value(raw.clone()).map_err(|error| {
+            refuse_code(
+                Code::RunTraceShapeInvalid,
+                format!("walkthrough does not decode: {error}"),
+            )
+        })?;
+    manifest
+        .validate_shape()
+        .map_err(|detail| refuse_code(Code::RunTraceShapeInvalid, detail))?;
+    for section in &manifest.ordered_sections {
+        if section.source_refs.is_empty() {
+            return Err(refuse_code(
+                Code::WalkthroughSectionUncited,
+                format!("section {} cites no source", section.ordinal),
+            ));
+        }
+    }
+    let steps = props
+        .get("steps")
+        .and_then(|steps| steps.as_array())
+        .map(|steps| steps.len() as u64);
+    for (position, note) in manifest.execution_notes.iter().enumerate() {
+        if u64::from(note.step_index) != position as u64 {
+            return Err(refuse_code(
+                Code::WalkthroughNoteOrderInvalid,
+                format!(
+                    "note at position {position} carries step index {}",
+                    note.step_index
+                ),
+            ));
+        }
+    }
+    for note in &manifest.execution_notes {
+        let outside_steps = steps.is_some_and(|count| u64::from(note.step_index) >= count);
+        if note.run_id != manifest.run_id || outside_steps {
+            return Err(refuse_code(
+                Code::WalkthroughSpanOutsideRun,
+                format!(
+                    "span '{}' at step {} is not in run '{}'",
+                    note.span_id, note.step_index, manifest.run_id
+                ),
+            ));
+        }
+    }
+    match checks {
+        WalkthroughChecks::Resolved => Ok(()),
+        WalkthroughChecks::Refused(refusal) => Err(refuse_code(
+            refusal.code(),
+            "the walkthrough does not resolve against the repository index or blob store"
+                .to_string(),
+        )),
+        WalkthroughChecks::NotRun => Err(refuse_code(
+            Code::WalkthroughRevisionStale,
+            "a walkthrough is written through AddNode, where its revision resolves".to_string(),
+        )),
+    }
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.3/R013.4 — the `steps` of a `RunTrace` are checked
+/// in order before the trace is admitted: a malformed digest refuses with
+/// `STEP_DIGEST_INVALID`, a skipped or repeated index with
+/// `STEP_ORDER_INVALID`, and a refusal writes nothing. A valid trace stores
+/// its steps in the order given.
+fn validate_step_records(props: &Props) -> Result<(), String> {
+    let Some(steps) = props.get("steps") else {
+        return Ok(());
+    };
+    let Some(steps) = steps.as_array() else {
+        return Err(refuse_code(
+            medulla_types::contract::ServerErrorCode::RunTraceShapeInvalid,
+            "steps must be an ordered list of step records".to_string(),
+        ));
+    };
+    // R013.5: `recordedBy` is engine-stamped after admission; a client-sent
+    // value is overwritten, so it is not part of the step record checked here.
+    let steps: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|step| {
+            let mut step = step.clone();
+            if let Some(object) = step.as_object_mut() {
+                object.remove("recordedBy");
+            }
+            step
+        })
+        .collect();
+    medulla_result_types::outcome_bundle::validate_step_records(&steps)
+        .map(|_| ())
+        .map_err(|(code, detail)| refuse_code(code, detail))
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.5 — every stored step of an admitted `RunTrace`
+/// carries `recordedBy`, the verified principal of the request. A client-sent
+/// `recordedBy` is overwritten: the actor is never a client field.
+fn stamp_step_actor(props: &Props, principal: &str) -> Option<Props> {
+    if node_type(props) != Some("RunTrace") {
+        return None;
+    }
+    let steps = props.get("steps")?.as_array()?;
+    let stamped: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|step| {
+            let mut step = step.clone();
+            if let Some(object) = step.as_object_mut() {
+                object.insert("recordedBy".into(), serde_json::json!(principal));
+            }
+            step
+        })
+        .collect();
+    let mut out = props.clone();
+    out.insert("steps".into(), serde_json::Value::Array(stamped));
+    Some(out)
+}
+
+/// Engine-owned keys stripped before a run-trace vocabulary record decodes.
+const ENGINE_KEYS: [&str; 4] = ["node_type", "tx_from", "error_rate", "run_trace_ref"];
+
+fn decode_record<T: for<'de> serde::Deserialize<'de>>(props: &Props) -> Result<T, String> {
+    let mut record = props.clone();
+    for key in ENGINE_KEYS {
+        record.remove(key);
+    }
+    serde_json::from_value(serde_json::Value::Object(record)).map_err(|err| err.to_string())
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.18.2 — ingest one observation window. The window
+/// links to its `:RunTrace` (`run_trace_ref`, stamped with the error rate by
+/// [`stamp_new_record`]); a run revision other than the stored trace's refuses
+/// with `WINDOW_RUN_REVISION_MISMATCH`, a reused window id with different
+/// content with `WINDOW_CONTENT_CONFLICT`, and an equal re-send is a replay.
+fn validate_run_observation(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    use medulla_types::contract::ServerErrorCode;
+    use medulla_work_types::run_observation::{RunObservationWindow, WINDOW_SAMPLES_MAX_DEFAULT};
+    if node_type(props) != Some("RunObservationWindow") {
+        return Ok(None);
+    }
+    let window: RunObservationWindow = decode_record(props)
+        .map_err(|err| format!("HarnessRecordMalformed: observation window '{node_id}': {err}"))?;
+    window
+        .validate(WINDOW_SAMPLES_MAX_DEFAULT)
+        .map_err(|err| format!("HarnessRecordMalformed: observation window '{node_id}': {err}"))?;
+    if window.window_id != node_id {
+        return Err(format!(
+            "HarnessRecordMalformed: node id '{node_id}' is not window '{}'",
+            window.window_id
+        ));
+    }
+    if let Some(trace) = view.props(&window.run_id) {
+        let stored_revision = trace.get("run_revision").and_then(|v| v.as_u64());
+        if stored_revision.is_some_and(|revision| revision != window.run_revision) {
+            return Err(refuse_code(
+                ServerErrorCode::WindowRunRevisionMismatch,
+                format!(
+                    "window '{node_id}' names run revision {} of '{}'",
+                    window.run_revision, window.run_id
+                ),
+            ));
+        }
+    }
+    if let Some(stored) = view.props(node_id) {
+        let same = decode_record::<RunObservationWindow>(&stored).is_ok_and(|s| s == window);
+        if !same {
+            return Err(refuse_code(
+                ServerErrorCode::WindowContentConflict,
+                format!("window '{node_id}' already holds different content"),
+            ));
+        }
+        return Ok(Some(Admission::Replay));
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.700/R009.701 — admit one durable run unit. A unit
+/// without a `run_id` refuses with `DURABLE_UNIT_RUN_MISSING`; a unit id reused
+/// with a different run refuses with `DURABLE_UNIT_RUN_CONFLICT`; an equal
+/// re-send is a replay. Another tenant's run is not in this view, so it reads
+/// as absent rather than as a conflict.
+fn validate_durable_unit(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    use medulla_types::contract::ServerErrorCode;
+    use medulla_types::durable_unit::DurableUnit;
+    if node_type(props) != Some("DurableUnit") {
+        return Ok(None);
+    }
+    let run_missing = props
+        .get("run_id")
+        .and_then(|v| v.as_str())
+        .is_none_or(|run| run.trim().is_empty());
+    if run_missing {
+        return Err(refuse_code(
+            ServerErrorCode::DurableUnitRunMissing,
+            format!("durable unit '{node_id}' names no run_id"),
+        ));
+    }
+    let unit: DurableUnit = decode_record(props)
+        .map_err(|err| format!("HarnessRecordMalformed: durable unit '{node_id}': {err}"))?;
+    if unit.unit_id != node_id {
+        return Err(format!(
+            "HarnessRecordMalformed: node id '{node_id}' is not unit '{}'",
+            unit.unit_id
+        ));
+    }
+    if let Some(stored) = view.props(node_id) {
+        if let Ok(prior) = decode_record::<DurableUnit>(&stored) {
+            if prior.run_id != unit.run_id {
+                return Err(refuse_code(
+                    ServerErrorCode::DurableUnitRunConflict,
+                    format!(
+                        "unit '{node_id}' belongs to run '{}', not '{}'",
+                        prior.run_id, unit.run_id
+                    ),
+                ));
+            }
+            if prior == unit {
+                return Ok(Some(Admission::Replay));
+            }
+        }
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
+/// The graph-relative admission of one AddNode of ANY harness-record kind.
+/// `None` when the node is not a harness record (the write passes through).
+fn harness_add_node_admission(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+    engine_fills_pointer: bool,
+    walkthrough: WalkthroughChecks,
+) -> Result<Option<Admission>, String> {
+    validate_run_trace_node(props, walkthrough)?;
+    validate_agent_definition_node(view, node_id, props)?;
+    if let Some(admission) = validate_run_observation(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
+    if let Some(admission) = validate_durable_unit(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
+    if is_harness_component_write(props) {
+        return Ok(Some(component_admission(view, node_id, props)?));
+    }
+    if is_harness_lesson_write(props) {
+        return Ok(Some(lesson_admission(
+            view,
+            node_id,
+            props,
+            engine_fills_pointer,
+        )?));
+    }
+    if let Some(admission) = validate_capability_gap(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
+    if is_adopted_harness_write(props) {
+        return Ok(Some(adoption_admission(view, node_id, props)?));
+    }
+    if is_harness_contrast_write(props) {
+        return Ok(Some(contrast_admission(view, node_id, props)?));
+    }
+    if is_harness_probe_run_write(props) {
+        return Ok(Some(probe_run_admission(view, node_id, props)?));
+    }
+    Ok(None)
+}
+
+/// The stamped, re-encoded blob of one admitted `Admission::New` harness
+/// write (MEDULLA-ORCH-VOCAB-R801.3/R802.4): the transaction time is stamped, and
+/// when a lesson's writer left the `supersedes_id` pointer absent the new
+/// lesson is linked to the current one. The record already decoded and validated in
+/// the admission; `tx_from` is an engine-owned key the decoders strip, so
+/// the stamped object decodes to the same record.
+fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Vec<u8>, String> {
+    let lesson = is_harness_lesson_write(props);
+    let mut stamped = props.clone();
+    stamped.insert("tx_from".into(), serde_json::json!(tx_now));
+    if node_type(props) == Some("RunObservationWindow") {
+        // R009.18.2: the window links to its trace, and a zero
+        // `eligible_attempts` stores the error rate as Unknown.
+        let window: medulla_work_types::run_observation::RunObservationWindow =
+            decode_record(props).map_err(|err| format!("HarnessRecordMalformed: {err}"))?;
+        stamped.insert("run_trace_ref".into(), serde_json::json!(window.run_id));
+        stamped.insert(
+            "error_rate".into(),
+            serde_json::to_value(window.error_rate())
+                .map_err(|err| format!("HarnessRecordMalformed: {err}"))?,
+        );
+    }
+    // A lesson links to the current one of its claim history; a component
+    // record carries no pointer (R801.7).
+    if lesson {
+        if let Some(pointer_target) = head {
+            let pointer_absent = decode_lesson_write(&stamped)
+                .map(|record| record.supersedes_id.is_none())
+                .unwrap_or(false);
+            if pointer_absent {
+                stamped.insert("supersedes_id".into(), serde_json::json!(pointer_target));
+            }
+        }
+    }
+    rmp_serde::to_vec_named(&serde_json::Value::Object(stamped)).map_err(|error| {
+        format!("HarnessRecordMalformed: cannot re-encode stamped record: {error}")
+    })
+}
+
+/// MEDULLA-ORCH-VOCAB-R801.3/R802.4 — the harness-record write attaches to the
+/// existing AddNode path at the pre-commit point, beside the owner-id stamp.
+/// A non-harness `AddNode` passes through untouched; a harness write comes
+/// back stamped with the transaction time and (when the writer left the
+/// pointer absent) linked to the current record; an idempotent replay comes
+/// back as the stored blob, byte-exact.
+pub fn direct_add_node(
+    method: &Method,
+    core: &GraphCore,
+    tx_now: u64,
+    principal: Option<&str>,
+) -> Result<Method, String> {
+    direct_add_node_checked(method, core, tx_now, principal, WalkthroughChecks::Resolved)
+}
+
+/// [`direct_add_node`] with the walkthrough read checks the `AddNode` handler
+/// resolved through the server-api read seams (MEDULLA-ORCH-VOCAB-R013.7.2).
+pub fn direct_add_node_checked(
+    method: &Method,
+    core: &GraphCore,
+    tx_now: u64,
+    principal: Option<&str>,
+    walkthrough: WalkthroughChecks,
+) -> Result<Method, String> {
+    let Method::AddNode {
+        node_id,
+        properties_msgpack,
+    } = method
+    else {
+        return Ok(method.clone());
+    };
+    let props = decode_props(properties_msgpack);
+    let empty: BTreeMap<String, Props> = BTreeMap::new();
+    let view = HarnessView {
+        core,
+        pending: &empty,
+    };
+    let Some(admission) = harness_add_node_admission(&view, node_id, &props, true, walkthrough)?
+    else {
+        // R013.5: a valid trace is not a harness record, but its steps are
+        // stamped with the writing principal before they are stored.
+        if let Some(stamped) = stamp_step_actor(&props, principal.unwrap_or("anonymous")) {
+            let blob = rmp_serde::to_vec_named(&serde_json::Value::Object(stamped))
+                .map_err(|error| format!("HarnessRecordMalformed: cannot encode steps: {error}"))?;
+            return Ok(Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: blob,
+            });
+        }
+        return Ok(method.clone());
+    };
+    match admission {
+        Admission::Replay => {
+            // The stored blob (its original stamps) is the write, byte-exact.
+            let stored = core
+                .get_node_properties(node_id)
+                .expect("admission saw the stored node");
+            Ok(Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: stored,
+            })
+        }
+        Admission::New { head } => {
+            let blob = stamp_new_record(&props, head.as_deref(), tx_now)?;
+            Ok(Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: blob,
+            })
+        }
+    }
+}
+
+/// The pending state of one harness-record write: the harness nodes its ops
+/// have admitted so far, in application order, with the field merges of its
+/// CASes applied. One state spans an `ApplyChangeEnvelope`, and the
+/// envelopes of an `ApplyChangeEnvelopes` batch in order.
+#[derive(Default)]
+pub struct HarnessBoundaryState {
+    pending: BTreeMap<String, Props>,
+}
+
+impl HarnessBoundaryState {
+    /// The engine-owned write markers, by record kind — the admission
+    /// dispatch key.
+    fn is_harness_record(props: &Props) -> bool {
+        is_harness_component_write(props)
+            || is_harness_lesson_write(props)
+            || is_adopted_harness_write(props)
+            || is_harness_contrast_write(props)
+            || is_harness_probe_run_write(props)
+            || is_capability_gap_write(props)
+            || is_desired_enhancement_write(props)
+    }
+
+    /// The envelope `AddNode` op: a harness record must decode, validate,
+    /// carry its `tx_from` stamp, and name its supersession — then it joins
+    /// the pending set for the later ops' supersession checks. Non-harness
+    /// and non-record ops pass through.
+    fn check_add_node(
+        &mut self,
+        node_id: &str,
+        properties_msgpack: &[u8],
+        core: &GraphCore,
+    ) -> Result<(), String> {
+        let props = decode_props(properties_msgpack);
+        if !Self::is_harness_record(&props) {
+            return Ok(());
+        }
+        let view = HarnessView {
+            core,
+            pending: &self.pending,
+        };
+        let Some(admission) =
+            harness_add_node_admission(&view, node_id, &props, false, WalkthroughChecks::NotRun)?
+        else {
+            return Ok(());
+        };
+        if matches!(admission, Admission::New { .. }) && tx_stamp(&props).is_none() {
+            let code = if is_harness_component_write(&props) {
+                "HarnessVersionWithoutStamp"
+            } else {
+                "HarnessRecordWithoutStamp"
+            };
+            return Err(format!(
+                "{code}: harness record '{node_id}' must carry its transaction-time stamp `tx_from`"
+            ));
+        }
+        self.pending.insert(node_id.to_string(), props);
+        Ok(())
+    }
+
+    /// The envelope `CompareAndSetNodeFields` op: a field merge on a harness
+    /// record must be visible to the supersession checks of the write's later
+    /// ops, except on a component version, which refuses (R801.7). Non-harness
+    /// nodes pass through.
+    fn check_cas(
+        &mut self,
+        node_id: &str,
+        updates_msgpack: &[u8],
+        core: &GraphCore,
+    ) -> Result<(), String> {
+        let base = match self.pending.get(node_id) {
+            Some(props) => props.clone(),
+            None => {
+                let Some(stored) = core.get_node_properties(node_id) else {
+                    return Ok(());
+                };
+                let stored = decode_props(&stored);
+                if !Self::is_harness_record(&stored) {
+                    return Ok(());
+                }
+                stored
+            }
+        };
+        // A published version never changes: currency is the champion pointer,
+        // so no compare-and-set may close a window on a component node (R801.7).
+        if is_harness_component_write(&base) {
+            return Err(format!(
+                "HarnessVersionImmutable: harness component version '{node_id}' is immutable"
+            ));
+        }
+        let mut merged = base;
+        for (key, value) in &decode_props(updates_msgpack) {
+            merged.insert(key.clone(), value.clone());
+        }
+        self.pending.insert(node_id.to_string(), merged);
+        Ok(())
+    }
+
+    /// MEDULLA-ORCH-VOCAB-R801.3/R802.4 — check one envelope's harness-record
+    /// writes op by op, in application order, against the graph as the write
+    /// sees it. The envelope bytes are byte-stable for replay, so the engine
+    /// verifies instead of mutating: each record decodes and validates,
+    /// carries its `tx_from` stamp (the generated client stamps it,
+    /// MEDULLA-DURABLE-KERNEL-R078/R081), and its supersession pointer names the
+    /// current record — which may itself be a PENDING write of this same
+    /// batch. Non-harness ops pass through.
+    pub fn check_envelope(
+        &mut self,
+        envelope: &ChangeEnvelope,
+        core: &GraphCore,
+    ) -> Result<(), String> {
+        for operation in &envelope.mutation.operations {
+            match &operation.method {
+                Method::AddNode {
+                    node_id,
+                    properties_msgpack,
+                } => self.check_add_node(node_id, properties_msgpack, core)?,
+                Method::CompareAndSetNodeFields {
+                    node_id,
+                    updates_msgpack,
+                    ..
+                } => self.check_cas(node_id, updates_msgpack, core)?,
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+pub mod tests;

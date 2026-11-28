@@ -1,15 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy)]
-pub(super) struct GraphOpsContext<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) read_authority: &'a GraphReadAuthority,
-    pub(super) core: &'a Arc<GraphCore>,
-    pub(super) raw_core: &'a Arc<GraphCore>,
-    pub(super) raw_ledger_len: u64,
-}
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 pub(super) async fn try_handle_graph_domains(
     ctx: GraphOpsContext<'_>,
@@ -22,9 +13,20 @@ pub(super) async fn try_handle_graph_domains(
     method = super::context_facts::try_handle_context_facts(ctx, method).await?;
     method = super::read_span::try_handle_read_span(ctx, method).await?;
     method = super::atom_context::try_handle_atom_context(ctx, method).await?;
-    method = super::architecture_exchange::try_handle_architecture_export(ctx, method).await?;
-    method = super::process_compile::try_handle_process_model_export(ctx, method).await?;
-    method = super::process_document::try_handle_process_document_export(ctx, method).await?;
+    method =
+        medulla_h_graph_gateway::graph_ops::architecture_exchange::try_handle_architecture_export(
+            ctx, method,
+        )
+        .await?;
+    method = medulla_h_graph_gateway::graph_ops::process_compile::try_handle_process_model_export(
+        ctx, method,
+    )
+    .await?;
+    method =
+        medulla_h_graph_gateway::graph_ops::process_document::try_handle_process_document_export(
+            ctx, method,
+        )
+        .await?;
     #[cfg(feature = "streaming")]
     {
         method = super::graph_change_feed::try_handle_graph_change_feed(ctx, method).await?;
@@ -35,16 +37,26 @@ pub(super) async fn try_handle_graph_domains(
     method = super::broker::try_handle_streams(ctx, method).await?;
     method = super::broker::try_handle_publisher_confirms(ctx, method).await?;
     method = super::memory::try_handle_memory_maintenance(ctx, method).await?;
-    method = super::memory_surface::try_handle_memory_surface(ctx, method).await?;
-    method = super::assistant_profile::try_handle_assistant_profile(ctx, method).await?;
+    method =
+        medulla_h_graph_gateway::graph_ops::memory_surface::try_handle_memory_surface(ctx, method)
+            .await?;
+    method = medulla_h_graph_gateway::graph_ops::assistant_profile::try_handle_assistant_profile(
+        ctx, method,
+    )
+    .await?;
     method = super::participant_read::try_handle_participant_read(ctx, method).await?;
-    method = super::harness_edit::try_handle_harness_edit(ctx, method).await?;
-    method = super::observation_state::try_handle_observation_state(ctx, method).await?;
+    method = medulla_h_graph_gateway::graph_ops::harness_edit::try_handle_harness_edit(ctx, method)
+        .await?;
+    method = medulla_h_graph_gateway::graph_ops::observation_state::try_handle_observation_state(
+        ctx, method,
+    )
+    .await?;
     method = super::memory::try_handle_summary_reads(ctx, method).await?;
     method = super::memory::try_handle_scene_graph(ctx, method).await?;
     method = super::memory::try_handle_trajectory_memory(ctx, method).await?;
     method = super::nodes::try_handle_node_batch(ctx, method).await?;
-    method = super::semantic::try_handle_semantic_compute(ctx, method).await?;
+    method = medulla_h_graph_gateway::graph_ops::semantic::try_handle_semantic_compute(ctx, method)
+        .await?;
     method = super::edges::try_handle_edge_writes(ctx, method).await?;
     method = super::edges::try_handle_edge_reads(ctx, method).await?;
     method = super::edges::try_handle_graph_counts(ctx, method).await?;
@@ -57,15 +69,28 @@ pub(super) async fn try_handle_graph_domains(
     method = super::memory::try_handle_lifecycle_context(ctx, method).await?;
     method = super::memory::try_handle_ledger(ctx, method).await?;
     method = super::subgraph::try_handle_subgraph_reads(ctx, method).await?;
-    method = super::finance_records::handle_record_get(ctx, method).await?;
-    method = super::finance_receipts::handle_receipt_list(ctx, method).await?;
+    method =
+        medulla_h_graph_gateway::graph_ops::finance_records::handle_record_get(ctx, method).await?;
+    method = medulla_h_graph_gateway::graph_ops::finance_receipts::handle_receipt_list(ctx, method)
+        .await?;
     #[cfg(feature = "finance")]
     {
-        method = super::finance_accounting::handle_project(ctx, method).await?;
-        method = super::finance_performance::handle_performance(ctx, method).await?;
+        method =
+            medulla_h_graph_gateway::graph_ops::finance_accounting::handle_project(ctx, method)
+                .await?;
+        method = medulla_h_graph_gateway::graph_ops::finance_performance::handle_performance(
+            ctx, method,
+        )
+        .await?;
         method = super::finance_regime::handle_regime(ctx, method).await?;
-        method = super::finance_order_limit_check::handle_check(ctx, method).await?;
-        method = super::finance_order_proposal::handle_receipt_get(ctx, method).await?;
+        method = medulla_h_graph_gateway::graph_ops::finance_order_limit_check::handle_check(
+            ctx, method,
+        )
+        .await?;
+        method = medulla_h_graph_gateway::graph_ops::finance_order_proposal::handle_receipt_get(
+            ctx, method,
+        )
+        .await?;
     }
     method = super::union::try_handle_cross_graph_union(ctx, method).await?;
     let _ = super::union::try_handle_subgraph_comparison(ctx, method).await?;

@@ -731,7 +731,7 @@ async fn discovered_for(
         )
         .unwrap()
     };
-    let response = medulla_h_graph::graph_ops::try_handle(
+    let response = medulla_h_graph::graph_ops::terminal::try_handle(
         &h.state,
         7,
         None,

@@ -4,7 +4,7 @@
 use std::time::Instant;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_graph::harness_admission::direct_add_node;
+use medulla_h_graph_gateway::harness_admission::direct_add_node;
 use medulla_protocol_types::protocol::Method;
 
 /// Admit write `index` through the direct AddNode path at `tx_now`, project

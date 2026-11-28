@@ -2,10 +2,6 @@
 //! They run the admission, recall and export rules over one graph holding two
 //! tenants, and check how the three methods are routed.
 
-use super::memory_surface::{
-    absent_record, admit_remember, export, node_blob, promotion_support_refusal, read_usage,
-    recall, tenant_max_bytes, Admitted,
-};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::is_gateway_routed;
@@ -13,6 +9,17 @@ use medulla_types::contract::{ResourceId, TenantId};
 use medulla_work_types::memory::{
     MediaAttachment, MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord,
     MemoryRememberRequest, MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
+};
+use {
+    medulla_h_graph_gateway::graph_ops::memory_surface::absent_record,
+    medulla_h_graph_gateway::graph_ops::memory_surface::admit_remember,
+    medulla_h_graph_gateway::graph_ops::memory_surface::export,
+    medulla_h_graph_gateway::graph_ops::memory_surface::node_blob,
+    medulla_h_graph_gateway::graph_ops::memory_surface::promotion_support_refusal,
+    medulla_h_graph_gateway::graph_ops::memory_surface::read_usage,
+    medulla_h_graph_gateway::graph_ops::memory_surface::recall,
+    medulla_h_graph_gateway::graph_ops::memory_surface::tenant_max_bytes,
+    medulla_h_graph_gateway::graph_ops::memory_surface::Admitted,
 };
 
 pub(super) const NOW: i64 = 1_000_000;

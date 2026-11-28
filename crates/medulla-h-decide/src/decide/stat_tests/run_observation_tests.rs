@@ -2,7 +2,7 @@
 //! `AddNode` admission.
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_graph::harness_admission::direct_add_node;
+use medulla_h_graph_gateway::harness_admission::direct_add_node;
 use medulla_protocol_types::protocol::Method;
 
 fn unknown() -> serde_json::Value {

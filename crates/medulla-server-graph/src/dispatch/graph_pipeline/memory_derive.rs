@@ -20,9 +20,6 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use medulla_h_graph::graph_ops::participant_derive::{
-    observation_configs, payload_node_id, payload_write, read_payload, session_turns, SessionTurn,
-};
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::knob_config::knobs;
@@ -39,6 +36,14 @@ use {
     medulla_decision_stats_records::decision::participant_derive::DeriveKey,
     medulla_decision_stats_records::decision::participant_derive::DerivePayload,
     medulla_decision_stats_records::decision::participant_derive::DueRule,
+};
+use {
+    medulla_h_graph_gateway::graph_ops::participant_derive::observation_configs,
+    medulla_h_graph_gateway::graph_ops::participant_derive::payload_node_id,
+    medulla_h_graph_gateway::graph_ops::participant_derive::payload_write,
+    medulla_h_graph_gateway::graph_ops::participant_derive::read_payload,
+    medulla_h_graph_gateway::graph_ops::participant_derive::session_turns,
+    medulla_h_graph_gateway::graph_ops::participant_derive::SessionTurn,
 };
 
 /// The durable queue every derive task goes to.
@@ -87,9 +92,9 @@ pub(crate) async fn fresh_memory_ids(
     let id = request.record.memory_id.as_str();
     let stored = entry
         .core
-        .get_node_properties(&medulla_h_graph::graph_ops::memory_surface::node_id(
-            tenant, id,
-        ))
+        .get_node_properties(
+            &medulla_h_graph_gateway::graph_ops::memory_surface::node_id(tenant, id),
+        )
         .is_some();
     if stored || request.record.speaker.is_none() {
         BTreeSet::new()
@@ -129,7 +134,9 @@ pub(crate) async fn enqueue_derivations(request: EnqueueRequest<'_>) -> DeriveOu
     let sessions: BTreeSet<String> = request
         .fresh
         .iter()
-        .filter_map(|id| medulla_h_graph::graph_ops::memory_surface::session_of(&core, &tenant, id))
+        .filter_map(|id| {
+            medulla_h_graph_gateway::graph_ops::memory_surface::session_of(&core, &tenant, id)
+        })
         .collect();
     for session in sessions {
         let turns = session_turns(&core, &tenant, &session);

@@ -55,7 +55,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T048 [US5] MEDULLA-SRC-AUTH-R010.6 Hot-path proof for source roles
 - [ ] T049 [US5] MEDULLA-SRC-AUTH-R011.1 Model
 - [ ] T050 [US5] MEDULLA-SRC-AUTH-R011.2 Behavior
-- [ ] T051 [US5] MEDULLA-SRC-AUTH-R011.3 Stamp the trust mark in the mutation gateway (`stamp_trust_mark_if_applicable` in `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs`, covering top-level, `Batch` and `BatchUpdate` writes; approval id is the reserved updates key `trust_mark_approval_id`)
+- [ ] T051 [US5] MEDULLA-SRC-AUTH-R011.3 Stamp the trust mark in the mutation gateway (`stamp_trust_mark_if_applicable` in `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs`, covering top-level, `Batch` and `BatchUpdate` writes; approval id is the reserved updates key `trust_mark_approval_id`)
 - [ ] T052 [US5] MEDULLA-SRC-AUTH-R011.4 Refusal
 - [ ] T053 [US5] MEDULLA-SRC-AUTH-R011.5 Evidence
 - [ ] T054 [US5] MEDULLA-SRC-AUTH-R011.6 Hot-path proof for the trust mark

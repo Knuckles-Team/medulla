@@ -47,7 +47,7 @@ pub(super) fn record_note(
         .ok_or_else(|| "the embedder returned no vector for the note".to_string())?;
     let now_ms = i64::try_from(ctx.now_ms).unwrap_or(i64::MAX);
     let (methods, stored, record_digest) =
-        medulla_h_graph::graph_ops::memory_surface::stage_session_note(
+        medulla_h_graph_gateway::graph_ops::memory_surface::stage_session_note(
             graph.core(),
             tenant_scope,
             &reader.principal,

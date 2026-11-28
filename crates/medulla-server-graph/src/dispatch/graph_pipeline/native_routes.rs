@@ -846,7 +846,7 @@ async fn fresh_turns(
         .into_iter()
         .filter(|record| record.speaker.is_some())
         .filter(|record| {
-            let node = medulla_h_graph::graph_ops::memory_surface::node_id(
+            let node = medulla_h_graph_gateway::graph_ops::memory_surface::node_id(
                 ctx.tenant_scope,
                 record.memory_id.as_str(),
             );

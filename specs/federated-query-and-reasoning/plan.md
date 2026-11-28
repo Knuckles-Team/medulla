@@ -781,7 +781,7 @@ Preserve `MEDULLA-FEDERATED-QUERY-R040.2.1-.3, R040.2.6`. Source record `GRAPHOS
 
 #### `MEDULLA-FEDERATED-QUERY-R086.100`
 
-**Open definition — current graph learner is binary and has a write path.** The source requires ordered n-ary hyperedge prediction and generalization to entities unseen at fit time. Hypotheses carry an evidence class and are never asserted facts. Current `Method::GraphLearnPredict`/`crates/medulla-server-api/src/handlers/graphlearn.rs` scores binary `(src,dst)` pairs over a resident graph and optionally writes `PredictedEdge`. It cannot satisfy ordered n-ary tuples, unseen-entity induction, or hypothesis-only guarantees. Preserve it unchanged. Before defining a public producer, the owner must choose the n-ary model/training artifact and inference semantics. Define ordered tuple positions and unseen-entity behavior. Define the evidence-class vocabulary and source binding. Choose the read-only capability/auth action. And name the Meristem proposal consumer receipt. Only then can a separate method be attached in the existing graphlearn method family and routed through `crates/medulla-h-graph/src/graph_ops/gateway_mining_ml.rs`/`crates/medulla-server-api/src/handlers/graphlearn.rs`. Do not route this through the binary `GraphLearnPredict` write-capable method. No model, endpoint, or authority is invented here.
+**Open definition — current graph learner is binary and has a write path.** The source requires ordered n-ary hyperedge prediction and generalization to entities unseen at fit time. Hypotheses carry an evidence class and are never asserted facts. Current `Method::GraphLearnPredict`/`crates/medulla-server-api/src/handlers/graphlearn.rs` scores binary `(src,dst)` pairs over a resident graph and optionally writes `PredictedEdge`. It cannot satisfy ordered n-ary tuples, unseen-entity induction, or hypothesis-only guarantees. Preserve it unchanged. Before defining a public producer, the owner must choose the n-ary model/training artifact and inference semantics. Define ordered tuple positions and unseen-entity behavior. Define the evidence-class vocabulary and source binding. Choose the read-only capability/auth action. And name the Meristem proposal consumer receipt. Only then can a separate method be attached in the existing graphlearn method family and routed through `crates/medulla-h-graph-gateway/src/graph_ops/gateway_mining_ml.rs`/`crates/medulla-server-api/src/handlers/graphlearn.rs`. Do not route this through the binary `GraphLearnPredict` write-capable method. No model, endpoint, or authority is invented here.
 
 Preserve `MEDULLA-FEDERATED-QUERY-R086; existing binary `GraphLearnPredict` and graph-write authorities`. Source record `EG:14` SHA256 `7223250e7f899a187aad0b152e597c6174b772c49779ca2bdd12d3ba68f4f5ef`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
 
@@ -851,7 +851,7 @@ Replaces: the quality gate in `agent_utilities/knowledge_graph/retrieval/hybrid_
 
 Meristem acceptance cases: `tests/retrieval/test_acl_context_compiler_crowd_out.py` and `tests/unit/knowledge_graph/test_hybrid_retriever_acl_before_internal_trim.py`.
 
-Call path: served `Discover` -> `try_handle_semantic_compute` -> `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:88`) -> verdict -> response.
+Call path: served `Discover` -> `try_handle_semantic_compute` -> `discover` (`crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs:88`) -> verdict -> response.
 
 Crates: `medulla-core` for the semantic store counters, `medulla-types` for the verdict.
 
@@ -874,7 +874,7 @@ Replaces: `agent_utilities/knowledge_graph/retrieval/hybrid_retriever.py` (`_res
 
 Meristem acceptance case: `tests/integration/knowledge_graph/test_engine_helpers.py`.
 
-Call path: served `Discover` -> `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:88`) -> planner port -> embedding endpoint -> HNSW arms -> fusion -> recency decay -> batched hop expansion.
+Call path: served `Discover` -> `discover` (`crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs:88`) -> planner port -> embedding endpoint -> HNSW arms -> fusion -> recency decay -> batched hop expansion.
 
 Crates: `medulla-ann` for the arms, `medulla-plan` for the planner port, `medulla-core` for adjacency.
 
@@ -1324,7 +1324,7 @@ Call paths. Each row names its entry point, the functions on the path and the at
 
 - R740 write: `handle_graph_store` (`crates/medulla-server-blob/src/sparql_http/graph_store.rs:17`) → `graph_write` (`:99`) → `parse_rdf_body` (`:187`). The served event `RDF_GRAPH_WRITE_EVENT` reaches the same parse function through a router arm beside `router.rs:117` and `coordinated_rdf_graph_write` beside `sparql_update.rs:806`. One parse function serves both entries.
 - R740 read: `Method::Sparql` gains `graph_media_type`. The result holds `graph_body` from `serialize_graph` (`negotiation.rs:35`). The six media types are the list `GRAPH_FORMS` of `negotiation.rs:17`.
-- R741: `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:222`) → `plan_discover` (`discover_plan.rs:100`) → `expand_seeds` (`discover_plan.rs:27`) → `expand_hops` (`crates/medulla-graph-core/src/graph/core_expand.rs:79`). Row-level security already limits the core that the walk reads. The filter only narrows it.
+- R741: `discover` (`crates/medulla-h-graph-gateway/src/graph_ops/semantic.rs:222`) → `plan_discover` (`discover_plan.rs:100`) → `expand_seeds` (`discover_plan.rs:27`) → `expand_hops` (`crates/medulla-graph-core/src/graph/core_expand.rs:79`). Row-level security already limits the core that the walk reads. The filter only narrows it.
 - R706.8 to R706.12: `execute` (`crates/medulla-exec/src/exec.rs:910`) → `apply_policies` (`policy_mask.rs:228`) → new `apply_shape_policies` → `medulla_shacl::validate` (`crates/medulla-shacl/src/validate.rs:40`). The audit record uses `audit_append` (`crates/medulla-persistence/src/redb_backend/backend_audit.rs:30`).
 - R742: `Method::Sparql` → evaluator → `expression.rs`. The row adds tests and one stated error rule, not a second evaluator.
 - R742.3: `Binding` in `crates/medulla-rdf/src/sparql.rs` becomes the typed RDF term. The parser output (`spargebra` literals), the graph read (`graph_match.rs`), the evaluator, the builtins, the aggregates, the `SERVICE` client, the OBDA rows and the result serializers move to it in one cutover, layer by layer; the wire `SparqlResult.rows` carries `SparqlTerm`, mirrored in `medulla/generated/models.py`, and the result-cache key carries the result shape revision.

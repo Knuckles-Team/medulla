@@ -16,7 +16,7 @@ use medulla_types::regime_forecast::{
 };
 use sha2::{Digest, Sha256};
 
-use super::finance_accounting::datetime_ns;
+use medulla_h_graph_gateway::graph_ops::finance_accounting::datetime_ns;
 
 pub(super) type Refusal = (&'static str, String);
 

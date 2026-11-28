@@ -246,7 +246,7 @@ const DISPATCH_ROOTS: [&str; 5] = [
 const GRAPH_PIPELINE: &str = "crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs";
 const NATIVE_ROUTES: &str =
     "crates/medulla-server-graph/src/dispatch/graph_pipeline/native_routes.rs";
-const GATEWAY_GRAPH: &str = "crates/medulla-h-graph/src/graph_ops/gateway_graph.rs";
+const GATEWAY_GRAPH: &str = "crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs";
 const MUTATION: &str = "crates/medulla-server-mutation/src/mutation.rs";
 const CONSENSUS_ROUTING: &str = "crates/medulla-server-consensus/src/dispatch/consensus/routing.rs";
 
@@ -380,14 +380,14 @@ fn check_route_order(graph: &str) -> Result<(), String> {
     let graph = code_mask(graph)?;
     let message = "graph gateway/terminal route order changed";
     let gateway_order = [
-        "medulla_h_graph::graph_ops::try_handle_gateway(",
+        "medulla_h_graph_gateway::graph_ops::try_handle_gateway(",
         "medulla_h_compute::finance::try_handle(",
     ];
     let graph_order = [
         "medulla_h_compute::datascience::try_handle(",
         "medulla_h_mining::mining::try_handle(",
         "medulla_server_api::handlers::graphlearn::try_handle(",
-        "medulla_h_graph::pipeline::try_handle(",
+        "medulla_h_graph_gateway::pipeline::try_handle(",
     ];
     let query_order = ["route_query_gateway(", "route_rdf_gateway("];
     let global_order = [
@@ -408,7 +408,7 @@ fn check_route_order(graph: &str) -> Result<(), String> {
         &[
             "route_pipeline_compute(&ctx, method)",
             "route_pipeline_surfaces(&ctx, method)",
-            "medulla_h_graph::graph_ops::try_handle(",
+            "medulla_h_graph::graph_ops::terminal::try_handle(",
         ],
         message,
     )

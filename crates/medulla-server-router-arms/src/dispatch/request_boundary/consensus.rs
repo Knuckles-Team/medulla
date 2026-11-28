@@ -189,7 +189,7 @@ async fn precheck_finance_record_put_on_leader(
     };
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified_context)
         .map_err(|error| Response::err(req.id, error))?;
-    medulla_h_graph::graph_ops::precheck_replicated_put(
+    medulla_h_graph_gateway::graph_ops::precheck_replicated_put(
         &core,
         authority.tenant_scope(),
         &req.method,

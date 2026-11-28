@@ -16,13 +16,16 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_h_graph::graph_ops::retention_cleanup::{cleanup_graph, RetentionCursor};
 use medulla_mutation_types::retention_policy::{HoldCheck, RetentionPolicy};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_mutation::mutation_batch::{
     commit_internal_graph_methods, CommitOrigin, InternalGraphCommitRequest,
+};
+use {
+    medulla_h_graph_gateway::graph_ops::retention_cleanup::cleanup_graph,
+    medulla_h_graph_gateway::graph_ops::retention_cleanup::RetentionCursor,
 };
 
 const GRAPH: &str = "__commons__";

@@ -8,8 +8,8 @@
 //! next position. A read refuses a cursor whose binding no longer holds with a
 //! typed code, and never answers a withheld event's existence.
 
-use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_mutation_types::graph_change_feed::{
     authorization_revision, snapshot_digest, GraphChange, GraphChangeCursor, GraphChangeEvent,
     GraphChangePage, GraphSnapshot, RowOperation, GRAPH_CHANGE_FEED_SCHEMA_VERSION,

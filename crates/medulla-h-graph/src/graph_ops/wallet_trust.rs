@@ -6,11 +6,11 @@
 //! records whose `tenant_id` is the verified tenant are candidates, so a
 //! cross-tenant read answers `WALLET_KEY_TRUST_NOT_FOUND`.
 
-use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_finance_types::finance_wallet_trust::{
     current_record, WalletKeyTrust, WALLET_KEY_TRUST_LABEL,
 };
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 use medulla_types::contract::ServerErrorCode;
 
 /// Page size of the label scan; every page is read.

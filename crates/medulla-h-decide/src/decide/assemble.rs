@@ -348,7 +348,7 @@ async fn read_profile(
     };
     let core = super::topology_read::graph_core(state, graph, verified).await?;
     let s = state.read().await;
-    medulla_h_graph::graph_ops::assistant_profile::read_visible_profile(
+    medulla_h_graph_gateway::graph_ops::assistant_profile::read_visible_profile(
         &core,
         &s.isolation,
         verified.tenant(),

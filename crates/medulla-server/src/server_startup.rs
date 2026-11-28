@@ -248,7 +248,7 @@ pub fn socket_mode_or_exit(raw: &str) -> u32 {
 
 /// Apply `--bus-participant-ttl-s`; an out-of-bounds value exits before any listener binds.
 pub fn bus_participant_ttl_or_exit(ttl_s: u64) {
-    if let Err(reason) = medulla_h_graph::graph_ops::bus::set_participant_ttl_s(ttl_s) {
+    if let Err(reason) = medulla_h_graph_gateway::graph_ops::bus::set_participant_ttl_s(ttl_s) {
         exit_with(format_args!("invalid --bus-participant-ttl-s: {reason}"), 2);
     }
 }

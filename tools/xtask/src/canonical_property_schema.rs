@@ -33,12 +33,12 @@ const STRUCTURAL_READERS: [&str; 20] = [
     "crates/medulla-jobs/src/claim.rs",
     "crates/medulla-h-mining/src/mining.rs",
     "crates/medulla-server-api/src/handlers/graphlearn.rs",
-    "crates/medulla-h-graph/src/graph_ops.rs",
+    "crates/medulla-h-graph-gateway/src/graph_ops.rs",
     "crates/medulla-h-txn/src/txn.rs",
     "crates/medulla-h-retrieve/src/reasoning_projection.rs",
 ];
 /// The one structural reader whose source is split over declared child modules.
-const MODULE_TREE_READER: &str = "crates/medulla-h-graph/src/graph_ops.rs";
+const MODULE_TREE_READER: &str = "crates/medulla-h-graph-gateway/src/graph_ops.rs";
 const KNOWLEDGE_READER: &str = "crates/medulla-retrieval/src/knowledge.rs";
 const CYPHER_READERS: [&str; 2] = [
     "crates/medulla-cypher/src/cypher/exec.rs",

@@ -4,7 +4,6 @@
 //! cross-tenant negative. Saves go through `admit_put` and the same
 //! `AddNode` upsert the gateway commits; reads go through `read_op`.
 
-use super::assistant_profile::{admit_put, read_op, Admitted, ReadOut};
 use medulla_graph_core::graph::GraphCore;
 use medulla_identity_types::assistant_profile::{
     AssistantProfile, DocumentSet, DocumentSetKind, ModelHints, ProfileOp, ProfileShare,
@@ -13,6 +12,10 @@ use medulla_identity_types::assistant_profile::{
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_mutation::mutation::apply_coalescable_write;
 use {
+    medulla_h_graph_gateway::graph_ops::assistant_profile::admit_put,
+    medulla_h_graph_gateway::graph_ops::assistant_profile::read_op,
+    medulla_h_graph_gateway::graph_ops::assistant_profile::Admitted,
+    medulla_h_graph_gateway::graph_ops::assistant_profile::ReadOut,
     medulla_identity_core_types::acl::AgentIdentity, medulla_identity_core_types::acl::AgentRole,
     medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
 };
@@ -290,7 +293,7 @@ fn document_set_save_share_and_read_only_query() {
 // spec: MEDULLA-DECISION-ENGINE-R656.2
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn racing_saves_of_one_revision_admit_exactly_one() {
-    use super::assistant_profile::lock_save_lane;
+    use medulla_h_graph_gateway::graph_ops::assistant_profile::lock_save_lane;
     let core = std::sync::Arc::new(GraphCore::new());
     let iso = std::sync::Arc::new(isolation());
     save(&core, &iso, SCOPE_A, "alice", profile(0, vec![])).unwrap();
@@ -332,7 +335,6 @@ async fn racing_saves_of_one_revision_admit_exactly_one() {
 /// the served handler's admission, then applied as the one write the gateway commits; a refused
 /// write changes nothing.
 mod participant_surface_proofs {
-    use super::super::participant_surface::{admit, plan_memberships, scope_max_sessions, Out};
     use super::{SCOPE_A, SCOPE_B};
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
@@ -347,6 +349,12 @@ mod participant_surface_proofs {
     use medulla_work_types::participant::{
         participant_iri, Participant, ParticipantId, ParticipantKind, ParticipantOp,
         PARTICIPANT_SCHEMA_VERSION,
+    };
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_surface::admit,
+        medulla_h_graph_gateway::graph_ops::participant_surface::plan_memberships,
+        medulla_h_graph_gateway::graph_ops::participant_surface::scope_max_sessions,
+        medulla_h_graph_gateway::graph_ops::participant_surface::Out,
     };
 
     fn participant(slug: &str, represents: &str, acts_as: &[&str], name: &str) -> Participant {
@@ -675,11 +683,9 @@ mod participant_surface_proofs {
 /// narrows recall to the sessions it names among the sessions the caller already sees, and the
 /// tenant filter keeps applying.
 mod scoped_recall_proofs {
-    use super::super::memory_surface::{recall, Narrowing};
     use super::super::memory_surface_tests::{
         episode_recall, ids, recall_request, record, seal, store, NOW,
     };
-    use super::super::participant_surface::{admit, resolve_scope_ref};
     use super::{SCOPE_A, SCOPE_B};
     use medulla_graph_core::graph::GraphCore;
     use medulla_server_mutation::mutation::apply_coalescable_write;
@@ -688,6 +694,14 @@ mod scoped_recall_proofs {
     use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
     use medulla_work_types::participant::ParticipantOp;
     use std::collections::BTreeSet;
+    use {
+        medulla_h_graph_gateway::graph_ops::memory_surface::recall,
+        medulla_h_graph_gateway::graph_ops::memory_surface::Narrowing,
+    };
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_surface::admit,
+        medulla_h_graph_gateway::graph_ops::participant_surface::resolve_scope_ref,
+    };
 
     fn scope(id: &str, owner: &str, sessions: &[&str]) -> MemoryScope {
         MemoryScope {
@@ -813,7 +827,8 @@ mod scoped_recall_proofs {
         ))
         .starts_with("SCOPE_NOT_VISIBLE: "));
         // A stored scope above the knob limit refuses on read.
-        let over: Vec<String> = (0..=super::super::participant_surface::scope_max_sessions())
+        let over: Vec<String> = (0
+            ..=medulla_h_graph_gateway::graph_ops::participant_surface::scope_max_sessions())
             .map(|n| format!("x{n}"))
             .collect();
         let mut huge = scope("huge", "alice", &[]);
@@ -904,9 +919,9 @@ mod scoped_recall_proofs {
 /// Observation flag proofs (MEDULLA-DECISION-ENGINE-R651.10): the stored settings of a session
 /// decide which perspectives its turns are derived from.
 mod observation_flag_proofs {
-    use super::super::participant_surface::{admit, observation_of};
     use super::SCOPE_A;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_h_graph_gateway::graph_ops::participant_surface::{admit, observation_stored};
     use medulla_server_mutation::mutation::apply_coalescable_write;
     use medulla_types::contract::{ResourceId, TenantId};
     use medulla_work_types::memory_scope::ObservationConfig;
@@ -920,6 +935,18 @@ mod observation_flag_proofs {
 
     fn id(slug: &str) -> ParticipantId {
         ParticipantId::new(slug).unwrap()
+    }
+
+    /// The stored observation setting of one participant in one session; a missing one reads as
+    /// the default.
+    fn observation_of(
+        core: &GraphCore,
+        tenant_scope: &str,
+        session_id: &str,
+        participant_id: &ParticipantId,
+    ) -> ObservationConfig {
+        observation_stored(core, tenant_scope, session_id, participant_id)
+            .unwrap_or_else(|| ObservationConfig::missing(session_id, participant_id.clone()))
     }
 
     fn serve(core: &GraphCore, agent: &str, op: ParticipantOp) {
@@ -1097,9 +1124,6 @@ fn profile_refusals_change_no_state() {
 
 mod derive_worker_proofs {
     use super::super::memory_surface_tests::{record, store};
-    use super::super::participant_derive::{
-        advance_checkpoint, derive_input, payload_node_id, payload_write, read_checkpoint,
-    };
     use super::{SCOPE_A, SCOPE_B};
     use medulla_decision_types::claims::ObserverRef;
     use medulla_graph_core::graph::GraphCore;
@@ -1111,6 +1135,13 @@ mod derive_worker_proofs {
     use {
         medulla_decision_stats_records::decision::participant_derive::DeriveKey,
         medulla_decision_stats_records::decision::participant_derive::DerivePayload,
+    };
+    use {
+        medulla_h_graph_gateway::graph_ops::participant_derive::advance_checkpoint,
+        medulla_h_graph_gateway::graph_ops::participant_derive::derive_input,
+        medulla_h_graph_gateway::graph_ops::participant_derive::payload_node_id,
+        medulla_h_graph_gateway::graph_ops::participant_derive::payload_write,
+        medulla_h_graph_gateway::graph_ops::participant_derive::read_checkpoint,
     };
 
     fn id(slug: &str) -> ParticipantId {

@@ -1,0 +1,999 @@
+use super::*;
+
+use super::ops_context::GraphOpsContext;
+
+const DISCOVER_FANOUT: usize = 4;
+const DISCOVER_LEX_SCAN_CAP: usize = 4096;
+const DISCOVER_SEM_WEIGHT: f32 = 0.6;
+const DISCOVER_KW_WEIGHT: f32 = 0.4;
+
+/// Read a node's human-readable `(name, description, type)` triple from its
+/// MessagePack property blob (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery), used to hydrate `Discover` hits.
+/// `name` falls back to the node id, `type` falls back to a `node_type` field, and
+/// a missing/undecodable blob yields `(id, "", "")` — so the op never fails on a
+/// text-less node, it just returns what it can.
+pub fn node_text(core: &GraphCore, node_id: &str) -> (String, String, String) {
+    let Some(blob) = core.get_node_properties(node_id) else {
+        return (node_id.to_string(), String::new(), String::new());
+    };
+    let obj = super::gateway_graph::decode_json_object(&blob);
+    let get = |k: &str| {
+        obj.get(k)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("")
+            .to_string()
+    };
+    let name = {
+        let n = get("name");
+        if n.is_empty() {
+            node_id.to_string()
+        } else {
+            n
+        }
+    };
+    let ntype = {
+        let t = get("type");
+        if t.is_empty() {
+            get("node_type")
+        } else {
+            t
+        }
+    };
+    (name, get("description"), ntype)
+}
+
+/// The web provenance of a node (MEDULLA-FEDERATED-QUERY-R653.7); empty unless the node has a URL.
+fn web_provenance(
+    core: &GraphCore,
+    node_id: &str,
+) -> medulla_catalog_source_types::web_source::WebProvenance {
+    core.get_node_properties(node_id)
+        .map(|blob| {
+            medulla_catalog_source_types::web_source::WebProvenance::from_properties(
+                &super::gateway_graph::decode_json_object(&blob),
+            )
+        })
+        .unwrap_or_default()
+}
+
+/// Fraction of the distinct query keywords that appear (as a substring, case-insensitively)
+/// anywhere in a candidate's `name`/`description`/`type` — a `[0.0, 1.0]` lexical score.
+fn keyword_overlap(kws: &[String], name: &str, description: &str, ntype: &str) -> f32 {
+    if kws.is_empty() {
+        return 0.0;
+    }
+    let haystack = format!(
+        "{} {} {}",
+        name.to_lowercase(),
+        description.to_lowercase(),
+        ntype.to_lowercase()
+    );
+    let matched = kws.iter().filter(|kw| haystack.contains(*kw)).count();
+    matched as f32 / kws.len() as f32
+}
+
+fn normalized_keywords(keywords: &[String]) -> Vec<String> {
+    let mut seen = std::collections::BTreeSet::new();
+    keywords
+        .iter()
+        .map(|word| word.to_lowercase())
+        .filter(|word| !word.is_empty() && seen.insert(word.clone()))
+        .collect()
+}
+
+/// A node's timestamp in unix seconds: `updated_at`, else `created_at`
+/// (MEDULLA-FEDERATED-QUERY-R090.2). Absent or non-numeric is `None`.
+fn node_time(core: &GraphCore, node_id: &str) -> Option<i64> {
+    let blob = core.get_node_properties(node_id)?;
+    let obj = super::gateway_graph::decode_json_object(&blob);
+    ["updated_at", "created_at"].iter().find_map(|key| {
+        let value = obj.get(*key)?;
+        value.as_i64().or_else(|| value.as_f64().map(|f| f as i64))
+    })
+}
+
+/// Whether the node's source declares `access_mode: checked_at_read`
+/// (MEDULLA-FEDERATED-QUERY-R703.7).
+#[cfg(feature = "query")]
+fn is_checked_at_read(core: &GraphCore, node_id: &str) -> bool {
+    core.get_node_properties(node_id).is_some_and(|blob| {
+        super::gateway_graph::decode_json_object(&blob)
+            .get("access_mode")
+            .and_then(serde_json::Value::as_str)
+            == Some("checked_at_read")
+    })
+}
+
+/// The half life of a node type: the `recencyHalfLifeDays` annotation on the type's class
+/// node (the node whose id is the type name), else `knob discover.recency_half_life_days`.
+fn half_life_days(core: &GraphCore, node_type: &str, default_days: f64) -> f64 {
+    core.get_node_properties(node_type)
+        .and_then(|blob| {
+            super::gateway_graph::decode_json_object(&blob)
+                .get("recencyHalfLifeDays")
+                .and_then(serde_json::Value::as_f64)
+        })
+        .filter(|days| *days > 0.0)
+        .unwrap_or(default_days)
+}
+
+/// The candidates of one `Discover` call: every node the dense or keyword path reached,
+/// with its two raw signals.
+struct Candidate {
+    id: String,
+    sim: f32,
+    kw: f32,
+}
+
+struct Candidates {
+    list: Vec<Candidate>,
+    /// The keyword-only scan stopped at [`DISCOVER_LEX_SCAN_CAP`].
+    scan_capped: bool,
+}
+
+/// Dense candidates (over-fetched for the keyword re-rank) or, with no embedding, the
+/// bounded keyword-only scan.
+fn gather_candidates(
+    core: &GraphCore,
+    kws: &[String],
+    query_embedding: &[f32],
+    k: usize,
+    allowed: Option<&std::collections::BTreeSet<String>>,
+) -> Candidates {
+    let has_kw = !kws.is_empty();
+    let mut list = Vec::new();
+    let mut scan_capped = false;
+    if !query_embedding.is_empty() {
+        let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
+        let raw = match allowed {
+            Some(allowed) => {
+                core.semantic_store
+                    .read()
+                    .semantic_search_filtered(query_embedding, fanout, |id| allowed.contains(id))
+            }
+            None => core
+                .semantic_store
+                .read()
+                .semantic_search(query_embedding, fanout),
+        };
+        for (id, sim) in raw {
+            let kw = if has_kw {
+                let (name, desc, ntype) = node_text(core, &id);
+                keyword_overlap(kws, &name, &desc, &ntype)
+            } else {
+                0.0
+            };
+            list.push(Candidate { id, sim, kw });
+        }
+    } else if has_kw {
+        let mut ids = core.node_ids();
+        if let Some(allowed) = allowed {
+            ids.retain(|id| allowed.contains(id));
+        }
+        scan_capped = ids.len() > DISCOVER_LEX_SCAN_CAP;
+        for id in ids.into_iter().take(DISCOVER_LEX_SCAN_CAP) {
+            let (name, desc, ntype) = node_text(core, &id);
+            let kw = keyword_overlap(kws, &name, &desc, &ntype);
+            if kw > 0.0 {
+                list.push(Candidate { id, sim: 0.0, kw });
+            }
+        }
+    }
+    Candidates { list, scan_capped }
+}
+
+/// One-round-trip hybrid discovery (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery),
+/// planned by [`discover_plan::plan_discover`] (MEDULLA-FEDERATED-QUERY-R090.2).
+///
+/// Mode `standard` ranks by the weighted blend: both signals give
+/// `DISCOVER_SEM_WEIGHT * sim + DISCOVER_KW_WEIGHT * kw`, one signal gives that signal.
+/// Mode `deep` fuses the semantic arm, the keyword arm and one semantic arm per
+/// expansion by reciprocal rank. A recency boost applies in `deep` mode or when `as_of`
+/// is set. Hits then expand over `hops` and hydrate. The verdict is
+/// [`discover_quality::quality_verdict`] and the plan carries the expansion evidence.
+#[cfg(feature = "query")]
+pub struct DiscoverCall<'a> {
+    pub keywords: &'a [String],
+    pub query_embedding: &'a [f32],
+    pub k: usize,
+    pub hops: u32,
+    pub as_of: Option<i64>,
+    pub graph_name: &'a str,
+    /// The verified carrier tenant; drift monitors are read under it.
+    pub tenant: Option<&'a str>,
+    /// Digest of the adapter that re-aimed this query, `None` for the base space.
+    pub adapter_digest: Option<&'a str>,
+    /// The `RetrievalQualityPolicy` node the verdict is judged by (R089.3).
+    pub quality_policy_ref: Option<&'a str>,
+    /// Implicit feedback events derived from the tenant's stored retrieval outcomes
+    /// (MEDULLA-FEDERATED-QUERY-R705.3); empty without a tenant or a control store.
+    pub implicit_feedback: &'a [medulla_result_types::feedback_event::RetrievalFeedback],
+    /// The IRIs the request's document sets allow (MEDULLA-DECISION-ENGINE-R656.3);
+    /// `None` applies no filter, `Some` only narrows, and an empty set returns nothing.
+    pub allowed: Option<&'a std::collections::BTreeSet<String>>,
+    /// The agent's knowledge scope, applied to the first `retrieval.scope_candidates` fused
+    /// candidates and never to the corpus (MEDULLA-FEDERATED-QUERY-R704.3, R704.6).
+    pub scope: Option<&'a medulla_retrieval::knowledge_scope::ResolvedScope>,
+    /// The digest of the knowledge scope applied (MEDULLA-FEDERATED-QUERY-R704.5).
+    pub scope_digest: &'a str,
+    /// Caller seeds that replace arm retrieval (MEDULLA-FEDERATED-QUERY-R741.1); empty
+    /// ranks the arms as before.
+    pub seeds: &'a [String],
+    /// The per-hop restriction of the neighbour walk (MEDULLA-FEDERATED-QUERY-R741.3).
+    pub hop_filter: &'a medulla_ingestion_types::ingestion_wire::HopFilter,
+}
+
+#[cfg(feature = "query")]
+pub fn discover(
+    core: &GraphCore,
+    call: &DiscoverCall<'_>,
+    deep: super::discover_plan::DeepArms,
+    req_id: u64,
+) -> Response {
+    // MEDULLA-DECISION-ENGINE-R174.8.3.1: one response is gathered under one index
+    // generation. The stamp is pinned before the gather and read again when the verdict
+    // is built; a swap in between repeats the gather once, and a second swap refuses.
+    for _ in 0..2 {
+        let pinned = core.semantic_store.read().generation();
+        let (response, answered) = discover_pass(core, call, deep.clone(), req_id);
+        match answered {
+            Some(stamp) if stamp != pinned => continue,
+            _ => return response,
+        }
+    }
+    Response::err(
+        req_id,
+        "INDEX_UNAVAILABLE: the resident index changed during the read",
+    )
+}
+
+/// One gather-rank-verdict pass of [`discover`]. Returns the response and the index
+/// generation its verdict reports; `None` when the pass refused before reading one.
+#[cfg(feature = "query")]
+fn discover_pass(
+    core: &GraphCore,
+    call: &DiscoverCall<'_>,
+    deep: super::discover_plan::DeepArms,
+    req_id: u64,
+) -> (Response, Option<u64>) {
+    use super::discover_plan::{fuse_arms, recency_boost, ArmList};
+    use medulla_ingestion_types::ingestion_wire::{DiscoverArm, DiscoverPlan};
+
+    let k = call.k;
+    let knobs = medulla_server_api::knob_config::knobs();
+    let (quality_knobs, policy_revision) = match super::discover_quality::resolve_policy(
+        core,
+        call.quality_policy_ref,
+        super::discover_quality::QualityKnobs::from_registry(),
+    ) {
+        Ok(resolved) => resolved,
+        Err(message) => {
+            return (
+                Response::err(req_id, format!("INVALID_ARGUMENT: {message}")),
+                None,
+            )
+        }
+    };
+    let kws = normalized_keywords(call.keywords);
+    let has_emb = !call.query_embedding.is_empty();
+    let has_kw = !kws.is_empty();
+    // A scoped read gathers enough candidates for the scope window, then cuts to `k` after it.
+    let scope_window = usize::try_from(knobs.retrieval_scope_candidates).unwrap_or(usize::MAX);
+    let gather_k = if call.scope.is_some() {
+        k.max(scope_window.div_ceil(DISCOVER_FANOUT))
+    } else {
+        k
+    };
+    let gathered = gather_candidates(core, &kws, call.query_embedding, gather_k, call.allowed);
+    let is_deep = !deep.vectors.is_empty();
+
+    // Score: the weighted blend (standard) or reciprocal-rank fusion over the arms (deep).
+    let mut arm_ranks: std::collections::HashMap<
+        String,
+        Vec<medulla_ingestion_types::ingestion_wire::ArmRank>,
+    > = std::collections::HashMap::new();
+    let mut ranked: Vec<(String, f32)> = if is_deep {
+        let by_score = |mut v: Vec<(String, f32)>| {
+            v.sort_by(|a, b| {
+                b.1.partial_cmp(&a.1)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| a.0.cmp(&b.0))
+            });
+            v
+        };
+        let mut arms = Vec::new();
+        if has_emb {
+            arms.push(ArmList {
+                arm: DiscoverArm::Semantic,
+                ranked: by_score(
+                    gathered
+                        .list
+                        .iter()
+                        .map(|c| (c.id.clone(), c.sim))
+                        .collect(),
+                ),
+            });
+        }
+        if has_kw {
+            arms.push(ArmList {
+                arm: DiscoverArm::Keyword,
+                ranked: by_score(
+                    gathered
+                        .list
+                        .iter()
+                        .filter(|c| c.kw > 0.0)
+                        .map(|c| (c.id.clone(), c.kw))
+                        .collect(),
+                ),
+            });
+        }
+        let fanout = k.max(1).saturating_mul(DISCOVER_FANOUT).max(k);
+        for vector in &deep.vectors {
+            let raw = core.semantic_store.read().semantic_search(vector, fanout);
+            arms.push(ArmList {
+                arm: DiscoverArm::Expansion,
+                ranked: raw,
+            });
+        }
+        fuse_arms(&arms, knobs.discover_rrf_k)
+            .into_iter()
+            .map(|fused| {
+                arm_ranks.insert(fused.id.clone(), fused.arm_ranks);
+                (fused.id, fused.score)
+            })
+            .collect()
+    } else {
+        gathered
+            .list
+            .iter()
+            .map(|c| {
+                let score = if has_emb && has_kw {
+                    DISCOVER_SEM_WEIGHT * c.sim.clamp(0.0, 1.0) + DISCOVER_KW_WEIGHT * c.kw
+                } else if has_emb {
+                    c.sim.clamp(0.0, 1.0)
+                } else {
+                    c.kw
+                };
+                (c.id.clone(), score)
+            })
+            .collect()
+    };
+
+    // Recency: deep mode, or any request that names `as_of`.
+    let mut boosts: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
+    if is_deep || call.as_of.is_some() {
+        let as_of = call.as_of.unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+        });
+        for (id, score) in &mut ranked {
+            let (_, _, node_type) = node_text(core, id);
+            let half_life = half_life_days(
+                core,
+                &node_type,
+                knobs.discover_recency_half_life_days as f64,
+            );
+            let boost = recency_boost(
+                knobs.discover_recency_weight,
+                half_life,
+                as_of,
+                node_time(core, id),
+            );
+            *score *= boost;
+            boosts.insert(id.clone(), boost);
+        }
+    }
+    // MEDULLA-FEDERATED-QUERY-R705.3: learned document boosts, added after calibration.
+    // MEDULLA-FEDERATED-QUERY-R705.5: each hit lists the boost it received.
+    let mut learned_boost: std::collections::HashMap<String, f32> =
+        std::collections::HashMap::new();
+    if let Some(tenant) = call.tenant {
+        let candidates: Vec<String> = ranked.iter().map(|(id, _)| id.clone()).collect();
+        let now_s = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000;
+        let boosts = super::retrieval_feedback::load_feedback(
+            core,
+            tenant,
+            &candidates,
+            now_s,
+            &super::retrieval_feedback::FeedbackKnobs::from_registry(),
+            call.implicit_feedback,
+        );
+        learned_boost.extend(
+            boosts
+                .iter()
+                .map(|boost| (boost.document_ref.clone(), boost.value as f32)),
+        );
+        if !boosts.is_empty() {
+            let calibrated: Vec<(String, f64)> = ranked
+                .iter()
+                .map(|(id, score)| (id.clone(), f64::from(*score)))
+                .collect();
+            ranked = medulla_retrieval::feedback_boost::apply_boosts(&calibrated, &boosts)
+                .into_iter()
+                .map(|(id, score)| (id, score as f32))
+                .collect();
+        }
+    }
+    ranked.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+    // MEDULLA-FEDERATED-QUERY-R704.3: the agent's knowledge scope narrows the first
+    // `retrieval.scope_candidates` fused candidates before the cut to `k`; it only narrows
+    // what the caller may read, and a scope that leaves fewer than `k` returns what it found.
+    if let Some(scope) = call.scope {
+        ranked.truncate(scope_window);
+        ranked = scope.top_k(core, ranked, scope_window);
+    }
+    // MEDULLA-FEDERATED-QUERY-R741.1: caller seeds replace the ranked arms. Each seed scores
+    // 1.0 and keeps the given order; a repeated seed counts once.
+    if !call.seeds.is_empty() {
+        let mut seen = std::collections::HashSet::new();
+        ranked = call
+            .seeds
+            .iter()
+            .filter(|id| seen.insert(id.as_str()))
+            .map(|id| (id.clone(), 1.0_f32))
+            .collect();
+    }
+    // MEDULLA-FEDERATED-QUERY-R703.7: a record whose source is checked at read cannot
+    // be vetted without a remote call, so `Discover` drops it and counts the drop.
+    let mut unchecked_excluded = 0_u64;
+    ranked.retain(|(id, _)| {
+        let excluded = is_checked_at_read(core, id);
+        unchecked_excluded += u64::from(excluded);
+        !excluded
+    });
+    ranked.truncate(k);
+
+    // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
+    let scope = medulla_graph_core::graph::HopScope {
+        filter: call.hop_filter,
+        graph_name: call.graph_name,
+    };
+    let mut planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k, &scope);
+    if let Some(allowed) = call.allowed {
+        planned.retain(|hit| allowed.contains(&hit.id));
+    }
+    planned.retain(|hit| {
+        let excluded = is_checked_at_read(core, &hit.id);
+        unchecked_excluded += u64::from(excluded);
+        !excluded
+    });
+
+    let results: Vec<medulla_ingestion_types::ingestion_wire::DiscoverHit> = planned
+        .into_iter()
+        .map(|hit| {
+            let (name, description, node_type) = node_text(core, &hit.id);
+            let web = web_provenance(core, &hit.id);
+            medulla_ingestion_types::ingestion_wire::DiscoverHit {
+                url: web.url,
+                retrieved_at: web.retrieved_at,
+                backend: web.backend,
+                query_digest: web.query_digest,
+                hop_path: if hit.path.len() > 1 {
+                    hit.path
+                } else {
+                    Vec::new()
+                },
+                arm_ranks: arm_ranks.remove(&hit.id).unwrap_or_default(),
+                recency_boost: boosts.get(&hit.id).copied().unwrap_or(1.0),
+                boost: learned_boost.get(&hit.id).copied().unwrap_or(0.0),
+                id: hit.id,
+                name,
+                description,
+                node_type,
+                score: hit.score,
+            }
+        })
+        .collect();
+
+    let (embedded_nodes, index_generation, embedded_through) = {
+        let store = core.semantic_store.read();
+        (
+            store.len(),
+            store.generation(),
+            store.embedded_through_version(),
+        )
+    };
+    let mut signals = match (
+        medulla_retrieval::discover_signals::discover_signals(),
+        call.tenant,
+    ) {
+        (Some(source), Some(tenant)) => source.read(tenant, call.graph_name),
+        _ => Default::default(),
+    };
+    // The adapter digest is the one this very response was ranked with.
+    signals.adapter_digest = call.adapter_digest.map(str::to_string);
+    let verdict = super::discover_quality::quality_verdict(
+        &super::discover_quality::QualityInputs {
+            hits: &results,
+            has_embedding: has_emb,
+            keyword_scan_capped: gathered.scan_capped,
+            embedded_nodes,
+            candidate_nodes: core.node_count(),
+            graph_version: core.version(),
+            embedded_through,
+            index_generation,
+            signals,
+        },
+        &quality_knobs,
+        &policy_revision,
+    );
+    let response = Response::ok(
+        req_id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(
+            medulla_query_types::wire::DiscoverResult {
+                hits: results,
+                verdict,
+                plan: DiscoverPlan {
+                    expansions: deep.evidence,
+                    degraded: deep.degraded,
+                    analysis: deep.analysis,
+                    unchecked_excluded,
+                },
+                scope_digest: call.scope_digest.to_string(),
+            },
+        ),
+    );
+    (response, Some(index_generation))
+}
+
+/// The verified carrier tenant of a `Discover` read and the digest of the adapter that
+/// re-aims its query (MEDULLA-FEDERATED-QUERY-R089.7, MEDULLA-DECISION-ENGINE-R174.7.5).
+#[cfg(all(feature = "query", feature = "decide"))]
+async fn discover_served(
+    ctx: &GraphOpsContext<'_>,
+    capability: Option<&str>,
+) -> (Option<String>, Option<ServedAdapterRef>) {
+    use medulla_server_ops::api::admin::served_adapter::{carrier_tenant, resolve_served};
+    let tenant = carrier_tenant(Some(ctx.read_authority)).map(str::to_string);
+    let adapter = resolve_served(
+        ctx.state,
+        tenant.as_deref(),
+        ctx.graph_name,
+        ctx.core,
+        capability,
+    )
+    .await;
+    (tenant, adapter)
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+async fn discover_served(
+    _ctx: &GraphOpsContext<'_>,
+    _capability: Option<&str>,
+) -> (Option<String>, Option<ServedAdapterRef>) {
+    (None, None)
+}
+
+/// The scoped adapter a `Discover` read resolved (MEDULLA-FEDERATED-QUERY-R090.7).
+#[cfg(all(feature = "query", feature = "decide"))]
+type ServedAdapterRef = Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>;
+/// Without the decide seam no adapter exists.
+#[cfg(all(feature = "query", not(feature = "decide")))]
+type ServedAdapterRef = Arc<std::convert::Infallible>;
+
+/// Re-aim the deep expansion vectors with the scoped adapter, one application per expansion.
+#[cfg(all(feature = "query", feature = "decide"))]
+fn adapt_expansions(deep: &mut super::discover_plan::DeepArms, adapter: Option<&ServedAdapterRef>) {
+    if let Some(adapter) = adapter {
+        super::discover_plan::adapt_deep_arms(deep, adapter.digest(), |v| adapter.adapt(v));
+    }
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+fn adapt_expansions(
+    _deep: &mut super::discover_plan::DeepArms,
+    _adapter: Option<&ServedAdapterRef>,
+) {
+}
+
+/// The digest of the resolved adapter, `None` for the base space.
+#[cfg(all(feature = "query", feature = "decide"))]
+fn adapter_digest_of(adapter: Option<&ServedAdapterRef>) -> Option<&str> {
+    adapter.map(|a| a.digest())
+}
+
+#[cfg(all(feature = "query", not(feature = "decide")))]
+fn adapter_digest_of(_adapter: Option<&ServedAdapterRef>) -> Option<&str> {
+    None
+}
+
+/// Serve `Discover`: plan off the reactor (the provider and embedder are blocking network
+/// clients; one provider call per request), then rank. A planner refusal returns its wire
+/// code, no rows and writes nothing.
+#[cfg(feature = "query")]
+#[allow(clippy::too_many_arguments)]
+async fn handle_discover(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    graph_name: &str,
+    keywords: Vec<String>,
+    query_embedding: Vec<f32>,
+    k: usize,
+    hops: u32,
+    query_text: Option<String>,
+    mode: medulla_ingestion_types::ingestion_wire::DiscoverMode,
+    as_of: Option<i64>,
+    perspectives: Option<u32>,
+    served: (Option<String>, Option<ServedAdapterRef>),
+    quality_policy_ref: Option<String>,
+    implicit_feedback: Vec<medulla_result_types::feedback_event::RetrievalFeedback>,
+    allowed: Option<std::collections::BTreeSet<String>>,
+    scope: Option<medulla_retrieval::knowledge_scope::ResolvedScope>,
+    scope_digest: String,
+    seed_ids: Vec<String>,
+    hop_filter: Option<medulla_ingestion_types::ingestion_wire::HopFilter>,
+) -> Response {
+    let (tenant, adapter) = served;
+    let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
+        query_text,
+        mode,
+        as_of,
+        hops,
+        seed_ids: seed_ids.clone(),
+        hop_filter: hop_filter.clone(),
+    };
+    let expansions = medulla_server_api::knob_config::knobs().discover_expansions as usize;
+    let planned_core = Arc::clone(core);
+    let planned = match compute_off_lock(req_id, move || {
+        // Only a `deep` request reads the vocabulary; `standard` plans nothing.
+        let relationships = if request.mode
+            == medulla_ingestion_types::ingestion_wire::DiscoverMode::Deep
+        {
+            medulla_plan::query_understanding::relationship_names(&planned_core.analysis_snapshot())
+        } else {
+            Vec::new()
+        };
+        super::discover_plan::plan_discover(&request, &relationships, expansions, perspectives)
+    })
+    .await
+    {
+        Ok(planned) => planned,
+        Err(response) => return response,
+    };
+    let mut deep = match planned {
+        Ok(deep) => deep,
+        Err(refusal) => return Response::err(req_id, refusal.message()),
+    };
+    // `plan_discover` has bounded the seed count and the filter. The seeds are then read
+    // through the caller's projected core, so a hidden seed refuses like an absent one
+    // (MEDULLA-FEDERATED-QUERY-R741.2), before any retrieval runs.
+    if let Err(refusal) = super::discover_plan::check_seeds(core, &seed_ids) {
+        return Response::err(req_id, refusal.message());
+    }
+    // The request's own vector was adapted once before dispatch; the planned expansion
+    // vectors get the same scoped adapter here (MEDULLA-FEDERATED-QUERY-R090.7).
+    adapt_expansions(&mut deep, adapter.as_ref());
+    let hop_filter = hop_filter.unwrap_or_default();
+    discover(
+        core,
+        &DiscoverCall {
+            keywords: &keywords,
+            query_embedding: &query_embedding,
+            k,
+            hops,
+            as_of,
+            graph_name,
+            tenant: tenant.as_deref(),
+            adapter_digest: adapter_digest_of(adapter.as_ref()),
+            quality_policy_ref: quality_policy_ref.as_deref(),
+            implicit_feedback: &implicit_feedback,
+            allowed: allowed.as_ref(),
+            scope: scope.as_ref(),
+            scope_digest: &scope_digest,
+            seeds: &seed_ids,
+            hop_filter: &hop_filter,
+        },
+        deep,
+        req_id,
+    )
+}
+
+/// `SemanticSearch`: pure extract-method from `try_handle`'s match arm,
+/// byte-identical behaviour, no signature change.
+async fn handle_semantic_search(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    query_embedding: Vec<f32>,
+    n_results: usize,
+) -> Response {
+    // CONCEPT:MEDULLA-KG.txn.per-graph-write-isolation / Phase C-D — the HNSW index is now maintained
+    // incrementally, so the ANN query is O(log n): hold the embedding read
+    // lock only for the query itself (no whole-store clone, no per-query
+    // index rebuild — at most a one-time lazy rebuild after load). The
+    // per-candidate Ebbinghaus decay scoring still runs off-lock below.
+    // Fetch more results initially to account for filtered-out nodes.
+    let raw_results = {
+        core.semantic_store
+            .read()
+            .semantic_search(&query_embedding, n_results * 2)
+    };
+
+    // Bounded candidate-metadata fetch: only the hit ids, not the graph.
+    let candidates: Vec<(String, f32, Option<Vec<u8>>)> = {
+        let g = &**core;
+        raw_results
+            .into_iter()
+            .map(|(id, sim)| {
+                let props = g.get_node_properties(&id);
+                (id, sim, props)
+            })
+            .collect()
+    };
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    match compute_off_lock(req_id, move || {
+        weight_semantic_results(candidates, now, n_results)
+    })
+    .await
+    {
+        Ok(weighted_results) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::ingestion::SemanticSearch,
+            >(&weighted_results),
+        ),
+        Err(resp) => resp,
+    }
+}
+
+/// EH-396: re-aim a `SemanticSearch`/`Discover` query vector by the caller's
+/// active adapter. `core` here is the caller's row-projected core, so the
+/// adapted probe still searches only rows the caller may see.
+#[cfg(feature = "decide")]
+async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method {
+    use medulla_server_ops::api::admin::served_adapter::adapted_query;
+    use medulla_server_ops::api::admin::served_adapter::carrier_tenant;
+    let tenant = carrier_tenant(Some(ctx.read_authority));
+    let served = (ctx.graph_name, &**ctx.core);
+    match method {
+        Method::SemanticSearch {
+            query_embedding,
+            n_results,
+        } => Method::SemanticSearch {
+            query_embedding: adapted_query(ctx.state, tenant, served, None, query_embedding).await,
+            n_results,
+        },
+        Method::Discover {
+            keywords,
+            query_embedding,
+            k,
+            quality_policy_ref,
+            hops,
+            query_text,
+            mode,
+            as_of,
+            perspectives,
+            capability,
+            document_set_ids,
+            agent_ref,
+            seed_ids,
+            hop_filter,
+        } => Method::Discover {
+            keywords,
+            query_embedding: adapted_query(
+                ctx.state,
+                tenant,
+                served,
+                capability.as_deref(),
+                query_embedding,
+            )
+            .await,
+            k,
+            quality_policy_ref,
+            hops,
+            query_text,
+            mode,
+            as_of,
+            perspectives,
+            capability,
+            document_set_ids,
+            agent_ref,
+            seed_ids,
+            hop_filter,
+        },
+        other => other,
+    }
+}
+
+#[cfg(not(feature = "decide"))]
+async fn adapt_query_vector(_ctx: &GraphOpsContext<'_>, method: Method) -> Method {
+    method
+}
+
+/// The knowledge scope of agent `agent_ref`, read from its definition node of the caller's
+/// projected view, with the digest of the declared scope; no scope when the request names no
+/// agent or the agent declares none (MEDULLA-FEDERATED-QUERY-R704.3, R704.5).
+#[cfg(feature = "query")]
+fn agent_scope_for(
+    core: &GraphCore,
+    agent_ref: Option<&str>,
+) -> Result<
+    (
+        Option<medulla_retrieval::knowledge_scope::ResolvedScope>,
+        String,
+    ),
+    String,
+> {
+    use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, ResolvedScope};
+    let scope = match agent_ref {
+        Some(agent) => agent_scope(core, agent).map_err(|refusal| refusal.to_string())?,
+        None => None,
+    };
+    let digest = scope_digest(scope.as_ref());
+    Ok((
+        scope.map(|scope| ResolvedScope::resolve(core, &scope)),
+        digest,
+    ))
+}
+
+/// The grant gate of the agent's knowledge scope (MEDULLA-FEDERATED-QUERY-R704.4): every
+/// knowledge set the scope names needs an unexpired `discover` grant naming the caller.
+/// Access is denied by default. A scope that cannot be read passes here: `agent_scope_for`
+/// has already refused it, so the scope refusals stay ahead of the grant refusal.
+#[cfg(all(feature = "query", feature = "security"))]
+async fn require_scope_grants(
+    ctx: &GraphOpsContext<'_>,
+    agent_ref: Option<&str>,
+) -> Result<(), String> {
+    let Some(agent) = agent_ref else {
+        return Ok(());
+    };
+    let Ok(Some(scope)) = medulla_retrieval::knowledge_scope::agent_scope(ctx.core, agent) else {
+        return Ok(());
+    };
+    let principal = ctx.read_authority.verified_actor()?.to_string();
+    let now_ms = medulla_server_api::txn::now_ms();
+    let state = ctx.state.read().await;
+    state.isolation.require_resource_grants(
+        &principal,
+        &scope.knowledge_sets,
+        medulla_identity_core_types::acl::ResourceProtocol::Knowledge,
+        "discover",
+        now_ms,
+    )
+}
+
+/// Handle semantic and embedding operations.
+///
+/// Every arm here is a READ, and every read is served from `core.semantic_store`
+/// — the resident generation. That IS the live generation: the only thing that
+/// makes an index resident and serving is
+/// `SemanticStore::adopt_generation(&image)`, and the only image
+/// `medulla_server::semantic_activation` ever adopts is the one
+/// `SemanticCodeStore::read_live()` returns, which serves the live generation
+/// and nothing else (a superseded or retired generation is unreachable through
+/// it). So there is no second read path to add: taking a query through
+/// `read_live()` would decode a whole IVF-PQ artifact per search and would bypass
+/// the raw arena that `semantic_search`'s exact brute-force fallback needs while
+/// an index is cold or warming.
+///
+/// `AddEmbedding` is the one mutating member of the family and it is
+/// `mutation::GATEWAY_ROUTED`, so it is structurally unreachable here.
+pub async fn try_handle_semantic_compute(
+    ctx: GraphOpsContext<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let GraphOpsContext { req_id, core, .. } = ctx;
+    let method = adapt_query_vector(&ctx, method).await;
+    ControlFlow::Break(match method {
+        Method::AddEmbedding { .. } | Method::DeclareEmbeddingSpace { .. } => unreachable!(
+            "AddEmbedding and DeclareEmbeddingSpace are mutation::GATEWAY_ROUTED; dispatch_graph_op must route them \
+                 through try_handle_gateway before it ever reaches this terminal handler"
+        ),
+        Method::SemanticSearch {
+            query_embedding,
+            n_results,
+        } => handle_semantic_search(req_id, core, query_embedding, n_results).await,
+        #[cfg(feature = "query")]
+        Method::Discover {
+            keywords,
+            query_embedding,
+            k,
+            quality_policy_ref,
+            hops,
+            query_text,
+            mode,
+            as_of,
+            perspectives,
+            capability,
+            document_set_ids,
+            agent_ref,
+            seed_ids,
+            hop_filter,
+        } => {
+            let allowed =
+                match super::assistant_profile::resolve_document_sets(&ctx, &document_set_ids)
+                    .await
+                {
+                    Ok(allowed) => allowed,
+                    Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
+                };
+            // The agent's knowledge scope narrows the candidates before truncation
+            // (MEDULLA-FEDERATED-QUERY-R704.3): it only narrows what the caller may read.
+            let (scope, scope_digest) = match agent_scope_for(core, agent_ref.as_deref()) {
+                Ok(resolved) => resolved,
+                Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
+            };
+            #[cfg(feature = "security")]
+            if let Err(error) = require_scope_grants(&ctx, agent_ref.as_deref()).await {
+                return ControlFlow::Break(Response::err(req_id, error));
+            }
+            let served = discover_served(&ctx, capability.as_deref()).await;
+            let implicit_feedback = match served.0.as_deref() {
+                Some(tenant) => {
+                    super::retrieval_feedback::load_implicit_events(
+                        ctx.state,
+                        tenant,
+                        &super::retrieval_feedback::FeedbackKnobs::from_registry(),
+                    )
+                    .await
+                }
+                None => Vec::new(),
+            };
+            handle_discover(
+                req_id,
+                core,
+                ctx.graph_name,
+                keywords,
+                query_embedding,
+                k,
+                hops,
+                query_text,
+                mode,
+                as_of,
+                perspectives,
+                served,
+                quality_policy_ref,
+                implicit_feedback,
+                allowed,
+                scope,
+                scope_digest,
+                seed_ids,
+                hop_filter,
+            )
+            .await
+        }
+        #[cfg(not(feature = "query"))]
+        Method::Discover { .. } => Response::err(
+            req_id,
+            "Discover requires the `query` feature (the retrieval stop rule)".to_string(),
+        ),
+        // CONCEPT:MEDULLA-KG.compute.l2-normalize-batch-vectors — kernel-backed in-engine batch L2-normalize (compute-near-data).
+        // The `numeric` feature links the pure medulla-numeric kernel (faer/ndarray, no Python-extension FFI);
+        // a no-numeric build (e.g. `pi`) has no medulla-numeric, so the op reports it's absent.
+        Method::BatchL2Normalize { vectors } => {
+            #[cfg(feature = "numeric")]
+            {
+                let out = medulla_numeric::linalg::batch_l2_normalize(&vectors);
+                Response::ok(
+                    req_id,
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::compute::BatchL2Normalize,
+                    >(out),
+                )
+            }
+            #[cfg(not(feature = "numeric"))]
+            {
+                let _ = vectors;
+                Response::err(
+                    req_id,
+                    "BatchL2Normalize requires the `numeric` feature (medulla-numeric kernel)."
+                        .to_string(),
+                )
+            }
+        }
+        // AddEdge/RemoveEdge (CONCEPT:MEDULLA-P0-2 bypass guard): GATEWAY_ROUTED — see
+        // the AddNode/RemoveNode comment above for why these are structurally
+        // unreachable here, not merely undocumented.
+        other => return ControlFlow::Continue(other),
+    })
+}

@@ -32,7 +32,7 @@ Negative cases that must exist: an origin-approved rank-1 declaration with a con
 
 - `MEDULLA-SRC-AUTH-R011.1`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::trust_mark_round_trips`.
 - `MEDULLA-SRC-AUTH-R011.2`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::derived_content_inherits_untrusted`.
-- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::cas_lowering_needs_approval_and_pins_current_mark` (planned, L2) and `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::tests::batch_writes_refuse_caller_set_trust_mark` (L2): the tests do not exist yet; the owning change adds them at this exact path. The approval id is the reserved updates-blob key `trust_mark_approval_id`.
+- `MEDULLA-SRC-AUTH-R011.3`: `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs::tests::add_node_stamps_trust_mark` (planned, L2) and `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs::tests::cas_lowering_needs_approval_and_pins_current_mark` (planned, L2) and `crates/medulla-h-graph-gateway/src/graph_ops/gateway_graph.rs::tests::batch_writes_refuse_caller_set_trust_mark` (L2): the tests do not exist yet; the owning change adds them at this exact path. The approval id is the reserved updates-blob key `trust_mark_approval_id`.
 - `MEDULLA-SRC-AUTH-R011.4`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::downgrade_without_approval_refused`.
 - `MEDULLA-SRC-AUTH-R011.5`: `crates/medulla-virtual-graph/src/source_selection/tests.rs::mark_carries_rule_and_generation`.
 - `MEDULLA-SRC-AUTH-R011.6`: `tests/federated/test_trust_mark_served.py::test_tool_result_is_untrusted_and_sticky` (planned, L3): the file does not exist yet; the owning change adds it at this exact path.
@@ -47,7 +47,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R004.6.1`: `tests/federated/test_source_coverage_served.py::test_rank_one_wins_and_alternates_listed` (planned, L3).
 - `MEDULLA-SRC-AUTH-R007.4`: `tests/federated/test_source_coverage_served.py::test_report_sources_used_equal_audit` (planned, L3) and `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::sources_used_equals_audit` (planned, L2).
 - `MEDULLA-SRC-AUTH-R009.4`: `tests/federated/test_source_coverage_served.py::test_swapping_authority_rank_changes_sources_used` (planned, L3).
-- `MEDULLA-SRC-AUTH-R801`: `crates/medulla-h-graph/src/graph_ops/policy_source.rs::tests::bind_refuses_in_order` (planned, L1) and `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
+- `MEDULLA-SRC-AUTH-R801`: `crates/medulla-h-graph-gateway/src/graph_ops/policy_source.rs::tests::bind_refuses_in_order` (planned, L1) and `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
 
 ### MEDULLA-SRC-AUTH-R012 tests
 

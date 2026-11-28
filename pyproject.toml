@@ -447,6 +447,7 @@ units = [
   "medulla-h-compute",
   "medulla-h-decide",
   "medulla-h-graph",
+  "medulla-h-graph-gateway",
   "medulla-h-ingest",
   "medulla-h-ingest-repository",
   "medulla-h-jobs",

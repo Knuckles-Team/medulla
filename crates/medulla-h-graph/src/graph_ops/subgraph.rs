@@ -1,6 +1,6 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// Every edge's endpoints paired with its decoded property blob (`Null` for
 /// an undecodable one). The subgraph and cluster-hierarchy wire projections

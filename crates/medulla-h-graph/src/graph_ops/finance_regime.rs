@@ -10,10 +10,13 @@
 //! the sizing input applies a versioned policy. Nothing is written and no order
 //! is created.
 
-use super::finance_accounting::{datetime_ns, literal};
 use super::finance_regime_gate::{calibrate, digest_of, size, GateModel, Refusal};
-use super::terminal::GraphOpsContext;
 use super::*;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
+use {
+    medulla_h_graph_gateway::graph_ops::finance_accounting::datetime_ns,
+    medulla_h_graph_gateway::graph_ops::finance_accounting::literal,
+};
 
 use medulla_numeric::evaluation::regime_forecast::{forecast, RegimeForecastRefusal};
 use medulla_types::regime_forecast::{

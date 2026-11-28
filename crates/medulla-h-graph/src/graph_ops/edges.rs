@@ -1,6 +1,6 @@
 use super::*;
 
-use super::terminal::GraphOpsContext;
+use medulla_h_graph_gateway::graph_ops::ops_context::GraphOpsContext;
 
 /// Intelligent overload backstop for the `GetEdges` full-graph dump — the
 /// edge-count sibling of [`oversize_dump_error`]. Given the graph's edge `count`

@@ -126,9 +126,14 @@ async fn handle_sync_memory(
 ) -> Response {
     use medulla_decision_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
-    use medulla_h_graph::graph_ops::memory_snapshot::{
-        check_doc_kind, content_change, decide_sync, exceeds_capacity, outcome_response, stamp_for,
-        ContentChange,
+    use {
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::check_doc_kind,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::content_change,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::decide_sync,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::exceeds_capacity,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::outcome_response,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::stamp_for,
+        medulla_h_graph_gateway::graph_ops::memory_snapshot::ContentChange,
     };
     let DispatchCtx {
         state,
@@ -166,7 +171,7 @@ async fn handle_sync_memory(
         // The pre-commit CAS step: a head whose content the CAS cannot serve reads
         // as the `Unavailable` standing.
         let head_content_held =
-            match medulla_h_graph::graph_ops::memory_snapshot::head_content_digest(
+            match medulla_h_graph_gateway::graph_ops::memory_snapshot::head_content_digest(
                 &core,
                 &request.doc_id,
             ) {
