@@ -1,9 +1,3 @@
-#[cfg(feature = "cost")]
-use super::request_boundary::dispatch_resource_stats;
-use super::request_boundary::{
-    append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops,
-    dispatch_boxed, DispatchAuthority,
-};
 use crate::dispatch::*;
 use medulla_server_api::handlers::{
     DispatchCtx, DispatchHeader, HandlerFuture, HandlerRegistry, MethodHandler,
@@ -14,81 +8,32 @@ use medulla_server_consensus::{
     dispatch::consensus::replicated_identity_bootstrap_authorized,
     dispatch::consensus::ServerRegistration,
 };
+use medulla_server_graph::dispatch::change_envelope::multi_graph_batch_update;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 #[cfg(feature = "knowledge-batch")]
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_knowledge_stream;
 #[cfg(feature = "modality-serving")]
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_served_modality;
-use medulla_server_graph::dispatch::request_boundary::screen::decode_screen_observation;
 #[cfg(feature = "sparql-http")]
 use medulla_server_graph::dispatch::sparql_update::{
     coordinated_rdf_graph_write, coordinated_sparql_http_update,
 };
 use medulla_server_graph::{
-    dispatch::change_envelope::dispatch_change_envelopes,
-    dispatch::change_envelope::multi_graph_batch_update,
-};
-use medulla_server_graph::{
     dispatch::policy_evolution::handle_policy_evolution,
     dispatch::policy_evolution::PolicyEvolutionTarget,
 };
-#[cfg(feature = "ast")]
-use medulla_server_graph::{
-    dispatch::request_boundary::preflight::ast_input_limits,
-    dispatch::request_boundary::preflight::decode_ast_files,
-    dispatch::request_boundary::preflight::validate_ast_logical_path,
-};
+use medulla_server_router_arms::dispatch::request_boundary::{dispatch_boxed, DispatchAuthority};
+use medulla_server_router_arms::dispatch::router::*;
 use std::sync::OnceLock;
 
-#[cfg(all(feature = "ann-redb", feature = "query"))]
-mod bookmark;
-#[cfg(all(feature = "ann-redb", feature = "query"))]
-mod bookmark_binding;
-mod branch_merge;
-mod branch_write;
-mod catalog_emit;
-#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
-mod changeset_index;
-mod channels;
 mod control_plane;
 mod data_plane;
-mod data_plane_arms;
 #[cfg(feature = "security")]
 mod data_product;
 mod decision_plane;
 mod graph_lifecycle;
-#[cfg(all(feature = "ann-redb", feature = "query"))]
-mod graph_source;
 mod identity_access;
-mod incident;
-mod knowledge_bundle;
-mod lifecycle;
-mod memory_change;
-mod memory_events;
-mod quality;
-mod resource_cost;
-mod schema_drift;
-mod sdlc;
-pub use sdlc::recover_deliveries_at_boot;
-mod git_export_pack;
-mod git_refs_list;
-mod import_git_history;
-mod list_path_grants;
-mod read_blame;
-mod read_path_history;
-mod read_tree;
-mod revert_changeset;
-pub mod service_control;
-mod set_path_grant;
-#[cfg(feature = "security")]
-pub(crate) mod share;
-mod source_bisect;
-mod source_ingest;
-mod submit_changeset;
-mod submit_symbol_edit;
-mod telemetry;
 
-use channels::dispatch_channel_methods;
 use control_plane::{
     dispatch_agent_library_methods, dispatch_cluster_admin_methods,
     dispatch_compute_and_media_methods, dispatch_graph_translated_op_families,
@@ -106,19 +51,14 @@ use data_plane::{
 };
 use graph_lifecycle::dispatch_graph_lifecycle_methods;
 use identity_access::dispatch_identity_and_access_methods;
-use incident::dispatch_incident_methods;
-#[cfg(feature = "security")]
-use lifecycle::apply_rbac_admin;
-#[cfg(feature = "redb")]
-pub(in crate::dispatch) use lifecycle::mark_graph_ready;
-pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
-use lifecycle::{delete_graph, dispatch_get_identity, index_kind_label, index_validity_label};
-use quality::dispatch_quality_methods;
-use resource_cost::dispatch_resource_cost_methods;
-use sdlc::dispatch_sdlc_methods;
-use service_control::dispatch_service_control_methods;
-use source_ingest::dispatch_source_ingest_methods;
-use telemetry::dispatch_telemetry_methods;
+use medulla_server_router_arms::dispatch::router::channels::dispatch_channel_methods;
+use medulla_server_router_arms::dispatch::router::incident::dispatch_incident_methods;
+use medulla_server_router_arms::dispatch::router::quality::dispatch_quality_methods;
+use medulla_server_router_arms::dispatch::router::resource_cost::dispatch_resource_cost_methods;
+use medulla_server_router_arms::dispatch::router::sdlc::dispatch_sdlc_methods;
+use medulla_server_router_arms::dispatch::router::service_control::dispatch_service_control_methods;
+use medulla_server_router_arms::dispatch::router::source_ingest::dispatch_source_ingest_methods;
+use medulla_server_router_arms::dispatch::router::telemetry::dispatch_telemetry_methods;
 
 /// The one guarded arm: a SPARQL-over-HTTP UPDATE arrives as an
 /// `ApplyMutation` whose event type is the SPARQL-HTTP update marker. Any

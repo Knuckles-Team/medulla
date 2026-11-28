@@ -466,6 +466,7 @@ units = [
   "medulla-server-graph",
   "medulla-server-identity",
   "medulla-server-router",
+  "medulla-server-router-arms",
 ]
 
 # Outer adapters: the facade package, the Python engine, the cross-crate test harnesses and the repository tooling (`cargo xtask`), which no crate depends on.

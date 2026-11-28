@@ -14,7 +14,7 @@ use super::*;
 /// but its catalog nodes are not; replaying the same request emits them again (the triples
 /// are idempotent).
 #[cfg(feature = "rdf")]
-pub(super) async fn commit_asset(
+pub async fn commit_asset(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
@@ -61,11 +61,7 @@ pub(super) fn emit_failures() -> u64 {
 /// logged and counted on the registered `medulla_catalog_emit_failures_total` series, and the
 /// replayed request emits the nodes again.
 #[cfg(feature = "rdf")]
-pub(super) fn after_emit(
-    response: Response,
-    _req_id: u64,
-    emitted: Result<(), String>,
-) -> Response {
+pub fn after_emit(response: Response, _req_id: u64, emitted: Result<(), String>) -> Response {
     if let Err(refusal) = emitted {
         medulla_kernel::metrics::process().catalog_emit_failed();
         tracing::error!(target: "medulla::catalog", %refusal, "catalog emit failed after the record committed");
@@ -172,7 +168,7 @@ async fn asset_evidence(
 /// back from the work item row, the workflow definition it executed (MEDULLA-TYPED-PACKS-R108.6).
 #[cfg(feature = "rdf")]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct RunTraceAsset {
+pub struct RunTraceAsset {
     pub run_id: String,
     pub tenant: String,
     pub work_item_id: String,
@@ -185,7 +181,7 @@ pub(super) struct RunTraceAsset {
 /// caller sent: the commit stamps it from the work item row, and [`commit_runs`] reads it back
 /// from that row.
 #[cfg(feature = "rdf")]
-pub(super) fn run_traces_of(method: &Method) -> Option<Vec<RunTraceAsset>> {
+pub fn run_traces_of(method: &Method) -> Option<Vec<RunTraceAsset>> {
     let Method::CommitWorkItemResult {
         tenant,
         work_item_id,
@@ -266,7 +262,7 @@ async fn read_work_item(
 /// item row recorded at submit. The first refusal stops the rest; a replay of the same commit
 /// emits them all again (the triples are idempotent).
 #[cfg(feature = "rdf")]
-pub(super) async fn commit_runs(
+pub async fn commit_runs(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,

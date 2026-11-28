@@ -468,10 +468,10 @@ reviewed_on = "2026-09-25"
 reason = """This renders UQL comparison operators for a wire expression, including !=. The modality function renders row validation prose. These separate protocols have no common enum or vocabulary."""
 
 [[pair]]
-left_file = "crates/medulla-server-router/src/dispatch/router/lifecycle.rs"
+left_file = "crates/medulla-server-router-arms/src/dispatch/router/lifecycle.rs"
 left_name = "index_kind_label"
 left_digest = "sha256:ee6e23cdffc019b620eb50df849d670c2b9b60f3130dc02a342df07c268e7c95"
-right_file = "crates/medulla-server-router/src/dispatch/router/lifecycle.rs"
+right_file = "crates/medulla-server-router-arms/src/dispatch/router/lifecycle.rs"
 right_name = "index_validity_label"
 right_digest = "sha256:e3033654d664abd0a2b39b954cef1e9f44746e4e14f8a9b3f24033636ec33758"
 reviewed_on = "2026-09-25"

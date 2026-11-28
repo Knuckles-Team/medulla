@@ -96,15 +96,15 @@ const REDUNDANT_WRAPPERS: [&str; 60] = [
 const ROUTE_OWNERS: [(&str, &str); 16] = [
     (
         "dispatch_service_control_methods",
-        "crates/medulla-server-router/src/dispatch/router/service_control.rs",
+        "crates/medulla-server-router-arms/src/dispatch/router/service_control.rs",
     ),
     (
         "dispatch_source_ingest_methods",
-        "crates/medulla-server-router/src/dispatch/router/source_ingest.rs",
+        "crates/medulla-server-router-arms/src/dispatch/router/source_ingest.rs",
     ),
     (
         "dispatch_resource_cost_methods",
-        "crates/medulla-server-router/src/dispatch/router/resource_cost.rs",
+        "crates/medulla-server-router-arms/src/dispatch/router/resource_cost.rs",
     ),
     (
         "dispatch_graph_lifecycle_methods",
@@ -112,7 +112,7 @@ const ROUTE_OWNERS: [(&str, &str); 16] = [
     ),
     (
         "dispatch_channel_methods",
-        "crates/medulla-server-router/src/dispatch/router/channels.rs",
+        "crates/medulla-server-router-arms/src/dispatch/router/channels.rs",
     ),
     (
         "dispatch_identity_and_access_methods",
@@ -156,7 +156,7 @@ const ROUTE_OWNERS: [(&str, &str); 16] = [
     ),
     (
         "dispatch_telemetry_methods",
-        "crates/medulla-server-router/src/dispatch/router/telemetry.rs",
+        "crates/medulla-server-router-arms/src/dispatch/router/telemetry.rs",
     ),
 ];
 
@@ -235,8 +235,9 @@ const LEGACY_COALESCER_METHODS: [&str; 5] = [
     "CompareAndSetNodeFields",
 ];
 
-const DISPATCH_ROOTS: [&str; 4] = [
+const DISPATCH_ROOTS: [&str; 5] = [
     "crates/medulla-server-router/src/dispatch",
+    "crates/medulla-server-router-arms/src/dispatch",
     "crates/medulla-server-graph/src/dispatch",
     "crates/medulla-server-consensus/src/dispatch",
     "crates/medulla-server-identity/src/dispatch",

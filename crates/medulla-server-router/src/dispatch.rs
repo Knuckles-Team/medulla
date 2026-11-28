@@ -11,14 +11,10 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_auth::access::check_graph_access;
-use medulla_server_auth::access::is_admin_authz_action;
-use medulla_server_auth::access::require_admin_capability;
 use medulla_server_auth::auth::verify_multisig_mutation_signatures;
 use medulla_server_auth::auth::verify_register_identity_signature;
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.
-#[cfg(feature = "ast")]
-use medulla_server_api::compute::compute_off_lock;
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module
 // (server/mod.rs) and three ungated signatures below -- `reconcile_existing_graph_create`,
 // `read_committed_graph_version`, `reconcile_missing_graph_delete` -- name this trait
@@ -30,29 +26,19 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::{timed_write, ServerState};
 
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod dispatch_e2e_tests;
+#[cfg(all(test, feature = "raft", feature = "security", feature = "redb"))]
+mod replicated_tenant_tests;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod request_boundary;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod router;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod seam;
-// MEDULLA-UNIFIED-DATA-PLANE-R760.3: the five served incident methods over the
-// incident authority of `medulla-stream`.
-#[cfg(any(feature = "obs", feature = "stream"))]
-pub mod incident;
-// MEDULLA-UNIFIED-DATA-PLANE-R762.3: the served quality rule write.
-pub mod quality;
-// EH-408 / EH-409: stored telemetry → ontology-bound facts. Needs the
-// observability store (`obs`) and the schema reasoner (`shacl`).
-#[cfg(all(feature = "obs", feature = "shacl"))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod telemetry;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod test_support;

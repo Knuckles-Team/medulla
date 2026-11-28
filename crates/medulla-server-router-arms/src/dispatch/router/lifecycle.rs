@@ -825,6 +825,3 @@ fn rbac_admin_response(
         }
     }
 }
-
-#[cfg(all(test, feature = "raft", feature = "security", feature = "redb"))]
-mod replicated_tenant_tests;

@@ -408,10 +408,15 @@ Upward references: none.
 
 #### `medulla-server-router`: 27,064 lines into 2 crates
 
+The static map put the request-boundary entry points, the seam and `router.rs` in the lower crate, but the entry
+points call the composed handler registry, which names every arm. A lower crate may not name a higher one, so those
+three modules, which compose the arms, stay in the crate that keeps the name. The `sdlc` family moves down with the arms
+that call its provenance check, and `read_path_history` moves down with the arms that read it.
+
 | Target crate | Lines | Modules (paths under `src/`, `::` form) |
 |---|---|---|
-| `medulla-server-router-arms` | 13,251 | ./{(root),dispatch}; dispatch/{incident,quality,request_boundary,router,seam,telemetry,test_support}; dispatch/router/{bookmark,bookmark_binding,branch_merge,branch_write,catalog_emit,changeset_index,channels,data_plane_arms,git_export_pack,git_refs_list,graph_source,import_git_history,incident,knowledge_bundle,lifecycle,list_path_grants,memory_change,memory_events,quality,read_blame,read_tree,resource_cost,revert_changeset,schema_drift,service_control,set_path_grant,share,source_bisect,source_ingest,submit_changeset,submit_symbol_edit,telemetry} |
-| `medulla-server-router` | 13,813 | dispatch/dispatch_e2e_tests; dispatch/router/{control_plane,data_plane,data_product,decision_plane,graph_lifecycle,identity_access,read_path_history,sdlc} |
+| `medulla-server-router-arms` | 15,967 | ./{(root),dispatch}; dispatch/{incident,quality,request_boundary,router,telemetry}; dispatch/request_boundary/{authorization,consensus,delegated_actor,method_errors,saga}; dispatch/router/{bookmark,bookmark_binding,branch_merge,branch_write,catalog_emit,changeset_index,channels,data_plane_arms,git_export_pack,git_refs_list,graph_source,import_git_history,incident,knowledge_bundle,lifecycle,list_path_grants,memory_change,memory_events,quality,read_blame,read_path_history,read_tree,resource_cost,revert_changeset,schema_drift,sdlc,service_control,set_path_grant,share,source_bisect,source_ingest,submit_changeset,submit_symbol_edit,telemetry} |
+| `medulla-server-router` | 11,636 | ./{(root),dispatch}; dispatch/{dispatch_e2e_tests,replicated_tenant_tests,request_boundary,router,seam,test_support}; dispatch/router/{control_plane,data_plane,data_product,decision_plane,graph_lifecycle,identity_access} |
 
 Upward references: none.
 

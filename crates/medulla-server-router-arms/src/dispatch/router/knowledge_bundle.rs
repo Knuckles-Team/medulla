@@ -18,7 +18,7 @@ use medulla_server_auth::access::importing;
 use medulla_types::knowledge_bundle::{ImportRecord, ImportState, IMPORT_RENEW_MS};
 
 /// Serve `Method::BundleExport`.
-pub(super) async fn serve_bundle_export(
+pub async fn serve_bundle_export(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -56,7 +56,7 @@ pub(super) async fn serve_bundle_export(
 
 /// Serve `Method::BundleImport`.
 #[allow(clippy::too_many_arguments)]
-pub(super) async fn serve_bundle_import(
+pub async fn serve_bundle_import(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,

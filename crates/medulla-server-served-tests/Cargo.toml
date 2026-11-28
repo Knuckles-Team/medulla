@@ -79,6 +79,7 @@ medulla-uql = { path = "../medulla-uql" }
 medulla-server-graph = { path = "../medulla-server-graph" }
 medulla-server-obs = { path = "../medulla-server-obs", optional = true }
 medulla-server-router = { path = "../medulla-server-router" }
+medulla-server-router-arms = { path = "../medulla-server-router-arms" }
 medulla-finance-types = { path = "../medulla-finance-types", optional = true }
 
 medulla-server = { path = "../medulla-server", features = ["test-support"] }

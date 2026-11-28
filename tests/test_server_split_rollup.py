@@ -33,6 +33,7 @@ HANDLERS = (
 HANDLER_FORBIDDEN = {
     "medulla-server",
     "medulla-server-router",
+    "medulla-server-router-arms",
     "medulla-wire",
     *HANDLERS,
 }
@@ -68,7 +69,12 @@ UPPER_LAYER = tuple(
 
 
 # Crates a lower layer must never name (R056.4, R056.6).
-_FACADE_AND_ROUTER = {"medulla-server", "medulla-server-router", "medulla-wire"}
+_FACADE_AND_ROUTER = {
+    "medulla-server",
+    "medulla-server-router",
+    "medulla-server-router-arms",
+    "medulla-wire",
+}
 _ABOVE_RAFT = _FACADE_AND_ROUTER
 _ABOVE_PERSISTENCE = _FACADE_AND_ROUTER | {"medulla-raft"}
 
@@ -217,7 +223,8 @@ def test_served_tests_live_in_the_served_tests_crate() -> None:
         for table, deps in _dependency_tables(manifest):
             if "medulla-server-router" in deps:
                 failures.append(
-                    f"{manifest_path.relative_to(REPO)}: [{table}] names medulla-server-router"
+                    f"{manifest_path.relative_to(REPO)}: [{table}] "
+                    "names medulla-server-router"
                 )
     # Rule 2: no handler source names the router crate.
     for crate in handlers:
@@ -227,7 +234,9 @@ def test_served_tests_live_in_the_served_tests_crate() -> None:
                     f"{source.relative_to(REPO)}: names medulla_server_router"
                 )
     # Rule 3: a served-test module of one handler crate is named for that crate.
-    split_tests = REPO / "crates" / "medulla-server-served-tests" / "src" / "split_tests"
+    split_tests = (
+        REPO / "crates" / "medulla-server-served-tests" / "src" / "split_tests"
+    )
     modules = sorted(split_tests.glob("*.rs")) if split_tests.is_dir() else []
     if not modules:
         failures.append(f"{split_tests.relative_to(REPO)}: no served-test module")
@@ -237,6 +246,7 @@ def test_served_tests_live_in_the_served_tests_crate() -> None:
         handler = "-".join(module.stem.split("_")[:3])
         if not (REPO / "crates" / handler).is_dir():
             failures.append(
-                f"{module.relative_to(REPO)}: names no handler crate ({handler} does not exist)"
+                f"{module.relative_to(REPO)}: names no handler crate "
+                f"({handler} does not exist)"
             )
     assert not failures, "\n".join(failures)

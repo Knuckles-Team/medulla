@@ -478,7 +478,7 @@ async fn source_drain_status(ctx: DispatchCtx<'_>, drain_id: String) -> Response
 /// handler, then the next page is enqueued under its deterministic task id, so a repeat of any step
 /// is harmless (see [`run_drain_ack_plan`]). A caller without the live lease writes nothing.
 #[cfg(feature = "jobs")]
-pub(super) async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Response {
+pub async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Response {
     use medulla_h_ingest::ingest_drain::{drain_ack_plan, on_ingest_drain_ack, DrainAckOutcome};
     use medulla_work_types::task_queue::TaskOutcome;
     let req_id = ctx.req.id;

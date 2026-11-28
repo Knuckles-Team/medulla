@@ -1264,6 +1264,7 @@ def mutation_inventory_sources() -> dict[str, str]:
     # Served dispatch is the router tree plus the graph-dispatch tree it delegates to.
     dispatch = _FamilyUnion(
         "crates/medulla-server-router/src/dispatch.rs",
+        "crates/medulla-server-router-arms/src/dispatch.rs",
         "crates/medulla-server-graph/src/dispatch.rs",
     )
     raft = read_compiler_family("crates/medulla-raft/src/raft/mod.rs")

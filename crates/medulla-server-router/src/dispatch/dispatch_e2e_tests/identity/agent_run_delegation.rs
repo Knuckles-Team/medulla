@@ -3,14 +3,14 @@
 //! and leaves an id with no agent-run record of the caller's tenant ungated (no oracle).
 
 use super::*;
-use crate::dispatch::request_boundary::authorization::{
-    check_agent_run_delegation, DispatchAuthority,
-};
 use medulla_protocol_types::protocol::Request;
 use medulla_result_types::epistemic_operations::{
     RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
 };
 use medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant;
+use medulla_server_router_arms::dispatch::request_boundary::authorization::{
+    check_agent_run_delegation, DispatchAuthority,
+};
 use medulla_work_types::native_control::{NativeControlSchemaVersion, SubmitWorkItemRequest};
 use std::collections::BTreeMap;
 
@@ -169,7 +169,7 @@ fn claiming(base: &VerifiedRequestContext, delegation_id: &str) -> VerifiedReque
 // spec: MEDULLA-IDENTITY-R744
 #[tokio::test]
 async fn an_envelope_naming_a_delegation_runs_as_its_principal_bounded_to_its_operations() {
-    use crate::dispatch::request_boundary::delegated_actor::{
+    use medulla_server_router_arms::dispatch::request_boundary::delegated_actor::{
         resolve_delegated_actor, DELEGATE_SCOPE,
     };
     let state = state();

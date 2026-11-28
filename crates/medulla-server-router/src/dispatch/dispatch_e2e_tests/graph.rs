@@ -2,6 +2,7 @@
 
 use crate::dispatch::request_boundary::dispatch;
 use crate::dispatch::*;
+use medulla_server_auth::access::is_admin_authz_action;
 use medulla_server_blob::blob::BlobStateExt;
 
 /// MEDULLA-CONTRACT-R056.5: one served method per domain goes through the

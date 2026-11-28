@@ -1,4 +1,7 @@
-"""Every workspace crate stays within the line budget after its split (MEDULLA-CONTRACT-R067)."""
+"""Every workspace crate stays within the line budget after its split.
+
+The budget and the split rows are MEDULLA-CONTRACT-R067.
+"""
 
 from __future__ import annotations
 
@@ -41,3 +44,30 @@ def test_catalog_types_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.5")
 def test_decision_stats_split_is_within_budget() -> None:
     _assert_split(["medulla-decision-stats-records", "medulla-decision-stats"])
+
+
+# spec: MEDULLA-CONTRACT-R067.12
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.12")
+def test_server_router_split_is_within_budget() -> None:
+    _assert_split(["medulla-server-router-arms", "medulla-server-router"])
+    arms = REPO / "crates" / "medulla-server-router-arms"
+    router = REPO / "crates" / "medulla-server-router"
+    # No upward edge: the arms crate never names the crate that composes it.
+    assert 'medulla-server-router"' not in (arms / "Cargo.toml").read_text()
+    for source in arms.rglob("*.rs"):
+        assert "medulla_server_router::" not in source.read_text(), source
+    assert "medulla-server-router-arms" in (router / "Cargo.toml").read_text()
+    # The old paths are gone: a moved arm is no longer a module of the router.
+    moved = [
+        "service_control",
+        "source_ingest",
+        "share",
+        "lifecycle",
+        "sdlc",
+        "channels",
+    ]
+    for name in moved:
+        assert not (router / "src" / "dispatch" / "router" / f"{name}.rs").exists(), (
+            name
+        )
+        assert (arms / "src" / "dispatch" / "router" / f"{name}.rs").exists(), name

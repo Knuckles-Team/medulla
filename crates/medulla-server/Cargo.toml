@@ -126,6 +126,7 @@ medulla-server-graph = { path = "../medulla-server-graph" }
 medulla-server-consensus = { path = "../medulla-server-consensus" }
 medulla-server-identity = { path = "../medulla-server-identity" }
 medulla-server-router = { path = "../medulla-server-router" }
+medulla-server-router-arms = { path = "../medulla-server-router-arms" }
 medulla-resource = { path = "../medulla-resource" }
 
 [features]

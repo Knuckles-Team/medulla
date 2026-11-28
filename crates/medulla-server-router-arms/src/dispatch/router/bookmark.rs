@@ -21,7 +21,7 @@ use medulla_types::bookmark_query::BookmarkSemanticSearchRequest;
 use tokio::sync::RwLock;
 
 /// Serve one bookmark search over the caller's projected core and the `bookmark` semantic index.
-pub(super) async fn handle_bookmark_search(
+pub async fn handle_bookmark_search(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
     req_id: u64,

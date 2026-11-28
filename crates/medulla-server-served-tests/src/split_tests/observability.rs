@@ -590,7 +590,7 @@ async fn health_answers_degraded_when_state_lock_is_held() {
     // Hold the write lock through the instrumented site, so the lock registry names the holder.
     let held = medulla_server_api::state::timed_write(&served.state).await;
     let started = std::time::Instant::now();
-    let response = medulla_server_router::dispatch::router::service_control::health_response(
+    let response = medulla_server_router_arms::dispatch::router::service_control::health_response(
         &served.state,
         next_id(),
     )

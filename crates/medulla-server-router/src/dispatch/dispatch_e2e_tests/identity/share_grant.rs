@@ -243,7 +243,7 @@ async fn a_write_after_a_share_succeeds() {
 // spec: MEDULLA-IDENTITY-R023.13.5
 #[test]
 fn share_event_fields_validate() {
-    use crate::dispatch::router::share::ShareEvent;
+    use medulla_server_router_arms::dispatch::router::share::ShareEvent;
     use medulla_store::redb_store::audit_status::AuditStatus;
     let grants = vec!["usr:b".to_string(), "usr:a".to_string()];
     let event = ShareEvent::new("RbacAdmin.ShareGrant", NODE, "private", "org", &grants);

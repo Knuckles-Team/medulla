@@ -259,6 +259,7 @@ def served_dispatch_source() -> str:
         read_module_tree(path, root_dir=ROOT)
         for path in (
             "crates/medulla-server-router/src/dispatch.rs",
+            "crates/medulla-server-router-arms/src/dispatch.rs",
             "crates/medulla-server-graph/src/dispatch.rs",
         )
     )

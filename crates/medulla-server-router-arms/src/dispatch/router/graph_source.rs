@@ -21,9 +21,9 @@ use tokio::sync::RwLock;
 const SCAN_PAGE: usize = 1024;
 
 /// Reads graph sources over the verified caller's projected core.
-pub(super) struct RouterGraphSource<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) verified: &'a VerifiedRequestContext,
+pub struct RouterGraphSource<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub verified: &'a VerifiedRequestContext,
 }
 
 impl GraphSourceProvider for RouterGraphSource<'_> {

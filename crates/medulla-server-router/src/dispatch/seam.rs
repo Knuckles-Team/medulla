@@ -471,14 +471,14 @@ pub async fn ensure_internal_global_graph(
         b"eg/internal-graph-lifecycle/v1",
         &[idempotency_key.as_bytes(), graph_name.as_bytes()],
     )?;
-    let request = super::router::GraphLifecycleRequest::verified(
+    let request = medulla_server_router_arms::dispatch::router::GraphLifecycleRequest::verified(
         req_id,
         Some(verified.agent_id().to_string()),
         verified,
         format!("internal-create:{}", create_identity.to_hex()),
     )?
     .with_own_attempt_nonce();
-    let response = super::router::create_graph(
+    let response = medulla_server_router_arms::dispatch::router::create_graph(
         state,
         request,
         graph_name.to_string(),

@@ -67,7 +67,7 @@ pub async fn run_once(state: &Arc<RwLock<ServerState>>) -> u32 {
                 continue;
             }
         };
-        match medulla_server_router::dispatch::router::recover_deliveries_at_boot(
+        match medulla_server_router_arms::dispatch::router::sdlc::recover_deliveries_at_boot(
             state, &graph, &context,
         )
         .await

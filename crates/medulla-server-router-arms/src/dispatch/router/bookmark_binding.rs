@@ -20,7 +20,7 @@ use tokio::sync::RwLock;
 
 /// Author the `bookmark` binding of the verified tenant when `connector`'s current pack declares
 /// the `Bookmark` class. `graph` is the activating request's graph.
-pub(super) async fn author_on_pack_activation(
+pub async fn author_on_pack_activation(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
     verified: &VerifiedRequestContext,

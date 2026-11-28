@@ -88,7 +88,7 @@ fn quarantine_rows(
         .collect::<Vec<(String, Map<String, Value>)>>()
 }
 
-pub(super) async fn drift_list(
+pub async fn drift_list(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
@@ -104,7 +104,7 @@ pub(super) async fn drift_list(
     typed_response::<SchemaDriftListResult>(req.id, result)
 }
 
-pub(super) async fn drift_get(
+pub async fn drift_get(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
@@ -156,7 +156,7 @@ async fn schema_op(
     }
 }
 
-pub(super) async fn repair_propose(
+pub async fn repair_propose(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
@@ -203,7 +203,7 @@ pub(super) async fn repair_propose(
     typed_response::<SchemaRepairProposeResult>(req.id, result)
 }
 
-pub(super) async fn repair_approve(
+pub async fn repair_approve(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,

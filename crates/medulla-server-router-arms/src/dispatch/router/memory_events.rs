@@ -11,7 +11,7 @@ use super::*;
 use medulla_decision_types::memory_events::MemoryEvent;
 
 /// Serve `Method::Claims` and announce the committed transitions.
-pub(super) async fn serve_claims_and_publish(
+pub async fn serve_claims_and_publish(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
     req_id: u64,
