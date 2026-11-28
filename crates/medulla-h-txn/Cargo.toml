@@ -58,6 +58,7 @@ medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-uql = { path = "../medulla-uql" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-raft-xshard/test-support", "medulla-server-ops/test-support", "medulla-server-mutation/test-support", "medulla-exec/test-support"]

@@ -39,6 +39,7 @@ medulla-server-auth = { path = "../medulla-server-auth", features = ["test-suppo
 medulla-server-router = { path = "../medulla-server-router" }
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 tempfile = "3"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 numeric = ["query", "medulla-server/numeric"]

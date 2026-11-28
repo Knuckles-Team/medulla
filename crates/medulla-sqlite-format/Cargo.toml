@@ -12,6 +12,7 @@ name = "medulla_sqlite_format"
 # thiserror for a small typed error enum (Corrupt/Io/Unsupported); the format layer is
 # byte-level, not wire DTOs, so it needs no serde.
 thiserror = "2.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 tempfile = "3.27"

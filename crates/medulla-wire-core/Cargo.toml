@@ -50,6 +50,7 @@ sha1 = { version = "0.10", optional = true }
 rustix = { version = "1.1.5", optional = true, features = ["fs"] }
 futures = { version = "0.3", optional = true }
 pgwire = { version = "0.40", optional = true, default-features = false, features = ["server-api", "_ring"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 broker = ["medulla-core/broker", "medulla-server-api/broker"]

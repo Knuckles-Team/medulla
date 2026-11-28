@@ -25,6 +25,7 @@ schemars = { version = "1.2.3", optional = true }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-query-types/contract-schema", "medulla-decision-policy-types/contract-schema", "medulla-decision-program-types/contract-schema", "medulla-decision-statistical-types/contract-schema", "medulla-decision-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-source-types/contract-schema", "medulla-work-types/contract-schema"]

@@ -32,6 +32,7 @@ webpki-root-certs = { version = "1.0.10", optional = true }
 base64 = { version = "0.23", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 nl-query = ["medulla-exec/query", "dep:medulla-rdf", "medulla-rdf/sparql", "dep:medulla-sql-lang", "medulla-sql-lang/sql", "dep:ureq", "dep:rustls", "dep:webpki-root-certs", "dep:base64"]

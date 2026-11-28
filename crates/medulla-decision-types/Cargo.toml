@@ -31,6 +31,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
 medulla-decision-program-types = { path = "../medulla-decision-program-types" }
 medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 wire-contract = ["query", "medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-source-types/wire-contract", "medulla-catalog-types/wire-contract", "medulla-decision-policy-types/wire-contract", "medulla-decision-program-types/wire-contract", "medulla-decision-statistical-types/wire-contract"]

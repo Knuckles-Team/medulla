@@ -38,6 +38,7 @@ medulla-work-store = { path = "../medulla-work-store" }
 medulla-lane-store = { path = "../medulla-lane-store", features = ["server"] }
 
 medulla-statechart = { path = "../medulla-statechart", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = []

@@ -63,6 +63,7 @@ medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["dep:medulla-ann", "medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann"]

@@ -51,6 +51,7 @@ medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 amqp-wire = ["server", "medulla-server-api/amqp-wire"]

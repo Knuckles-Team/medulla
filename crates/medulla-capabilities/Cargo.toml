@@ -182,6 +182,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types", features = ["wire
 medulla-identity-core-types = { path = "../medulla-identity-core-types", features = ["wire-contract"] }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [[test]]
 name = "decision_ontology"

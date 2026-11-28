@@ -72,6 +72,7 @@ medulla-finance-market = { path = "../medulla-finance-market", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 blob = ["dep:medulla-server-blob", "medulla-server-blob/blob", "redb"]

@@ -23,6 +23,7 @@ medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]

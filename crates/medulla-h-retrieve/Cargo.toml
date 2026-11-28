@@ -49,6 +49,7 @@ medulla-exec = { path = "../medulla-exec" }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb"]

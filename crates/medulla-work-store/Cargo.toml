@@ -41,6 +41,7 @@ medulla-durable = { path = "../medulla-durable" }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 
 tempfile = { version = "3", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 security = ["medulla-store/security", "medulla-lane-store/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]

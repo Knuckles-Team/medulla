@@ -27,6 +27,7 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 contract = ["dep:medulla-modality", "medulla-compute-assemble/contract", "medulla-core/contract", "medulla-graph-core/contract"]

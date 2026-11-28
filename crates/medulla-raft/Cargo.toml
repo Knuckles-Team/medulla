@@ -62,6 +62,7 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc", features = ["streaming"] }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 blob = ["redb", "medulla-protocol-types/blob", "medulla-server-api/blob", "medulla-types/blob", "server"]

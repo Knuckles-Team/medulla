@@ -21,6 +21,7 @@ name = "medulla_viz_export"
 medulla-viz-core = { path = "../medulla-viz-core" }
 medulla-viz-columnstore = { path = "../medulla-viz-columnstore" }
 medulla-viz-kernels = { path = "../medulla-viz-kernels" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

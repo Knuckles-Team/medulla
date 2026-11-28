@@ -23,6 +23,7 @@ datafusion = { version = "54", default-features = false, optional = true, featur
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 sql = ["dep:datafusion", "medulla-tables/sql", "medulla-table-store/sql"]

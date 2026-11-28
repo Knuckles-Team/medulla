@@ -64,6 +64,7 @@ medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-server-blob = { path = "../medulla-server-blob", optional = true }
 tracing = "0.1"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ast = []

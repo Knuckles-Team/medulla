@@ -18,6 +18,7 @@ medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 parking_lot = "0.12"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

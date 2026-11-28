@@ -46,6 +46,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-mining = { path = "../medulla-mining", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 cypher = ["dep:petgraph"]

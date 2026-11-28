@@ -29,6 +29,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-source-types/wire-contract"]

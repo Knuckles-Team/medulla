@@ -72,6 +72,7 @@ medulla-nlq = { path = "../medulla-nlq" }
 medulla-server-router = { path = "../medulla-server-router" }
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-served-test-harness = { path = "../medulla-served-test-harness" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 numeric = ["query", "medulla-server/numeric", "medulla-h-query-read/numeric", "medulla-exec/numeric", "medulla-served-test-harness/numeric"]

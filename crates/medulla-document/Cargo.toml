@@ -38,6 +38,7 @@ quick-xml = { version = "0.41", optional = true }
 calamine = { version = "0.38", default-features = false, optional = true }
 # 1.x needs rust-version 1.98; the pinned toolchain is 1.96.0.
 mail-parser = { version = "0.11.9", default-features = false, optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

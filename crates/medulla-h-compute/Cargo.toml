@@ -43,6 +43,7 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 
 medulla-quantum-core = { path = "../medulla-quantum-core", optional = true }
 medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 datascience = ["medulla-compute-assemble/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience", "medulla-query-types/datascience"]

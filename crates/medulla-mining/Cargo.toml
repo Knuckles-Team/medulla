@@ -18,6 +18,7 @@ medulla-query-types = { path = "../medulla-query-types" }
 medulla-geo = { path = "../medulla-geo", default-features = false, optional = true }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 serde_json = "1.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 mining = ["dep:medulla-geo", "dep:medulla-numeric", "medulla-compute-assemble/mining", "medulla-types/mining", "medulla-query-types/mining"]

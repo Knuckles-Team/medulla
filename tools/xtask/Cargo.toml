@@ -17,3 +17,4 @@ toml_edit = { version = "0.25", default-features = false, features = ["parse"] }
 syn = { version = "2", default-features = false, features = ["full", "parsing", "derive", "printing", "clone-impls", "visit"] }
 walkdir = "2"
 zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+medulla-workspace-hack = { version = "0.1", path = "../../crates/medulla-workspace-hack" }

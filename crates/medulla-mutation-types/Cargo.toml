@@ -24,6 +24,7 @@ hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-identity-core-types/wire-contract", "medulla-identity-types/wire-contract"]

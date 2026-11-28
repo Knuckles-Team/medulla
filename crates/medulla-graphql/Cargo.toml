@@ -87,6 +87,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-cypher = { path = "../medulla-cypher", features = ["cypher"] }
 medulla-exec = { path = "../medulla-exec" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

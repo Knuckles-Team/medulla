@@ -215,6 +215,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 medulla-compute-assemble = { path = "../medulla-compute-assemble" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }

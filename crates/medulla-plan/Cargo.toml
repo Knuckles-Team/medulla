@@ -434,6 +434,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-sql = { path = "../medulla-sql" }
 duckdb = { version = "=1.10506.1", default-features = false, optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

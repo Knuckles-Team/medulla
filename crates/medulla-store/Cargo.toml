@@ -44,6 +44,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]

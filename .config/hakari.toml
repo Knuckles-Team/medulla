@@ -14,3 +14,18 @@ platforms = [
     "x86_64-pc-windows-msvc",
     "aarch64-pc-windows-msvc",
 ]
+
+# The `[patch.crates-io]` vendored crates are path packages inside this repository's tree, not
+# workspace members (MEDULLA-CONTRACT-R069.1). They stay out of the generated crate.
+[final-excludes]
+third-party = [
+    { name = "apache-avro", path = "vendor/zstd-parent-patches/apache-avro-0.21.0" },
+    { name = "arrow-ipc", path = "vendor/zstd-parent-patches/arrow-ipc-58.4.0" },
+    { name = "iceberg", path = "vendor/zstd-parent-patches/iceberg-0.10.1" },
+    { name = "parquet", path = "vendor/zstd-parent-patches/parquet-58.4.0" },
+    { name = "polars-parquet", path = "vendor/zstd-parent-patches/polars-parquet-0.54.4" },
+    { name = "tantivy-sstable", path = "vendor/zstd-parent-patches/tantivy-sstable-0.7.0" },
+    { name = "opendal-core", path = "vendor/security-patches/opendal-core-0.57.0" },
+    { name = "opendal-service-s3", path = "vendor/security-patches/opendal-service-s3-0.57.0" },
+    { name = "iceberg-storage-opendal", path = "vendor/security-patches/iceberg-storage-opendal-0.10.1" },
+]

@@ -25,6 +25,7 @@ schemars = { version = "1.2.3", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 wire-contract = ["medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-result-types/wire-contract"]

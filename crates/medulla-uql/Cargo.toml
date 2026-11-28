@@ -16,6 +16,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 serde_json = "1.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 query = ["medulla-exec/query", "medulla-types/query", "medulla-query-types/query"]

@@ -27,6 +27,7 @@ rmp-serde = "1.3"
 sha2 = "0.10"
 hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-core-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-identity-core-types/contract-schema", "medulla-ingestion-types/contract-schema", "medulla-work-types/contract-schema"]

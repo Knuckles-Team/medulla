@@ -21,6 +21,7 @@ name = "medulla_alignment"
 [dependencies]
 medulla-modality = { path = "../medulla-modality" }
 serde = { version = "1.0", features = ["derive"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

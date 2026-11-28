@@ -188,6 +188,7 @@ medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }

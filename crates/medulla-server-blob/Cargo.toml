@@ -48,6 +48,7 @@ medulla-federation = { path = "../medulla-federation" }
 
 object_store = { version = "0.14.2", optional = true, features = ["aws-base", "ring"] }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]

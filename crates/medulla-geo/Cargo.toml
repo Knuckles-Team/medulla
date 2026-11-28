@@ -30,6 +30,7 @@ serde_json = { version = "1.0", optional = true }
 # (default OFF) — a default/pi/node/full build links none of it and `Geometry`
 # carries no new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 # `geo-io` (CONCEPT:MEDULLA-264) turns on the GeoJSON codec (serde_json). It is a DEFAULT

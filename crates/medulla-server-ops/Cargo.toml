@@ -66,6 +66,7 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
 medulla-lake = { path = "../medulla-lake", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann-redb = ["redb", "medulla-server-api/ann-redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb"]

@@ -86,6 +86,7 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-work-store = { path = "../medulla-work-store" }
 medulla-exec = { path = "../medulla-exec" }
 medulla-resource = { path = "../medulla-resource" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-federation?/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-program-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-identity-core-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-direct-state/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-work-store/test-support", "medulla-exec/test-support"]

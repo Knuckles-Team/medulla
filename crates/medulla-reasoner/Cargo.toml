@@ -30,6 +30,7 @@ rand = "0.8"
 tracing = "0.1"
 rand_chacha = "0.3"
 cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [[bench]]
 name = "owl_retract"

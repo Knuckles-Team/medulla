@@ -22,6 +22,7 @@ medulla-audio = { path = "../medulla-audio", features = ["asr"] }
 medulla-resource = { path = "../medulla-resource" }
 whisper-rs = { version = "0.16", default-features = false }
 sha2 = "0.10"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

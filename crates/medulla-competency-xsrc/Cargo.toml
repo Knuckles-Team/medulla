@@ -12,3 +12,4 @@ name = "medulla_competency_xsrc"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }

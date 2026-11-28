@@ -73,6 +73,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-program = { path = "../medulla-program", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 broker = ["medulla-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-server-api/broker", "medulla-types/broker", "medulla-graph-core/broker", "medulla-server-mutation/broker", "medulla-server-cdc/broker", "medulla-server-auth/broker"]

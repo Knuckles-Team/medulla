@@ -29,6 +29,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["medulla-identity-core-types/test-support", "medulla-identity-types/test-support"]

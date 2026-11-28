@@ -45,6 +45,7 @@ medulla-numeric = { path = "../medulla-numeric" }
 # medulla-numeric's own `ndarray = "0.17"` so the `ArrayView1` types unify to one crate
 # version. Optional, only under `drift` (default OFF) — Pi/default links none of it.
 ndarray = { version = "0.17", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

@@ -60,6 +60,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute-assemble/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]

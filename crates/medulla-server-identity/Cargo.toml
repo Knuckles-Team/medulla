@@ -47,6 +47,7 @@ medulla-storage = { path = "../medulla-storage", optional = true }
 
 async-trait = { version = "0.1" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ast = []

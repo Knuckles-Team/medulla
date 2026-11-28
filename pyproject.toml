@@ -301,6 +301,7 @@ units = [
   "medulla-version",
   "medulla-vocab",
   "medulla-work-types",
+  "medulla-workspace-hack",
 ]
 
 # Pure domain logic and modality kernels over contract types: numeric, vector, text, geo, media, decision, quantum and visualization kernels. No storage.

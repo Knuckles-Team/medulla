@@ -22,6 +22,7 @@ name = "medulla_viz_graph_tiles"
 medulla-viz-core = { path = "../medulla-viz-core" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 proptest = "1"

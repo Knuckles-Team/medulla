@@ -41,6 +41,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

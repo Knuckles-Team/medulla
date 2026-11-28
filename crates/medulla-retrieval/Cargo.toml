@@ -26,6 +26,7 @@ medulla-result-types = { path = "../medulla-result-types", features = ["query"] 
 medulla-ann = { path = "../medulla-ann", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 epistemic = ["query", "dep:medulla-epistemic", "medulla-exec/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]

@@ -75,6 +75,7 @@ medulla-numeric = { path = "../medulla-numeric", optional = true }
 
 
 medulla-graphql = { path = "../medulla-graphql", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 
 

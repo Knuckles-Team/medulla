@@ -32,6 +32,7 @@ arrow = "58.4"
 datafusion = { version = "54", default-features = false, features = ["nested_expressions", "sql"] }
 iceberg = "0.10"
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 iceberg-federation = ["medulla-sql/iceberg-federation"]

@@ -41,6 +41,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 # MEDULLA-FEDERATED-QUERY-R721.1: `ModalityContract` for `BlobReference` (the blob modality).

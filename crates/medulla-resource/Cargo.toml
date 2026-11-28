@@ -11,3 +11,4 @@ name = "medulla_resource"
 
 [dependencies]
 medulla-types = { path = "../medulla-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }

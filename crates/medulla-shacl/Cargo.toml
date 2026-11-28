@@ -46,6 +46,7 @@ spargebra = "0.4"
 # OFF) — a default/pi/node/full build links none of it and `ValidationResult`
 # carries no new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

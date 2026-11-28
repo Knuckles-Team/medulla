@@ -14,3 +14,4 @@ path = "src/lib.rs"
 [dependencies]
 ctor = "1"
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-ambient-auth"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }

@@ -58,6 +58,7 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 unicode-normalization = "0.1"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-policy-types/test-support", "medulla-decision-statistical-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]

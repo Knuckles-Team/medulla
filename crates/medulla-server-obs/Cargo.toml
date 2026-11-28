@@ -65,6 +65,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-resource = { path = "../medulla-resource" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 blob = ["server", "redb", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob"]

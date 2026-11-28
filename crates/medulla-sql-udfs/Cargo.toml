@@ -47,6 +47,7 @@ medulla-tables = { path = "../medulla-tables" }
 medulla-finance-quant = { path = "../medulla-finance-quant" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 finance = ["sql", "medulla-compute-assemble/finance", "medulla-types/finance"]

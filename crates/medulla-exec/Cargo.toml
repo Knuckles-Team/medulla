@@ -47,6 +47,7 @@ medulla-index-types = { path = "../medulla-index-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }
 sha2 = "0.10"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 test-support = ["query", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-compute-assemble?/test-support", "medulla-catalog-source-types/test-support"]

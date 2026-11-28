@@ -41,6 +41,7 @@ sqlx = { version = "0.9", default-features = false, features = [
 futures-util = { version = "0.3", default-features = false, features = ["std"], optional = true }
 sqlparser = { version = "0.62", features = ["visitor"], optional = true }
 url = { version = "2", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 server = []

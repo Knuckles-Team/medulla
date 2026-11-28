@@ -27,6 +27,7 @@ serde = { version = "1.0", features = ["derive"] }
 # itself depends on it), so this adds no new dependency to the tree.
 serde_json = "1.0"
 sha2 = "0.10"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 # MEDULLA-P1-1 fleet aggregator (`tests/fleet_tck.rs`): pull the pilot modality crates in
 # (each with its own `contract` feature on) so their TCK reports can be collected into

@@ -22,6 +22,7 @@ nalgebra = { version = "0.35", features = ["serde"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-finance-market = { path = "../medulla-finance-market" }
 ndarray = "0.17"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 analytics = ["medulla-numeric/analytics"]

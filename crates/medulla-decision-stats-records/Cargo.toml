@@ -30,6 +30,7 @@ sha2 = "0.10"
 unicode-normalization = "0.1"
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 decision = ["dep:medulla-types", "dep:medulla-query-types", "medulla-numeric/decision"]

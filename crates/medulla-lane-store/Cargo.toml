@@ -31,6 +31,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-resource-store = { path = "../medulla-resource-store" }
 
 medulla-transaction = { path = "../medulla-transaction" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 security = ["medulla-store/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-resource-store/security", "medulla-types/security"]

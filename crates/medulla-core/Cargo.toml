@@ -137,6 +137,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 # Sensitive column scan over 10,000 values and 20 pattern detectors (MEDULLA-TYPED-PACKS-R803.6): nightly budget.
 [[bench]]

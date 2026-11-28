@@ -18,6 +18,7 @@ sha2 = "0.10"
 # constructor macro used by the always-available AudioSegment value type. The
 # ModalityContract implementation remains feature-gated below.
 medulla-modality = { path = "../medulla-modality" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

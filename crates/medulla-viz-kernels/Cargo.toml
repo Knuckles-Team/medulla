@@ -18,6 +18,7 @@ name = "medulla_viz_kernels"
 # `decimate_minmax`/`density_grid` already take plain `&[f64]`, not a store).
 [dependencies]
 medulla-viz-core = { path = "../medulla-viz-core" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 proptest = "1"

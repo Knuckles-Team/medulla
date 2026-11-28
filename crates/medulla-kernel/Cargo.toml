@@ -51,6 +51,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-table-store = { path = "../medulla-table-store" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

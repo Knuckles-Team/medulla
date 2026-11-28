@@ -22,6 +22,7 @@ parking_lot = "0.12"
 tracing = { version = "0.1" }
 rayon = { version = "1.12", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["dep:rayon"]

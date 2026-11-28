@@ -16,6 +16,7 @@ parking_lot = "0.12"
 tracing = { version = "0.1" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-kvcache = { path = "../medulla-kvcache", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 result-cache = ["dep:medulla-kvcache"]

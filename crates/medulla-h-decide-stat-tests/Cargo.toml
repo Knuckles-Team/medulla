@@ -61,6 +61,7 @@ medulla-h-decide-learning = { path = "../medulla-h-decide-learning" }
 medulla-h-decide-runlog = { path = "../medulla-h-decide-runlog" }
 
 medulla-uql = { path = "../medulla-uql", features = ["query"], optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["medulla-graph-core/ann", "medulla-semantic-index/ann", "medulla-h-decide/ann", "medulla-h-decide-base/ann", "medulla-h-decide-learning/ann", "medulla-h-decide-runlog/ann"]

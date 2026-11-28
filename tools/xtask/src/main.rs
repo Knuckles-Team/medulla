@@ -209,13 +209,13 @@ const CHECKS: &[Check] = &[
         standalone: true,
         needs_git: false,
     },
-    // Standalone until the workspace-hack crate is generated and wired into every member
-    // (MEDULLA-CONTRACT-R069.1); then it moves into `checks`.
+    // Runs in `checks` (CI): the workspace-hack crate is generated and every member depends on it
+    // (MEDULLA-CONTRACT-R069.1, MEDULLA-CONTRACT-R069.2).
     Check {
         name: workspace_hack::NAME,
         summary: workspace_hack::SUMMARY,
         run: workspace_hack::run,
-        standalone: true,
+        standalone: false,
         needs_git: false,
     },
 ];

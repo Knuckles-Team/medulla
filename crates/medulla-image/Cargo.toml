@@ -19,6 +19,7 @@ sha2 = "0.10"
 # and `ImageData` carries no new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
 flate2 = { version = "1.1", default-features = false, features = ["rust_backend"], optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

@@ -57,6 +57,7 @@ medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 federation = ["query", "dep:medulla-plan", "medulla-exec/federation", "medulla-federation/federation", "medulla-nlq/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation"]

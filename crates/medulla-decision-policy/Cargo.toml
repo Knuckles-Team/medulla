@@ -22,6 +22,7 @@ medulla-decision-policy-types = { path = "../medulla-decision-policy-types" }
 medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 solve = []

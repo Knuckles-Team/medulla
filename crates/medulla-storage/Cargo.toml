@@ -28,6 +28,7 @@ object_store = { workspace = true, optional = true }
 serde_json = { workspace = true }
 async-trait = { version = "0.1", optional = true }
 futures-util = { version = "0.3", default-features = false, optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 # Archive segments over the S3-compatible object_store trait of

@@ -55,6 +55,7 @@ medulla-store = { path = "../medulla-store", optional = true }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 
 medulla-h-decide-base = { path = "../medulla-h-decide-base" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["medulla-graph-core/ann", "medulla-h-decide-base/ann"]

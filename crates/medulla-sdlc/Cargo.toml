@@ -15,6 +15,7 @@ path = "src/lib.rs"
 medulla-decision-statistical-types = { path = "../medulla-decision-statistical-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-types = { path = "../medulla-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 serde_json = "1.0"

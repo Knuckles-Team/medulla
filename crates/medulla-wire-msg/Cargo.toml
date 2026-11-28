@@ -45,6 +45,7 @@ medulla-capabilities = { path = "../medulla-capabilities" }
 tokio-tungstenite = { version = "0.30", optional = true, default-features = false, features = ["connect", "handshake"] }
 dust_dds = { version = "0.15", optional = true }
 cyclonedds = { version = "1.8.0", optional = true, default-features = false, features = ["std"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 amqp-wire = ["server", "medulla-server-api/amqp-wire", "medulla-wire-core/amqp-wire", "medulla-server/amqp-wire"]

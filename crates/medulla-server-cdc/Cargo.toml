@@ -43,6 +43,7 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-exec = { path = "../medulla-exec" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 broker = ["medulla-server-api/broker", "medulla-core/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-types/broker"]

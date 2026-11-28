@@ -4832,6 +4832,7 @@ dependencies = [
  "medulla-result-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -4850,6 +4851,7 @@ dependencies = [
  "medulla-image",
  "medulla-modality",
  "medulla-video",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -4861,6 +4863,7 @@ dependencies = [
  "cudarc",
  "medulla-modality",
  "medulla-numeric",
+ "medulla-workspace-hack",
  "ndarray 0.17.2",
  "postcard",
  "rand 0.8.8",
@@ -4884,6 +4887,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "redb",
  "serde",
  "sha2 0.10.9",
@@ -4895,6 +4899,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-audio",
  "medulla-resource",
+ "medulla-workspace-hack",
  "sha2 0.10.9",
  "whisper-rs",
 ]
@@ -4904,6 +4909,7 @@ name = "medulla-audio"
 version = "0.1.0"
 dependencies = [
  "medulla-modality",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -4927,6 +4933,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "regex",
  "schemars 1.2.3",
  "serde_json",
@@ -4941,6 +4948,7 @@ dependencies = [
  "medulla-identity-core-types",
  "medulla-source-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "thiserror 2.0.21",
 ]
 
@@ -4952,6 +4960,7 @@ dependencies = [
  "medulla-agent-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -4971,6 +4980,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "oxiri",
  "rmp-serde",
  "schemars 1.2.3",
@@ -4983,10 +4993,16 @@ dependencies = [
 [[package]]
 name = "medulla-competency"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-competency-xsrc"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-compute"
@@ -5011,6 +5027,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rayon",
  "rmp-serde",
  "serde",
@@ -5076,6 +5093,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
  "rayon",
@@ -5119,6 +5137,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "oxrdf",
  "oxttl",
  "parking_lot",
@@ -5165,6 +5184,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-virtual-graph",
+ "medulla-workspace-hack",
  "petgraph",
  "redb",
  "rmp-serde",
@@ -5179,6 +5199,9 @@ dependencies = [
 [[package]]
 name = "medulla-decision-eval"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-decision-memory"
@@ -5189,6 +5212,7 @@ dependencies = [
  "medulla-decision-policy-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
 ]
 
@@ -5205,6 +5229,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -5218,6 +5243,7 @@ dependencies = [
  "medulla-catalog-source-types",
  "medulla-decision-program-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "serde_json",
 ]
 
@@ -5232,6 +5258,7 @@ dependencies = [
  "medulla-decision-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
  "serde",
@@ -5250,6 +5277,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-source-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rand_chacha 0.3.1",
  "rmp-serde",
  "schemars 1.2.3",
@@ -5272,6 +5300,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -5286,11 +5315,15 @@ dependencies = [
  "medulla-decision-policy-types",
  "medulla-decision-statistical-types",
  "medulla-types",
+ "medulla-workspace-hack",
 ]
 
 [[package]]
 name = "medulla-decision-records"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-decision-statistical-types"
@@ -5303,6 +5336,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -5325,6 +5359,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-source-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
@@ -5345,6 +5380,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand_chacha 0.3.1",
  "serde",
  "serde_json",
@@ -5368,6 +5404,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -5380,6 +5417,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "rustix 1.1.6",
  "serde",
@@ -5405,6 +5443,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-source-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "quick-xml 0.41.0",
  "serde",
  "serde_json",
@@ -5420,6 +5459,7 @@ dependencies = [
  "criterion",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5600,6 +5640,7 @@ dependencies = [
  "medulla-wire-msg",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "object 0.40.0",
  "object_store 0.14.2",
  "openraft",
@@ -5651,6 +5692,7 @@ dependencies = [
  "medulla-compute",
  "medulla-compute-assemble",
  "medulla-source-types",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -5674,6 +5716,7 @@ dependencies = [
  "medulla-result-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5714,6 +5757,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-workspace-hack",
  "petgraph",
  "rayon",
  "rmp-serde",
@@ -5739,6 +5783,7 @@ dependencies = [
  "medulla-sqlite-format",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "parking_lot",
  "rmp-serde",
  "serde",
@@ -5760,6 +5805,7 @@ dependencies = [
  "medulla-numeric",
  "medulla-result-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "ndarray 0.17.2",
  "serde",
  "serde_json",
@@ -5774,6 +5820,7 @@ dependencies = [
  "medulla-numeric",
  "medulla-result-types",
  "medulla-stream",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -5788,6 +5835,7 @@ dependencies = [
  "medulla-numeric",
  "medulla-result-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "nalgebra",
  "ndarray 0.17.2",
  "rand 0.8.8",
@@ -5801,6 +5849,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -5813,6 +5862,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-modality",
  "medulla-types",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -5832,6 +5882,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-semantic-index",
  "medulla-types",
+ "medulla-workspace-hack",
  "petgraph",
  "rayon",
  "rmp-serde",
@@ -5863,6 +5914,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "petgraph",
  "redb",
@@ -5886,6 +5938,7 @@ dependencies = [
  "medulla-semantic-index",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "petgraph",
  "rmp-serde",
  "serde",
@@ -5937,6 +5990,7 @@ dependencies = [
  "medulla-version",
  "medulla-virtual-graph",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -5990,6 +6044,7 @@ dependencies = [
  "medulla-types",
  "medulla-version",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6030,6 +6085,7 @@ dependencies = [
  "medulla-viz-graph-tiles",
  "medulla-viz-kernels",
  "medulla-wasm",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6089,6 +6145,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6145,6 +6202,7 @@ dependencies = [
  "medulla-text",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "rmp-serde",
  "serde",
@@ -6198,6 +6256,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6245,6 +6304,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6292,6 +6352,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6346,6 +6407,7 @@ dependencies = [
  "medulla-types",
  "medulla-uql",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6401,6 +6463,7 @@ dependencies = [
  "medulla-types",
  "medulla-uql",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6456,6 +6519,7 @@ dependencies = [
  "medulla-storage",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6521,6 +6585,7 @@ dependencies = [
  "medulla-uql",
  "medulla-virtual-graph",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6569,6 +6634,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_bytes",
@@ -6633,6 +6699,7 @@ dependencies = [
  "medulla-types",
  "medulla-video",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_bytes",
@@ -6702,6 +6769,7 @@ dependencies = [
  "medulla-types",
  "medulla-version",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "rmp-serde",
  "serde",
@@ -6736,6 +6804,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-version",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6745,6 +6814,9 @@ dependencies = [
 [[package]]
 name = "medulla-h-packs"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-h-query"
@@ -6805,6 +6877,7 @@ dependencies = [
  "medulla-uql",
  "medulla-version",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6871,6 +6944,7 @@ dependencies = [
  "medulla-uql",
  "medulla-virtual-graph",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6914,6 +6988,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6967,6 +7042,7 @@ dependencies = [
  "medulla-types",
  "medulla-virtual-graph",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -7018,6 +7094,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "parking_lot",
  "rmp-serde",
  "rustix 1.1.6",
@@ -7037,6 +7114,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7052,6 +7130,7 @@ dependencies = [
  "hex",
  "medulla-identity-core-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "schemars 1.2.3",
  "serde",
  "serde_json",
@@ -7064,6 +7143,7 @@ version = "0.1.0"
 dependencies = [
  "flate2",
  "medulla-modality",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -7078,6 +7158,7 @@ dependencies = [
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7088,12 +7169,16 @@ dependencies = [
 [[package]]
 name = "medulla-ingest"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-ingestion-types"
 version = "0.1.0"
 dependencies = [
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7117,6 +7202,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "redb",
  "rmp-serde",
@@ -7143,6 +7229,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "proptest",
  "redb",
  "rmp-serde",
@@ -7181,6 +7268,7 @@ dependencies = [
  "medulla-table-store",
  "medulla-tables",
  "medulla-types",
+ "medulla-workspace-hack",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
@@ -7206,6 +7294,7 @@ dependencies = [
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-modality",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "tempfile",
@@ -7224,6 +7313,7 @@ dependencies = [
  "medulla-catalog-source-types",
  "medulla-modality",
  "medulla-types",
+ "medulla-workspace-hack",
  "orc-rust",
  "polars-core",
  "polars-io",
@@ -7250,6 +7340,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -7265,6 +7356,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde_json",
 ]
@@ -7278,6 +7370,7 @@ dependencies = [
  "medulla-numeric",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "serde_json",
 ]
 
@@ -7301,6 +7394,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-video",
+ "medulla-workspace-hack",
  "rayon",
  "serde",
  "serde_json",
@@ -7316,6 +7410,7 @@ dependencies = [
  "medulla-identity-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7343,6 +7438,7 @@ dependencies = [
  "medulla-sql-lang",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "rmp-serde",
  "rustls",
  "serde",
@@ -7371,6 +7467,7 @@ dependencies = [
  "medulla-types",
  "medulla-version",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "nalgebra",
  "ndarray 0.17.2",
  "num-complex",
@@ -7395,6 +7492,7 @@ dependencies = [
  "libc",
  "medulla-types",
  "medulla-version",
+ "medulla-workspace-hack",
  "parking_lot",
  "serde",
  "serde_json",
@@ -7405,10 +7503,16 @@ dependencies = [
 [[package]]
 name = "medulla-packs"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-parity"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-persistence"
@@ -7455,6 +7559,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "object_store 0.14.2",
  "parking_lot",
  "redb",
@@ -7493,6 +7598,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-version",
+ "medulla-workspace-hack",
  "object_store 0.14.2",
  "redb",
  "rmp-serde",
@@ -7528,6 +7634,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "redb",
  "rmp-serde",
@@ -7580,6 +7687,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "redb",
  "rmp-serde",
@@ -7595,6 +7703,9 @@ dependencies = [
 [[package]]
 name = "medulla-placement"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-plan"
@@ -7647,6 +7758,7 @@ dependencies = [
  "medulla-uql",
  "medulla-wasm",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "petgraph",
  "proptest",
@@ -7674,6 +7786,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -7705,6 +7818,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7735,6 +7849,7 @@ dependencies = [
  "medulla-types",
  "medulla-wasm",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "pyo3",
  "rmp-serde",
@@ -7745,6 +7860,7 @@ dependencies = [
 name = "medulla-quantum-core"
 version = "0.1.0"
 dependencies = [
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -7757,6 +7873,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-numeric",
  "medulla-quantum-core",
+ "medulla-workspace-hack",
  "thiserror 2.0.21",
 ]
 
@@ -7768,6 +7885,7 @@ dependencies = [
  "hmac 0.12.1",
  "medulla-quantum-core",
  "medulla-types",
+ "medulla-workspace-hack",
  "reqwest 0.13.5",
  "serde",
  "serde_json",
@@ -7789,6 +7907,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-types",
  "medulla-version",
+ "medulla-workspace-hack",
  "ndarray 0.17.2",
  "serde",
  "serde_json",
@@ -7803,6 +7922,7 @@ dependencies = [
  "medulla-numeric",
  "medulla-quantum-core",
  "medulla-quantum-gates",
+ "medulla-workspace-hack",
  "thiserror 2.0.21",
 ]
 
@@ -7824,6 +7944,7 @@ dependencies = [
  "medulla-semantic-index",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -7836,6 +7957,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-kvcache",
  "medulla-protocol-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "tracing",
 ]
@@ -7848,6 +7970,7 @@ dependencies = [
  "medulla-identity-core-types",
  "medulla-ingestion-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -7898,6 +8021,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "parking_lot",
  "petgraph",
@@ -7939,6 +8063,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "petgraph",
  "rand 0.8.8",
@@ -8003,6 +8128,7 @@ dependencies = [
  "medulla-types",
  "medulla-virtual-graph",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "oxjsonld",
  "oxrdf",
  "oxttl",
@@ -8031,6 +8157,7 @@ dependencies = [
  "medulla-semantic-index",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "oxrdf",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
@@ -8043,12 +8170,16 @@ dependencies = [
 [[package]]
 name = "medulla-repo-index"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-resource"
 version = "0.1.0"
 dependencies = [
  "medulla-types",
+ "medulla-workspace-hack",
 ]
 
 [[package]]
@@ -8068,6 +8199,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -8086,6 +8218,7 @@ dependencies = [
  "medulla-mutation-types",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -8112,6 +8245,7 @@ dependencies = [
  "medulla-result-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -8124,6 +8258,7 @@ dependencies = [
  "medulla-decision-statistical-types",
  "medulla-source-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "serde_json",
 ]
 
@@ -8135,6 +8270,7 @@ dependencies = [
  "medulla-index-types",
  "medulla-numeric",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "rand 0.8.8",
  "rand_chacha 0.3.1",
@@ -8168,6 +8304,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -8288,6 +8425,7 @@ dependencies = [
  "medulla-wire-core",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "parking_lot",
  "polars-core",
@@ -8378,6 +8516,7 @@ dependencies = [
  "medulla-wasm",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "rand 0.8.8",
  "redb",
@@ -8429,6 +8568,7 @@ dependencies = [
  "medulla-types",
  "medulla-wasm",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -8469,6 +8609,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "object_store 0.14.2",
  "parking_lot",
  "redb",
@@ -8509,6 +8650,7 @@ dependencies = [
  "medulla-stream",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "rand 0.8.8",
  "rmp-serde",
@@ -8554,6 +8696,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "redb",
  "rmp-serde",
@@ -8602,6 +8745,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "redb",
  "rmp-serde",
@@ -8683,6 +8827,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "redb",
  "rmp-serde",
@@ -8722,6 +8867,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -8761,6 +8907,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "redb",
  "rmp-serde",
@@ -8815,6 +8962,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -8855,6 +9003,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "polars-core",
  "polars-io",
@@ -8921,6 +9070,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-wasm",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -9006,6 +9156,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "polars-core",
  "polars-io",
@@ -9097,6 +9248,7 @@ dependencies = [
  "medulla-types",
  "medulla-version",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "parking_lot",
  "polars-core",
@@ -9171,6 +9323,7 @@ dependencies = [
  "medulla-types",
  "medulla-wire-core",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -9237,6 +9390,7 @@ dependencies = [
  "medulla-version",
  "medulla-wire-core",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -9300,6 +9454,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "openraft",
  "redb",
  "rmp-serde",
@@ -9316,6 +9471,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-modality",
  "medulla-rdf",
+ "medulla-workspace-hack",
  "regex",
  "serde",
  "serde_json",
@@ -9328,6 +9484,7 @@ version = "0.1.0"
 dependencies = [
  "medulla-modality",
  "medulla-rdf",
+ "medulla-workspace-hack",
  "regex",
  "serde",
  "serde_json",
@@ -9345,6 +9502,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -9391,6 +9549,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "ndarray 0.17.2",
  "petgraph",
  "redb",
@@ -9414,6 +9573,7 @@ dependencies = [
  "medulla-table-store",
  "medulla-tables",
  "medulla-types",
+ "medulla-workspace-hack",
  "serde_json",
 ]
 
@@ -9440,6 +9600,7 @@ dependencies = [
  "medulla-tables",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde_json",
  "tokio",
@@ -9473,6 +9634,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-tsdb",
  "medulla-types",
+ "medulla-workspace-hack",
  "ndarray 0.17.2",
  "petgraph",
  "redb",
@@ -9487,6 +9649,7 @@ dependencies = [
 name = "medulla-sqlite-format"
 version = "0.1.0"
 dependencies = [
+ "medulla-workspace-hack",
  "tempfile",
  "thiserror 2.0.21",
 ]
@@ -9501,6 +9664,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "proptest",
  "redb",
  "rmp-serde",
@@ -9520,6 +9684,7 @@ dependencies = [
  "medulla-mutation-types",
  "medulla-protocol-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "object_store 0.14.2",
  "redb",
  "rmp-serde",
@@ -9537,6 +9702,9 @@ dependencies = [
 [[package]]
 name = "medulla-storage-owner"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-store"
@@ -9565,6 +9733,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -9598,6 +9767,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -9630,6 +9800,7 @@ dependencies = [
  "medulla-types",
  "medulla-work-store",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -9649,6 +9820,7 @@ dependencies = [
  "medulla-modality",
  "medulla-query-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rdkafka",
  "serde",
  "serde_json",
@@ -9684,6 +9856,7 @@ dependencies = [
  "medulla-text",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "petgraph",
  "redb",
@@ -9714,6 +9887,7 @@ dependencies = [
  "medulla-storage",
  "medulla-text",
  "medulla-transaction",
+ "medulla-workspace-hack",
  "petgraph",
  "redb",
  "rmp-serde",
@@ -9732,6 +9906,7 @@ dependencies = [
  "cudarc",
  "medulla-modality",
  "medulla-tsdb",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
 ]
@@ -9742,6 +9917,7 @@ version = "0.1.0"
 dependencies = [
  "ctor",
  "medulla-server-auth",
+ "medulla-workspace-hack",
 ]
 
 [[package]]
@@ -9749,6 +9925,7 @@ name = "medulla-text"
 version = "0.33.0"
 dependencies = [
  "medulla-modality",
+ "medulla-workspace-hack",
  "serde",
  "tantivy",
  "tempfile",
@@ -9767,6 +9944,7 @@ dependencies = [
  "medulla-storage",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "object_store 0.14.2",
  "redb",
  "rmp-serde",
@@ -9797,6 +9975,7 @@ dependencies = [
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
+ "medulla-workspace-hack",
  "redb",
  "rmp-serde",
  "serde",
@@ -9812,6 +9991,7 @@ version = "0.1.0"
 dependencies = [
  "espeak-rs",
  "medulla-audio",
+ "medulla-workspace-hack",
  "ort",
  "piper-rs",
  "serde",
@@ -9839,6 +10019,7 @@ dependencies = [
  "medulla-result-types",
  "medulla-source-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "oxiri",
  "rmp-serde",
  "schemars 1.2.3",
@@ -9860,6 +10041,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-semantic-index",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde_json",
 ]
@@ -9867,12 +10049,16 @@ dependencies = [
 [[package]]
 name = "medulla-version"
 version = "3.3.5"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-video"
 version = "0.1.0"
 dependencies = [
  "medulla-modality",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -9889,6 +10075,7 @@ dependencies = [
  "medulla-rdf",
  "medulla-source-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "oxrdf",
  "serde",
  "serde_json",
@@ -9903,6 +10090,7 @@ dependencies = [
  "bitvec",
  "hex",
  "medulla-viz-core",
+ "medulla-workspace-hack",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -9914,6 +10102,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-jobs",
+ "medulla-workspace-hack",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -9927,6 +10116,7 @@ dependencies = [
  "medulla-viz-columnstore",
  "medulla-viz-core",
  "medulla-viz-kernels",
+ "medulla-workspace-hack",
 ]
 
 [[package]]
@@ -9934,6 +10124,7 @@ name = "medulla-viz-graph-tiles"
 version = "0.1.0"
 dependencies = [
  "medulla-viz-core",
+ "medulla-workspace-hack",
  "proptest",
  "serde",
  "serde_json",
@@ -9945,17 +10136,22 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "medulla-viz-core",
+ "medulla-workspace-hack",
  "proptest",
 ]
 
 [[package]]
 name = "medulla-vocab"
 version = "0.1.0"
+dependencies = [
+ "medulla-workspace-hack",
+]
 
 [[package]]
 name = "medulla-wasm"
 version = "0.1.0"
 dependencies = [
+ "medulla-workspace-hack",
  "serde",
  "wasmtime",
  "wat",
@@ -10005,6 +10201,7 @@ dependencies = [
  "medulla-uql",
  "medulla-wire-core",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "parking_lot",
  "pgwire",
  "rand 0.8.8",
@@ -10056,6 +10253,7 @@ dependencies = [
  "medulla-tsdb",
  "medulla-types",
  "medulla-uql",
+ "medulla-workspace-hack",
  "parking_lot",
  "pgwire",
  "rmp-serde",
@@ -10097,6 +10295,7 @@ dependencies = [
  "medulla-test-ambient-auth",
  "medulla-types",
  "medulla-wire-core",
+ "medulla-workspace-hack",
  "parking_lot",
  "rmp-serde",
  "serde",
@@ -10133,6 +10332,7 @@ dependencies = [
  "medulla-transaction",
  "medulla-types",
  "medulla-work-types",
+ "medulla-workspace-hack",
  "rand 0.8.8",
  "redb",
  "rmp-serde",
@@ -10152,6 +10352,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-result-types",
  "medulla-types",
+ "medulla-workspace-hack",
  "rmp-serde",
  "schemars 1.2.3",
  "serde",
@@ -10162,11 +10363,183 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-workspace-hack"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "aho-corasick",
+ "anyhow",
+ "arrow",
+ "arrow-array",
+ "arrow-cast",
+ "arrow-data",
+ "arrow-schema",
+ "base64 0.23.1",
+ "bigdecimal",
+ "bitflags 2.13.2",
+ "bon",
+ "bon-macros",
+ "brotli",
+ "brotli-decompressor",
+ "bumpalo",
+ "bytemuck",
+ "cast",
+ "cc",
+ "chrono",
+ "cipher 0.4.4",
+ "clang-sys",
+ "clap",
+ "clap_builder",
+ "comfy-table",
+ "const-oid 0.9.6",
+ "cranelift-bitset",
+ "crc32fast",
+ "criterion",
+ "crossbeam-epoch",
+ "crypto-common 0.1.7",
+ "datafusion",
+ "der 0.7.10",
+ "deranged",
+ "digest 0.10.7",
+ "digest 0.11.3",
+ "either",
+ "errno",
+ "fastrand",
+ "flate2",
+ "fnv",
+ "foldhash 0.2.0",
+ "form_urlencoded",
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+ "generic-array",
+ "getrandom 0.2.17",
+ "getrandom 0.3.4",
+ "getrandom 0.4.3",
+ "half",
+ "hashbrown 0.14.5",
+ "hashbrown 0.15.5",
+ "hashbrown 0.16.1",
+ "hashbrown 0.17.1",
+ "hmac 0.12.1",
+ "http",
+ "httparse",
+ "hyper",
+ "indexmap 2.14.2",
+ "itertools 0.13.0",
+ "lazy_static",
+ "libc",
+ "libm",
+ "linux-raw-sys 0.12.1",
+ "log",
+ "lz4_flex 0.13.1",
+ "matrixmultiply",
+ "md-5 0.11.0",
+ "memchr",
+ "nalgebra",
+ "ndarray 0.17.2",
+ "nix",
+ "nom 7.1.3",
+ "num-bigint",
+ "num-complex",
+ "num-integer",
+ "num-rational",
+ "num-traits",
+ "objc2-core-foundation",
+ "object 0.40.0",
+ "object_store 0.14.2",
+ "once_cell",
+ "ort",
+ "ort-sys",
+ "oxrdf",
+ "oxttl",
+ "peg-runtime",
+ "percent-encoding",
+ "petgraph",
+ "phf_shared 0.11.3",
+ "polars-arrow",
+ "polars-core",
+ "polars-error",
+ "polars-io",
+ "postgres-types",
+ "proc-macro2",
+ "pulley-interpreter",
+ "quick-xml 0.41.0",
+ "quick-xml 0.42.0",
+ "quote",
+ "rand 0.10.3",
+ "rand 0.8.8",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
+ "regex",
+ "regex-automata",
+ "regex-lite",
+ "regex-syntax",
+ "reqwest 0.13.5",
+ "ring",
+ "rustc-hash 2.1.3",
+ "rustix 0.38.44",
+ "rustix 1.1.6",
+ "rustls",
+ "rustls-pki-types",
+ "rustls-webpki",
+ "semver",
+ "serde",
+ "serde_core",
+ "serde_json",
+ "sha2 0.10.9",
+ "signal-hook",
+ "simd-adler32",
+ "simdutf8",
+ "slab",
+ "smallvec",
+ "spargebra",
+ "spki",
+ "sqlparser",
+ "stable_deref_trait",
+ "strum 0.28.0",
+ "subtle",
+ "syn 2.0.119",
+ "syn 3.0.9",
+ "tar",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-stream",
+ "tokio-util",
+ "tower",
+ "tracing",
+ "tracing-core",
+ "twox-hash",
+ "typenum",
+ "ureq",
+ "uuid",
+ "wasmtime-internal-core",
+ "whoami",
+ "winapi",
+ "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
+ "zerocopy",
+ "zeroize",
+ "zip",
+ "zlib-rs",
+ "zstd 0.14.3",
+ "zstd-safe 8.2.0",
+ "zstd-sys",
+]
+
+[[package]]
 name = "medulla-xtask"
 version = "0.0.0"
 dependencies = [
  "base64 0.22.1",
  "flate2",
+ "medulla-workspace-hack",
  "regex",
  "serde_json",
  "serde_yaml_ng",

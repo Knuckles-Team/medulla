@@ -342,6 +342,12 @@ jobs:
       - &medulla-locked-pytest
         name: Install locked pytest for generated-client checks
         run: uv pip install --python "$(command -v python3)" pytest==9.1.1 iniconfig==2.3.1 packaging==26.3 pluggy==1.7.0 pygments==2.21.0
+      # `cargo xtask workspace-hack` (run by `checks`) regenerates the workspace-hack crate and
+      # fails when it is stale; it refuses any cargo-hakari but the pinned one
+      # (MEDULLA-CONTRACT-R069.2). Keep the version equal to PINNED_VERSION in
+      # tools/xtask/src/workspace_hack.rs and hakari_version in scripts/bootstrap.sh.
+      - name: Install pinned cargo-hakari (workspace-hack freshness)
+        run: command -v cargo-hakari >/dev/null 2>&1 || cargo install --locked cargo-hakari --version =0.9.39
       - name: Repository checks (cargo xtask checks)
         run: cargo --locked xtask checks
       - name: Epistemic Operations manifest ⇄ Rust DTO parity
@@ -1865,6 +1871,12 @@ jobs:
           for hook in $WHOLE_REPO_HOOKS; do
             SKIP="${SCOPE_SKIP}" pre-commit run "$hook" --config .config/pre-commit.yaml --hook-stage pre-push --from-ref "$BASE" --to-ref "$HEAD" --show-diff-on-failure
           done
+      # `cargo xtask workspace-hack` (run by `checks`) regenerates the workspace-hack crate and
+      # fails when it is stale; it refuses any cargo-hakari but the pinned one
+      # (MEDULLA-CONTRACT-R069.2). Keep the version equal to PINNED_VERSION in
+      # tools/xtask/src/workspace_hack.rs and hakari_version in scripts/bootstrap.sh.
+      - name: Install pinned cargo-hakari (workspace-hack freshness)
+        run: command -v cargo-hakari >/dev/null 2>&1 || cargo install --locked cargo-hakari --version =0.9.39
       - name: Repository checks (cargo xtask checks)
         run: cargo --locked xtask checks
       - name: Spec trailers

@@ -24,6 +24,7 @@ hex = "0.4"
 strum = { version = "0.28", features = ["derive"], optional = true }
 schemars = { version = "1.2.3", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract", "medulla-query-types/wire-contract", "medulla-mutation-types/wire-contract"]

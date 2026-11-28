@@ -39,6 +39,7 @@ medulla-work-store = { path = "../medulla-work-store" }
 medulla-lane-store = { path = "../medulla-lane-store" }
 
 medulla-statechart = { path = "../medulla-statechart", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 compute-dist = ["raft", "medulla-store/compute-dist", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-types/compute-dist"]

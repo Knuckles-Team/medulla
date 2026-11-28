@@ -46,6 +46,7 @@ medulla-tables = { path = "../medulla-tables" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 # MEDULLA-FEDERATED-QUERY-R721.1: `ModalityContract` for `TableSnapshotRow` (the SQL modality).

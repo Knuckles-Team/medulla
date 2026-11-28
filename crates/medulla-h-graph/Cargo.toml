@@ -64,6 +64,7 @@ medulla-finance-quant = { path = "../medulla-finance-quant", optional = true }
 medulla-source-types = { path = "../medulla-source-types" }
 
 medulla-h-graph-gateway = { path = "../medulla-h-graph-gateway" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 blob = ["dep:medulla-server-blob", "medulla-server-blob/blob", "redb", "medulla-h-graph-gateway/blob"]

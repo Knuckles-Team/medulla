@@ -58,6 +58,7 @@ medulla-lane-store = { path = "../medulla-lane-store" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 cold-tier = ["medulla-persistence/cold-tier", "medulla-core/cold-tier", "medulla-graph-core/cold-tier"]

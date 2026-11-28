@@ -44,6 +44,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["medulla-semantic-index/ann"]

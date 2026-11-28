@@ -13,6 +13,7 @@ name = "medulla_quantum_gates"
 medulla-quantum-core = { path = "../medulla-quantum-core" }
 medulla-numeric = { path = "../medulla-numeric", features = ["complex"] }
 thiserror = "2.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

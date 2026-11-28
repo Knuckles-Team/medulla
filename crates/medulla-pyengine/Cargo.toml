@@ -127,6 +127,7 @@ medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

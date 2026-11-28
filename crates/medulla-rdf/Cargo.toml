@@ -126,6 +126,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 # Explicit state machines (MEDULLA-ORCH-VOCAB-R811): the ontology test compares the Turtle

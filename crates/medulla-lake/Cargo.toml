@@ -99,6 +99,7 @@ apache-avro = { version = "0.22", default-features = false, optional = true }
 # need it once a real writer lands.
 iceberg = { version = "0.10", optional = true }
 iceberg-storage-opendal = { version = "0.10", optional = true, default-features = false, features = ["opendal-s3"] }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

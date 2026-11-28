@@ -305,6 +305,13 @@ repos:
     pass_filenames: false
     always_run: true
     stages: [pre-push]
+  - id: workspace-hack
+    name: The generated workspace-hack crate is current
+    entry: cargo xtask workspace-hack
+    language: system
+    pass_filenames: false
+    always_run: true
+    stages: [pre-push]
   - id: epistemic-operations-protocol
     name: Epistemic Operations manifest ⇄ Rust DTO parity
     entry: python3 scripts/check_epistemic_operations_protocol.py

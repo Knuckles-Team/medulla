@@ -53,6 +53,7 @@ medulla-wasm = { path = "../medulla-wasm", optional = true }
 ureq = { version = "3.4.2", optional = true }
 medulla-exec = { path = "../medulla-exec" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 # Ambient test posture (OIDC off, fixed node identity, fixture signer registry) for the unit

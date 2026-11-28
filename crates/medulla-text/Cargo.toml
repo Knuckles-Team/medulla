@@ -38,6 +38,7 @@ tantivy = { version = "0.26", optional = true }
 # OFF) — a default/pi/node/full build links none of it and `TextHit` carries no new
 # required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 tempfile = "3.27"

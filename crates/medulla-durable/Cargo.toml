@@ -43,6 +43,7 @@ medulla-types = { path = "../medulla-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 # The engine wire codec, for record round-trip tests only.

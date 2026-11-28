@@ -67,6 +67,7 @@ medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-h-decide-base = { path = "../medulla-h-decide-base" }
 medulla-h-decide-learning = { path = "../medulla-h-decide-learning" }
 medulla-h-decide-runlog = { path = "../medulla-h-decide-runlog" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 ann = ["medulla-graph-core/ann", "medulla-h-decide-base/ann", "medulla-h-decide-learning/ann", "medulla-h-decide-runlog/ann"]

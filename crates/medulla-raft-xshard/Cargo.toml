@@ -44,6 +44,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-raft = { path = "../medulla-raft" }
 medulla-exec = { path = "../medulla-exec" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 calvin = ["nonblocking", "medulla-raft/calvin"]

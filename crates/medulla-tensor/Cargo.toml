@@ -29,6 +29,7 @@ cudarc = { version = "0.17", optional = true, default-features = false, features
 # (default OFF) — a default/pi/node/full build links none of it and `Tensor` carries
 # no new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [features]
 default = []

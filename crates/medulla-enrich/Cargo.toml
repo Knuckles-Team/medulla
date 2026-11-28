@@ -15,6 +15,7 @@ medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["
 medulla-source-types = { path = "../medulla-source-types" }
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 serde_json = "1"

@@ -20,3 +20,4 @@ sha2 = "0.10"
 hex = "0.4"
 medulla-result-types = { path = "../medulla-result-types", features = ["finance"] }
 medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }

@@ -43,6 +43,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
+medulla-workspace-hack = { version = "0.1", path = "../medulla-workspace-hack" }
 
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
