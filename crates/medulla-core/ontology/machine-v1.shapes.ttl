@@ -1,0 +1,266 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Shapes of the canonical machine vocabulary (MEDULLA-MACHINE-R002.3, R003.2, R004.1 to R004.3,
+# R005.5). The native SHACL engine does not infer rdfs:subClassOf for targets, so a shape targets
+# a class that a record carries directly or the subjects of a property only a canonical node uses.
+# A connector record of a subclass of :Machine is a view: it carries no :identityTier and no shape
+# below targets it.
+
+# spec: MEDULLA-MACHINE-R002.3
+:MachineShape a sh:NodeShape ;
+    sh:targetSubjectsOf :identityTier ;
+    sh:nodeKind sh:IRI ;
+    sh:pattern "^urn:machine:(uuid|serial|bmc|host):[0-9a-f]{32}$" ;
+    sh:message "A canonical machine is an IRI of the form urn:machine:<tier>:<32 hex digits>." ;
+    sh:property [
+        sh:path :machineName ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:message "A machine has exactly one non-empty :machineName." ;
+    ] ;
+    sh:property [
+        sh:path :identityTier ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "uuid" "serial" "bmc" "host" ) ;
+        sh:message "A machine has exactly one :identityTier: uuid, serial, bmc or host." ;
+    ] ;
+    sh:property [
+        sh:path :machineKey ;
+        sh:minCount 1 ;
+        sh:pattern "^(uuid|serial|bmc|host):.+$" ;
+        sh:message "A machine has at least one :machineKey of the form <kind>:<value>." ;
+    ] ;
+    sh:property [
+        sh:path :systemUuid ;
+        sh:maxCount 1 ;
+        sh:message "A machine has at most one :systemUuid." ;
+    ] ;
+    sh:property [
+        sh:path :machineLifecycleState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "commissioned" "active" "draining" "maintenance" "retired" ) ;
+        sh:message "A machine has exactly one :machineLifecycleState of the five stored states." ;
+    ] .
+
+# spec: MEDULLA-MACHINE-R004.1
+:MachineObserverShape a sh:NodeShape ;
+    sh:targetSubjectsOf :observes ;
+    sh:property [
+        sh:path :observes ;
+        sh:minCount 1 ;
+        sh:or ( [ sh:class :Machine ] [ sh:class :MachineKey ] ) ;
+        sh:message "Every value of :observes is a :Machine or a :MachineKey." ;
+    ] .
+
+# spec: MEDULLA-MACHINE-R004.2
+:ProbeSnapshotShape a sh:NodeShape ;
+    sh:targetClass :ProbeSnapshot ;
+    sh:property [
+        sh:path :probeKind ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "system" "management" "orchestrator" ) ;
+        sh:message "A probe snapshot has exactly one :probeKind: system, management or orchestrator." ;
+    ] ;
+    sh:property [
+        sh:path :connector ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A probe snapshot has exactly one :connector." ;
+    ] ;
+    sh:property [
+        sh:path :tool ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "A probe snapshot has exactly one :tool." ;
+    ] ;
+    sh:property [
+        sh:path :probeDigest ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "A probe snapshot has exactly one :probeDigest of the form sha256:<64 hex digits>." ;
+    ] ;
+    sh:property [
+        sh:path :observedAt ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "A probe snapshot has exactly one :observedAt of type xsd:dateTime." ;
+    ] ;
+    sh:property [
+        sh:path :observes ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class :Machine ;
+        sh:message "A probe snapshot observes exactly one :Machine." ;
+    ] .
+
+# spec: MEDULLA-MACHINE-R004.3
+:MachineKeyShape a sh:NodeShape ;
+    sh:targetClass :MachineKey ;
+    sh:nodeKind sh:IRI ;
+    sh:pattern "^urn:machine-key:(uuid|serial|bmc|host):[0-9a-f]{32}$" ;
+    sh:message "A key anchor is an IRI of the form urn:machine-key:<kind>:<32 hex digits>." ;
+    sh:property [
+        sh:path :machineKey ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^(uuid|serial|bmc|host):.+$" ;
+        sh:message "A key anchor has exactly one :machineKey of the form <kind>:<value>." ;
+    ] ;
+    sh:property [
+        sh:path :identifies ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class :Machine ;
+        sh:message "A key anchor identifies exactly one :Machine." ;
+    ] .
+
+# spec: MEDULLA-MACHINE-R005.5
+:MachineLifecycleTransitionShape a sh:NodeShape ;
+    sh:targetClass :MachineLifecycleTransitionRecord ;
+    sh:property [
+        sh:path :previousState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "commissioned" "active" "draining" "maintenance" "retired" ) ;
+        sh:message "A transition record has exactly one :previousState of the five stored states." ;
+    ] ;
+    sh:property [
+        sh:path :nextState ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "commissioned" "active" "draining" "maintenance" "retired" ) ;
+        sh:message "A transition record has exactly one :nextState of the five stored states." ;
+    ] ;
+    sh:property [
+        sh:path :appliedEdgeId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^H0[1-7]$" ;
+        sh:message "A transition record has exactly one :appliedEdgeId from H01 to H07." ;
+    ] ;
+    sh:property [
+        sh:path :firedByEvent ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "Ready" "Drain" "Drained" "Resume" "Retire" ) ;
+        sh:message "A transition record has exactly one :firedByEvent of the five events." ;
+    ] ;
+    sh:property [
+        sh:path :evidenceDigest ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "A transition record has exactly one :evidenceDigest of the form sha256:<64 hex digits>." ;
+    ] ;
+    sh:property [
+        sh:path :observedAt ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "A transition record has exactly one :observedAt of type xsd:dateTime." ;
+    ] ;
+    sh:property [
+        sh:path :transitionOf ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class :Machine ;
+        sh:message "A transition record belongs to exactly one :Machine." ;
+    ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:CentralProcessorShape a sh:NodeShape ;
+    sh:targetClass :CentralProcessor ;
+    sh:property [ sh:path :socketIndex ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A processor has exactly one :socketIndex." ] ;
+    sh:property [ sh:path :coreCount ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A processor has exactly one :coreCount." ] ;
+    sh:property [ sh:path :threadCount ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A processor has exactly one :threadCount." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:MemoryModuleShape a sh:NodeShape ;
+    sh:targetClass :MemoryModule ;
+    sh:property [ sh:path :capacityBytes ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 1 ;
+        sh:message "A memory module has exactly one :capacityBytes of at least 1." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:StorageDeviceShape a sh:NodeShape ;
+    sh:targetClass :StorageDevice ;
+    sh:property [ sh:path :capacityBytes ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A storage device has exactly one :capacityBytes." ] ;
+    sh:property [ sh:path :storageMedium ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "hdd" "ssd" "nvme" "other" ) ;
+        sh:message "A storage device has exactly one :storageMedium: hdd, ssd, nvme or other." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:NetworkInterfaceShape a sh:NodeShape ;
+    sh:targetClass :NetworkInterface ;
+    sh:property [ sh:path :interfaceName ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A network interface has exactly one :interfaceName." ] ;
+    sh:property [ sh:path :macAddress ; sh:maxCount 1 ;
+        sh:pattern "^([0-9a-f]{2}:){5}[0-9a-f]{2}$" ;
+        sh:message "A network interface has at most one :macAddress in lower-case colon form." ] ;
+    sh:property [ sh:path :linkState ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "up" "down" "unknown" ) ;
+        sh:message "A network interface has exactly one :linkState: up, down or unknown." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:NetworkBondShape a sh:NodeShape ;
+    sh:targetClass :NetworkBond ;
+    sh:property [ sh:path :bondName ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A network bond has exactly one :bondName." ] ;
+    sh:property [ sh:path :bondMember ; sh:minCount 1 ;
+        sh:message "A network bond has at least one :bondMember." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:AcceleratorShape a sh:NodeShape ;
+    sh:targetClass :Accelerator ;
+    sh:property [ sh:path :acceleratorKind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "gpu" "fpga" "tpu" "dpu" "other" ) ;
+        sh:message "An accelerator has exactly one :acceleratorKind: gpu, fpga, tpu, dpu or other." ] .
+
+# spec: MEDULLA-MACHINE-R003.2
+:ManagementControllerShape a sh:NodeShape ;
+    sh:targetClass :ManagementController ;
+    sh:property [ sh:path :controllerId ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^([0-9a-f]{2}:){5}[0-9a-f]{2}$" ;
+        sh:message "A management controller has exactly one :controllerId in lower-case colon form." ] .
+
+# Each part is the object of exactly one owner property: one of the seven sub-properties of
+# :hasComponent. Records state the specific property and the engine does not infer sub-properties
+# in a constraint, so each constraint lists them. The engine declines property paths, so the count
+# is two SPARQL constraints over every part class: none, and more than one.
+# spec: MEDULLA-MACHINE-R003.2
+:MachineComponentOwnerShape a sh:NodeShape ;
+    sh:targetClass :CentralProcessor, :MemoryModule, :StorageDevice, :NetworkInterface, :NetworkBond, :Accelerator, :ManagementController ;
+    sh:sparql [
+        sh:message "A part is the object of exactly one owner property (:hasProcessor, :hasMemoryModule, :hasStorageDevice, :hasNetworkInterface, :hasNetworkBond, :hasAccelerator or :hasManagementController): this part has none." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                OPTIONAL { ?owner ?ownerp $this . FILTER (?ownerp IN (:hasProcessor, :hasMemoryModule, :hasStorageDevice, :hasNetworkInterface, :hasNetworkBond, :hasAccelerator, :hasManagementController)) }
+                FILTER (!BOUND(?owner))
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "A part is the object of exactly one owner property (:hasProcessor, :hasMemoryModule, :hasStorageDevice, :hasNetworkInterface, :hasNetworkBond, :hasAccelerator or :hasManagementController): this part has several." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                ?first ?firstp $this .
+                ?second ?secondp $this .
+                FILTER (?firstp IN (:hasProcessor, :hasMemoryModule, :hasStorageDevice, :hasNetworkInterface, :hasNetworkBond, :hasAccelerator, :hasManagementController))
+                FILTER (?secondp IN (:hasProcessor, :hasMemoryModule, :hasStorageDevice, :hasNetworkInterface, :hasNetworkBond, :hasAccelerator, :hasManagementController))
+                FILTER (?first != ?second)
+            }
+        """
+    ] .

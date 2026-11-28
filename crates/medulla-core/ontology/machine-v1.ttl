@@ -1,0 +1,421 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# The canonical machine vocabulary (MEDULLA-MACHINE-R001.1, R003.1, R004.1 to R004.3, R005.5).
+# One class names a physical or virtual computing machine. A connector class for a host or a
+# cluster member extends it and stays a view of the canonical node.
+
+:Machine a owl:Class ;
+    rdfs:label "Machine" ;
+    rdfs:comment "A physical or virtual computing machine with one stable identity. The canonical machine carries :identityTier. A connector view of a machine does not." ;
+    rdfs:subClassOf bfo:0000004 .
+
+:MachineComponent a owl:Class ;
+    rdfs:label "Machine Component" ;
+    rdfs:comment "A part of a machine. Abstract." ;
+    rdfs:subClassOf bfo:0000030 .
+
+:CentralProcessor a owl:Class ;
+    rdfs:label "Central Processor" ;
+    rdfs:comment "One processor package." ;
+    rdfs:subClassOf :MachineComponent .
+
+:MemoryModule a owl:Class ;
+    rdfs:label "Memory Module" ;
+    rdfs:comment "One memory module." ;
+    rdfs:subClassOf :MachineComponent .
+
+:StorageDevice a owl:Class ;
+    rdfs:label "Storage Device" ;
+    rdfs:comment "One disk, solid-state drive or NVMe device." ;
+    rdfs:subClassOf :MachineComponent .
+
+:NetworkInterface a owl:Class ;
+    rdfs:label "Network Interface" ;
+    rdfs:comment "One network interface." ;
+    rdfs:subClassOf :MachineComponent .
+
+:NetworkBond a owl:Class ;
+    rdfs:label "Network Bond" ;
+    rdfs:comment "One aggregation of interfaces." ;
+    rdfs:subClassOf :MachineComponent .
+
+:Accelerator a owl:Class ;
+    rdfs:label "Accelerator" ;
+    rdfs:comment "One GPU, FPGA, TPU, DPU or similar device." ;
+    rdfs:subClassOf :MachineComponent .
+
+:ManagementController a owl:Class ;
+    rdfs:label "Management Controller" ;
+    rdfs:comment "One out-of-band management controller." ;
+    rdfs:subClassOf :MachineComponent .
+
+:MachineKey a owl:Class ;
+    rdfs:label "Machine Key" ;
+    rdfs:comment "An anchor for one normalized identity key of a machine." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:ProbeSnapshot a owl:Class ;
+    rdfs:label "Probe Snapshot" ;
+    rdfs:comment "One recorded probe result with its content digest." ;
+    rdfs:subClassOf :Observation .
+
+:MachineLifecycleTransitionRecord a owl:Class ;
+    rdfs:label "Machine Lifecycle Transition Record" ;
+    rdfs:comment "One applied lifecycle transition of a machine." ;
+    rdfs:subClassOf :Observation .
+
+:hasComponent a owl:ObjectProperty ;
+    rdfs:label "has component" ;
+    rdfs:comment "The machine owns the part. Records state the specific sub-property of the part kind." ;
+    rdfs:domain :Machine ;
+    rdfs:range :MachineComponent .
+
+:hasProcessor a owl:ObjectProperty ;
+    rdfs:label "has processor" ;
+    rdfs:comment "The machine owns this processor." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :CentralProcessor .
+
+:hasMemoryModule a owl:ObjectProperty ;
+    rdfs:label "has memory module" ;
+    rdfs:comment "The machine owns this memory module." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :MemoryModule .
+
+:hasStorageDevice a owl:ObjectProperty ;
+    rdfs:label "has storage device" ;
+    rdfs:comment "The machine owns this storage device." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :StorageDevice .
+
+:hasNetworkInterface a owl:ObjectProperty ;
+    rdfs:label "has network interface" ;
+    rdfs:comment "The machine owns this network interface." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :NetworkInterface .
+
+:hasNetworkBond a owl:ObjectProperty ;
+    rdfs:label "has network bond" ;
+    rdfs:comment "The machine owns this network bond." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :NetworkBond .
+
+:hasAccelerator a owl:ObjectProperty ;
+    rdfs:label "has accelerator" ;
+    rdfs:comment "The machine owns this accelerator." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :Accelerator .
+
+:hasManagementController a owl:ObjectProperty ;
+    rdfs:label "has management controller" ;
+    rdfs:comment "The machine owns this management controller." ;
+    rdfs:subPropertyOf :hasComponent ;
+    rdfs:domain :Machine ;
+    rdfs:range :ManagementController .
+
+:bondMember a owl:ObjectProperty ;
+    rdfs:label "bond member" ;
+    rdfs:comment "The interface belongs to the bond." ;
+    rdfs:domain :NetworkBond ;
+    rdfs:range :NetworkInterface .
+
+:identifies a owl:ObjectProperty ;
+    rdfs:label "identifies" ;
+    rdfs:comment "The key anchor belongs to the canonical machine." ;
+    rdfs:domain :MachineKey ;
+    rdfs:range :Machine .
+
+:observes a owl:ObjectProperty ;
+    rdfs:label "observes" ;
+    rdfs:comment "A connector record or probe snapshot points at its machine. It may point at the anchor of a key it holds." ;
+    rdfs:range [ a owl:Class ; owl:unionOf ( :Machine :MachineKey ) ] .
+
+:transitionOf a owl:ObjectProperty ;
+    rdfs:label "transition of" ;
+    rdfs:comment "The transition record belongs to the machine." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range :Machine .
+
+:machineName a owl:DatatypeProperty ;
+    rdfs:label "machine name" ;
+    rdfs:comment "The hosts-file name of the machine." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:identityTier a owl:DatatypeProperty ;
+    rdfs:label "identity tier" ;
+    rdfs:comment "The tier of the key that derived the machine IRI: uuid, serial, bmc or host." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:machineKey a owl:DatatypeProperty ;
+    rdfs:label "machine key" ;
+    rdfs:comment "One normalized identity key, in the form kind:value." ;
+    rdfs:range xsd:string .
+
+:systemUuid a owl:DatatypeProperty ;
+    rdfs:label "system UUID" ;
+    rdfs:comment "The hardware system UUID, normalized." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:serialNumber a owl:DatatypeProperty ;
+    rdfs:label "serial number" ;
+    rdfs:comment "A hardware serial number, normalized." ;
+    rdfs:range xsd:string .
+
+:manufacturer a owl:DatatypeProperty ;
+    rdfs:label "manufacturer" ;
+    rdfs:comment "The hardware manufacturer." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:model a owl:DatatypeProperty ;
+    rdfs:label "model" ;
+    rdfs:comment "The hardware model." ;
+    rdfs:range xsd:string .
+
+:architecture a owl:DatatypeProperty ;
+    rdfs:label "architecture" ;
+    rdfs:comment "The processor architecture." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:operatingSystem a owl:DatatypeProperty ;
+    rdfs:label "operating system" ;
+    rdfs:comment "The operating system name and version." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:kernelVersion a owl:DatatypeProperty ;
+    rdfs:label "kernel version" ;
+    rdfs:comment "The kernel version." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:processorCount a owl:DatatypeProperty ;
+    rdfs:label "processor count" ;
+    rdfs:comment "The number of processor packages." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:coreCount a owl:DatatypeProperty ;
+    rdfs:label "core count" ;
+    rdfs:comment "The number of cores." ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:threadCount a owl:DatatypeProperty ;
+    rdfs:label "thread count" ;
+    rdfs:comment "The number of hardware threads." ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:memoryTotalBytes a owl:DatatypeProperty ;
+    rdfs:label "memory total bytes" ;
+    rdfs:comment "The total memory in bytes." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:machineAddress a owl:DatatypeProperty ;
+    rdfs:label "machine address" ;
+    rdfs:comment "One address of the machine. One value per address." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:managementAddress a owl:DatatypeProperty ;
+    rdfs:label "management address" ;
+    rdfs:comment "The address of the out-of-band management controller." ;
+    rdfs:range xsd:string .
+
+:machineRole a owl:DatatypeProperty ;
+    rdfs:label "machine role" ;
+    rdfs:comment "One role of the machine. One value per role." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:machineGroup a owl:DatatypeProperty ;
+    rdfs:label "machine group" ;
+    rdfs:comment "One group of the machine. One value per group." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:sshCredentialRef a owl:DatatypeProperty ;
+    rdfs:label "ssh credential reference" ;
+    rdfs:comment "A reference to the secure shell credential. Never a secret." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:managementCredentialRef a owl:DatatypeProperty ;
+    rdfs:label "management credential reference" ;
+    rdfs:comment "A reference to the management credential. Never a secret." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:retireRequested a owl:DatatypeProperty ;
+    rdfs:label "retire requested" ;
+    rdfs:comment "Whether the operator asked to retire the machine." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:boolean .
+
+:machineLifecycleState a owl:DatatypeProperty ;
+    rdfs:label "machine lifecycle state" ;
+    rdfs:comment "The stored lifecycle state: commissioned, active, draining, maintenance or retired." ;
+    rdfs:domain :Machine ;
+    rdfs:range xsd:string .
+
+:socketIndex a owl:DatatypeProperty ;
+    rdfs:label "socket index" ;
+    rdfs:comment "The socket of a processor package." ;
+    rdfs:domain :CentralProcessor ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:componentSlot a owl:DatatypeProperty ;
+    rdfs:label "component slot" ;
+    rdfs:comment "The slot a memory module sits in." ;
+    rdfs:domain :MemoryModule ;
+    rdfs:range xsd:string .
+
+:capacityBytes a owl:DatatypeProperty ;
+    rdfs:label "capacity bytes" ;
+    rdfs:comment "The capacity of a part in bytes." ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:deviceName a owl:DatatypeProperty ;
+    rdfs:label "device name" ;
+    rdfs:comment "The operating system name of a storage device." ;
+    rdfs:domain :StorageDevice ;
+    rdfs:range xsd:string .
+
+:storageMedium a owl:DatatypeProperty ;
+    rdfs:label "storage medium" ;
+    rdfs:comment "The medium of a storage device: hdd, ssd, nvme or other." ;
+    rdfs:domain :StorageDevice ;
+    rdfs:range xsd:string .
+
+:interfaceName a owl:DatatypeProperty ;
+    rdfs:label "interface name" ;
+    rdfs:comment "The operating system name of a network interface." ;
+    rdfs:domain :NetworkInterface ;
+    rdfs:range xsd:string .
+
+:macAddress a owl:DatatypeProperty ;
+    rdfs:label "MAC address" ;
+    rdfs:comment "The hardware address of a network interface, lower-case colon form." ;
+    rdfs:domain :NetworkInterface ;
+    rdfs:range xsd:string .
+
+:speedMegabits a owl:DatatypeProperty ;
+    rdfs:label "speed megabits" ;
+    rdfs:comment "The link speed in megabits per second." ;
+    rdfs:domain :NetworkInterface ;
+    rdfs:range xsd:nonNegativeInteger .
+
+:linkState a owl:DatatypeProperty ;
+    rdfs:label "link state" ;
+    rdfs:comment "The link state of a network interface: up, down or unknown." ;
+    rdfs:domain :NetworkInterface ;
+    rdfs:range xsd:string .
+
+:bondName a owl:DatatypeProperty ;
+    rdfs:label "bond name" ;
+    rdfs:comment "The operating system name of a network bond." ;
+    rdfs:domain :NetworkBond ;
+    rdfs:range xsd:string .
+
+:bondMode a owl:DatatypeProperty ;
+    rdfs:label "bond mode" ;
+    rdfs:comment "The aggregation mode of a network bond." ;
+    rdfs:domain :NetworkBond ;
+    rdfs:range xsd:string .
+
+:acceleratorKind a owl:DatatypeProperty ;
+    rdfs:label "accelerator kind" ;
+    rdfs:comment "The kind of an accelerator: gpu, fpga, tpu, dpu or other." ;
+    rdfs:domain :Accelerator ;
+    rdfs:range xsd:string .
+
+:pciAddress a owl:DatatypeProperty ;
+    rdfs:label "PCI address" ;
+    rdfs:comment "The bus address of an accelerator." ;
+    rdfs:domain :Accelerator ;
+    rdfs:range xsd:string .
+
+:controllerId a owl:DatatypeProperty ;
+    rdfs:label "controller id" ;
+    rdfs:comment "The hardware address of a management controller, lower-case colon form." ;
+    rdfs:domain :ManagementController ;
+    rdfs:range xsd:string .
+
+:firmwareVersion a owl:DatatypeProperty ;
+    rdfs:label "firmware version" ;
+    rdfs:comment "The firmware version of a management controller." ;
+    rdfs:domain :ManagementController ;
+    rdfs:range xsd:string .
+
+:probeKind a owl:DatatypeProperty ;
+    rdfs:label "probe kind" ;
+    rdfs:comment "The kind of a probe: system, management or orchestrator." ;
+    rdfs:domain :ProbeSnapshot ;
+    rdfs:range xsd:string .
+
+:connector a owl:DatatypeProperty ;
+    rdfs:label "connector" ;
+    rdfs:comment "The connector that ran the probe." ;
+    rdfs:domain :ProbeSnapshot ;
+    rdfs:range xsd:string .
+
+:tool a owl:DatatypeProperty ;
+    rdfs:label "tool" ;
+    rdfs:comment "The connector tool that ran the probe." ;
+    rdfs:domain :ProbeSnapshot ;
+    rdfs:range xsd:string .
+
+:probeDigest a owl:DatatypeProperty ;
+    rdfs:label "probe digest" ;
+    rdfs:comment "The content digest of the probe result, in the form sha256:hex." ;
+    rdfs:domain :ProbeSnapshot ;
+    rdfs:range xsd:string .
+
+:observedAt a owl:DatatypeProperty ;
+    rdfs:label "observed at" ;
+    rdfs:comment "When a probe result or a transition was observed." ;
+    rdfs:range xsd:dateTime .
+
+:previousState a owl:DatatypeProperty ;
+    rdfs:label "previous state" ;
+    rdfs:comment "The lifecycle state before a transition." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range xsd:string .
+
+:nextState a owl:DatatypeProperty ;
+    rdfs:label "next state" ;
+    rdfs:comment "The lifecycle state after a transition." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range xsd:string .
+
+:appliedEdgeId a owl:DatatypeProperty ;
+    rdfs:label "applied edge id" ;
+    rdfs:comment "The edge of the lifecycle machine that fired, H01 to H07." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range xsd:string .
+
+:firedByEvent a owl:DatatypeProperty ;
+    rdfs:label "fired by event" ;
+    rdfs:comment "The event that fired the transition." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range xsd:string .
+
+:evidenceDigest a owl:DatatypeProperty ;
+    rdfs:label "evidence digest" ;
+    rdfs:comment "The digest of the evidence facts behind a transition, in the form sha256:hex." ;
+    rdfs:domain :MachineLifecycleTransitionRecord ;
+    rdfs:range xsd:string .

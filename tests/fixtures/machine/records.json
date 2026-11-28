@@ -1,0 +1,182 @@
+{
+ "entities": [
+  {
+   "id": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "node_type": "Machine",
+   "properties": {
+    "identityTier": "serial",
+    "machineKey": [
+     "host:alpha",
+     "serial:ABC 123"
+    ],
+    "machineLifecycleState": "active",
+    "machineName": "alpha"
+   }
+  },
+  {
+   "id": "urn:machine-key:serial:ce4057006ad7685b67a799f0743e2911",
+   "node_type": "MachineKey",
+   "properties": {
+    "machineKey": "serial:ABC 123"
+   }
+  },
+  {
+   "id": "urn:machine-key:host:41097ff758a2bcf28635c4da73d9fa18",
+   "node_type": "MachineKey",
+   "properties": {
+    "machineKey": "host:alpha"
+   }
+  },
+  {
+   "id": "urn:machine-part:9a6f0f3424d20945e557cedc9205320c",
+   "node_type": "CentralProcessor",
+   "properties": {
+    "coreCount": 8,
+    "model": "cpu-model",
+    "socketIndex": 0,
+    "threadCount": 16
+   }
+  },
+  {
+   "id": "urn:machine-part:cf9288394372466802a24ac2b8d68b25",
+   "node_type": "MemoryModule",
+   "properties": {
+    "capacityBytes": 17179869184,
+    "componentSlot": "DIMM_A1"
+   }
+  },
+  {
+   "id": "urn:machine-part:e3d28d5282f98bec5de3385290ee5928",
+   "node_type": "StorageDevice",
+   "properties": {
+    "capacityBytes": 1000204886016,
+    "deviceName": "nvme0n1",
+    "serialNumber": "SN-DISK-1",
+    "storageMedium": "nvme"
+   }
+  },
+  {
+   "id": "urn:machine-part:ac177e96f0f67eb6b2177b714b5c56ff",
+   "node_type": "NetworkInterface",
+   "properties": {
+    "interfaceName": "eth0",
+    "linkState": "up",
+    "macAddress": "aa:bb:cc:dd:ee:01",
+    "speedMegabits": 10000
+   }
+  },
+  {
+   "id": "urn:machine-part:8c0939a238bdceae0fbb4b082ff46514",
+   "node_type": "NetworkInterface",
+   "properties": {
+    "interfaceName": "eth1",
+    "linkState": "up",
+    "macAddress": "aa:bb:cc:dd:ee:02",
+    "speedMegabits": 10000
+   }
+  },
+  {
+   "id": "urn:machine-part:e4634f5882a5f3d2bc7d9ba3cbb35125",
+   "node_type": "NetworkBond",
+   "properties": {
+    "bondMode": "802.3ad",
+    "bondName": "bond0"
+   }
+  },
+  {
+   "id": "urn:machine-part:75313501cfb3cdb983de6db3fbc327ee",
+   "node_type": "Accelerator",
+   "properties": {
+    "acceleratorKind": "gpu",
+    "pciAddress": "0000:01:00.0"
+   }
+  },
+  {
+   "id": "urn:machine-part:a7a4af17da4c367340c05672fc289df9",
+   "node_type": "ManagementController",
+   "properties": {
+    "controllerId": "aa:bb:cc:dd:ee:09",
+    "firmwareVersion": "2.1"
+   }
+  },
+  {
+   "id": "urn:machine-probe:9642fa362bb951b057b2e7a5b4c5a894",
+   "node_type": "ProbeSnapshot",
+   "properties": {
+    "connector": "shell",
+    "observedAt": "2026-11-27T10:00:00Z",
+    "probeDigest": "sha256:5b50afa60628f1c2040e18407e95dcf48d35aa084eb73330de6cd3be6a1cab6a",
+    "probeKind": "system",
+    "tool": "inventory"
+   }
+  }
+ ],
+ "relationships": [
+  {
+   "relationship": "identifies",
+   "source": "urn:machine-key:serial:ce4057006ad7685b67a799f0743e2911",
+   "target": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d"
+  },
+  {
+   "relationship": "identifies",
+   "source": "urn:machine-key:host:41097ff758a2bcf28635c4da73d9fa18",
+   "target": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d"
+  },
+  {
+   "relationship": "hasProcessor",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:9a6f0f3424d20945e557cedc9205320c"
+  },
+  {
+   "relationship": "hasMemoryModule",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:cf9288394372466802a24ac2b8d68b25"
+  },
+  {
+   "relationship": "hasStorageDevice",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:e3d28d5282f98bec5de3385290ee5928"
+  },
+  {
+   "relationship": "hasNetworkInterface",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:ac177e96f0f67eb6b2177b714b5c56ff"
+  },
+  {
+   "relationship": "hasNetworkInterface",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:8c0939a238bdceae0fbb4b082ff46514"
+  },
+  {
+   "relationship": "hasNetworkBond",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:e4634f5882a5f3d2bc7d9ba3cbb35125"
+  },
+  {
+   "relationship": "hasAccelerator",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:75313501cfb3cdb983de6db3fbc327ee"
+  },
+  {
+   "relationship": "hasManagementController",
+   "source": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d",
+   "target": "urn:machine-part:a7a4af17da4c367340c05672fc289df9"
+  },
+  {
+   "relationship": "bondMember",
+   "source": "urn:machine-part:e4634f5882a5f3d2bc7d9ba3cbb35125",
+   "target": "urn:machine-part:ac177e96f0f67eb6b2177b714b5c56ff"
+  },
+  {
+   "relationship": "bondMember",
+   "source": "urn:machine-part:e4634f5882a5f3d2bc7d9ba3cbb35125",
+   "target": "urn:machine-part:8c0939a238bdceae0fbb4b082ff46514"
+  },
+  {
+   "relationship": "observes",
+   "source": "urn:machine-probe:9642fa362bb951b057b2e7a5b4c5a894",
+   "target": "urn:machine:serial:f3af1defd63343f5dd2ee44b56cb636d"
+  }
+ ],
+ "schema": "inventory-records/v1"
+}

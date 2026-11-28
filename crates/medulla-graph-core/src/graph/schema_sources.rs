@@ -1298,6 +1298,22 @@ fn core_specs() -> &'static [CoreSpec] {
             )),
             ontology: None,
         },
+        // MEDULLA-MACHINE-R001.1: the one canonical machine class, its hardware parts,
+        // the observes link and its shapes.
+        CoreSpec {
+            module: "machine",
+            version: 1,
+            shapes: None,
+            ontology: Some(include_str!("../../../medulla-core/ontology/machine-v1.ttl")),
+        },
+        CoreSpec {
+            module: "machine-shapes",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/machine-v1.shapes.ttl"
+            )),
+            ontology: None,
+        },
         // MEDULLA-TYPED-PACKS-R105.10.4: every packaged core module is in the parent
         // catalog, so pack import judges a pack against the class set the wheel ships
         // (downtime-work is registered below with its shapes, R101.3).

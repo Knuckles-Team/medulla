@@ -11170,3 +11170,146 @@
     :fromState :ObserveRequestMachine_Responding ;
     :toState :ObserveRequestMachine_Refused ;
     :firedBy :ObserveRequestMachine_Event_Refuse .
+
+
+# spec: MEDULLA-MACHINE-R005.4
+# The MachineLifecycle machine. The Rust edge table MACHINE_LIFECYCLE_MACHINE is the same table (five
+# states, five events, seven edges H01 to H07; Retired is terminal); the ontology test asserts equal
+# edge sets.
+
+:MachineLifecycleState a owl:Class ;
+    rdfs:label "MachineLifecycle State" ;
+    rdfs:comment "A state of the MachineLifecycle machine." ;
+    rdfs:subClassOf :State .
+
+:MachineLifecycleTerminalState a owl:Class ;
+    rdfs:label "MachineLifecycle Terminal State" ;
+    rdfs:comment "A terminal state of the MachineLifecycle machine." ;
+    rdfs:subClassOf :TerminalState, :MachineLifecycleState .
+
+:MachineLifecycleTransition a owl:Class ;
+    rdfs:label "MachineLifecycle Transition" ;
+    rdfs:comment "A transition of the MachineLifecycle machine." ;
+    rdfs:subClassOf :Transition .
+
+:MachineLifecycleEvent a owl:Class ;
+    rdfs:label "MachineLifecycle Event" ;
+    rdfs:comment "An event of the MachineLifecycle machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MachineLifecycleGuard a owl:Class ;
+    rdfs:label "MachineLifecycle Guard" ;
+    rdfs:comment "A guard of the MachineLifecycle machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MachineLifecycleMachine a :StateMachine ;
+    rdfs:label "MachineLifecycle machine" ;
+    :initialState :MachineLifecycleMachine_Commissioned ;
+    :hasState :MachineLifecycleMachine_Commissioned, :MachineLifecycleMachine_Active, :MachineLifecycleMachine_Draining, :MachineLifecycleMachine_Maintenance, :MachineLifecycleMachine_Retired .
+
+:MachineLifecycleMachine_Commissioned a :MachineLifecycleState ;
+    rdfs:label "MachineLifecycle Commissioned" ;
+    :storedForm "commissioned" .
+
+:MachineLifecycleMachine_Active a :MachineLifecycleState ;
+    rdfs:label "MachineLifecycle Active" ;
+    :storedForm "active" .
+
+:MachineLifecycleMachine_Draining a :MachineLifecycleState ;
+    rdfs:label "MachineLifecycle Draining" ;
+    :storedForm "draining" .
+
+:MachineLifecycleMachine_Maintenance a :MachineLifecycleState ;
+    rdfs:label "MachineLifecycle Maintenance" ;
+    :storedForm "maintenance" .
+
+:MachineLifecycleMachine_Retired a :MachineLifecycleTerminalState ;
+    rdfs:label "MachineLifecycle Retired" ;
+    :storedForm "retired" .
+
+:MachineLifecycleMachine_Event_Ready a :MachineLifecycleEvent ;
+    rdfs:label "MachineLifecycle Ready" .
+
+:MachineLifecycleMachine_Event_Drain a :MachineLifecycleEvent ;
+    rdfs:label "MachineLifecycle Drain" .
+
+:MachineLifecycleMachine_Event_Drained a :MachineLifecycleEvent ;
+    rdfs:label "MachineLifecycle Drained" .
+
+:MachineLifecycleMachine_Event_Resume a :MachineLifecycleEvent ;
+    rdfs:label "MachineLifecycle Resume" .
+
+:MachineLifecycleMachine_Event_Retire a :MachineLifecycleEvent ;
+    rdfs:label "MachineLifecycle Retire" .
+
+:MachineLifecycleMachine_Guard_ReachableAndReady a :MachineLifecycleGuard ;
+    rdfs:label "MachineLifecycle ReachableAndReady" ;
+    rdfs:comment "Guard: the machine is reachable and ready, and no drain, health failure or retirement is requested." .
+
+:MachineLifecycleMachine_Guard_DrainOrHealthFailing a :MachineLifecycleGuard ;
+    rdfs:label "MachineLifecycle DrainOrHealthFailing" ;
+    rdfs:comment "Guard: the machine is health failing, or a drain or a retirement is requested." .
+
+:MachineLifecycleMachine_Guard_EvacuatedWhileDrainOrFailing a :MachineLifecycleGuard ;
+    rdfs:label "MachineLifecycle EvacuatedWhileDrainOrFailing" ;
+    rdfs:comment "Guard: every workload left the machine while a drain, a health failure or a retirement holds." .
+
+:MachineLifecycleMachine_Guard_RetireRequested a :MachineLifecycleGuard ;
+    rdfs:label "MachineLifecycle RetireRequested" ;
+    rdfs:comment "Guard: the operator asked to retire the machine." .
+
+:MachineLifecycleMachine_H01 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H01" ;
+    :edgeId "H01" ;
+    :fromState :MachineLifecycleMachine_Commissioned ;
+    :toState :MachineLifecycleMachine_Active ;
+    :guardedBy :MachineLifecycleMachine_Guard_ReachableAndReady ;
+    :firedBy :MachineLifecycleMachine_Event_Ready .
+
+:MachineLifecycleMachine_H02 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H02" ;
+    :edgeId "H02" ;
+    :fromState :MachineLifecycleMachine_Active ;
+    :toState :MachineLifecycleMachine_Draining ;
+    :guardedBy :MachineLifecycleMachine_Guard_DrainOrHealthFailing ;
+    :firedBy :MachineLifecycleMachine_Event_Drain .
+
+:MachineLifecycleMachine_H03 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H03" ;
+    :edgeId "H03" ;
+    :fromState :MachineLifecycleMachine_Draining ;
+    :toState :MachineLifecycleMachine_Maintenance ;
+    :guardedBy :MachineLifecycleMachine_Guard_EvacuatedWhileDrainOrFailing ;
+    :firedBy :MachineLifecycleMachine_Event_Drained .
+
+:MachineLifecycleMachine_H04 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H04" ;
+    :edgeId "H04" ;
+    :fromState :MachineLifecycleMachine_Draining ;
+    :toState :MachineLifecycleMachine_Active ;
+    :guardedBy :MachineLifecycleMachine_Guard_ReachableAndReady ;
+    :firedBy :MachineLifecycleMachine_Event_Resume .
+
+:MachineLifecycleMachine_H05 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H05" ;
+    :edgeId "H05" ;
+    :fromState :MachineLifecycleMachine_Maintenance ;
+    :toState :MachineLifecycleMachine_Active ;
+    :guardedBy :MachineLifecycleMachine_Guard_ReachableAndReady ;
+    :firedBy :MachineLifecycleMachine_Event_Ready .
+
+:MachineLifecycleMachine_H06 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H06" ;
+    :edgeId "H06" ;
+    :fromState :MachineLifecycleMachine_Maintenance ;
+    :toState :MachineLifecycleMachine_Retired ;
+    :guardedBy :MachineLifecycleMachine_Guard_RetireRequested ;
+    :firedBy :MachineLifecycleMachine_Event_Retire .
+
+:MachineLifecycleMachine_H07 a :MachineLifecycleTransition ;
+    rdfs:label "MachineLifecycle H07" ;
+    :edgeId "H07" ;
+    :fromState :MachineLifecycleMachine_Commissioned ;
+    :toState :MachineLifecycleMachine_Retired ;
+    :guardedBy :MachineLifecycleMachine_Guard_RetireRequested ;
+    :firedBy :MachineLifecycleMachine_Event_Retire .

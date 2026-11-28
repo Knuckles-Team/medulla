@@ -923,6 +923,23 @@ fn capacity_lease_machine_classes_extend_core() {
     sm::assert_extends_core("CapacityLease");
 }
 
+// spec: MEDULLA-MACHINE-R005
+// spec: MEDULLA-MACHINE-R005.4
+#[test]
+fn machine_lifecycle_machine_matches_edge_table() {
+    let machine = &medulla_source_types::machine::lifecycle::MACHINE_LIFECYCLE_MACHINE;
+    // The Turtle edge set equals the Rust table: 7 edges, 5 states, 1 of them terminal.
+    assert_eq!(machine.edges.len(), 7);
+    assert_eq!(machine.states.len(), 5);
+    assert_eq!(machine.terminals.len(), 1);
+    sm::assert_matches(machine);
+}
+// spec: MEDULLA-MACHINE-R005.4
+#[test]
+fn machine_lifecycle_machine_classes_extend_core() {
+    sm::assert_extends_core("MachineLifecycle");
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R174.1
 #[test]
 fn generation_cycle_machine_matches_edge_table() {
