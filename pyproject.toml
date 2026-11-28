@@ -515,6 +515,8 @@ exempt = ["vendor/*"]
 [tool.pipelines_hooks.state_machine]
 paths = ["crates", "medulla", "tools"]
 languages = ["rust", "python"]
+# The generated Python mirror of the Rust types: each type in it has a Rust twin that the census reads.
+exclude = ["medulla/generated/**"]
 # Report mode: the full census prints on every run and the hook exits 0.
 # MEDULLA-CONTRACT-R063 clears the census and switches this to "blocking".
 mode = "staged"
