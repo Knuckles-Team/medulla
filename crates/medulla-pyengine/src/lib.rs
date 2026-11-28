@@ -188,6 +188,10 @@ pub fn resolve_core(registry: &SharedRegistry, graph: &str) -> Result<Arc<GraphC
 // ---------------------------------------------------------------------------
 mod authority;
 
+// Machine identity, lifecycle and hosts-file functions (MEDULLA-MACHINE-R007). Pure Rust with no
+// pyo3, so it is unit-tested without an interpreter; the `python` module below exposes it.
+mod machine;
+
 // ---------------------------------------------------------------------------
 // Python surface — pyo3 extension module `medulla.engine`.
 // Gated behind the `python` feature so a plain rlib consumer of this crate
@@ -784,9 +788,115 @@ mod py {
         medulla_capabilities::catalog::catalog_json()
     }
 
+    /// Turn a refusal text of `crate::machine` into the `ValueError` its caller raises.
+    fn value_error(text: String) -> PyErr {
+        pyo3::exceptions::PyValueError::new_err(text)
+    }
+
+    /// `machine_key_ref(kind, raw)`: the anchor id and key text of one normalized key, as JSON.
+    #[pyfunction]
+    fn machine_key_ref(kind: &str, raw: &str) -> PyResult<String> {
+        crate::machine::machine_key_ref(kind, raw).map_err(value_error)
+    }
+
+    /// `machine_normalize_key(kind, raw)`: `{kind, value}` as JSON, or `ValueError`.
+    #[pyfunction]
+    fn machine_normalize_key(kind: &str, raw: &str) -> PyResult<String> {
+        crate::machine::machine_normalize_key(kind, raw).map_err(value_error)
+    }
+
+    /// `machine_iri(tenant, keys_json)`: `{iri, tier, key}` of the best valid key, as JSON.
+    #[pyfunction]
+    fn machine_iri(tenant: &str, keys_json: &str) -> PyResult<String> {
+        crate::machine::machine_iri(tenant, keys_json).map_err(value_error)
+    }
+
+    /// `machine_lifecycle_derive(state, facts_json)`: `{event}` as JSON.
+    #[pyfunction]
+    fn machine_lifecycle_derive(state: &str, facts_json: &str) -> PyResult<String> {
+        crate::machine::machine_lifecycle_derive(state, facts_json).map_err(value_error)
+    }
+
+    /// `machine_lifecycle_apply(state, event, facts_json)`: `{state, edge_id}` as JSON, or a
+    /// `ValueError` carrying the `TRANSITION_REFUSED` detail.
+    #[pyfunction]
+    fn machine_lifecycle_apply(state: &str, event: &str, facts_json: &str) -> PyResult<String> {
+        crate::machine::machine_lifecycle_apply(state, event, facts_json).map_err(value_error)
+    }
+
+    /// `normalize_hosts_file(yaml)`: the canonical JSON of the normalized hosts file, or a
+    /// `ValueError` carrying the `HOSTS_FILE_INVALID` record.
+    #[pyfunction]
+    fn normalize_hosts_file(yaml: &str) -> PyResult<String> {
+        crate::machine::normalize_hosts_file(yaml).map_err(value_error)
+    }
+
+    /// `machine_hosts_digest(yaml)`: the digest of the normalized hosts file.
+    #[pyfunction]
+    fn machine_hosts_digest(yaml: &str) -> PyResult<String> {
+        crate::machine::machine_hosts_digest(yaml).map_err(value_error)
+    }
+
+    /// `canonical_digest(text)`: `sha256:` and the lower-case hex digest of the text.
+    #[pyfunction]
+    fn canonical_digest(text: &str) -> String {
+        crate::machine::canonical_digest(text)
+    }
+
+    /// `machine_canonical_json(records_json)`: the canonical JSON of an inventory record set.
+    #[pyfunction]
+    fn machine_canonical_json(records_json: &str) -> PyResult<String> {
+        crate::machine::machine_canonical_json(records_json).map_err(value_error)
+    }
+
+    /// `machine_check_shapes(records_json)`: the canonical record set when it passes the machine
+    /// shapes, else a `ValueError` naming the entity and the constraint.
+    #[pyfunction]
+    fn machine_check_shapes(records_json: &str) -> PyResult<String> {
+        crate::machine::machine_check_shapes(records_json).map_err(value_error)
+    }
+
+    /// `machine_host_entity(tenant, host_json, state)`: the `Machine` entity of one normalized host.
+    #[pyfunction]
+    fn machine_host_entity(tenant: &str, host_json: &str, state: &str) -> PyResult<String> {
+        crate::machine::machine_host_entity(tenant, host_json, state).map_err(value_error)
+    }
+
+    /// `machine_component_ids(machine_iri, kind, parts_json)`: the part ids as a JSON list.
+    #[pyfunction]
+    fn machine_component_ids(machine_iri: &str, kind: &str, parts_json: &str) -> PyResult<String> {
+        crate::machine::machine_component_ids(machine_iri, kind, parts_json).map_err(value_error)
+    }
+
+    /// `machine_probe_id(machine_iri, probe_kind, probe_digest)`: the id of one probe snapshot.
+    #[pyfunction]
+    fn machine_probe_id(machine_iri: &str, probe_kind: &str, probe_digest: &str) -> String {
+        crate::machine::machine_probe_id(machine_iri, probe_kind, probe_digest)
+    }
+
+    /// `machine_transition_id(machine_iri, edge_id, evidence_digest)`: the id of one record.
+    #[pyfunction]
+    fn machine_transition_id(machine_iri: &str, edge_id: &str, evidence_digest: &str) -> String {
+        crate::machine::machine_transition_id(machine_iri, edge_id, evidence_digest)
+    }
+
     #[pymodule]
     fn engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(method_catalog, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_key_ref, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_normalize_key, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_iri, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_lifecycle_derive, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_lifecycle_apply, m)?)?;
+        m.add_function(wrap_pyfunction!(normalize_hosts_file, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_hosts_digest, m)?)?;
+        m.add_function(wrap_pyfunction!(canonical_digest, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_canonical_json, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_check_shapes, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_host_entity, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_component_ids, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_probe_id, m)?)?;
+        m.add_function(wrap_pyfunction!(machine_transition_id, m)?)?;
         m.add_class::<PyEngine>()?;
         m.add_class::<crate::graph_ops::PyGraphOpsOps>()?;
         m.add_class::<crate::query::PyQueryOps>()?;

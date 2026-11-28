@@ -7844,6 +7844,7 @@ dependencies = [
  "medulla-protocol-types",
  "medulla-query-types",
  "medulla-rdf",
+ "medulla-source-types",
  "medulla-statechart",
  "medulla-tsdb",
  "medulla-types",
@@ -7853,6 +7854,7 @@ dependencies = [
  "parking_lot",
  "pyo3",
  "rmp-serde",
+ "serde",
  "serde_json",
 ]
 

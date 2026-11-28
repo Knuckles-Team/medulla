@@ -120,6 +120,9 @@ medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-types = { path = "../medulla-types" }
@@ -141,5 +144,4 @@ medulla-identity-core-types = { path = "../medulla-identity-core-types" }
 # (`rmp_serde::to_vec_named`) -- both crates are already regular (non-dev) deps of
 # `medulla-core`, which this crate depends on unconditionally, so this adds no NEW crate to
 # the workspace's dependency set, only a dev-only edge from this one.
-serde_json = "1.0"
 rmp-serde = "1.3"
