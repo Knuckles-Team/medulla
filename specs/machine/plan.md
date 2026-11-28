@@ -9,7 +9,7 @@ The core ontology gains one machine class, seven hardware part classes, an obser
 ## Technical Context
 
 - **Language/Version**: Rust 2021 on the pinned toolchain. Python 3.14 (floor 3.12) for served tests.
-- **Primary Dependencies**: `medulla-types` (`transition_refused`), `sha2`, `serde`, `serde_yaml`, `medulla-pyengine` (PyO3).
+- **Primary Dependencies**: `medulla-types` (`transition_refused`), `sha2`, `serde`, `serde_yaml_ng`, `medulla-pyengine` (PyO3).
 - **Storage**: The engine graph store. No new store.
 - **Testing**: Rust unit and integration tests per crate. Served Python tests under `tests/`.
 - **Target Platform**: Linux x86_64 and aarch64 without AVX2 assumptions.
@@ -32,7 +32,7 @@ The core ontology gains one machine class, seven hardware part classes, an obser
 crates/medulla-core/ontology/machine-v1.ttl                      new
 crates/medulla-core/ontology/machine-v1.shapes.ttl               new
 crates/medulla-core/ontology/state-machines-v1.ttl               existing: MachineLifecycle block
-crates/medulla-core/ontology/infrastructure-v1.ttl               existing: retire Host, NetworkInterface, GPUAccelerator, hasInterface
+crates/medulla-core/ontology/infrastructure-v1.ttl               existing: retire Host, NetworkInterface, GPUAccelerator, hasInterface (replaced by hasNetworkInterface)
 crates/medulla-core/ontology/infrastructure-v1.shapes.ttl        existing: shapes target Machine
 crates/medulla-core/ontology/company_infra-v1.ttl                existing: retire InfrastructureHost
 crates/medulla-core/ontology/core-foundation-v1.ttl              existing: Server comment

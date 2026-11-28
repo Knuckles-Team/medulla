@@ -25,7 +25,14 @@ All terms live in the core namespace `https://knuckles-team.github.io/ontology/c
 
 | Property | Domain | Range | Meaning |
 |---|---|---|---|
-| `:hasComponent` | `:Machine` | `:MachineComponent` | The machine owns the part |
+| `:hasComponent` | `:Machine` | `:MachineComponent` | The machine owns the part. It is the parent of the seven sub-properties below and no record states it |
+| `:hasProcessor` | `:Machine` | `:CentralProcessor` | The machine owns the processor. Sub-property of `:hasComponent` |
+| `:hasMemoryModule` | `:Machine` | `:MemoryModule` | The machine owns the memory module. Sub-property of `:hasComponent` |
+| `:hasStorageDevice` | `:Machine` | `:StorageDevice` | The machine owns the storage device. Sub-property of `:hasComponent` |
+| `:hasNetworkInterface` | `:Machine` | `:NetworkInterface` | The machine owns the interface. Sub-property of `:hasComponent` |
+| `:hasNetworkBond` | `:Machine` | `:NetworkBond` | The machine owns the bond. Sub-property of `:hasComponent` |
+| `:hasAccelerator` | `:Machine` | `:Accelerator` | The machine owns the accelerator. Sub-property of `:hasComponent` |
+| `:hasManagementController` | `:Machine` | `:ManagementController` | The machine owns the controller. Sub-property of `:hasComponent` |
 | `:bondMember` | `:NetworkBond` | `:NetworkInterface` | The interface belongs to the bond |
 | `:identifies` | `:MachineKey` | `:Machine` | The key anchor belongs to the canonical machine |
 | `:observes` | none | `:Machine` or `:MachineKey` | A connector record or probe snapshot points at its machine. It may point at the anchor of a key it holds |
@@ -96,7 +103,7 @@ Only `:observedAt` holds a timestamp. A machine node carries none.
 | `kg:HardwareNode` | `:Machine` |
 | `infrastructure#NetworkInterface` | `:NetworkInterface` |
 | `infrastructure#GPUAccelerator` | `:Accelerator` |
-| `infrastructure#hasInterface` | `:hasComponent` |
+| `infrastructure#hasInterface` | `:hasNetworkInterface` |
 
 `infrastructure#Node` stays as the orchestration member. `infrastructure#isHost` keeps its name and now ranges over `:Machine`. `infrastructure#Device` stays as a device that groups entity states.
 
@@ -121,7 +128,13 @@ The normalized records are entities and relationships in the shape of the connec
 | Relationship | From | To |
 |---|---|---|
 | `identifies` | MachineKey | Machine |
-| `hasComponent` | Machine | any component |
+| `hasProcessor` | Machine | CentralProcessor |
+| `hasMemoryModule` | Machine | MemoryModule |
+| `hasStorageDevice` | Machine | StorageDevice |
+| `hasNetworkInterface` | Machine | NetworkInterface |
+| `hasNetworkBond` | Machine | NetworkBond |
+| `hasAccelerator` | Machine | Accelerator |
+| `hasManagementController` | Machine | ManagementController |
 | `bondMember` | NetworkBond | NetworkInterface |
 | `observes` | ProbeSnapshot | Machine |
 | `observes` | any connector record | Machine or MachineKey |
@@ -184,8 +197,8 @@ Module `medulla.engine` holds these functions. Each takes and returns text. Stru
 
 ## Function refusals
 
-- `HOSTS_FILE_INVALID`: raised as `ValueError` whose text is the JSON record `{"code","reason","pointer"}`. Reasons: `schema_version`, `unknown_field`, `duplicate_name`, `bad_name`, `no_address`, `bad_address`, `bad_reference`, `bad_role`, `secret_field`, `empty_hosts`, `malformed_yaml`.
-- `MachineKeyRefused`: raised as `ValueError("<kind>:<reason>")`. Reasons: `malformed`, `placeholder`, `empty`.
+- `HOSTS_FILE_INVALID`: raised as `ValueError` whose text is the JSON record `{"code","reason","pointer"}`. Reasons: `schema_version`, `unknown_field`, `duplicate_name`, `bad_name`, `no_address`, `bad_address`, `bad_reference`, `bad_role`, `secret_field`, `empty_hosts`, `malformed_yaml`. An identity pin that does not normalize refuses with `bad_reference`.
+- `MachineKeyRefused`: raised as `ValueError("<kind>:<reason>")`. Reasons: `malformed`, `placeholder`, `empty`. An unrecognized kind raises `<kind>:unknown_kind`.
 - `no_valid_key`: `machine_iri` found no valid key.
 - `TRANSITION_REFUSED`: `machine_lifecycle_apply` raises `ValueError` whose text is `TRANSITION_REFUSED: MachineLifecycleMachine refused '<event>' from '<state>' (<reason>)`. Reasons: `illegal_transition`, `guard_failed`, `terminal_state`, `unknown_event`.
 

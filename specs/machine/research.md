@@ -93,3 +93,15 @@ The hosts file lists which machines exist and which references reach them. The S
 ## Open point resolved: a retired flag replaces a deletion
 
 The hosts file may mark a host `retired`. An erased entry makes the next reconcile drop the machine and its history. A flag keeps the history and drives the machine through the lifecycle first.
+
+## Decision 12: ingest does not validate shapes; the normalizer does
+
+`SourceIngest` carries no shape check, and none is added. The records come only from the deterministic normalizer. It refuses to produce a machine that would fail `:MachineShape`, so the guarantee sits where the record is made. A competency test asserts that the graph after ingest conforms to the shapes.
+
+## Decision 13: each part kind has its own owner property
+
+A pack relation is keyed by domain and property, so one property with seven ranges cannot be declared. `:hasComponent` stays as the parent. Seven sub-properties each have one range, and a record states the specific one.
+
+## Decision 14: the canonical JSON writer is local to the record module
+
+The workspace holds canonical JSON writers in `medulla-core` (`process_import`) and `medulla-compute-assemble` (`prompt`). Both crates depend on `medulla-source-types`, so a dependency from this layer to either would be a cycle. The decision crates and the catalog crate hold only a serde field-order encoder and a record-specific encoder. The writer in `records.rs` is the one reachable implementation of sorted-key canonical JSON at this layer. It is kept small and covered by byte-stability tests.

@@ -70,7 +70,7 @@ An operator writes a small YAML hosts file. The engine validates it, refuses a s
 
 - **FR-001**: The core ontology holds one machine class, `core:Machine`, and no retired host class. Rows: `MEDULLA-MACHINE-R001`, `MEDULLA-MACHINE-R001.1`, `MEDULLA-MACHINE-R001.2`, `MEDULLA-MACHINE-R001.3`, `MEDULLA-MACHINE-R001.4`.
 - **FR-002**: A pure function derives a stable IRI from ordered identity keys. Rows: `MEDULLA-MACHINE-R002`, `MEDULLA-MACHINE-R002.1`, `MEDULLA-MACHINE-R002.2`, `MEDULLA-MACHINE-R002.3`, `MEDULLA-MACHINE-R002.4`.
-- **FR-003**: Seven part classes and `hasComponent` model the hardware. Rows: `MEDULLA-MACHINE-R003`, `MEDULLA-MACHINE-R003.1`, `MEDULLA-MACHINE-R003.2`, `MEDULLA-MACHINE-R003.3`.
+- **FR-003**: Seven part classes, `hasComponent` and its seven sub-properties model the hardware. Rows: `MEDULLA-MACHINE-R003`, `MEDULLA-MACHINE-R003.1`, `MEDULLA-MACHINE-R003.2`, `MEDULLA-MACHINE-R003.3`.
 - **FR-004**: Any connector record links to its machine with `observes`. Rows: `MEDULLA-MACHINE-R004`, `MEDULLA-MACHINE-R004.1`, `MEDULLA-MACHINE-R004.2`, `MEDULLA-MACHINE-R004.3`.
 - **FR-005**: The host lifecycle is an explicit state machine with a refusal and an ontology mirror. Rows: `MEDULLA-MACHINE-R005`, `MEDULLA-MACHINE-R005.1`, `MEDULLA-MACHINE-R005.2`, `MEDULLA-MACHINE-R005.3`, `MEDULLA-MACHINE-R005.4`, `MEDULLA-MACHINE-R005.5`.
 - **FR-006**: A public hosts-file schema normalizes to deterministic records that enter the tenant graph through source ingestion. Rows: `MEDULLA-MACHINE-R006`, `MEDULLA-MACHINE-R006.1`, `MEDULLA-MACHINE-R006.2`, `MEDULLA-MACHINE-R006.3`, `MEDULLA-MACHINE-R006.4`.
