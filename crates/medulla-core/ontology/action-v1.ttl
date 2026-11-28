@@ -118,7 +118,10 @@ typed over the objects it operates on (actsOn), and carries an effect class
 :ActionRecord a owl:Class ;
     rdfs:label "Action Record" ;
     rdfs:comment "An append-only record of one action: its kind, its actor, the facts it read and the rules it applied, each at the version and digest it was read at. No writer updates an ActionRecord node; a correction is a new record whose :causedBy names the corrected one (MEDULLA-DECISION-ENGINE-R869.1)." ;
-    rdfs:subClassOf :ActionInvocation .
+    rdfs:subClassOf :ActionInvocation,
+        [ a owl:Restriction ;
+            owl:onProperty :approvedBy ;
+            owl:allValuesFrom :GateDecision ] .
 
 :FactUse a owl:Class ;
     rdfs:label "Fact Use" ;
@@ -176,24 +179,6 @@ typed over the objects it operates on (actsOn), and carries an effect class
     rdfs:comment "The node id of the rule." ;
     rdfs:domain :RuleUse ;
     rdfs:range xsd:string .
-
-:ruleVersion a owl:DatatypeProperty ;
-    rdfs:label "rule version" ;
-    rdfs:comment "The version of the rule the action applied." ;
-    rdfs:domain :RuleUse ;
-    rdfs:range xsd:integer .
-
-:ruleDigest a owl:DatatypeProperty ;
-    rdfs:label "rule digest" ;
-    rdfs:comment "sha256: plus 64 lowercase hex digest of the rule." ;
-    rdfs:domain :RuleUse ;
-    rdfs:range xsd:string .
-
-:approvedBy a owl:ObjectProperty ;
-    rdfs:label "approved by" ;
-    rdfs:comment "Links an ActionRecord to the GateDecision that approved it." ;
-    rdfs:domain :ActionRecord ;
-    rdfs:range :GateDecision .
 
 :causedBy a owl:ObjectProperty ;
     rdfs:label "caused by" ;

@@ -694,8 +694,9 @@
 
 :ruleVersion a owl:DatatypeProperty ;
     rdfs:label "rule version" ;
-    rdfs:comment "The version of the rule kind the parameters are written for; an unknown version refuses with RULE_VERSION_UNKNOWN." ;
-    rdfs:domain :RuleSpec ;
+    rdfs:comment "The version of the rule kind the parameters are written for; an unknown version refuses with RULE_VERSION_UNKNOWN. A RuleUse (action module) names the version of the rule the action applied." ;
+    rdfs:domain [ a owl:Class ;
+            owl:unionOf ( :RuleSpec :RuleUse ) ] ;
     rdfs:range xsd:integer .
 
 :ruleParameters a owl:DatatypeProperty ;
@@ -706,8 +707,9 @@
 
 :ruleDigest a owl:DatatypeProperty ;
     rdfs:label "rule digest" ;
-    rdfs:comment "The canonical digest of kind, version and parameters: 64 lowercase hex characters." ;
-    rdfs:domain :RuleSpec ;
+    rdfs:comment "The canonical digest of kind, version and parameters: 64 lowercase hex characters. A RuleUse (action module) names the digest of the rule the action applied." ;
+    rdfs:domain [ a owl:Class ;
+            owl:unionOf ( :RuleSpec :RuleUse ) ] ;
     rdfs:range xsd:string .
 
 # spec: MEDULLA-BUSINESS-OPS-R001.2

@@ -8109,6 +8109,11 @@
     rdfs:comment "An event of the AccessRequest machine." ;
     rdfs:subClassOf :TransitionEvent .
 
+:AccessRequestGuard a owl:Class ;
+    rdfs:label "AccessRequest Guard" ;
+    rdfs:comment "A guard of the AccessRequest machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
 :AccessRequestMachine a :StateMachine ;
     rdfs:label "AccessRequest machine" ;
     :initialState :AccessRequestMachine_Pending ;
@@ -8184,6 +8189,11 @@
     rdfs:label "ChangeRequest Event" ;
     rdfs:comment "An event of the ChangeRequest machine." ;
     rdfs:subClassOf :TransitionEvent .
+
+:ChangeRequestGuard a owl:Class ;
+    rdfs:label "ChangeRequest Guard" ;
+    rdfs:comment "A guard of the ChangeRequest machine." ;
+    rdfs:subClassOf :TransitionGuard .
 
 :ChangeRequestMachine a :StateMachine ;
     rdfs:label "ChangeRequest machine" ;
@@ -8261,6 +8271,11 @@
     rdfs:comment "An event of the DurableUnit machine." ;
     rdfs:subClassOf :TransitionEvent .
 
+:DurableUnitGuard a owl:Class ;
+    rdfs:label "DurableUnit Guard" ;
+    rdfs:comment "A guard of the DurableUnit machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
 :DurableUnitMachine a :StateMachine ;
     rdfs:label "DurableUnit machine" ;
     :initialState :DurableUnitMachine_InFlight ;
@@ -8337,6 +8352,11 @@
     rdfs:comment "An event of the GlossaryTerm machine." ;
     rdfs:subClassOf :TransitionEvent .
 
+:GlossaryTermGuard a owl:Class ;
+    rdfs:label "GlossaryTerm Guard" ;
+    rdfs:comment "A guard of the GlossaryTerm machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
 :GlossaryTermMachine a :StateMachine ;
     rdfs:label "GlossaryTerm machine" ;
     :initialState :GlossaryTermMachine_Draft ;
@@ -8412,6 +8432,11 @@
     rdfs:label "OntologyProposal Event" ;
     rdfs:comment "An event of the OntologyProposal machine." ;
     rdfs:subClassOf :TransitionEvent .
+
+:OntologyProposalGuard a owl:Class ;
+    rdfs:label "OntologyProposal Guard" ;
+    rdfs:comment "A guard of the OntologyProposal machine." ;
+    rdfs:subClassOf :TransitionGuard .
 
 :OntologyProposalMachine a :StateMachine ;
     rdfs:label "OntologyProposal machine" ;
@@ -8714,6 +8739,11 @@
     rdfs:label "InnovationShift Event" ;
     rdfs:comment "An event of the innovation-shift machine." ;
     rdfs:subClassOf :TransitionEvent .
+
+:InnovationShiftGuard a owl:Class ;
+    rdfs:label "InnovationShift Guard" ;
+    rdfs:comment "A guard of the InnovationShift machine." ;
+    rdfs:subClassOf :TransitionGuard .
 
 :innovation_shift a :StateMachine ;
     rdfs:label "innovation shift machine" ;

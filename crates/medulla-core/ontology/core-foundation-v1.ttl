@@ -931,9 +931,11 @@ per-document tags.""" ;
 :approvedBy a owl:ObjectProperty ;
     rdfs:label "approved by" ;
     rdfs:comment """Links an entity to the Person, Role, or Organization that
-approved/authorized it.  Decision audit trail.""" ;
-    rdfs:domain bfo:0000001 ;
-    rdfs:range bfo:0000004 .
+approved/authorized it.  Decision audit trail.  The one declaration of the
+property: each user types its values on its own class (a Regulation names an
+independent continuant, an ActionRecord names a GateDecision), so no range is
+asserted here that another user's values would contradict.""" ;
+    rdfs:domain bfo:0000001 .
 
 :governedBy a owl:ObjectProperty ;
     rdfs:label "governed by" ;

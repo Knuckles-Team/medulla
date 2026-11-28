@@ -791,7 +791,13 @@ ex:parent a owl:ReflexiveProperty .
         // and 4 for the pack object-model `:ValueType` term (MEDULLA-TYPED-PACKS-R650.1);
         // plus 1: `:Playbook rdfs:subClassOf :Procedure`, the decision-engine playbook
         // component kind (58788adb4c), on the one existing `:Playbook` declaration.
-        assert_eq!(triples.len(), 1_139);
+        // plus 11 rooting every core class in BFO and declaring the transition refusal, 8 for
+        // the DMN decision classes, 5 for the `:formalizes` edge, 9 for `:PlatformGoal` with
+        // its id property and shape, 20 for the `:Participant` class and record, and 1 for the
+        // `:Server` description added with the machine-class cutover; less the 1 `rdfs:range`
+        // triple dropped from `:approvedBy`, which now has the one declaration with no range
+        // (each user types its own values) and no second declaration in the action module.
+        assert_eq!(triples.len(), 1_192);
         for required in [
             "https://knuckles-team.github.io/ontology/core#Concept",
             "https://knuckles-team.github.io/ontology/core#Evidence",

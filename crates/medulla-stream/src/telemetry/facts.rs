@@ -20,7 +20,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::binding::{EntityRef, INFRASTRUCTURE_NAMESPACE};
+use super::binding::{EntityRef, INFRASTRUCTURE_NAMESPACE, KG_NAMESPACE};
 use super::pipeline::TelemetryFacts;
 
 pub const OBSERVES: &str = "OBSERVES";
@@ -84,7 +84,14 @@ impl FactGraph {
             Value::Object(fields) => fields,
             other => Map::from_iter([("value".to_string(), other)]),
         };
-        let class_iri = format!("{INFRASTRUCTURE_NAMESPACE}{class}");
+        // Incident is the one core class (MEDULLA-MACHINE-R001.2 namespace merge); the other
+        // telemetry facts are infrastructure classes.
+        let namespace = if class == INCIDENT_CLASS {
+            KG_NAMESPACE
+        } else {
+            INFRASTRUCTURE_NAMESPACE
+        };
+        let class_iri = format!("{namespace}{class}");
         properties.insert("type".into(), class.into());
         properties.insert("class_iri".into(), class_iri.clone().into());
         properties.insert("evidence_class".into(), evidence.label().into());
