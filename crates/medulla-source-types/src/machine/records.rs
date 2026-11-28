@@ -13,6 +13,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+use super::identity::{machine_iri, normalize_key, select_key, MachineKey, MachineKeyKind};
+use super::lifecycle::{MachineLifecycleState, MACHINE_LIFECYCLE_STATE_PROPERTY};
+
 /// The schema tag of a record set.
 pub const INVENTORY_RECORDS_SCHEMA: &str = "inventory-records/v1";
 
@@ -52,8 +55,8 @@ pub struct InventoryEntity {
 pub struct InventoryRelationship {
     /// The id of the source entity.
     pub source: String,
-    /// The relationship name: `identifies`, `hasComponent`, `bondMember`, `observes` or
-    /// `transitionOf`.
+    /// The relationship name: `identifies`, one of the seven owner properties of
+    /// [`ComponentKind::owner_relationship`], `bondMember`, `observes` or `transitionOf`.
     pub relationship: String,
     /// The id of the target entity.
     pub target: String,
@@ -178,6 +181,33 @@ pub enum ComponentKind {
 }
 
 impl ComponentKind {
+    /// The core class of a part of this kind.
+    pub fn class_name(self) -> &'static str {
+        match self {
+            Self::Processor => "CentralProcessor",
+            Self::Memory => "MemoryModule",
+            Self::Storage => "StorageDevice",
+            Self::Nic => "NetworkInterface",
+            Self::Bond => "NetworkBond",
+            Self::Accelerator => "Accelerator",
+            Self::Management => "ManagementController",
+        }
+    }
+
+    /// The relationship a machine uses to own a part of this kind. Each is a sub-property of
+    /// `hasComponent` with a single range.
+    pub fn owner_relationship(self) -> &'static str {
+        match self {
+            Self::Processor => "hasProcessor",
+            Self::Memory => "hasMemoryModule",
+            Self::Storage => "hasStorageDevice",
+            Self::Nic => "hasNetworkInterface",
+            Self::Bond => "hasNetworkBond",
+            Self::Accelerator => "hasAccelerator",
+            Self::Management => "hasManagementController",
+        }
+    }
+
     /// The tag of the kind in a part id.
     pub fn tag(self) -> &'static str {
         match self {
@@ -256,6 +286,182 @@ pub fn transition_id(machine_iri: &str, edge_id: &str, evidence_digest: &str) ->
         "urn:machine-transition:{}",
         id_digest(&[machine_iri, edge_id, evidence_digest])
     )
+}
+
+/// The five stored lifecycle states, as the machine shape lists them.
+const STORED_STATES: [&str; 5] = ["commissioned", "active", "draining", "maintenance", "retired"];
+
+/// A record that would fail its shape in the engine. The messages carry the wording of the
+/// `:MachineShape` constraint that the record would break.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{entity}: {message}")]
+pub struct MachineShapeRefused {
+    /// The id of the entity that fails, or the relationship it belongs to.
+    pub entity: String,
+    /// The constraint the entity breaks.
+    pub message: String,
+}
+
+fn refused(entity: &str, message: &str) -> MachineShapeRefused {
+    MachineShapeRefused {
+        entity: entity.to_string(),
+        message: message.to_string(),
+    }
+}
+
+/// Every value of a property as a list of texts, or `None` when a value is not a text.
+fn texts(properties: &BTreeMap<String, PropertyValue>, name: &str) -> Option<Vec<String>> {
+    match properties.get(name) {
+        None => Some(Vec::new()),
+        Some(PropertyValue::Text(text)) => Some(vec![text.clone()]),
+        Some(PropertyValue::List(items)) => Some(items.clone()),
+        Some(_) => None,
+    }
+}
+
+fn is_machine_iri(id: &str) -> bool {
+    let Some(rest) = id.strip_prefix("urn:machine:") else {
+        return false;
+    };
+    let Some((tier, digest)) = rest.split_once(':') else {
+        return false;
+    };
+    MachineKeyKind::from_tag(tier).is_some()
+        && digest.len() == 32
+        && digest.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+/// Check one `Machine` entity against the constraints of `:MachineShape`; every other entity
+/// passes. This is the same check the engine makes on the stored node.
+pub fn check_machine(entity: &InventoryEntity) -> Result<(), MachineShapeRefused> {
+    if entity.node_type != "Machine" {
+        return Ok(());
+    }
+    let id = entity.id.as_str();
+    let props = &entity.properties;
+    if !is_machine_iri(id) {
+        return Err(refused(id, "A canonical machine is an IRI of the form urn:machine:<tier>:<32 hex digits>."));
+    }
+    let names = texts(props, "machineName").unwrap_or_default();
+    if names.len() != 1 || names[0].is_empty() {
+        return Err(refused(id, "A machine has exactly one non-empty :machineName."));
+    }
+    let tiers = texts(props, "identityTier").unwrap_or_default();
+    if tiers.len() != 1 || MachineKeyKind::from_tag(&tiers[0]).is_none() {
+        return Err(refused(id, "A machine has exactly one :identityTier: uuid, serial, bmc or host."));
+    }
+    let keys = texts(props, "machineKey").unwrap_or_default();
+    let well_formed = |key: &String| {
+        key.split_once(':')
+            .is_some_and(|(kind, value)| MachineKeyKind::from_tag(kind).is_some() && !value.is_empty())
+    };
+    if keys.is_empty() || !keys.iter().all(well_formed) {
+        return Err(refused(id, "A machine has at least one :machineKey of the form <kind>:<value>."));
+    }
+    if texts(props, "systemUuid").map_or(true, |uuids| uuids.len() > 1) {
+        return Err(refused(id, "A machine has at most one :systemUuid."));
+    }
+    let states = texts(props, MACHINE_LIFECYCLE_STATE_PROPERTY).unwrap_or_default();
+    if states.len() != 1 || !STORED_STATES.contains(&states[0].as_str()) {
+        return Err(refused(id, "A machine has exactly one :machineLifecycleState of the five stored states."));
+    }
+    Ok(())
+}
+
+/// Build the `Machine` entity of one host: the preferred valid key derives the IRI and the tier,
+/// and every valid candidate becomes a `machineKey`. A machine that would fail `:MachineShape`
+/// is refused instead of produced.
+pub fn machine_entity(
+    tenant: &str,
+    name: &str,
+    candidates: &[MachineKey],
+    state: MachineLifecycleState,
+) -> Result<InventoryEntity, MachineShapeRefused> {
+    let valid: Vec<MachineKey> = candidates
+        .iter()
+        .filter_map(|candidate| normalize_key(candidate.kind, &candidate.value).ok())
+        .collect();
+    let Some(chosen) = select_key(&valid) else {
+        return Err(refused(name, "A machine has at least one :machineKey of the form <kind>:<value>."));
+    };
+    let mut keys: Vec<String> = valid
+        .iter()
+        .map(|key| format!("{}:{}", key.kind.tag(), key.value))
+        .collect();
+    keys.sort();
+    keys.dedup();
+    let mut properties = BTreeMap::new();
+    properties.insert("machineName".to_string(), PropertyValue::Text(name.to_string()));
+    properties.insert("identityTier".to_string(), PropertyValue::Text(chosen.kind.tag().to_string()));
+    properties.insert("machineKey".to_string(), PropertyValue::List(keys));
+    if let Some(uuid) = valid.iter().find(|key| key.kind == MachineKeyKind::SystemUuid) {
+        properties.insert("systemUuid".to_string(), PropertyValue::Text(uuid.value.clone()));
+    }
+    properties.insert(
+        MACHINE_LIFECYCLE_STATE_PROPERTY.to_string(),
+        PropertyValue::Text(state_text(state).to_string()),
+    );
+    let entity = InventoryEntity {
+        id: machine_iri(tenant, &chosen),
+        node_type: "Machine".to_string(),
+        properties,
+    };
+    check_machine(&entity)?;
+    Ok(entity)
+}
+
+fn state_text(state: MachineLifecycleState) -> &'static str {
+    match state {
+        MachineLifecycleState::Commissioned => "commissioned",
+        MachineLifecycleState::Active => "active",
+        MachineLifecycleState::Draining => "draining",
+        MachineLifecycleState::Maintenance => "maintenance",
+        MachineLifecycleState::Retired => "retired",
+    }
+}
+
+impl InventoryRecordSet {
+    /// Refuse a record set that the engine would refuse: a `Machine` that fails `:MachineShape`,
+    /// a part without exactly one owner property of its own kind, or a relationship name the
+    /// vocabulary does not declare.
+    pub fn check_shapes(&self) -> Result<(), MachineShapeRefused> {
+        let owners: Vec<(&str, &str)> = [
+            ComponentKind::Processor,
+            ComponentKind::Memory,
+            ComponentKind::Storage,
+            ComponentKind::Nic,
+            ComponentKind::Bond,
+            ComponentKind::Accelerator,
+            ComponentKind::Management,
+        ]
+        .into_iter()
+        .map(|kind| (kind.class_name(), kind.owner_relationship()))
+        .collect();
+        for entity in &self.entities {
+            check_machine(entity)?;
+            if let Some((_, owner)) = owners.iter().find(|(class, _)| *class == entity.node_type) {
+                let count = self
+                    .relationships
+                    .iter()
+                    .filter(|r| r.target == entity.id && r.relationship == *owner)
+                    .count();
+                if count != 1 {
+                    return Err(refused(
+                        &entity.id,
+                        &format!("A part is the object of exactly one :{owner}: this part has {count}."),
+                    ));
+                }
+            }
+        }
+        const OTHERS: [&str; 4] = ["identifies", "bondMember", "observes", "transitionOf"];
+        for relationship in &self.relationships {
+            let name = relationship.relationship.as_str();
+            if !OTHERS.contains(&name) && !owners.iter().any(|(_, owner)| *owner == name) {
+                return Err(refused(&relationship.source, &format!("The relationship {name} is not declared.")));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// The text a property contributes to a natural key, when it holds a non-empty value.
@@ -344,7 +550,7 @@ mod tests {
         ];
         set.relationships = vec![
             relationship("urn:machine-key:host:bb", "identifies", "urn:machine:serial:aa"),
-            relationship("urn:machine:serial:aa", "hasComponent", "urn:machine-part:cc"),
+            relationship("urn:machine:serial:aa", "hasProcessor", "urn:machine-part:cc"),
         ];
         set
     }
@@ -373,7 +579,7 @@ mod tests {
                 r#""properties":{"machineKey":"host:alpha"}}],"#,
                 r#""relationships":[{"relationship":"identifies","source":"urn:machine-key:host:bb","#,
                 r#""target":"urn:machine:serial:aa"},"#,
-                r#"{"relationship":"hasComponent","source":"urn:machine:serial:aa","#,
+                r#"{"relationship":"hasProcessor","source":"urn:machine:serial:aa","#,
                 r#""target":"urn:machine-part:cc"}],"schema":"inventory-records/v1"}"#
             )
         );
@@ -441,5 +647,66 @@ mod tests {
         assert_eq!(cpu.len(), 2);
         assert_eq!(ComponentKind::from_tag("nic"), Some(ComponentKind::Nic));
         assert_eq!(ComponentKind::from_tag("gpu"), None);
+    }
+    fn uuid_key() -> MachineKey {
+        MachineKey { kind: MachineKeyKind::SystemUuid, value: "4c4c4544-0042-3510-8051-b8c04f4d4e32".into() }
+    }
+
+    fn host_key(name: &str) -> MachineKey {
+        MachineKey { kind: MachineKeyKind::Hostname, value: name.into() }
+    }
+
+    // spec: MEDULLA-MACHINE-R006.3
+    #[test]
+    fn a_built_machine_passes_the_machine_shape_and_an_unshaped_one_is_refused() {
+        let built = machine_entity("t1", "alpha", &[host_key("alpha"), uuid_key()], MachineLifecycleState::Commissioned)
+            .expect("a machine with a valid key is produced");
+        assert!(built.id.starts_with("urn:machine:uuid:"));
+        assert_eq!(built.properties["identityTier"], text("uuid"));
+        assert_eq!(built.properties["machineLifecycleState"], text("commissioned"));
+        assert!(check_machine(&built).is_ok());
+        // No valid key: the placeholder uuid is not a key.
+        let placeholder = MachineKey { kind: MachineKeyKind::SystemUuid, value: "00000000-0000-0000-0000-000000000000".into() };
+        let refused = machine_entity("t1", "alpha", &[placeholder], MachineLifecycleState::Active).unwrap_err();
+        assert!(refused.message.contains("at least one :machineKey"));
+        // Each constraint of the shape refuses its own violation.
+        let broken: [(&str, PropertyValue, &str); 5] = [
+            ("machineName", text(""), "non-empty :machineName"),
+            ("identityTier", text("rack"), ":identityTier"),
+            ("machineKey", PropertyValue::List(vec!["serial".into()]), "<kind>:<value>"),
+            ("systemUuid", PropertyValue::List(vec!["a".into(), "b".into()]), "at most one :systemUuid"),
+            ("machineLifecycleState", text("asleep"), ":machineLifecycleState"),
+        ];
+        for (name, value, fragment) in broken {
+            let mut entity = built.clone();
+            entity.properties.insert(name.to_string(), value);
+            let refusal = check_machine(&entity).unwrap_err();
+            assert!(refusal.message.contains(fragment), "{name}: {refusal}");
+        }
+        let mut renamed = built.clone();
+        renamed.id = "urn:machine:serial:not-hex".into();
+        assert!(check_machine(&renamed).unwrap_err().message.contains("urn:machine:<tier>"));
+    }
+
+    // spec: MEDULLA-MACHINE-R006.3
+    #[test]
+    fn a_record_set_needs_one_owner_property_per_part_and_declared_relationships() {
+        let machine = machine_entity("t1", "alpha", &[host_key("alpha")], MachineLifecycleState::Active).unwrap();
+        let part_id = component_id(&machine.id, ComponentKind::Accelerator, "0000:01:00.0");
+        let mut set = InventoryRecordSet::new();
+        set.entities = vec![machine.clone(), entity(&part_id, "Accelerator", &[("acceleratorKind", text("gpu"))])];
+        assert!(set.check_shapes().unwrap_err().message.contains("this part has 0"));
+        set.relationships = vec![relationship(&machine.id, ComponentKind::Accelerator.owner_relationship(), &part_id)];
+        assert!(set.check_shapes().is_ok());
+        set.relationships[0].relationship = "hasComponent".into();
+        assert!(set.check_shapes().unwrap_err().message.contains("this part has 0"));
+        set.relationships[0].relationship = "hasProcessor".into();
+        assert!(set.check_shapes().is_err());
+        set.relationships[0].relationship = "ownsEverything".into();
+        assert!(set.check_shapes().is_err());
+        for kind in [ComponentKind::Processor, ComponentKind::Memory, ComponentKind::Storage, ComponentKind::Nic, ComponentKind::Bond, ComponentKind::Accelerator, ComponentKind::Management] {
+            assert!(kind.owner_relationship().starts_with("has"));
+            assert_ne!(kind.owner_relationship(), "hasComponent");
+        }
     }
 }

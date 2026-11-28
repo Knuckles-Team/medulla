@@ -14,7 +14,9 @@ use serde::{Deserialize, Serialize};
 use serde_yaml_ng::Value;
 
 use super::identity::{normalize_key, MachineKeyKind};
-use super::records::{canonical_digest, canonical_text};
+use super::identity::MachineKey;
+use super::lifecycle::MachineLifecycleState;
+use super::records::{canonical_digest, canonical_text, machine_entity, InventoryEntity, MachineShapeRefused};
 
 /// The schema tag of a hosts file.
 pub const HOSTS_FILE_SCHEMA: &str = "hosts/v1";
@@ -514,6 +516,32 @@ pub fn normalize_hosts_file(yaml: &str) -> Result<NormalizedHosts, HostsFileRefu
     })
 }
 
+impl NormalizedHost {
+    /// The identity keys of the host: its pins and its name.
+    pub fn keys(&self) -> Vec<MachineKey> {
+        let mut keys = vec![MachineKey { kind: MachineKeyKind::Hostname, value: self.name.clone() }];
+        let pins = [
+            (MachineKeyKind::SystemUuid, &self.identity.system_uuid),
+            (MachineKeyKind::SystemSerial, &self.identity.system_serial),
+            (MachineKeyKind::ManagementControllerId, &self.identity.management_mac),
+        ];
+        keys.extend(pins.into_iter().filter_map(|(kind, value)| {
+            value.as_ref().map(|value| MachineKey { kind, value: value.clone() })
+        }));
+        keys
+    }
+}
+
+/// The `Machine` entity of one normalized host in `tenant`. A host that would yield a machine
+/// failing `:MachineShape` is refused here instead of reaching the engine.
+pub fn host_machine_entity(
+    tenant: &str,
+    host: &NormalizedHost,
+    state: MachineLifecycleState,
+) -> Result<InventoryEntity, MachineShapeRefused> {
+    machine_entity(tenant, &host.name, &host.keys(), state)
+}
+
 /// The canonical JSON text of a normalized hosts file.
 pub fn normalized_hosts_json(hosts: &NormalizedHosts) -> String {
     canonical_text(hosts)
@@ -678,5 +706,18 @@ schema: hosts/v1
         assert_eq!(beta.identity.system_uuid.as_deref(), Some("123e4567-e89b-12d3-a456-426614174000"));
         assert_eq!(beta.identity.management_mac.as_deref(), Some("aa:bb:cc:dd:ee:01"));
         assert!(a.contains("\"system_serial\":null"));
+    }
+    // spec: MEDULLA-MACHINE-R006.2
+    #[test]
+    fn every_normalized_host_yields_a_machine_that_passes_the_machine_shape() {
+        let hosts = normalize_hosts_file(VALID).expect("the fixture normalizes");
+        assert!(!hosts.hosts.is_empty());
+        for host in &hosts.hosts {
+            let entity = host_machine_entity("tenant-1", host, MachineLifecycleState::Commissioned)
+                .unwrap_or_else(|e| panic!("{} is refused: {e}", host.name));
+            assert_eq!(entity.properties["machineName"], crate::machine::records::PropertyValue::Text(host.name.clone()));
+            // The same host in another tenant is another machine only through the host name key.
+            assert!(entity.id.starts_with("urn:machine:"));
+        }
     }
 }
