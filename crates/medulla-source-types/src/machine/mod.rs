@@ -4,3 +4,4 @@
 pub mod identity;
 pub mod lifecycle;
 pub mod records;
+pub mod hosts;
