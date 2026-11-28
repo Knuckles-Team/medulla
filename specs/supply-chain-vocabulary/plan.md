@@ -84,8 +84,8 @@ Prefixes: `kg:` = `https://knuckles-team.github.io/ontology/core#`; `infra:` = `
 | `kg:SupplyChainItem` | class | `rdfs:subClassOf bfo:0000031` | connector `erp:Item` maps here |
 | `kg:suppliesItem` | object property | `kg:Supplier` to `kg:SupplyChainItem` | derived from PO: `PurchaseOrder -suppliedBy-> Supplier`, `PurchaseOrder -contains-> Item` |
 | `kg:realizedByAsset` | object property | `kg:SupplyChainItem` to `kg:AssetInstance` (`trm-v1.ttl`) | ERPNext Asset links item to a deployed asset |
-| `kg:assetHost` | object property | `kg:AssetInstance` to `infra:Host` | asserted only through approved `owl:sameAs` or a CMDB CI link |
-| `infra:serviceRunsOn` | object property | `infra:Service` to `infra:Host`. Subproperty of `infra:runsOn` | projected only for independently identified Service records. Never infer this edge from an arbitrary runsOn triple |
+| `kg:assetHost` | object property | `kg:AssetInstance` to `kg:Machine` | asserted only through approved `owl:sameAs` or a CMDB CI link |
+| `infra:serviceRunsOn` | object property | `infra:Service` to `kg:Machine`. Subproperty of `infra:runsOn` | projected only for independently identified Service records. Never infer this edge from an arbitrary runsOn triple |
 | `kg:suppliesService` | object property | `kg:Supplier` to `infra:Service` | derived. Physical chain on sub-property `kg:suppliesServiceViaHost`: `suppliesItem, realizedByAsset, assetHost, ^infra:serviceRunsOn` (a service runs on a host). Software chain lives on the inverse `kg:serviceSupplier`: `deployedAs, usesImage, containsComponent, supplyChainVersionOf, publishedBy` (service to supplier) |
 
 `infra:runsOn` also links containers and pods to hardware. The physical chain must therefore use `infra:serviceRunsOn`. A container-only or pod-only runsOn fixture must not infer suppliesService or retype the runtime entity as a Service.
@@ -135,7 +135,7 @@ No `:ChangeRequest` class is added (Decision D3).
 | Term | Kind | Domain to range | Note |
 |---|---|---|---|
 | `infra:HostLimit` | class | `rdfs:subClassOf bfo:0000031` | one normalized (reading, limit) pair; a virtual row, not stored by default |
-| `infra:limitOf` | object property | `infra:HostLimit` to `infra:Host` | |
+| `infra:limitOf` | object property | `infra:HostLimit` to `kg:Machine` | |
 | `infra:limitKind` | datatype | string in `{temperature, disk, memory, cpu}` | closed by SHACL `sh:in` |
 | `infra:readingValue`, `infra:limitValue` | datatype | `xsd:decimal` | same unit per kind |
 | `infra:limitUnit` | datatype | string (`celsius`, `bytes`, `count`) | |
@@ -160,7 +160,7 @@ Mechanism: `MEDULLA-UNIFIED-DATA-PLANE-R030` (blocking, field similarity, Felleg
 |---|---|---|
 | `kg:Supplier` | erpnext `Supplier.supplier_name`, leanix `Provider` name, dockerhub `Organization`/namespace, github/gitlab owner | normalized legal name; web domain; namespace slug |
 | `infra:Service` | uptime monitor, container-manager workload/K8sService, portainer `Service`, leanix `Application`, servicenow CI | normalized service name; hostname from monitor URL; namespace+name |
-| `infra:Host` | systems-manager `HardwareNode`, fan-manager `ManagedHost`, ERPNext asset, CMDB CI | hostname; BMC address; serial number |
+| `kg:Machine` | systems-manager `HardwareNode`, fan-manager `ManagedHost`, ERPNext asset, CMDB CI | hostname; BMC address; serial number |
 | `infra:ContainerImage` | dockerhub `Repository`/tag, container-manager image, portainer `Image` | `registry/repository:tag`; digest (exact) |
 | `kg:Customer` | erpnext `Customer`, salesforce `Account`, twenty `Company` | normalized name; domain |
 

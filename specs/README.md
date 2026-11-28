@@ -56,7 +56,7 @@ Medulla is one engine with one server executable. Every spec belongs to one subs
 | Ingest | `MEDULLA-INGEST-WORKER`, `MEDULLA-REPO-INGEST`, `MEDULLA-SCM`, `MEDULLA-BRANCH-MERGE` | Ingest lanes and queues, repository indexing, changesets, merges | Ingest worker loop, `SourceIngest`, repository index |
 | Sources | `MEDULLA-UNIFIED-DATA-PLANE`, `MEDULLA-SRC-AUTH` | Attached sources read as virtual graphs, source authority and abstention | Virtual SPARQL, `UnifiedQuery` |
 | Query and reasoning | `MEDULLA-FEDERATED-QUERY` | UQL, SPARQL, natural language, retrieval, expansion, reasoning | `UnifiedQuery`, `Discover`, SPARQL handlers |
-| Ontology and packs | `MEDULLA-TYPED-PACKS`, `MEDULLA-DATAPLAT-VOCAB`, `MEDULLA-MEDIA-VOCAB`, `MEDULLA-SUPPLY-VOCAB`, `MEDULLA-ORCH-VOCAB` | Typed packs, the catalog, ontology modules and shapes | `ConnectorPack.Import`, schema sources |
+| Ontology and packs | `MEDULLA-TYPED-PACKS`, `MEDULLA-DATAPLAT-VOCAB`, `MEDULLA-MEDIA-VOCAB`, `MEDULLA-SUPPLY-VOCAB`, `MEDULLA-ORCH-VOCAB`, `MEDULLA-MACHINE` | Typed packs, the catalog, ontology modules and shapes | `ConnectorPack.Import`, schema sources |
 | Decisions and self-evolution | `MEDULLA-DECISION-ENGINE`, `MEDULLA-SDLC` | The decision pipeline, fitted heads, knobs, the revision lifecycle, lifecycle records | `Decide`, `AgentAssemble`, `DecisionCommit`, `DecisionLog`, decision jobs |
 | Finance | `MEDULLA-FINANCE-PRIMITIVES` | Market data primitives, kernels, backtests, risk and signals | Finance numeric kernels, series operators in UQL |
 | Graph-native development | `MEDULLA-SDLC`, `MEDULLA-SCM`, `MEDULLA-REPO-INGEST`, `MEDULLA-BRANCH-MERGE` | The ecosystem's code, specs, changes, gates and releases as graph records | `SubmitChangeset`, `ReadTree`, `SourceIngest`, `UnifiedQuery`, served through arbora MCP |
@@ -142,6 +142,7 @@ bootstrap skill, together with the [SDD full lifecycle](https://github.com/Knuck
 - [`MEDULLA-MEDIA-VOCAB`](media-and-personal-vocabulary/spec.md) — media and personal-content vocabulary and per-connector virtual-graph mappings.
 - [`MEDULLA-BUSINESS-OPS`](business-operations/spec.md) — business operations pack, deterministic rule evaluation (recurrence, threshold, reconcile, reorder, phrase policy) and owner digest queries.
 - [`MEDULLA-SUPPLY-VOCAB`](supply-chain-vocabulary/spec.md) — supply-chain, commercial and host-limit vocabulary for the cross-source competency
+- [`MEDULLA-MACHINE`](machine/spec.md) — one machine concept, stable identity, hardware parts, host lifecycle machine and inventory records.
 - [`MEDULLA-INCREMENTAL-VIEWS`](incremental-views/spec.md) — incremental view maintenance for plan views, SQL views and the ontology closure.
 - [`MEDULLA-CLUSTER`](clustering-kernel/spec.md) — one clustering kernel for centroid training: seeded mini-batch updates, run state machine, drift-triggered refresh and a build that never stalls the engine.
 - [`MEDULLA-OBSERVE`](engine-observability/spec.md) — engine observability: task registry, runtime introspection, explicit runtime state machines, progress proofs, readiness, trace correlation and profiling.
