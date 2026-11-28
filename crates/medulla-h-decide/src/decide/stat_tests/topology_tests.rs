@@ -14,7 +14,6 @@ use medulla_agent_types::agent_topology::{
     TopologyPlan,
 };
 use medulla_agent_types::delegation::AgentGraphEntryRef;
-use medulla_compute::assemble::{admit_topology, assemble, inputs, replay_check, RecordIdentity};
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::{
     AssemblyRequest, DecisionOutcome, DecisionPolicy, DecisionRecord, TemplateFacts,
@@ -26,6 +25,12 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
+use {
+    medulla_compute_assemble::assemble::admit_topology,
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
+    medulla_compute_assemble::assemble::replay_check,
+    medulla_compute_assemble::assemble::RecordIdentity,
+};
 
 const ASKER: &str = "asker";
 

@@ -1056,7 +1056,7 @@ pub fn free() {}
             ("c.rs".into(), b"impl S { fn new() -> S { S } }\n".to_vec()),
             ("d.rs".into(), b"impl S { fn new() -> S { S } }\n".to_vec()),
         ];
-        let out = super::super::resolve::index_repository(&files);
+        let out = crate::parser::resolve::index_repository(&files);
         let mut seen = std::collections::HashSet::new();
         for n in &out.nodes {
             assert!(
@@ -1205,7 +1205,7 @@ pub fn free() {}
             "x.py".into(),
             b"class A:\n    def run(self):\n        return 1\n".to_vec(),
         )];
-        let out = super::super::resolve::index_repository(&files);
+        let out = crate::parser::resolve::index_repository(&files);
         let run = out
             .nodes
             .iter()

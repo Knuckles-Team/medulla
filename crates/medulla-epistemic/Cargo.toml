@@ -20,7 +20,7 @@ medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 # The conjugate Bayesian backend — `probabilistic::bayesian_update` IS the
 # ConfidenceModel numeric core (rides medulla-compute's pure `reasoning` feature, no heavy dep).
-medulla-compute = { path = "../medulla-compute", features = ["reasoning"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["reasoning"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -45,7 +45,7 @@ medulla-work-types = { path = "../medulla-work-types" }
 [dev-dependencies]
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types" }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 tempfile = "3"
@@ -63,7 +63,7 @@ epistemic-tms = ["dep:tracing", "medulla-types/epistemic", "medulla-query-types/
 # default, deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p
 # medulla-epistemic --features contract` runs the suite.
-contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]
+contract = ["dep:medulla-modality", "medulla-compute-assemble/contract", "medulla-core/contract", "medulla-graph-core/contract"]
 # EPI-P3-3 — calibrated probabilistic + causal reasoning: a linear structural
 # causal model (SCM) over named variables supporting genuine do-calculus
 # interventions (graph surgery — cut incoming edges, don't just condition),

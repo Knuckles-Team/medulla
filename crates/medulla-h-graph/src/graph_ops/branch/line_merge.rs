@@ -9,8 +9,11 @@
 //! renders as `SOURCE_CONFLICT{paths}`. Pure and deterministic; it writes
 //! nothing, the caller lands the merged blob.
 
-use medulla_compute::line_merge::{merge_lines, LineMerge};
 use medulla_source_types::source_changeset::{FileMergeRefusal, FileMerger};
+use {
+    medulla_compute_assemble::line_merge::merge_lines,
+    medulla_compute_assemble::line_merge::LineMerge,
+};
 
 /// Three-way text merge of one file over `base`, `ours` (the submission) and
 /// `theirs` (the branch head). Disjoint hunks merge; overlapping hunks and

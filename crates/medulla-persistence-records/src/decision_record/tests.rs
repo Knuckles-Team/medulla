@@ -10,13 +10,17 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ModalityFacts, agent_component::PromptMode, agent_component::ToolEffect,
 };
-use medulla_compute::assemble::{assemble, inputs, replay_check, Assembly, RecordIdentity};
 #[cfg(test)]
 use medulla_decision_types::decision::DecisionOutcome;
 use medulla_decision_types::decision::{
     AssemblyRequest, AssemblyRequirements, DecisionPolicy, LibraryCandidateScope,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
+    medulla_compute_assemble::assemble::replay_check, medulla_compute_assemble::assemble::Assembly,
+    medulla_compute_assemble::assemble::RecordIdentity,
+};
 
 use super::super::agent_component::{test_component_draft, test_tool_facts};
 use super::super::agent_fixtures::mutation_context;

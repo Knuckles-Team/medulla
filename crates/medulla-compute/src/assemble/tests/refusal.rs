@@ -1,7 +1,7 @@
 //! An assembly refusal folds under the `Assemble` origin with a registered code
 //! (MEDULLA-DECISION-ENGINE-R010.100.2).
 
-use crate::assemble::AssembleError;
+use medulla_compute_assemble::assemble::AssembleError;
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::record::outcome::{
     AbstainReason, RefusalOrigin, RefusalSurface,

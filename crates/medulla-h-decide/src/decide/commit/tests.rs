@@ -13,7 +13,6 @@ use medulla_agent_types::agent_topology::SchemaAuthority;
 use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_agent_types::delegation::AgentGraphEntryRef;
-use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};
 use medulla_decision_types::decision::DecisionCommitRequest;
 use medulla_decision_types::decision::DecisionCommitResult;
 use medulla_decision_types::decision::TemplateFacts;
@@ -24,6 +23,11 @@ use medulla_work_types::{
     native_control::NativeControlSchemaVersion,
 };
 use tokio::sync::RwLock;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
+    medulla_compute_assemble::assemble::replay_check,
+    medulla_compute_assemble::assemble::RecordIdentity,
+};
 
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -39,7 +43,7 @@ use medulla_server_api::state::ServerState;
 
 pub(in crate::decide) fn topology_assembly(
     store: &AgentLibraryStore,
-) -> medulla_compute::assemble::Assembly {
+) -> medulla_compute_assemble::assemble::Assembly {
     let base = decided(store, TENANT);
     let mut topology = facts();
     let base_graph = base.graph.unwrap();

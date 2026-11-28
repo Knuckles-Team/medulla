@@ -8,7 +8,7 @@ use super::assemble_tests::{
     assemble_with_policy, harness, publish_with, request, seed, Harness, ASKER, TENANT,
 };
 use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind, PromptMode};
-use medulla_compute::assemble::prompt::select_system_prompt;
+use medulla_compute_assemble::assemble::prompt::select_system_prompt;
 use medulla_decision_outcome_types::decision::prompt_candidate::{PromptCandidate, PromptRole};
 use medulla_decision_types::decision::knob_families::prompt_candidate::KNOBS;
 use medulla_decision_types::decision::knobs::KnobValue;

@@ -8,11 +8,15 @@
 //! `tree_checkpoint_interval` long, it returns the full tree snapshot that
 //! commits with that changeset.
 
-use medulla_compute::source_tree::{
-    checkpoint_due, encode_checkpoint, replay, tree_at, TreeChain, TreeError,
-};
 use medulla_source_types::source_changeset::{
     Changeset, ChangesetRefusal, ReadTreeReceipt, ReadTreeRequest, SubmitRefusal,
+};
+use {
+    medulla_compute_assemble::source_tree::checkpoint_due,
+    medulla_compute_assemble::source_tree::encode_checkpoint,
+    medulla_compute_assemble::source_tree::replay, medulla_compute_assemble::source_tree::tree_at,
+    medulla_compute_assemble::source_tree::TreeChain,
+    medulla_compute_assemble::source_tree::TreeError,
 };
 
 use crate::source_changeset::ChainView;
@@ -68,7 +72,7 @@ pub fn checkpoint_after(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::source_tree::TreeChain;
+    use medulla_compute_assemble::source_tree::TreeChain;
     use medulla_source_types::source_changeset::{ChangedPath, PathOp, Trailers};
     use std::collections::HashMap;
 

@@ -22,9 +22,9 @@ type RefTable<'a> = BTreeMap<&'a str, IndexRefPresence>;
 pub(super) type Memberships<'a> = BTreeMap<(&'a str, &'a str), &'a str>;
 
 /// Validated lookup view over one [`IndexRepositoryScope`].
-pub(super) struct ScopeCatalog<'a> {
-    pub(super) scope: &'a IndexRepositoryScope,
-    pub(super) memberships: Memberships<'a>,
+pub struct ScopeCatalog<'a> {
+    pub scope: &'a IndexRepositoryScope,
+    pub memberships: Memberships<'a>,
     /// Every `(path, blob digest)` bound by at least one live ref.
     bindings: BTreeSet<(&'a str, &'a str)>,
 }
@@ -32,7 +32,7 @@ pub(super) struct ScopeCatalog<'a> {
 impl<'a> ScopeCatalog<'a> {
     /// Validate `scope` structurally. Logical-path syntax is checked by the
     /// request boundary, which owns the portable-path rule.
-    pub(super) fn build(scope: &'a IndexRepositoryScope) -> Result<Self, String> {
+    pub fn build(scope: &'a IndexRepositoryScope) -> Result<Self, String> {
         check_name("repository_id", &scope.repository_id)?;
         let refs = declared_refs(scope)?;
         let memberships = collect_memberships(scope.file_versions.as_slice(), &refs)?;
@@ -49,12 +49,12 @@ impl<'a> ScopeCatalog<'a> {
     }
 
     /// Whether some live ref of this batch binds `path` to `digest`.
-    pub(super) fn binds(&self, path: &str, digest: &str) -> bool {
+    pub fn binds(&self, path: &str, digest: &str) -> bool {
         self.bindings.contains(&(path, digest))
     }
 
     /// The batch's memberships grouped by ref, in ref-name then path order.
-    pub(super) fn paths_by_ref(&self) -> BTreeMap<&'a str, Vec<(&'a str, &'a str)>> {
+    pub fn paths_by_ref(&self) -> BTreeMap<&'a str, Vec<(&'a str, &'a str)>> {
         let mut grouped: BTreeMap<&'a str, Vec<(&'a str, &'a str)>> = BTreeMap::new();
         for (&(ref_name, path), &digest) in &self.memberships {
             grouped.entry(ref_name).or_default().push((path, digest));
@@ -188,25 +188,25 @@ fn scoped_key(parts: &[&str]) -> String {
 }
 
 /// `sha256:<hex>` of raw blob content — the `:Blob` key.
-pub(super) fn content_digest(content: &[u8]) -> String {
+pub fn content_digest(content: &[u8]) -> String {
     format!("{SHA256_PREFIX}{}", hex::encode(Sha256::digest(content)))
 }
 
 /// `:Blob` identity: content only. A symbol is a property of content, not of a
 /// branch or a path, so every ref and path sharing the bytes shares this node.
-pub(super) fn blob_node_id(digest: &str) -> String {
+pub fn blob_node_id(digest: &str) -> String {
     format!("blob:{digest}")
 }
 
 /// `:FileVersion` identity: one repository path bound to one blob.
-pub(super) fn file_version_id(repository_id: &str, path: &str, digest: &str) -> String {
+pub fn file_version_id(repository_id: &str, path: &str, digest: &str) -> String {
     let key = scoped_key(&["eg:file-version", repository_id, path, digest]);
     format!("fileversion:{key}")
 }
 
 /// `:Branch` identity: one ref name in one repository (not its revision, which
 /// moves while the branch stays the same entity).
-pub(super) fn branch_node_id(repository_id: &str, ref_name: &str) -> String {
+pub fn branch_node_id(repository_id: &str, ref_name: &str) -> String {
     let key = scoped_key(&["eg:branch", repository_id, ref_name]);
     format!("branch:{key}")
 }

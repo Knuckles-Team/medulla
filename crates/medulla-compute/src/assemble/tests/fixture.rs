@@ -16,7 +16,7 @@ use medulla_decision_types::decision::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::super::RecordIdentity;
+use medulla_compute_assemble::assemble::RecordIdentity;
 
 pub const TENANT: &str = "tenant-a";
 
@@ -204,7 +204,8 @@ pub fn inputs_with(
     candidates: Vec<CandidateFacts>,
     policy: DecisionPolicy,
 ) -> DecisionInputs {
-    super::super::inputs(request, candidates, Vec::new(), policy).expect("fixture inputs fit")
+    medulla_compute_assemble::assemble::inputs(request, candidates, Vec::new(), policy)
+        .expect("fixture inputs fit")
 }
 
 pub fn inputs(request: AssemblyRequest, candidates: Vec<CandidateFacts>) -> DecisionInputs {

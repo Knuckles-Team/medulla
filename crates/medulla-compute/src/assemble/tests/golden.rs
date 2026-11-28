@@ -9,8 +9,10 @@ use std::path::PathBuf;
 use medulla_decision_types::solve::ModelSpec;
 use medulla_decision_types::{decision::CostBudget, decision::DecisionRecord};
 
-use super::super::{assemble, replay_check};
 use super::fixture::*;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+};
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 struct Golden {

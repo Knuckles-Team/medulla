@@ -19,7 +19,7 @@ medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
 hex = "0.4"
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
@@ -44,8 +44,8 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
-test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
-ast = ["medulla-compute/ast"]
+test-support = ["dep:tempfile", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-agent-types/test-support", "medulla-compute-assemble/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
+ast = ["medulla-compute-assemble/ast"]
 compute-dist = ["raft", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-types/compute-dist"]
 embedded = ["redb"]
 matview = ["medulla-protocol-types/matview", "medulla-types/matview", "query", "redb", "server"]
@@ -63,7 +63,7 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "query", "redb", "server", 
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }

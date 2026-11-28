@@ -427,7 +427,9 @@ pub fn read_prompt_blueprint(
     identity: &medulla_agent_types::agent_component::PromptBlueprintIdentity,
 ) -> Result<serde_json::Value, &'static str> {
     if medulla_types::contract::Digest256::sha256(body).to_hex() != identity.body_sha256 {
-        return Err(medulla_compute::assemble::prompt::RefusalCode::PromptPinUnresolved.as_str());
+        return Err(
+            medulla_compute_assemble::assemble::prompt::RefusalCode::PromptPinUnresolved.as_str(),
+        );
     }
     serde_json::from_slice::<StrictJson>(body)
         .map(|StrictJson(value)| value)
@@ -473,7 +475,7 @@ pub async fn read_pinned_prompt(
     let identity = PromptBlueprintIdentity::of_entry(&pointer.entry).ok_or_else(|| {
         format!(
             "{}: the revision is not a pinned blueprint prompt",
-            medulla_compute::assemble::prompt::RefusalCode::PromptPinUnresolved.as_str()
+            medulla_compute_assemble::assemble::prompt::RefusalCode::PromptPinUnresolved.as_str()
         )
     })?;
     if request.schema_revision != identity.schema_revision {
@@ -515,12 +517,15 @@ pub async fn serve_prompt_render(
         use medulla_agent_types::agent_component::{
             receipt_digest, PromptRenderReceipt, PromptRenderResult, PROMPT_RENDER_SCHEMA_VERSION,
         };
-        use medulla_compute::assemble::prompt::{
-            canonical_bytes, render_prompt, RenderPolicy, RENDERING_VERSION,
-        };
         use medulla_decision_types::decision::knob_families::prompt_render;
         use medulla_decision_types::decision::knobs::KnobValue;
         use medulla_types::contract::Digest256;
+        use {
+            medulla_compute_assemble::assemble::prompt::canonical_bytes,
+            medulla_compute_assemble::assemble::prompt::render_prompt,
+            medulla_compute_assemble::assemble::prompt::RenderPolicy,
+            medulla_compute_assemble::assemble::prompt::RENDERING_VERSION,
+        };
 
         let (identity, body) = match read_pinned_prompt(state, store, &request).await {
             Ok(value) => value,
@@ -543,7 +548,7 @@ pub async fn serve_prompt_render(
         let spec = &prompt_render::KNOBS[prompt_render::MAX_RENDER_BYTES];
         let max_render_bytes = match spec.default {
             KnobValue::Integer(bytes) => u32::try_from(bytes).unwrap_or(u32::MAX),
-            _ => medulla_compute::assemble::prompt::DEFAULT_MAX_RENDER_BYTES,
+            _ => medulla_compute_assemble::assemble::prompt::DEFAULT_MAX_RENDER_BYTES,
         };
         let policy = RenderPolicy {
             max_render_bytes,

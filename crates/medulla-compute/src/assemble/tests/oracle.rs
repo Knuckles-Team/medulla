@@ -5,11 +5,13 @@
 use medulla_decision_types::{decision::DecisionOutcome, decision::SolverBudget};
 use medulla_decision_types::{solve::Relation, solve::VarId};
 
-use super::super::{assemble, replay_check};
 use super::fixture::*;
 use medulla_decision_policy::solve::Model;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+};
 // The crate's one SplitMix64 stream, so every case is replayable.
-use crate::SplitMix64 as Seeded;
+use medulla_compute_assemble::SplitMix64 as Seeded;
 
 const CAPABILITIES: [&str; 6] = [
     "eg:capability/retrieval/web-search",

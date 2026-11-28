@@ -15,7 +15,7 @@ fn invalid(detail: impl Into<String>) -> AssembleError {
     AssembleError::new(DecisionErrorCode::AssemblyInputsInvalid, detail)
 }
 
-pub(in super::super) fn inputs(inputs: &DecisionInputs) -> Result<(), AssembleError> {
+pub fn inputs(inputs: &DecisionInputs) -> Result<(), AssembleError> {
     let requirements = inputs.request.requirements.topology.as_ref();
     match (requirements, inputs.topology.as_ref()) {
         (None, None) => Ok(()),

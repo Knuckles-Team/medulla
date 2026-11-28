@@ -324,7 +324,7 @@ impl DispatchApi for DispatchSeam {
         'a,
         Result<
             (
-                medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+                medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
                 medulla_work_types::native_control::EnrichmentBudgetPark,
             ),
             String,
@@ -350,7 +350,8 @@ impl DispatchApi for DispatchSeam {
     fn decode_pending_enrichment_intent(
         &self,
         intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
-    ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
+    ) -> Result<medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot, String>
+    {
         medulla_server_graph::dispatch::graph_pipeline::decode_pending_enrichment_intent(intent)
     }
 
@@ -363,7 +364,7 @@ impl DispatchApi for DispatchSeam {
     ))]
     fn enrichment_intent_for_snapshot(
         &self,
-        snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+        snapshot: medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
     ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
         medulla_server_graph::dispatch::graph_pipeline::enrichment_intent_for_snapshot(snapshot)
     }

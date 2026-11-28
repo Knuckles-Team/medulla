@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use medulla_decision_outcome_types::decision::prompt_candidate::{PromptCandidate, PromptRole};
 use medulla_decision_types::decision::record::outcome::AbstainReason;
 
-use crate::assemble::prompt::select_system_prompt;
+use medulla_compute_assemble::assemble::prompt::select_system_prompt;
 
 const ONE: i64 = 1 << 32;
 

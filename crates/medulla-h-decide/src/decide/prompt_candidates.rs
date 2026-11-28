@@ -9,8 +9,11 @@
 use std::collections::BTreeSet;
 
 use medulla_agent_types::agent_component::{AgentComponentEntry, AgentComponentKind};
-use medulla_compute::assemble::prompt::{select_system_prompt, SelectedPrompt};
 use medulla_decision_outcome_types::decision::prompt_candidate::{PromptCandidate, PromptRole};
+use {
+    medulla_compute_assemble::assemble::prompt::select_system_prompt,
+    medulla_compute_assemble::assemble::prompt::SelectedPrompt,
+};
 
 /// A component confidence of 1.0 in Q32: no component confidence fact exists, so every
 /// candidate carries the same one.

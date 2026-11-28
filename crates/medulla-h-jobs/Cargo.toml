@@ -19,7 +19,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-federation = { path = "../medulla-federation", optional = true }
@@ -78,7 +78,7 @@ query = ["dep:medulla-exec", "medulla-table-store/sql", "dep:medulla-sql", "medu
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
 statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-work-types/statechart", "server"]
-decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
+decide = ["medulla-capabilities/decide", "medulla-compute-assemble/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
 # The governed-action outbox events (MEDULLA-UNIFIED-DATA-PLANE-R700.3).
 streaming = ["dep:medulla-server-cdc", "medulla-server-cdc/streaming", "medulla-types/streaming", "medulla-query-types/streaming"]
 # Shape-rule measurement of the quality job (MEDULLA-UNIFIED-DATA-PLANE-R762.9).
@@ -102,15 +102,15 @@ stream = ["dep:medulla-plan", "medulla-plan/stream", "medulla-raft/stream", "med
 nl-query = ["dep:medulla-plan", "medulla-plan/nl-query", "medulla-raft/nl-query", "medulla-server-api/nl-query", "query", "redb", "server"]
 tsdb = ["dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "redb", "server"]
 wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf", "server"]
-gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu", "medulla-compute/gpu", "medulla-raft/gpu", "medulla-server-api/gpu", "query", "redb", "tensor"]
-gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda", "medulla-raft/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "query", "redb", "tensor"]
+gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu", "medulla-compute-assemble/gpu", "medulla-raft/gpu", "medulla-server-api/gpu", "query", "redb", "tensor"]
+gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda", "medulla-compute-assemble/gpu-cuda", "medulla-raft/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "query", "redb", "tensor"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl", "medulla-raft/owl-plan", "medulla-server-api/owl-plan", "medulla-types/owl-plan", "medulla-query-types/owl-plan", "query", "redb", "server"]
 cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
 cypher-plan = ["medulla-kernel/cypher-plan", "medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan", "cypher"]
 result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

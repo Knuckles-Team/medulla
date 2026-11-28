@@ -16,12 +16,15 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use medulla_compute::ast::parser::{parse_file, SourceLanguage};
-use medulla_compute::source_symbol_edit::{ResolvedSymbol, SymbolResolver};
 use medulla_h_ingest::source_changeset::BlobIo;
 use medulla_h_ingest::source_symbol_edit::prepare;
 use medulla_source_types::lifecycle::sha256_hex;
 use medulla_source_types::source_changeset::SubmittedBlobRef;
 use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
+use {
+    medulla_compute_assemble::source_symbol_edit::ResolvedSymbol,
+    medulla_compute_assemble::source_symbol_edit::SymbolResolver,
+};
 
 /// The spec budget: p99 at most 30 ms.
 const BUDGET_P99_NS: u128 = 30_000_000;

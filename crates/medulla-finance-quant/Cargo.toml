@@ -12,7 +12,7 @@ name = "medulla_finance_quant"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-numeric = { path = "../medulla-numeric", features = ["evaluate"] }
 medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
@@ -27,4 +27,4 @@ ndarray = "0.17"
 analytics = ["medulla-numeric/analytics"]
 
 [dev-dependencies]
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }

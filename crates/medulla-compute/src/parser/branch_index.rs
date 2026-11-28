@@ -25,10 +25,15 @@ use medulla_ingestion_types::ingestion_wire::{
 };
 
 use super::branch_projection::project_scope;
-use super::branch_scope::{blob_node_id, content_digest, file_version_id, ScopeCatalog};
 use super::enrichment_admission::{record_native_evidence, record_resolved_facts};
 use super::resolve::resolve;
 use super::tree_sitter::parse_files_with_outcomes;
+use {
+    medulla_compute_assemble::parser::branch_scope::blob_node_id,
+    medulla_compute_assemble::parser::branch_scope::content_digest,
+    medulla_compute_assemble::parser::branch_scope::file_version_id,
+    medulla_compute_assemble::parser::branch_scope::ScopeCatalog,
+};
 
 const INVALID: &str = "AST_INPUT_INVALID";
 

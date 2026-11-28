@@ -383,6 +383,7 @@ units = [
 name = "engine"
 units = [
   "medulla-compute",
+  "medulla-compute-assemble",
   "medulla-cypher",
   "medulla-epistemic",
   "medulla-exec",

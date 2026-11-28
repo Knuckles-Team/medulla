@@ -10,12 +10,16 @@
 //! the winner's plan is read back from the certificate's selection.
 
 mod admissible;
-pub(super) mod admit;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod admit;
 mod model;
 mod plan;
-pub(super) mod standalone;
-pub(crate) mod tables;
-pub(super) mod validate;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod standalone;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod tables;
+#[allow(missing_docs)] // docs pending: reached across the crate split
+pub mod validate;
 
 use medulla_agent_types::agent_topology::SlotRole;
 use medulla_agent_types::agent_topology::TopologyCaps;

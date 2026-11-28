@@ -20,7 +20,7 @@ pub struct GitExportPackFields {
 mod served {
     use super::super::read_tree::RegistryTree;
     use super::*;
-    use medulla_compute::source_tree::TreeChain;
+    use medulla_compute_assemble::source_tree::TreeChain;
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_changeset::git::{export_pack_with_format, resolve_revs};
     use medulla_h_ingest::source_changeset::ChunkStoreBlobs;

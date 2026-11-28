@@ -64,7 +64,7 @@ fn every_method() -> [AnnIndexPlan; 5] {
 fn stream(seed: u64) -> impl FnMut() -> f32 {
     let mut state = seed;
     move || {
-        let z = medulla_compute::splitmix64_next(&mut state);
+        let z = medulla_compute_assemble::splitmix64_next(&mut state);
         ((z >> 40) as f32 / (1u64 << 24) as f32) * 2.0 - 1.0
     }
 }

@@ -30,7 +30,6 @@ mod test_support;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_compute::line_merge::{merge_lines, LineMerge};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_server_auth::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 use medulla_server_blob::blob::store::RedbChunkStore;
@@ -41,6 +40,10 @@ use medulla_source_types::source_changeset::{
     SubmittedPath, TreeEntry,
 };
 use medulla_source_types::source_path_grant::SetPathGrantRequest;
+use {
+    medulla_compute_assemble::line_merge::merge_lines,
+    medulla_compute_assemble::line_merge::LineMerge,
+};
 
 const SECRET: &str = "scm-r011-simulation-secret";
 const ENCRYPTION_KEY: &str = "scm-r011-simulation-encryption-key-0123456789";

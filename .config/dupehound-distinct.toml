@@ -248,7 +248,7 @@ deletion of the unread `provides` field from agent_component's struct literal
 the argument above is unchanged, so the left digest is re-pinned."""
 
 [[pair]]
-left_file = "crates/medulla-compute/src/assemble/topology/model.rs"
+left_file = "crates/medulla-compute-assemble/src/assemble/topology/model.rs"
 left_name = "class_name"
 left_digest = "sha256:aec3f3a19b999e05d3c56b72144e7f45cd5a374be2dcdb492fc6681bc44a9681"
 right_file = "crates/medulla-modality/src/rows.rs"

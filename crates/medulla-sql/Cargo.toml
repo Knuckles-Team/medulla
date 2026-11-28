@@ -28,7 +28,7 @@ ndarray = { version = "0.17", optional = true }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-ann = { path = "../medulla-ann", optional = true }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
@@ -62,14 +62,14 @@ medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
-finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
+finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute-assemble/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
 metastore-federation = ["dep:medulla-lake", "medulla-lake/metastore"]
 iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal"]
 numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
 sql = ["medulla-sql-lang/sql", "iceberg-federation", "metastore-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:petgraph", "dep:tracing", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
 
 [dev-dependencies]
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

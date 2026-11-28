@@ -1,6 +1,6 @@
 //! Embedding similarity and entity-resolution proposals.
 
-use medulla_compute::union_find_root;
+use medulla_compute_assemble::union_find_root;
 use medulla_graph_core::graph::GraphView;
 
 pub fn compute_similarity_edges(core: &GraphView, threshold: f64) -> Vec<(String, String, f64)> {

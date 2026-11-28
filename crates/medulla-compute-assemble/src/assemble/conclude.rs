@@ -26,7 +26,7 @@ use super::{agent, eliminate, facts, model, template, uniqueness, why_not, Assem
 use medulla_decision_policy::solve::Verdict;
 
 /// Every record field the decision function computes.
-pub(super) struct Decided {
+pub struct Decided {
     pub resolution_kind: ResolutionKind,
     pub evidence_class: EvidenceClass,
     pub premises: Vec<PremiseRef>,
@@ -53,7 +53,7 @@ pub(super) fn verdict_supports_solved(verdict: &Verdict) -> bool {
 }
 
 /// What every assembly over one input set shares, template or not.
-pub(super) struct Ladder<'a> {
+pub struct Ladder<'a> {
     pub inputs: &'a DecisionInputs,
     pub required: Vec<RequiredCapability>,
     pub screened: Screened,
@@ -174,7 +174,7 @@ pub(super) fn prepare(inputs: &DecisionInputs) -> Result<Prepared<'_>, AssembleE
 }
 
 /// Decide over one topology: the one-agent graph, or one template.
-pub(super) fn decide_one(
+pub fn decide_one(
     ladder: &Ladder<'_>,
     template: Option<&TemplateFacts>,
 ) -> Result<Decided, AssembleError> {
@@ -408,7 +408,7 @@ fn solved(
 
 /// The slot a chosen candidate fills: its kind, qualified by the template
 /// node it was placed in when the answer is a template graph.
-pub(super) fn slot_label(template: Option<&TemplateFacts>, slot: usize, kind: &str) -> String {
+pub fn slot_label(template: Option<&TemplateFacts>, slot: usize, kind: &str) -> String {
     match template.and_then(|template| template.slot_nodes().get(slot).copied()) {
         Some(node) => format!("{}/{kind}", node.node_id),
         None => kind.to_string(),

@@ -15,10 +15,19 @@ use medulla_decision_types::decision::{
 };
 use medulla_types::evidence_class::EvidenceClass;
 
-use super::super::model::{build, Building};
-use super::super::search::{search, SolveContext};
-use super::super::{assemble, replay_check, Assembly};
 use super::fixture::*;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+    medulla_compute_assemble::assemble::Assembly,
+};
+use {
+    medulla_compute_assemble::assemble::model::build,
+    medulla_compute_assemble::assemble::model::Building,
+};
+use {
+    medulla_compute_assemble::assemble::search::search,
+    medulla_compute_assemble::assemble::search::SolveContext,
+};
 
 fn decide(
     request: medulla_decision_types::decision::AssemblyRequest,
@@ -321,7 +330,7 @@ fn candidate_scope_at_the_boundary_builds_one_more_is_refused() {
             })
             .collect()
     };
-    let at_boundary = super::super::inputs(
+    let at_boundary = medulla_compute_assemble::assemble::inputs(
         request(&[], &[]),
         sorted_tools(MAX_ASSEMBLY_CANDIDATES),
         Vec::new(),
@@ -331,7 +340,7 @@ fn candidate_scope_at_the_boundary_builds_one_more_is_refused() {
         at_boundary.is_ok(),
         "{MAX_ASSEMBLY_CANDIDATES} candidates must fit: {at_boundary:?}"
     );
-    let over = super::super::inputs(
+    let over = medulla_compute_assemble::assemble::inputs(
         request(&[], &[]),
         sorted_tools(MAX_ASSEMBLY_CANDIDATES + 1),
         Vec::new(),

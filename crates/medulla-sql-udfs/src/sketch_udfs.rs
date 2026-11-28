@@ -30,7 +30,10 @@ use datafusion::logical_expr::{
 };
 use datafusion::scalar::ScalarValue;
 
-use medulla_compute::sketch::{CountMinSketch, HyperLogLog, MinHashSketch};
+use {
+    medulla_compute_assemble::sketch::CountMinSketch,
+    medulla_compute_assemble::sketch::HyperLogLog, medulla_compute_assemble::sketch::MinHashSketch,
+};
 
 /// The Arrow element type every `List<UInt64>` signature column uses (MinHash's raw hash
 /// values) — shared by the aggregate's return/state type and the scalar similarity function's

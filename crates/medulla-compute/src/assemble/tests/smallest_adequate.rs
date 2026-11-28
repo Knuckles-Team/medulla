@@ -5,7 +5,7 @@ use medulla_decision_types::decision::size::{Adequacy, SourceSize};
 use medulla_decision_types::decision::{CandidateFacts, DecisionPolicy, Violation};
 
 use super::fixture::{cheap_model, inputs_with, request};
-use crate::assemble::eliminate::screen;
+use medulla_compute_assemble::assemble::eliminate::screen;
 
 fn with_adequacy(id: &str, adequate: Option<bool>) -> CandidateFacts {
     let mut model = cheap_model(id);
@@ -85,7 +85,7 @@ mod objective_levels {
         agent_basics, bounded, cheap_model, identity, inputs_with, prompt, request, tool,
     };
     use super::SourceSize;
-    use crate::assemble::assemble;
+    use medulla_compute_assemble::assemble::assemble;
 
     const CAPS: [&str; 3] = [
         "eg:capability/retrieval/web-search",

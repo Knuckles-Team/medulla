@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use medulla_compute::SplitMix64;
+use medulla_compute_assemble::SplitMix64;
 
 /// The gate stops with this code when a phase's exit artifact is invalid.
 pub const PHASE_EXIT_INVALID: &str = "PHASE_EXIT_INVALID";

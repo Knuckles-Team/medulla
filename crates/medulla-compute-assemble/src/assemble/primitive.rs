@@ -148,7 +148,7 @@ impl DecisionRefusal for Refused {
 
 /// What the primitive rules removed from a request: the eliminated option of
 /// each failed check and the abstention reason that reports it.
-pub(super) struct PrimitiveScreen {
+pub struct PrimitiveScreen {
     pub eliminated: Vec<Elimination>,
     pub reasons: Vec<AbstainReason>,
 }
@@ -186,9 +186,7 @@ fn refuse(screen: &mut PrimitiveScreen, removed: &str, refusal: PrimitiveRefusal
 /// candidates' published contracts. A candidate with no contract skips the
 /// checks and stays legal. `None` when nothing is refused; a name outside the
 /// candidate set is an invalid input, not a refusal of a primitive.
-pub(super) fn screen_request(
-    inputs: &DecisionInputs,
-) -> Result<Option<PrimitiveScreen>, AssembleError> {
+pub fn screen_request(inputs: &DecisionInputs) -> Result<Option<PrimitiveScreen>, AssembleError> {
     let mut screen = PrimitiveScreen {
         eliminated: Vec::new(),
         reasons: Vec::new(),
@@ -248,7 +246,7 @@ fn proof(candidate: &CandidateFacts, subject: String, fact: String) -> PremiseRe
 /// so the result is always `compatible`. Nothing here activates a proposal: a
 /// run-trace proposal for a primitive is a draft `ProgramRevision` candidate
 /// that R805 promotes, so the composition this record names is unchanged.
-pub(super) fn premises(inputs: &DecisionInputs) -> Vec<PremiseRef> {
+pub fn premises(inputs: &DecisionInputs) -> Vec<PremiseRef> {
     let mut named: Vec<&str> = Vec::new();
     for edge in &inputs.request.primitive_edges {
         named.push(&edge.producer);

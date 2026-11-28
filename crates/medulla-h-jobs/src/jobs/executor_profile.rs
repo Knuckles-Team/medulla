@@ -12,12 +12,15 @@
 
 use std::collections::HashMap;
 
-use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
 use {
     medulla_catalog_source_types::profile::ColumnProfile,
     medulla_catalog_source_types::profile::HistogramBucket,
     medulla_catalog_source_types::profile::ProfileMethod,
     medulla_catalog_source_types::profile::TopValue,
+};
+use {
+    medulla_compute_assemble::sketch::HyperLogLog,
+    medulla_compute_assemble::sketch::HLL_DEFAULT_PRECISION,
 };
 
 use super::data_plane_write::{commit_job_methods, edge_method, node_method};

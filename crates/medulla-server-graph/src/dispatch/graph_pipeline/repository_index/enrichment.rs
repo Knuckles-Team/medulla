@@ -21,10 +21,10 @@ use medulla_compute::parser::enrichment_admission::EnrichmentCursor;
 use medulla_compute::parser::enrichment_admission::EnrichmentStage;
 use medulla_compute::parser::enrichment_admission::NativePolicyVerdict;
 use medulla_compute::parser::enrichment_admission::UnitKey;
-use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
-use medulla_compute::parser::enrichment_snapshot::EligibleUnit;
-use medulla_compute::parser::enrichment_snapshot::EnrichmentWorkStage;
-use medulla_compute::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleUnit;
+use medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentWorkStage;
+use medulla_compute_assemble::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS;
 
 // The durable mutation record accepts at most 64 MiB. Keep the complete
 // snapshot far below that limit, including its envelope and source rows.

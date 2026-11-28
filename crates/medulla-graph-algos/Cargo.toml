@@ -12,7 +12,7 @@ name = "medulla_graph_algos"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-numeric = { path = "../medulla-numeric" }
 medulla-types = { path = "../medulla-types" }
 medulla-query-types = { path = "../medulla-query-types" }
@@ -29,12 +29,12 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
-contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]
-graphlearn = ["medulla-compute/graphlearn", "medulla-types/graphlearn", "medulla-query-types/graphlearn"]
+contract = ["dep:medulla-modality", "medulla-compute-assemble/contract", "medulla-core/contract", "medulla-graph-core/contract"]
+graphlearn = ["medulla-compute-assemble/graphlearn", "medulla-types/graphlearn", "medulla-query-types/graphlearn"]
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-kvcache = { path = "../medulla-kvcache" }
 

@@ -8,7 +8,6 @@
 
 use std::sync::Arc;
 
-use medulla_compute::source_tree::{tree_at, TreeChain};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
@@ -19,6 +18,10 @@ use medulla_source_types::gate_verdict::{
 use medulla_source_types::source_changeset::{decode_changeset, Changeset};
 use medulla_work_types::step_verdict::VerificationVerdict;
 use tokio::sync::RwLock;
+use {
+    medulla_compute_assemble::source_tree::tree_at,
+    medulla_compute_assemble::source_tree::TreeChain,
+};
 
 use super::publish::PublishError;
 use super::time_travel::ChainEntry;

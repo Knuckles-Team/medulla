@@ -151,7 +151,7 @@ impl SplitMix64 {
         Self { word: seed }
     }
     pub(crate) fn next_u64(&mut self) -> u64 {
-        medulla_compute::splitmix64_next(&mut self.word)
+        medulla_compute_assemble::splitmix64_next(&mut self.word)
     }
     pub(crate) fn next_f64(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64

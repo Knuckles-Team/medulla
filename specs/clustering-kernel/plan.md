@@ -71,7 +71,7 @@ crates/medulla-server-graph/src/semantic_activation.rs      existing (R002.6, R0
 crates/medulla-table-store/src/tables/ann_authority/generation.rs existing (R008.1)
 crates/medulla-sql/src/sql/ann.rs                           existing (R008.1)
 crates/medulla-sql-udfs/src/numeric.rs                      existing (R008.5)
-crates/medulla-compute/src/datascience/primitives.rs        existing (R008.4)
+crates/medulla-compute-assemble/src/datascience/primitives.rs        existing (R008.4)
 crates/medulla-h-compute/src/datascience/routes.rs          existing (R001.3)
 crates/medulla-graph-algos/src/graph_algos/spectral.rs      existing (R008.6)
 crates/medulla-mining/src/mining/cluster.rs                 existing (R008.7)
@@ -150,7 +150,7 @@ Code shapes: the kernel files stay under 900 lines. No function takes more than 
 
 ## Production caller chain
 
-- Served method: `Method::DsKMeans` arm (`crates/medulla-h-compute/src/datascience/routes.rs:55`) → `primitives::kmeans` (`crates/medulla-compute/src/datascience/primitives.rs:152`) → `cluster::fit`.
+- Served method: `Method::DsKMeans` arm (`crates/medulla-h-compute/src/datascience/routes.rs:55`) → `primitives::kmeans` (`crates/medulla-compute-assemble/src/datascience/primitives.rs:152`) → `cluster::fit`.
 - SQL aggregate: `kmeans_result` (`crates/medulla-sql-udfs/src/numeric.rs:642`) → `cluster::kmeans_labels` → `fit`.
 - Python kernel: `kmeans` (`crates/medulla-numeric/src/py.rs:431`) → `fit`.
 - Index build: `activate_one` (`crates/medulla-server-graph/src/semantic_activation.rs:69`) → `SemanticStore::warm` (`crates/medulla-semantic-index/src/semantic_ann_index.rs:8`) → `build_index` (`semantic_ann_index.rs:52`) → `AnnIndex::build` (`crates/medulla-semantic-index/src/semantic_ann.rs:73`) → `IvfPq::train` (`crates/medulla-ann/src/ivfpq.rs:140`) → `fit` (`ivfpq.rs:213`, `ivfpq.rs:586`).

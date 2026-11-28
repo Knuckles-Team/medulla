@@ -4,7 +4,7 @@ use medulla_raft::raft::command::*;
 #[cfg(feature = "ast")]
 #[test]
 fn sealed_repository_budget_is_bound_to_exact_source_intent() {
-    use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
+    use medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot;
     use medulla_ingestion_types::ingestion_wire::{ExtractedNode, IndexResult};
     use medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority;
 

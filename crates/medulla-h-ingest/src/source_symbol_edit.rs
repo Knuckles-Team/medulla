@@ -8,10 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_compute::ast::symbol::ParseResult;
-use medulla_compute::source_symbol_edit::{
-    project_symbol_edit, BlobAccess, ProjectionRefusal, SymbolResolver,
-};
+use medulla_compute_assemble::ast::symbol::ParseResult;
 use medulla_enrich::symbol_edit_verify::{
     parse_clean, verify_roundtrip, OpVerdict, RoundtripRefusal,
 };
@@ -21,6 +18,12 @@ use medulla_source_types::source_changeset::{
 };
 use medulla_source_types::source_symbol_edit::{
     SymbolEdit, SymbolEditEvidence, SymbolEditKind, SymbolEditOpEvidence,
+};
+use {
+    medulla_compute_assemble::source_symbol_edit::project_symbol_edit,
+    medulla_compute_assemble::source_symbol_edit::BlobAccess,
+    medulla_compute_assemble::source_symbol_edit::ProjectionRefusal,
+    medulla_compute_assemble::source_symbol_edit::SymbolResolver,
 };
 
 use crate::source_changeset::BlobIo;
@@ -181,7 +184,7 @@ pub fn prepare(
 mod tests {
     use super::*;
     use medulla_compute::ast::parser::{parse_file, SourceLanguage};
-    use medulla_compute::source_symbol_edit::ResolvedSymbol;
+    use medulla_compute_assemble::source_symbol_edit::ResolvedSymbol;
     use medulla_source_types::source_symbol_edit::{SymbolEditKind, SymbolEditOp};
     use std::cell::RefCell;
 

@@ -11,6 +11,7 @@ name = "medulla_enrich"
 
 [dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["ast"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["ast"] }
 medulla-source-types = { path = "../medulla-source-types" }
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"

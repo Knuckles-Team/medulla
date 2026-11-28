@@ -356,6 +356,8 @@ Upward references: none.
 
 Upward references to resolve (3 module pairs, 4 references): `contract` (crate medulla-compute-assemble) uses `ast` (crate medulla-compute) x2; `assemble::model` (crate medulla-compute-assemble) uses `assemble::topology` (crate medulla-compute) x1; `assemble::profile` (crate medulla-compute-assemble) uses `assemble::conclude` (crate medulla-compute) x1.
 
+Resolution as landed: the referenced items are moved down as whole modules. `ast::symbol`, `assemble::topology` (with `topology::tables`), `assemble::conclude`, `assemble::template`, `assemble::uniqueness`, `assemble::why_not`, `assemble::seal` and `assemble::validate` live in `medulla-compute-assemble`; the `parser::tree_sitter_*` modules declared by path under `parser::tree_sitter`, and `parser::resolve_imports`, stay with their declaring module in `medulla-compute`.
+
 #### `medulla-h-decide`: 131,816 lines into 7 crates
 
 | Target crate | Lines | Modules (paths under `src/`, `::` form) |

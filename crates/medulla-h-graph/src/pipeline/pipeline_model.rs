@@ -1,11 +1,14 @@
-use medulla_compute::datascience::primitives::train_test_split;
-use medulla_compute::datascience::{estimators, metrics};
+use medulla_compute_assemble::datascience::primitives::train_test_split;
 use medulla_mining::mining::classify;
 use medulla_query_types::wire::{
     EstimatorParams, FittedClassifier, FittedModel, ModelSpec, SplitSpec,
 };
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
+use {
+    medulla_compute_assemble::datascience::estimators,
+    medulla_compute_assemble::datascience::metrics,
+};
 
 pub(super) struct TrainArtifact {
     pub(super) blob: Value,

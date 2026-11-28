@@ -219,7 +219,7 @@ Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`. Production cal
 Failure: A missing round limit returns `RETRIEVAL_ROUND_LIMIT_REQUIRED`. A strict insufficient verdict abstains.
 Consumers: MERISTEM-HARNESS-CYCLE (R079)
 Moves from Meristem: executable_rag.py:87 (sufficiency rule), executable_rag.py:198 (repair choice), hybrid_retriever.py:1957 (fallback policy)
-Existing code: `crates/medulla-exec/src/exec.rs:536`; `crates/medulla-exec/src/exec.rs:848`; `crates/medulla-exec/src/exec.rs:1436` (diversified ranking); `crates/medulla-exec/src/runtime.rs:61`; `crates/medulla-compute/src/assemble/conclude.rs:69` (typed abstention pattern). Reachable today: no.
+Existing code: `crates/medulla-exec/src/exec.rs:536`; `crates/medulla-exec/src/exec.rs:848`; `crates/medulla-exec/src/exec.rs:1436` (diversified ranking); `crates/medulla-exec/src/runtime.rs:61`; `crates/medulla-compute-assemble/src/assemble/conclude.rs:69` (typed abstention pattern). Reachable today: no.
 Existing-code search: no sufficiency check and no fallback policy exist in the engine. Search terms: `sufficien`, `fallback_policy`, `FallbackPolicy`, `extractive`, `round_limit`, `max_rounds`.
 Reuses: the ranked `RowSet` from `fuse_rrf` and the typed abstention pattern. New: the verdict type, the rule, the repair order.
 Decision: Medulla decides sufficiency, repair and fallback per call and hands them to the harness. Rejected alternative: keep the rule in the harness, because each harness must otherwise carry its own threshold.
@@ -250,7 +250,7 @@ Attach point: `execute` at `crates/medulla-exec/src/exec.rs:536`. Production cal
 Failure: A gap below the margin returns `ARBITRATION_ABSTAIN` with both candidates. A candidate without a grounding returns `CANDIDATE_GROUNDING_REQUIRED`.
 Consumers: MERISTEM-HARNESS-CYCLE (R079)
 Moves from Meristem: shortcut_risks.py:42, agent_control_contracts.py:73 (prior probe and evidence classes)
-Existing code: `crates/medulla-exec/src/exec.rs:536`. The typed abstention pattern is at `crates/medulla-compute/src/assemble/conclude.rs:69`. It is not reachable today.
+Existing code: `crates/medulla-exec/src/exec.rs:536`. The typed abstention pattern is at `crates/medulla-compute-assemble/src/assemble/conclude.rs:69`. It is not reachable today.
 Existing-code search: no arbitration exists in the engine. Search terms: `arbitrat`, `abstain`, `margin`, `parametric`, `prior_probe`.
 Reuses: the typed abstention pattern and the ranked evidence side. New: the candidate type, the margin rule, the verdict.
 Decision: One margin rule in the engine over two candidates. Rejected alternative: a learned arbiter, because it needs labelled disagreement data.

@@ -76,7 +76,10 @@ pub(super) async fn assemble_for(
     verified: &VerifiedRequestContext,
     request: AssemblyRequest,
 ) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
-    use medulla_compute::assemble::{assemble, inputs, RecordIdentity};
+    use {
+        medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::inputs,
+        medulla_compute_assemble::assemble::RecordIdentity,
+    };
 
     use super::telemetry::{self, Stage};
     const FAMILY: &str = "assembly";
@@ -418,13 +421,16 @@ fn coding_agent_plan(
     ) {
         return None;
     }
-    medulla_compute::assemble::coding_agent::compose_coding_agent_plan(request?, limit_s?).ok()
+    medulla_compute_assemble::assemble::coding_agent::compose_coding_agent_plan(request?, limit_s?)
+        .ok()
 }
 
 /// The wire text of an assembly refusal, folded under the `Assemble` origin
 /// (MEDULLA-DECISION-ENGINE-R010.100.2): `CODE: detail`.
 #[cfg(feature = "decide")]
-pub(crate) fn assembly_refusal(error: &medulla_compute::assemble::AssembleError) -> String {
+pub(crate) fn assembly_refusal(
+    error: &medulla_compute_assemble::assemble::AssembleError,
+) -> String {
     use medulla_decision_types::decision::record::outcome::{AbstainReason, RefusalOrigin};
     let folded = AbstainReason::from_refusal(RefusalOrigin::ASSEMBLE, error);
     format!("{}: {}", folded.code().as_str(), error.detail)

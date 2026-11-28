@@ -72,13 +72,13 @@ const ONE_AGENT_SLOTS: [(AgentComponentKind, &str, SlotArity); 5] = [
 
 /// One variable: candidate `candidate` placed in slot `slot`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct VarRef {
+pub struct VarRef {
     pub slot: usize,
     pub candidate: usize,
 }
 
 /// A built programme and what each of its variables stands for.
-pub(super) struct Built {
+pub struct Built {
     pub spec: ModelSpec,
     pub vars: Vec<VarRef>,
     /// The topology choice each variable after the candidate variables stands
@@ -86,7 +86,7 @@ pub(super) struct Built {
     pub shape: Vec<super::topology::Choice>,
 }
 
-pub(super) enum Building {
+pub enum Building {
     Ready(Built),
     /// A step decided before any search: nothing covers a requirement, an
     /// agent slot has no legal candidate, or a pin names an illegal option.
@@ -94,11 +94,11 @@ pub(super) enum Building {
 }
 
 /// The variable name of `var`.
-pub(super) fn var_name(var: VarRef) -> String {
+pub fn var_name(var: VarRef) -> String {
     format!("s{}.c{}", var.slot, var.candidate)
 }
 
-pub(super) fn build(
+pub fn build(
     inputs: &DecisionInputs,
     required: &[RequiredCapability],
     (legal, slots): (&[usize], usize),

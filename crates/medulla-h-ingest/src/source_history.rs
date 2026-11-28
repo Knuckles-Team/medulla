@@ -7,16 +7,30 @@
 //! the whole chain is rebuilt first. `read_path_history` is the read side over
 //! `medulla_compute::source_history::path_history`.
 
-use medulla_compute::source_history::{
-    apply_changeset, blame, blame_key, decode_blame, decode_head, decode_seq, head_key,
-    path_history, prior_blame_paths, rebuild, seq_key, BlameEntry, BlameInputs, HistoryError,
-    HistoryIndex, HistoryRow, SOURCE_HISTORY_INDEX_VERSION,
-};
 use medulla_source_types::source_changeset::{
     Changeset, ReadBlameReceipt, ReadBlameRequest, ReadPathHistoryReceipt, ReadPathHistoryRequest,
     SubmitRefusal,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
+use {
+    medulla_compute_assemble::source_history::apply_changeset,
+    medulla_compute_assemble::source_history::blame,
+    medulla_compute_assemble::source_history::blame_key,
+    medulla_compute_assemble::source_history::decode_blame,
+    medulla_compute_assemble::source_history::decode_head,
+    medulla_compute_assemble::source_history::decode_seq,
+    medulla_compute_assemble::source_history::head_key,
+    medulla_compute_assemble::source_history::path_history,
+    medulla_compute_assemble::source_history::prior_blame_paths,
+    medulla_compute_assemble::source_history::rebuild,
+    medulla_compute_assemble::source_history::seq_key,
+    medulla_compute_assemble::source_history::BlameEntry,
+    medulla_compute_assemble::source_history::BlameInputs,
+    medulla_compute_assemble::source_history::HistoryError,
+    medulla_compute_assemble::source_history::HistoryIndex,
+    medulla_compute_assemble::source_history::HistoryRow,
+    medulla_compute_assemble::source_history::SOURCE_HISTORY_INDEX_VERSION,
+};
 
 use crate::source_changeset::{BlobIo, ChainView};
 

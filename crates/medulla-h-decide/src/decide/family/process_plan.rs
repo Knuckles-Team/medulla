@@ -9,11 +9,7 @@
 
 use std::cell::RefCell;
 
-use medulla_compute::process_plan::bind::{registered_contract, resolve_bindings};
-use medulla_compute::process_plan::plan::{
-    engine_refusal, plan_from_workflow, Callee, ConditionQuestion,
-};
-use medulla_compute::process_plan::rank::ranked_bindings;
+use medulla_compute_assemble::process_plan::rank::ranked_bindings;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::process_plan::{
     BindingSource, BindingTarget, ProcessPlanKnobs, ProcessPlanRefusal, ProcessPlanRequest,
@@ -35,6 +31,16 @@ use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::process_import::{workflow_node_id, CanonicalWorkflow};
 use medulla_types::refusal_code::RefusalCode;
+use {
+    medulla_compute_assemble::process_plan::bind::registered_contract,
+    medulla_compute_assemble::process_plan::bind::resolve_bindings,
+};
+use {
+    medulla_compute_assemble::process_plan::plan::engine_refusal,
+    medulla_compute_assemble::process_plan::plan::plan_from_workflow,
+    medulla_compute_assemble::process_plan::plan::Callee,
+    medulla_compute_assemble::process_plan::plan::ConditionQuestion,
+};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_task_plan::{PlanNotes, Planned};

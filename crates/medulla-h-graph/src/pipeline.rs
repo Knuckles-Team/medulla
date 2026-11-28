@@ -14,7 +14,7 @@ mod pipeline_model;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_compute::datascience::estimators;
+use medulla_compute_assemble::datascience::estimators;
 use medulla_graph_algos::graphlearn::edge_fn::Basis;
 use medulla_graph_algos::graphlearn::link_predict::{
     self, FeatureCtx, KanLinkConfig, KanLinkModel,

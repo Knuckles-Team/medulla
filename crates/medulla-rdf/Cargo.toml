@@ -153,6 +153,7 @@ medulla-identity-types = { path = "../medulla-identity-types", features = ["test
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 # Ingest-worker machines (MEDULLA-INGEST-WORKER-R911, MEDULLA-INGEST-WORKER-R912.1): the ontology test compares their edge tables.
 medulla-compute = { path = "../medulla-compute", features = ["ast"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["ast"] }
 medulla-h-ingest = { path = "../medulla-h-ingest", features = ["redb", "blob", "query", "modality-serving"] }
 medulla-transaction = { path = "../medulla-transaction" }
 # ICV integration test (CONCEPT:MEDULLA-146). medulla-shacl sits ABOVE medulla-rdf in the DAG (it

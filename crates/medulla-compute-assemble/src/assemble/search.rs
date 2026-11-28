@@ -41,7 +41,7 @@ pub(super) type Drafts = (Vec<AgentLibraryEntryDraft>, AgentGraphDraft);
 pub(super) type Validator<'v> = dyn Fn(&[(usize, &CandidateFacts)]) -> Result<Drafts, String> + 'v;
 
 /// What every search step shares.
-pub(super) struct SolveContext<'a> {
+pub struct SolveContext<'a> {
     pub inputs: &'a DecisionInputs,
     pub built: Built,
     pub config: SolverConfig,
@@ -50,7 +50,7 @@ pub(super) struct SolveContext<'a> {
 }
 
 impl<'a> SolveContext<'a> {
-    pub(super) fn new(
+    pub fn new(
         inputs: &'a DecisionInputs,
         built: Built,
         template: Option<&'a TemplateFacts>,
@@ -101,7 +101,7 @@ impl<'a> SolveContext<'a> {
 }
 
 /// A validated answer: the final model, its certificate and the drafts.
-pub(super) struct Answer {
+pub struct Answer {
     pub spec: ModelSpec,
     pub model: Model,
     pub certificate: Certificate,
@@ -109,13 +109,13 @@ pub(super) struct Answer {
     pub drafts: Drafts,
 }
 
-pub(super) fn model_invalid(error: medulla_decision_policy::solve::ModelError) -> AssembleError {
+pub fn model_invalid(error: medulla_decision_policy::solve::ModelError) -> AssembleError {
     AssembleError::new(DecisionErrorCode::AssemblyModelInvalid, error.to_string())
 }
 
 /// Solve, validate the answer, and cut it off and re-solve when a validator
 /// refuses it -- at most `max_nogood_rounds` times.
-pub(super) fn search(
+pub fn search(
     context: &SolveContext<'_>,
     validate: &Validator<'_>,
 ) -> Result<Result<Answer, Vec<AbstainReason>>, AssembleError> {

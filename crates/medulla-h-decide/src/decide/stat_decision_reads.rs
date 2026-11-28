@@ -438,9 +438,9 @@ pub(super) fn why_not(
     let record: DecisionRecord = serde_json::from_slice(&body).map_err(|error| {
         format!("DECISION_INPUTS_RETIRED: the stored inputs cannot rebuild the problem: {error}")
     })?;
-    let replayed = medulla_compute::assemble::assemble(
+    let replayed = medulla_compute_assemble::assemble::assemble(
         record.inputs.clone(),
-        medulla_compute::assemble::RecordIdentity::of(&record),
+        medulla_compute_assemble::assemble::RecordIdentity::of(&record),
     )
     .map_err(|error| match error.code {
         medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid => {
@@ -462,12 +462,16 @@ pub(super) fn why_not(
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |elapsed| elapsed.as_millis() as u64)
     };
-    let explained =
-        medulla_compute::assemble::explain_option(&record.inputs, option_id, budget, &clock)
-            .map_err(|error| error.to_string())?
-            .ok_or_else(|| {
-                "OPTION_NOT_VISIBLE: the option is not among the record's candidates".to_string()
-            })?;
+    let explained = medulla_compute_assemble::assemble::explain_option(
+        &record.inputs,
+        option_id,
+        budget,
+        &clock,
+    )
+    .map_err(|error| error.to_string())?
+    .ok_or_else(|| {
+        "OPTION_NOT_VISIBLE: the option is not among the record's candidates".to_string()
+    })?;
     Ok(DecisionWhyNot {
         record_id: record.record_id,
         option_id: option_id.to_string(),

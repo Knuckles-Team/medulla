@@ -27,10 +27,10 @@ use medulla_compute::parser::enrichment_admission::EnrichmentCandidate;
 use medulla_compute::parser::enrichment_admission::EnrichmentStage;
 use medulla_compute::parser::enrichment_admission::QueueBinding;
 use medulla_compute::parser::enrichment_admission::UnitKey;
-use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
-use medulla_compute::parser::enrichment_snapshot::EligibleUnit;
-use medulla_compute::parser::enrichment_snapshot::EnrichmentBudgetCheckpoint;
-use medulla_compute::parser::enrichment_snapshot::EnrichmentWorkStage;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleUnit;
+use medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentBudgetCheckpoint;
+use medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentWorkStage;
 use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "blob")]
 use medulla_server_api::api::reentry::DrainOutcome;
@@ -947,7 +947,7 @@ mod tests {
     #[test]
     fn maximum_eligible_snapshot_fits_inline_intent_bound() {
         let mut source = snapshot(
-            medulla_compute::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS,
+            medulla_compute_assemble::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS,
             u64::MAX,
         );
         source.tenant_id = "t".repeat(512);
@@ -958,7 +958,7 @@ mod tests {
         for (index, unit) in source.units.iter_mut().enumerate() {
             unit.parser_capability_digest = format!("{}{:012}", "p".repeat(500), index);
             unit.content_length =
-                medulla_compute::parser::enrichment_snapshot::MAX_REPOSITORY_CONTENT_BYTES;
+                medulla_compute_assemble::parser::enrichment_snapshot::MAX_REPOSITORY_CONTENT_BYTES;
             unit.compute_units = u64::MAX;
         }
         source.validate().unwrap();
@@ -980,7 +980,7 @@ mod tests {
         };
         assert_eq!(
             decode_pending_intent(&intent).unwrap().units.len(),
-            medulla_compute::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS
+            medulla_compute_assemble::parser::enrichment_snapshot::MAX_ELIGIBLE_UNITS
         );
     }
 

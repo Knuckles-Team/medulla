@@ -598,7 +598,7 @@ impl ColumnStats {
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, Default)]
 pub struct DistinctStats {
-    sketches: std::collections::HashMap<String, medulla_compute::sketch::HyperLogLog>,
+    sketches: std::collections::HashMap<String, medulla_compute_assemble::sketch::HyperLogLog>,
 }
 
 #[cfg(feature = "query")]
@@ -617,7 +617,8 @@ impl DistinctStats {
     /// memory point for no query-planning benefit).
     fn compute(view: &medulla_graph_core::graph::GraphView) -> Self {
         use std::collections::HashMap;
-        let mut sketches: HashMap<String, medulla_compute::sketch::HyperLogLog> = HashMap::new();
+        let mut sketches: HashMap<String, medulla_compute_assemble::sketch::HyperLogLog> =
+            HashMap::new();
         visit_top_level_properties(view, |k, val| {
             if matches!(
                 val,

@@ -58,7 +58,7 @@ fn ranked_levels(order: &ObjectiveOrder) -> Vec<ObjectiveLevelKind> {
 /// their own budget screening. The caller applies the policy's
 /// `UnknownCostRule`: under `ExcludeWhenStrict` this candidate and level
 /// abstain the decision (MEDULLA-DECISION-ENGINE-R014.100.2).
-pub(super) fn first_unknown_size_or_cost(
+pub fn first_unknown_size_or_cost(
     inputs: &DecisionInputs,
     legal: &[usize],
 ) -> Option<(String, &'static str)> {
@@ -228,7 +228,7 @@ fn level_label(kind: ObjectiveLevelKind) -> &'static str {
 /// `Observation`, naming the revision that measured it
 /// (MEDULLA-DECISION-ENGINE-R014.100.2). A level whose value is unknown adds
 /// nothing: the record never states a value nobody measured.
-pub(super) fn premises(inputs: &DecisionInputs, chosen: &[&CandidateFacts]) -> Vec<PremiseRef> {
+pub fn premises(inputs: &DecisionInputs, chosen: &[&CandidateFacts]) -> Vec<PremiseRef> {
     let ranked = ranked_levels(&inputs.policy.objective);
     let mut out = Vec::new();
     for candidate in chosen {

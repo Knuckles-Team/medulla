@@ -2,7 +2,7 @@
 // (Neo4j GDS `gds.louvain` parity).
 
 use super::graph::AdjacencyGraph;
-use medulla_compute::SplitMix64;
+use medulla_compute_assemble::SplitMix64;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::hash::Hash;

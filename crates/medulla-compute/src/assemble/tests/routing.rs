@@ -10,8 +10,11 @@ use medulla_decision_types::decision::{
 };
 use medulla_types::evidence_class::EvidenceClass;
 
-use super::super::{assemble, replay_check, Assembly};
 use super::fixture::*;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+    medulla_compute_assemble::assemble::Assembly,
+};
 
 /// What an item accepts.
 enum Accept {

@@ -9,8 +9,12 @@ use medulla_agent_types::{
 };
 use medulla_decision_types::{decision::DecisionOutcome, decision::TemplateFacts};
 
-use super::super::{assemble, inputs as build_inputs, replay_check};
 use super::fixture::*;
+use {
+    medulla_compute_assemble::assemble::assemble,
+    medulla_compute_assemble::assemble::inputs as build_inputs,
+    medulla_compute_assemble::assemble::replay_check,
+};
 
 fn agent_node(node_id: &str) -> AgentGraphNode {
     AgentGraphNode {
@@ -74,7 +78,7 @@ pub(super) fn reference(template: &TemplateFacts) -> AgentGraphEntryRef {
     }
 }
 
-fn decide_over(templates: Vec<TemplateFacts>) -> super::super::Assembly {
+fn decide_over(templates: Vec<TemplateFacts>) -> medulla_compute_assemble::assemble::Assembly {
     let mut asked = request(&["eg:task/research"], &[]);
     asked.templates = bounded(templates.iter().map(reference).collect());
     let inputs = build_inputs(

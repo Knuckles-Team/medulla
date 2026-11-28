@@ -116,9 +116,7 @@ pub fn compose_coding_agent_plan(
 
 /// The abstention reasons of the request's coding-agent question; `None` when
 /// the request carries none or the plan composes.
-pub(super) fn refusals(
-    inputs: &DecisionInputs,
-) -> Result<Option<Vec<AbstainReason>>, AssembleError> {
+pub fn refusals(inputs: &DecisionInputs) -> Result<Option<Vec<AbstainReason>>, AssembleError> {
     let Some(request) = &inputs.request.coding_agent else {
         return Ok(None);
     };
@@ -152,7 +150,7 @@ fn claim(subject: String, fact: &str) -> PremiseRef {
 
 /// The premises the question rests on, each a claim the caller made: the
 /// agent at its revision, its receipt and every skill at its version.
-pub(super) fn premises(inputs: &DecisionInputs) -> Vec<PremiseRef> {
+pub fn premises(inputs: &DecisionInputs) -> Vec<PremiseRef> {
     let Some(request) = &inputs.request.coding_agent else {
         return Vec::new();
     };

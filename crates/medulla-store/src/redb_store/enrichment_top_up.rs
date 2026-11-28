@@ -3,7 +3,7 @@
 //! entering the graph-shard transaction.
 
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
-use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,

@@ -1,113 +1,21 @@
-// Compute primitives built ahead of their wire exposure (e.g. parametric_var,
-// inv_norm) are kept; matches the facade's long-standing crate-level posture.
-
 //! medulla-compute — the compute domains layered above the graph core: always-on graph
 //! `algorithms` + `ast`/`parser` (their tree-sitter parts gated by `ast`), plus the
 //! feature-gated `finance`, `datascience`, and `reasoning` domains. Depends on
 //! `medulla-types` and `medulla-core`, never on `medulla-server`. It re-exports nothing from
 //! the lower crates: a caller names the owning crate.
 
-/// Find a disjoint-set root while halving each traversed path. Both entity
-/// resolution clusters and impact polytree detection use this exact rule.
-pub fn union_find_root(parent: &mut [usize], mut node: usize) -> usize {
-    while parent[node] != node {
-        parent[node] = parent[parent[node]];
-        node = parent[node];
-    }
-    node
-}
-
-/// Advance a SplitMix64 state by one step.
-///
-/// Compute domains use the same mixing algorithm while retaining their own
-/// seed conventions. Keeping only the state transition here preserves each
-/// caller's stream and gives the implementation one canonical home.
-pub fn splitmix64_next(state: &mut u64) -> u64 {
-    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    let mut z = *state;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    z ^ (z >> 31)
-}
-
-/// The dependency-free SplitMix64 stream shared by the always-on `graph_algos`
-/// kernels (`louvain::visit_order`, `random_walk`, and the `similarity`
-/// NN-descent sampler), each of which previously carried its own byte-identical
-/// copy. `new` seeds the state directly and every draw advances via
-/// [`splitmix64_next`], so each caller's stream is bit-for-bit what its local
-/// copy produced — the seeded reproducibility those algorithms document is
-/// preserved exactly.
-pub struct SplitMix64 {
-    word: u64,
-}
-
-impl SplitMix64 {
-    pub fn new(seed: u64) -> Self {
-        Self { word: seed }
-    }
-
-    pub fn next_u64(&mut self) -> u64 {
-        splitmix64_next(&mut self.word)
-    }
-
-    /// A uniform `f64` in `[0, 1)`, via the top 53 bits (the standard
-    /// integer-to-double technique — full `f64` mantissa precision).
-    pub fn next_f64(&mut self) -> f64 {
-        (self.next_u64() >> 11) as f64 * (1.0 / (1u64 << 53) as f64)
-    }
-
-    /// Uniform integer in `[0, bound)`; `bound` must be positive.
-    pub fn below(&mut self, bound: usize) -> usize {
-        (self.next_u64() % bound as u64) as usize
-    }
-}
-
-pub mod node_labels;
-// MEDULLA-CQ-ORCH-R704: stored canonical workflows become task plans.
-pub mod process_plan;
 // CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms — standalone graph data-science algorithms (Neo4j GDS parity).
 // Pure-Rust, deterministic, generic over node id; decoupled from the live engine
 // graph so it is unit-testable in isolation. Always-on (no heavy deps).
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod ast;
 
-// ModalityContract retrofit for `ast::symbol::Symbol` (CONCEPT:E4/X1), opt-in `contract` feature.
-#[cfg(feature = "contract")]
-mod contract;
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod parser;
-pub mod screen;
-// MEDULLA-BRANCH-MERGE-R008 — pure diff3 line merge for file blobs; both the
-// accept path (`MEDULLA-SCM-R003`) and `merge_file` (`MEDULLA-BRANCH-MERGE-R010`)
-// call it. No handler type, std-only, always-on.
-pub mod line_merge;
-// MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
-/// Bisect over the gate verdicts of the source-changeset chain (MEDULLA-SCM-R009).
-pub mod source_bisect;
-/// Git object ids, trees, commits and version-2 packs (MEDULLA-SCM-R010).
-pub mod source_git_objects;
-/// Derived history indexes of the source-changeset chain (MEDULLA-SCM-R005).
-pub mod source_history;
-pub mod source_symbol_edit;
-/// Tree materialization of the source-changeset chain (MEDULLA-SCM-R004).
-pub mod source_tree;
-/// Shared parser fixtures for this crate's unit tests and downstream test
-/// consumers. The feature is dev-only in the facade and absent from releases.
-#[cfg(all(any(test, feature = "test-support"), feature = "ast"))]
-pub mod test_support;
-// CONCEPT:MEDULLA-KG.compute.approximate-sketches (W4.5/N5) — HyperLogLog / Count-Min Sketch /
-// MinHash. Pure-Rust (only `std`), deterministic given the same inserted items — the lowest
-// common DAG ancestor of `medulla-plan` (PlanStats cardinality inputs) and `medulla-query` (SQL aggregate
-// UDFs), which is why it lives here rather than in either consumer. Always-on (no heavy deps).
-pub mod sketch;
 
-#[cfg(feature = "datascience")]
-pub mod datascience;
-// CONCEPT:MEDULLA-KG.compute.bayesian-fusion-helpers — Bayesian-update / mixture / fusion helpers over the
-// `medulla_types::Distribution` value. Conjugate posteriors are closed-form (no
-// sampling), so this rides the pure `reasoning` feature (no heavy dep).
-#[cfg(feature = "reasoning")]
-pub mod probabilistic;
 // Decide layer packages A2/A5 — the assembly decision function: step-1b
 // eliminations, the typed model over the legal remainder, the solve with its
 // no-good loop, why-not re-solves and the sealed, replayable record.
 #[cfg(feature = "decide")]
+#[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod assemble;

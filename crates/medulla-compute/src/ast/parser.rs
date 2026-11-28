@@ -10,8 +10,12 @@
 // child walks below.
 #![allow(clippy::only_used_in_recursion, clippy::needless_range_loop)]
 
-use super::symbol::{ParseResult, Symbol, SymbolType};
 use tree_sitter::{Language, Node, Parser};
+use {
+    medulla_compute_assemble::ast::symbol::ParseResult,
+    medulla_compute_assemble::ast::symbol::Symbol,
+    medulla_compute_assemble::ast::symbol::SymbolType,
+};
 
 /// Supported languages for AST parsing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

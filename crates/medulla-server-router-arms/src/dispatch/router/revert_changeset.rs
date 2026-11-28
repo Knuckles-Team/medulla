@@ -19,7 +19,6 @@ mod served {
     use super::super::read_path_history::RegistryHistory;
     use super::super::submit_changeset::{submit_changeset_with, SubmitChangesetFields};
     use super::*;
-    use medulla_compute::source_history::{decode_head, head_key, id_key, HistoryIndex};
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_revert::{plan_revert, RevertPlan, MAX_REVERT_WINDOW};
     use medulla_mutation_types::branch::BranchRef;
@@ -27,6 +26,12 @@ mod served {
     use medulla_server_blob::blob::BlobStateExt;
     use medulla_source_types::source_changeset::{Changeset, SubmitChangesetReceipt};
     use medulla_source_types::source_path_grant::PathAccess;
+    use {
+        medulla_compute_assemble::source_history::decode_head,
+        medulla_compute_assemble::source_history::head_key,
+        medulla_compute_assemble::source_history::id_key,
+        medulla_compute_assemble::source_history::HistoryIndex,
+    };
 
     /// The chain from `target` to the head, oldest first, each with its carrying commit id.
     fn read_window(

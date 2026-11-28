@@ -23,7 +23,7 @@ arbora (admission, auth, principal) --> medulla dispatch
 | 4 Entailment | `crates/medulla-decision-types/src/decision/record/` | Derivation records back entailed answers. |
 | 5 Exact solve | `crates/medulla-decision-policy/src/solve`, `crates/medulla-compute/src/assemble` | Bounded 0-1 model, certificate and node budget. |
 | 6 Statistical rank | `crates/medulla-decision-stats/src/decision`, `crates/medulla-h-decide/src/decide/stat_decide.rs` | Fitted heads rank legal options or abstain. They never widen the legal set. |
-| 7 Conclude | `crates/medulla-compute/src/assemble/conclude.rs`, `crates/medulla-h-decide/src/decide/stat_decide.rs` | One `ResolutionKind`, one `EvidenceClass`, one typed abstention. |
+| 7 Conclude | `crates/medulla-compute-assemble/src/assemble/conclude.rs`, `crates/medulla-h-decide/src/decide/stat_decide.rs` | One `ResolutionKind`, one `EvidenceClass`, one typed abstention. |
 | 8 Record | `crates/medulla-decision-types/src/decision/record.rs`, `crates/medulla-h-decide/src/decide/stat_log.rs` | The sealed record pins inputs, premises, digests and result. |
 | 9 Commit | `crates/medulla-h-decide/src/decide/commit.rs` | Re-derive, verify, catalog compare-and-set, idempotent retry. |
 | 10 Learn | `crates/medulla-h-decide/src/decide/stat_learning.rs`, `crates/medulla-h-decide/src/decide/stat_jobs.rs` | Outcomes, off-policy estimates, fit, evaluate, guarded publish. |

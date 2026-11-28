@@ -11,7 +11,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_compute::parser::spec_artifacts::{is_row_id, parse_spec_file, SDD_NS};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_source_types::source_changeset::Changeset;
@@ -19,6 +18,11 @@ use medulla_types::contract::EngineErrorCode;
 use {
     medulla_catalog_source_types::ontology_inspection::RdfObject,
     medulla_catalog_source_types::ontology_inspection::RdfTriple,
+};
+use {
+    medulla_compute_assemble::parser::spec_artifacts::is_row_id,
+    medulla_compute_assemble::parser::spec_artifacts::parse_spec_file,
+    medulla_compute_assemble::parser::spec_artifacts::SDD_NS,
 };
 
 /// Refusal code of a row ID that resolves to no row.
@@ -921,7 +925,8 @@ pub fn project_tasks(
         } else {
             continue;
         };
-        let Some(task) = medulla_compute::parser::spec_artifacts::parse_task_line(ticked, rest)
+        let Some(task) =
+            medulla_compute_assemble::parser::spec_artifacts::parse_task_line(ticked, rest)
         else {
             continue;
         };
@@ -2326,7 +2331,7 @@ pub async fn commit_requirements(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::parser::spec_artifacts::parse_spec_file;
+    use medulla_compute_assemble::parser::spec_artifacts::parse_spec_file;
 
     const REQUIREMENTS: &str = "# Requirements\n\n\
 | ID | Requirement | Acceptance |\n|----|----|----|\n\

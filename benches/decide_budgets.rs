@@ -40,7 +40,7 @@ use medulla_agent_types::agent_component::{
 use medulla_agent_types::agent_topology::{
     LeasePlan, SlotPlan, StopRule, TopologyPlan, TopologyPolicy,
 };
-use medulla_compute::assemble::admit_topology;
+use medulla_compute_assemble::assemble::admit_topology;
 use medulla_decision_outcome_types::decision::concentration::{
     concentration_verdict, ConcentrationPolicy, EditFact,
 };
@@ -3777,7 +3777,7 @@ const PROCESS_PLAN_STEPS: usize = 60;
 /// hold, a chain of tool steps, is planned by `plan_from_workflow` and sealed by
 /// `plan_explicit_tasks`. Budget in `group_budgets`: p99 at most 30 ms.
 fn bench_process_plan(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
-    use medulla_compute::process_plan::plan::plan_from_workflow;
+    use medulla_compute_assemble::process_plan::plan::plan_from_workflow;
     use medulla_decision_types::decision::process_plan::{
         BindingSource, BindingTarget, StepBinding,
     };
@@ -3838,7 +3838,8 @@ fn bench_process_plan(c: &mut Criterion, report: &mut BTreeMap<String, serde_jso
         annex: Vec::new(),
         losses: Vec::new(),
     };
-    let no_callee = |_: &str| -> Option<medulla_compute::process_plan::plan::Callee> { None };
+    let no_callee =
+        |_: &str| -> Option<medulla_compute_assemble::process_plan::plan::Callee> { None };
     let plan = || {
         let drafted = plan_from_workflow(black_box(&workflow), &bindings, &no_callee, 4, 86_400)
             .expect("the bench workflow plans");

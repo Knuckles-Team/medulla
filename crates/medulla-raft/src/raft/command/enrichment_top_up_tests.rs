@@ -1,5 +1,5 @@
-use medulla_compute::parser::enrichment_snapshot::EligibleUnit;
-use medulla_compute::parser::enrichment_snapshot::EnrichmentWorkStage;
+use medulla_compute_assemble::parser::enrichment_snapshot::EligibleUnit;
+use medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentWorkStage;
 use medulla_mutation_types::mutation_scope::CommittedVersion;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
@@ -15,7 +15,7 @@ use medulla_work_types::{
 };
 
 fn transition() -> EnrichmentTopUpTransition {
-    let old = medulla_compute::test_support::repository_enrichment_snapshot(
+    let old = medulla_compute_assemble::test_support::repository_enrichment_snapshot(
         "tenant-a",
         "graph-a",
         10,

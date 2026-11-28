@@ -23,7 +23,7 @@ struct ScreenObservationWire {
     #[serde(with = "serde_bytes", default)]
     png: Vec<u8>,
     #[serde(default)]
-    elements: Vec<medulla_compute::screen::UiElementInput>,
+    elements: Vec<medulla_compute_assemble::screen::UiElementInput>,
 }
 
 /// Session identity and previous-frame lineage. Checked in the ORIGINAL order:
@@ -92,7 +92,9 @@ fn validate_screen_png(png: &[u8]) -> Result<(), String> {
     validate_screen_png_dimensions(width, height)
 }
 
-fn screen_element_text_within_policy(element: &medulla_compute::screen::UiElementInput) -> bool {
+fn screen_element_text_within_policy(
+    element: &medulla_compute_assemble::screen::UiElementInput,
+) -> bool {
     !element.role.is_empty()
         && element.role.len() <= MAX_SCREEN_ROLE_BYTES
         && !element.role.chars().any(char::is_control)
@@ -100,7 +102,9 @@ fn screen_element_text_within_policy(element: &medulla_compute::screen::UiElemen
         && !element.name.contains('\0')
 }
 
-fn screen_element_box_within_policy(element: &medulla_compute::screen::UiElementInput) -> bool {
+fn screen_element_box_within_policy(
+    element: &medulla_compute_assemble::screen::UiElementInput,
+) -> bool {
     element.x.unsigned_abs() <= MAX_SCREEN_COORDINATE_ABS as u64
         && element.y.unsigned_abs() <= MAX_SCREEN_COORDINATE_ABS as u64
         && element.w >= 0
@@ -113,7 +117,7 @@ fn screen_element_box_within_policy(element: &medulla_compute::screen::UiElement
 /// budget — the running total is what bounds a request built from many small
 /// but individually legal elements.
 fn validate_screen_elements(
-    elements: &[medulla_compute::screen::UiElementInput],
+    elements: &[medulla_compute_assemble::screen::UiElementInput],
 ) -> Result<(), String> {
     if elements.len() > MAX_SCREEN_ELEMENTS {
         return Err("screen element count exceeds the resource limit".to_string());
@@ -137,7 +141,7 @@ fn validate_screen_elements(
 
 pub fn decode_screen_observation(
     obs_msgpack: &[u8],
-) -> Result<medulla_compute::screen::ScreenObservationInput, String> {
+) -> Result<medulla_compute_assemble::screen::ScreenObservationInput, String> {
     let wire: ScreenObservationWire = medulla_types::msgpack::decode_bounded(
         obs_msgpack,
         medulla_types::msgpack::MsgpackLimits::new(
@@ -152,7 +156,7 @@ pub fn decode_screen_observation(
     validate_screen_png(&wire.png)?;
     validate_screen_elements(&wire.elements)?;
 
-    Ok(medulla_compute::screen::ScreenObservationInput {
+    Ok(medulla_compute_assemble::screen::ScreenObservationInput {
         session_id: wire.session_id,
         frame_seq: wire.frame_seq,
         prev_frame_id: wire.prev_frame_id,

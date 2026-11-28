@@ -4,7 +4,7 @@
 //! Run: cargo bench -p medulla-compute --bench spec_parse
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_compute::parser::spec_artifacts::parse_spec_file;
+use medulla_compute_assemble::parser::spec_artifacts::parse_spec_file;
 use std::hint::black_box;
 
 fn corpus() -> (String, String) {

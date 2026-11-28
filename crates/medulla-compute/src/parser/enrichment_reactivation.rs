@@ -7,9 +7,12 @@ use medulla_work_types::{
     native_control::EnrichmentBudgetPark,
 };
 
-use super::enrichment_snapshot::{EligibleSnapshot, EnrichmentBudgetCheckpoint};
+use {
+    medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
+    medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentBudgetCheckpoint,
+};
 
-pub use super::TOP_UP_ACTION;
+pub use medulla_compute_assemble::parser::TOP_UP_ACTION;
 
 /// Caller-proposed revision fields. The serving boundary must bind these to a
 /// verified caller, retained policy authority, and a durable prior revision.
@@ -175,11 +178,14 @@ pub fn plan_reactivation(
 
 #[cfg(test)]
 mod tests {
-    use super::super::enrichment_snapshot::{EligibleUnit, EnrichmentWorkStage};
     use super::*;
+    use {
+        medulla_compute_assemble::parser::enrichment_snapshot::EligibleUnit,
+        medulla_compute_assemble::parser::enrichment_snapshot::EnrichmentWorkStage,
+    };
 
     fn source(cost: u64, budget: u64) -> EligibleSnapshot {
-        crate::test_support::repository_enrichment_snapshot(
+        medulla_compute_assemble::test_support::repository_enrichment_snapshot(
             "tenant",
             "code",
             budget,

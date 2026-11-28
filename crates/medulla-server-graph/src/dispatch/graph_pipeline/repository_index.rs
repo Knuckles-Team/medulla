@@ -136,11 +136,11 @@ async fn branch_changesets(
             }
             if let Some(bytes) = registry.history_row(
                 &reference,
-                &medulla_compute::source_history::seq_key(&commit.id),
+                &medulla_compute_assemble::source_history::seq_key(&commit.id),
             )? {
                 seqs.insert(
                     changeset.id.clone(),
-                    medulla_compute::source_history::decode_seq(&bytes)?,
+                    medulla_compute_assemble::source_history::decode_seq(&bytes)?,
                 );
             }
             chain.push(changeset);

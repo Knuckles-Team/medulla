@@ -60,7 +60,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-CLUSTER-R008.1` | IVF coarse quantizer and PQ codebooks train on the kernel | `crates/medulla-ann/tests/ivfpq_kernel.rs::recall_matches_exact_mode_within_budget` (planned) |
 | `MEDULLA-CLUSTER-R008.2` | Distance helpers move to the kernel | `crates/medulla-numeric/tests/cluster_kernel.rs::sq_dist_matches_scalar_reference_bits` (planned) |
 | `MEDULLA-CLUSTER-R008.3` | The accelerator becomes a kernel backend | `crates/medulla-numeric/tests/cluster_kernel.rs::custom_backend_is_used_and_must_agree` (planned) |
-| `MEDULLA-CLUSTER-R008.4` | The served data-science method | `crates/medulla-compute/src/datascience/primitives.rs::tests::test_kmeans` |
+| `MEDULLA-CLUSTER-R008.4` | The served data-science method | `crates/medulla-compute-assemble/src/datascience/primitives.rs::tests::test_kmeans` |
 | `MEDULLA-CLUSTER-R008.5` | The SQL aggregate and the Python kernel | `crates/medulla-numeric/tests/cluster_kernel.rs::python_surface_args_map_to_config` (planned) |
 | `MEDULLA-CLUSTER-R008.6` | Spectral partitions (MEDULLA-FEDERATED-QUERY-R607.2) | `crates/medulla-graph-algos/src/graph_algos/spectral.rs::tests::planted_partition_is_recovered_and_ids_are_stable` |
 | `MEDULLA-CLUSTER-R008.7` | Mixture-model seeding | `crates/medulla-mining/src/mining/cluster.rs::tests::gmm_is_deterministic_for_a_seed` |

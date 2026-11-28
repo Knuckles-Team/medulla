@@ -227,7 +227,7 @@ pub fn select_system_prompt(
 /// the chosen prompt (`prompt_component_id`, `connector`, `digest`, one `covered_capability`
 /// per required capability it serves) and `prompt_score_q32`, and for any decision one
 /// `excluded_prompt:<component_id>` premise per prompt a failed connector hid.
-pub(super) fn premises(inputs: &DecisionInputs, solved: bool) -> Vec<PremiseRef> {
+pub fn premises(inputs: &DecisionInputs, solved: bool) -> Vec<PremiseRef> {
     let Some(selection) = inputs.prompt_selection.as_ref() else {
         return Vec::new();
     };

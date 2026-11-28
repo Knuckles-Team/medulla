@@ -20,7 +20,7 @@ use medulla_agent_types::agent_topology::TopologyFacts;
 
 /// One (width, rounds) choice of one slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Choice {
+pub struct Choice {
     pub slot: usize,
     pub width: u8,
     pub rounds: u8,
@@ -61,7 +61,7 @@ fn choice(index: usize, slot: &SlotTopology, subtasks: u32, width: u8, rounds: u
 
 /// Every choice of slot `index`, width ascending then rounds ascending; empty
 /// when the caps leave the slot no width or no round.
-pub(crate) fn slot_choices(
+pub fn slot_choices(
     facts: &TopologyFacts,
     index: usize,
     caps: &TopologyCaps,
@@ -77,6 +77,6 @@ pub(crate) fn slot_choices(
 }
 
 /// The fewest agents the fan-out needs: `⌈subtasks / per_agent_subtasks⌉`.
-pub(crate) fn demanded_width(subtasks: u32, per_agent_subtasks: u32) -> u64 {
+pub fn demanded_width(subtasks: u32, per_agent_subtasks: u32) -> u64 {
     u64::from(subtasks).div_ceil(u64::from(per_agent_subtasks.max(1)))
 }

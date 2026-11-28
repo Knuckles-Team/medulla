@@ -60,7 +60,8 @@ mod served {
 
     /// Check the request bounds before any store is read.
     fn validate(request: &ImportGitHistoryRequest) -> Result<(), String> {
-        let id_len = medulla_compute::source_git_objects::id_len(request.object_format) * 2;
+        let id_len =
+            medulla_compute_assemble::source_git_objects::id_len(request.object_format) * 2;
         if !lower_hex(&request.pack_digest, 64) {
             return Err(refusal(ChangesetRefusal::ChangesetInvalid, "pack_digest"));
         }

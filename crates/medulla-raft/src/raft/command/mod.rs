@@ -16,7 +16,7 @@ pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_MET
 /// this module and its top-up child. The production decoder still validates it.
 #[cfg(any(test, feature = "test-support"))]
 pub fn pending_repository_intent(
-    snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+    snapshot: medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
     topic: &str,
 ) -> medulla_mutation_types::mutation_scope::MutationOutboxIntent {
     medulla_mutation_types::mutation_scope::MutationOutboxIntent {

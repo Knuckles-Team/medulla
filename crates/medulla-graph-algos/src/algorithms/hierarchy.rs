@@ -131,7 +131,7 @@ fn project_cluster_graph(
         ids.retain(|id| {
             view.node_properties
                 .get(id)
-                .and_then(|b| medulla_compute::node_labels::node_type_label(b))
+                .and_then(|b| medulla_compute_assemble::node_labels::node_type_label(b))
                 .as_deref()
                 == Some(want)
         });
@@ -147,7 +147,7 @@ fn project_cluster_graph(
         .map(|id| {
             view.node_properties
                 .get(id)
-                .and_then(|b| medulla_compute::node_labels::node_type_label(b))
+                .and_then(|b| medulla_compute_assemble::node_labels::node_type_label(b))
                 .unwrap_or_else(|| "_".to_string())
         })
         .collect();

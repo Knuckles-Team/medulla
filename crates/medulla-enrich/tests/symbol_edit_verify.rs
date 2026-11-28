@@ -1,7 +1,7 @@
 //! MEDULLA-SCM-R013.3: the re-parse of a projected symbol edit.
 
 use medulla_compute::ast::parser::{parse_file, SourceLanguage};
-use medulla_compute::ast::symbol::ParseResult;
+use medulla_compute_assemble::ast::symbol::ParseResult;
 use medulla_enrich::symbol_edit_verify::{verify_roundtrip, RoundtripRefusal};
 use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
 

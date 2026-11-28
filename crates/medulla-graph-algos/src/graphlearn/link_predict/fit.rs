@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
-use medulla_compute::{
-    datascience::training::adam_step, datascience::training::AdamHyperparameters,
+use {
+    medulla_compute_assemble::datascience::training::adam_step,
+    medulla_compute_assemble::datascience::training::AdamHyperparameters,
 };
 
 use super::{

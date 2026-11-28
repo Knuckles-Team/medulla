@@ -2,12 +2,16 @@
 
 use std::path::PathBuf;
 
-use medulla_compute::parser::spec_artifacts::{
-    parse_spec_dir, parse_spec_file, parse_task_line, SpecArtifactRefusal, SDD_NS,
-};
 use {
     medulla_catalog_source_types::ontology_inspection::RdfObject,
     medulla_catalog_source_types::ontology_inspection::RdfTriple,
+};
+use {
+    medulla_compute_assemble::parser::spec_artifacts::parse_spec_dir,
+    medulla_compute_assemble::parser::spec_artifacts::parse_spec_file,
+    medulla_compute_assemble::parser::spec_artifacts::parse_task_line,
+    medulla_compute_assemble::parser::spec_artifacts::SpecArtifactRefusal,
+    medulla_compute_assemble::parser::spec_artifacts::SDD_NS,
 };
 
 const REQUIREMENTS: &str = "# Requirements\n\n## Rows\n\n\

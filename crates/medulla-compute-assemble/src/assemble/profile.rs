@@ -40,7 +40,7 @@ impl DecisionRefusal for NotAllowed {
 }
 
 /// The premise a profile-constrained decision lists.
-pub(super) fn premise(inputs: &DecisionInputs) -> Option<PremiseRef> {
+pub fn premise(inputs: &DecisionInputs) -> Option<PremiseRef> {
     let profile = inputs.profile.as_ref()?;
     Some(PremiseRef {
         subject: format!("profile:{}@{}", profile.profile_id, profile.revision),
@@ -55,7 +55,7 @@ pub(super) fn premise(inputs: &DecisionInputs) -> Option<PremiseRef> {
 
 /// Report an uncovered capability that the allowlist alone made uncoverable
 /// under the profile's code; every other reason is kept as it is.
-pub(super) fn attribute(inputs: &DecisionInputs, decided: &mut Decided) {
+pub fn attribute(inputs: &DecisionInputs, decided: &mut Decided) {
     let Some(profile) = &inputs.profile else {
         return;
     };

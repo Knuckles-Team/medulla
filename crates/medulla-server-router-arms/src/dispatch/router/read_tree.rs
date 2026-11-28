@@ -15,7 +15,7 @@ pub struct ReadTreeFields {
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod served {
     use super::*;
-    use medulla_compute::source_tree::TreeChain;
+    use medulla_compute_assemble::source_tree::TreeChain;
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_tree::read_tree;
     use medulla_mutation_types::branch::BranchRef;

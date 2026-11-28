@@ -36,7 +36,7 @@ const AGENT_NODE: &str = "agent";
 const END_NODE: &str = "end";
 
 /// The slot a selected candidate fills, by kind.
-pub(super) fn slot_name(kind: AgentComponentKind) -> &'static str {
+pub fn slot_name(kind: AgentComponentKind) -> &'static str {
     kind.as_str()
 }
 

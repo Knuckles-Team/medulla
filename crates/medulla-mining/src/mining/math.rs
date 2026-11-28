@@ -54,7 +54,7 @@ impl SplitMix64 {
     }
 
     pub(super) fn next_u64(&mut self) -> u64 {
-        medulla_compute::splitmix64_next(&mut self.word)
+        medulla_compute_assemble::splitmix64_next(&mut self.word)
     }
 
     pub(super) fn next_f64(&mut self) -> f64 {

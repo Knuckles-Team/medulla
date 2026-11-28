@@ -1,3 +1,5 @@
+
+
 [package]
 name = "medulla-compute"
 version = "0.27.0"
@@ -10,7 +12,7 @@ license = "MIT"
 name = "medulla_compute"
 
 [features]
-test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-query-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-source-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support", "medulla-compute-assemble/test-support"]
 # `algorithms`, `ast`, and `parser` are always compiled (algorithms is used by
 # the always-on graph-op handlers); the heavy domains are gated so a slim build
 # links neither their code nor their deps. Mirrors the facade feature names 1:1.
@@ -20,8 +22,8 @@ test-support = ["medulla-types/test-support", "medulla-query-types/test-support"
 # Decide layer's conformal kernels, so finance links medulla-numeric (always-built
 # conformal/risk modules; no `decision` feature needed), and turns trend flips
 # into CEP events for medulla-stream's NFA (its runtime-free batch core; no tokio).
-finance = ["dep:nalgebra", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-numeric/analytics", "dep:medulla-stream"]
-datascience = ["dep:rand_chacha", "medulla-types/datascience", "medulla-query-types/datascience", "medulla-result-types/datascience", "medulla-protocol-types/datascience"]
+finance = ["medulla-types/finance", "medulla-result-types/finance", "medulla-compute-assemble/finance"]
+datascience = ["medulla-types/datascience", "medulla-query-types/datascience", "medulla-result-types/datascience", "medulla-compute-assemble/datascience"]
 # Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining): pure-Rust,
 # dependency-light frequent-itemset + association-rule mining. It turns on the
 # matching medulla-types feature so the `MineAssociate` wire variant exists, and links
@@ -29,39 +31,39 @@ datascience = ["dep:rand_chacha", "medulla-types/datascience", "medulla-query-ty
 # significance uses and -- with `medulla-numeric/motif` (EH-529, ANALYTICS-HARVEST AH-09)
 # -- for `MineAnomaly`'s `Algorithm::MatrixProfileDiscord` alone, which reuses the
 # medulla-numeric matrix-profile kernel rather than a second implementation.
-mining = ["medulla-types/mining", "medulla-query-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "dep:medulla-geo", "medulla-numeric/motif"]
+mining = ["medulla-types/mining", "medulla-query-types/mining", "medulla-result-types/mining", "medulla-compute-assemble/mining"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor):
 # a pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph whose
 # learned per-feature edge functions ARE queryable KG artifacts. Reuses the
 # analytic-gradient Adam kernels from `datascience::training`, so it implies
 # `datascience`; also turns on the matching medulla-types feature so the `GraphLearn*`
 # wire variants exist. No heavy dep (no torch) — folded into `full` via `compute`.
-graphlearn = ["datascience", "medulla-types/graphlearn", "medulla-query-types/graphlearn", "medulla-result-types/graphlearn", "medulla-protocol-types/graphlearn"]
-reasoning = []
+graphlearn = ["datascience", "medulla-types/graphlearn", "medulla-query-types/graphlearn", "medulla-result-types/graphlearn", "medulla-compute-assemble/graphlearn"]
+reasoning = ["medulla-compute-assemble/reasoning"]
 # General bounded 0-1 integer programming with verifiable certificates (Decide
 # layer package A3): a deterministic node-budgeted branch-and-bound, Lagrangian
 # leaf-bound certificates and an independent verifier (`Method::Solve`). The
 # wire DTOs (validated models with integer rows and a lexicographic objective)
 # live in `medulla-types::solve`; this gates the search and the certificate verifier.
-solve = ["medulla-decision-policy/solve"]
+solve = ["medulla-decision-policy/solve", "medulla-compute-assemble/solve"]
 # RF-ADR-010 A2: `is_a` derivation, evidence classification and the task ->
 # capability closure the assembly layer reasons with. It builds and solves a
 # model, so it implies `solve`.
-decide = ["solve", "mining"]
+decide = ["solve", "mining", "medulla-compute-assemble/decide"]
 # The statistical half of the Decide layer: heads, calibration and the
 # off-policy estimators, which are medulla-numeric kernels.
-decide-stats = ["decide", "medulla-numeric/decision", "medulla-decision-stats-records/decision"]
+decide-stats = ["decide", "medulla-compute-assemble/decide-stats"]
 # GPU transitive-closure DISPATCH SEAM (CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu):
 # compiles the `ClosureBackend` trait + backend selection in `reasoning_closure`. The
 # pure-Rust CPU hash-join is ALWAYS the compiled-in fallback; this marker just opts a
 # build into the seam (and is implied by `gpu-cuda`). No accelerator dep on its own —
 # Pi-lean, kept OUT of pi/full by the facade. Implies `reasoning` (the module it extends).
-gpu = ["reasoning"]
+gpu = ["reasoning", "medulla-compute-assemble/gpu"]
 # REAL CUDA transitive-join backend: pulls `cudarc` (dynamic-loading, so it builds with
 # NO CUDA toolkit) and runs the two-pass CSR-join kernel on a GPU when a device is
 # present, else falls back to the CPU backend at runtime. Implies `gpu`. OUT of
 # pi/default/full — an extras-only feature, mirroring `medulla-ann`'s `gpu-cuda`.
-gpu-cuda = ["gpu", "dep:cudarc"]
+gpu-cuda = ["gpu", "medulla-compute-assemble/gpu-cuda"]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for MergeProposal`
 # AND `impl ModalityContract for ast::symbol::Symbol` (the X1 real `evidence_address()` ->
 # `EvidenceAddress::CodeSymbol` resolver) + the `modality_conformance_tests!` battery for
@@ -70,81 +72,32 @@ gpu-cuda = ["gpu", "dep:cudarc"]
 # `resolve_candidates` live in the always-on `algorithms` module and `Symbol` lives in
 # the always-on `ast` module, so `contract` needs no other feature implied.
 # `cargo test -p medulla-compute --features contract` runs the suite.
-contract = ["dep:medulla-modality", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract", "medulla-numeric/contract", "medulla-stream?/contract"]
-ast = [
-    "dep:tree-sitter",
-    "dep:tree-sitter-python",
-    "dep:tree-sitter-rust",
-    "dep:tree-sitter-typescript",
-    "dep:tree-sitter-javascript",
-    "dep:tree-sitter-go",
-    "dep:tree-sitter-java",
-    "dep:tree-sitter-c",
-    "dep:tree-sitter-cpp",
-    "dep:tree-sitter-c-sharp",
-    "dep:tree-sitter-sequel",
-]
+contract = ["medulla-graph-core/contract", "medulla-compute-assemble/contract"]
+ast = ["dep:tree-sitter", "dep:tree-sitter-python", "dep:tree-sitter-rust", "dep:tree-sitter-typescript", "dep:tree-sitter-javascript", "dep:tree-sitter-go", "dep:tree-sitter-java", "dep:tree-sitter-c", "dep:tree-sitter-cpp", "dep:tree-sitter-c-sharp", "dep:tree-sitter-sequel", "medulla-compute-assemble/ast"]
 # CONCEPT:KG-2.106 — the extended-language tier. Feature-gated because each grammar
 # adds compile time + binary size; the `ast` core stays lean and `full` opts in.
-ast-extended = [
-    "ast",
-    "dep:tree-sitter-ruby",
-    "dep:tree-sitter-php",
-    "dep:tree-sitter-bash",
-    "dep:tree-sitter-scala",
-    "dep:tree-sitter-lua",
-    "dep:tree-sitter-kotlin-ng",
-    "dep:tree-sitter-objc",
-    "dep:tree-sitter-zig",
-    "dep:tree-sitter-groovy",
-    "dep:tree-sitter-swift",
-    "dep:tree-sitter-verilog",
-    "dep:tree-sitter-julia",
-    "dep:tree-sitter-elixir",
-    "dep:tree-sitter-powershell",
-    "dep:tree-sitter-fortran",
-    "dep:tree-sitter-pascal",
-    # HTML/CSS/JSON register and parse but the generic walker extracts no
-    # symbols from them (no function/class concept) — see the ABI-pin
-    # comment block below.
-    "dep:tree-sitter-html",
-    "dep:tree-sitter-css",
-    "dep:tree-sitter-json",
-    # ABI-15 (CONCEPT:EH-281 follow-up — the `tree-sitter` core pin below was
-    # bumped 0.23 -> 0.25 to unlock these two): Terraform/HCL, DreamMaker.
-    "dep:tree-sitter-hcl",
-    "dep:tree-sitter-dm",
-]
+ast-extended = ["ast", "dep:tree-sitter-ruby", "dep:tree-sitter-php", "dep:tree-sitter-bash", "dep:tree-sitter-scala", "dep:tree-sitter-lua", "dep:tree-sitter-kotlin-ng", "dep:tree-sitter-objc", "dep:tree-sitter-zig", "dep:tree-sitter-groovy", "dep:tree-sitter-swift", "dep:tree-sitter-verilog", "dep:tree-sitter-julia", "dep:tree-sitter-elixir", "dep:tree-sitter-powershell", "dep:tree-sitter-fortran", "dep:tree-sitter-pascal", "dep:tree-sitter-html", "dep:tree-sitter-css", "dep:tree-sitter-json", "dep:tree-sitter-hcl", "dep:tree-sitter-dm", "medulla-compute-assemble/ast-extended"]
 
 [dependencies]
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-types = { path = "../medulla-types" }
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
-medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
-medulla-core = { path = "../medulla-core" }
 # Reuse medulla-geo's generic symmetric distance-matrix traversal for t-SNE's
 # squared-vector metric. Optional with the mining domain so slim builds keep
 # the GIS leaf out of their dependency graph.
-medulla-geo = { path = "../medulla-geo", default-features = false, optional = true }
 # The exact numeric kernels the statistical decision surface is built on
 # (calibration, conformal prediction, off-policy estimators). Optional so a
 # build without `decide-stats` links none of it.
-medulla-numeric = { path = "../medulla-numeric" }
 # The CEP engine trend-flip events run through (finance::market::events).
-medulla-stream = { path = "../medulla-stream", optional = true }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 rmp-serde = "1.3"
-petgraph = { version = "0.8.3", features = ["serde-1"] }
 rayon = "1.12"
 sha2 = "0.10"
 # Git object ids (SHA-1 object format) and pack streams (MEDULLA-SCM-R010).
-sha1 = "0.10"
-flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 hex = "0.4"
-rand = "0.8"
 # Lightweight tracing spans for AST parse/index throughput (CONCEPT:MEDULLA-011). The
 # `tracing` facade compiles to a no-op unless a subscriber is installed, so this
 # adds no runtime cost to a default build.
@@ -152,16 +105,12 @@ tracing = "0.1"
 # ModalityContract retrofit (CONCEPT:E4). Optional, only under `contract` (default
 # OFF) — a default build links none of it and `MergeProposal` carries no new
 # required trait. See `src/contract.rs`.
-medulla-modality = { path = "../medulla-modality", optional = true }
 
 # Optional, domain-gated heavy deps.
-nalgebra = { version = "0.35", features = ["serde"], optional = true }
-rand_chacha = { version = "0.3", optional = true }
 # REAL CUDA transitive-join backend (CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu), only
 # under `gpu-cuda`. `dynamic-loading` dlopens libcuda at runtime, so a `gpu-cuda` build
 # needs no CUDA toolkit and runs (CPU fallback) on a GPU-less host. Pinned to medulla-ann's
 # exact cudarc config so one process shares a single driver/context.
-cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
 # CONCEPT:EH-281 follow-up: bumped 0.23 -> 0.25 to unlock Terraform/HCL and
 # DreamMaker, both ABI 15. Verified additive-only for this crate's own usage
 # before bumping: 0.25's core accepts ABI 13..=15 (a strict SUPERSET of
@@ -254,18 +203,16 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 
 # Criterion harness for the AST parse-throughput baseline bench (CONCEPT:MEDULLA-012).
 # DEV-only — never linked into the engine binary.
-medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
-medulla-isolation = { path = "../medulla-isolation" }
-medulla-decision-stats-records = { path = "../medulla-decision-stats-records" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 
 [dev-dependencies]
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
@@ -275,16 +222,13 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
-medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used
 # by medulla-types' own derivation tests.
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-ingestion-types = { path = "../medulla-ingestion-types", features = ["test-support"] }
-medulla-identity-types = { path = "../medulla-identity-types" }
 # Deterministic RNG for the reasoning-closure differential/parity tests (the runtime
 # `rand_chacha` dep is optional under `datascience`; tests need it unconditionally).
-rand_chacha = "0.3"
 
 # Offline `IndexRepository` driver harness: calls `parser::resolve::index_repository`,
 # which lives behind the `ast` grammars, so the example is gated to it (a default
@@ -300,6 +244,7 @@ required-features = ["ast"]
 # AST parse-throughput baseline (CONCEPT:MEDULLA-012). `parse_files` lives behind the
 # `ast` grammars, so the bench is gated to it (a default `cargo check --benches`
 # skips it). Run: `cargo bench -p medulla-compute --features ast --bench parse_bench`.
+
 [[bench]]
 name = "parse_bench"
 path = "benches/parse_bench.rs"
@@ -309,6 +254,7 @@ required-features = ["ast"]
 # Approximate gds.knn (NN-descent) quality + speed bench (CONCEPT:MEDULLA-KG.compute.node-similarity,
 # W4.3/E11): seeded NN-descent vs the exact O(V^2) sweep. Always-on graph_algos, so no
 # required-features.
+
 [[bench]]
 name = "approx_knn"
 path = "benches/approx_knn.rs"
@@ -316,6 +262,7 @@ harness = false
 
 # Spec-artifact parse bench (MEDULLA-SDLC-R014.1): 500 rows + 500 task lines.
 # Run: `cargo bench -p medulla-compute --bench spec_parse`.
+
 [[bench]]
 name = "spec_parse"
 path = "benches/spec_parse.rs"
@@ -323,6 +270,7 @@ harness = false
 
 # Assembly step derivation bench (MEDULLA-ORCH-VOCAB-R007.1): 64 steps of 16
 # capabilities. Run: `cargo bench -p medulla-compute --bench assemble_steps`.
+
 [[bench]]
 name = "assemble_steps"
 path = "benches/assemble_steps.rs"
@@ -330,10 +278,12 @@ harness = false
 
 # Near-duplicate index bench (MEDULLA-INGEST-WORKER-R702.6): insert plus query over 100,000
 # documents. Run: `cargo bench -p medulla-compute --bench lsh_index`.
+
 [[bench]]
 name = "lsh_index"
 path = "benches/lsh_index.rs"
 # Test-only opt-in cfg (not a feature, so `--all-features` never turns it on). See the
 # crate's device/CPU-feature parity tests for when to pass `--cfg medulla_gpu_device_tests`.
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(medulla_gpu_device_tests)"] }

@@ -21,6 +21,7 @@ medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-audio = { path = "../medulla-audio", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
@@ -70,11 +71,11 @@ medulla-asr-whisper = { path = "../medulla-asr-whisper", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 
 [features]
-test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]
+test-support = ["medulla-server-auth/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-raft/test-support", "medulla-server-api/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support"]
 asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", "dep:medulla-asr-whisper", "medulla-persistence/asr-whisper", "medulla-raft/asr-whisper", "medulla-server-api/asr-whisper", "server"]
-ast = ["medulla-compute/ast", "medulla-server-api/ast", "medulla-store/ast"]
+ast = ["medulla-compute/ast", "medulla-compute-assemble/ast", "medulla-server-api/ast", "medulla-store/ast"]
 blob = ["dep:medulla-rdf", "medulla-rdf/rdf", "redb", "medulla-protocol-types/blob", "medulla-raft/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob", "server"]
-decide = ["medulla-decision-stats/decision", "medulla-decision-stats-records/decision", "redb", "medulla-compute/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server"]
+decide = ["medulla-decision-stats/decision", "medulla-decision-stats-records/decision", "redb", "medulla-compute/decide", "medulla-compute-assemble/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server"]
 modality-serving = ["dep:medulla-video", "medulla-video/runtime", "dep:medulla-image", "medulla-image/runtime", "medulla-document/serving", "dep:medulla-audio", "medulla-audio/runtime", "redb", "security", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "server"]
 query = ["medulla-tables/sql", "medulla-table-store/sql", "redb", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "medulla-store/raft", "server"]
@@ -94,6 +95,7 @@ server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/s
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

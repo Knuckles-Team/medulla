@@ -17,14 +17,27 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use medulla_compute::source_git_objects::{
-    build_commit, build_tree, object_id, parse_commit, parse_tree, read_pack, write_pack,
-    GitObjectError, GitObjectKind, GitTreeEntry, MODE_SUBMODULE, MODE_TREE,
-};
-use medulla_compute::source_tree::{apply_scoped, Tree, TreeChain};
 use medulla_source_types::source_changeset::{
     Changeset, ChangesetRefusal, GitObjectFormat, GitOrigin, PathOp, SubmitChangesetRequest,
     SubmitRefusal, SubmittedPath,
+};
+use {
+    medulla_compute_assemble::source_git_objects::build_commit,
+    medulla_compute_assemble::source_git_objects::build_tree,
+    medulla_compute_assemble::source_git_objects::object_id,
+    medulla_compute_assemble::source_git_objects::parse_commit,
+    medulla_compute_assemble::source_git_objects::parse_tree,
+    medulla_compute_assemble::source_git_objects::read_pack,
+    medulla_compute_assemble::source_git_objects::write_pack,
+    medulla_compute_assemble::source_git_objects::GitObjectError,
+    medulla_compute_assemble::source_git_objects::GitObjectKind,
+    medulla_compute_assemble::source_git_objects::GitTreeEntry,
+    medulla_compute_assemble::source_git_objects::MODE_SUBMODULE,
+    medulla_compute_assemble::source_git_objects::MODE_TREE,
+};
+use {
+    medulla_compute_assemble::source_tree::apply_scoped,
+    medulla_compute_assemble::source_tree::Tree, medulla_compute_assemble::source_tree::TreeChain,
 };
 
 use super::BlobIo;
@@ -110,7 +123,7 @@ type Flat = BTreeMap<String, (u32, String)>;
 fn commit_of(
     objects: &PackObjects,
     id: &str,
-) -> Result<medulla_compute::source_git_objects::ParsedCommit, SubmitRefusal> {
+) -> Result<medulla_compute_assemble::source_git_objects::ParsedCommit, SubmitRefusal> {
     match objects.get(id) {
         Some((GitObjectKind::Commit, body)) => parse_commit(body).map_err(codec),
         Some(_) => Err(malformed(format!("object {id} is not a commit"))),
@@ -257,7 +270,10 @@ pub fn plan_import(
     max_commits: u64,
 ) -> Result<ImportPlan, SubmitRefusal> {
     // Newest first: the commits the branch does not hold yet.
-    let mut line: Vec<(String, medulla_compute::source_git_objects::ParsedCommit)> = Vec::new();
+    let mut line: Vec<(
+        String,
+        medulla_compute_assemble::source_git_objects::ParsedCommit,
+    )> = Vec::new();
     let mut stop: Option<String> = None;
     let mut cursor = head.to_string();
     loop {
@@ -764,13 +780,20 @@ mod tests {
     use super::*;
     use crate::source_changeset::{accept, AcceptContext, ChainView};
     use crate::source_history::{read_blame, read_path_history};
-    use medulla_compute::source_git_objects::{MODE_EXECUTABLE, MODE_FILE, MODE_SYMLINK};
-    use medulla_compute::source_history::{rebuild, HistoryIndex};
     use medulla_source_types::source_changeset::{
         FileMergeRefusal, ReadBlameRequest, ReadPathHistoryRequest, SubmittedBlobRef,
     };
     use sha2::{Digest, Sha256};
     use std::cell::RefCell;
+    use {
+        medulla_compute_assemble::source_git_objects::MODE_EXECUTABLE,
+        medulla_compute_assemble::source_git_objects::MODE_FILE,
+        medulla_compute_assemble::source_git_objects::MODE_SYMLINK,
+    };
+    use {
+        medulla_compute_assemble::source_history::rebuild,
+        medulla_compute_assemble::source_history::HistoryIndex,
+    };
 
     const REPO: &str = "repo";
     const BRANCH: &str = "branch";

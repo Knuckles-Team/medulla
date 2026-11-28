@@ -354,7 +354,7 @@ pub trait DispatchApi: Send + Sync {
         'a,
         Result<
             (
-                medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+                medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
                 medulla_work_types::native_control::EnrichmentBudgetPark,
             ),
             String,
@@ -375,7 +375,8 @@ pub trait DispatchApi: Send + Sync {
     fn decode_pending_enrichment_intent(
         &self,
         intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
-    ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
+    ) -> Result<medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot, String>
+    {
         Err(RAFT_NOT_SERVED.to_string())
     }
 
@@ -390,7 +391,7 @@ pub trait DispatchApi: Send + Sync {
     #[allow(unused_variables)]
     fn enrichment_intent_for_snapshot(
         &self,
-        snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+        snapshot: medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
     ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
         Err(RAFT_NOT_SERVED.to_string())
     }
@@ -779,7 +780,7 @@ pub async fn plan_held_underfunded_park(
     committed_at_ms: u64,
 ) -> Result<
     (
-        medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+        medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
         medulla_work_types::native_control::EnrichmentBudgetPark,
     ),
     String,
@@ -801,7 +802,7 @@ pub async fn plan_held_underfunded_park(
 pub async fn decode_pending_enrichment_intent(
     state: &Arc<RwLock<ServerState>>,
     intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
-) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
+) -> Result<medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot, String> {
     dispatch_api(state)
         .await?
         .decode_pending_enrichment_intent(intent)
@@ -817,7 +818,7 @@ pub async fn decode_pending_enrichment_intent(
 ))]
 pub async fn enrichment_intent_for_snapshot(
     state: &Arc<RwLock<ServerState>>,
-    snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+    snapshot: medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
 ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
     dispatch_api(state)
         .await?

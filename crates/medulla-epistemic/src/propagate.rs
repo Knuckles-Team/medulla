@@ -11,7 +11,10 @@
 use std::collections::{HashMap, HashSet};
 
 use medulla_catalog_source_types::distribution::Distribution;
-use medulla_compute::probabilistic::{bayesian_update, Evidence};
+use {
+    medulla_compute_assemble::probabilistic::bayesian_update,
+    medulla_compute_assemble::probabilistic::Evidence,
+};
 
 use crate::adapter::BeliefGraph;
 use crate::model::{

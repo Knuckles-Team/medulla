@@ -2,13 +2,18 @@
 // share `pkg/util.py` byte for byte and differ in `pkg/app.py`.
 
 use super::index_branches;
-use crate::parser::branch_scope::{blob_node_id, branch_node_id, content_digest, file_version_id};
 use crate::parser::enrichment_admission::{native_admissions, NativePolicyVerdict, UnitKey};
 use medulla_ingestion_types::ingestion_wire::{
     IndexFileVerdict, IndexFileVersion, IndexRef, IndexRefPresence, IndexRepositoryScope,
     IndexResult, IndexTombstone,
 };
 use medulla_types::contract::BoundedVec;
+use {
+    medulla_compute_assemble::parser::branch_scope::blob_node_id,
+    medulla_compute_assemble::parser::branch_scope::branch_node_id,
+    medulla_compute_assemble::parser::branch_scope::content_digest,
+    medulla_compute_assemble::parser::branch_scope::file_version_id,
+};
 
 const REPO: &str = "forge/team/project";
 const UTIL: &str = "def shared():\n    return 1\n";

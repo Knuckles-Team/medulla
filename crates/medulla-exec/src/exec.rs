@@ -2781,19 +2781,19 @@ fn eval_prob_query(
                 ProbEvidenceSpec::Bernoulli {
                     successes,
                     failures,
-                } => medulla_compute::probabilistic::Evidence::Bernoulli {
+                } => medulla_compute_assemble::probabilistic::Evidence::Bernoulli {
                     successes: *successes,
                     failures: *failures,
                 },
                 ProbEvidenceSpec::Gaussian {
                     observations,
                     known_variance,
-                } => medulla_compute::probabilistic::Evidence::Gaussian {
+                } => medulla_compute_assemble::probabilistic::Evidence::Gaussian {
                     observations: observations.clone(),
                     known_variance: *known_variance,
                 },
             };
-            medulla_compute::probabilistic::bayesian_update(dist, &ev)
+            medulla_compute_assemble::probabilistic::bayesian_update(dist, &ev)
                 .ok()
                 .map(|post| post.mean())
         }

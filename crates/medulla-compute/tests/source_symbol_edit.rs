@@ -2,11 +2,15 @@
 
 use std::collections::BTreeMap;
 
-use medulla_compute::source_symbol_edit::{
-    project_symbol_edit, BlobAccess, ProjectionRefusal, ResolvedSymbol, SymbolResolver,
-};
 use medulla_source_types::lifecycle::sha256_hex;
 use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
+use {
+    medulla_compute_assemble::source_symbol_edit::project_symbol_edit,
+    medulla_compute_assemble::source_symbol_edit::BlobAccess,
+    medulla_compute_assemble::source_symbol_edit::ProjectionRefusal,
+    medulla_compute_assemble::source_symbol_edit::ResolvedSymbol,
+    medulla_compute_assemble::source_symbol_edit::SymbolResolver,
+};
 
 #[derive(Default)]
 struct Blobs(BTreeMap<String, Vec<u8>>);

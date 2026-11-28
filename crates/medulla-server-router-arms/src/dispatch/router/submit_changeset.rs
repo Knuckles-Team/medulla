@@ -448,13 +448,15 @@ mod served {
                                 .read_blocking(move |registry, branch| {
                                     registry.history_row(
                                         branch,
-                                        &medulla_compute::source_history::seq_key(&commit_id),
+                                        &medulla_compute_assemble::source_history::seq_key(
+                                            &commit_id,
+                                        ),
                                     )
                                 })
                                 .await
                             {
                                 Ok(Ok(Some(bytes))) => {
-                                    medulla_compute::source_history::decode_seq(&bytes)
+                                    medulla_compute_assemble::source_history::decode_seq(&bytes)
                                 }
                                 Ok(Ok(None)) => {
                                     Err("the history index holds no seq for the accepted changeset"

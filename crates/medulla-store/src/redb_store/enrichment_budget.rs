@@ -102,7 +102,7 @@ fn validate_source_intent(
     #[serde(deny_unknown_fields)]
     struct Pending {
         budget_status: BudgetStatus,
-        snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
+        snapshot: medulla_compute_assemble::parser::enrichment_snapshot::EligibleSnapshot,
     }
     #[derive(serde::Deserialize)]
     #[serde(rename_all = "snake_case")]

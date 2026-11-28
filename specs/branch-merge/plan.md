@@ -46,7 +46,7 @@ crates/medulla-storage/src/owner/lineage.rs            existing: ALL_LAYOUTS gai
 crates/medulla-server-api/src/api/conflict_decider.rs  new: ConflictDecider trait
 crates/medulla-h-graph/src/graph_ops/branch.rs         new: handlers and merge_conflicts
 crates/medulla-h-graph/src/graph_ops/branch/           new: merge.rs, conflict.rs, publish.rs, line_merge.rs
-crates/medulla-compute/src/line_merge.rs               new: merge_lines
+crates/medulla-compute-assemble/src/line_merge.rs               new: merge_lines
 crates/medulla-protocol-types/src/protocol/method/method_11.rs  existing: four new Method variants
 tests/test_branch_*.py                                 new: served tests
 ```

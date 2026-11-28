@@ -14,9 +14,12 @@ use medulla_decision_types::solve::{
     Relation, SolverConfig, SolverConfigSpec, VarId, DEFAULT_CERTIFICATE_LEAVES,
 };
 
-use super::super::uniqueness::no_good_row;
-use super::super::{assemble, replay_check, Assembly};
 use super::fixture::*;
+use medulla_compute_assemble::assemble::uniqueness::no_good_row;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+    medulla_compute_assemble::assemble::Assembly,
+};
 
 fn unique_library() -> Vec<CandidateFacts> {
     let mut library = agent_basics();

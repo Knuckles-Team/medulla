@@ -33,11 +33,11 @@ crates/medulla-source-types/src/source_changeset.rs          existing: Changeset
 crates/medulla-source-types/src/source_symbol_edit.rs        existing: SymbolEdit
 crates/medulla-types/src/source_path_grant.rs         new: PathGrant
 crates/medulla-work-types/src/scheduler_config.rs          existing: knobs added
-crates/medulla-compute/src/source_symbol_edit.rs      existing: projection
-crates/medulla-compute/src/source_tree.rs             new: tree_at
-crates/medulla-compute/src/source_history.rs          new: history indexes
-crates/medulla-compute/src/source_bisect.rs           new: next_step
-crates/medulla-compute/src/source_git_objects.rs      new: git object build and parse
+crates/medulla-compute-assemble/src/source_symbol_edit.rs      existing: projection
+crates/medulla-compute-assemble/src/source_tree.rs             new: tree_at
+crates/medulla-compute-assemble/src/source_history.rs          new: history indexes
+crates/medulla-compute-assemble/src/source_bisect.rs           new: next_step
+crates/medulla-compute-assemble/src/source_git_objects.rs      new: git object build and parse
 crates/medulla-enrich/src/symbol_edit_verify.rs       new: verify_roundtrip
 crates/medulla-server-auth/src/access/path_grant.rs   new: check
 crates/medulla-h-ingest/src/source_changeset.rs       new: accept, import, export
@@ -175,8 +175,8 @@ none
 ## Production caller chain
 
 - `Method::SubmitChangeset` → `crates/medulla-server-router/src/dispatch/router/graph_lifecycle.rs` → `submit_changeset.rs::handle_submit_changeset` → `crates/medulla-h-ingest/src/source_changeset.rs::verify_submission` and `::accept` → `stream_blob_put` (`crates/medulla-server-blob/src/blob/stream.rs:35`), `medulla_transaction::occ::disjoint` (`crates/medulla-transaction/src/occ.rs:79`), the branch commit path, then `reindex_changeset` and the history indexes.
-- `Method::ReadTree` and the history methods → the same route file → `source_tree.rs::read_tree` and `source_history.rs` → `crates/medulla-compute/src/source_tree.rs::tree_at` and `source_history.rs`.
-- `Method::SubmitSymbolEdit` → the same route file → `source_symbol_edit.rs::handle_submit_symbol_edit` → `project_symbol_edit` (`crates/medulla-compute/src/source_symbol_edit.rs:145`) → `verify_roundtrip` → `accept`.
+- `Method::ReadTree` and the history methods → the same route file → `source_tree.rs::read_tree` and `source_history.rs` → `crates/medulla-compute-assemble/src/source_tree.rs::tree_at` and `source_history.rs`.
+- `Method::SubmitSymbolEdit` → the same route file → `source_symbol_edit.rs::handle_submit_symbol_edit` → `project_symbol_edit` (`crates/medulla-compute-assemble/src/source_symbol_edit.rs:145`) → `verify_roundtrip` → `accept`.
 - Obsolete path to delete: the planned `gate_verdicts` field of `Changeset`.
 
 ## Cross-repo seams

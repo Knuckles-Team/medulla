@@ -6,7 +6,7 @@ use medulla_agent_types::agent_topology::StopRule;
 use medulla_decision_types::decision::SolverBudget;
 
 use super::*;
-use crate::SplitMix64;
+use medulla_compute_assemble::SplitMix64;
 
 #[derive(Clone, Debug)]
 struct Case {

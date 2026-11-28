@@ -381,7 +381,7 @@ pub(in crate::decide) struct TopologyWorld {
     pub(in crate::decide) backend: Arc<RedbBackend>,
     pub(in crate::decide) state: crate::decide::SharedState,
     pub(in crate::decide) store: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
-    pub(in crate::decide) assembly: medulla_compute::assemble::Assembly,
+    pub(in crate::decide) assembly: medulla_compute_assemble::assemble::Assembly,
 }
 
 const LEDGER: &str = "topology";

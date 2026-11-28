@@ -1662,12 +1662,15 @@ mod tests {
     #[test]
     fn rust_crate_and_super_imports_resolve_inside_the_importers_crate() {
         let r = index_repository(&files(&[
-            ("crates/a/src/lib.rs", "use crate::reduce;\npub fn a() {}\n"),
+            (
+                "crates/a/src/lib.rs",
+                "use medulla_compute_assemble::reduce;\npub fn a() {}\n",
+            ),
             ("crates/a/src/reduce.rs", "pub fn go() {}\n"),
             ("crates/a/src/nested/sibling.rs", "pub struct Thing;\n"),
             (
                 "crates/b/src/render.rs",
-                "use crate::reduce;\npub fn r() {}\n",
+                "use medulla_compute_assemble::reduce;\npub fn r() {}\n",
             ),
             ("crates/b/src/reduce.rs", "pub fn go() {}\n"),
             (
@@ -1687,13 +1690,13 @@ mod tests {
                 .map(|e| e.target.clone())
         };
         assert_eq!(
-            target("crates/b/src/render.rs", "crate::reduce").as_deref(),
+            target("crates/b/src/render.rs", "medulla_compute_assemble::reduce").as_deref(),
             Some("file:crates/b/src/reduce.rs"),
             "crate:: must anchor on the importer's own crate root; edges={:?}",
             r.edges
         );
         assert_eq!(
-            target("crates/a/src/lib.rs", "crate::reduce").as_deref(),
+            target("crates/a/src/lib.rs", "medulla_compute_assemble::reduce").as_deref(),
             Some("file:crates/a/src/reduce.rs")
         );
         // `crates/b/src/nested/deep.rs` owns module dir `.../nested/deep`, so
@@ -1862,7 +1865,7 @@ mod tests {
             ),
             (
                 "crates/a/src/lib.rs",
-                "use crate::shared;\npub fn run() {}\n",
+                "use medulla_compute_assemble::shared;\npub fn run() {}\n",
             ),
         ]));
         assert_eq!(
@@ -1872,7 +1875,12 @@ mod tests {
             r.edges
         );
         assert_eq!(
-            dep_target(&r, "crates/a/src/lib.rs", "crate::shared").as_deref(),
+            dep_target(
+                &r,
+                "crates/a/src/lib.rs",
+                "medulla_compute_assemble::shared"
+            )
+            .as_deref(),
             Some("file:crates/a/src/shared/mod.rs"),
             "a Rust module dir must resolve via mod.rs; edges={:?}",
             r.edges

@@ -15,7 +15,7 @@ path = "src/lib.rs"
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
 medulla-kernel = { path = "../medulla-kernel" }
@@ -62,7 +62,7 @@ argon2 = { version = "0.5", optional = true, default-features = false, features 
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["rust_crypto"] }
 
 [features]
-ast = ["medulla-server-router/blob", "medulla-server-router/ast", "medulla-server/ast", "medulla-compute/ast", "medulla-h-ingest-repository/ast", "medulla-server-api/ast", "medulla-store/ast"]
+ast = ["medulla-server-router/blob", "medulla-server-router/ast", "medulla-server/ast", "medulla-compute-assemble/ast", "medulla-h-ingest-repository/ast", "medulla-server-api/ast", "medulla-store/ast"]
 compute-dist = ["medulla-server/compute-dist", "raft", "medulla-persistence/compute-dist", "medulla-protocol-types/compute-dist", "medulla-raft/compute-dist", "medulla-raft-xshard/compute-dist", "medulla-result-types/compute-dist", "medulla-server-api/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist", "medulla-server-ops/compute-dist"]
 harness = ["medulla-server/harness", "raft", "medulla-raft/harness", "medulla-raft-xshard/harness", "medulla-raft-xshard/test-support"]
 oidc = ["medulla-server-router/oidc", "medulla-server/oidc", "dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
@@ -73,7 +73,7 @@ server = ["medulla-server-router/server", "medulla-server/server", "medulla-h-in
 
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

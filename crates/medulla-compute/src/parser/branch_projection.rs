@@ -12,7 +12,12 @@ use medulla_ingestion_types::ingestion_wire::{
     ExtractedEdge, ExtractedNode, IndexRef, IndexRefPresence, IndexTombstone,
 };
 
-use super::branch_scope::{blob_node_id, branch_node_id, file_version_id, ScopeCatalog};
+use {
+    medulla_compute_assemble::parser::branch_scope::blob_node_id,
+    medulla_compute_assemble::parser::branch_scope::branch_node_id,
+    medulla_compute_assemble::parser::branch_scope::file_version_id,
+    medulla_compute_assemble::parser::branch_scope::ScopeCatalog,
+};
 
 /// Append the scope's projection to `nodes`/`edges`.
 pub(super) fn project_scope(

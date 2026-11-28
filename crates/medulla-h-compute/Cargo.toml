@@ -12,7 +12,7 @@ name = "medulla_h_compute"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
@@ -45,9 +45,9 @@ medulla-quantum-core = { path = "../medulla-quantum-core", optional = true }
 medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
 
 [features]
-datascience = ["medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience", "medulla-query-types/datascience"]
+datascience = ["medulla-compute-assemble/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience", "medulla-query-types/datascience"]
 evaluate = ["medulla-numeric/evaluate"]
-finance = ["evaluate", "medulla-finance-quant/analytics", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
+finance = ["evaluate", "medulla-finance-quant/analytics", "medulla-compute-assemble/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
 quantum-agent-api = ["dep:medulla-quantum-core", "dep:medulla-quantum-sim", "medulla-server-api/quantum-agent-api", "server"]
 viz-graph-tiles = ["dep:medulla-viz-graph-tiles", "viz-interactive"]
 viz-interactive = ["dep:medulla-viz-kernels", "viz-static-export", "medulla-viz-core?/viz-interactive"]
@@ -59,7 +59,7 @@ server = ["medulla-server-api/server"]
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
-medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

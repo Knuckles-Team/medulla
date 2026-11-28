@@ -15,7 +15,7 @@ pub struct ReadPathHistoryFields {
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod served {
     use super::*;
-    use medulla_compute::source_history::HistoryIndex;
+    use medulla_compute_assemble::source_history::HistoryIndex;
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_history::read_path_history;
     use medulla_mutation_types::branch::BranchRef;

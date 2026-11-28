@@ -13,7 +13,7 @@
 //!   A failed check abstains with the matching `PRIMITIVE_*` code and one
 //!   eliminated-constraint premise for the option it removed.
 
-use medulla_compute::assemble::primitive::check_graph_size;
+use medulla_compute_assemble::assemble::primitive::check_graph_size;
 use medulla_decision_types::decision::AssemblyRequest;
 
 /// Refuse a request whose primitive graph is over the knob; the wire text is

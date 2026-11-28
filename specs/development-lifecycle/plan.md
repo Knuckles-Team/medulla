@@ -28,7 +28,7 @@ The engine holds the whole software lifecycle as typed records. This plan extend
 ## Project Structure
 
 ```text
-crates/medulla-compute/src/parser/spec_artifacts.rs                existing  deterministic parser (R014.1)
+crates/medulla-compute-assemble/src/parser/spec_artifacts.rs                existing  deterministic parser (R014.1)
 crates/medulla-core/src/lifecycle/                                 existing  derive, store, defect, status, trace (R001, R003, R005, R006)
 crates/medulla-core/ontology/sdd-v1.ttl                            existing  lifecycle kinds and edges (R001.1)
 crates/medulla-core/ontology/sdd-v1.shapes.ttl                     new       lifecycle shapes (R001.1)

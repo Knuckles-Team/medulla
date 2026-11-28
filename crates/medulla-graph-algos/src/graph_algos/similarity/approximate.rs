@@ -3,7 +3,7 @@ use super::{
     cosine_from_neighbors, finish_similarity_pairs, jaccard_from_neighbors, knn_similarity,
     neighbor_norm, prepared_neighbors, KnnSimilarityApproxConfig, Metric, SimilarityPair,
 };
-use medulla_compute::SplitMix64;
+use medulla_compute_assemble::SplitMix64;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -442,7 +442,7 @@ where
     for round in 0..max_iters.max(1) {
         let updates = refine_descent_round(&mut lists, sample, k, &context, &mut rng);
         tracing::trace!(
-            target: "medulla_compute::knn_descent",
+            target: "medulla_compute_assemble::knn_descent",
             mode = "approximate",
             round,
             sample_rate,

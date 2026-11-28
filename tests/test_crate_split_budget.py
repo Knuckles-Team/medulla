@@ -89,3 +89,9 @@ def test_h_ingest_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.8")
 def test_h_admin_split_is_within_budget() -> None:
     _assert_split(["medulla-h-admin-schema", "medulla-h-admin"])
+
+
+# spec: MEDULLA-CONTRACT-R067.6
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.6")
+def test_compute_split_is_within_budget() -> None:
+    _assert_split(["medulla-compute-assemble", "medulla-compute"])

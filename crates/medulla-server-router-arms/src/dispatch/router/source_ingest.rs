@@ -283,7 +283,7 @@ async fn observe_screen(ctx: DispatchCtx<'_>, obs_msgpack: Vec<u8>) -> Response 
     };
     // Inline: PNG hashing + node/edge build over the element set is
     // microsecond-cheap (no AST parse), so it doesn't need the blocking pool.
-    let result = medulla_compute::screen::observe_screen(&input);
+    let result = medulla_compute_assemble::screen::observe_screen(&input);
     Response::ok(
         req_id,
         ResultPayload::of::<ingestion_results::ObserveScreen>(result),

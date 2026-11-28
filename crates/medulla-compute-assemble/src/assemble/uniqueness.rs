@@ -164,7 +164,7 @@ fn prove(spec: &ModelSpec, config: &SolverConfig) -> Option<Certificate> {
 /// `Σ_{i∈S} x_i − Σ_{j∉S} x_j ≤ |S| − 1`: exactly the selection S is cut.
 /// Any other selection misses S in at least one of the two sums, so its
 /// left-hand side stays at |S| − 1 or below.
-pub(super) fn no_good_row(selected: &[bool]) -> ConstraintSpec {
+pub fn no_good_row(selected: &[bool]) -> ConstraintSpec {
     let chosen = selected.iter().filter(|&&is_chosen| is_chosen).count();
     ConstraintSpec {
         label: "uniqueness".to_string(),

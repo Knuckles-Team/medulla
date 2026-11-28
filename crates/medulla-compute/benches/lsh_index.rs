@@ -13,7 +13,7 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_compute::sketch::{shingles, LshIndex};
+use {medulla_compute_assemble::sketch::shingles, medulla_compute_assemble::sketch::LshIndex};
 
 const DOCUMENTS: usize = 100_000;
 const WORDS: usize = 24;

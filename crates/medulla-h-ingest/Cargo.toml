@@ -20,6 +20,7 @@ medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
+medulla-compute-assemble = { path = "../medulla-compute-assemble" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-decision-types = { path = "../medulla-decision-types" }
@@ -57,11 +58,11 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-h-ingest-repository = { path = "../medulla-h-ingest-repository" }
 
 [features]
-test-support = ["medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-h-ingest-repository/test-support"]
+test-support = ["medulla-catalog-source-types/test-support", "medulla-catalog-types/test-support", "medulla-compute/test-support", "medulla-compute-assemble/test-support", "medulla-kernel/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-persistence-records/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-mutation/test-support", "medulla-h-ingest-repository/test-support"]
 asr-whisper = ["medulla-server-api/asr-whisper", "server", "medulla-h-ingest-repository/asr-whisper"]
-ast = ["medulla-compute/ast", "medulla-server-api/ast", "medulla-h-ingest-repository/ast"]
+ast = ["medulla-compute/ast", "medulla-compute-assemble/ast", "medulla-server-api/ast", "medulla-h-ingest-repository/ast"]
 blob = ["dep:jiff", "dep:medulla-rdf", "medulla-rdf/rdf", "redb", "medulla-protocol-types/blob", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob", "server", "medulla-h-ingest-repository/blob"]
-decide = ["medulla-decision-stats/decision", "redb", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server", "medulla-h-ingest-repository/decide"]
+decide = ["medulla-decision-stats/decision", "redb", "medulla-compute/decide", "medulla-compute-assemble/decide", "medulla-persistence-records/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "numeric", "query", "server", "medulla-h-ingest-repository/decide"]
 modality-serving = ["medulla-document/serving", "redb", "security", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "server", "medulla-h-ingest-repository/modality-serving"]
 query = ["redb", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query", "medulla-h-ingest-repository/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-server-api/raft", "medulla-server-mutation/raft", "server", "medulla-h-ingest-repository/raft"]
@@ -82,6 +83,7 @@ async-trait = { version = "0.1" }
 medulla-catalog-source-types = { path = "../medulla-catalog-source-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-compute-assemble = { path = "../medulla-compute-assemble", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-sdlc = { path = "../medulla-sdlc" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

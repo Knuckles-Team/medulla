@@ -20,7 +20,7 @@ pub struct GitRefsListFields {
 mod served {
     use super::super::read_tree::RegistryTree;
     use super::*;
-    use medulla_compute::source_tree::TreeChain;
+    use medulla_compute_assemble::source_tree::TreeChain;
     use medulla_h_ingest::source_changeset::git::head_commit_id;
     use medulla_h_ingest::source_changeset::ChunkStoreBlobs;
     use medulla_mutation_types::branch::BranchRef;

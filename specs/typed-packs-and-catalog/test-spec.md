@@ -222,7 +222,7 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R001.5 | The complete generated-client inventory shares the original wire shapes and golden bytes. | A stale client, omitted client or changed field fails. | `tests/test_connector_pack_contract.py::test_all_clients_share_pack_contract` |
 | MEDULLA-TYPED-PACKS-R001.6 | A typed object round-trips all identity and revision fields. | Changing a schema or body pin cannot preserve the old definition identity. | `crates/medulla-agent-types/src/agent_component.rs::tests::prompt_blueprint_identity` |
 | MEDULLA-TYPED-PACKS-R001.7 | Nested valid objects retain every admitted field and extension value. | Missing task, wrong field types, nonfinite numbers and oversized objects refuse. | `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` |
-| MEDULLA-TYPED-PACKS-R001.8 | Repeated identical inputs produce the same bytes and render digest. | A changed variable changes the result; invalid input produces no render result. | `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` |
+| MEDULLA-TYPED-PACKS-R001.8 | Repeated identical inputs produce the same bytes and render digest. | A changed variable changes the result; invalid input produces no render result. | `crates/medulla-compute-assemble/src/assemble/prompt.rs::tests::prompt_render_vectors` |
 | MEDULLA-TYPED-PACKS-R001.9 | Retired. | The render wire types are proven by R002.9 and R002.13. | none |
 | MEDULLA-TYPED-PACKS-R001.10 | Every comparable generated enum has the Rust wire values. | A Rust-only member, or a gate comparing fewer than 100 enums, fails. | `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` |
 | MEDULLA-TYPED-PACKS-R001.11 | Drift is reported per enum. | A planted mismatch is reported as python-only and rust-only members. | `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` |
@@ -582,7 +582,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R001.5`: `tests/test_connector_pack_client.py::test_pack_digest_matches_the_rust_golden_vector` (existing); `tests/test_connector_pack_contract.py::test_python_client_matches_pack_vectors` (planned)
 - `MEDULLA-TYPED-PACKS-R001.6`: `crates/medulla-agent-types/src/agent_component.rs::tests::prompt_blueprint_identity` (planned)
 - `MEDULLA-TYPED-PACKS-R001.7`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` (planned)
-- `MEDULLA-TYPED-PACKS-R001.8`: `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` (planned)
+- `MEDULLA-TYPED-PACKS-R001.8`: `crates/medulla-compute-assemble/src/assemble/prompt.rs::tests::prompt_render_vectors` (planned)
 - `MEDULLA-TYPED-PACKS-R001.9`: retired; see R002.9 and R002.13.
 - `MEDULLA-TYPED-PACKS-R001.10`: `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` (existing)
 - `MEDULLA-TYPED-PACKS-R001.11`: `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` (existing)

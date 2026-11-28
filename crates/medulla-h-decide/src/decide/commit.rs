@@ -105,7 +105,7 @@ async fn commit(
         )
         .map_err(|refusal| refusal.message())?;
     }
-    let bytes = medulla_compute::assemble::encoded_len(&record);
+    let bytes = medulla_compute_assemble::assemble::encoded_len(&record);
     if bytes > MAX_DECISION_RECORD_BYTES {
         return Err(format!(
             "{}: {bytes} bytes exceed {MAX_DECISION_RECORD_BYTES}",
@@ -113,7 +113,7 @@ async fn commit(
         ));
     }
     let checked = record.clone();
-    tokio::task::spawn_blocking(move || medulla_compute::assemble::replay_check(&checked))
+    tokio::task::spawn_blocking(move || medulla_compute_assemble::assemble::replay_check(&checked))
         .await
         .map_err(|error| format!("decision replay task failed: {error}"))?
         .map_err(|error| error.to_string())?;

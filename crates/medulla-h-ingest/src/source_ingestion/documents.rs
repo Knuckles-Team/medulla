@@ -12,7 +12,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
-use medulla_compute::sketch::{shingles, LshIndex, MinHashSketch, LSH_MAX_BUCKET_MEMBERS};
 use medulla_document::atoms::decompose;
 use medulla_document::fragment::{normalize_media_type, ReaderRegistry};
 use medulla_document::processing::{chunk_text, ChunkingConfig};
@@ -27,6 +26,11 @@ use medulla_source_types::source_document::{
 };
 use medulla_source_types::source_ingestion::{SourceEntityRef, SourceIngestionBatch, SourceRecord};
 use medulla_types::contract::Digest256;
+use {
+    medulla_compute_assemble::sketch::shingles, medulla_compute_assemble::sketch::LshIndex,
+    medulla_compute_assemble::sketch::MinHashSketch,
+    medulla_compute_assemble::sketch::LSH_MAX_BUCKET_MEMBERS,
+};
 
 use super::ResolvedIngestionMappings;
 

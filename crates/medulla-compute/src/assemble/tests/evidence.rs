@@ -3,8 +3,10 @@
 use medulla_decision_types::decision::{DecisionOutcome, PremiseClass, PremiseProvenance};
 use medulla_types::evidence_class::EvidenceClass;
 
-use super::super::{assemble, replay_check};
 use super::fixture::*;
+use {
+    medulla_compute_assemble::assemble::assemble, medulla_compute_assemble::assemble::replay_check,
+};
 
 // spec: MEDULLA-DECISION-ENGINE-R121.1
 #[test]

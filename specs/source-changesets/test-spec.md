@@ -29,7 +29,7 @@
   seeded culprit. The recorded decision replays byte-identically. *(MEDULLA-SCM-R009)*
 - `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids` (planned).
   Import of a generated linear history then `export_pack` preserves every commit id and tree id for both object
-  formats, including one merge commit of two parents. `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors`
+  formats, including one merge commit of two parents. `crates/medulla-compute-assemble/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors`
   (planned) pins the object ids and the delta reads. `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::history_and_blame_follow_first_parent_through_a_merge` (planned) reads history and blame through a merge on the first-parent line. *(MEDULLA-SCM-R010)*
 - `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay`. Concurrent accepts with
   crash and replay hold every chain invariant. *(MEDULLA-SCM-R011)*
@@ -93,12 +93,12 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R003` | `tests/test_scm_accept.py::test_disjoint_writers_land_and_overlap_rebases_or_conflicts` | L3 | planned |
 | `MEDULLA-SCM-R003.1` | `tests/test_scm_disjoint_served.py::test_disjoint_changesets_land_in_parallel` | L4 | planned |
 | `MEDULLA-SCM-R004` | `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` | L3 | existing |
-| `MEDULLA-SCM-R004` | `crates/medulla-compute/src/source_tree.rs::tests::tree_at_revision_matches_full_replay` | L2 | existing |
-| `MEDULLA-SCM-R005` | `crates/medulla-compute/src/source_history.rs::tests::incremental_rows_equal_rebuild` | L2 | planned |
+| `MEDULLA-SCM-R004` | `crates/medulla-compute-assemble/src/source_tree.rs::tests::tree_at_revision_matches_full_replay` | L2 | existing |
+| `MEDULLA-SCM-R005` | `crates/medulla-compute-assemble/src/source_history.rs::tests::incremental_rows_equal_rebuild` | L2 | planned |
 | `MEDULLA-SCM-R005` | `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild` | L3 | planned |
-| `MEDULLA-SCM-R005.1` | `crates/medulla-compute/src/source_history.rs::tests::path_history_lists_newest_first_up_to_rev` | L2 | planned |
+| `MEDULLA-SCM-R005.1` | `crates/medulla-compute-assemble/src/source_history.rs::tests::path_history_lists_newest_first_up_to_rev` | L2 | planned |
 | `MEDULLA-SCM-R005.1` | `tests/test_scm_history.py::test_path_history_lists_touching_changesets` | L3 | planned |
-| `MEDULLA-SCM-R005.2` | `crates/medulla-compute/src/source_history.rs::tests::blame_keeps_origins_across_modify_and_rename` | L2 | planned |
+| `MEDULLA-SCM-R005.2` | `crates/medulla-compute-assemble/src/source_history.rs::tests::blame_keeps_origins_across_modify_and_rename` | L2 | planned |
 | `MEDULLA-SCM-R005.2` | `tests/test_scm_history.py::test_blame_attributes_lines_across_rename` | L3 | planned |
 | `MEDULLA-SCM-R006` | `tests/test_scm_code_graph.py::test_one_file_change_updates_only_its_symbols` | L3 | planned |
 | `MEDULLA-SCM-R007` | `crates/medulla-source-types/src/source_path_grant.rs::tests::longest_segment_prefix_wins_and_no_match_denies` | L2 | planned |
@@ -106,7 +106,7 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R007` | `crates/medulla-persistence/src/branch_registry_store.rs::tests::both_false_grant_is_stored_as_deny` | L2 | planned |
 | `MEDULLA-SCM-R008` | `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` | L3 | planned |
 | `MEDULLA-SCM-R009` | `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision` | L3 | planned |
-| `MEDULLA-SCM-R010` | `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids`; `crates/medulla-compute/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors` | L3 | planned |
+| `MEDULLA-SCM-R010` | `crates/medulla-h-ingest/src/source_changeset/git.rs::tests::export_import_preserves_commit_and_tree_ids`; `crates/medulla-compute-assemble/src/source_git_objects.rs::tests::pack_round_trips_and_ids_match_git_vectors` | L3 | planned |
 | `MEDULLA-SCM-R011` | `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay` | L3 | planned |
 | `MEDULLA-SCM-R012` | `crates/medulla-h-ingest/src/source_changeset/provenance.rs::tests::agent_needs_a_visible_run_trace` | L2 | planned |
 | `MEDULLA-SCM-R012` | `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` | L3 | planned |

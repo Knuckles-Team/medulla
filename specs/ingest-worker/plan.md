@@ -21,7 +21,7 @@ connector    --> SourceIngest > prepare > resolve_mappings > match batch.kind > 
 | Metrics | `crates/medulla-kernel/src/metrics/ingest.rs` | `MEDULLA-INGEST-WORKER-R001.13`, `MEDULLA-INGEST-WORKER-R604.5` |
 | Drains | `crates/medulla-h-ingest-repository/src/ingest_drain.rs` | `MEDULLA-INGEST-WORKER-R605.2` |
 | Documents and transcripts | `crates/medulla-h-ingest/src/source_ingestion/documents.rs`, `transcript.rs` | `MEDULLA-INGEST-WORKER-R003.8`, `MEDULLA-INGEST-WORKER-R003.14` |
-| Readers and dedup | `crates/medulla-document/src/fragment.rs`, `crates/medulla-compute/src/sketch.rs` | `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R702.1` |
+| Readers and dedup | `crates/medulla-document/src/fragment.rs`, `crates/medulla-compute-assemble/src/sketch.rs` | `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R702.1` |
 | Governance, permissions, sweep, containers | `crates/medulla-h-ingest/src/source_ingestion/` | `MEDULLA-INGEST-WORKER-R900.2`, `MEDULLA-INGEST-WORKER-R902.2`, `MEDULLA-INGEST-WORKER-R903.2`, `MEDULLA-INGEST-WORKER-R904.3` |
 
 ## Technical Context
@@ -54,7 +54,7 @@ crates/medulla-source-types/src/source_transcript.rs existing: transcript thread
 crates/medulla-types/src/                            existing: knowledge_atom, ontology_proposal, extracted_fact, ingest_rules, source_governance; new: ingest_lanes, ingest_drain, ingest_materialize, data_prep_declaration
 crates/medulla-h-ingest/src/                         existing: source_ingestion.rs; new: ingest_queue, ingest_drain, atom_context, data_prep_declaration, source_ingestion/*
 crates/medulla-document/src/                         existing: processing, transcript, html; new: atoms, fragment, readers
-crates/medulla-compute/src/sketch.rs                 existing: MinHashSketch (LshIndex added)
+crates/medulla-compute-assemble/src/sketch.rs                 existing: MinHashSketch (LshIndex added)
 crates/medulla-core/src/                             new: source_hierarchy
 crates/medulla-kernel/src/metrics/                   existing: outbox; new: ingest
 crates/medulla-server-router/src/dispatch/router/source_ingest.rs  existing: dispatch arms

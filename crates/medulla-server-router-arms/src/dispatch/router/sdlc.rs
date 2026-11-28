@@ -1144,7 +1144,7 @@ async fn changeset_tree_digest(
         let Some(commit_id) = found else {
             return Ok(None);
         };
-        let tree = medulla_compute::source_tree::tree_at(
+        let tree = medulla_compute_assemble::source_tree::tree_at(
             &super::read_tree::RegistryTree {
                 registry: &registry,
                 branch: &reference,

@@ -220,7 +220,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 |---|---|
 | `MEDULLA-UNIFIED-DATA-PLANE-R761` | See each child. |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.1` | `crates/medulla-types/tests/profile.rs::profile_round_trips` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R761.2` | `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` |
+| `MEDULLA-UNIFIED-DATA-PLANE-R761.2` | `crates/medulla-compute-assemble/src/sketch.rs::tests::hll_precision_14_within_error_bound` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.3` | `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned) |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.4` | `tests/data_plane/test_profile_served.py::test_profile_refusals` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R761.5` | `tests/federation/test_profile_method_served.py::test_profile_method_recorded` |
@@ -362,7 +362,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3:** `crates/medulla-lake/tests/metastore.rs::avro_reader_schema_projection` (planned). Proves the row: Avro scans project the reader schema.
 - **MEDULLA-UNIFIED-DATA-PLANE-R750.754:** `crates/medulla-work-types/tests/no_parallel_history_store.rs::run_history_module_is_absent` (L1). Proves the row: the parallel history store is gone.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog` (planned). Proves the row: Dataset and column profiling (rollup).
-- **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-compute/src/sketch.rs::tests::hll_precision_14_within_error_bound` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
+- **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-compute-assemble/src/sketch.rs::tests::hll_precision_14_within_error_bound` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.2:** `crates/medulla-h-jobs/src/jobs/executor_profile.rs::tests::sample_profile_counts_are_consistent` (planned). Proves the row: Behavior: pushed aggregates where the dialect allows, sampling otherwise, sketch for distinct counts.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.3:** `tests/data_plane/test_profile_served.py::test_profile_job_attaches_to_catalog`. Proves the row: Wiring: the `DatasetProfile` job kind attaches profiles to the catalog.
 - **MEDULLA-UNIFIED-DATA-PLANE-R761.4:** `tests/data_plane/test_profile_served.py::test_profile_refusals`. Proves the row: Refusal: out-of-scope dataset, unsupported source.

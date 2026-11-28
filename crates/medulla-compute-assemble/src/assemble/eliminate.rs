@@ -17,7 +17,7 @@ use super::facts::{self, Declared};
 
 /// The legal remainder (indices into the inputs' candidates, ascending) and
 /// every elimination, in candidate order.
-pub(super) struct Screened {
+pub struct Screened {
     pub legal: Vec<usize>,
     pub eliminated: Vec<Elimination>,
 }
@@ -46,7 +46,7 @@ const RULES: &[Rule] = &[
     adequacy,
 ];
 
-pub(super) fn screen(inputs: &DecisionInputs, currency: Option<&str>) -> Screened {
+pub fn screen(inputs: &DecisionInputs, currency: Option<&str>) -> Screened {
     let rules = Rules {
         inputs,
         constraints: &inputs.request.requirements.constraints,

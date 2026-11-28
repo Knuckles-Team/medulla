@@ -679,7 +679,7 @@ pub fn auc(pos: &[f64], neg: &[f64]) -> f64 {
     wins / (pos.len() as f64 * neg.len() as f64)
 }
 
-use medulla_compute::SplitMix64;
+use medulla_compute_assemble::SplitMix64;
 
 #[cfg(test)]
 mod tests {

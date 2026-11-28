@@ -17,7 +17,6 @@ mod served {
     use super::super::read_tree::RegistryTree;
     use super::super::submit_changeset::{submit_changeset_with, SubmitChangesetFields};
     use super::*;
-    use medulla_compute::source_symbol_edit::{ResolvedSymbol, SymbolResolver};
     use medulla_h_graph::graph_ops::branch as ops;
     use medulla_h_ingest::source_changeset::ChunkStoreBlobs;
     use medulla_h_ingest::source_symbol_edit::prepare;
@@ -32,6 +31,10 @@ mod served {
     use medulla_source_types::source_path_grant::PathAccess;
     use serde_json::Value;
     use std::collections::{BTreeMap, BTreeSet};
+    use {
+        medulla_compute_assemble::source_symbol_edit::ResolvedSymbol,
+        medulla_compute_assemble::source_symbol_edit::SymbolResolver,
+    };
 
     /// Symbols resolved before projection: the projection trait is synchronous, the reads are not.
     struct Prefetched(BTreeMap<String, ResolvedSymbol>);

@@ -9,8 +9,12 @@
 use std::collections::BTreeMap;
 
 use medulla_compute::ast::parser::{parse_file, SourceLanguage};
-use medulla_compute::ast::symbol::{ParseResult, Symbol, SymbolType};
 use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind};
+use {
+    medulla_compute_assemble::ast::symbol::ParseResult,
+    medulla_compute_assemble::ast::symbol::Symbol,
+    medulla_compute_assemble::ast::symbol::SymbolType,
+};
 
 use crate::fingerprint::fingerprint;
 use crate::Id;

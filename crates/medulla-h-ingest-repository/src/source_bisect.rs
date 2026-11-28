@@ -6,12 +6,17 @@
 
 use std::collections::BTreeMap;
 
-use medulla_compute::source_bisect::next_step;
-use medulla_compute::source_history::{decode_seq, id_key, seq_key, HistoryIndex};
+use medulla_compute_assemble::source_bisect::next_step;
 use medulla_source_types::source_bisect::{
     BisectLink, BisectRefusal, BisectStepReceipt, BisectStepRequest,
 };
 use medulla_work_types::step_verdict::VerificationVerdict;
+use {
+    medulla_compute_assemble::source_history::decode_seq,
+    medulla_compute_assemble::source_history::id_key,
+    medulla_compute_assemble::source_history::seq_key,
+    medulla_compute_assemble::source_history::HistoryIndex,
+};
 
 /// The most changesets one bisect window holds. A longer range refuses `INVALID_ARGUMENT`
 /// naming a nearer `good`; with no `good` the window is the last `MAX_BISECT_WINDOW` changesets

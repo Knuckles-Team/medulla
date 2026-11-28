@@ -5,8 +5,13 @@ use std::collections::BTreeSet;
 
 use medulla_decision_types::decision::primitive::{EffectClass, PrimitiveContract, PrimitiveKind};
 
-use super::super::primitive::{
-    check_graph_size, edge_type_checks, require_edge, substitutes, PrimitiveRefusal, REFUSALS,
+use {
+    medulla_compute_assemble::assemble::primitive::check_graph_size,
+    medulla_compute_assemble::assemble::primitive::edge_type_checks,
+    medulla_compute_assemble::assemble::primitive::require_edge,
+    medulla_compute_assemble::assemble::primitive::substitutes,
+    medulla_compute_assemble::assemble::primitive::PrimitiveRefusal,
+    medulla_compute_assemble::assemble::primitive::REFUSALS,
 };
 
 const KINDS: [PrimitiveKind; 4] = [

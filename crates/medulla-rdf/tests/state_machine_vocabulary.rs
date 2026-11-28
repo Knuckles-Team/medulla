@@ -1031,7 +1031,9 @@ fn shard_monitor_machine_classes_extend_core() {
 // spec: MEDULLA-INGEST-WORKER-R911.1
 #[test]
 fn enrichment_work_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_compute::parser::enrichment_work_machine::ENRICHMENT_WORK_MACHINE);
+    sm::assert_matches(
+        &medulla_compute_assemble::parser::enrichment_work_machine::ENRICHMENT_WORK_MACHINE,
+    );
 }
 // spec: MEDULLA-INGEST-WORKER-R911.1
 #[test]
