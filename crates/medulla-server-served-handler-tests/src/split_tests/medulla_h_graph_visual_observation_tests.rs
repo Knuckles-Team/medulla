@@ -16,7 +16,9 @@ mod served {
     };
     use serde_json::json;
 
-    use super::super::connector_pack_harness::{next_id, ok, Served, OTHER_TENANT, TENANT};
+    use medulla_served_test_harness::connector_pack_harness::{
+        next_id, ok, Served, OTHER_TENANT, TENANT,
+    };
 
     const GRAPH: &str = "visual-observation";
     const RUN: &str = "run-visual-1";

@@ -23,7 +23,9 @@ mod served {
         medulla_identity_core_types::acl::GrantEffect, medulla_identity_core_types::acl::RbacAction,
     };
 
-    use super::super::connector_pack_harness::{next_id, ok, Served, OTHER_TENANT, TENANT};
+    use medulla_served_test_harness::connector_pack_harness::{
+        next_id, ok, Served, OTHER_TENANT, TENANT,
+    };
 
     const GRAPH: &str = "document-set-retrieval";
     /// The harness administrator, who owns the sets this journey saves.
@@ -72,7 +74,14 @@ mod served {
         }
     }
 
-    impl Served {
+    trait DocumentSetServed: Sized {
+        async fn ds_as_tenant(&self, tenant: &str, method: Method) -> Response;
+        async fn ds_put_set(&self, set: DocumentSet);
+        async fn ds_recall(&self, tenant: &str, document_set_ids: &[&str]) -> Response;
+        async fn ds_discover(&self, tenant: &str, document_set_ids: &[&str]) -> Response;
+    }
+
+    impl DocumentSetServed for Served {
         async fn ds_as_tenant(&self, tenant: &str, method: Method) -> Response {
             if tenant == TENANT {
                 self.call_on(GRAPH, &format!("document-set:{}", next_id()), method)

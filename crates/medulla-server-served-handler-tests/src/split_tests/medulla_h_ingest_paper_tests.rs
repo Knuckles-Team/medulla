@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use super::connector_pack_harness::{Served, GRAPH, OTHER_TENANT, TENANT};
+use medulla_served_test_harness::connector_pack_harness::{Served, GRAPH, OTHER_TENANT, TENANT};
 
 const CONNECTOR: &str = "paper-source";
 const STREAM: &str = "paper";

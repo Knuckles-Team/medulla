@@ -20,8 +20,8 @@ use medulla_types::bookmark_query::{
 };
 use serde_json::{json, Value};
 
-use super::connector_pack_harness::{ok, Served, OTHER_TENANT, TENANT};
-use super::semantic_live_generation::{
+use medulla_served_test_harness::connector_pack_harness::{ok, Served, OTHER_TENANT, TENANT};
+use medulla_served_test_harness::semantic_live_generation::{
     binding_of, complete_graph_source_s1, drive_generation_to_live, entity_vector,
 };
 

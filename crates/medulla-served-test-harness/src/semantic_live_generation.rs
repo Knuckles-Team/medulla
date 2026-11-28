@@ -14,7 +14,8 @@
 //!
 //! It is shared by the bookmark proofs and every served proof that needs a live semantic index.
 
-use super::connector_pack_harness::{next_id, ok, Served, TENANT};
+use crate::connector_pack_harness::{next_id, ok, Served, TENANT};
+use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_index_types::semantic_index::{
     SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDigest,
     SemanticExpectedEntity, SemanticGenerationAggregate, SemanticGenerationArtifact,
@@ -27,14 +28,15 @@ use medulla_index_types::semantic_index::{
     SemanticStageTransition, SemanticVector,
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
-use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::{Method, Request};
+use medulla_server_auth::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 
 /// The consumer the helper claims its leases as.
-pub(super) const DRIVER: &str = "live-generation-driver";
+pub const DRIVER: &str = "live-generation-driver";
 
 /// The deterministic unit vector the helper embeds for `source_entity_id`, so a proof can build
 /// the query embedding that ranks an entity first.
-pub(super) fn entity_vector(dimension: usize, source_entity_id: &str) -> Vec<f32> {
+pub fn entity_vector(dimension: usize, source_entity_id: &str) -> Vec<f32> {
     let mut values: Vec<f32> = (0..dimension)
         .map(|axis| {
             let byte =
@@ -188,7 +190,7 @@ impl<'a> Driver<'a> {
             Target::Signed(state) => {
                 medulla_server_router::dispatch::request_boundary::dispatch(
                     state,
-                    super::medulla_h_query_dispatch_pipeline_tests::signed(next_id(), op),
+                    signed(next_id(), op),
                 )
                 .await
             }
@@ -322,14 +324,14 @@ fn successor_of(
 }
 
 /// The admitted binding `binding_id`.
-pub(super) async fn binding_of(served: &Served, binding_id: &str) -> SemanticBinding {
+pub async fn binding_of(served: &Served, binding_id: &str) -> SemanticBinding {
     Driver::served(served, binding_id).binding().await
 }
 
 /// Complete S1 for every entity of a graph-sourced binding: move the binding to building, admit
 /// the source-dirty wakeup `dirty` of its graph (one page: the snapshot of the bound nodes),
 /// claim each admitted S1 and complete it over the source content it names.
-pub(super) async fn complete_graph_source_s1(
+pub async fn complete_graph_source_s1(
     served: &Served,
     binding_id: &str,
     dirty: &MutationOutboxRecord,
@@ -405,12 +407,12 @@ pub(super) async fn complete_graph_source_s1(
 }
 
 /// Drive the binding's generation from completed S1 to live and return the live generation.
-pub(super) async fn drive_generation_to_live(served: &Served, binding_id: &str) -> u64 {
+pub async fn drive_generation_to_live(served: &Served, binding_id: &str) -> u64 {
     drive_stages_to_live(Driver::served(served, binding_id)).await
 }
 
 /// As [`drive_generation_to_live`], for a state a test signs its own requests for.
-pub(super) async fn drive_signed_generation_to_live(
+pub async fn drive_signed_generation_to_live(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     binding_id: &str,
 ) -> u64 {
@@ -640,4 +642,59 @@ async fn drive_stages_to_live(driver: Driver<'_>) -> u64 {
         )
         .await
         .expect("the engine S6 worker activated the generation")
+}
+
+/// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
+/// nothing outside this process and is never a live credential.
+pub const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:ignore
+pub const WORKER: &str = "semantic-dispatch-worker";
+
+pub fn claims(principal: &str) -> RequestContextClaims {
+    RequestContextClaims {
+        principal: principal.to_string(),
+        tenant: TENANT.to_string(),
+        audience: "medulla-test".to_string(),
+        agent_id: principal.to_string(),
+        scopes: vec!["*".to_string()],
+        // Empty: this is a NON-delegated context (the principal IS the
+        // agent), and auth refuses a non-delegated context that still
+        // carries a chain.
+        delegation: Vec::new(),
+        policy_version: "policy-test".to_string(),
+        ..RequestContextClaims::default()
+    }
+}
+
+/// One signed `Method::SemanticIndex` request, exactly as a connector mints
+/// it. The attempt nonce and idempotency key the handler uses are derived
+/// from THIS envelope, not from the op body.
+pub fn signed(id: u64, op: SemanticIndexOp) -> Request {
+    signed_method(id, Method::SemanticIndex { op: Box::new(op) })
+}
+
+/// One signed request of any method, as the worker principal signs it.
+pub fn signed_method(id: u64, method: Method) -> Request {
+    let context = claims(WORKER);
+    let mut request = Request {
+        id,
+        graph: TENANT.to_string(),
+        auth_token: String::new(),
+        agent_id: Some(WORKER.to_string()),
+        method,
+        trace_id: None,
+    };
+    request.auth_token = compute_verified_envelope_token(
+        SECRET,
+        &request,
+        &VerifiedEnvelopeParams {
+            context: &context,
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock")
+                .as_secs(),
+            nonce: &format!("semantic-dispatch-nonce-{id}"),
+            idempotency_key: &format!("semantic-dispatch-key-{id}"),
+        },
+    );
+    request
 }

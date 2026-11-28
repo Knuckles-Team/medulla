@@ -1,0 +1,82 @@
+[package]
+name = "medulla-served-test-harness"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: the fixtures the served test crates share."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_served_test_harness"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-core-types = { path = "../medulla-identity-core-types" }
+medulla-query-types = { path = "../medulla-query-types" }
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+tracing = "0.1"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server-router = { path = "../medulla-server-router" }
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
+tempfile = "3"
+
+[features]
+numeric = ["query", "medulla-server/numeric"]
+obs = ["medulla-server-router/obs", "tsdb"]
+promql = ["medulla-server-router/promql", "obs"]
+modality-serving = ["medulla-server/modality-serving"]
+ann = ["medulla-server-router/ann", "medulla-server/ann"]
+ann-redb = ["medulla-server-router/ann-redb", "medulla-server/ann-redb", "ann", "redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
+blob = ["medulla-server-router/blob", "medulla-server/blob", "redb", "server", "medulla-protocol-types/blob", "medulla-server-api/blob", "medulla-types/blob", "medulla-server-blob/blob"]
+cypher = ["medulla-server/cypher", "medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher"]
+datascience = ["medulla-server/datascience", "server"]
+decide = ["medulla-server/decide", "jobs", "redb", "shacl", "medulla-persistence/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "owl", "sparql"]
+epistemic = ["medulla-server-router/epistemic", "medulla-server/epistemic", "query", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic", "medulla-server-ops/epistemic", "medulla-server-auth/epistemic"]
+epistemic-causal = ["medulla-server/epistemic-causal", "epistemic", "medulla-server-api/epistemic-causal"]
+epistemic-tms = ["medulla-server/epistemic-tms", "epistemic", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms"]
+evidence-graph = ["medulla-server/evidence-graph", "epistemic", "medulla-server-api/evidence-graph"]
+finance = ["medulla-server/finance", "medulla-protocol-types/finance", "medulla-types/finance", "shacl"]
+federation = ["medulla-server-router/federation", "medulla-server/federation", "query", "server", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-types/federation", "medulla-query-types/federation", "medulla-server-ops/federation", "medulla-server-auth/federation"]
+federation-sql = ["medulla-server/federation-sql", "federation", "medulla-server-api/federation-sql", "medulla-server-ops/federation-sql"]
+graphql = ["medulla-server/graphql", "security", "server", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-server-api/graphql", "medulla-types/graphql", "medulla-server-ops/graphql", "medulla-server-auth/graphql"]
+jobs = ["medulla-server-router/jobs", "medulla-server/jobs", "epistemic", "server", "mining", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-types/jobs", "medulla-server-ops/jobs"]
+matview = ["medulla-server/matview", "query", "streaming", "medulla-persistence/matview", "medulla-protocol-types/matview", "medulla-server-api/matview", "medulla-types/matview", "medulla-server-ops/matview"]
+mining = ["query", "tsdb", "medulla-server-router/mining", "medulla-server/mining", "medulla-kernel/mining", "medulla-protocol-types/mining", "medulla-server-api/mining", "medulla-types/mining", "medulla-query-types/mining", "medulla-server-ops/mining", "medulla-server-auth/mining"]
+nl-query = ["medulla-server-router/nl-query", "medulla-server/nl-query", "query", "server", "medulla-server-api/nl-query", "medulla-server-blob/nl-query"]
+obda = ["medulla-server/obda", "sparql", "query", "medulla-protocol-types/obda", "medulla-types/obda"]
+oidc = ["medulla-server-router/oidc", "medulla-server/oidc", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
+owl = ["medulla-server-router/owl", "medulla-server/owl", "sparql", "medulla-persistence/owl", "medulla-protocol-types/owl", "medulla-server-api/owl", "medulla-types/owl", "medulla-query-types/owl", "medulla-server-ops/owl"]
+query = ["medulla-server-router/query", "medulla-server/query", "redb", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-types/query", "medulla-query-types/query", "medulla-server-ops/query", "medulla-server-auth/query"]
+raft = ["medulla-server-router/raft", "medulla-server/raft", "redb", "server", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-auth/raft"]
+rdf = ["medulla-server-router/rdf", "medulla-server/rdf", "server", "medulla-kernel/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
+reasoning = ["medulla-server/reasoning", "medulla-kernel/reasoning", "medulla-server-api/reasoning"]
+redb = ["medulla-server-router/redb", "medulla-server/redb", "dep:redb", "dep:medulla-transaction", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-ops/redb", "medulla-server-blob/redb"]
+security = ["medulla-server-router/security", "medulla-server/security", "redb", "oidc", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-types/security", "medulla-server-ops/security", "medulla-server-blob/security", "medulla-server-auth/security"]
+server = ["medulla-server-router/server", "medulla-server/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
+shacl = ["medulla-server-router/shacl", "medulla-server/shacl", "rdf", "medulla-kernel/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-ops/shacl", "medulla-server-blob/shacl", "owl", "sparql"]
+shex = ["medulla-server/shex", "rdf"]
+sparql = ["medulla-server-router/sparql", "medulla-server/sparql", "rdf", "medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-types/sparql", "medulla-server-ops/sparql"]
+streaming = ["medulla-server-router/streaming", "medulla-server/streaming", "server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-types/streaming", "medulla-query-types/streaming", "medulla-server-ops/streaming"]
+test-support = ["medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-query-types/test-support", "medulla-source-types/test-support", "medulla-server-ops/test-support", "medulla-server-blob/test-support", "medulla-server-auth/test-support", "medulla-server/test-support"]
+tsdb = ["medulla-server-router/tsdb", "medulla-server/tsdb", "redb", "server", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
+wasm-udf = ["medulla-server-router/wasm-udf", "medulla-server/wasm-udf", "server", "medulla-protocol-types/wasm-udf", "medulla-server-api/wasm-udf", "medulla-types/wasm-udf", "medulla-query-types/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-server-auth/wasm-udf"]

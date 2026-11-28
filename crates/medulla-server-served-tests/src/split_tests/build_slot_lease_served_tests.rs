@@ -21,7 +21,7 @@ use medulla_work_types::native_control::{
     CapacityStatusResult, NativeControlSchemaVersion,
 };
 
-use super::connector_pack_harness::{ok, Served, GRAPH, TENANT};
+use medulla_served_test_harness::connector_pack_harness::{ok, Served, GRAPH, TENANT};
 
 const CELL: &str = "build-slots:r820";
 const LEASE_SCOPE: &[&str] = &["capacity:lease", "capacity:read"];

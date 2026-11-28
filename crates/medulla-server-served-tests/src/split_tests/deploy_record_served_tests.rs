@@ -14,7 +14,9 @@ use medulla_source_types::deploy_record::{
 };
 use serde_json::json;
 
-use super::connector_pack_harness::{ok, Served, GRAPH, OTHER_TENANT, TENANT};
+use medulla_served_test_harness::connector_pack_harness::{
+    ok, Served, GRAPH, OTHER_TENANT, TENANT,
+};
 
 const CONNECTOR: &str = "deploy-record-source";
 const STREAM: &str = "paper";

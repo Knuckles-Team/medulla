@@ -19,7 +19,7 @@ use super::medulla_h_query_dispatch_pipeline_tests::{
     TENANT,
 };
 use super::medulla_h_query_sql_source_read_tests::{binding_draft, dispatch_table_fixture};
-use super::semantic_live_generation::entity_vector;
+use medulla_served_test_harness::semantic_live_generation::entity_vector;
 
 /// An encoder of the binding's space that answers the vector the live generation holds for one
 /// source entity, whatever the query text.

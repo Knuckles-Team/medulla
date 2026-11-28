@@ -14,6 +14,9 @@
 //! A test that reached past any of those would prove nothing about whether the
 //! method is reachable at all, which is the only thing that has ever gone wrong
 //! here.
+pub(super) use medulla_served_test_harness::semantic_live_generation::{
+    claims, signed, signed_method, SECRET, WORKER,
+};
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -21,7 +24,6 @@ use tokio::sync::RwLock;
 use super::medulla_h_query_sql_source_read_tests::{
     binding_draft, commit_sql_change, dispatch_table_fixture, selector,
 };
-use medulla_identity_core_types::acl::RequestContextClaims;
 use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
@@ -29,24 +31,17 @@ use medulla_index_types::semantic_index::{
     SemanticStageIntentDraft, SemanticStageLeasePage, SemanticStageOutcome,
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
 };
-use medulla_protocol_types::protocol::Request;
-use medulla_protocol_types::protocol::{Method, Response};
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::test_support::decode_raw_response as ok;
-use medulla_server_auth::auth::compute_verified_envelope_token;
-use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
-/// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
-/// nothing outside this process and is never a live credential.
-const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:ignore
 /// `auth::request_context_policy` is a FIXED triple under `cfg(test)`:
 /// audience `medulla-test`, tenant `tenant-shared`, policy version
 /// `policy-test`. A signed envelope that names anything else is refused at
 /// the request boundary before the method is ever looked at, so these are
 /// not arbitrary fixture names.
 pub(super) const TENANT: &str = "tenant-shared";
-pub(super) const WORKER: &str = "semantic-dispatch-worker";
 
 pub(super) fn dispatch_state(
     persist_dir: &std::path::Path,
@@ -57,56 +52,6 @@ pub(super) fn dispatch_state(
     );
     state.persist_dir = Some(persist_dir.to_string_lossy().into_owned());
     Arc::new(RwLock::new(state))
-}
-
-fn claims(principal: &str) -> RequestContextClaims {
-    RequestContextClaims {
-        principal: principal.to_string(),
-        tenant: TENANT.to_string(),
-        audience: "medulla-test".to_string(),
-        agent_id: principal.to_string(),
-        scopes: vec!["*".to_string()],
-        // Empty: this is a NON-delegated context (the principal IS the
-        // agent), and auth refuses a non-delegated context that still
-        // carries a chain.
-        delegation: Vec::new(),
-        policy_version: "policy-test".to_string(),
-        ..RequestContextClaims::default()
-    }
-}
-
-/// One signed `Method::SemanticIndex` request, exactly as a connector mints
-/// it. The attempt nonce and idempotency key the handler uses are derived
-/// from THIS envelope, not from the op body.
-pub(super) fn signed(id: u64, op: SemanticIndexOp) -> Request {
-    signed_method(id, Method::SemanticIndex { op: Box::new(op) })
-}
-
-/// One signed request of any method, as the worker principal signs it.
-pub(super) fn signed_method(id: u64, method: Method) -> Request {
-    let context = claims(WORKER);
-    let mut request = Request {
-        id,
-        graph: TENANT.to_string(),
-        auth_token: String::new(),
-        agent_id: Some(WORKER.to_string()),
-        method,
-        trace_id: None,
-    };
-    request.auth_token = compute_verified_envelope_token(
-        SECRET,
-        &request,
-        &VerifiedEnvelopeParams {
-            context: &context,
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("system clock")
-                .as_secs(),
-            nonce: &format!("semantic-dispatch-nonce-{id}"),
-            idempotency_key: &format!("semantic-dispatch-key-{id}"),
-        },
-    );
-    request
 }
 
 /// A completion stamp comfortably after the engine's own ACL decision
@@ -143,7 +88,9 @@ pub(super) async fn drive_binding_to_live_generation(
     draft: &medulla_index_types::semantic_index::SemanticBindingDraft,
     fixture: &super::medulla_h_query_sql_source_read_tests::DispatchTableFixture,
 ) -> LiveBinding {
-    use super::semantic_live_generation::{drive_signed_generation_to_live, DRIVER};
+    use medulla_served_test_harness::semantic_live_generation::{
+        drive_signed_generation_to_live, DRIVER,
+    };
     let binding_id = draft.binding_id.clone();
     let dispatch = |op: SemanticIndexOp| {
         medulla_server_router::dispatch::request_boundary::dispatch(

@@ -58,7 +58,7 @@ mod served {
     use serde_json::json;
     use sha2::{Digest, Sha256};
 
-    use super::super::connector_pack_harness::{
+    use medulla_served_test_harness::connector_pack_harness::{
         next_id, ok, IngestOptions, Served, OTHER_TENANT, TENANT,
     };
 
@@ -80,7 +80,14 @@ mod served {
 
     /// The media journeys' view of the shared connector-pack harness: one `image` stream that
     /// maps to `Document`.
-    impl Served {
+    trait MediaServed: Sized {
+        async fn media_provisioned() -> Self;
+        async fn ingest_media(&self, record_id: &str, kind: &str, text: &str) -> Response;
+        async fn remember(&self, tenant: &str, record: MemoryRecord) -> Response;
+        async fn recall(&self, tenant: &str, include_media: bool) -> MemoryRecallResult;
+    }
+
+    impl MediaServed for Served {
         async fn media_provisioned() -> Self {
             Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "Document")]).await
         }

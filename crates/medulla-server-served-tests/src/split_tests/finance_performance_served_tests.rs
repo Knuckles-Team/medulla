@@ -7,7 +7,7 @@ use medulla_finance_types::wire_finance::{FinanceRecord, FinanceRecordKind};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::finance_accounting::FinancePerformanceCard;
 
-use super::connector_pack_harness::{ok, Served, GRAPH, TENANT};
+use medulla_served_test_harness::connector_pack_harness::{ok, Served, GRAPH, TENANT};
 
 // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.4
 #[tokio::test]

@@ -101,3 +101,30 @@ def test_compute_split_is_within_budget() -> None:
 @pytest.mark.spec("MEDULLA-CONTRACT-R067.4")
 def test_identity_types_split_is_within_budget() -> None:
     _assert_split(["medulla-identity-core-types", "medulla-identity-types"])
+
+
+# spec: MEDULLA-CONTRACT-R067.13
+@pytest.mark.spec("MEDULLA-CONTRACT-R067.13")
+def test_served_tests_split_is_within_budget() -> None:
+    harness = "medulla-served-test-harness"
+    handler = "medulla-server-served-handler-tests"
+    kept = "medulla-server-served-tests"
+    _assert_split([harness, handler, kept])
+    crates = REPO / "crates"
+    # Every handler-crate served test moved; none stays in the kept crate.
+    assert not list((crates / kept / "src" / "split_tests").glob("medulla_h_*"))
+    assert list((crates / handler / "src" / "split_tests").glob("medulla_h_*.rs"))
+    # The harness is a plain library; the two test crates are test-only.
+    assert "#![cfg(test)]" not in (crates / harness / "src" / "lib.rs").read_text()
+    for crate in (handler, kept):
+        assert "#![cfg(test)]" in (crates / crate / "src" / "lib.rs").read_text()
+        manifest = (crates / crate / "Cargo.toml").read_text()
+        assert f'{harness} = {{ path = "../{harness}" }}' in manifest
+    # No crate of the three names another test crate that sits above it.
+    for crate in (harness, handler):
+        assert f'"../{kept}"' not in (crates / crate / "Cargo.toml").read_text()
+    assert f'"../{handler}"' not in (crates / kept / "Cargo.toml").read_text()
+    # The old harness paths are gone from the kept crate.
+    for module in ("connector_pack_harness", "semantic_live_generation"):
+        assert not (crates / kept / "src" / "split_tests" / f"{module}.rs").exists()
+        assert (crates / harness / "src" / f"{module}.rs").exists()

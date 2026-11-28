@@ -29,7 +29,7 @@ struct Served {
     _dir: tempfile::TempDir,
     state: Arc<RwLock<ServerState>>,
     /// Fails the test when one of its requests was answered by an uncoded refusal.
-    tap: crate::refusal_tap::RefusalTap,
+    tap: medulla_served_test_harness::refusal_tap::RefusalTap,
     last_id: AtomicU64,
 }
 
@@ -60,7 +60,7 @@ impl Served {
         Self {
             _dir: dir,
             state,
-            tap: crate::refusal_tap::RefusalTap::new(),
+            tap: medulla_served_test_harness::refusal_tap::RefusalTap::new(),
             last_id: AtomicU64::new(0),
         }
     }
@@ -842,7 +842,7 @@ async fn introspect_rows_carry_no_token_or_payload() {
 // spec: MEDULLA-OBSERVE-R001.3
 #[tokio::test(flavor = "multi_thread")]
 async fn collapsed_refusal_fails_the_harness() {
-    use crate::refusal_tap::RefusalTap;
+    use medulla_served_test_harness::refusal_tap::RefusalTap;
     let served = Served::new().await;
 
     // A typed refusal through the served path is never a collapse.
@@ -896,7 +896,7 @@ const TRACEPARENT: &str = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-
 // spec: MEDULLA-OBSERVE-R002.3
 #[tokio::test(flavor = "multi_thread")]
 async fn engine_log_line_inside_request_shows_ids() {
-    let capture = crate::log_capture::install();
+    let capture = medulla_served_test_harness::log_capture::install();
     let served = Served::new().await;
 
     // A request that carries a traceparent: every engine log line it prints runs inside the
@@ -975,7 +975,7 @@ async fn engine_log_line_inside_request_shows_ids() {
 // spec: MEDULLA-OBSERVE-R002.4
 #[tokio::test(flavor = "multi_thread")]
 async fn one_trace_id_follows_a_request_into_its_spawned_task() {
-    let capture = crate::log_capture::install();
+    let capture = medulla_served_test_harness::log_capture::install();
     let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
     let served = Served::new().await;
     let graph = "observe:traced";

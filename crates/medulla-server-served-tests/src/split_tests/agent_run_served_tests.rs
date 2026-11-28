@@ -19,8 +19,10 @@ use medulla_source_types::source_connection::{
 };
 use medulla_work_types::action_spec::{ActionList, ActionParameter, ActionSpec, ParamType};
 
-use super::connector_pack_harness::{ok, Served, GRAPH, OTHER_TENANT, TENANT};
 use super::deploy_record_served_tests::{admit, refusal_text};
+use medulla_served_test_harness::connector_pack_harness::{
+    ok, Served, GRAPH, OTHER_TENANT, TENANT,
+};
 
 const CONNECTOR: &str = "agent-run-source";
 const STREAM: &str = "paper";

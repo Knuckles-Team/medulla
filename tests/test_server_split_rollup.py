@@ -234,12 +234,18 @@ def test_served_tests_live_in_the_served_tests_crate() -> None:
                     f"{source.relative_to(REPO)}: names medulla_server_router"
                 )
     # Rule 3: a served-test module of one handler crate is named for that crate.
-    split_tests = (
-        REPO / "crates" / "medulla-server-served-tests" / "src" / "split_tests"
+    split_dirs = [
+        REPO / "crates" / crate / "src" / "split_tests"
+        for crate in (
+            "medulla-server-served-tests",
+            "medulla-server-served-handler-tests",
+        )
+    ]
+    modules = sorted(
+        module for directory in split_dirs for module in directory.glob("*.rs")
     )
-    modules = sorted(split_tests.glob("*.rs")) if split_tests.is_dir() else []
     if not modules:
-        failures.append(f"{split_tests.relative_to(REPO)}: no served-test module")
+        failures.append("crates/medulla-server-served-tests: no served-test module")
     for module in modules:
         if not module.name.startswith("medulla_h_"):
             continue

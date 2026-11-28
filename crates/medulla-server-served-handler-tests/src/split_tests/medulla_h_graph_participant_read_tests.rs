@@ -20,7 +20,9 @@ mod served {
         Participant, ParticipantId, ParticipantKind, ParticipantOp,
     };
 
-    use super::super::connector_pack_harness::{next_id, ok, Served, OTHER_TENANT, TENANT};
+    use medulla_served_test_harness::connector_pack_harness::{
+        next_id, ok, Served, OTHER_TENANT, TENANT,
+    };
 
     const GRAPH: &str = "participant-read";
     /// The harness administrator: the principal the participant acts as.
@@ -58,7 +60,12 @@ mod served {
         }
     }
 
-    impl Served {
+    trait ParticipantReadServed: Sized {
+        async fn pr_call(&self, method: Method) -> Response;
+        async fn pr_read(&self, tenant: &str, scopes: &[&str], op: ParticipantReadOp) -> Response;
+    }
+
+    impl ParticipantReadServed for Served {
         async fn pr_call(&self, method: Method) -> Response {
             self.call_on(GRAPH, &format!("participant-read:{}", next_id()), method)
                 .await

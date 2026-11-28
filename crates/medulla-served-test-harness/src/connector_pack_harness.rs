@@ -30,24 +30,24 @@ use tokio::sync::RwLock;
 
 const SECRET: &str = "connector-pack-served-fixture-secret"; // sanitizer:ignore
 /// The fixed tenant the served test auth policy admits at the door.
-pub(super) const TENANT: &str = "tenant-shared";
+pub const TENANT: &str = "tenant-shared";
 /// A second tenant of the same store.
-pub(super) const OTHER_TENANT: &str = "tenant-other";
+pub const OTHER_TENANT: &str = "tenant-other";
 /// The System-role agent the harness isolation registers.
 const ADMIN: &str = "connector-pack-admin";
 const COMMONS: &str = "__commons__";
 /// The consumer the harness claims the ingest graph's source-dirty wakeups as.
 const DIRTY_CONSUMER: &str = "connector-pack-source-dirty";
 /// The graph the connector-pack journeys ingest into by default.
-pub(super) const GRAPH: &str = "connector-pack-ingest";
+pub const GRAPH: &str = "connector-pack-ingest";
 
-pub(super) fn next_id() -> u64 {
+pub fn next_id() -> u64 {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     NEXT.fetch_add(1, Ordering::Relaxed)
 }
 
 /// The decoded result of a successful response.
-pub(super) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
+pub fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
     assert!(
         response.error.is_none(),
         "{label} was refused: {response:?}"
@@ -168,7 +168,7 @@ fn pack(connector: &str, streams: &[(&str, &str)]) -> (ConnectorPackIndex, Vec<u
 }
 
 /// One served state holding an ingest graph and an imported connector pack.
-pub(super) struct Served {
+pub struct Served {
     _dir: tempfile::TempDir,
     state: Arc<RwLock<ServerState>>,
     connector: String,
@@ -178,21 +178,17 @@ pub(super) struct Served {
 
 /// How one `SourceIngest` envelope differs from the plain delta of a journey.
 #[derive(Default)]
-pub(super) struct IngestOptions {
+pub struct IngestOptions {
     /// Refuse a record that carries a field its mapping does not name.
-    pub(super) strict_schema: bool,
+    pub strict_schema: bool,
     /// The envelope's derived features, as the wire carries them.
-    pub(super) features: Vec<Value>,
+    pub features: Vec<Value>,
 }
 
 impl Served {
     /// A fresh state, the ingest graph `graph`, and the pack of `connector` with its `streams`,
     /// imported on the commons graph.
-    pub(super) async fn provisioned(
-        graph: &str,
-        connector: &str,
-        streams: &[(&str, &str)],
-    ) -> Self {
+    pub async fn provisioned(graph: &str, connector: &str, streams: &[(&str, &str)]) -> Self {
         Self::provisioned_activating(graph, connector, streams, COMMONS, None).await
     }
 
@@ -200,7 +196,7 @@ impl Served {
     /// activation reads as its own, which a semantic index authored by the import is built from.
     /// `text_embedder` is injected into the state before the import, so the import's authored
     /// index is embedded in its space.
-    pub(super) async fn provisioned_activating(
+    pub async fn provisioned_activating(
         graph: &str,
         connector: &str,
         streams: &[(&str, &str)],
@@ -248,7 +244,7 @@ impl Served {
 
     /// Durably subscribe the harness to the source-dirty wakeups of the ingest graph, so
     /// [`Self::source_dirty_records`] reads the ones its commits write.
-    pub(super) async fn subscribe_source_dirty(&self) {
+    pub async fn subscribe_source_dirty(&self) {
         let persistence = self.persistence().await;
         persistence
             .subscribe_mutation_outbox(
@@ -261,7 +257,7 @@ impl Served {
     }
 
     /// The source-dirty wakeups the ingest graph's commits wrote, oldest first.
-    pub(super) async fn source_dirty_records(&self) -> Vec<MutationOutboxRecord> {
+    pub async fn source_dirty_records(&self) -> Vec<MutationOutboxRecord> {
         let persistence = self.persistence().await;
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let mut budget = medulla_transaction::OutboxClaimBudget::new(64, 60_000, now_ms)
@@ -292,17 +288,17 @@ impl Served {
     }
 
     /// The served state the harness dispatches against.
-    pub(super) fn state(&self) -> &Arc<RwLock<ServerState>> {
+    pub fn state(&self) -> &Arc<RwLock<ServerState>> {
         &self.state
     }
 
     /// The graph the pack's records are ingested into.
-    pub(super) fn graph(&self) -> &str {
+    pub fn graph(&self) -> &str {
         &self.graph
     }
 
     /// One request as `ADMIN` of the door tenant, on `graph`, through the signed dispatch.
-    pub(super) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
+    pub async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
         let id = next_id();
         let request = scoped_test_request_on(
             SECRET,
@@ -322,13 +318,13 @@ impl Served {
 
     /// One request as `tenant`'s verified context with `scopes`, through the chokepoint, as the
     /// harness administrator (a System identity: no row rule narrows its reads).
-    pub(super) async fn verified(&self, tenant: &str, scopes: &[&str], method: Method) -> Response {
+    pub async fn verified(&self, tenant: &str, scopes: &[&str], method: Method) -> Response {
         self.verified_as(ADMIN, tenant, scopes, method).await
     }
 
     /// As [`Self::verified`], for `principal`, whose reads the row rules narrow when it is a
     /// registered non-System identity (see [`Self::register_reader`]).
-    pub(super) async fn verified_as(
+    pub async fn verified_as(
         &self,
         principal: &str,
         tenant: &str,
@@ -357,7 +353,7 @@ impl Served {
 
     /// Register `agent_id` as a regular (non-System) identity with no team and no role, so the
     /// row rules decide what its reads return.
-    pub(super) async fn register_reader(&self, agent_id: &str) {
+    pub async fn register_reader(&self, agent_id: &str) {
         self.state.write().await.isolation.register_agent(
             medulla_identity_core_types::acl::AgentIdentity {
                 agent_id: agent_id.to_string(),
@@ -370,7 +366,7 @@ impl Served {
 
     /// Make the row `node_id` of the ingest graph private to `owner`: no other non-System
     /// identity may read it, whatever the graph and tenant checks allow.
-    pub(super) async fn deny_row(&self, node_id: &str, owner: &str) {
+    pub async fn deny_row(&self, node_id: &str, owner: &str) {
         let core = self
             .state
             .read()
@@ -391,7 +387,7 @@ impl Served {
 
     /// Upload `bytes` through the blob CAS, hold them under the caller's owner scope and return
     /// the content digest.
-    pub(super) async fn upload(&self, bytes: &[u8]) -> String {
+    pub async fn upload(&self, bytes: &[u8]) -> String {
         let tag = format!(
             "upload:{}:{}",
             hex::encode(Sha256::digest(bytes)),
@@ -504,11 +500,7 @@ impl Served {
 
     /// Ingest `records` of `stream`, `(record_id, payload)` each, in one plain delta envelope and
     /// return the accepted receipt.
-    pub(super) async fn ingest(
-        &self,
-        stream: &str,
-        records: &[(&str, Value)],
-    ) -> SourceIngestionReceipt {
+    pub async fn ingest(&self, stream: &str, records: &[(&str, Value)]) -> SourceIngestionReceipt {
         let response = self
             .ingest_with(stream, records, &IngestOptions::default())
             .await;
@@ -519,7 +511,7 @@ impl Served {
 
     /// Ingest `records` of `stream` in one envelope shaped by `options`, and return the raw
     /// response, so a journey can assert a refusal.
-    pub(super) async fn ingest_with(
+    pub async fn ingest_with(
         &self,
         stream: &str,
         records: &[(&str, Value)],
@@ -566,7 +558,7 @@ impl Served {
     }
 
     /// The ids a UQL statement answers as a reader of `TENANT` holding only `kg:read`.
-    pub(super) async fn uql_ids(&self, text: &str) -> Vec<String> {
+    pub async fn uql_ids(&self, text: &str) -> Vec<String> {
         let response = self
             .verified(
                 TENANT,
@@ -590,7 +582,7 @@ impl Served {
     }
 
     /// The stored properties of a node, read as a `kg:read` reader of `TENANT`.
-    pub(super) async fn properties(&self, id: &str) -> Option<serde_json::Map<String, Value>> {
+    pub async fn properties(&self, id: &str) -> Option<serde_json::Map<String, Value>> {
         let response = self
             .verified(
                 TENANT,

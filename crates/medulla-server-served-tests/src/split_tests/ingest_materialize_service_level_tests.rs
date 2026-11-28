@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::json;
 
-use super::connector_pack_harness::{Served, GRAPH};
+use medulla_served_test_harness::connector_pack_harness::{Served, GRAPH};
 
 const CONNECTOR: &str = "materialize-bench-source";
 const STREAM: &str = "doc";
