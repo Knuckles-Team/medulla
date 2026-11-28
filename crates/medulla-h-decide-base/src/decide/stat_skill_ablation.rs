@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
-use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+use medulla_decision_outcome_types::decision::revision_list::{RevisionRow, ENGINE_AUTHOR};
 use medulla_decision_statistical_types::decision::codes::CANARY_NO_CHAMPION;
 use medulla_decision_statistical_types::decision::codes::COMPILE_MODEL_UNKNOWN;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -248,6 +248,7 @@ pub fn record_model_compile(
             digest: row.compiled_digest.clone(),
             evaluation_receipt_id: None,
             created_ms: ctx.now_ms,
+            author: ENGINE_AUTHOR.to_string(),
         };
         writes.push((draft.key(), encode_artifact(&draft)?));
         proposals.push(draft.id);

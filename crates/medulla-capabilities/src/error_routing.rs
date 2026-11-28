@@ -2948,6 +2948,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "GapTransition",
     // MEDULLA-TYPED-PACKS-R805.3: an access request moves `AccessRequestMachine`.
     "AccessRequestDecide",
+    // MEDULLA-DECISION-ENGINE-R805.15: a `review` moves a revision through `RevisionMachine`.
+    "DecisionLog",
 ];
 
 /// The wire code of a refused machine transition.

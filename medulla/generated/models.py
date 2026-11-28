@@ -5185,6 +5185,26 @@ class DecisionLogOpPointer(BaseModel):
     tenant_id: str
 
 
+ReviewDecision = Literal["approve", "veto"]
+
+
+class RevisionReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision: ReviewDecision
+    digest: str
+    reason: str
+    revision_id: str
+
+
+class DecisionLogOpReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["review"]
+    review: RevisionReview
+    tenant_id: str
+
+
 class InputsState(str, Enum):
     inline = "inline"
     compacted = "compacted"
@@ -5735,6 +5755,7 @@ DecisionLogOp = Annotated[
     | DecisionLogOpHarnessAdoption
     | DecisionLogOpHarnessLessons
     | DecisionLogOpPointer
+    | DecisionLogOpReview
     | DecisionLogOpLifecycleRecord
     | DecisionLogOpLifecycleRecords
     | DecisionLogOpList
@@ -27057,6 +27078,7 @@ RevisionStage = Literal["draft", "evaluated", "published", "champion", "retired"
 class RevisionRow(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    author: str = ""
     created_ms: Annotated[int, Field(ge=0)]
     digest: str
     evaluation_receipt_id: str | None = None
@@ -27064,6 +27086,14 @@ class RevisionRow(BaseModel):
     stage: RevisionStage
     subject_kind: str
     subject_ref: str
+
+
+class RevisionReviewReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipt_ref: str
+    revision_id: str
+    stage: RevisionStage
 
 
 class RevisionProposalListRequest(BaseModel):
@@ -48132,6 +48162,9 @@ __all__ = [
     "RevisionProposalListRequest",
     "RevisionProposalPage",
     "RevisionRow",
+    "ReviewDecision",
+    "RevisionReview",
+    "RevisionReviewReceipt",
     "RevisionStage",
     "RiskHistorySpec",
     "CapacityAcquireRequest",
@@ -48487,6 +48520,7 @@ __all__ = [
     "DecisionLogOpHarnessAdoption",
     "DecisionLogOpHarnessLessons",
     "DecisionLogOpPointer",
+    "DecisionLogOpReview",
     "DecisionLogOpLearn",
     "DecisionLogOpLifecycleRecord",
     "DecisionLogOpLifecycleRecords",

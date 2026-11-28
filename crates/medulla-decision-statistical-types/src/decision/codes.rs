@@ -257,6 +257,14 @@ pub const ROLLBACK_NO_PARENT: RefusalCode = RefusalCode::new("ROLLBACK_NO_PARENT
 /// A champion pointer read names a key that has no active revision
 /// (MEDULLA-DECISION-ENGINE-R805.13).
 pub const POINTER_NOT_FOUND: RefusalCode = RefusalCode::new("POINTER_NOT_FOUND");
+/// A review names a revision no row of the tenant holds
+/// (MEDULLA-DECISION-ENGINE-R805.15).
+pub const REVISION_NOT_FOUND: RefusalCode = RefusalCode::new("REVISION_NOT_FOUND");
+/// A review's digest differs from the digest of the revision it names
+/// (MEDULLA-DECISION-ENGINE-R805.15).
+pub const REVISION_DIGEST_MISMATCH: RefusalCode = RefusalCode::new("REVISION_DIGEST_MISMATCH");
+/// The reviewer of a revision is its author (MEDULLA-DECISION-ENGINE-R805.15).
+pub const REVIEW_SELF_APPROVAL: RefusalCode = RefusalCode::new("REVIEW_SELF_APPROVAL");
 /// The only score is a model judge's; a judge never decides promotion.
 pub const PROMOTION_JUDGE_ONLY: RefusalCode = RefusalCode::new("PROMOTION_JUDGE_ONLY");
 /// A measured fact whose run is not newer than the champion's.
@@ -292,6 +300,9 @@ pub const PROMOTION: &[RefusalCode] = &[
     PROMOTION_RECEIPT_MISMATCH,
     ROLLBACK_NO_PARENT,
     POINTER_NOT_FOUND,
+    REVISION_NOT_FOUND,
+    REVISION_DIGEST_MISMATCH,
+    REVIEW_SELF_APPROVAL,
     EVAL_SET_NOT_INDEPENDENT,
     PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_NO_BASELINE,

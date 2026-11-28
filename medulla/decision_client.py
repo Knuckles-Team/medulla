@@ -1227,6 +1227,27 @@ def pointer_op(tenant_id: str, pointer_key: str) -> dict[str, Any]:
     return {"op": "pointer", "tenant_id": tenant_id, "pointer_key": pointer_key}
 
 
+def review_op(
+    tenant_id: str, revision_id: str, decision: str, digest: str, reason: str
+) -> dict[str, Any]:
+    """Review one ``evaluated`` revision proposal (R805.15).
+
+    ``decision`` is ``approve`` (publishes it) or ``veto`` (retires it), ``digest`` is
+    the digest the reviewer read and ``reason`` is 1 to 1024 characters. The reviewer is
+    the verified principal; a reviewer who authored the revision is refused
+    ``REVIEW_SELF_APPROVAL``."""
+    return {
+        "op": "review",
+        "tenant_id": tenant_id,
+        "review": {
+            "revision_id": revision_id,
+            "decision": decision,
+            "digest": digest,
+            "reason": reason,
+        },
+    }
+
+
 def lifecycle_record_op(
     tenant_id: str, record_kind: str, record: dict[str, Any]
 ) -> dict[str, Any]:
@@ -2289,6 +2310,24 @@ class DecisionClient:
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
+
+    async def review_revision(
+        self,
+        tenant_id: str,
+        revision_id: str,
+        decision: str,
+        digest: str,
+        reason: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Send ``DecisionLog`` ``review`` (R805.15): approve or veto an ``evaluated``
+        revision. The result is ``{revision_id, stage, receipt_ref}``; a repeat of the
+        same review answers the stored receipt and writes nothing."""
+        return await self.log(
+            review_op(tenant_id, revision_id, decision, digest, reason),
+            idempotency_key=idempotency_key,
+        )
 
     async def fit(
         self, request: Mapping[str, Any], *, idempotency_key: str | None = None

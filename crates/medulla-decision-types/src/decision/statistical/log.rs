@@ -578,6 +578,14 @@ pub enum DecisionLogOp {
         tenant_id: String,
         pointer_key: String,
     },
+    /// An operator reviews a revision proposal (MEDULLA-DECISION-ENGINE-R805.15): `approve`
+    /// publishes an `evaluated` revision and `veto` retires it, each through the revision
+    /// machine, and one receipt keyed `review:<revision_id>:<digest>` is stored in the same
+    /// write. The reviewer is the verified principal; the request carries none.
+    Review {
+        tenant_id: String,
+        review: RevisionReview,
+    },
     /// Commit one lifecycle record (MEDULLA-SDLC-R013, R019.4): a `would_dispatch` decision of
     /// the delivery loop or a `ScenarioRun` of a delivery phase. The one write authority of
     /// both; a repeat of an identical record is a replay.
@@ -859,6 +867,31 @@ pub struct HarnessAdoptionWrite {
     pub evidence_run_ids: BoundedVec<String, 32>,
 }
 
+/// What a `Review` op carries (MEDULLA-DECISION-ENGINE-R805.15): the revision, the
+/// decision, the digest the reviewer read and the reason. The reason is 1 to 1024
+/// characters and only its SHA-256 is stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RevisionReview {
+    pub revision_id: String,
+    pub decision: ReviewDecision,
+    /// The digest of the revision as the reviewer read it.
+    pub digest: String,
+    pub reason: String,
+}
+
+/// An operator's decision about an `evaluated` revision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ReviewDecision {
+    /// Publish the revision (edge V02 of the revision machine).
+    Approve,
+    /// Retire the revision (edge V06 of the revision machine).
+    Veto,
+}
+
 /// The stored refs of one `HarnessAdoption` write.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -947,6 +980,7 @@ impl DecisionLogOp {
             | Self::PolicyActivation { .. } => LogOpClass::Govern,
             Self::RunRecord { .. }
             | Self::HarnessAdoption { .. }
+            | Self::Review { .. }
             | Self::LifecycleRecord { .. } => LogOpClass::Write,
         }
     }
@@ -983,6 +1017,7 @@ impl DecisionLogOp {
             | Self::WritebackAudit { tenant_id, .. }
             | Self::FeedbackContinuation { tenant_id, .. }
             | Self::HarnessAdoption { tenant_id, .. }
+            | Self::Review { tenant_id, .. }
             | Self::HarnessLessons { tenant_id, .. }
             | Self::Pointer { tenant_id, .. }
             | Self::LifecycleRecord { tenant_id, .. }

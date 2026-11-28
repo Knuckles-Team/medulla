@@ -354,6 +354,7 @@ async fn steps_record_actor_and_evidence() {
         digest: "d".into(),
         evaluation_receipt_id: None,
         created_ms: 1,
+        author: "principal:a".into(),
     };
     store
         .put_decision_artifacts(
@@ -452,6 +453,7 @@ async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
         digest: "d".into(),
         evaluation_receipt_id: None,
         created_ms: 1,
+        author: "principal:a".into(),
     };
     store
         .put_decision_artifacts(

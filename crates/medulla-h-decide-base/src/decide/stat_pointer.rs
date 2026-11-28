@@ -115,6 +115,7 @@ fn record_champion(
             digest: to.receipt_digest.clone(),
             evaluation_receipt_id: Some(to.receipt_digest.clone()),
             created_ms: at.now_ms,
+            author: at.principal.to_string(),
         },
     )
 }

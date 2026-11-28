@@ -632,6 +632,7 @@ mod served {
             digest: proposal.edit.body_digest.clone(),
             evaluation_receipt_id: Some(proposal.evidence_digest.clone()),
             created_ms: now_ms,
+            author: verified.principal_persistence_id(),
         };
         let receipt_id = Digest256::framed(
             b"medulla.knowledge_curation.receipt.v1",

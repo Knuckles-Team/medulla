@@ -220,6 +220,7 @@ pub fn adopt(
             digest: write.decision_record_digest.clone(),
             evaluation_receipt_id: Some(adoptions[adoptions_before].decision_ref.clone()),
             created_ms: ctx.now_ms,
+            author: reader.principal.clone(),
         };
         rows.push((revision.key(), encode_artifact(&revision)?));
     }

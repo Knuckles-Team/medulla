@@ -1042,6 +1042,7 @@ fn seed_harness_bundle(h: &Harness) -> (RevisionSubject, Vec<String>, GraphView)
             digest: format!("sha256:decision-{index}"),
             evaluation_receipt_id: Some(adopted.decision_ref.clone()),
             created_ms: index,
+            author: "principal:a".to_string(),
         };
         rows.push((revision.key(), encode_artifact(&revision).unwrap()));
         adoptions.push(id);

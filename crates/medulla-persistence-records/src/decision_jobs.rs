@@ -218,6 +218,38 @@ impl AgentLibraryStore {
         })
     }
 
+    /// Compare-and-set several decision artifacts in one owner transaction:
+    /// every `(key, expected, bytes)` is written only when every row still holds
+    /// its `expected` bytes (`None` = absent), else nothing is written. A review
+    /// that moves a revision row and stores its receipt is one such write
+    /// (MEDULLA-DECISION-ENGINE-R805.15).
+    pub fn swap_decision_artifacts(
+        &self,
+        tenant_id: &str,
+        swaps: &[(String, Option<Vec<u8>>, Vec<u8>)],
+    ) -> Result<(), String> {
+        self.maintain_control_rows(tenant_id, "decision_artifacts", |owner| {
+            let mut table = owner.open_table(DECISION_ARTIFACTS)?;
+            for (key, expected, _) in swaps {
+                let current = table
+                    .get((tenant_id, key.as_str()))
+                    .map_err(|error| error.to_string())?
+                    .map(|row| row.value().to_vec());
+                if &current != expected {
+                    return Err(format!(
+                        "IDEMPOTENCY_CONFLICT: decision artifact {key} changed concurrently; read it again"
+                    ));
+                }
+            }
+            for (key, _, bytes) in swaps {
+                table
+                    .insert((tenant_id, key.as_str()), bytes.as_slice())
+                    .map_err(|error| error.to_string())?;
+            }
+            Ok(())
+        })
+    }
+
     /// Every decision artifact of `tenant_id` whose key starts with `prefix`,
     /// in key order. Refuses rather than truncates past `limit`.
     pub fn decision_artifacts_with_prefix(

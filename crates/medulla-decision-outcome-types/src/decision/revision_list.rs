@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::promotion::{RevisionEvent, RevisionStage};
+use medulla_decision_policy_types::decision::held_out::{ReceiptKind, ReviewApproval};
 use medulla_types::transition_refused::TransitionRefused;
 
 /// The schema version of [`RevisionProposalPage`].
@@ -13,6 +14,14 @@ pub const REVISION_PROPOSAL_PAGE_SCHEMA_VERSION: u16 = 1;
 /// The store key prefix of revision rows; a key is
 /// `revision:<created_ms, 20 digits>:<id>`, so key order is creation order.
 pub const REVISION_KEY_PREFIX: &str = "revision:";
+
+/// The author of a revision the engine drafts itself, with no principal behind
+/// it (MEDULLA-DECISION-ENGINE-R805.15).
+pub const ENGINE_AUTHOR: &str = "engine";
+
+/// The store key prefix of review receipts; a key is `review:<revision_id>:<digest>`
+/// (MEDULLA-DECISION-ENGINE-R805.15).
+pub const REVIEW_KEY_PREFIX: &str = "review:";
 
 /// One stored revision of a subject.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,6 +37,46 @@ pub struct RevisionRow {
     pub digest: String,
     pub evaluation_receipt_id: Option<String>,
     pub created_ms: u64,
+    /// The principal that created the row, or [`ENGINE_AUTHOR`] for a revision
+    /// the engine drafted. A reviewer who is the author is refused
+    /// (MEDULLA-DECISION-ENGINE-R805.15). A row stored before the field existed
+    /// reads as the empty string, which no principal equals.
+    #[serde(default)]
+    pub author: String,
+}
+
+/// What an operator decided about an `evaluated` revision.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ReviewDecisionKind {
+    Approve,
+    Veto,
+}
+
+/// The receipt stored beside a reviewed revision, keyed
+/// `review:<revision_id>:<digest>` (MEDULLA-DECISION-ENGINE-R805.15). The
+/// reason text is not stored, only its SHA-256.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RevisionReviewRecord {
+    pub receipt_kind: ReceiptKind,
+    pub review: ReviewApproval,
+    pub decision: ReviewDecisionKind,
+    pub reason_digest: String,
+    pub decided_ms: u64,
+}
+
+/// The answer to a `DecisionLog` review: the revision, the stage it now holds
+/// and the key of the stored receipt (MEDULLA-DECISION-ENGINE-R805.15).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RevisionReviewReceipt {
+    pub revision_id: String,
+    pub stage: RevisionStage,
+    pub receipt_ref: String,
 }
 
 impl RevisionRow {
@@ -99,6 +148,7 @@ mod tests {
             digest: "sha256:aa".into(),
             evaluation_receipt_id: None,
             created_ms,
+            author: "principal:a".into(),
         }
     }
 

@@ -90,6 +90,8 @@ pub mod stat_recommend;
 #[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod stat_replay_lo;
 #[cfg(feature = "decide")]
+pub mod stat_review;
+#[cfg(feature = "decide")]
 #[allow(missing_docs)] // docs pending: reached across the crate split
 pub mod stat_skill_ablation;
 #[allow(missing_docs)] // docs pending: reached across the crate split

@@ -103,13 +103,32 @@ pub fn record_revision(
     if row.stage == RevisionStage::Champion {
         retire_champions(store, tenant, row)?;
     }
-    let key = row.key();
+    let held = store.decision_artifact(tenant, &row.key())?;
+    record_revision_over(store, tenant, row, held, &[])
+}
+
+/// Store `row` over the `held` bytes it was read as (`None` = absent), together with
+/// the `companions` that must be absent (a review's receipt): the row and every
+/// companion land in one owner write or not at all, and a row that moved since it was
+/// read refuses.
+pub fn record_revision_over(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    row: &RevisionRow,
+    held: Option<Vec<u8>>,
+    companions: &[(String, Vec<u8>)],
+) -> Result<(), String> {
     let bytes = encode_artifact(row)?;
-    let expected = store.decision_artifact(tenant, &key)?;
-    if expected.as_deref() == Some(bytes.as_slice()) {
+    if held.as_deref() == Some(bytes.as_slice()) && companions.is_empty() {
         return Ok(());
     }
-    store.swap_decision_artifact(tenant, &key, expected, bytes)
+    let mut swaps = vec![(row.key(), held, bytes)];
+    swaps.extend(
+        companions
+            .iter()
+            .map(|(key, bytes)| (key.clone(), None, bytes.clone())),
+    );
+    store.swap_decision_artifacts(tenant, &swaps)
 }
 
 fn retire_champions(

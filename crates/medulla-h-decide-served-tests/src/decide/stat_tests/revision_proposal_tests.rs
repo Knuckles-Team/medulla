@@ -26,6 +26,7 @@ fn row(id: &str, created_ms: u64, stage: RevisionStage) -> RevisionRow {
         digest: format!("sha256:{id}"),
         evaluation_receipt_id: Some(format!("receipt:{id}")),
         created_ms,
+        author: "principal:a".to_string(),
     }
 }
 

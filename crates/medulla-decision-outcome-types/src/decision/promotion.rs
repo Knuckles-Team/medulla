@@ -676,6 +676,7 @@ mod tests {
             digest: "d".into(),
             evaluation_receipt_id: None,
             created_ms: 1,
+            author: "principal:a".into(),
         }
     }
 

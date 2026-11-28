@@ -49,6 +49,8 @@ mod insight_tests;
 mod fanout_tests;
 // MEDULLA-DECISION-ENGINE-R803.8: adoption, contrast and lesson stored in one write, served.
 mod harness_adoption_tests;
+// MEDULLA-DECISION-ENGINE-R805.15: an operator reviews an evaluated revision, served.
+mod review_tests;
 // MEDULLA-SDLC-R013, R019.4: scenario runs and would-dispatch decisions in the one log.
 mod connector_toolchoice_tests;
 mod connector_triage_tests;

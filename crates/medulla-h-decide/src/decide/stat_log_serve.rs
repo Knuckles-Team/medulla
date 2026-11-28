@@ -227,6 +227,11 @@ pub(super) fn dispatch(
         >(
             medulla_h_decide_base::decide::stat_harness_adoption::adopt(ctx, reader, &write)?,
         ),
+        DecisionLogOp::Review { review, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogReview,
+        >(
+            medulla_h_decide_base::decide::stat_review::revision_review(ctx, reader, &review)?,
+        ),
         DecisionLogOp::LifecycleRecord { record, .. } => ResultPayload::of::<
             medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecord,
         >(
