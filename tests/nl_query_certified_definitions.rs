@@ -70,7 +70,7 @@ impl medulla_nlq::nl::NlPlanner for DefinitionPlanner {
 
 fn state() -> test_support::SharedState {
     common::configure_authority();
-    medulla_h_query::nl::set_nl_planner(Arc::new(DefinitionPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(DefinitionPlanner));
     test_support::durable_state(SECRET, common::current_isolation())
 }
 

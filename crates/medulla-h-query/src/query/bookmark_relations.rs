@@ -8,7 +8,6 @@
 //! MAC-bound cursor on its last edge; a request that reaches past the read window refuses
 //! `BOOKMARK_LIMIT_EXCEEDED` rather than answer a truncated success. Nothing here writes.
 
-use super::code_context::{out_edges, props_of, relationship, text};
 use super::live_artifact::response_body;
 use super::uql_statement::handle_uql;
 use super::*;
@@ -23,6 +22,12 @@ use medulla_types::bookmark_query::{
     BOOKMARK_LIMIT_EXCEEDED, BOOKMARK_RESPONSE_TOO_LARGE, BOOKMARK_REVISION_MISMATCH,
 };
 use std::collections::BTreeSet;
+use {
+    medulla_h_query_read::query::code_context::out_edges,
+    medulla_h_query_read::query::code_context::props_of,
+    medulla_h_query_read::query::code_context::relationship,
+    medulla_h_query_read::query::code_context::text,
+};
 
 /// The relationships a bookmark edge may carry: the ingest edges and the mindmap edge.
 const RELATIONSHIPS: [&str; 5] = [

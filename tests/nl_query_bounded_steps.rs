@@ -81,7 +81,7 @@ fn plan_body(resp: &Response) -> NlQueryPlanResult {
 // spec: MEDULLA-FEDERATED-QUERY-R058.8
 #[tokio::test]
 async fn follow_up_is_rewritten_and_disclosed() {
-    medulla_h_query::nl::set_nl_planner(Arc::new(ScriptedPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(ScriptedPlanner));
     let state = state();
 
     let history = vec![NlTurn {
@@ -140,7 +140,7 @@ fn refusal(resp: &Response) -> String {
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.1
 #[tokio::test]
 async fn second_step_corrects_parse_error() {
-    medulla_h_query::nl::set_nl_planner(Arc::new(ScriptedPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(ScriptedPlanner));
     let state = state();
     for (i, node) in ["d1", "d2", "d3"].iter().enumerate() {
         let added = test_support::dispatch(
@@ -241,7 +241,7 @@ async fn refusals_return_code_and_no_rows() {
     assert!(text.contains("NL_PLANNER_UNCONFIGURED"), "{text}");
     assert!(unconfigured.result.is_none(), "{text}");
 
-    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(EchoPlanner));
 
     // Every step refused and the budget spent: the code and every step's text.
     let exhausted = nl_with_steps(&state, 31, "MATCH (:Doc", Some(2)).await;
@@ -299,7 +299,7 @@ async fn explain(state: &test_support::SharedState, id: u64, text: &str) -> NlQu
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.5
 #[tokio::test]
 async fn served_response_carries_steps_and_digest() {
-    medulla_h_query::nl::set_nl_planner(Arc::new(ScriptedPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(ScriptedPlanner));
     let state = state();
     add_doc(&state, 40, "d1", "Doc").await;
 
@@ -389,7 +389,7 @@ async fn one_schema_read_per_request() {
         handle: tokio::runtime::Handle::current(),
         hints: std::sync::Mutex::new(Vec::new()),
     });
-    medulla_h_query::nl::set_nl_planner(planner.clone());
+    medulla_h_query_read::nl::set_nl_planner(planner.clone());
 
     // Step 1 is refused after the planner changed the graph; step 2 still sees the
     // schema read at the start of the request: one read, shared by every step.

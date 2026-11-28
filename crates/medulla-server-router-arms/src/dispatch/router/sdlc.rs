@@ -1673,7 +1673,10 @@ async fn run_connector_tool(
     principal: String,
     idempotency_key: String,
 ) -> Result<Value, (String, String)> {
-    use medulla_h_query::query::connector_tool::{call_connector_tool, ConnectorToolRequest};
+    use {
+        medulla_h_query_read::query::connector_tool::call_connector_tool,
+        medulla_h_query_read::query::connector_tool::ConnectorToolRequest,
+    };
     let call = ConnectorToolRequest {
         server,
         tool,

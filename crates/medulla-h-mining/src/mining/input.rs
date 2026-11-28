@@ -189,14 +189,14 @@ pub(super) fn gather_plan_rows(
     // persistent `GraphTextIndex` via `ServedTextIndex`, instead of falling back to a
     // snapshot-derived index rebuilt from `snap` on every mining request; the spatial
     // (L37) and SHACL-shape legs push down the same way.
-    let indexes = medulla_h_query::query::CoreIndexes::open(core);
+    let indexes = medulla_h_query_read::query::CoreIndexes::open(core);
     // CONCEPT:MEDULLA-KG.mining.tsdb-typed-absent — resolve the SAME verified tenant/namespace scope
     // the served `UnifiedQuery` path resolves (`query::served_tsdb_scope`, single source of
     // truth), THEN require the live store to actually be bound before falling through to the
     // old silent-empty degrade. `None` (the plan has no `TsScan` leg) is unaffected.
     #[cfg(feature = "tsdb")]
     let tsdb_scope =
-        medulla_h_query::query::served_tsdb_scope(plan, tsdb.graph_name, tsdb.read_authority)?;
+        medulla_h_query_read::query::served_tsdb_scope(plan, tsdb.graph_name, tsdb.read_authority)?;
     #[cfg(feature = "tsdb")]
     if tsdb_scope.is_some() && tsdb.tsdb_store.is_none() {
         return Err(
@@ -206,7 +206,7 @@ pub(super) fn gather_plan_rows(
         );
     }
     let store = core.semantic_store.read();
-    let rows = match medulla_h_query::query::run_unified_with(
+    let rows = match medulla_h_query_read::query::run_unified_with(
         plan.clone(),
         &snap,
         &store,
@@ -284,11 +284,11 @@ pub(super) fn gather_plan_rows_snapshot(
 ) -> (Vec<Vec<f64>>, Vec<String>) {
     let snap = core.analysis_snapshot();
     let store = core.semantic_store.read();
-    let rows = match medulla_h_query::query::run_unified_with(
+    let rows = match medulla_h_query_read::query::run_unified_with(
         plan.clone(),
         &snap,
         &store,
-        medulla_h_query::query::ServedIndexes::default(),
+        medulla_h_query_read::query::ServedIndexes::default(),
         #[cfg(feature = "tsdb")]
         medulla_server_ops::api::query_txn::query_support::TsdbLegBind {
             tsdb: None,

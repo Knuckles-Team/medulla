@@ -120,8 +120,8 @@ fn raw(response: &Response) -> Vec<u8> {
 }
 
 async fn seeded_state() -> test_support::SharedState {
-    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
-    medulla_h_query::nl::set_sql_nl_planner(Arc::new(EchoSql));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query_read::nl::set_sql_nl_planner(Arc::new(EchoSql));
     let state = state();
     for (id, statement) in [
         (1, "CREATE TABLE orders (id INT, total INT)"),

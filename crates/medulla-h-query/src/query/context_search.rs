@@ -10,8 +10,6 @@
 //! turns text into spans with offsets into the original bytes; the cursor kernel
 //! (`context_cursor`) pins tenant, query and snapshot revision. Nothing here writes.
 
-use super::segment_filter::ReadScope;
-use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_agent_types::agent_component::DecisionPolicyRef;
@@ -22,6 +20,8 @@ use medulla_decision_types::decision::statistical::context_search::{
     CONTEXT_SEARCH_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::DecisionPolicy;
+use medulla_h_query_read::query::segment_filter::ReadScope;
+use medulla_h_query_read::query::sql_read::sql_read_snapshot;
 use medulla_protocol_types::result_contract::query::RetrievalContextSearch;
 use {
     medulla_decision_stats_records::decision::context_cursor,

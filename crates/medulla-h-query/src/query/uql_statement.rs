@@ -51,9 +51,11 @@ pub(crate) async fn handle_uql(
     // MEDULLA-ORCH-VOCAB-R010.1: a named harness metric statement.
     if !prepare && foreign_executions.is_empty() {
         if let Some(query) = medulla_mutation_types::harness_metrics::harness_query(&text) {
-            return Ok(super::harness_metrics::handle_harness_metric(
-                ctx, query, &params,
-            ));
+            return Ok(
+                medulla_h_query_read::query::harness_metrics::handle_harness_metric(
+                    ctx, query, &params,
+                ),
+            );
         }
     }
     if prepare && !foreign_executions.is_empty() {
@@ -65,10 +67,11 @@ pub(crate) async fn handle_uql(
     // Compute both pins once from the exact request and bound plan.  The
     // foreign-read lifecycle accepts only these server-owned values; callers
     // never need to reproduce Rust's named-MessagePack serialization.
-    let query_digest = match super::planning::foreign_uql_query_digest(&text, &params) {
-        Ok(digest) => digest,
-        Err(error) => return Ok(Response::err(req_id, error)),
-    };
+    let query_digest =
+        match medulla_h_query_read::query::planning::foreign_uql_query_digest(&text, &params) {
+            Ok(digest) => digest,
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
     if let Err(error) = check_foreign_executions(foreign_executions.as_slice(), &query_digest) {
         return Ok(Response::err(req_id, error));
     }
@@ -427,8 +430,8 @@ fn uql_cache_key(
 /// parse error carries its stable code.
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod served_tests {
-    use super::super::current_auth_test_support::prelude::*;
     use super::UqlMetering;
+    use crate::query::current_auth_test_support::prelude::*;
     use medulla_decision_types::decision::indexless_retrieval::{tenant_ceiling, unit_costs};
     use medulla_decision_types::decision::DecisionPolicy;
     use medulla_query_types::wire::{UqlParam, UqlResult};
@@ -687,7 +690,8 @@ mod served_tests {
         medulla_table_store::plan_scope::inject_scope(&mut binding, &scope).expect("scope injects");
         assert_eq!(
             query_digest,
-            super::super::planning::foreign_uql_query_digest(text, &params).expect("query digest")
+            medulla_h_query_read::query::planning::foreign_uql_query_digest(text, &params)
+                .expect("query digest")
         );
         assert_eq!(
             plan_digest,
@@ -735,7 +739,8 @@ mod served_tests {
         medulla_table_store::plan_scope::inject_scope(&mut binding, &scope).expect("scope injects");
         assert_eq!(
             query_digest,
-            super::super::planning::foreign_uql_query_digest(text, &params).expect("query digest")
+            medulla_h_query_read::query::planning::foreign_uql_query_digest(text, &params)
+                .expect("query digest")
         );
         assert_eq!(
             plan_digest,

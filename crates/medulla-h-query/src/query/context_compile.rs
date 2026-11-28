@@ -11,7 +11,6 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::access_port::ForeignAccessCheckPort;
 use super::retrieval_round::{reranker_binding, RerankerBinding};
 use super::*;
 use medulla_decision_types::decision::context_bundle::{
@@ -21,6 +20,7 @@ use medulla_decision_types::decision::context_bundle::{
 use medulla_exec::access_check::{
     filter_hits, AccessCache, AccessHit, AccessMode, DropReason, MAX_CACHE_TTL_MS,
 };
+use medulla_h_query_read::query::access_port::ForeignAccessCheckPort;
 use medulla_plan::context_bundle::{
     bundle_key_of, compile_with, CompileInputs, ContextKnobs, RerankDoc, RerankInputs,
     ResolutionSpan, SourceHit, SourceRanking,

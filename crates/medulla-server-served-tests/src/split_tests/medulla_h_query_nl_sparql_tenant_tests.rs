@@ -482,8 +482,8 @@ fn build_pack(connector: &str) -> (ConnectorPackIndex, Vec<u8>) {
 #[tokio::test]
 async fn nl_sparql_returns_only_the_callers_tenant_rows() {
     let _env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
-    medulla_h_query::nl::set_sparql_nl_planner(Arc::new(EchoSparql));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query_read::nl::set_sparql_nl_planner(Arc::new(EchoSparql));
     let served = Served::new();
 
     // Both tenants import a pack into the SAME store and both are projected, so each

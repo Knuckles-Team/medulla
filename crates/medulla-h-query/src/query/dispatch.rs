@@ -1,11 +1,14 @@
 #[cfg(feature = "query")]
-use super::argument_map::{dispatch_argument_map, is_argument_map_method};
-#[cfg(feature = "query")]
 use super::live_artifact::{dispatch_live_artifact, is_live_artifact_method};
 #[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
 use medulla_server_api::api::reentry::TryHandleContext;
+#[cfg(feature = "query")]
+use {
+    medulla_h_query_read::query::argument_map::dispatch_argument_map,
+    medulla_h_query_read::query::argument_map::is_argument_map_method,
+};
 
 #[cfg(feature = "query")]
 mod edge_index;
@@ -97,7 +100,10 @@ async fn dispatch_query_family(
         Method::ColumnLineage { op } => return Ok(handle_column_lineage(hctx, op).await),
         // MEDULLA-UNIFIED-DATA-PLANE-R764.8: reads the usage series of the caller's own scope.
         Method::CatalogUsage { asset, top_n } => {
-            return Ok(super::catalog_search::handle_usage(hctx, asset, top_n).await)
+            return Ok(medulla_h_query_read::query::catalog_search::handle_usage(
+                hctx, asset, top_n,
+            )
+            .await)
         }
         // MEDULLA-UNIFIED-DATA-PLANE-R029.2: reads the baselined catalog of the caller's own source.
         Method::SchemaContext {
@@ -112,17 +118,21 @@ async fn dispatch_query_family(
         }
         // MEDULLA-ORCH-VOCAB-R811.1: cost, tokens and solved count per run group.
         Method::RunMetrics { request } => {
-            return Ok(super::run_metrics::handle_run_metrics(hctx, *request))
+            return Ok(medulla_h_query_read::query::run_metrics::handle_run_metrics(hctx, *request))
         }
         // MEDULLA-INGEST-WORKER-R003.21: the stored body text of one node at a revision.
         Method::NodeBody { request } => {
-            return Ok(super::node_body::handle_node_body(hctx, *request))
+            return Ok(medulla_h_query_read::query::node_body::handle_node_body(
+                hctx, *request,
+            ))
         }
         // MEDULLA-ORCH-VOCAB-R009.100: one page of the records correlated to a root run.
         Method::RunTraceExport { request } => {
-            return Ok(super::run_trace_export::handle_run_trace_export(
-                hctx, *request,
-            ))
+            return Ok(
+                medulla_h_query_read::query::run_trace_export::handle_run_trace_export(
+                    hctx, *request,
+                ),
+            )
         }
         other => other,
     };
@@ -170,9 +180,11 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     let method = match method {
         Method::EncodedDocumentSearch { request } => {
-            return Ok(super::document_encoding::handle_encoded_search(
-                hctx, *request,
-            ))
+            return Ok(
+                medulla_h_query_read::query::document_encoding::handle_encoded_search(
+                    hctx, *request,
+                ),
+            )
         }
         other => other,
     };
@@ -180,7 +192,9 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     let method = match method {
         Method::ProjectionRead { request } => {
-            return Ok(super::projection::handle_projection_read(hctx, *request))
+            return Ok(
+                medulla_h_query_read::query::projection::handle_projection_read(hctx, *request),
+            )
         }
         other => other,
     };
@@ -320,13 +334,13 @@ fn is_sql_query_method(method: &Method) -> bool {
 async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Response, Method> {
     // MEDULLA-UNIFIED-DATA-PLANE-R764.3.1: the assets are read off the verified method before it
     // is consumed; usage is recorded only after the server answered it successfully.
-    let assets = super::asset_usage::query_assets(&method);
+    let assets = medulla_h_query_read::query::asset_usage::query_assets(&method);
     // MEDULLA-TYPED-PACKS-R108.8: the question digest, never the answer.
-    let digest = super::asset_usage::question_digest(&method);
+    let digest = medulla_h_query_read::query::asset_usage::question_digest(&method);
     let result = run_sql_query(ctx, method).await;
     if let Ok(response) = &result {
-        if super::asset_usage::answered(response) {
-            super::asset_usage::record_query_usage(ctx, assets, digest).await;
+        if medulla_h_query_read::query::asset_usage::answered(response) {
+            medulla_h_query_read::query::asset_usage::record_query_usage(ctx, assets, digest).await;
         }
     }
     result
@@ -354,10 +368,13 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
                     || retrieval.is_some()
                     || foreign_execution.is_some()
                     || !foreign_executions.is_empty();
-                return Ok(super::spec_intelligence::serve(ctx, &plan, &query, alongside).await);
+                return Ok(medulla_h_query_read::query::spec_intelligence::serve(
+                    ctx, &plan, &query, alongside,
+                )
+                .await);
             }
             if let Some(query) = code_map {
-                return Ok(super::code_map::serve(ctx, &plan, &query).await);
+                return Ok(medulla_h_query_read::query::code_map::serve(ctx, &plan, &query).await);
             }
             handle_unified_query(
                 ctx,
@@ -379,9 +396,9 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
         // MEDULLA-FEDERATED-QUERY-R724: the scope-filtered boundary list.
         Method::SchemaProjections { op } => handle_schema_projections(ctx, op),
         // MEDULLA-UNIFIED-DATA-PLANE-R030.3: approving one entity link writes its owl:sameAs edge.
-        Method::ApproveEntityLink { left, right } => {
-            Ok(super::entity_link::handle_approve(ctx, left, right))
-        }
+        Method::ApproveEntityLink { left, right } => Ok(
+            medulla_h_query_read::query::entity_link::handle_approve(ctx, left, right),
+        ),
         // MEDULLA-FEDERATED-QUERY-R708.3: stored, versioned queries.
         other @ (Method::StoredQueryPut { .. }
         | Method::StoredQueryCall { .. }
@@ -398,13 +415,15 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             token_ids,
             text,
             policy,
-        } => Ok(super::document_encoding::handle_encode_document(
-            ctx,
-            document_id,
-            token_ids,
-            text,
-            policy,
-        )),
+        } => Ok(
+            medulla_h_query_read::query::document_encoding::handle_encode_document(
+                ctx,
+                document_id,
+                token_ids,
+                text,
+                policy,
+            ),
+        ),
         other => Err(other),
     }
 }
@@ -825,7 +844,7 @@ async fn handle_sql_with_lease(
         name: ctx.graph_name.to_string(),
         core: Arc::clone(core),
     };
-    let response = super::sql_read::catalog_sql_response(
+    let response = medulla_h_query_read::query::sql_read::catalog_sql_response(
         state,
         req_id,
         snap,

@@ -52,7 +52,7 @@ async fn capture_graph_dispatch<'a>(
         verified_context,
     } = ctx;
     #[cfg(feature = "cypher")]
-    if let Err(error) = medulla_h_query::query::validate_cypher_mode(method) {
+    if let Err(error) = medulla_h_query_read::query::validate_cypher_mode(method) {
         return Err(Response::err(req_id, error));
     }
     #[cfg(feature = "redb")]

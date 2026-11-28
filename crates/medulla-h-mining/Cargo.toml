@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 medulla-version = { path = "../medulla-version" }
-medulla-h-query = { path = "../medulla-h-query" }
+medulla-h-query-read = { path = "../medulla-h-query-read" }
 hex = "0.4"
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
@@ -40,14 +40,14 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }
 
 [features]
-epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-h-query/epistemic", "medulla-exec/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
-federation = ["query", "dep:medulla-plan", "medulla-h-query/federation", "medulla-exec/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation"]
-mining = ["query", "tsdb", "medulla-h-query/mining", "medulla-mining/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-server-api/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-types/mining", "medulla-query-types/mining"]
-query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/query", "medulla-exec/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
-tsdb = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
+epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-h-query-read/epistemic", "medulla-exec/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
+federation = ["query", "dep:medulla-plan", "medulla-h-query-read/federation", "medulla-exec/federation", "medulla-plan?/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation"]
+mining = ["query", "tsdb", "medulla-h-query-read/mining", "medulla-mining/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-server-api/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-types/mining", "medulla-query-types/mining"]
+query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query-read/query", "medulla-exec/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query", "medulla-query-types/query"]
+tsdb = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query-read/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
 
 [dev-dependencies]
-medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-h-query-read = { path = "../medulla-h-query-read", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

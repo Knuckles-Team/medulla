@@ -613,7 +613,7 @@ outbox records incrementally and advances a durable projection cursor.
     implementation.
   - The **facade** feature `epistemic-causal = ["epistemic", "medulla-epistemic/epistemic-causal"]`
     turns on the wire `Method::CausalEstimate`/`Method::RankByProvenance` handler arms
-    (`#[cfg(feature = "epistemic-causal")]` in `crates/medulla-h-query/src/query.rs`).
+    (`#[cfg(feature = "epistemic-causal")]` in `crates/medulla-h-query-read/src/query.rs`).
 
 ### Provenance-aware retrieval ranking (`ranking.rs`)
 
@@ -622,7 +622,7 @@ outbox records incrementally and advances a durable projection cursor.
   `evidence_quality` (reliability, corroboration, calibration precision, freshness) in
   addition to similarity, not similarity alone.
 - **Wire exposure:** `Method::RankByProvenance` (handler `rank_by_provenance_wire`,
-  `crates/medulla-h-query/src/query.rs`), a pure function over request-carried candidates — no
+  `crates/medulla-h-query-read/src/query.rs`), a pure function over request-carried candidates — no
   graph snapshot needed.
 - **Default-on or opt-in:** same composable facade `epistemic-causal` feature as
   `CausalEstimate`; included in `full`.
@@ -638,7 +638,7 @@ outbox records incrementally and advances a durable projection cursor.
   `RowVisibility`/`can_see_row` check (`crates/medulla-isolation/src/isolation.rs`) every other
   RLS-aware read path enforces — masking (never silently dropping) an evidence node the
   caller's RLS context cannot see.
-- **The dual-arm handler (`crates/medulla-h-query/src/query.rs`, both checked by direct
+- **The dual-arm handler (`crates/medulla-h-query-read/src/query.rs`, both checked by direct
   read):**
   - `#[cfg(feature = "epistemic-redaction")]` arm: `disclosure_level: None` takes the
     byte-for-byte classic `explain_belief` path; `Some(cap)` routes through
@@ -683,7 +683,7 @@ outbox records incrementally and advances a durable projection cursor.
   returns every transitively-cited node's `EvidenceLocus` plus its
   `AssetOccurrence`/`Blob` identity chain.
 - **Wire exposure:** `Method::ExplainEvidence { node_id }` (handler
-  `explain_evidence_wire`, `crates/medulla-h-query/src/query.rs`).
+  `explain_evidence_wire`, `crates/medulla-h-query-read/src/query.rs`).
 - **Feature gating and resolution:**
   - The wire `Method::ExplainEvidence` variant itself is gated only by the base
     `epistemic` feature (already in `full`).

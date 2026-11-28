@@ -64,7 +64,7 @@ def test_modality_retry_binds_caller_tenant_and_physical_graph_key() -> None:
 def test_universal_read_cache_key_follows_query_children() -> None:
     module = _load_gate("check_universal_read_rls.py", "e1_universal_query_family")
     query = module.read_module_tree(
-        "crates/medulla-h-query/src/query.rs", root_dir=ROOT
+        "crates/medulla-h-query-read/src/query.rs", root_dir=ROOT
     )
     rdf = module.rdf_handler_source()
     dispatch = module.served_dispatch_source()

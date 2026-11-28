@@ -12,7 +12,7 @@ tenant is refused at the door with AUTH_TENANT_MISMATCH. So the connected reader
 is always the deployment tenant, placed as the leaf of the chain, and the other
 tenants are only owners of stored nodes. Reading the same store as each of
 several tenants is proven at the read chokepoint, in
-`crates/medulla-h-query/src/query/planning.rs::tenant_scope_served_tests`.
+`crates/medulla-h-query-read/src/query/planning.rs::tenant_scope_served_tests`.
 """
 
 import os

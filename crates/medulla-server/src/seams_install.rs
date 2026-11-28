@@ -152,7 +152,7 @@ pub fn install_state_seams(state: &ServerState) {
 
     // L5 query, txn, wire.
     #[cfg(all(feature = "query", feature = "nl-query"))]
-    medulla_h_query::query::expansion::install_expansion_provider();
+    medulla_h_query_read::query::expansion::install_expansion_provider();
     #[cfg(all(feature = "mining", feature = "server"))]
     medulla_kernel::kernel::persistence::install_mining_replay(medulla_h_mining::mining::replay);
 

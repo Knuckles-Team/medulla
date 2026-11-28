@@ -281,7 +281,7 @@ def main() -> None:
     knowledge = knowledge_stream_handler_source()
     query = "\n".join(
         (
-            read_module_tree("crates/medulla-h-query/src/query.rs", root_dir=ROOT),
+            read_module_tree("crates/medulla-h-query-read/src/query.rs", root_dir=ROOT),
             read("crates/medulla-server-ops/src/api/query_txn/query_support.rs"),
         )
     )

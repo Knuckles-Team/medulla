@@ -32,7 +32,7 @@ pub fn register_query_encoders() -> Result<(), String> {
         // The built-in chunk encoder is a registered default entry, so served
         // `EncodeDocument` resolves every encoder through the registry.
         if let Err(error) =
-            medulla_h_query::query::document_encoding::register_default_chunk_encoder()
+            medulla_h_query_read::query::document_encoding::register_default_chunk_encoder()
         {
             outcome = Err(error);
             return;

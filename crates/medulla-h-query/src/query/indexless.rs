@@ -26,14 +26,14 @@
 use std::collections::BTreeMap;
 
 use super::context_search::{node_type, resolve_policy};
-use super::segment_filter::ReadScope;
-use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_decision_types::decision::indexless_retrieval::{
     ceiling_premises, clamp_budget, operation_id, tenant_ceiling, unit_costs, verify_span,
     BudgetMeter, IndexlessErrorCode, IndexlessOp, IndexlessRequest, IndexlessResult,
     IndexlessUnitCosts,
 };
+use medulla_h_query_read::query::segment_filter::ReadScope;
+use medulla_h_query_read::query::sql_read::sql_read_snapshot;
 use medulla_protocol_types::result_contract::query::IndexlessRetrieve;
 use medulla_query_types::indexless_cost::CostReport;
 

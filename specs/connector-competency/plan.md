@@ -365,7 +365,7 @@ none
 ## Production caller chain
 
 - `Method::Uql` (`crates/medulla-protocol-types/src/protocol/method/method_05.rs:119`) to `dispatch_sql_query` (`crates/medulla-h-query/src/query/dispatch.rs:127`) to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`) to the connector contract.
-- `Method::UnifiedQuery` (`method_05.rs:95`) to `dispatch_sql_query` to `run_unified_off_lock_with` (`crates/medulla-h-query/src/query/planning.rs:877`) to `Op::ForeignScan` (`crates/medulla-exec/src/exec/dispatch.rs:363`) to `FederatedExec::foreign_scan` (`crates/medulla-federation/src/federation_opt/federated.rs:51`).
+- `Method::UnifiedQuery` (`method_05.rs:95`) to `dispatch_sql_query` to `run_unified_off_lock_with` (`crates/medulla-h-query-read/src/query/planning.rs:877`) to `Op::ForeignScan` (`crates/medulla-exec/src/exec/dispatch.rs:363`) to `FederatedExec::foreign_scan` (`crates/medulla-federation/src/federation_opt/federated.rs:51`).
 - `ConnectorPackOp::Import` (`crates/medulla-h-admin/src/admin/connector_pack.rs:53`) to `serve_import` (:146) to `project` (`crates/medulla-h-admin/src/connector_pack_projection.rs:286`), which writes the pack and catalog nodes.
 - Ontology terms: server bootstrap to `GraphSchemaSources::default()` (`crates/medulla-graph-core/src/graph/schema_sources.rs`) to the registered modules in `crates/medulla-core/ontology/`.
 - Obsolete paths to delete: none; every row adds to an existing path.

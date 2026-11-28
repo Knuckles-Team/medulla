@@ -138,7 +138,7 @@ const REQUIRED_MARKERS: &[(&str, &[&str])] = &[
         ],
     ),
     (
-        "crates/medulla-h-query/src/query.rs",
+        "crates/medulla-h-query-read/src/query.rs",
         &[
             r#""reasoning-recompute""#,
             r#"status: "Queued".to_string()"#,
@@ -411,7 +411,7 @@ impl JobStore {
                 "Cargo.toml",
                 "crates/medulla-epistemic/src/incremental.rs",
                 "crates/medulla-h-jobs/src/jobs.rs",
-                "crates/medulla-h-query/src/query.rs",
+                "crates/medulla-h-query-read/src/query.rs",
                 "crates/medulla-h-retrieve/src/reasoning_projection.rs",
                 "crates/medulla-jobs/src/model.rs",
                 "crates/medulla-jobs/src/store.rs",

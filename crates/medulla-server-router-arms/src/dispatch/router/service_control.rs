@@ -63,7 +63,7 @@ pub async fn dispatch_service_control_methods(
         Method::CancelRequest { target_req_id } => Response::ok(
             req.id,
             ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::CancelRequest>(
-                medulla_h_query::request_cancel::cancel(target_req_id),
+                medulla_h_query_read::request_cancel::cancel(target_req_id),
             ),
         ),
 

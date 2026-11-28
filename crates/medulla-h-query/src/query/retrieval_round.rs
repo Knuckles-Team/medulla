@@ -6,7 +6,6 @@
 //! then executes the plan and the requested parts inside that bound context. The
 //! method writes nothing and caches nothing.
 
-use super::planning::{run_unified_off_lock_with, UnifiedRead};
 use super::*;
 use medulla_exec::exec::{LexicalOverlapReranker, Reranker, LEXICAL_OVERLAP_RERANKER};
 use medulla_plan::doc_state::{segment_policy, HashSegmentsEncoder, StateSource};
@@ -16,6 +15,10 @@ use medulla_result_types::retrieval_arbitration::{ArbitrationChoice, ARBITRATION
 use medulla_result_types::retrieval_round::{ArbitrationAbstention, RoundRequest, RoundResult};
 use medulla_result_types::retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED;
 use medulla_types::retrieval_round::DocumentState;
+use {
+    medulla_h_query_read::query::planning::run_unified_off_lock_with,
+    medulla_h_query_read::query::planning::UnifiedRead,
+};
 
 /// The registered knobs one round reads.
 fn round_knobs() -> RoundKnobs {

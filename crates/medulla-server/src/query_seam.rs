@@ -32,7 +32,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         medulla_catalog_source_types::lineage::LineageResult,
         medulla_catalog_source_types::lineage::LineageError,
     > {
-        medulla_h_query::query::derive_lineage(sql, dialect, catalog, target)
+        medulla_h_query_read::query::derive_lineage(sql, dialect, catalog, target)
     }
 
     #[cfg(feature = "ann-redb")]
@@ -62,7 +62,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         #[cfg(feature = "tsdb")]
         tsdb_ctx: medulla_server_ops::api::query_txn::query_support::TsdbLegBind<'_>,
     ) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
-        medulla_h_query::query::overlay::run_unified_with_staged_finish(
+        medulla_h_query_read::query::overlay::run_unified_with_staged_finish(
             plan,
             view,
             (core, staged),

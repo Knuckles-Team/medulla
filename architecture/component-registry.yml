@@ -3476,7 +3476,7 @@ components:
       - "src/server/mutation_batch"
       - "crates/medulla-server-mutation/src/mutation_batch.rs"
       - "src/server/mysql_wire"
-      - "crates/medulla-h-query/src/nl.rs"
+      - "crates/medulla-h-query-read/src/nl.rs"
       - "src/server/obda"
       - "crates/medulla-server-api/src/oidc.rs"
       - "src/server/pgwire"
@@ -3485,7 +3485,7 @@ components:
       - "src/server/redis_wire"
       - "crates/medulla-server/src/registry_reaper.rs"
       - "crates/medulla-server/src/replica.rs"
-      - "crates/medulla-h-query/src/request_cancel.rs"
+      - "crates/medulla-h-query-read/src/request_cancel.rs"
       - "crates/medulla-server-api/src/request_replay.rs"
       - "crates/medulla-wire-msg/src/ros2_bridge.rs"
       - "crates/medulla-server-api/src/routed_write_coalescer.rs"
@@ -3531,7 +3531,7 @@ components:
         - "crates/medulla-server-ops/src/api/query_txn/txn_intent.rs (15)"
         - "crates/medulla-server/src/registry_reaper.rs (12)"
         - "crates/medulla-server/src/transport.rs (11)"
-        - "crates/medulla-h-query/src/nl.rs (9)"
+        - "crates/medulla-h-query-read/src/nl.rs (9)"
         - "crates/medulla-server-auth/src/sql_tables.rs (8)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`
@@ -5054,7 +5054,7 @@ wiring_decisions:
       - "`grep -c invalidate_filtered_view_cache crates/medulla-isolation/src/isolation.rs` = 0. CONFIRMED
          on the current tree."
       - "Six live read sites, all confirmed at the cited lines: crates/medulla-server-auth/src/access.rs:301;
-         crates/medulla-h-sparql/src/rdf.rs:131, :162, :462; crates/medulla-h-query/src/query.rs:5627, :5684."
+         crates/medulla-h-sparql/src/rdf.rs:131, :162, :462; crates/medulla-h-query-read/src/query.rs:5627, :5684."
     finding_understated_the_problem: >-
       The finding names three uninvalidating mutators (try_add_grant, try_remove_grant,
       try_register_agent). There are at least THIRTEEN, all in crates/medulla-isolation/src/isolation.rs

@@ -39,7 +39,7 @@ impl medulla_nlq::nl::NlPlanner for EchoPlanner {
 
 fn state() -> test_support::SharedState {
     common::configure_authority();
-    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(EchoPlanner));
     #[cfg(feature = "tsdb")]
     {
         let (persist_dir, persistence) = common::tempdir_persistence();

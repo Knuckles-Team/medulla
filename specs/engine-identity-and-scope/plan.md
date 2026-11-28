@@ -44,7 +44,7 @@ crates/medulla-server-auth/src/auth.rs                       existing: admission
 crates/medulla-isolation/src/isolation/                      existing: identity admin, scope_bound.rs; new: ownership.rs, share.rs
 crates/medulla-identity-types/src/identity/                  existing: ops, store, segment; new: mode.rs, ownership.rs, metadata.rs, delegation.rs
 crates/medulla-identity-types/src/tenancy.rs                 existing: tenant tree, secured read, scope predicate
-crates/medulla-h-query/src/query/segment_filter.rs           new: visible-unit filter and point-read check
+crates/medulla-h-query-read/src/query/segment_filter.rs           new: visible-unit filter and point-read check
 crates/medulla-h-admin/src/admin/ownership.rs                new: ownership plan handler
 crates/medulla-server-router/src/dispatch/router/identity_access.rs  existing: Identity, RbacAdmin and access arms
 crates/medulla-capabilities/src/                             existing: scope registry and method descriptors
@@ -333,7 +333,7 @@ none
 - Request admission: `crates/medulla-server-api/src/oidc.rs` verifier to `crates/medulla-server-auth/src/auth.rs` to `dispatch_identity_and_access_methods` (`crates/medulla-server-router/src/dispatch/router/identity_access.rs:10`).
 - `Method::Identity` to `dispatch_identity_store_method` (`identity_access.rs:90`) to `IdentityStore` (`crates/medulla-identity-types/src/identity/store.rs`).
 - `Method::RbacAdmin` to the arm at `identity_access.rs:305`, which gains the share and ownership apply calls.
-- `Method::Uql` and `Method::UnifiedQuery` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs`) to `run_unified_off_lock_with` (`crates/medulla-h-query/src/query/planning.rs`), which gains the tenant predicate and the visible-unit filter.
+- `Method::Uql` and `Method::UnifiedQuery` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs`) to `run_unified_off_lock_with` (`crates/medulla-h-query-read/src/query/planning.rs`), which gains the tenant predicate and the visible-unit filter.
 - `Method::AgentAssemble` to `handle_agent_assemble` (`crates/medulla-h-decide/src/decide/assemble.rs:25`) to `assemble_for` (line 46), which gains `enforce_scope`.
 - `Method::ApplyMutation` to `compile_methods` (`crates/medulla-server-api/src/batch_compile/compile.rs:124`), which gains `identity_metadata::admit`.
 - Obsolete paths to delete: none; every row adds to an existing path.

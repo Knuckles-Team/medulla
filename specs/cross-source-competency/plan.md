@@ -150,7 +150,7 @@ none
 
 ## Production caller chain
 
-- `Method::UnifiedQuery` to `route_query_gateway` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/gateway.rs`) to `medulla_h_query::query::try_handle` to `dispatch_sql_query` (`crates/medulla-h-query/src/query/dispatch.rs:127`) to `handle_unified_query` (`crates/medulla-h-query/src/query/sql_read.rs:309`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`), which reads the approved virtual mappings.
+- `Method::UnifiedQuery` to `route_query_gateway` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/gateway.rs`) to `medulla_h_query::query::try_handle` to `dispatch_sql_query` (`crates/medulla-h-query/src/query/dispatch.rs:127`) to `handle_unified_query` (`crates/medulla-h-query-read/src/query/sql_read.rs:309`) to `foreign_scan` (`crates/medulla-federation/src/federation_opt/run.rs:26`), which reads the approved virtual mappings.
 - `Method::Uql` to `dispatch_sql_query` to `handle_uql` (`crates/medulla-h-query/src/query/uql_statement.rs:17`), the entry of the agent-claims program.
 - `Method::SourceCoverage` (planned, `MEDULLA-SRC-AUTH-R004.6.1`) to `crates/medulla-server-graph/src/dispatch/graph_pipeline/pipeline.rs` to `medulla_h_sparql::foreign_source_handlers::try_handle` to `source_coverage.rs::handle` (planned) to `select_sources_with` (`crates/medulla-virtual-graph/src/source_selection.rs:596`), the first production caller of source selection.
 - `Method::SupplyChainImpact` and `Method::CrossSourceQuestion` (new) to the same `try_handle` to `supply_chain_impact.rs::handle` and `cross_source_question.rs::handle` (new) to `select_sources_with` and the report assemblers of `crates/medulla-source-types/src/`.

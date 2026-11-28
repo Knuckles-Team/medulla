@@ -265,7 +265,7 @@ fn query_references(query: &StoredQuery) -> Vec<String> {
     match query.language {
         StoredQueryLanguage::Uql => {
             medulla_uql::parse_with(&query.text, &placeholder_params(query))
-                .map(|plan| super::asset_usage::plan_labels(&plan))
+                .map(|plan| medulla_h_query_read::query::asset_usage::plan_labels(&plan))
                 .unwrap_or_default()
         }
         #[cfg(feature = "federation-sql")]

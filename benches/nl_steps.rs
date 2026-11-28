@@ -80,7 +80,7 @@ async fn ask(state: &test_support::SharedState, id: u64, text: &str) {
 
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.6
 fn nl_steps(c: &mut Criterion) {
-    medulla_h_query::nl::set_nl_planner(Arc::new(BenchPlanner));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(BenchPlanner));
     let rt = Builder::new_multi_thread().enable_all().build().unwrap();
     let state = rt.block_on(seeded_state());
     let mut group = c.benchmark_group("nl_steps");

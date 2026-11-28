@@ -58,7 +58,7 @@ crates/medulla-types/src/materialization_status_machine.rs new (R016.1)
 crates/medulla-epistemic/src/incremental/                 existing (R016.1: one status map, written by fire)
 crates/medulla-epistemic/src/recompute.rs                 existing (R016.1: TruthMaintenance writes through fire)
 crates/medulla-h-retrieve/src/reasoning_projection.rs     existing (R016.1: versioned snapshot directory)
-crates/medulla-h-query/src/query/explain_handlers.rs      existing (R016.1: status rendered by result_text)
+crates/medulla-h-query-read/src/query/explain_handlers.rs      existing (R016.1: status rendered by result_text)
 crates/medulla-core/ontology/state-machines-v1.ttl        existing (R016.1: MaterializationStatusMachine)
 crates/medulla-types/src/contract/server_error_code.rs    existing, new codes
 crates/medulla-exec/src/incremental/zset.rs               existing, deleted (R002.1)
@@ -173,7 +173,7 @@ Code shapes: new logic goes into the new files listed above. No function takes m
 - Read: `get_plan_matview` (`dist_compute.rs:501`) → `incremental_rows` (`manager.rs:144`).
 - Boot: `spawn_matview_reload` (`crates/medulla-h-admin/src/boot_maintenance.rs:50`) → `reload_matviews` (`dist_compute.rs:663`) → the call at `dist_compute.rs:700` that R006 replaces.
 - Explain: `Method::Uql` → `explain` (`crates/medulla-plan/src/uql/serve.rs:283`).
-- SQL commit: pgwire `COMMIT` → `crates/medulla-h-query/src/query/sql_catalog.rs:269` → `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2022`) → `commit_txn_batch_inner` (`store.rs:2095`) → `apply_mutation_txn_ops_with_crashpoints` (`store.rs:2281`).
+- SQL commit: pgwire `COMMIT` → `crates/medulla-h-query-read/src/query/sql_catalog.rs:269` → `commit_txn_batch` (`crates/medulla-table-store/src/tables/store.rs:2022`) → `commit_txn_batch_inner` (`store.rs:2095`) → `apply_mutation_txn_ops_with_crashpoints` (`store.rs:2281`).
 - SQL create: `classify_create_view` (`crates/medulla-sql-lang/src/sql/classify.rs:2213`); today it refuses `CREATE MATERIALIZED VIEW` at `classify.rs:2219`.
 - Feed read: `Method::CdcRead` arm (`crates/medulla-h-query/src/streaming.rs:429`).
 - Closure: `reasoning_cascade::spawn` (`crates/medulla-server-cdc/src/reasoning_cascade.rs:360`) → `refresh_one` (`reasoning_cascade.rs:248`).

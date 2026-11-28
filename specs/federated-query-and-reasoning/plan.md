@@ -39,7 +39,7 @@ The engine serves read-only federated query, retrieval, reasoning and analysis t
 crates/medulla-h-query/src/query/dispatch.rs            existing, new arms in dispatch_query_family
 crates/medulla-h-query/src/query/retrieval_round.rs     new (R081.11)
 crates/medulla-h-query/src/query/context_compile.rs     new (R650.3)
-crates/medulla-h-query/src/query/argument_map.rs        new (R700.3)
+crates/medulla-h-query-read/src/query/argument_map.rs        new (R700.3)
 crates/medulla-h-query/src/query/live_artifact.rs       new (R701.3)
 crates/medulla-h-query/src/query/search_task.rs         new (R702.3)
 crates/medulla-plan/src/retrieval_round.rs              new (R081.11)
@@ -304,8 +304,8 @@ Harness evaluation uses the engine decision port of `MERISTEM-HARNESS-CYCLE-R079
 Hosting uses [host-composition-boundary](https://github.com/Knuckles-Team/graph-os/tree/main/specs/host-composition-boundary).
 These are dependencies, not delivery claims against those owners.
 
-Common served path: `Method::UnifiedQuery` → `crates/medulla-h-query/src/query/dispatch.rs:133` → `crates/medulla-h-query/src/query/sql_read.rs:305` → `crates/medulla-h-query/src/query/planning.rs:854`.
-Binding continues through `crates/medulla-h-query/src/query/planning.rs:424` → `crates/medulla-h-query/src/query/planning.rs:411` → `crates/medulla-exec/src/exec.rs:536`.
+Common served path: `Method::UnifiedQuery` → `crates/medulla-h-query/src/query/dispatch.rs:133` → `crates/medulla-h-query-read/src/query/sql_read.rs:305` → `crates/medulla-h-query-read/src/query/planning.rs:854`.
+Binding continues through `crates/medulla-h-query-read/src/query/planning.rs:424` → `crates/medulla-h-query-read/src/query/planning.rs:411` → `crates/medulla-exec/src/exec.rs:536`.
 The GraphQL caller at `crates/medulla-graphql/src/crossmodal.rs:429` must consume equivalent typed policies when enabled.
 New typed operators below are proposed additions to the structured plan contract.
 They require generated contract and client updates during implementation.
@@ -321,7 +321,7 @@ New ranking components cannot reinterpret uncalibrated continuation, progress te
 
 Existing code: `crates/medulla-index-types/src/embedding.rs:47` defines EmbeddingSpaceRef.
 `crates/medulla-exec/src/exec.rs:278` defines the text-only TextEmbedder.
-`crates/medulla-h-query/src/query/planning.rs:11` currently binds only an optional deterministic hash embedder.
+`crates/medulla-h-query-read/src/query/planning.rs:11` currently binds only an optional deterministic hash embedder.
 `crates/medulla-exec/src/exec/vector_rank.rs:65` and `crates/medulla-exec/src/exec/vector_rank.rs:97` rank authorized candidate vectors.
 Reachable today: no, for the complete four-modality contract.
 The generic rank path is reachable; the hash embedder proves no semantic or cross-modal quality.
@@ -406,7 +406,7 @@ Existing code: EmbeddingSpaceRef at `crates/medulla-index-types/src/embedding.rs
 EmbeddingBinding at `crates/medulla-table-store/src/tables/embedding_binding.rs:398` owns column bindings.
 `crates/medulla-h-retrieve/src/semantic_index/dispatch.rs:14` dispatches governed ingestion stages.
 `crates/medulla-h-retrieve/src/semantic_index/worker.rs:175` completes a generation stage.
-`crates/medulla-h-query/src/query/planning.rs:611` binds query encoding.
+`crates/medulla-h-query-read/src/query/planning.rs:611` binds query encoding.
 Reachable today: no, for complete independent chunk encoding and aggregate validation.
 
 DocumentEncodingPolicy must pin tokenizer digest, model revision, chunk size, overlap, position mode and aggregation revision.
@@ -435,8 +435,8 @@ The paper supports this mechanism; its benchmark gains are not acceptance eviden
 #### R077.6: workload-based column advice
 
 Existing code: `crates/medulla-table-store/src/tables/embedding_binding.rs:398` defines EmbeddingBinding.
-`crates/medulla-h-query/src/query/sql_read.rs:100` handles SQL reads.
-Its catalog response at `crates/medulla-h-query/src/query/sql_read.rs:379` invokes the authorized table store and typed SQL executor.
+`crates/medulla-h-query-read/src/query/sql_read.rs:100` handles SQL reads.
+Its catalog response at `crates/medulla-h-query-read/src/query/sql_read.rs:379` invokes the authorized table store and typed SQL executor.
 `crates/medulla-sql/src/sql/ann.rs:116` supplies ANN ranking, not a recommendation service.
 Reachable today: no, for workload-based recommendation and recommendation-specific refusal.
 Search terms included ColumnVector, recommendation, workload and column statistics.
@@ -1224,7 +1224,7 @@ The seven design answers that bind every row of this feature:
 
 Chunk encoding (R039.2.2 to R039.2.4): `crates/medulla-core/src/compute/chunk_windows.rs` holds `split_windows`, `ChunkEncoder`/`encode_chunks` and `aggregate_mean_chunks` as pure functions; the window knobs are registry knobs in `knob_config.rs` and the refusal codes are `ServerErrorCode` variants routed to `SemanticIndex` (decision recorded in research.md).
 
-Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/document_encoding.rs` serves `EncodeDocument` (durable write, staged gateway) and `EncodedDocumentSearch` (read). `encode` runs `split_windows`, `encode_chunks` and `aggregate_mean_chunks`, builds the `EncodingReceipt` (`crates/medulla-types/src/retrieval.rs`) and writes one `EncodedDocument` node and one per-policy `EncodedIndexHead` node. `retrieval.encode_budget_chunks` is a registry knob; `ENCODE_BUDGET_EXHAUSTED` and `ENCODE_POLICY_STALE` are `ServerErrorCode` variants routed to `SemanticIndex`. The served tests are `tests/retrieval/test_chunk_encoding_served.py`.
+Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query-read/src/query/document_encoding.rs` serves `EncodeDocument` (durable write, staged gateway) and `EncodedDocumentSearch` (read). `encode` runs `split_windows`, `encode_chunks` and `aggregate_mean_chunks`, builds the `EncodingReceipt` (`crates/medulla-types/src/retrieval.rs`) and writes one `EncodedDocument` node and one per-policy `EncodedIndexHead` node. `retrieval.encode_budget_chunks` is a registry knob; `ENCODE_BUDGET_EXHAUSTED` and `ENCODE_POLICY_STALE` are `ServerErrorCode` variants routed to `SemanticIndex`. The served tests are `tests/retrieval/test_chunk_encoding_served.py`.
 
 #### Low-storage ANN layering
 
@@ -1236,13 +1236,13 @@ Chunk encoding served (R039.2.5 to R039.2.7): `crates/medulla-h-query/src/query/
 
 1. Add the `provenance` text map to `UqlRow` in `crates/medulla-query-types/src/wire_query_core.rs` and fill it from `RowSet::texts()` where `run_statement` builds rows.
 2. Make `fetch_columns` in `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs` return its provenance cells as text channels on the scanned `RowSet`.
-3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query/src/query/asset_usage.rs`).
+3. Count `Op::ForeignScan` source names in `query_assets` (`crates/medulla-h-query-read/src/query/asset_usage.rs`).
 4. Write `tests/federated/test_pack_source_served.py` on the journey helpers of `tests/connector_competency/test_contract_kinds_served.py`, with the store audit (`SELECT ?s WHERE { ?s ?p ?o }` unchanged).
 
 #### Expansion port wiring (R651.3)
 `ExpansionProvider`, `set_expansion_provider`, `expansion_provider` and `run_expansion` live in
 `crates/medulla-plan/src/query_understanding.rs`. `HttpExpansionProvider` lives in
-`crates/medulla-h-query/src/query/expansion.rs` and is installed from `install_seams`
+`crates/medulla-h-query-read/src/query/expansion.rs` and is installed from `install_seams`
 (`crates/medulla-server/src/seams_install.rs`). `UreqNlPlanner::complete` is the one HTTP path.
 
 ## Phase 2: Task approach

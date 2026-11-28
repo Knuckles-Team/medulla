@@ -126,8 +126,8 @@ async fn direct_sparql(state: &test_support::SharedState, id: u64, query: &str) 
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.11
 #[tokio::test]
 async fn sparql_dialect_plans_and_runs_a_select() {
-    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
-    medulla_h_query::nl::set_sparql_nl_planner(Arc::new(EchoSparql));
+    medulla_h_query_read::nl::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query_read::nl::set_sparql_nl_planner(Arc::new(EchoSparql));
     let state = state();
     let added = test_support::dispatch(
         &state,

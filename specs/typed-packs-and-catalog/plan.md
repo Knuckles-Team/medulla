@@ -599,7 +599,7 @@ A stale vocabulary revision is a crosswalk whose source class still resolves but
 
 ### Operational metadata views (R108.8)
 
-The plan source `Op::UsageScan { view }` (`crates/medulla-exec/src/exec/usage.rs`) reads a per-request `UsageSource` bound by `ServedPlanLegs::resolve` (`served_usage_leg`, `crates/medulla-h-query/src/query/asset_usage.rs`) over the tenant's `asset_usage.*` series, trimmed to `knob catalog.top_queries_window_days`, plus the `ToolCall` / `RunTrace` nodes of the narrowed graph view. The question digest is written by `record_query_usage` as a tag of `asset_usage.queries`. See research.md.
+The plan source `Op::UsageScan { view }` (`crates/medulla-exec/src/exec/usage.rs`) reads a per-request `UsageSource` bound by `ServedPlanLegs::resolve` (`served_usage_leg`, `crates/medulla-h-query-read/src/query/asset_usage.rs`) over the tenant's `asset_usage.*` series, trimmed to `knob catalog.top_queries_window_days`, plus the `ToolCall` / `RunTrace` nodes of the narrowed graph view. The question digest is written by `record_query_usage` as a tag of `asset_usage.queries`. See research.md.
 
 ### Domain pack run (R097.700)
 

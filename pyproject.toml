@@ -449,6 +449,7 @@ units = [
   "medulla-h-mining",
   "medulla-h-packs",
   "medulla-h-query",
+  "medulla-h-query-read",
   "medulla-h-retrieve",
   "medulla-h-sparql",
   "medulla-h-txn",

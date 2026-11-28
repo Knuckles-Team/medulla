@@ -15,10 +15,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use super::segment_filter::ReadScope;
-use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_graph_core::graph::GraphView;
+use medulla_h_query_read::query::segment_filter::ReadScope;
+use medulla_h_query_read::query::sql_read::sql_read_snapshot;
 use medulla_plan::search_task::synthesize;
 use medulla_protocol_types::result_contract::query::SynthesizeSearchTask;
 use medulla_server_api::knob_config::knobs;

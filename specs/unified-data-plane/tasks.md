@@ -148,7 +148,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T142 [US7] MEDULLA-UNIFIED-DATA-PLANE-R700.6 Hot-path proof: a failed criterion applies no effect
 - [ ] T143 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.1 Standards conformance: cohorts, drift scores and consolidation recommendations: Model
 - [ ] T144 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.2 Standards conformance: cohorts, drift scores and consolidation recommendations: Behavior
-- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Add the `Standard`/`StandardsAsset` node schema, `StandardsDriftResult`, `Method::StandardsDrift { scope, standard }` with its registrations and `handle_standards_drift` in `crates/medulla-h-query/src/query/standards.rs`; register `STANDARDS_NODE_INVALID` and `STANDARD_NOT_FOUND`
+- [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Add the `Standard`/`StandardsAsset` node schema, `StandardsDriftResult`, `Method::StandardsDrift { scope, standard }` with its registrations and `handle_standards_drift` in `crates/medulla-h-query-read/src/query/standards.rs`; register `STANDARDS_NODE_INVALID` and `STANDARD_NOT_FOUND`
 - [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
 - [ ] T147 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
 - [x] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero

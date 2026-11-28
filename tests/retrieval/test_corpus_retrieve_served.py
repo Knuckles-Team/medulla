@@ -210,7 +210,7 @@ def test_method_reaches_each_mode(start_medulla_server) -> None:
     _with_graph(body)
     # One implementation per mode: the handler defines none of its own.
     handler = (
-        _ROOT / "crates/medulla-h-query/src/query/corpus_retrieve.rs"
+        _ROOT / "crates/medulla-h-query-read/src/query/corpus_retrieve.rs"
     ).read_text()
     assert "dispatch(" in handler and "expand_hops(" in handler
     assert not re.search(

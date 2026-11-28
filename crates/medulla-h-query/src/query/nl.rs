@@ -140,7 +140,7 @@ pub(crate) fn handle_nl_query_plan(
             ),
         ));
     }
-    let planner = crate::nl::resolve_planner()
+    let planner = medulla_h_query_read::nl::resolve_planner()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?
         .ok_or_else(|| {
             Response::err(
@@ -167,7 +167,7 @@ pub(crate) fn handle_nl_query_plan(
     // with no planner refuses `NL_PLANNER_UNCONFIGURED`.
     let (sql_planner, sparql_planner) = if planning.text_dialects {
         (
-            crate::nl::resolve_sql_planner()
+            medulla_h_query_read::nl::resolve_sql_planner()
                 .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?,
             nl_sparql_planner(req_id)?,
         )
@@ -279,7 +279,8 @@ fn nl_sparql_planner(
     req_id: u64,
 ) -> Result<Option<std::sync::Arc<dyn medulla_nlq::nl::sparql_planner::SparqlNlPlanner>>, Response>
 {
-    crate::nl::resolve_sparql_planner().map_err(|e| Response::err(req_id, nl_config_refusal(&e)))
+    medulla_h_query_read::nl::resolve_sparql_planner()
+        .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))
 }
 
 /// A build without SPARQL has no SPARQL planner to offer.
@@ -304,7 +305,7 @@ pub(crate) fn nl_follow_up(
     if history.is_empty() {
         return Ok((text.to_string(), None));
     }
-    let max_turns = crate::nl::resolve_max_history_turns()
+    let max_turns = medulla_h_query_read::nl::resolve_max_history_turns()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?;
     medulla_query_types::nl_query::validate_nl_history(history, max_turns)
         .map_err(|detail| Response::err(req_id, format!("INVALID_ARGUMENT: NlQuery: {detail}")))?;
@@ -586,7 +587,7 @@ pub(crate) async fn handle_nl_query_plan_only(
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let _ = graph;
-    let planner = match crate::nl::resolve_planner() {
+    let planner = match medulla_h_query_read::nl::resolve_planner() {
         Ok(Some(planner)) => planner,
         Ok(None) => {
             return Ok(Response::err(
@@ -613,8 +614,10 @@ pub(crate) async fn handle_nl_query_plan_only(
             Ok(digest) => digest,
             Err(error) => return Ok(Response::err(req_id, error)),
         };
-    let query_digest = match super::planning::foreign_uql_query_digest(&uql, &UqlParams::default())
-    {
+    let query_digest = match medulla_h_query_read::query::planning::foreign_uql_query_digest(
+        &uql,
+        &UqlParams::default(),
+    ) {
         Ok(digest) => digest,
         Err(error) => return Ok(Response::err(req_id, error)),
     };
