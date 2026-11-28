@@ -47,6 +47,7 @@ VECTORS = json.loads(
 FACTS_UP = json.dumps({"reachable": True, "ready": True})
 
 
+@pytest.mark.spec("MEDULLA-MACHINE-R007")
 def test_every_vector_and_refusal_matches_the_rust_functions() -> None:
     for row in VECTORS["iri_vectors"]:
         keys = json.dumps([{"kind": row["kind"], "value": row["raw"]}])
@@ -79,6 +80,7 @@ def test_every_vector_and_refusal_matches_the_rust_functions() -> None:
         _e.machine_iri("t", nil)
 
 
+@pytest.mark.spec("MEDULLA-MACHINE-R007")
 def test_lifecycle_functions_follow_the_edge_table() -> None:
     assert json.loads(_e.machine_lifecycle_derive("commissioned", FACTS_UP)) == {
         "event": "Ready"
@@ -116,6 +118,7 @@ hosts:
 """
 
 
+@pytest.mark.spec("MEDULLA-MACHINE-R007")
 def test_hosts_file_and_record_functions_are_canonical() -> None:
     text = _e.normalize_hosts_file(HOSTS)
     parsed = json.loads(text)
