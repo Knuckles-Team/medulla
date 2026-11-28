@@ -34,3 +34,5 @@ Each task line reads `- [ ] T001 [P] [US1] <ID>-R012.4 description`. Tasks run p
 - [ ] T028 [US5] MEDULLA-MACHINE-R006 Inventory record schema and ingest (rollup).
 - [ ] T029 [US1] MEDULLA-MACHINE-R008 Wiring.
 - [ ] T030 [US1] MEDULLA-MACHINE-R009 Hot-path proof and competency question.
+- [ ] T031 [US2] MEDULLA-MACHINE-R002.4 Key anchor id.
+- [ ] T032 [US1] MEDULLA-MACHINE-R004.3 Machine key anchor.

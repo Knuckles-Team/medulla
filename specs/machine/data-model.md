@@ -17,6 +17,7 @@ All terms live in the core namespace `https://knuckles-team.github.io/ontology/c
 | `:NetworkBond` | `:MachineComponent` | One aggregation of interfaces |
 | `:Accelerator` | `:MachineComponent` | One GPU, FPGA, TPU, DPU or similar device |
 | `:ManagementController` | `:MachineComponent` | One out-of-band management controller |
+| `:MachineKey` | `bfo:0000031` | An anchor for one normalized identity key of a machine |
 | `:ProbeSnapshot` | `:Observation` | One recorded probe result with its content digest |
 | `:MachineLifecycleTransitionRecord` | `:Observation` | One applied lifecycle transition |
 
@@ -26,7 +27,8 @@ All terms live in the core namespace `https://knuckles-team.github.io/ontology/c
 |---|---|---|---|
 | `:hasComponent` | `:Machine` | `:MachineComponent` | The machine owns the part |
 | `:bondMember` | `:NetworkBond` | `:NetworkInterface` | The interface belongs to the bond |
-| `:observes` | none | `:Machine` | Any connector record or probe snapshot points at the machine it describes |
+| `:identifies` | `:MachineKey` | `:Machine` | The key anchor belongs to the canonical machine |
+| `:observes` | none | `:Machine` or `:MachineKey` | A connector record or probe snapshot points at its machine. It may point at the anchor of a key it holds |
 | `:transitionOf` | `:MachineLifecycleTransitionRecord` | `:Machine` | The record belongs to the machine |
 
 `:observes` has no domain on purpose. Every connector host class, orchestrator member class and probe record may use it.
@@ -37,7 +39,7 @@ All terms live in the core namespace `https://knuckles-team.github.io/ontology/c
 |---|---|---|
 | `:machineName` | `xsd:string` | Machine. The hosts-file name |
 | `:identityTier` | `xsd:string` in `uuid`, `serial`, `bmc`, `host` | Machine |
-| `:machineKey` | `xsd:string`, form `<kind>:<normalized value>` | Machine. One per known key |
+| `:machineKey` | `xsd:string`, form `<kind>:<normalized value>` | Machine (one per known key) and MachineKey (exactly one) |
 | `:systemUuid` | `xsd:string` | Machine |
 | `:serialNumber` | `xsd:string` | Machine, MemoryModule, StorageDevice, Accelerator |
 | `:manufacturer` | `xsd:string` | Machine |
@@ -105,6 +107,7 @@ The normalized records are entities and relationships in the shape of the connec
 | Entity type | Id | Properties |
 |---|---|---|
 | `Machine` | machine IRI | The Machine properties above |
+| `MachineKey` | `urn:machine-key:<tag>:` + first 32 hex of sha256(`<tag> LF <value>`) | `machineKey` |
 | `CentralProcessor` | `urn:machine-part:` + first 32 hex of sha256(`<machine IRI> LF processor LF <natural key>`) | `socketIndex`, `model`, `coreCount`, `threadCount` |
 | `MemoryModule` | same form, kind `memory` | `componentSlot`, `capacityBytes`, `serialNumber`, `model` |
 | `StorageDevice` | same form, kind `storage` | `deviceName`, `model`, `serialNumber`, `capacityBytes`, `storageMedium` |
@@ -117,9 +120,11 @@ The normalized records are entities and relationships in the shape of the connec
 
 | Relationship | From | To |
 |---|---|---|
+| `identifies` | MachineKey | Machine |
 | `hasComponent` | Machine | any component |
 | `bondMember` | NetworkBond | NetworkInterface |
 | `observes` | ProbeSnapshot | Machine |
+| `observes` | any connector record | Machine or MachineKey |
 | `transitionOf` | MachineLifecycleTransitionRecord | Machine |
 
 Natural key per component kind, first non-empty value in this order:
@@ -171,6 +176,7 @@ Module `medulla.engine` holds these functions. Each takes and returns text. Stru
 |---|---|---|
 | `normalize_hosts_file(yaml)` | the hosts file text | `{"schema":"hosts-normalized/v1","hosts":[{"name","addresses","management_address","roles","groups","credentials":{"ssh","management"},"identity":{"system_uuid","system_serial","management_mac"},"retired"}]}`. Absent scalars are `null`. |
 | `machine_normalize_key(kind, raw)` | kind in `uuid`, `serial`, `bmc`, `host`; raw text | `{"kind","value"}` |
+| `machine_key_ref(kind, raw)` | same | `{"iri","key"}` with the anchor id |
 | `machine_iri(tenant, keys_json)` | `keys_json` is `[{"kind","value"}]` in any order | `{"iri","tier","key"}` for the best valid key |
 | `machine_lifecycle_derive(state, facts_json)` | stored state text; facts `{"reachable","ready","health_failing","drain_requested","workloads_evacuated","retire_requested"}` | `{"event":"Ready"\|"Drain"\|"Drained"\|"Resume"\|"Retire"\|null}` |
 | `machine_lifecycle_apply(state, event, facts_json)` | stored state text, event name, facts | `{"state","edge_id"}` |
@@ -200,3 +206,11 @@ All keys here are documentation values. The tenant of the host vectors is `tenan
 Preference vectors: keys `[uuid 00000000-0000-0000-0000-000000000000, serial SN-0001, host alpha]` select the serial key. Keys `[host alpha, bmc AA-BB-CC-DD-EE-01]` select the bmc key. An empty list selects none.
 
 The vectors live in `crates/medulla-source-types/tests/vectors/machine_iri.json`, and the Python test reads the same file.
+
+| Key anchor of | Anchor id |
+|---|---|
+| uuid `123e4567-e89b-12d3-a456-426614174000` | `urn:machine-key:uuid:fadf2b3c7a3b8eaf74b9d3045973e1ce` |
+| serial `ABC 123` | `urn:machine-key:serial:ce4057006ad7685b67a799f0743e2911` |
+| bmc `aa:bb:cc:dd:ee:01` | `urn:machine-key:bmc:84d46b5bb6df3515f700478db20f68e2` |
+| host `node-1.example` | `urn:machine-key:host:11165384ff7580ae5652b6a2bae3f5dd` |
+| host `alpha` | `urn:machine-key:host:41097ff758a2bcf28635c4da73d9fa18` |

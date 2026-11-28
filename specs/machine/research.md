@@ -80,6 +80,16 @@ A connector host class rolls up as a subclass of `core:Machine`, as the roll-up 
 
 Alternative rejected: give every connector record the canonical IRI as its node id. A connector that holds only a hostname derives a hostname-tier IRI, which differs from the hardware-tier IRI the build derives. The result is two machine nodes again.
 
+## Decision 10: key anchors let a connector link without knowing the tier
+
+A connector often holds one key, such as a hostname, and no tenant name. The canonical IRI may use a stronger key. The build therefore writes one `core:MachineKey` anchor per known key. Each anchor has a tenant-free id, because the tenant graph isolates it. Each anchor `core:identifies` the canonical machine. A connector points `core:observes` at the anchor of the key it holds. A query follows `core:identifies` to the machine.
+
+Alternative rejected: an alias table in the engine. It stores a second identity map outside the graph and needs its own sync.
+
+## Decision 11: the hosts file declares the fleet and the SSH inventory grants access
+
+The hosts file lists which machines exist and which references reach them. The SSH inventory of the shell connector stays the access authority for that connector. The hosts file never replaces it. Arbora passes an address and a credential reference for each probe. The connector resolves the reference itself.
+
 ## Open point resolved: a retired flag replaces a deletion
 
 The hosts file may mark a host `retired`. An erased entry makes the next reconcile drop the machine and its history. A flag keeps the history and drives the machine through the lifecycle first.
