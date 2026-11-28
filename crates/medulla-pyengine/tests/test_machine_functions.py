@@ -57,7 +57,19 @@ def test_every_vector_and_refusal_matches_the_rust_functions() -> None:
         normalized = json.loads(_e.machine_normalize_key(row["kind"], row["raw"]))
         assert normalized == {"kind": row["kind"], "value": row["normalized"]}
     for row in VECTORS["preference_vectors"]:
-        chosen = json.loads(_e.machine_iri("tenant-a", json.dumps(row["keys"])))
+        valid: list[Any] = []
+        for key in row["keys"]:
+            try:
+                valid.append(
+                    json.loads(_e.machine_normalize_key(key["kind"], key["value"]))
+                )
+            except ValueError:
+                continue  # a placeholder or malformed key is dropped
+        if row["selects"] is None:
+            with pytest.raises(ValueError, match="^no_valid_key$"):
+                _e.machine_iri("tenant-a", json.dumps(valid))
+            continue
+        chosen = json.loads(_e.machine_iri("tenant-a", json.dumps(valid)))
         assert {"kind": chosen["tier"], "value": chosen["key"].split(":", 1)[1]} == row[
             "selects"
         ]
